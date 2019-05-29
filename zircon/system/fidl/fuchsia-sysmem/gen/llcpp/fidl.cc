@@ -197,6 +197,7 @@ extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
 [[maybe_unused]]
 constexpr uint32_t kHeap_CreateResource_Ordinal = 900305090u;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceRequestTable;
+extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
 [[maybe_unused]]
 constexpr uint32_t kHeap_DestroyResource_Ordinal = 668940193u;
 
@@ -609,6 +610,7 @@ constexpr uint32_t kDriverConnector_Connect_Ordinal = 813883444u;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
 [[maybe_unused]]
 constexpr uint32_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 282632817u;
+extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 }  // namespace
 
@@ -1388,11 +1390,13 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestT
 constexpr uint32_t kBufferCollection_Sync_Ordinal = 364524065u;
 [[maybe_unused]]
 constexpr uint32_t kBufferCollection_SetConstraints_Ordinal = 1411081086u;
+extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
 [[maybe_unused]]
 constexpr uint32_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 456576936u;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint32_t kBufferCollection_CheckBuffersAllocated_Ordinal = 156573902u;
+extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
 [[maybe_unused]]
 constexpr uint32_t kBufferCollection_CloseSingleBuffer_Ordinal = 402848328u;
 [[maybe_unused]]

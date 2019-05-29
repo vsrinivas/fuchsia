@@ -15,6 +15,7 @@ constexpr uint32_t kStream_Start_Ordinal = 932812003u;
 constexpr uint32_t kStream_Stop_Ordinal = 9009058u;
 [[maybe_unused]]
 constexpr uint32_t kStream_ReleaseFrame_Ordinal = 629961612u;
+extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
 constexpr uint32_t kStream_OnFrameAvailable_Ordinal = 1771204245u;
 

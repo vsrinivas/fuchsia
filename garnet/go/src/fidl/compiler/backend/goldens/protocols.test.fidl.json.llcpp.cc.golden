@@ -2705,8 +2705,10 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint32_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145u;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]]
 constexpr uint32_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143u;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace
 

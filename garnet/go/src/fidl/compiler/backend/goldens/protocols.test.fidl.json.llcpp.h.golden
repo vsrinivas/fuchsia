@@ -1448,6 +1448,8 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   };
 };
 
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 class WithErrorSyntax final {
  public:
@@ -1457,7 +1459,7 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     WithErrorSyntax_ErrorAsPrimitive_Result result;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1469,7 +1471,7 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     WithErrorSyntax_ErrorAsEnum_Result result;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

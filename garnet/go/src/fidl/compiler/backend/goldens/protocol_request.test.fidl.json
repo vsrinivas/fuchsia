@@ -36,6 +36,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -58,7 +59,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         },
         {
           "ordinal": 1068158078,
@@ -73,6 +75,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -95,7 +98,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         },
         {
           "ordinal": 1275478777,
@@ -129,6 +133,7 @@
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": false
         },
         {
@@ -163,6 +168,7 @@
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": false
         }
       ]

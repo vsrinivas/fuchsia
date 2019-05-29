@@ -402,6 +402,7 @@ type Struct struct {
 	Alignment    int                       `json:"alignment"`
 	MaxHandles   int                       `json:"max_handles"`
 	MaxOutOfLine int                       `json:"max_out_of_line"`
+	HasPadding   bool                      `json:"has_padding"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -462,15 +463,17 @@ func (d *Interface) GetServiceName() string {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal      Ordinal     `json:"ordinal"`
-	GenOrdinal   Ordinal     `json:"generated_ordinal"`
-	Name         Identifier  `json:"name"`
-	HasRequest   bool        `json:"has_request"`
-	Request      []Parameter `json:"maybe_request,omitempty"`
-	RequestSize  int         `json:"maybe_request_size,omitempty"`
-	HasResponse  bool        `json:"has_response"`
-	Response     []Parameter `json:"maybe_response,omitempty"`
-	ResponseSize int         `json:"maybe_response_size,omitempty"`
+	Ordinal         Ordinal     `json:"ordinal"`
+	GenOrdinal      Ordinal     `json:"generated_ordinal"`
+	Name            Identifier  `json:"name"`
+	HasRequest      bool        `json:"has_request"`
+	Request         []Parameter `json:"maybe_request,omitempty"`
+	RequestSize     int         `json:"maybe_request_size,omitempty"`
+	RequestPadding  bool        `json:"maybe_request_has_padding,omitempty"`
+	HasResponse     bool        `json:"has_response"`
+	Response        []Parameter `json:"maybe_response,omitempty"`
+	ResponseSize    int         `json:"maybe_response_size,omitempty"`
+	ResponsePadding bool        `json:"maybe_response_has_padding,omitempty"`
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.

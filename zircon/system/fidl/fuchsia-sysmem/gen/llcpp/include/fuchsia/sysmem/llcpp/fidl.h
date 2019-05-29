@@ -246,6 +246,7 @@ class BufferCollectionToken final {
 
 extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceRequestTable;
+extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
 
 // Manages resources on a specific sysmem heap.
 //
@@ -282,7 +283,7 @@ class Heap final {
     int32_t s;
     uint64_t id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_HeapCreateResourceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -663,6 +664,7 @@ class Heap final {
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
+extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 class DriverConnector final {
  public:
@@ -685,7 +687,7 @@ class DriverConnector final {
     uint64_t base_address;
     uint64_t size;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -953,10 +955,10 @@ struct ImagePlane {
   uint32_t bytes_per_row{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_BufferMemoryConstraintsTable;
 
 struct BufferMemoryConstraints {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferMemoryConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 280;
   [[maybe_unused]]
@@ -1010,10 +1012,10 @@ struct FormatModifier {
   uint64_t value{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_PixelFormatTable;
 
 struct PixelFormat {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_PixelFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -1076,10 +1078,10 @@ struct ColorSpace {
   ColorSpaceType type{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_ImageSpecTable;
 
 struct ImageSpec {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageSpecTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
@@ -1162,11 +1164,11 @@ struct BufferSpec {
   };
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_ImageFormat_2Table;
 
 // Describes how an image is represented.
 struct ImageFormat_2 {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageFormat_2Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
@@ -1205,11 +1207,11 @@ struct ImageFormat_2 {
   uint32_t pixel_aspect_ratio_height{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_ImageFormatConstraintsTable;
 
 // Describes constraints on layout of image data in buffers.
 struct ImageFormatConstraints {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageFormatConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 232;
   [[maybe_unused]]
@@ -1327,10 +1329,10 @@ struct ImageFormatConstraints {
   uint32_t required_max_bytes_per_row{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_ImageFormatTable;
 
 struct ImageFormat {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 72;
   [[maybe_unused]]
@@ -1433,10 +1435,10 @@ struct BufferCollectionInfo {
   uint64_t vmo_size{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_BufferMemorySettingsTable;
 
 struct BufferMemorySettings {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferMemorySettingsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -1455,10 +1457,10 @@ struct BufferMemorySettings {
   HeapType heap{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_SingleBufferSettingsTable;
 
 struct SingleBufferSettings {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SingleBufferSettingsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 264;
   [[maybe_unused]]
@@ -1652,13 +1654,13 @@ struct BufferUsage {
   uint32_t video{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
 
 // Constraints on BufferCollection parameters.  These constraints can be
 // specified per-participant.  The sysmem service implements aggregation of
 // constraints from multiple participants.
 struct BufferCollectionConstraints {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 7752;
   [[maybe_unused]]
@@ -1755,7 +1757,9 @@ struct BufferCollectionConstraints {
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
+extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
+extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
 
 class BufferCollection final {
@@ -1781,7 +1785,7 @@ class BufferCollection final {
     bool has_constraints;
     BufferCollectionConstraints constraints;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 7776;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1805,7 +1809,7 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

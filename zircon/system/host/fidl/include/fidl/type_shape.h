@@ -9,10 +9,20 @@
 
 class TypeShape {
 public:
-    constexpr TypeShape(uint32_t size, uint32_t alignment, uint32_t depth = 0u, uint32_t max_handles = 0u, uint32_t max_out_of_line = 0u)
-        : size_(size), alignment_(alignment), depth_(depth), max_handles_(max_handles), max_out_of_line_(max_out_of_line) {}
+    constexpr TypeShape(uint32_t size,
+                        uint32_t alignment,
+                        uint32_t depth = 0u,
+                        uint32_t max_handles = 0u,
+                        uint32_t max_out_of_line = 0u,
+                        bool has_padding = false)
+        : size_(size),
+          alignment_(alignment),
+          depth_(depth),
+          max_handles_(max_handles),
+          max_out_of_line_(max_out_of_line),
+          has_padding_(has_padding) {}
     constexpr TypeShape()
-        : TypeShape(0u, 0u, 0u, 0u, 0u) {}
+        : TypeShape(0u, 0u, 0u, 0u, 0u, false) {}
 
     TypeShape(const TypeShape&) = default;
     TypeShape& operator=(const TypeShape&) = default;
@@ -20,8 +30,12 @@ public:
     uint32_t Size() const { return size_; }
     uint32_t Alignment() const { return alignment_; }
     uint32_t Depth() const { return depth_; }
+
+    // These properties are accounted for recursively.
+
     uint32_t MaxHandles() const { return max_handles_; }
     uint32_t MaxOutOfLine() const { return max_out_of_line_; }
+    bool HasPadding() const { return has_padding_; }
 
 private:
     uint32_t size_;
@@ -29,6 +43,7 @@ private:
     uint32_t depth_;
     uint32_t max_handles_;
     uint32_t max_out_of_line_;
+    bool has_padding_;
 };
 
 // |FieldShape| describes a |TypeShape| that is embedded in a struct or (x)union as a member field.

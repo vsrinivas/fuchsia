@@ -19,6 +19,7 @@ struct Expected {
     uint32_t max_out_of_line = 0;
     uint32_t max_handles = 0;
     uint32_t depth = 0;
+    bool has_padding = false;
 };
 
 bool CheckTypeShape(const TypeShape& actual, Expected expected) {
@@ -28,6 +29,7 @@ bool CheckTypeShape(const TypeShape& actual, Expected expected) {
     EXPECT_EQ(actual.MaxOutOfLine(), expected.max_out_of_line);
     EXPECT_EQ(actual.MaxHandles(), expected.max_handles);
     EXPECT_EQ(actual.Depth(), expected.depth);
+    EXPECT_EQ(actual.HasPadding(), expected.has_padding);
     END_HELPER;
 }
 
@@ -112,6 +114,7 @@ struct EmptyWithOtherThings {
     EXPECT_TRUE(CheckTypeShape(empty_with_other_things->typeshape, Expected {
         .size = 16,
         .alignment = 4,
+        .has_padding = true,
     }));
     ASSERT_EQ(empty_with_other_things->members.size(), 8);
     // bool a;
@@ -202,6 +205,7 @@ struct BoolAndU64 {
     EXPECT_TRUE(CheckTypeShape(bool_and_u32->typeshape, Expected {
         .size = 8,
         .alignment = 4,
+        .has_padding = true,
     }));
     ASSERT_EQ(bool_and_u32->members.size(), 2);
     EXPECT_TRUE(CheckFieldShape(bool_and_u32->members[0].fieldshape, ExpectedField {
@@ -216,6 +220,7 @@ struct BoolAndU64 {
     EXPECT_TRUE(CheckTypeShape(bool_and_u64->typeshape, Expected {
         .size = 16,
         .alignment = 8,
+        .has_padding = true,
     }));
     ASSERT_EQ(bool_and_u64->members.size(), 2);
     EXPECT_TRUE(CheckFieldShape(bool_and_u64->members[0].fieldshape, ExpectedField {
@@ -332,6 +337,7 @@ table TableWithBoolAndU64 {
         .size = 16,
         .alignment = 8,
         .depth = 4294967295, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto one_bool = test_library.LookupTable("TableWithOneBool");
@@ -341,6 +347,7 @@ table TableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 24,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto two_bools = test_library.LookupTable("TableWithTwoBools");
@@ -350,6 +357,7 @@ table TableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 48,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto bool_and_u32 = test_library.LookupTable("TableWithBoolAndU32");
@@ -359,6 +367,7 @@ table TableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 48,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto bool_and_u64 = test_library.LookupTable("TableWithBoolAndU64");
@@ -368,6 +377,7 @@ table TableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 48,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -394,6 +404,7 @@ table TableWithOneHandle {
         .max_out_of_line = 24,
         .max_handles = 1,
         .depth = 3,
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -468,6 +479,7 @@ struct OptionalBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 8,
         .depth = 1,
+        .has_padding = true,  // because |BoolAndU32| has padding
     }));
 
     auto bool_and_u64 = test_library.LookupStruct("OptionalBoolAndU64");
@@ -477,6 +489,7 @@ struct OptionalBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 16,
         .depth = 1,
+        .has_padding = true,  // because |BoolAndU64| has padding
     }));
 
     END_TEST;
@@ -568,6 +581,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 24,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_one_bool = test_library.LookupTable("TableWithOptionalTableWithOneBool");
@@ -577,6 +591,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 56,
         .depth = 6, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto two_bools = test_library.LookupTable("TableWithOptionalTwoBools");
@@ -586,6 +601,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 24,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_two_bools = test_library.LookupTable("TableWithOptionalTableWithTwoBools");
@@ -595,6 +611,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 80,
         .depth = 6, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto bool_and_u32 = test_library.LookupTable("TableWithOptionalBoolAndU32");
@@ -604,6 +621,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 24,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_bool_and_u32 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU32");
@@ -613,6 +631,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 80,
         .depth = 6, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto bool_and_u64 = test_library.LookupTable("TableWithOptionalBoolAndU64");
@@ -622,6 +641,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 32,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_bool_and_u64 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU64");
@@ -631,6 +651,7 @@ table TableWithOptionalTableWithBoolAndU64 {
         .alignment = 8,
         .max_out_of_line = 80,
         .depth = 6, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -668,6 +689,7 @@ table TableWithOptionalUnion {
     EXPECT_TRUE(CheckTypeShape(a_union->typeshape, Expected {
         .size = 24,
         .alignment = 8,
+        .has_padding = true,
     }));
     ASSERT_EQ(a_union->members.size(), 2);
     EXPECT_TRUE(CheckFieldShape(a_union->members[0].fieldshape, ExpectedField {
@@ -686,6 +708,7 @@ table TableWithOptionalUnion {
         .alignment = 8,
         .max_out_of_line = 24,
         .depth = 1,
+        .has_padding = true,  // because |UnionOfThings| has padding
     }));
 
     auto table_with_optional_union = test_library.LookupTable("TableWithOptionalUnion");
@@ -695,6 +718,7 @@ table TableWithOptionalUnion {
         .alignment = 8,
         .max_out_of_line = 40,
         .depth = 3,
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -727,6 +751,7 @@ union ManyHandleUnion {
         .size = 8,
         .alignment = 4,
         .max_handles = 1,
+        .has_padding = true,
     }));
     ASSERT_EQ(one_handle_union->members.size(), 3);
     EXPECT_TRUE(CheckFieldShape(one_handle_union->members[0].fieldshape, ExpectedField {
@@ -750,6 +775,7 @@ union ManyHandleUnion {
         .max_out_of_line = 32,
         .max_handles = 8,
         .depth = 1,
+        .has_padding = true,
     }));
     ASSERT_EQ(many_handle_union->members.size(), 3);
     EXPECT_TRUE(CheckFieldShape(many_handle_union->members[0].fieldshape, ExpectedField {
@@ -837,6 +863,7 @@ table TableWithUnboundedVectors {
         .alignment = 8,
         .max_out_of_line = 48,
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_unbounded_vector = test_library.LookupTable("TableWithUnboundedVector");
@@ -846,6 +873,7 @@ table TableWithUnboundedVectors {
         .alignment = 8,
         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_unbounded_vectors = test_library.LookupTable("TableWithUnboundedVectors");
@@ -855,6 +883,7 @@ table TableWithUnboundedVectors {
         .alignment = 8,
         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -947,6 +976,7 @@ table TableWithHandleStructVector {
         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
         .max_handles = std::numeric_limits<uint32_t>::max(),
         .depth = 4,  // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto handle_struct_vector = test_library.LookupStruct("HandleStructVector");
@@ -967,6 +997,7 @@ table TableWithHandleStructVector {
         .max_out_of_line = 320,
         .max_handles = 8,
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
@@ -977,6 +1008,7 @@ table TableWithHandleStructVector {
         .max_out_of_line = 64,
         .max_handles = 8,
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -1032,6 +1064,7 @@ table TableWithUnboundedString {
         .alignment = 8,
         .max_out_of_line = 40,
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto table_with_unbounded_string = test_library.LookupTable("TableWithUnboundedString");
@@ -1041,6 +1074,7 @@ table TableWithUnboundedString {
         .alignment = 8,
         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -1077,6 +1111,7 @@ table TableWithAnArray {
         .alignment = 8,
         .max_out_of_line = 56,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -1123,6 +1158,7 @@ table TableWithNullableHandleArray {
         .max_out_of_line = 48,
         .max_handles = 8,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
@@ -1141,6 +1177,7 @@ table TableWithNullableHandleArray {
         .max_out_of_line = 48,
         .max_handles = 8,
         .depth = 3, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     END_TEST;
@@ -1204,6 +1241,7 @@ struct StructWithOptionalEmptyXUnion {
         .alignment = 8,
         .max_out_of_line = 8,
         .depth = 1, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
     ASSERT_EQ(one_bool->members.size(), 1);
     EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField {
@@ -1217,6 +1255,7 @@ struct StructWithOptionalEmptyXUnion {
         .alignment = 8,
         .max_out_of_line = 256,
         .depth = 4, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto unbounded = test_library.LookupXUnion("XUnionWithUnboundedOutOfLineObject");
@@ -1407,6 +1446,7 @@ protocol MessagePort {
       .size = 24,
       .alignment = 8,
       .max_handles = 1,
+      .has_padding = true,
   }));
   ASSERT_EQ(post_message_request->members.size(), 1);
   EXPECT_TRUE(CheckFieldShape(post_message_request->members[0].fieldshape, ExpectedField {
@@ -1451,6 +1491,7 @@ protocol MessagePort {
       .size = 24,
       .alignment = 8,
       .max_handles = 1,
+      .has_padding = true,
   }));
 
   END_TEST;
@@ -1490,6 +1531,7 @@ protocol MessagePort {
       .size = 24,
       .alignment = 8,
       .max_handles = 1,
+      .has_padding = true,
   }));
 
   END_TEST;
@@ -1529,6 +1571,7 @@ protocol MessagePort {
       .size = 24,
       .alignment = 8,
       .max_handles = 1,
+      .has_padding = true,
   }));
 
   END_TEST;
@@ -1585,6 +1628,14 @@ struct TheStruct {
       .max_out_of_line = 0,
       .max_handles = std::numeric_limits<uint32_t>::max(),
       .depth = std::numeric_limits<uint32_t>::max(),
+      .has_padding = true
+  }));
+  ASSERT_EQ(the_struct->members.size(), 2);
+  EXPECT_TRUE(CheckFieldShape(the_struct->members[0].fieldshape, ExpectedField {
+      .padding = 4,
+  }));
+  EXPECT_TRUE(CheckFieldShape(the_struct->members[1].fieldshape, ExpectedField {
+      .offset = 8,
   }));
 
   END_TEST;
@@ -1660,6 +1711,7 @@ struct B {
       .max_out_of_line = 32,
       .max_handles = std::numeric_limits<uint32_t>::max(),
       .depth = std::numeric_limits<uint32_t>::max(),
+      .has_padding = true,
   }));
 
   auto struct_b = library.LookupStruct("B");
@@ -1671,6 +1723,7 @@ struct B {
       .max_out_of_line = 16,
       .max_handles = std::numeric_limits<uint32_t>::max(),
       .depth = std::numeric_limits<uint32_t>::max(),
+      .has_padding = true,
   }));
 
   END_TEST;
@@ -1756,6 +1809,7 @@ enum Priority {
       .size = 16,
       .alignment = 8,
       .max_handles = 1,
+      .has_padding = true,
   }));
 
   auto value = library.LookupStruct("Value");
@@ -1766,6 +1820,7 @@ enum Priority {
       .max_out_of_line = 16,
       .max_handles = 1,
       .depth = 1,
+      .has_padding = true,  // because the size of |Priority| defaults to uint32
   }));
 
   auto diff_entry = library.LookupStruct("DiffEntry");
@@ -1776,6 +1831,7 @@ enum Priority {
       .max_out_of_line = 352,
       .max_handles = 3,
       .depth = 2,
+      .has_padding = true  // because |Value| has padding
   }));
 
   END_TEST;

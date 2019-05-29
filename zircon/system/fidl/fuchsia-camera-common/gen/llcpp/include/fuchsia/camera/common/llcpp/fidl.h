@@ -66,6 +66,7 @@ struct FrameAvailableEvent {
   Metadata metadata{};
 };
 
+extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTable;
 
 // Protocol shared between the driver and the consumer.
 class Stream final {
@@ -80,7 +81,7 @@ class Stream final {
     fidl_message_header_t _hdr;
     uint32_t buffer_id;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fuchsia_camera_common_StreamReleaseFrameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -239,11 +240,11 @@ struct FrameRate {
   uint32_t frames_per_sec_denominator{};
 };
 
-
+extern "C" const fidl_type_t fuchsia_camera_common_VideoFormatTable;
 
 // Video format includes the image format and frame rate of frames being produced.
 struct VideoFormat {
-  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr const fidl_type_t* Type = &fuchsia_camera_common_VideoFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]

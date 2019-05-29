@@ -255,8 +255,12 @@ bool IsStoredOutOfLine(const CGenerator::Member& member) {
         member.kind == flat::Type::Kind::kString)
         return true;
     if (member.kind == flat::Type::Kind::kIdentifier) {
-        return member.nullability == types::Nullability::kNullable &&
-               (member.decl_kind == flat::Decl::Kind::kStruct || member.decl_kind == flat::Decl::Kind::kUnion || member.decl_kind == flat::Decl::Kind::kXUnion);
+        if (member.decl_kind == flat::Decl::Kind::kXUnion ||
+            member.decl_kind == flat::Decl::Kind::kTable)
+            return true;
+        if (member.nullability == types::Nullability::kNullable)
+            return member.decl_kind == flat::Decl::Kind::kStruct ||
+                   member.decl_kind == flat::Decl::Kind::kUnion;
     }
     return false;
 }
@@ -1103,7 +1107,8 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         }
         size_t max_hcount = std::max(request_hcount, response_hcount);
 
-        bool encode_request = ((count > 0) || (request_hcount > 0));
+        bool has_padding = method_info.request->typeshape.HasPadding();
+        bool encode_request = (count > 0) || (request_hcount > 0) || has_padding;
 
         EmitClientMethodDecl(&file_, method_info.c_name, request, response);
         file_ << " {\n";
@@ -1195,6 +1200,8 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             // using |_handles| rather than trying to find them in the decoded
             // message.
             count = CountSecondaryObjects(response);
+            has_padding = method_info.response->typeshape.HasPadding();
+            bool decode_response = (count > 0) || (response_hcount > 0) || has_padding;
             if (count > 0u) {
                 file_ << kIndent << "if ";
                 if (count > 1u)
@@ -1225,9 +1232,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 file_ << kIndent << "}\n";
             }
 
-            if ((count == 0) && (response_hcount == 0)) {
-                file_ << kIndent << "// OPTIMIZED AWAY fidl_decode() of POD-only response\n";
-            } else {
+            if (decode_response) {
                 // TODO(FIDL-162): Validate the response ordinal. C++ bindings also need to do that.
                 switch (named_interface.transport) {
                 case Transport::Channel:
@@ -1241,6 +1246,8 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                 }
                 file_ << kIndent << "if (_status != ZX_OK)\n";
                 file_ << kIndent << kIndent << "return _status;\n";
+            } else {
+                file_ << kIndent << "// OPTIMIZED AWAY fidl_decode() of POD-only response\n";
             }
 
             for (const auto& member : response) {
@@ -1475,7 +1482,9 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
         file_ << kIndent << kIndent << ".num_bytes = _wr_num_bytes,\n";
         file_ << kIndent << kIndent << ".num_handles = " << hcount << ",\n";
         file_ << kIndent << "};\n";
-        if (hcount > 0 || CountSecondaryObjects(response) > 0) {
+        bool has_padding = method_info.response->typeshape.HasPadding();
+        bool encode_response = (hcount > 0) || CountSecondaryObjects(response) > 0 || has_padding;
+        if (encode_response) {
             file_ << kIndent << "zx_status_t _status = fidl_encode_msg(&"
                   << method_info.response->coded_name << ", &_msg, &_msg.num_handles, NULL);\n";
             file_ << kIndent << "if (_status != ZX_OK)\n";

@@ -71,6 +71,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -86,10 +87,12 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 107534328,
@@ -104,6 +107,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -125,7 +129,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 432149361,
@@ -158,6 +163,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -191,10 +197,12 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 426977568,
@@ -227,6 +235,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -248,7 +257,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 1769985842,
@@ -263,7 +273,8 @@
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 2051478023,
@@ -296,7 +307,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         }
       ]
     },
@@ -321,6 +333,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -343,7 +356,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         },
         {
           "ordinal": 1284890143,
@@ -358,6 +372,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -380,7 +395,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     },
@@ -446,6 +462,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -496,7 +513,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 952134976,
@@ -546,6 +564,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -567,7 +586,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 1691201382,
@@ -601,6 +621,7 @@
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -623,7 +644,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     },
@@ -689,6 +711,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -739,7 +762,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 677342235,
@@ -789,6 +813,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -810,7 +835,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 255772213,
@@ -844,6 +870,7 @@
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -866,7 +893,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     },
@@ -932,6 +960,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -982,7 +1011,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 180770075,
@@ -1032,6 +1062,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1053,7 +1084,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 1258480262,
@@ -1087,6 +1119,7 @@
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -1109,7 +1142,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     },
@@ -1175,6 +1209,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -1225,7 +1260,8 @@
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 1999489700,
@@ -1275,6 +1311,7 @@
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1296,7 +1333,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 115851270,
@@ -1330,6 +1368,7 @@
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -1352,7 +1391,8 @@
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     }
@@ -1370,7 +1410,8 @@
       "size": 1,
       "max_out_of_line": 0,
       "alignment": 1,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     },
     {
       "name": "test.name/WithErrorSyntax_ErrorAsEnum_Response",
@@ -1384,7 +1425,8 @@
       "size": 1,
       "max_out_of_line": 0,
       "alignment": 1,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],

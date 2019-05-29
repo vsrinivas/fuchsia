@@ -27,6 +27,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -42,6 +43,7 @@
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": false
         },
         {
@@ -57,7 +59,8 @@
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         },
         {
           "ordinal": 2146190926,
@@ -72,7 +75,8 @@
           "has_response": true,
           "maybe_response": [],
           "maybe_response_size": 16,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         }
       ]
     }

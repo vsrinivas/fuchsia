@@ -120,7 +120,7 @@ public:
 
     Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
         // TODO(FIDL-237): Turn this on after prebuilts have picked up new encoder.
-        // auto padding_ptr = padding_position.template Get<const uint8_t*>(StartingPoint{bytes_});
+        // auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
         // for (uint32_t i = 0; i < padding_length; i++) {
         //     if (padding_ptr[i] != 0) {
         //         SetError("non-zero padding bytes detected");

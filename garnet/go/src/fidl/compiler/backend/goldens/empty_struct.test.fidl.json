@@ -19,7 +19,8 @@
       "size": 1,
       "max_out_of_line": 0,
       "alignment": 1,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],

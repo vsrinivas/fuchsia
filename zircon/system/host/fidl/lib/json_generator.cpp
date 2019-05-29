@@ -563,6 +563,7 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
     GenerateObjectMember(prefix, value.members);
     GenerateObjectMember(prefix + "_size", value.typeshape.Size());
     GenerateObjectMember(prefix + "_alignment", value.typeshape.Alignment());
+    GenerateObjectMember(prefix + "_has_padding", value.typeshape.HasPadding());
 }
 
 void JSONGenerator::Generate(const flat::Struct& value) {
@@ -577,6 +578,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
         GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
         GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+        GenerateObjectMember("has_padding", value.typeshape.HasPadding());
     });
 }
 

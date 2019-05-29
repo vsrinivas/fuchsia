@@ -135,7 +135,8 @@ struct Simple {
       "size": 2,
       "max_out_of_line": 0,
       "alignment": 1,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],
@@ -219,6 +220,7 @@ protocol EmptyInterface {
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": false
         },
         {
@@ -253,7 +255,8 @@ protocol EmptyInterface {
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         },
         {
           "ordinal": 556045674,
@@ -287,6 +290,7 @@ protocol EmptyInterface {
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": true,
           "maybe_response": [
             {
@@ -309,7 +313,8 @@ protocol EmptyInterface {
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     }
@@ -327,7 +332,8 @@ protocol EmptyInterface {
       "size": 1,
       "max_out_of_line": 0,
       "alignment": 1,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],
@@ -514,7 +520,8 @@ union PizzaOrPasta {
       "size": 16,
       "max_out_of_line": 4294967295,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     },
     {
       "name": "fidl.test.json/Pasta",
@@ -547,7 +554,8 @@ union PizzaOrPasta {
       "size": 16,
       "max_out_of_line": 16,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],
@@ -779,6 +787,7 @@ protocol sub {
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -800,7 +809,8 @@ protocol sub {
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         }
       ]
     },
@@ -843,6 +853,7 @@ protocol sub {
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -864,7 +875,8 @@ protocol sub {
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false
         }
       ]
     }
@@ -959,6 +971,7 @@ protocol Child {
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": false
         }
       ]
@@ -1003,6 +1016,7 @@ protocol Child {
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": false
         },
         {
@@ -1037,6 +1051,7 @@ protocol Child {
           ],
           "maybe_request_size": 24,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
           "has_response": false
         }
       ]
@@ -1119,6 +1134,7 @@ protocol Example {
           ],
           "maybe_request_size": 32,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -1141,7 +1157,8 @@ protocol Example {
             }
           ],
           "maybe_response_size": 32,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     }
@@ -1177,7 +1194,8 @@ protocol Example {
       "size": 8,
       "max_out_of_line": 0,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],
@@ -1372,7 +1390,8 @@ struct ByteAndBytes {
       "size": 56,
       "max_out_of_line": 4294967295,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": true
     }
   ],
   "table_declarations": [],
@@ -1904,7 +1923,8 @@ struct Struct {
       "size": 32,
       "max_out_of_line": 4294967295,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": true
     }
   ],
   "table_declarations": [],
@@ -2038,7 +2058,8 @@ struct Baz {
       "size": 4,
       "max_out_of_line": 0,
       "alignment": 4,
-      "max_handles": 0
+      "max_handles": 0,
+      "has_padding": false
     }
   ],
   "table_declarations": [],
@@ -2146,6 +2167,7 @@ protocol Top {
           "maybe_request": [],
           "maybe_request_size": 16,
           "maybe_request_alignment": 8,
+          "maybe_request_has_padding": false,
           "has_response": true,
           "maybe_response": [
             {
@@ -2168,7 +2190,8 @@ protocol Top {
             }
           ],
           "maybe_response_size": 24,
-          "maybe_response_alignment": 8
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": true
         }
       ]
     }

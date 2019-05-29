@@ -167,6 +167,7 @@ type Struct struct {
 	Size         int
 	MaxHandles   int
 	MaxOutOfLine int
+	HasPadding   bool
 	Kind         structKind
 }
 
@@ -179,7 +180,7 @@ type StructMember struct {
 }
 
 func (s Struct) NeedsEncodeDecode() bool {
-	return s.MaxHandles > 0 || s.MaxOutOfLine > 0
+	return s.MaxHandles > 0 || s.MaxOutOfLine > 0 || s.HasPadding
 }
 
 type Interface struct {
@@ -213,12 +214,14 @@ type Method struct {
 	RequestTypeName      string
 	RequestMaxHandles    int
 	RequestMaxOutOfLine  int
+	RequestPadding       bool
 	HasResponse          bool
 	Response             []Parameter
 	ResponseSize         int
 	ResponseTypeName     string
 	ResponseMaxHandles   int
 	ResponseMaxOutOfLine int
+	ResponsePadding      bool
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
@@ -761,8 +764,8 @@ func (m Method) NewLLProps(r Interface) LLProps {
 		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
 		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
 		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
-		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0,
-		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0,
+		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0 || m.RequestPadding,
+		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0 || m.ResponsePadding,
 	}
 }
 
@@ -808,12 +811,14 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			RequestTypeName:      fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
 			RequestMaxHandles:    c.maxHandlesFromParameterArray(v.Request),
 			RequestMaxOutOfLine:  c.maxOutOfLineFromParameterArray(v.Request),
+			RequestPadding:       v.RequestPadding,
 			HasResponse:          v.HasResponse,
 			Response:             c.compileParameterArray(v.Response),
 			ResponseSize:         v.ResponseSize,
 			ResponseTypeName:     fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
 			ResponseMaxHandles:   c.maxHandlesFromParameterArray(v.Response),
 			ResponseMaxOutOfLine: c.maxOutOfLineFromParameterArray(v.Response),
+			ResponsePadding:      v.ResponsePadding,
 			CallbackType:         callbackType,
 			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -859,6 +864,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 		Size:         val.Size,
 		MaxHandles:   val.MaxHandles,
 		MaxOutOfLine: val.MaxOutOfLine,
+		HasPadding:   val.HasPadding,
 	}
 
 	for _, v := range val.Members {

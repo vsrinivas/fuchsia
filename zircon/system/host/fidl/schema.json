@@ -329,6 +329,10 @@
                     "description": "Alignment of interface method request parameters, if any present",
                     "$ref": "#/definitions/count"
                 },
+                "maybe_request_has_padding": {
+                    "description": "Flag indicating if there could be padding bytes in the request",
+                    "type": "boolean"
+                },
                 "has_response": {
                     "description": "Flag indicating that interface method has a response component",
                     "type": "boolean"
@@ -347,6 +351,10 @@
                 "maybe_response_alignment": {
                     "description": "Alignment of interface method response parameters, if any present",
                     "$ref": "#/definitions/count"
+                },
+                "maybe_response_has_padding": {
+                    "description": "Flag indicating if there could be padding bytes in the response",
+                    "type": "boolean"
                 }
             }
         },
@@ -436,6 +444,10 @@
                 "max_out_of_line": {
                     "description": "Maximum size of the out-of-line struct payload",
                     "$ref": "#/definitions/count"
+                },
+                "has_padding": {
+                    "description": "Flag indicating if there could be padding bytes in the struct. This flag is also set on the struct when it is set on any of it's fields themselves, even if the struct has no immediate padding.",
+                    "type": "boolean"
                 }
             }
         },
