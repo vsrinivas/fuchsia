@@ -13,6 +13,7 @@ group("test") {
 test("fzl-zxtest") {
   sources = [
     "pinned-vmo-tests.cpp",
+    "vmo-pool-tests.cpp",
   ]
   deps = [
     "$zx/system/dev/lib/fake-bti",
@@ -39,7 +40,6 @@ test("fzl") {
     "memory_probe_tests.cpp",
     "owned-vmo-mapper-tests.cpp",
     "resizeable-vmo-mapper-tests.cpp",
-    "vmo-pool-tests.cpp",
     "vmo-probe.cpp",
     "vmo-vmar-tests.cpp",
   ]

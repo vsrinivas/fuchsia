@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "virtual_camera_control.h"
+
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/log_level.h>
 #include <src/lib/fxl/logging.h>
-
-#include "virtual_camera_control.h"
 
 namespace virtual_camera {
 
@@ -89,25 +89,15 @@ void VirtualCameraControlImpl::ProduceFrame() {
   FXL_DCHECK(event.metadata.timestamp != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
 
-  zx_status_t status = buffers_.GetNewBuffer();
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_NOT_FOUND) {
-      FXL_LOG(ERROR) << "no available frames, dropping frame #" << frame_count_;
-      event.frame_status = fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
-    } else {
-      FXL_LOG(ERROR) << "failed to get new frame, err: " << status;
-      event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;
-    }
+  // As per the camera driver spec, we always send an OnFrameAvailable message,
+  // even if there is an error.
+  auto buffer = buffers_.LockBufferForWrite();
+  if (!buffer) {
+    FXL_LOG(ERROR) << "no available frames, dropping frame #" << frame_count_;
+    event.frame_status = fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
   } else {  // Got a buffer.  Fill it with color:
-
-    color_source_.FillARGB(buffers_.CurrentBufferAddress(),
-                           buffers_.CurrentBufferSize());
-
-    zx_status_t status = buffers_.BufferCompleted(&event.buffer_id);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "could not release the buffer: " << status;
-      event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;
-    }
+    color_source_.FillARGB(buffer->virtual_address(), buffer->size());
+    event.buffer_id = buffer->ReleaseWriteLockAndGetIndex();
   }
 
   OnFrameAvailable(event);
@@ -154,6 +144,7 @@ void VirtualCameraControlImpl::CreateStream(
   rate_ = frame_rate;
 
   buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
+  buffers_.MapVmos();
 
   stream_ = std::make_unique<VirtualCameraStreamImpl>(*this, std::move(stream));
   stream_token_ = std::move(stream_token);
@@ -202,7 +193,7 @@ void VirtualCameraControlImpl::VirtualCameraStreamImpl::Stop() {
 
 void VirtualCameraControlImpl::VirtualCameraStreamImpl::ReleaseFrame(
     uint32_t buffer_index) {
-  owner_.buffers_.BufferRelease(buffer_index);
+  owner_.buffers_.ReleaseBuffer(buffer_index);
 }
 
 VirtualCameraControlImpl::VirtualCameraStreamImpl::VirtualCameraStreamImpl(

@@ -74,22 +74,29 @@ auto DmaManager::GetUvActiveDim() {
     }
 }
 
+void DmaManager::OnFrameWritten(bool is_uv) {
+    // TODO(garratt): this assumes that the uv component is always written second.
+    if (current_format_.HasSecondaryChannel() && !is_uv) {
+        return;
+    }
+    ZX_ASSERT(publish_buffer_callback_ != nullptr);
+    publish_buffer_callback_(write_locked_buffers_.back().ReleaseWriteLockAndGetIndex());
+    write_locked_buffers_.pop_back();
+}
+
 // Called as one of the later steps when a new frame arrives.
 void DmaManager::OnNewFrame() {
-    // 1) Publish last frame
-    if (buffers_.HasBufferInProgress()) {
-        uint32_t buffer_index;
-        buffers_.BufferCompleted(&buffer_index);
-        if (publish_buffer_callback_) {
-            publish_buffer_callback_(buffer_index);
-        }
+    // 1) Get another buffer
+    auto buffer = buffers_.LockBufferForWrite();
+    if (!buffer) {
+        zxlogf(ERROR, "Failed to get buffer\n");
+        // TODO(garratt): what should we do when we run out of buffers?
+        return;
     }
-    // 2) Get another buffer
-    buffers_.GetNewBuffer();
-    // 3) Optional?  Set the DMA settings again... seems unnecessary
-    // 4) Set the DMA address
-    uint32_t memory_address = static_cast<uint32_t>(
-                              reinterpret_cast<uintptr_t>(buffers_.CurrentBufferAddress()));
+    // 2) Optional?  Set the DMA settings again... seems unnecessary
+    // 3) Set the DMA address
+    uint32_t memory_address = static_cast<uint32_t>(buffer->physical_address());
+
     // clang-format off
     GetPrimaryBank0().FromValue(0)
       .set_value(memory_address + current_format_.GetBank0Offset())
@@ -99,7 +106,7 @@ void DmaManager::OnNewFrame() {
           .set_value(memory_address + current_format_.GetBank0OffsetUv())
           .WriteTo(&isp_mmio_local_);
     }
-    // 5) Optional? Enable Write_on
+    // 4) Optional? Enable Write_on
     GetPrimaryMisc().ReadFrom(&isp_mmio_local_)
         .set_frame_write_on(1)
         .WriteTo(&isp_mmio_local_);
@@ -109,10 +116,12 @@ void DmaManager::OnNewFrame() {
             .WriteTo(&isp_mmio_local_);
     }
    // clang-format on
+    // Add buffer to queue of buffers we are writing:
+    write_locked_buffers_.push_back(std::move(*buffer));
 }
 
 void DmaManager::ReleaseFrame(uint32_t buffer_index) {
-    buffers_.BufferRelease(buffer_index);
+    buffers_.ReleaseBuffer(buffer_index);
 }
 
 void DmaManager::SetFormat(DmaFormat format) {

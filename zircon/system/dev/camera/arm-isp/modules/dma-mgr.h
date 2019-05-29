@@ -9,6 +9,7 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-pool.h>
+#include <deque>
 
 namespace camera {
 
@@ -25,12 +26,16 @@ public:
     // component of the ISP.
     void OnNewFrame();
 
+    // Called when a "DMA write done" interrupt is received.
+    void OnFrameWritten(bool is_uv);
+
     // Signal that all consumers are done with this frame.
     void ReleaseFrame(uint32_t buffer_index);
 
 private:
     ddk::MmioView isp_mmio_local_;
     fzl::VmoPool buffers_;
+    std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
     uint32_t fps_;
     DmaFormat current_format_;
     bool downscaled_ = false;

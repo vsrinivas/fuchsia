@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fake-bti/bti.h>
 #include <lib/fzl/vmo-pool.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
 #include <zircon/rights.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
@@ -15,56 +16,91 @@
 // 1) Init with vmos, init with non-initialized vmos
 // 2) memset at address, for size()
 // 3) Get a bunch of buffers, make sure it runs out
-// 4) Call GetNewBuffer twice, assert fail
-// 5) pass bad buffer index to BufferRelease
+// 4) Call LockBufferForWrite twice, assert fail
+// 5) pass bad buffer index to ReleaseBuffer
 // 6) try to release twice
-// 7) Check GetNewBuffer and BufferCompleted return the same
+// 7) Check LockBufferForWrite and BufferCompleted return the same
 
 namespace {
 
 static constexpr size_t kVmoTestSize = 512 << 10;    // 512KB
-static constexpr uint32_t kNumVmos = 20;             // 512KB
+static constexpr uint32_t kNumVmos = 20;
 
 // Create vmos for each handle in an array of vmo handles:
-bool AssignVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
-    BEGIN_TEST;
+void AssignVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
     zx_status_t status;
     for (size_t i = 0; i < num_vmos; ++i) {
         status = zx::vmo::create(vmo_size, 0, &vmos[i]);
-        ASSERT_EQ(status, ZX_OK);
+        EXPECT_EQ(status, ZX_OK);
     }
-    END_TEST;
 }
 
 // A helper class to initialize the VmoPool, and to check the state.
 // Since we cannot access the VmoPool's free buffer list, we check the
 // state of the VmoPool by filling it up and emptying it out.
-class VmoPoolTester {
+class VmoPoolTester : public zxtest::Test {
 public:
     zx::vmo vmo_handles_[kNumVmos];
     fzl::VmoPool pool_;
+    bool is_mapped_ = false;
+    bool is_pinned_ = false;
 
-    bool Init() {
-        BEGIN_TEST;
-        ASSERT_TRUE(AssignVmos(kNumVmos, kVmoTestSize, vmo_handles_));
+    void Init() {
+        AssignVmos(kNumVmos, kVmoTestSize, vmo_handles_);
         ASSERT_EQ(pool_.Init(vmo_handles_, kNumVmos), ZX_OK);
-        END_TEST;
     }
 
-    bool FillBuffers(size_t num_buffers) {
-        BEGIN_TEST;
+    void FillBuffers(size_t num_buffers) {
         for (size_t i = 0; i < kNumVmos && i < num_buffers; ++i) {
-            ASSERT_EQ(pool_.GetNewBuffer(nullptr), ZX_OK);
-            ASSERT_EQ(pool_.BufferCompleted(nullptr), ZX_OK);
+            auto buffer = pool_.LockBufferForWrite();
+            ASSERT_TRUE(buffer.has_value());
+            __UNUSED uint32_t index = buffer->ReleaseWriteLockAndGetIndex();
         }
-        END_TEST;
+    }
+
+    // Create vmos for each handle in an array of vmo handles:
+    void CreateContiguousVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
+        if (bti_handle_ == ZX_HANDLE_INVALID) {
+            ASSERT_EQ(fake_bti_create(&bti_handle_), ZX_OK, "");
+        }
+        for (size_t i = 0; i < num_vmos; ++i) {
+            zx_status_t status = zx::vmo::create_contiguous(*zx::unowned_bti(bti_handle_),
+                                                            vmo_size, 0, &vmos[i]);
+            ASSERT_EQ(status, ZX_OK);
+        }
+    }
+
+    void InitContiguous() {
+        CreateContiguousVmos(kNumVmos, kVmoTestSize, vmo_handles_);
+        ASSERT_EQ(pool_.Init(vmo_handles_, kNumVmos), ZX_OK);
+    }
+
+    void PinVmos(fzl::VmoPool::RequireContig require_contiguous,
+                 fzl::VmoPool::RequireLowMem require_low_memory) {
+        if (bti_handle_ == ZX_HANDLE_INVALID) {
+            ASSERT_EQ(fake_bti_create(&bti_handle_), ZX_OK, "");
+        }
+        EXPECT_EQ(pool_.PinVmos(*zx::unowned_bti(bti_handle_),
+                                require_contiguous, require_low_memory),
+                  ZX_OK);
+        is_pinned_ = true;
+    }
+
+    void MapVmos() {
+        EXPECT_EQ(pool_.MapVmos(), ZX_OK);
+        is_mapped_ = true;
+    }
+
+    ~VmoPoolTester() {
+        if (bti_handle_ != ZX_HANDLE_INVALID) {
+            fake_bti_destroy(bti_handle_);
+        }
     }
 
     // Fills the pool, to make sure all accounting
     // is done correctly.
     // filled_count is the number of buffers that are already reserved.
-    bool CheckFillingPool(size_t filled_count) {
-        BEGIN_TEST;
+    void CheckFillingPool(size_t filled_count) {
         // Test that the pool gives indexes from 0 to kNumVmos-1
         // It is not required to give the indexes in any particular
         // order.
@@ -73,77 +109,70 @@ public:
             gave_index[i] = false;
         }
         for (size_t i = 0; i < kNumVmos - filled_count; ++i) {
-            uint32_t new_buffer_index, buffer_completed_index;
-            ASSERT_EQ(pool_.GetNewBuffer(&new_buffer_index), ZX_OK);
-            ASSERT_LT(new_buffer_index, kNumVmos);
-            ASSERT_EQ(gave_index[new_buffer_index], false);
-            gave_index[new_buffer_index] = true;
-            ASSERT_TRUE(CheckHasBuffer());
-            // Now mark as complete:
-            ASSERT_EQ(pool_.BufferCompleted(&buffer_completed_index), ZX_OK);
-            // Make sure the index passed on BufferComplete is still the same:
-            ASSERT_EQ(new_buffer_index, buffer_completed_index);
-            ASSERT_TRUE(CheckHasNoBuffer());
+            auto buffer = pool_.LockBufferForWrite();
+            ASSERT_TRUE(buffer.has_value());
+            CheckValidBuffer(*buffer);
+            uint32_t buffer_index = buffer->ReleaseWriteLockAndGetIndex();
+            CheckInvalidBuffer(*buffer);
+
+            ASSERT_LT(buffer_index, kNumVmos);
+            EXPECT_EQ(gave_index[buffer_index], false);
+            gave_index[buffer_index] = true;
         }
         // Now check that requesting any further buffers fails:
-        ASSERT_EQ(pool_.GetNewBuffer(nullptr), ZX_ERR_NOT_FOUND);
-        END_TEST;
+        auto buffer = pool_.LockBufferForWrite();
+        EXPECT_FALSE(buffer.has_value());
     }
 
+    // Check the Buffer to make sure it gives the correct info
+    void CheckValidBuffer(fzl::VmoPool::Buffer& buffer) {
+        ASSERT_TRUE(buffer.valid());
+        EXPECT_EQ(buffer.size(), kVmoTestSize);
+        if (is_mapped_) {
+            ASSERT_NO_DEATH(([&buffer] {
+                EXPECT_NE(buffer.virtual_address(), nullptr);
+            }));
+        } else {
+            ASSERT_DEATH(([&buffer] { buffer.virtual_address(); }));
+        }
+        if (is_pinned_) {
+            // Cannot assume that the physical address will be non-zero, since
+            // fake-bti returns physical addresses of 0.
+            ASSERT_NO_DEATH(([&buffer] { buffer.physical_address(); }));
+        } else {
+            ASSERT_DEATH(([&buffer] { buffer.physical_address(); }));
+        }
+    }
+
+    // Check that an invalid buffer acts according to spec.
+    void CheckInvalidBuffer(fzl::VmoPool::Buffer& buffer) {
+        EXPECT_FALSE(buffer.valid());
+        ASSERT_DEATH(([&buffer] { buffer.size(); }));
+        ASSERT_DEATH(([&buffer] { buffer.virtual_address(); }));
+        ASSERT_DEATH(([&buffer] { buffer.physical_address(); }));
+    }
     // Empties the pool, to make sure all accounting
     // is done correctly.
     // unfilled_count is the number of buffers that are already reserved.
-    bool CheckEmptyPool(size_t unfilled_count) {
-        BEGIN_TEST;
+    void CheckEmptyPool(size_t unfilled_count) {
         size_t release_errors = 0;
         for (uint32_t i = 0; i < kNumVmos; ++i) {
-            if (pool_.BufferRelease(i) == ZX_ERR_NOT_FOUND) {
+            if (pool_.ReleaseBuffer(i) == ZX_ERR_NOT_FOUND) {
                 release_errors++;
-                ASSERT_LE(release_errors, unfilled_count);
+                EXPECT_LE(release_errors, unfilled_count);
             }
         }
         // Make sure we had exactly filled_count buffers already released.
-        ASSERT_EQ(unfilled_count, release_errors);
+        EXPECT_EQ(unfilled_count, release_errors);
         // Now, make sure all buffers are now released.
         for (uint32_t i = 0; i < kNumVmos; ++i) {
-            ASSERT_EQ(pool_.BufferRelease(i), ZX_ERR_NOT_FOUND);
+            EXPECT_EQ(pool_.ReleaseBuffer(i), ZX_ERR_NOT_FOUND);
         }
-        END_TEST;
     }
 
-    bool CheckHasBuffer() {
-        BEGIN_TEST;
-        ASSERT_TRUE(pool_.HasBufferInProgress());
-        void* addr = pool_.CurrentBufferAddress();
-        ASSERT_NONNULL(addr);
-        size_t mem_size = pool_.CurrentBufferSize();
-        ASSERT_EQ(mem_size, kVmoTestSize);
-        uint32_t rw_access = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-        ASSERT_TRUE(vmo_probe::probe_verify_region(addr, mem_size, rw_access));
-        END_TEST;
-    }
-
-    bool CheckHasNoBuffer() {
-        BEGIN_TEST;
-        ASSERT_FALSE(pool_.HasBufferInProgress());
-        void* addr = pool_.CurrentBufferAddress();
-        ASSERT_NULL(addr);
-        size_t mem_size = pool_.CurrentBufferSize();
-        ASSERT_EQ(mem_size, 0);
-        END_TEST;
-    }
-
-    bool CheckAccounting(bool buffer_in_progress, size_t filled_count) {
-        BEGIN_TEST;
-        if (buffer_in_progress) {
-            ASSERT_TRUE(CheckHasBuffer());
-            ASSERT_EQ(pool_.BufferCompleted(), ZX_OK);
-            filled_count++;
-        }
-        ASSERT_TRUE(CheckHasNoBuffer());
-        ASSERT_TRUE(CheckFillingPool(filled_count));
-        ASSERT_TRUE(CheckEmptyPool(0));
-        END_TEST;
+    void CheckAccounting(size_t filled_count) {
+        CheckFillingPool(filled_count);
+        CheckEmptyPool(0);
     }
 
     // Shuffles the free list, psuedo-randomly.
@@ -152,158 +181,114 @@ public:
     // number p and a number (n) that does not have that prime number
     // as a factor, the set of (x*p)%n, where x := {0,n-1} will cover the
     // range of {0,n-1} exactly.
-    bool ShufflePool() {
-        BEGIN_TEST;
-        ASSERT_TRUE(FillBuffers(kNumVmos));
+    void ShufflePool() {
+        FillBuffers(kNumVmos);
         static constexpr uint32_t kHashingSeed = 7;
         static_assert(kNumVmos % kHashingSeed != 0, "Bad Hashing seed");
         uint32_t hashing_index = 0;
         for (size_t i = 0; i < kNumVmos; ++i) {
             hashing_index = (hashing_index + kHashingSeed) % kNumVmos;
-            ASSERT_EQ(pool_.BufferRelease(hashing_index), ZX_OK);
+            ASSERT_EQ(pool_.ReleaseBuffer(hashing_index), ZX_OK);
         }
-        END_TEST;
     }
+
+    zx_handle_t bti_handle_ = ZX_HANDLE_INVALID;
 };
 
-// Initialize the pool with a vector.
-// (All the other tests initialize with an array)
-// First tries vector of invalid handles
-// then assigns the handles, and tries again.
-// This test also verifies that you can re-initialize if a previous call to
-// Init fails.
-bool vmo_pool_init_vector_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    fbl::Vector<zx::vmo> vmo_vector;
-    fbl::AllocChecker ac;
-    // Move the tester's vmos into a vector:
-    for (size_t i = 0; i < kNumVmos; ++i) {
-        vmo_vector.push_back(std::move(tester.vmo_handles_[i]), &ac);
-        ASSERT_TRUE(ac.check());
-    }
-    ASSERT_NE(tester.pool_.Init(vmo_vector), ZX_OK);
-    // Now assign the vmos:
-    ASSERT_TRUE(AssignVmos(kNumVmos, kVmoTestSize, vmo_vector.get()));
-    ASSERT_EQ(tester.pool_.Init(vmo_vector), ZX_OK);
-
-    ASSERT_TRUE(tester.CheckAccounting(false, 0));
-    END_TEST;
+TEST_F(VmoPoolTester, FillAndEmptyPool) {
+    Init();
+    CheckAccounting(0);
 }
 
-bool vmo_pool_fill_and_empty_pool_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
-    ASSERT_TRUE(tester.CheckAccounting(false, 0));
-    END_TEST;
+TEST_F(VmoPoolTester, FillAndEmptyPinnedPool) {
+    InitContiguous();
+    CheckAccounting(0);
+    PinVmos(fzl::VmoPool::RequireContig::Yes, fzl::VmoPool::RequireLowMem::Yes);
+    CheckAccounting(0);
 }
 
-bool vmo_pool_double_get_buffer_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
-    ASSERT_EQ(tester.pool_.GetNewBuffer(), ZX_OK);
-    ASSERT_EQ(tester.pool_.GetNewBuffer(), ZX_ERR_BAD_STATE);
+TEST_F(VmoPoolTester, FillAndEmptyMappedPool) {
+    Init();
+    CheckAccounting(0);
+    MapVmos();
+    CheckAccounting(0);
+}
+
+TEST_F(VmoPoolTester, NoncontigPinnedPool) {
+    Init();
+    PinVmos(fzl::VmoPool::RequireContig::No, fzl::VmoPool::RequireLowMem::Yes);
+}
+
+TEST_F(VmoPoolTester, DoubleGetBuffer) {
+    Init();
+    auto buffer = pool_.LockBufferForWrite();
+    EXPECT_TRUE(buffer.has_value());
+    auto buffer2 = pool_.LockBufferForWrite();
+    EXPECT_TRUE(buffer.has_value());
 
     // Now check accounting:
-    ASSERT_TRUE(tester.CheckAccounting(true, 0));
-    END_TEST;
+    CheckAccounting(2);
 }
 
 // Checks that you can cancel a buffer, which will put it back into the pool.
-bool vmo_pool_release_before_complete_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
-    uint32_t current_buffer;
-    ASSERT_EQ(tester.pool_.GetNewBuffer(&current_buffer), ZX_OK);
-    ASSERT_EQ(tester.pool_.BufferRelease(current_buffer), ZX_OK);
-    ASSERT_TRUE(tester.CheckHasNoBuffer());
-    // Running BufferCompleted should now fail, because we did not have an
-    // in-progress buffer.
-    ASSERT_EQ(tester.pool_.BufferCompleted(&current_buffer), ZX_ERR_BAD_STATE);
+TEST_F(VmoPoolTester, ReleaseBeforeComplete) {
+    Init();
+    auto buffer = pool_.LockBufferForWrite();
+    ASSERT_TRUE(buffer.has_value());
+    EXPECT_EQ(buffer->Release(), ZX_OK);
 
     // Now check accounting:
-    ASSERT_TRUE(tester.CheckAccounting(false, 0));
-    END_TEST;
+    CheckAccounting(0);
 }
 
-bool vmo_pool_release_wrong_buffer_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
+TEST_F(VmoPoolTester, ReleaseWrongBuffer) {
+    Init();
 
-    uint32_t current_buffer;
-    ASSERT_EQ(tester.pool_.GetNewBuffer(&current_buffer), ZX_OK);
-    ASSERT_EQ(tester.pool_.BufferCompleted(&current_buffer), ZX_OK);
+    auto buffer = pool_.LockBufferForWrite();
+    ASSERT_TRUE(buffer.has_value());
+    ASSERT_TRUE(buffer->valid());
+    uint32_t current_buffer = buffer->ReleaseWriteLockAndGetIndex();
+    // Make sure that we can't mark complete twice:
+    ASSERT_DEATH(([&buffer]() { buffer->ReleaseWriteLockAndGetIndex(); }));
     // Test an out-of-bounds index:
-    ASSERT_EQ(tester.pool_.BufferRelease(kNumVmos), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(pool_.ReleaseBuffer(kNumVmos), ZX_ERR_INVALID_ARGS);
     // Test all of the buffer indices that are not locked:
     for (uint32_t i = 0; i < kNumVmos; ++i) {
         if (i == current_buffer) {
             continue;
         }
-        ASSERT_EQ(tester.pool_.BufferRelease(i), ZX_ERR_NOT_FOUND);
+        EXPECT_EQ(pool_.ReleaseBuffer(i), ZX_ERR_NOT_FOUND);
     }
     // Now check accounting:
-    ASSERT_TRUE(tester.CheckAccounting(false, 1));
-    END_TEST;
+    CheckAccounting(1);
 }
 
 // Checks that the pool does not need to be amptied or filled in any particular
 // order.
-bool vmo_pool_out_of_order_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
-    ASSERT_TRUE(tester.ShufflePool());
+TEST_F(VmoPoolTester, OutOfOrder) {
+    Init();
+    ShufflePool();
     // Now check accounting:
-    ASSERT_TRUE(tester.CheckAccounting(false, 0));
-    END_TEST;
+    CheckAccounting(0);
 }
 
-bool vmo_pool_reset_test() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
+TEST_F(VmoPoolTester, Reset) {
+    Init();
     size_t test_cases[]{0, 1, kNumVmos / 2, kNumVmos};
     for (size_t buffer_count : test_cases) {
         // With no buffer in progress
-        ASSERT_TRUE(tester.FillBuffers(buffer_count));
-        tester.pool_.Reset();
-        ASSERT_TRUE(tester.CheckAccounting(false, 0));
-        // With buffer in progress:
-        if (buffer_count != kNumVmos) {
-            ASSERT_TRUE(tester.FillBuffers(buffer_count));
-            ASSERT_EQ(tester.pool_.GetNewBuffer(), ZX_OK);
-            tester.pool_.Reset();
-            ASSERT_TRUE(tester.CheckAccounting(false, 0));
-        }
+        FillBuffers(buffer_count);
+        pool_.Reset();
+        CheckAccounting(0);
     }
-    END_TEST;
 }
 
-bool vmo_pool_reinit() {
-    BEGIN_TEST;
-    VmoPoolTester tester;
-    ASSERT_TRUE(tester.Init());
-    ASSERT_TRUE(tester.CheckAccounting(false, 0));
+TEST_F(VmoPoolTester, Reinit) {
+    Init();
+    CheckAccounting(0);
 
-    ASSERT_TRUE(tester.Init());
-    ASSERT_TRUE(tester.CheckAccounting(false, 0));
-    END_TEST;
+    Init();
+    CheckAccounting(0);
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(vmo_pool_tests)
-RUN_NAMED_TEST("vmo_pool_reset", vmo_pool_reset_test)
-RUN_NAMED_TEST("vmo_pool_init_vector", vmo_pool_init_vector_test)
-RUN_NAMED_TEST("vmo_pool_double_get_buffer", vmo_pool_double_get_buffer_test)
-RUN_NAMED_TEST("vmo_pool_release_wrong_buffer", vmo_pool_release_wrong_buffer_test)
-RUN_NAMED_TEST("vmo_pool_release_before_complete", vmo_pool_release_before_complete_test)
-RUN_NAMED_TEST("vmo_pool_fill_and_empty_pool", vmo_pool_fill_and_empty_pool_test)
-RUN_NAMED_TEST("vmo_pool_out_of_order", vmo_pool_out_of_order_test)
-RUN_NAMED_TEST("vmo_pool_reinit", vmo_pool_reinit)
-END_TEST_CASE(vmo_pool_tests)

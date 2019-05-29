@@ -218,6 +218,7 @@ class UsbVideoStream : public UsbVideoStreamBase,
   static fbl::unique_ptr<async::Loop> fidl_dispatch_loop_;
 
   fzl::VmoPool buffers_;
+  fzl::VmoPool::Buffer current_buffer_;
 
   // The vendor and product information for this device.
   UsbDeviceInfo device_info_;

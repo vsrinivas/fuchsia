@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/drivers/usb_video/usb-video-stream.h"
+
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -17,7 +19,6 @@
 #include <usb/usb-request.h>
 
 #include "garnet/drivers/usb_video/camera_control_impl.h"
-#include "garnet/drivers/usb_video/usb-video-stream.h"
 #include "garnet/drivers/usb_video/video-util.h"
 
 namespace video {
@@ -349,7 +350,17 @@ zx_status_t UsbVideoStream::CreateStream(
 
   // TODO(garratt): Check if we should clear previous buffers
   // Now to set the buffers:
-  buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
+  status = buffers_.Init(buffer_collection.vmos.data(),
+                         buffer_collection.buffer_count);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to initialize VmoPool, err: %d\n", status);
+    return status;
+  }
+  buffers_.MapVmos();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to map vmos, err: %d\n", status);
+    return status;
+  }
 
   return ZX_OK;
 }
@@ -397,7 +408,7 @@ zx_status_t UsbVideoStream::StopStreaming() {
 
 zx_status_t UsbVideoStream::FrameRelease(uint64_t buffer_id) {
   fbl::AutoLock lock(&lock_);
-  return buffers_.BufferRelease(buffer_id);
+  return buffers_.ReleaseBuffer(buffer_id);
 }
 
 void UsbVideoStream::QueueRequestLocked() {
@@ -552,7 +563,7 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
   event.metadata.timestamp = cur_frame_state_.capture_time;
 
   // If we were not even writing to a buffer, return buffer full error:
-  if (!buffers_.HasBufferInProgress()) {
+  if (!current_buffer_.valid()) {
     event.frame_status = fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
     camera_control_->OnFrameAvailable(event);
     return ZX_OK;
@@ -564,18 +575,14 @@ zx_status_t UsbVideoStream::FrameNotifyLocked() {
     event.frame_status = fuchsia::camera::FrameStatus::ERROR_FRAME;
   }
 
-  zx_status_t status = buffers_.BufferCompleted(&event.buffer_id);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "could not mark frame as complete: %d\n", status);
-    return ZX_ERR_BAD_STATE;
-  }
+  event.buffer_id = current_buffer_.ReleaseWriteLockAndGetIndex();
 
   // In the case that we didn't write anything, don't send a notification.
   // We'll release the buffer just to make things neat though.
   if (cur_frame_state_.bytes <= 0) {
     // No bytes were received, so don't send a notification.
     // release the buffer back:
-    status = buffers_.BufferRelease(event.buffer_id);
+    zx_status_t status = buffers_.ReleaseBuffer(event.buffer_id);
     if (status != ZX_OK) {
       zxlogf(ERROR, "could not release the buffer: %d\n", status);
       return ZX_ERR_BAD_STATE;
@@ -631,13 +638,13 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
     cur_frame_state_ = {};
     cur_frame_state_.fid = fid;
     num_frames_++;
-    zx_status_t status = buffers_.GetNewBuffer();
-    if (status == ZX_ERR_NOT_FOUND) {
+    auto buffer = buffers_.LockBufferForWrite();
+    if (!buffer) {
       zxlogf(ERROR, "no available frames, dropping frame #%u\n", num_frames_);
-    } else if (status != ZX_OK) {
-      zxlogf(ERROR, "failed to get new frame, err: %d\n", status);
     }
+    current_buffer_ = std::move(*buffer);
   }
+
   cur_frame_state_.eof = header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_EOF;
 
   if (header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_ERR) {
@@ -698,7 +705,7 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
     zxlogf(TRACE, "skipping payload of invalid frame #%u\n", num_frames_);
     return;
   }
-  if (!buffers_.HasBufferInProgress()) {
+  if (!current_buffer_.valid()) {
     // There was no space in the video buffer when the frame's first payload
     // header was parsed.
     return;
@@ -714,10 +721,10 @@ void UsbVideoStream::ProcessPayloadLocked(usb_request_t* req) {
   }
 
   // Append the data to the end of the current frame.
-  uint64_t avail = buffers_.CurrentBufferSize() - cur_frame_state_.bytes;
+  uint64_t avail = current_buffer_.size() - cur_frame_state_.bytes;
   ZX_DEBUG_ASSERT(avail >= data_size);
 
-  uint8_t* dst = reinterpret_cast<uint8_t*>(buffers_.CurrentBufferAddress()) +
+  uint8_t* dst = reinterpret_cast<uint8_t*>(current_buffer_.virtual_address()) +
                  cur_frame_state_.bytes;
   usb_request_copy_from(req, dst, data_size, header_len);
 
