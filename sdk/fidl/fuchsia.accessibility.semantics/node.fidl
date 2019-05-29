@@ -15,7 +15,7 @@ enum Action {
 /// Represents a role of an element on an UI. In progress.
 enum Role {
     // Role used to represent elements which role is not currently supported.
-    unknown = 1;
+    UNKNOWN = 1;
 };
 
 /// An attribute is an essential property to describe an element. Unlike states,
