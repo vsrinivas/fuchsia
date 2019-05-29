@@ -32,10 +32,10 @@ void FormattingTreeVisitor::Segment::RemoveExtraBlankLines(bool respects_trailin
             bool is_blank = true;
             bool is_comment = false;
             for (int j = i + 1; j < static_cast<int>(output_.size()) && output_[j] != '\n'; j++) {
-                if (!IsNonNewlineWS(output_[j])) {
+                if (!utils::IsWhitespaceNoNewline(output_[j])) {
                     is_blank = false;
                 }
-                if (IsStartOfComment(output_, j)) {
+                if (utils::LineFromOffsetIsRegularComment(output_, j)) {
                     is_comment = true;
                 }
             }
@@ -99,11 +99,12 @@ void FormattingTreeVisitor::Segment::InsertRequiredNewlines(bool is_top_level) {
             if (i == static_cast<int>(output_.size()) - 1) {
                 output_.append("\n");
             } else {
-                size_t j = output_.find_first_not_of(kWsCharactersNoNewline, i + 1);
+                size_t j = output_.find_first_not_of(utils::kWhitespaceNoNewlineChars, i + 1);
                 // Unless the next thing is a comment.
-                if (j != std::string::npos && !IsStartOfComment(output_, static_cast<int>(j))) {
+                if (j != std::string::npos &&
+                    !utils::LineFromOffsetIsRegularComment(output_, j)) {
                     // Make the next thing a newline.
-                    if (IsNonNewlineWS(output_[i + 1])) {
+                    if (utils::IsWhitespaceNoNewline(output_[i + 1])) {
                         output_[i + 1] = '\n';
                     } else if (output_[i + 1] != '\n') {
                         output_.insert(i + 1, "\n");
@@ -135,11 +136,11 @@ void FormattingTreeVisitor::Segment::InsertRequiredNewlines(bool is_top_level) {
             // that isn't a comment, and insert a blank line (if it
             // isn't already blank).
             int i = static_cast<int>(lines.size()) - 1;
-            while (i >= 0 && IsStartOfComment(lines[i], 0)) {
+            while (i >= 0 && utils::FirstLineIsRegularComment(lines[i])) {
                 i--;
             }
 
-            if (!IsStartOfBlankLine(lines[i], 0)) {
+            if (!utils::FirstLineIsBlank(lines[i])) {
                 lines.insert(lines.begin() + i + 1, "");
             }
         }
@@ -154,9 +155,9 @@ void FormattingTreeVisitor::Segment::InsertRequiredNewlines(bool is_top_level) {
 int FormattingTreeVisitor::Segment::EraseMultipleSpacesAt(int pos, int leave_this_many, bool incl_newline) {
     std::function<bool(char)> is_ws;
     if (incl_newline) {
-        is_ws = [](char ch) { return isspace(ch); };
+        is_ws = [](char ch) { return utils::IsWhitespace(ch); };
     } else {
-        is_ws = [](char ch) { return IsNonNewlineWS(ch); };
+        is_ws = [](char ch) { return utils::IsWhitespaceNoNewline(ch); };
     }
     if (!is_ws(output_[pos])) {
         return 0;
@@ -215,7 +216,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
 
         // Ensure whitespace around certain characters
         if (RequiresWSBeforeChar(output_[i])) {
-            if (i == 0 || !isspace(output_[i - 1])) {
+            if (i == 0 || !utils::IsWhitespace(output_[i - 1])) {
                 output_.insert(i, " ");
                 i++;
             }
@@ -242,10 +243,12 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
         // We don't want whitespace after these characters... unless there is a
         // comment after the WS.
         int j;
-        for (j = i + 1; j < static_cast<int>(output_.size()) && IsNonNewlineWS(output_[j]); j++)
+        for (j = i + 1; j < static_cast<int>(output_.size()) &&
+                        utils::IsWhitespaceNoNewline(output_[j]);
+             j++)
             ;
         if (NoWSAfterChar(output_[i]) &&
-            !IsStartOfComment(output_, j)) {
+            !utils::LineFromOffsetIsRegularComment(output_, j)) {
             EraseMultipleSpacesAt(i + 1, 0);
         }
 
@@ -253,13 +256,13 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
         // iteration requires ws, so we need to keep it past anything
         // that uses that information in the loop.
         if (RequiresWSAfterChar(output_[i])) {
-            if (i != static_cast<int>(output_.size()) - 1 && !isspace(output_[i + 1])) {
+            if (i != static_cast<int>(output_.size()) - 1 && !utils::IsWhitespace(output_[i + 1])) {
                 output_.insert(i + 1, " ");
                 i++;
             }
             last_char_required_ws = true;
         } else {
-            if (!isspace(output_[i])) {
+            if (!utils::IsWhitespace(output_[i])) {
                 last_char_required_ws = false;
             }
         }
@@ -347,7 +350,7 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
                     MaybeWindPastComment(str, j);
                     if (str[j] == '\n')
                         break;
-                    if (!IsNonNewlineWS(str[j]))
+                    if (!utils::IsWhitespaceNoNewline(str[j]))
                         align_on_oparen = true;
                 }
                 if (align_on_oparen) {
@@ -369,7 +372,7 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
                 // This tracks the distance from the beginning of the method
                 // name, in case we need it (i.e., in case we don't indent to
                 // the '(' character.
-                if (!isspace(ch) && next_nonws_char_is_checkpoint_) {
+                if (!utils::IsWhitespace(ch) && next_nonws_char_is_checkpoint_) {
                     offset_of_first_id_ =
                         interface_method_alignment_size_ =
                             distance_from_last_newline_ + kIndentSpaces - 1;
@@ -392,7 +395,7 @@ void FormattingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
     std::string_view start_view = real_start.previous_end().data();
     const char* start_ptr = start_view.data();
     size_t initial_length = start_view.size();
-    size_t offset = strspn(start_ptr, kWsCharacters);
+    size_t offset = strspn(start_ptr, utils::kWhitespaceChars);
     std::string_view processed_file_start(
         start_ptr + offset, initial_length - offset);
     element->start_.set_previous_end(
@@ -403,8 +406,8 @@ void FormattingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
     size_t final_size = formatted_output_.size();
     size_t last_char_index = final_size - 1;
     if (formatted_output_.at(last_char_index) != '\n' ||
-        strchr(kWsCharacters, formatted_output_.at(last_char_index - 1)) != nullptr) {
-        while (strchr(kWsCharacters, formatted_output_.at(last_char_index)) != nullptr) {
+        strchr(utils::kWhitespaceChars, formatted_output_.at(last_char_index - 1)) != nullptr) {
+        while (strchr(utils::kWhitespaceChars, formatted_output_.at(last_char_index)) != nullptr) {
             last_char_index--;
         }
         formatted_output_ = formatted_output_.substr(0, last_char_index + 1);

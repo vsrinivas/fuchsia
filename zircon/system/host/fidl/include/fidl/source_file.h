@@ -17,6 +17,14 @@ public:
     SourceFile(std::string filename, std::string data);
     virtual ~SourceFile();
 
+    // Enables move construction and assignment
+    SourceFile(SourceFile&& rhs) = default;
+    SourceFile& operator=(SourceFile&&) = default;
+
+    // no copy or assign (move-only or pass by reference)
+    SourceFile(const SourceFile&) = delete;
+    SourceFile& operator=(const SourceFile&) = delete;
+
     std::string_view filename() const { return filename_; }
     std::string_view data() const { return data_; }
 

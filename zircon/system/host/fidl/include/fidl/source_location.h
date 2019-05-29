@@ -21,7 +21,8 @@ public:
     SourceLocation(std::string_view data, const SourceFile& source_file)
         : data_(data), source_file_(&source_file) {}
 
-    SourceLocation() : data_(std::string_view()), source_file_(nullptr) {}
+    SourceLocation()
+        : data_(std::string_view()), source_file_(nullptr) {}
 
     bool valid() const { return source_file_ != nullptr; }
 
@@ -30,7 +31,8 @@ public:
 
     std::string_view SourceLine(SourceFile::Position* position_out) const;
 
-    std::string position() const;
+    SourceFile::Position position() const;
+    std::string position_str() const;
 
 private:
     std::string_view data_;

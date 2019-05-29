@@ -55,6 +55,11 @@ bool Lint(const fidl::SourceFile& source_file,
     }
     fidl::Findings findings;
     fidl::linter::Linter linter;
+    // These are very noisy and make it difficult to see other violations.
+    // Also, how bad is it to repeat the library name? Maybe this should be allowed.
+    linter.IgnoreCheckId("name-repeats-library-name");
+    linter.IgnoreCheckId("name-repeats-enclosing-type-name");
+    linter.IgnoreCheckId("no-trailing-comment");
     if (linter.Lint(ast, &findings)) {
         return true;
     }
@@ -97,10 +102,9 @@ int main(int argc, char* argv[]) {
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
         if (!Lint(*source_file, &error_reporter, output)) {
-            // In the formattter, we do not print the report if there are only
-            // warnings.
-            error_reporter.PrintReports();
-            return 1;
+            // Some findings were produced but for now we will continue,
+            // and print the results at the end.
         }
     }
+    error_reporter.PrintReports();
 }

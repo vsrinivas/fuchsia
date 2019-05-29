@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "tree_visitor.h"
+#include "utils.h"
 
 // A TreeVisitor (see tree_visitor.h) that pretty-prints FIDL code.
 
@@ -189,10 +190,6 @@ private:
 
     static constexpr int kIndentSpaces = 4;
 
-    static constexpr char kWsCharacters[] = " \t\n\v\f\r";
-
-    static constexpr char kWsCharactersNoNewline[] = " \t\v\f\r";
-
     std::string formatted_output_;
 
     // Indentations can be caused by nesting in the AST (e.g., if you've started
@@ -242,39 +239,10 @@ private:
     // When we complete a node and know the next thing needs to be whitespace
     bool ws_required_next_ = false;
 
-    // Some helper methods.
-    static bool IsNonNewlineWS(char ch) {
-        return strchr(kWsCharactersNoNewline, ch) != nullptr;
-    }
-
-    static bool IsStartOfBlankLine(const std::string& str, int offset) {
-        for (int i = offset; i < static_cast<int>(str.size()) && str[i] != '\n'; i++) {
-            if (!IsNonNewlineWS(str[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    static bool IsStartOfComment(std::string str, int i) {
-        if ((i < static_cast<int>(str.size()) - 1) && str[i] == '/' && str[i + 1] == '/') {
-            // doc comments, which start with three slashes, should not
-            // be treated as comments since they get internally converted
-            // to attributes
-            if (str.size() == 2) {
-                return true;
-            } else {
-                return str[i + 2] != '/';
-            }
-        } else {
-            return false;
-        }
-    }
-
     // If the string str at offset pos is the beginning of a comment, pos is
     // modified to be the newline character at EOL.
     static void MaybeWindPastComment(std::string str, int& pos) {
-        if (IsStartOfComment(str, pos)) {
+        if (utils::LineFromOffsetIsRegularComment(str, pos)) {
             while (pos < static_cast<int>(str.size()) && str[pos] != '\n') {
                 pos++;
             }
@@ -291,7 +259,7 @@ private:
 
         void RemoveTrailingWS() {
             std::string re("[");
-            re += kWsCharactersNoNewline;
+            re += utils::kWhitespaceNoNewlineChars;
             re += "]+\n";
             output_ = std::regex_replace(output_, std::regex(re), "\n");
         }
@@ -300,7 +268,7 @@ private:
         // add back indentation later.
         void RemoveLeadingWS() {
             std::string re("\n[");
-            re += kWsCharactersNoNewline;
+            re += utils::kWhitespaceNoNewlineChars;
             re += "]+";
             output_ = std::regex_replace(output_, std::regex(re), "\n");
         }

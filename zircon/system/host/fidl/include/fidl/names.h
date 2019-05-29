@@ -20,6 +20,7 @@ std::string StringJoin(const std::vector<std::string_view>& strings, std::string
 std::string NameIdentifier(SourceLocation name);
 std::string NameName(const flat::Name& name, std::string_view library_separator, std::string_view separator);
 
+std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& components);
 std::string NameLibrary(const std::vector<std::string_view>& library_name);
 std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name);
 

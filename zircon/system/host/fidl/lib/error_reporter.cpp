@@ -56,7 +56,7 @@ std::string Format(std::string qualifier, const SourceLocation* maybe_location,
 
     // Many editors and IDEs recognize errors in the form of
     // filename:linenumber:column: error: descriptive-test-here\n
-    std::string error = location.position();
+    std::string error = location.position_str();
     error.append(": ");
     error.append(qualifier);
     error.append(": ");

@@ -67,26 +67,70 @@ bool id_to_words() {
     END_TEST;
 }
 
-bool case_test(std::string case_name,
+bool case_test(bool valid_conversion,
+               std::string case_name,
                fit::function<bool(std::string)> is_case,
                fit::function<std::string(std::string)> to_case,
                std::string original, std::string expected) {
-    ASSERT_FALSE(is_case(original),
+    EXPECT_FALSE(is_case(original),
                  (original + " is " + case_name).c_str());
     std::string converted = to_case(original);
-    ASSERT_STRING_EQ(converted, expected,
-                     (converted + " != " + expected).c_str());
-    ASSERT_TRUE(is_case(converted),
-                (converted + " is not " + case_name).c_str());
+    EXPECT_STRING_EQ(converted, expected,
+                     ("from '" + original +
+                      "' to '" + converted +
+                      "' != '" + expected + "'")
+                         .c_str());
+    if (valid_conversion) {
+        EXPECT_TRUE(is_case(expected),
+                    ("from '" + original +
+                     "' expected '" + expected +
+                     "' is not " + case_name)
+                        .c_str());
+        EXPECT_TRUE(is_case(converted),
+                    ("from '" + original +
+                     "' to '" + converted +
+                     "' is not " + case_name)
+                        .c_str());
+    } else {
+        EXPECT_FALSE(is_case(converted),
+                     ("from '" + original +
+                      "' to '" + converted +
+                      "' was not expected to match " + case_name + ", but did!")
+                         .c_str());
+    }
     return true;
 }
 
-#define ASSERT_CASE(CASE, FROM, TO) \
-    ASSERT_TRUE(case_test(#CASE, is_##CASE##_case, to_##CASE##_case, FROM, TO))
+#define ASSERT_CASE(CASE, FROM, TO)                         \
+    EXPECT_TRUE(case_test(/*valid_conversion=*/true, #CASE, \
+                          is_##CASE##_case, to_##CASE##_case, FROM, TO))
+
+#define ASSERT_BAD_CASE(CASE, FROM, TO)                      \
+    EXPECT_TRUE(case_test(/*valid_conversion=*/false, #CASE, \
+                          is_##CASE##_case, to_##CASE##_case, FROM, TO))
 
 bool upper_camel_case() {
     BEGIN_TEST;
 
+    ASSERT_CASE(upper_camel, "x", "X");
+    ASSERT_CASE(upper_camel, "xy", "Xy");
+    ASSERT_BAD_CASE(upper_camel, "x_y", "XY");
+    ASSERT_CASE(upper_camel, "xyz_123", "Xyz123");
+    ASSERT_CASE(upper_camel, "xy_z_123", "XyZ123");
+    ASSERT_CASE(upper_camel, "xy_z123", "XyZ123");
+    ASSERT_CASE(upper_camel, "days_in_a_week", "DaysInAWeek");
+    ASSERT_CASE(upper_camel, "android8_0_0", "Android8_0_0");
+    ASSERT_CASE(upper_camel, "android_8_0_0", "Android8_0_0");
+    ASSERT_CASE(upper_camel, "x_marks_the_spot", "XMarksTheSpot");
+    ASSERT_CASE(upper_camel, "RealID", "RealId");
+    ASSERT_CASE(upper_camel, "real_id", "RealId");
+    ASSERT_BAD_CASE(upper_camel, "real_i_d", "RealID");
+    ASSERT_CASE(upper_camel, "real3d", "Real3d");
+    ASSERT_CASE(upper_camel, "real3_d", "Real3D");
+    ASSERT_CASE(upper_camel, "real_3d", "Real3d");
+    ASSERT_CASE(upper_camel, "real_3_d", "Real3D");
+    ASSERT_CASE(upper_camel, "sample_x_union", "SampleXUnion");
+    ASSERT_CASE(upper_camel, "sample_xunion", "SampleXunion");
     ASSERT_CASE(upper_camel, "URLLoader", "UrlLoader");
     ASSERT_CASE(upper_camel, "is_21Jump_street", "Is21JumpStreet");
     ASSERT_CASE(upper_camel, "URLloader", "UrLloader");
@@ -103,6 +147,25 @@ bool upper_camel_case() {
 bool lower_camel_case() {
     BEGIN_TEST;
 
+    ASSERT_CASE(lower_camel, "X", "x");
+    ASSERT_CASE(lower_camel, "XY", "xy");
+    ASSERT_CASE(lower_camel, "X_Y", "xY");
+    ASSERT_CASE(lower_camel, "XYZ_123", "xyz123");
+    ASSERT_CASE(lower_camel, "XY_Z_123", "xyZ123");
+    ASSERT_CASE(lower_camel, "XY_Z123", "xyZ123");
+    ASSERT_CASE(lower_camel, "DAYS_IN_A_WEEK", "daysInAWeek");
+    ASSERT_CASE(lower_camel, "ANDROID8_0_0", "android8_0_0");
+    ASSERT_CASE(lower_camel, "ANDROID_8_0_0", "android8_0_0");
+    ASSERT_CASE(lower_camel, "X_MARKS_THE_SPOT", "xMarksTheSpot");
+    ASSERT_CASE(lower_camel, "realID", "realId");
+    ASSERT_CASE(lower_camel, "REAL_ID", "realId");
+    ASSERT_BAD_CASE(lower_camel, "REAL_I_D", "realID");
+    ASSERT_CASE(lower_camel, "REAL3D", "real3D");
+    ASSERT_CASE(lower_camel, "REAL3_D", "real3D");
+    ASSERT_CASE(lower_camel, "REAL_3D", "real3D");
+    ASSERT_CASE(lower_camel, "REAL_3_D", "real3D");
+    ASSERT_CASE(lower_camel, "SAMPLE_X_UNION", "sampleXUnion");
+    ASSERT_CASE(lower_camel, "SAMPLE_XUNION", "sampleXunion");
     ASSERT_CASE(lower_camel, "URLLoader", "urlLoader");
     ASSERT_CASE(lower_camel, "is_21Jump_street", "is21JumpStreet");
     ASSERT_CASE(lower_camel, "URLloader", "urLloader");
@@ -119,6 +182,24 @@ bool lower_camel_case() {
 bool upper_snake_case() {
     BEGIN_TEST;
 
+    ASSERT_CASE(upper_snake, "x", "X");
+    ASSERT_CASE(upper_snake, "xy", "XY");
+    ASSERT_CASE(upper_snake, "xY", "X_Y");
+    ASSERT_CASE(upper_snake, "xyz123", "XYZ123");
+    ASSERT_CASE(upper_snake, "xyz_123", "XYZ_123");
+    ASSERT_CASE(upper_snake, "xyZ123", "XY_Z123");
+    ASSERT_CASE(upper_snake, "daysInAWeek", "DAYS_IN_A_WEEK");
+    ASSERT_CASE(upper_snake, "android8_0_0", "ANDROID8_0_0");
+    ASSERT_CASE(upper_snake, "android_8_0_0", "ANDROID_8_0_0");
+    ASSERT_CASE(upper_snake, "xMarksTheSpot", "X_MARKS_THE_SPOT");
+    ASSERT_CASE(upper_snake, "realId", "REAL_ID");
+    ASSERT_CASE(upper_snake, "realID", "REAL_ID");
+    ASSERT_CASE(upper_snake, "real3d", "REAL3D");
+    ASSERT_CASE(upper_snake, "real3D", "REAL3_D");
+    ASSERT_CASE(upper_snake, "real_3d", "REAL_3D");
+    ASSERT_CASE(upper_snake, "real_3D", "REAL_3_D");
+    ASSERT_CASE(upper_snake, "sampleXUnion", "SAMPLE_X_UNION");
+    ASSERT_CASE(upper_snake, "sampleXunion", "SAMPLE_XUNION");
     ASSERT_CASE(upper_snake, "URLLoader", "URL_LOADER");
     ASSERT_CASE(upper_snake, "is_21Jump_street", "IS_21_JUMP_STREET");
     ASSERT_CASE(upper_snake, "URLloader", "UR_LLOADER");
@@ -135,6 +216,24 @@ bool upper_snake_case() {
 bool lower_snake_case() {
     BEGIN_TEST;
 
+    ASSERT_CASE(lower_snake, "X", "x");
+    ASSERT_CASE(lower_snake, "Xy", "xy");
+    ASSERT_CASE(lower_snake, "XY", "xy");
+    ASSERT_CASE(lower_snake, "Xyz123", "xyz123");
+    ASSERT_CASE(lower_snake, "Xyz_123", "xyz_123");
+    ASSERT_CASE(lower_snake, "XyZ123", "xy_z123");
+    ASSERT_CASE(lower_snake, "DaysInAWeek", "days_in_a_week");
+    ASSERT_CASE(lower_snake, "Android8_0_0", "android8_0_0");
+    ASSERT_CASE(lower_snake, "Android_8_0_0", "android_8_0_0");
+    ASSERT_CASE(lower_snake, "XMarksTheSpot", "x_marks_the_spot");
+    ASSERT_CASE(lower_snake, "RealId", "real_id");
+    ASSERT_CASE(lower_snake, "RealID", "real_id");
+    ASSERT_CASE(lower_snake, "Real3d", "real3d");
+    ASSERT_CASE(lower_snake, "Real3D", "real3_d");
+    ASSERT_CASE(lower_snake, "Real_3d", "real_3d");
+    ASSERT_CASE(lower_snake, "Real_3D", "real_3_d");
+    ASSERT_CASE(lower_snake, "SampleXUnion", "sample_x_union");
+    ASSERT_CASE(lower_snake, "SampleXunion", "sample_xunion");
     ASSERT_CASE(lower_snake, "URLLoader", "url_loader");
     ASSERT_CASE(lower_snake, "is_21Jump_street", "is_21_jump_street");
     ASSERT_CASE(lower_snake, "URLloader", "ur_lloader");
@@ -181,6 +280,209 @@ bool lower_no_separator_case() {
     END_TEST;
 }
 
+bool whitespace_and_comments() {
+    BEGIN_TEST;
+
+    ASSERT_TRUE(IsWhitespace(' '));
+    ASSERT_TRUE(IsWhitespace('\t'));
+    ASSERT_TRUE(IsWhitespace('\v'));
+    ASSERT_TRUE(IsWhitespace('\f'));
+    ASSERT_TRUE(IsWhitespace('\r'));
+    ASSERT_TRUE(IsWhitespace('\n'));
+    ASSERT_FALSE(IsWhitespace('\0'));
+    ASSERT_FALSE(IsWhitespace('_'));
+    ASSERT_FALSE(IsWhitespace('-'));
+    ASSERT_FALSE(IsWhitespace('A'));
+    ASSERT_FALSE(IsWhitespace('Z'));
+    ASSERT_FALSE(IsWhitespace('a'));
+    ASSERT_FALSE(IsWhitespace('z'));
+    ASSERT_FALSE(IsWhitespace('0'));
+    ASSERT_FALSE(IsWhitespace('9'));
+    ASSERT_FALSE(IsWhitespace('!'));
+
+    ASSERT_TRUE(IsWhitespaceNoNewline(' '));
+    ASSERT_TRUE(IsWhitespaceNoNewline('\t'));
+    ASSERT_TRUE(IsWhitespaceNoNewline('\v'));
+    ASSERT_TRUE(IsWhitespaceNoNewline('\f'));
+    ASSERT_TRUE(IsWhitespaceNoNewline('\r'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('\n'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('\0'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('_'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('-'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('A'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('Z'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('a'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('z'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('0'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('9'));
+    ASSERT_FALSE(IsWhitespaceNoNewline('!'));
+
+    ASSERT_TRUE(IsBlank(""));
+    ASSERT_TRUE(IsBlank(" "));
+    ASSERT_TRUE(IsBlank("\t"));
+    ASSERT_TRUE(IsBlank("\n"));
+    ASSERT_TRUE(IsBlank("\n\n\n"));
+    ASSERT_TRUE(IsBlank("  \n  \n  \n"));
+    ASSERT_TRUE(IsBlank(" \t\v\f\r\n"));
+    ASSERT_TRUE(IsBlank("     "));
+    ASSERT_TRUE(IsBlank(" \t \t "));
+    ASSERT_TRUE(IsBlank("\t \t \t"));
+    ASSERT_FALSE(IsBlank("multi\nline"));
+    ASSERT_FALSE(IsBlank("\nmore\nmulti\nline\n"));
+    ASSERT_FALSE(IsBlank("\t\t."));
+    ASSERT_FALSE(IsBlank("    ."));
+    ASSERT_FALSE(IsBlank(".    "));
+    ASSERT_FALSE(IsBlank("// Comment "));
+    ASSERT_FALSE(IsBlank("/// Doc Comment "));
+
+    ASSERT_TRUE(LineFromOffsetIsBlank("four", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four  \t \t  ", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \t\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \n\t", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \nmore lines", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \nmore lines\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsBlank("four    \t\n\t", 4));
+    ASSERT_FALSE(LineFromOffsetIsBlank("four.", 4));
+    ASSERT_FALSE(LineFromOffsetIsBlank("four.\n", 4));
+    ASSERT_FALSE(LineFromOffsetIsBlank("fournot blank    \n", 4));
+    ASSERT_FALSE(LineFromOffsetIsBlank("four    more chars", 4));
+    ASSERT_FALSE(LineFromOffsetIsBlank("four    more chars\n", 4));
+
+    ASSERT_TRUE(FirstLineIsBlank(""));
+    ASSERT_TRUE(FirstLineIsBlank(""));
+    ASSERT_TRUE(FirstLineIsBlank("\n"));
+    ASSERT_TRUE(FirstLineIsBlank("    "));
+    ASSERT_TRUE(FirstLineIsBlank("    \n"));
+    ASSERT_TRUE(FirstLineIsBlank("  \t \t  "));
+    ASSERT_TRUE(FirstLineIsBlank("    \n"));
+    ASSERT_TRUE(FirstLineIsBlank("    \t\n"));
+    ASSERT_TRUE(FirstLineIsBlank("    \nmore lines"));
+    ASSERT_TRUE(FirstLineIsBlank("    \nmore lines\n"));
+    ASSERT_TRUE(FirstLineIsBlank("    \n\t"));
+    ASSERT_TRUE(FirstLineIsBlank("    \t\n\t"));
+    ASSERT_FALSE(FirstLineIsBlank("."));
+    ASSERT_FALSE(FirstLineIsBlank(".\n"));
+    ASSERT_FALSE(FirstLineIsBlank("not blank    \n"));
+    ASSERT_FALSE(FirstLineIsBlank("    more chars"));
+    ASSERT_FALSE(FirstLineIsBlank("    more chars\n"));
+
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//  \t\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//not blank    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//  not blank", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//not blank", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//not blank    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//  not blank\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//not blank\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//    \n\t", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//    \t\n\t", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//    \nmore lines", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four//    \nmore lines\n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four.//", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four    .//\n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("fourmore//    ", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four    more\n//    \n", 4));
+    //// Greater than 3 slashes are still interpreted as a regular comment
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////  \t\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////not blank    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////  not blank", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////not blank", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////not blank    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////  not blank\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four////not blank\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////  \t\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////not blank    ", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////  not blank", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////not blank", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////not blank    \n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////  not blank\n", 4));
+    ASSERT_TRUE(LineFromOffsetIsRegularComment("four/////not blank\n", 4));
+    /// FIDL Doc Comments start with 3 slashes, like this one
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///\n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///    ", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///    \n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///  \t\n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///not blank    ", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///  not blank", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///not blank", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///not blank    \n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///  not blank\n", 4));
+    ASSERT_FALSE(LineFromOffsetIsRegularComment("four///not blank\n", 4));
+
+    ASSERT_TRUE(FirstLineIsRegularComment("//"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//    "));
+    ASSERT_TRUE(FirstLineIsRegularComment("//    \n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//  \t\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//not blank    "));
+    ASSERT_TRUE(FirstLineIsRegularComment("//  not blank"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//not blank"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//not blank    \n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//  not blank\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//not blank\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//    \n\t"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//    \t\n\t"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//    \nmore lines"));
+    ASSERT_TRUE(FirstLineIsRegularComment("//    \nmore lines\n"));
+    ASSERT_FALSE(FirstLineIsRegularComment(".//"));
+    ASSERT_FALSE(FirstLineIsRegularComment("    .//\n"));
+    ASSERT_FALSE(FirstLineIsRegularComment("more//    "));
+    ASSERT_FALSE(FirstLineIsRegularComment("    more\n//    \n"));
+    //// Greater than 3 slashes are still interpreted as a regular comment
+    ASSERT_TRUE(FirstLineIsRegularComment("////"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////    "));
+    ASSERT_TRUE(FirstLineIsRegularComment("////    \n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////  \t\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////not blank    "));
+    ASSERT_TRUE(FirstLineIsRegularComment("////  not blank"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////not blank"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////not blank    \n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////  not blank\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("////not blank\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////    "));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////    \n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////  \t\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////not blank    "));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////  not blank"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////not blank"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////not blank    \n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////  not blank\n"));
+    ASSERT_TRUE(FirstLineIsRegularComment("/////not blank\n"));
+    /// FIDL Doc Comments start with 3 slashes, like this one
+    ASSERT_FALSE(FirstLineIsRegularComment("///"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///\n"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///    "));
+    ASSERT_FALSE(FirstLineIsRegularComment("///    \n"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///  \t\n"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///not blank    "));
+    ASSERT_FALSE(FirstLineIsRegularComment("///  not blank"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///not blank"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///not blank    \n"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///  not blank\n"));
+    ASSERT_FALSE(FirstLineIsRegularComment("///not blank\n"));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(utils_tests)
 
 RUN_TEST(id_to_words)
@@ -190,6 +492,7 @@ RUN_TEST(upper_snake_case)
 RUN_TEST(lower_snake_case)
 RUN_TEST(konstant_case)
 RUN_TEST(lower_no_separator_case)
+RUN_TEST(whitespace_and_comments)
 
 END_TEST_CASE(utils_tests)
 

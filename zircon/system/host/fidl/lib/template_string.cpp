@@ -15,15 +15,19 @@ std::string TemplateString::Substitute(Substitutions substitutions,
     std::ostringstream os;
     std::smatch match;
 
-    static const std::regex kRegexReplaceable(
-        R"((.?)(?:(?:\$\{([A-Z_][A-Z0..9_]*)\})|(?:\$([A-Z_][A-Z0..9_]*))))");
+    // function-local static pointer to non-trivially-destructible type
+    // is allowed by styleguide
+    static const auto kRegexReplaceable = new std::regex(
+        R"((.?)((?:\$\{([A-Z_][A-Z0-9_]*)\})|(?:\$([A-Z_][A-Z0-9_]*))))");
+
     int match_index = 1;
     static const int kPrecedingChar = match_index++;
+    static const int kVarToken = match_index++;
     static const int kBracedVar = match_index++;
     static const int kUnbracedVar = match_index++;
 
     auto str = str_;
-    while (std::regex_search(str, match, kRegexReplaceable)) {
+    while (std::regex_search(str, match, *kRegexReplaceable)) {
         os << match.prefix();
         if (match[kPrecedingChar] == "$") {
             os << std::string(match[0]).substr(1); // escaped "$"
@@ -37,7 +41,7 @@ std::string TemplateString::Substitute(Substitutions substitutions,
             if (substitutions.find(replaceable) != substitutions.end()) {
                 os << substitutions[replaceable];
             } else if (!remove_unmatched) {
-                os << match[0];
+                os << match[kVarToken];
             }
         }
         str = match.suffix().str();

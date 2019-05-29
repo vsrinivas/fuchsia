@@ -17,6 +17,58 @@
 namespace fidl {
 namespace utils {
 
+static constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
+static constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";
+
+static bool IsWhitespace(char ch) {
+    return ch != '\0' && strchr(kWhitespaceChars, ch) != nullptr;
+}
+
+static bool IsWhitespaceNoNewline(char ch) {
+    return ch != '\0' && strchr(kWhitespaceNoNewlineChars, ch) != nullptr;
+}
+
+// Returns true if the view has anything other than whitespace
+static bool IsBlank(std::string_view view) {
+    return view.find_first_not_of(kWhitespaceChars) == std::string::npos;
+}
+
+static bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
+    for (size_t i = offset; i < str.size() && str[i] != '\n'; i++) {
+        if (!IsWhitespaceNoNewline(str[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool FirstLineIsBlank(const std::string& str) {
+    return LineFromOffsetIsBlank(str, 0);
+}
+
+static bool LineFromOffsetIsRegularComment(std::string_view view, size_t offset) {
+    size_t i = offset;
+    if ((i + 1 < view.size()) && view[i] == '/' && view[i + 1] == '/') {
+        // Doc comments, which start with three slashes, should not
+        // be treated as comments since they get internally converted
+        // to attributes. But comments that start with more than three
+        // slashes are not converted to doc comment attributes.
+        if (view.size() == 2) {
+            return true;
+        } else {
+            return (i + 2 == view.size()) ||
+                   (view[i + 2] != '/') ||
+                   ((i + 3 < view.size()) && (view[i + 3] == '/'));
+        }
+    } else {
+        return false;
+    }
+}
+
+static bool FirstLineIsRegularComment(std::string_view view) {
+    return LineFromOffsetIsRegularComment(view, 0);
+}
+
 enum class ParseNumericResult {
     kSuccess,
     kOutOfBounds,

@@ -436,6 +436,17 @@ std::string NameName(const flat::Name& name, std::string_view library_separator,
     return compiled_name;
 }
 
+std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& components) {
+    std::string id;
+    for (const auto& component : components) {
+        if (!id.empty()) {
+            id.append(".");
+        }
+        id.append(component->location().data());
+    }
+    return id;
+}
+
 std::string NameLibrary(const std::vector<std::string_view>& library_name) {
     return StringJoin(library_name, ".");
 }

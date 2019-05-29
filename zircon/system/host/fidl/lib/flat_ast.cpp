@@ -459,11 +459,11 @@ bool Typespace::Create(const flat::Name& name,
 }
 
 bool Typespace::CreateNotOwned(const flat::Name& name,
-                       const Type* arg_type,
-                       const std::optional<types::HandleSubtype>& handle_subtype,
-                       const Size* size,
-                       types::Nullability nullability,
-                       std::unique_ptr<Type>* out_type) {
+                               const Type* arg_type,
+                               const std::optional<types::HandleSubtype>& handle_subtype,
+                               const Size* size,
+                               types::Nullability nullability,
+                               std::unique_ptr<Type>* out_type) {
     // TODO(pascallouis): lookup whether we've already created the type, and
     // return it rather than create a new one. Lookup must be by name,
     // arg_type, size, and nullability.
@@ -478,7 +478,6 @@ bool Typespace::CreateNotOwned(const flat::Name& name,
     }
     return type_template->Create(maybe_location, arg_type, handle_subtype, size,
                                  nullability, out_type);
-
 }
 
 void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
@@ -658,9 +657,7 @@ public:
             return CannotHaveSize(maybe_location);
 
         *out_type = std::make_unique<HandleType>(
-            handle_subtype.has_value() ?
-                handle_subtype.value() :
-                types::HandleSubtype::kHandle,
+            handle_subtype.has_value() ? handle_subtype.value() : types::HandleSubtype::kHandle,
             nullability);
         return true;
     }
@@ -782,8 +779,8 @@ public:
             }
             if (!partial_type_ctor_->maybe_arg_type_ctor->type) {
                 if (!library_->CompileTypeConstructor(
-                    partial_type_ctor_->maybe_arg_type_ctor.get(),
-                    nullptr /* out_typeshape */))
+                        partial_type_ctor_->maybe_arg_type_ctor.get(),
+                        nullptr /* out_typeshape */))
                     return false;
             }
             arg_type = partial_type_ctor_->maybe_arg_type_ctor->type;
@@ -1093,12 +1090,11 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter,
 
 static std::string Trim(std::string s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-                return !std::isspace(ch);
+                return !utils::IsWhitespace(static_cast<char>(ch));
             }));
     s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-                return !std::isspace(ch);
-            })
-                .base(),
+                return !utils::IsWhitespace(static_cast<char>(ch));
+            }).base(),
             s.end());
     return s;
 }
@@ -1118,18 +1114,21 @@ bool TransportConstraint(ErrorReporter* error_reporter,
     transports.emplace_back(Trim(value.substr(prev_pos)));
 
     // Validate that they're ok
-    static const std::set<std::string> kValidTransports = {
+
+    // function-local static pointer to non-trivially-destructible type
+    // is allowed by styleguide
+    static const auto kValidTransports = new std::set<std::string>{
         "Channel",
         "SocketControl",
         "OvernetEmbedded",
         "OvernetInternal",
     };
     for (auto transport : transports) {
-        if (kValidTransports.count(transport) == 0) {
+        if (kValidTransports->count(transport) == 0) {
             std::ostringstream out;
             out << "invalid transport type: got " << transport << " expected one of ";
             bool first = true;
-            for (const auto& t : kValidTransports) {
+            for (const auto& t : *kValidTransports) {
                 if (!first) {
                     out << ", ";
                 }
@@ -1477,7 +1476,7 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
 
 namespace {
 
-template<typename T>
+template <typename T>
 void StoreDecl(Decl* decl_ptr, std::vector<std::unique_ptr<T>>* declarations) {
     std::unique_ptr<T> t_decl;
     t_decl.reset(reinterpret_cast<T*>(decl_ptr));
@@ -1863,7 +1862,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
     }
 
     if (!RegisterDecl(std::make_unique<Struct>(
-        nullptr /* attributes */, std::move(name), std::move(members), anonymous)))
+            nullptr /* attributes */, std::move(name), std::move(members), anonymous)))
         return false;
     *out_struct_decl = struct_declarations_.back().get();
     return true;
@@ -3025,7 +3024,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             if (!name_result.ok())
                 return Fail(method.name,
                             "Multiple methods with the same name in an interface; last occurrence was at " +
-                                name_result.previous_occurrence().position());
+                                name_result.previous_occurrence().position_str());
             auto ordinal_result = method_scope.ordinals.Insert(method.ordinal->value, method.name);
             if (method.ordinal->value == 0)
                 return Fail(method.ordinal->location(), "Ordinal value 0 disallowed.");
@@ -3035,7 +3034,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 replacement_method.push_back('_');
                 return Fail(method.ordinal->location(),
                             "Multiple methods with the same ordinal in an interface; previous was at " +
-                                ordinal_result.previous_occurrence().position() + ". If these " +
+                                ordinal_result.previous_occurrence().position_str() + ". If these " +
                                 "were automatically generated, consider using attribute " +
                                 "[Selector=\"" + replacement_method + "\"] to change the " +
                                 "name used to calculate the ordinal.");
@@ -3085,7 +3084,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         if (!name_result.ok())
             return Fail(member.name,
                         "Multiple struct fields with the same name; previous was at " +
-                            name_result.previous_occurrence().position());
+                            name_result.previous_occurrence().position_str());
         if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
             return false;
         // TODO(FIDL-486): When a default value is present, we must resolve the
@@ -3115,13 +3114,13 @@ bool Library::CompileTable(Table* table_declaration) {
         if (!ordinal_result.ok())
             return Fail(member.ordinal->location(),
                         "Multiple table fields with the same ordinal; previous was at " +
-                            ordinal_result.previous_occurrence().position());
+                            ordinal_result.previous_occurrence().position_str());
         if (member.maybe_used) {
             auto name_result = name_scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
             if (!name_result.ok())
                 return Fail(member.maybe_used->name,
                             "Multiple table fields with the same name; previous was at " +
-                                name_result.previous_occurrence().position());
+                                name_result.previous_occurrence().position_str());
             if (!CompileTypeConstructor(member.maybe_used->type_ctor.get(), &member.maybe_used->typeshape))
                 return false;
         }
@@ -3162,7 +3161,7 @@ bool Library::CompileUnion(Union* union_declaration) {
         if (!name_result.ok())
             return Fail(member.name,
                         "Multiple union members with the same name; previous was at " +
-                            name_result.previous_occurrence().position());
+                            name_result.previous_occurrence().position_str());
         if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
             return false;
     }
@@ -3192,13 +3191,13 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
         if (!ordinal_result.ok())
             return Fail(member.ordinal->location(),
                         "Multiple xunion fields with the same ordinal; previous was at " +
-                            ordinal_result.previous_occurrence().position());
+                            ordinal_result.previous_occurrence().position_str());
 
         auto name_result = scope.Insert(member.name.data(), member.name);
         if (!name_result.ok())
             return Fail(member.name,
                         "Multiple xunion members with the same name; previous was at " +
-                            name_result.previous_occurrence().position());
+                            name_result.previous_occurrence().position_str());
 
         if (!CompileTypeConstructor(member.type_ctor.get(), &member.fieldshape.Typeshape()))
             return false;

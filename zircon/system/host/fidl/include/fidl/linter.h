@@ -5,7 +5,9 @@
 #ifndef ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 #define ZIRCON_SYSTEM_HOST_FIDL_INCLUDE_FIDL_LINTER_H_
 
+#include <array>
 #include <deque>
+#include <regex>
 #include <set>
 
 #include <fidl/check_def.h>
@@ -26,6 +28,10 @@ public:
     // objects with associated check logic (lambdas registered via
     // |CheckCallbacks|).
     Linter();
+
+    void IgnoreCheckId(std::string check_id) {
+        ignored_check_ids_.insert(check_id);
+    }
 
     // Calling Lint() invokes the callbacks for elements
     // of the given |SourceFile|. If a check fails, the callback generates a
@@ -116,15 +122,16 @@ private:
     };
 
     const std::set<std::string>& permitted_library_prefixes() const;
-    std::string permitted_library_prefixes_as_string() const;
+    std::string kPermittedLibraryPrefixesas_string() const;
 
     CheckDef DefineCheck(std::string check_id,
                          std::string message_template);
 
-    template <typename... Args>
-    Finding& AddFinding(Args&&... args) const;
+    Finding* AddFinding(SourceLocation source_location,
+                        std::string check_id,
+                        std::string message) const;
 
-    const Finding& AddFinding(
+    const Finding* AddFinding(
         SourceLocation location,
         const CheckDef& check,
         Substitutions substitutions = {},
@@ -132,16 +139,23 @@ private:
         std::string replacement_template = "") const;
 
     template <typename SourceElementSubtypeRefOrPtr>
-    const Finding& AddFinding(
+    const Finding* AddFinding(
         const SourceElementSubtypeRefOrPtr& element,
         const CheckDef& check,
         Substitutions substitutions = {},
         std::string suggestion_template = "",
         std::string replacement_template = "") const;
 
-    const Finding& AddRepeatedNameFinding(
+    const Finding* AddRepeatedNameFinding(
         const Context& context,
         const Context::RepeatsContextNames& name_repeater) const;
+
+    bool CurrentLibraryIsPlatformSourceLibrary();
+    bool CurrentFileIsInPlatformSourceTree();
+
+    // Initialization and checks at the start of a new file. The Linter
+    // can be called multiple times with many different files.
+    void NewFile(const raw::File& element);
 
     // If a finding was added, return a pointer to that finding.
     const Finding* CheckCase(std::string type,
@@ -167,23 +181,74 @@ private:
     // objects for violating the repeated name rule.
     void ExitContext();
 
-    std::deque<Context> context_stack_;
+    std::string GetCopyrightSuggestion();
+    void AddInvalidCopyrightFinding(SourceLocation location);
+    void CheckInvalidCopyright(SourceLocation location,
+                               std::string line_comment,
+                               std::string line_to_match);
+    bool CopyrightCheckIsComplete();
 
-    LintingTreeCallbacks callbacks_;
-    std::set<std::string> permitted_library_prefixes_;
-    std::set<std::string> stop_words_;
+    std::string MakeCopyrightBlock();
 
     // All check types created in during |Linter| construction. The |std::set|
     // ensures each CheckDef has a unique |id|, and an iterator will traverse
     // the set in lexicographical order.
+    // Must be defined before constant checks.
     std::set<CheckDef> checks_;
 
+    // const variables not trivially destructible (static storage is forbidden)
+    // (https://google.github.io/styleguide/cppguide.html#Static_and_Global_Variables)
+
+    const CheckDef kLibraryNameComponentCheck;
+    const CheckDef kRepeatsLibraryNameCheck;
+    const CheckDef kLibraryPrefixCheck;
+    const CheckDef kInvalidCopyrightCheck;
+
+    const std::vector<std::string> kCopyrightLines;
+    const std::string kCopyrightBlock;
+    const std::string kDocAttribute;
+    const std::regex kYearRegex;
+    const std::regex kDocCommentRegex;
+    const std::regex kDisallowedLibraryComponentRegex;
+
+    const std::set<std::string> kPermittedLibraryPrefixes;
+    const std::set<std::string> kStopWords;
+
+    std::deque<Context> context_stack_;
+
+    size_t line_comments_checked_ = 0;
+
+    // Set to true for the first line that does not match the standard
+    // Copyright block (if checked) so subsequent lines do not have to
+    // be checked. (Prevents duplicate findings.)
+    bool added_invalid_copyright_finding_ = false;
+
+    // If good copyright lines
+    size_t good_copyright_lines_found_ = 0;
+
+    // 4 digits assumed to be the intended copyright date.
+    std::string copyright_date_;
+
+    // The first name in the FIDL library declaration; for example, for:
+    //   library fidl.types;
+    // |library_prefix_| will be "fidl"
+    std::string library_prefix_;
+    bool library_is_platform_source_library_;
+
+    std::string filename_;
+    bool file_is_in_platform_source_tree_;
+
+    LintingTreeCallbacks callbacks_;
+
+    // Case type functions used by CheckCase().
     CaseType lower_snake_{utils::is_lower_snake_case,
                           utils::to_lower_snake_case};
     CaseType upper_snake_{utils::is_upper_snake_case,
                           utils::to_upper_snake_case};
     CaseType upper_camel_{utils::is_upper_camel_case,
                           utils::to_upper_camel_case};
+
+    std::set<std::string> ignored_check_ids_;
 
     // Pointer to the current "Findings" object, passed to the Lint() method,
     // for the diration of the Visit() to lint a given FIDL file. When the

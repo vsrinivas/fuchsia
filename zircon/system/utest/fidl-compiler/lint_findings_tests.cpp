@@ -16,21 +16,18 @@ namespace fidl {
 namespace {
 
 #define ASSERT_FINDINGS(TEST) \
-    ASSERT_TRUE(test.ExpectFindings(), "Failed")
+    ASSERT_TRUE(TEST.ExpectFindings(), "Failed")
+
+#define ASSERT_FINDINGS_IN_ANY_POSITION(TEST) \
+    ASSERT_TRUE(TEST.ExpectFindingsInAnyPosition(), "Failed")
 
 #define ASSERT_NO_FINDINGS(TEST) \
-    ASSERT_TRUE(test.ExpectNoFindings(), "Failed")
+    ASSERT_TRUE(TEST.ExpectNoFindings(), "Failed")
 
 class LintTest {
 
 public:
     LintTest() {}
-
-    // Creates a single Finding, clearing any existing Findings first.
-    LintTest& ClearFindings() {
-        expected_findings_.clear();
-        return *this;
-    }
 
     // Adds a Finding to the back of the list of Findings.
     LintTest& AddFinding(std::string check_id, std::string message,
@@ -39,6 +36,11 @@ public:
                "source_template() must be called before AddFinding()");
         std::string template_string = source_template_.str();
         size_t start = template_string.find(violation_string);
+        if (start == std::string::npos) {
+            std::cout << "ERROR: violation_string '" << violation_string
+                      << "' was not found in template string:" << std::endl
+                      << template_string;
+        }
         // Note, if there are any substitution variables in the template that
         // preceed the violation_string, the test will probably fail because the
         // string location will probably be different after substitution.
@@ -48,16 +50,40 @@ public:
             TemplateString(violation_string).Substitute(substitutions_);
         auto source_location = library().SourceLocation(
             start, expanded_violation_string.size());
-        expected_findings_.emplace_back(
+        auto& finding = expected_findings_.emplace_back(
             source_location, check_id, message);
+
+        if (!default_suggestion_.empty()) {
+            if (default_replacement_.empty()) {
+                finding.SetSuggestion(default_suggestion_);
+            } else {
+                finding.SetSuggestion(default_suggestion_, default_replacement_);
+            }
+        }
+
         return *this;
     }
 
-    Finding& GetLastExpectedFinding() {
-        if (expected_findings_.empty()) {
-            AddFinding(default_check_id_, default_message_);
-        }
-        return expected_findings_.back();
+    // Adds a Finding to the back of the list of Findings using the default
+    // check_id and message (via previous calls to check_id() and message()).
+    LintTest& AddFinding(std::string violation_string = "${TEST}") {
+        return AddFinding(default_check_id_, default_message_, violation_string);
+    }
+
+    // Optional description of what is being tested. This can help when
+    // reading the code or debugging a failed test, particularly if
+    // it's not obvious what is being tested.
+    // |that_| is automatically cleared after test execution in case
+    // a follow-up test with a different purpose does not set a new
+    // value.
+    LintTest& that(std::string that) {
+        that_ = that;
+        return *this;
+    }
+
+    LintTest& filename(std::string filename) {
+        filename_ = filename;
+        return *this;
     }
 
     LintTest& check_id(std::string check_id) {
@@ -71,16 +97,23 @@ public:
     }
 
     LintTest& suggestion(std::string suggestion) {
-        GetLastExpectedFinding().SetSuggestion(suggestion);
+        default_suggestion_ = suggestion;
+        if (!expected_findings_.empty()) {
+            Finding& finding = expected_findings_.back();
+            finding.SetSuggestion(suggestion);
+        }
         return *this;
     }
 
     LintTest& replacement(std::string replacement) {
-        Finding& finding = GetLastExpectedFinding();
-        assert(finding.suggestion().has_value() &&
-               "|suggestion| must be added before |replacement|");
-        auto description = finding.suggestion()->description();
-        finding.SetSuggestion(description, replacement);
+        default_replacement_ = replacement;
+        if (!expected_findings_.empty()) {
+            Finding& finding = expected_findings_.back();
+            assert(finding.suggestion().has_value() &&
+                   "|suggestion| must be added before |replacement|");
+            auto description = finding.suggestion()->description();
+            finding.SetSuggestion(description, replacement);
+        }
         return *this;
     }
 
@@ -107,11 +140,31 @@ public:
         return execute(/*expect_findings=*/true);
     }
 
+    bool ExpectFindingsInAnyPosition() {
+        return execute(/*expect_findings=*/true,
+                       /*assert_positions_match=*/false);
+    }
+
 private:
-    bool execute(bool expect_findings) {
+    // Removes all expected findings previously added with AddFinding().
+    LintTest& Reset() {
+        library_.reset();
+        expected_findings_.clear();
+        that_ = "";
+        return *this;
+    }
+
+    bool execute(bool expect_findings, bool assert_positions_match = true) {
         std::ostringstream ss;
         ss << std::endl
-           << default_check_id_ << std::endl;
+           << "Failed test for check '" << default_check_id_ << "'";
+        if (!that_.empty()) {
+            ss << std::endl
+               << "that " << that_;
+        }
+        ss << ":" << std::endl;
+
+        // Start with checks for invalid test construction:
         auto context = (ss.str() + "Bad test!");
 
         if (expect_findings && expected_findings_.empty()) {
@@ -124,10 +177,16 @@ private:
 
         ASSERT_TRUE(ValidTest(), context.c_str());
 
+        // The test looks good, so run the linter, and update the context
+        // value by replacing "Bad test!" with the FIDL source code.
         Findings findings;
         library().Lint(&findings);
 
-        ss << library().source_file().data();
+        std::string source_code = std::string(library().source_file().data());
+        if (source_code.back() == '\0') {
+            source_code.resize(source_code.size() - 1);
+        }
+        ss << source_code;
         context = ss.str();
 
         auto finding = findings.begin();
@@ -135,47 +194,28 @@ private:
 
         while (finding != findings.end() &&
                expected_finding != expected_findings_.end()) {
-            ASSERT_TRUE(CompareExpectedToActualFinding(*expected_finding, *finding,
-                                                       ss.str()));
+            ASSERT_TRUE(CompareExpectedToActualFinding(
+                *expected_finding, *finding,
+                ss.str(), assert_positions_match));
             expected_finding++;
             finding++;
         }
         if (finding != findings.end()) {
-            ss << "\n\n";
-            ss << "===================" << std::endl;
-            ss << "UNEXPECTED FINDINGS:" << std::endl;
-            ss << "===================" << std::endl;
-            while (finding != findings.end()) {
-                ss << finding->source_location().position() << ": ";
-                utils::PrintFinding(ss, *finding);
-                ss << std::endl;
-                finding++;
-            }
-            ss << "===================" << std::endl;
+            PrintFindings(ss, finding, findings.end(), "UNEXPECTED FINDINGS");
             context = ss.str();
             bool has_unexpected_findings = true;
             ASSERT_FALSE(has_unexpected_findings, context.c_str());
         }
         if (expected_finding != expected_findings_.end()) {
-            ss << "\n\n";
-            ss << "===========================" << std::endl;
-            ss << "EXPECTED FINDINGS NOT FOUND:" << std::endl;
-            ss << "===========================" << std::endl;
-            while (expected_finding != expected_findings_.end()) {
-                ss << expected_finding->source_location().position() << ": ";
-                utils::PrintFinding(ss, *expected_finding);
-                ss << std::endl;
-                expected_finding++;
-            }
-            ss << "===========================" << std::endl;
+            PrintFindings(ss, expected_finding, expected_findings_.end(),
+                          "EXPECTED FINDINGS NOT FOUND");
             context = ss.str();
             bool expected_findings_not_found = true;
             ASSERT_FALSE(expected_findings_not_found, context.c_str());
         }
         // Delete the library. The library owns the |SourceFile| referenced by
         // the |expected_findings_|, so delete those as well.
-        library_.reset();
-        expected_findings_.clear();
+        Reset();
         return true;
     }
 
@@ -202,18 +242,24 @@ private:
         return true;
     }
 
+    // Complex templates with more than one substitution variable will typically
+    // throw off the location match. Set |assert_positions_match| to false to
+    // skip this check.
     bool CompareExpectedToActualFinding(const Finding& expectf, const Finding& finding,
-                                        std::string test_context) const {
+                                        std::string test_context,
+                                        bool assert_positions_match) const {
         std::ostringstream ss;
-        ss << finding.source_location().position() << ": ";
+        ss << finding.source_location().position_str() << ": ";
         utils::PrintFinding(ss, finding);
         auto context = (test_context + ss.str());
         ASSERT_STRING_EQ(expectf.subcategory(),
                          finding.subcategory(),
                          context.c_str());
-        ASSERT_STRING_EQ(expectf.source_location().position(),
-                         finding.source_location().position(),
-                         context.c_str());
+        if (assert_positions_match) {
+            ASSERT_STRING_EQ(expectf.source_location().position_str(),
+                             finding.source_location().position_str(),
+                             context.c_str());
+        }
         ASSERT_STRING_EQ(expectf.message(),
                          finding.message(),
                          context.c_str());
@@ -237,21 +283,18 @@ private:
         return true;
     }
 
-    static std::string FileLocation(const std::string& within, const std::string& to_find) {
-        std::istringstream lines(within);
-        std::string line;
-        size_t line_number = 0;
-        while (std::getline(lines, line)) {
-            line_number++;
-            size_t column_index = line.find(to_find);
-            if (column_index != std::string::npos) {
-                std::stringstream position;
-                position << "example.fidl:" << line_number << ":" << (column_index + 1);
-                return position.str();
-            }
+    template <typename Iter>
+    void PrintFindings(std::ostream& os, Iter finding, Iter end, std::string title) {
+        os << "\n\n";
+        os << "============================" << std::endl;
+        os << title << ":" << std::endl;
+        os << "============================" << std::endl;
+        for (; finding != end; finding++) {
+            os << finding->source_location().position_str() << ": ";
+            utils::PrintFinding(os, *finding);
+            os << std::endl;
         }
-        assert(false); // Bug in test
-        return "never reached";
+        os << "============================" << std::endl;
     }
 
     TestLibrary& library() {
@@ -259,13 +302,18 @@ private:
             assert(!source_template_.str().empty() &&
                    "source_template() must be set before library() is called");
             library_ = std::make_unique<TestLibrary>(
+                filename_,
                 source_template_.Substitute(substitutions_));
         }
         return *library_;
     }
 
+    std::string that_; // optional description of what is being tested
+    std::string filename_ = "example.fidl";
     std::string default_check_id_;
     std::string default_message_;
+    std::string default_suggestion_;
+    std::string default_replacement_;
     Findings expected_findings_;
     TemplateString source_template_;
     Substitutions substitutions_;
@@ -436,28 +484,32 @@ const uint64 ${TEST} = 1234;
     END_TEST;
 }
 
-bool copyright_notice_should_not_flow_through_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool copyright_should_not_be_doc_comment() {
     BEGIN_TEST;
 
     LintTest test;
-    test.check_id("copyright-notice-should-not-flow-through")
-        .message("Copyright notice should not flow through")
-        .source_template(R"FIDL(
+    test.check_id("copyright-should-not-be-doc-comment")
+        .message("Copyright notice should use non-flow-through comment markers")
+        .source_template(R"FIDL(${TEST} Copyright 2019 The Fuchsia Authors. All rights reserved.
+${TEST} Use of this source code is governed by a BSD-style license that can be
+${TEST} found in the LICENSE file.
 library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "//");
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "///")
+        .suggestion("change '///' to '//'")
+        .replacement("//");
+    ASSERT_FINDINGS(test);
+
+    test.that("capitalization is not important")
+        .source_template(R"FIDL(${TEST} copyright 2019 The Fuchsia Authors. All rights reserved.
+${TEST} Use of this source code is governed by a BSD-style license that can be
+${TEST} found in the LICENSE file.
+library fidl.a;
+)FIDL");
     ASSERT_FINDINGS(test);
 
     END_TEST;
@@ -604,7 +656,6 @@ struct ShirtAndPantSupplies {
   string tag;
 };
 )FIDL")
-        .ClearFindings()
         .AddFinding(
             "name-repeats-enclosing-type-name",
             "struct member names (shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
@@ -621,7 +672,6 @@ struct ShirtAndPantSupplies {
       string tag;
     };
     )FIDL")
-        .ClearFindings()
         .AddFinding(
             "name-repeats-enclosing-type-name",
             "struct member names (shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
@@ -642,7 +692,6 @@ struct ShirtAndPantSupplies {
       string shirt_and_pant_tag;
     };
     )FIDL")
-        .ClearFindings()
         .AddFinding(
             "name-repeats-enclosing-type-name",
             // repeated words are in lexicographical order; "and" is removed (a stop word)
@@ -665,7 +714,6 @@ struct ShirtAndPantSupplies {
   string tag;
 };
 )FIDL")
-        .ClearFindings()
         .AddFinding(
             "name-repeats-enclosing-type-name",
             // repeated words are in lexicographical order; "and" is removed (a stop word)
@@ -805,35 +853,6 @@ xunion ${TEST} {
     END_TEST;
 }
 
-bool deprecation_comment_should_not_flow_through_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Warning on DEPRECATED comments.
-
-    LintTest test;
-    test.check_id("deprecation-comment-should-not-flow-through")
-        .message("DEPRECATED comments should not flow through")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
 bool disallowed_library_name_component() {
     BEGIN_TEST;
 
@@ -907,65 +926,6 @@ bool protocol_name_includes_service_please_implement_me() {
     LintTest test;
     test.check_id("protocol-name-includes-service")
         .message("Protocols must not include the name 'service.'")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool discontiguous_comment_block_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    LintTest test;
-    test.check_id("discontiguous-comment-block")
-        .message("Multi-line comments should be in a single contiguous comment block, with all "
-                 "lines prefixed by comment markers")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool end_of_file_should_be_one_newline_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-    //
-    // Warning: often hard to get right depending on the editor.
-
-    LintTest test;
-    test.check_id("end-of-file-should-be-one-newline")
-        .message("End files with exactly one newline character")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1120,66 +1080,6 @@ bool inconsistent_type_for_recurring_library_concept_please_implement_me() {
     LintTest test;
     test.check_id("inconsistent-type-for-recurring-library-concept")
         .message("Ideally, types would be used consistently across library boundaries")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool incorrect_line_indent_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter: It can handle all checks in this section ("Syntax"), but linter can run the
-    // formatter and diff results to see if the file needs to be formatted.
-
-    LintTest test;
-    test.check_id("incorrect-line-indent")
-        .message("Use 4 space indents")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool incorrect_spacing_between_declarations_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-
-    LintTest test;
-    test.check_id("incorrect-spacing-between-declarations")
-        .message("Separate declarations for struct, union, enum, and protocol constructs from "
-                 "other declarations with one blank line (two consecutive newline characters)")
         .source_template(R"FIDL(
 library fidl.a;
 
@@ -1433,29 +1333,149 @@ using bar as baz;
     END_TEST;
 }
 
-bool invalid_copyright_for_platform_source_library_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool invalid_copyright_for_platform_source_library() {
     BEGIN_TEST;
 
+    TemplateString copyright_template(R"FIDL(// Copyright ${YYYY} The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.)FIDL");
+    auto copyright_2019 = copyright_template.Substitute({{"YYYY", "2019"}});
+    auto copyright_2020 = copyright_template.Substitute({{"YYYY", "2020"}});
+
     LintTest test;
-    test.check_id("invalid-copyright-for-platform-source-library")
+    test.filename("fuchsia/example.fidl")
+        .check_id("invalid-copyright-for-platform-source-library")
         .message("FIDL files defined in the Platform Source Tree (i.e., defined in "
-                 "fuchsia.googlesource.com) must begin with the standard copyright notice")
-        .source_template(R"FIDL(
-library fidl.a;
+                 "fuchsia.googlesource.com) must begin with the standard copyright notice");
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
+    test.source_template(copyright_2019 + R"FIDL(
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    library fidl.a;
+    )FIDL");
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.that("the rubric does not mandate a blank line before the library name")
+        .source_template(copyright_2019 + R"FIDL(
+    library fidl.a;
+    )FIDL");
+    ASSERT_NO_FINDINGS(test);
+
+    test.that("the the date doesn't have to match")
+        .source_template(copyright_2020 + R"FIDL(
+
+    library fidl.a;
+    )FIDL");
+    ASSERT_NO_FINDINGS(test);
+
+    test.that("the copyright must start on the first line")
+        .source_template("\n" + copyright_2019 + R"FIDL(
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Insert missing header:\n\n" + copyright_2019)
+        .AddFinding("Copyright");
+    ASSERT_FINDINGS(test);
+
+    test.that("a bad or missing date will produce a suggestion with ${YYYY}")
+        .source_template(R"FIDL(// Copyright 20019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Insert missing header:\n\n" + copyright_template.str())
+        .AddFinding("20019");
+    ASSERT_FINDINGS(test);
+
+    test.that("the words must have the correct case")
+        .source_template(R"FIDL(// COPYRIGHT 2019 THE FUCHSIA AUTHORS. ALL RIGHTS RESERVED.
+    // USE OF THIS SOURCE CODE IS GOVERNED BY A BSD-STYLE LICENSE THAT CAN BE
+    // FOUND IN THE LICENSE FILE.
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Insert missing header:\n\n" + copyright_2019)
+        .AddFinding("OPYRIGHT");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Sloppyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Insert missing header:\n\n" + copyright_2019)
+        .AddFinding("Sloppyright");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Copyright 2019 The Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Insert missing header:\n\n" + copyright_2019)
+        .AddFinding("Authors");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by an anarchy license that can be
+// found in the LICENSE file.
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Update your header with:\n\n" + copyright_2019)
+        .AddFinding("n anarchy");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+    // found in the README.md file.
+
+    library fidl.a;
+    )FIDL")
+        .suggestion("Update your header with:\n\n" + copyright_2019)
+        .AddFinding("README.md");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Copyright ${YYYY} The Fuchsia Authors. All rights reserved.
+/// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.a;
+)FIDL")
+        .suggestion("Update your header with:\n\n" + copyright_template.str())
+        .AddFinding("// Copyright");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+/// found in the LICENSE file.
+
+library fidl.a;
+)FIDL")
+        .suggestion("Update your header with:\n\n" + copyright_2019)
+        .AddFinding("// Copyright");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+
+library fidl.a;
+)FIDL")
+        .suggestion("Update your header with:\n\n" + copyright_2019)
+        .AddFinding("// Copyright");
+    ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(${BLANK_LINE}
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.a;
+)FIDL")
+        .substitute("BLANK_LINE", "")
+        .suggestion("Update your header with:\n\n" + copyright_template.str())
+        .AddFinding("${BLANK_LINE}");
     ASSERT_FINDINGS(test);
 
     END_TEST;
@@ -1843,30 +1863,44 @@ using foo as ${TEST};
     END_TEST;
 }
 
-bool note_comment_should_not_flow_through_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool no_trailing_comment() {
     BEGIN_TEST;
 
-    // Warning on NOTE comments.
-
     LintTest test;
-    test.check_id("note-comment-should-not-flow-through")
-        .message("NOTE comments should not flow through")
+    test.check_id("no-trailing-comment")
+        .message("Place comments above the thing being described")
         .source_template(R"FIDL(
 library fidl.a;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+struct SeasonToShirtAndPantMapEntry {
+
+  // winter, spring, summer, or fall
+  string season;
+
+  // all you gotta do is call
+  string shirt_and_pant_type;
+
+  bool clashes;
+};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.source_template(R"FIDL(
+library fidl.a;
+
+struct SeasonToShirtAndPantMapEntry {
+
+  string season; // winter, spring, summer, or fall
+
+  // all you gotta do is call
+  string shirt_and_pant_type;
+
+  bool clashes;
+};
+)FIDL")
+        .AddFinding("// winter, spring, summer, or fall");
+
     ASSERT_FINDINGS(test);
 
     END_TEST;
@@ -1950,60 +1984,103 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool tabs_disallowed_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-
-    LintTest test;
-    test.check_id("tabs-disallowed")
-        .message("Never use tabs")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool todo_comment_should_not_flow_through_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool todo_should_not_be_doc_comment() {
     BEGIN_TEST;
 
     // Warning on TODO comments.
 
-    LintTest test;
-    test.check_id("todo-comment-should-not-flow-through")
-        .message("TODO comments should not flow through")
-        .source_template(R"FIDL(
+    std::string source_template = R"FIDL(
 library fidl.a;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
+${TEST1} TODO: Finish the TestStruct declaration
+struct TestStruct {
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+  ${TEST2}TODO: Replace the placeholder
+  string placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxb/FIDL-0000): Add some more fields
+};
+${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
+)FIDL";
+
+    LintTest test;
+    test.check_id("todo-should-not-be-doc-comment")
+        .message("TODO comment should use a non-flow-through comment marker")
+        .source_template(source_template);
+
+    test.substitute({
+        {"TEST1", "//"},
+        {"TEST2", "//"},
+        {"DOC_NOT_ALLOWED_HERE1", "//"},
+        {"DOC_NOT_ALLOWED_HERE2", "//"},
+    });
+
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute({
+                        {"TEST1", "///"},
+                        {"TEST2", "//"},
+                        {"DOC_NOT_ALLOWED_HERE1", "//"},
+                        {"DOC_NOT_ALLOWED_HERE2", "//"},
+                    })
+        .suggestion("change '///' to '//'")
+        .replacement("//")
+        .AddFinding("${TEST1}");
+
     ASSERT_FINDINGS(test);
+
+    test.substitute({
+                        {"TEST1", "//"},
+                        {"TEST2", "///"},
+                        {"DOC_NOT_ALLOWED_HERE1", "//"},
+                        {"DOC_NOT_ALLOWED_HERE2", "//"},
+                    })
+        .AddFinding("${TEST2}");
+
+    ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+    test.substitute({
+                        {"TEST1", "///"},
+                        {"TEST2", "///"},
+                        {"DOC_NOT_ALLOWED_HERE1", "//"},
+                        {"DOC_NOT_ALLOWED_HERE2", "///"},
+                    })
+        .AddFinding("${TEST1}")
+        .AddFinding("${TEST2}");
+
+    ASSERT_FINDINGS_IN_ANY_POSITION(test);
+
+    LintTest parser_test;
+    parser_test
+        .source_template(source_template)
+        .substitute({
+            {"TEST1", "//"},
+            {"TEST2", "//"},
+            {"DOC_NOT_ALLOWED_HERE1", "///"},
+            {"DOC_NOT_ALLOWED_HERE2", "//"},
+        })
+        .check_id("parser-error")
+        .message(R"ERROR(example.fidl:9:1: error: unexpected token RightCurly, was expecting Identifier
+};
+^
+)ERROR")
+        .AddFinding("\n"); // Linter fails on first character
+
+    ASSERT_FINDINGS(parser_test);
+
+    parser_test
+        .substitute({
+            {"TEST1", "//"},
+            {"TEST2", "//"},
+            {"DOC_NOT_ALLOWED_HERE1", "//"},
+            {"DOC_NOT_ALLOWED_HERE2", "///"},
+        })
+        .message(R"ERROR(example.fidl:11:1: error: unexpected token RightCurly, was expecting Identifier
+};
+^
+)ERROR"); // Parser does not interpret this as a Doc Comment, and does not fail
+          // BUT Parser swallows the comment, so the Linter does not see it.
+          // Since this comment doesn't flow-through, I guess it's not failing the check.
+
+    ASSERT_NO_FINDINGS(parser_test);
 
     END_TEST;
 }
@@ -2024,35 +2101,6 @@ library ${TEST};
     ASSERT_NO_FINDINGS(test);
 
     test.substitute("TEST", "fuchsia.foo.bar.baz");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool trailing_whitespace_disallowed_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Use formatter.
-
-    LintTest test;
-    test.check_id("trailing-whitespace-disallowed")
-        .message("Avoid trailing whitespace")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
     ASSERT_FINDINGS(test);
 
     END_TEST;
@@ -2236,31 +2284,26 @@ library ${TEST}.subcomponent;
 
 BEGIN_TEST_CASE(lint_findings_tests)
 
-RUN_TEST(constant_repeats_library_name)
 RUN_TEST(constant_repeats_enclosing_type_name)
+RUN_TEST(constant_repeats_library_name)
 RUN_TEST(constant_should_use_common_prefix_suffix_please_implement_me)
-RUN_TEST(copyright_notice_should_not_flow_through_please_implement_me)
+RUN_TEST(copyright_should_not_be_doc_comment)
 RUN_TEST(decl_member_repeats_enclosing_type_name)
 RUN_TEST(decl_member_repeats_enclosing_type_name_but_may_disambiguate)
 RUN_TEST(decl_member_repeats_library_name)
 RUN_TEST(decl_name_repeats_library_name)
-RUN_TEST(deprecation_comment_should_not_flow_through_please_implement_me)
 RUN_TEST(disallowed_library_name_component)
-RUN_TEST(discontiguous_comment_block_please_implement_me)
-RUN_TEST(end_of_file_should_be_one_newline_please_implement_me)
 RUN_TEST(event_names_must_start_with_on)
 RUN_TEST(excessive_number_of_separate_protocols_for_file_please_implement_me)
 RUN_TEST(excessive_number_of_separate_protocols_for_library_please_implement_me)
 RUN_TEST(inconsistent_type_for_recurring_file_concept_please_implement_me)
 RUN_TEST(inconsistent_type_for_recurring_library_concept_please_implement_me)
-RUN_TEST(incorrect_line_indent_please_implement_me)
-RUN_TEST(incorrect_spacing_between_declarations_please_implement_me)
 RUN_TEST(invalid_case_for_constant)
 RUN_TEST(invalid_case_for_decl_member)
 RUN_TEST(invalid_case_for_decl_name)
 RUN_TEST(invalid_case_for_decl_name_for_event)
 RUN_TEST(invalid_case_for_primitive_alias)
-RUN_TEST(invalid_copyright_for_platform_source_library_please_implement_me)
+RUN_TEST(invalid_copyright_for_platform_source_library)
 RUN_TEST(library_name_does_not_match_file_path_please_implement_me)
 RUN_TEST(manager_protocols_are_discouraged_please_implement_me)
 RUN_TEST(method_repeats_enclosing_type_name)
@@ -2268,16 +2311,16 @@ RUN_TEST(method_return_status_missing_ok_please_implement_me)
 RUN_TEST(method_returns_status_with_non_optional_result_please_implement_me)
 RUN_TEST(method_should_pipeline_protocols_please_implement_me)
 RUN_TEST(no_commonly_reserved_words_please_implement_me)
-RUN_TEST(note_comment_should_not_flow_through_please_implement_me)
+// TODO(fxb/FIDL-656): Remove this check after issues are resolved with
+// trailing comments in existing source and tools
+RUN_TEST(no_trailing_comment)
 RUN_TEST(primitive_alias_repeats_library_name)
 RUN_TEST(protocol_name_ends_in_service_please_implement_me)
 RUN_TEST(protocol_name_includes_service_please_implement_me)
 RUN_TEST(service_hub_pattern_is_discouraged_please_implement_me)
 RUN_TEST(string_bounds_not_specified_please_implement_me)
-RUN_TEST(tabs_disallowed_please_implement_me)
-RUN_TEST(todo_comment_should_not_flow_through_please_implement_me)
+RUN_TEST(todo_should_not_be_doc_comment)
 RUN_TEST(too_many_nested_libraries_please_implement_me)
-RUN_TEST(trailing_whitespace_disallowed_please_implement_me)
 RUN_TEST(unexpected_type_for_well_known_buffer_concept_please_implement_me)
 RUN_TEST(unexpected_type_for_well_known_bytes_concept_please_implement_me)
 RUN_TEST(unexpected_type_for_well_known_socket_handle_concept_please_implement_me)

@@ -49,12 +49,12 @@ bool is_lower_camel_case(const std::string& str) {
     if (has_konstant_k(str)) {
         return false;
     }
-    static std::regex re{"^[a-z][a-z0-9]*([A-Z][a-z0-9]+)*$"};
+    static std::regex re{"^[a-z][a-z0-9]*(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*([A-Z][a-z0-9]*)?$"};
     return str.size() > 0 && std::regex_match(str, re);
 }
 
 bool is_upper_camel_case(const std::string& str) {
-    static std::regex re{"^([A-Z][a-z0-9]+)+$"};
+    static std::regex re{"^(([A-Z]{1,2}[a-z0-9]+)(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*)?([A-Z][a-z0-9]*)?$"};
     return str.size() > 0 && std::regex_match(str, re);
 }
 
@@ -142,24 +142,34 @@ std::string to_upper_snake_case(const std::string& astr) {
 
 std::string to_lower_camel_case(const std::string& astr) {
     std::string str = strip_konstant_k(astr);
+    bool prev_char_was_digit = false;
     std::string newid;
     for (const auto& word : id_to_words(str)) {
         if (newid.size() == 0) {
             newid.append(word);
         } else {
+            if (prev_char_was_digit && isdigit(word[0])) {
+                newid.push_back('_');
+            }
             newid.push_back(static_cast<char>(toupper(word[0])));
             newid.append(word.substr(1));
         }
+        prev_char_was_digit = isdigit(word.back());
     }
     return newid;
 }
 
 std::string to_upper_camel_case(const std::string& astr) {
     std::string str = strip_konstant_k(astr);
+    bool prev_char_was_digit = false;
     std::string newid;
     for (const auto& word : id_to_words(str)) {
+        if (prev_char_was_digit && isdigit(word[0])) {
+            newid.push_back('_');
+        }
         newid.push_back(static_cast<char>(toupper(word[0])));
         newid.append(word.substr(1));
+        prev_char_was_digit = isdigit(word.back());
     }
     return newid;
 }
@@ -169,13 +179,13 @@ std::string to_konstant_case(const std::string& str) {
 }
 
 void PrintFinding(std::ostream& os, const Finding& finding) {
-    os << finding.message();
+    os << finding.message() << " [" << finding.subcategory() << "]";
     if (finding.suggestion().has_value()) {
         auto& suggestion = finding.suggestion();
         os << "; " << suggestion->description();
         if (suggestion->replacement().has_value()) {
-            os << "\nDid you mean:\n    "
-               << *suggestion->replacement();
+            os << "\n    Proposed replacement:  '"
+               << *suggestion->replacement() << "'";
         }
     }
 }
