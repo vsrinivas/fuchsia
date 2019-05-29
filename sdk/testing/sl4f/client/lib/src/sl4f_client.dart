@@ -139,6 +139,12 @@ class Sl4f {
           '-o', 'StrictHostKeyChecking=no',
           // Timeout to connect, keeping it short makes the logs more sensical.
           '-o', 'ConnectTimeout=2',
+          // These five arguments allow ssh to reuse its connection.
+          '-o', 'ControlPersist=yes',
+          '-o', 'ControlMaster=auto',
+          '-o', 'ControlPath=/tmp/fuchsia--%r@%h:%p',
+          '-o', 'ServerAliveInterval=1',
+          '-o', 'ServerAliveCountMax=1',
           '$_sshUser@$target',
           cmd
         ],
