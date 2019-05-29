@@ -34,11 +34,14 @@ class StubLogListener : public fuchsia::logger::LogListener {
   const std::vector<fuchsia::logger::LogMessage>& GetLogs() {
     return log_messages_;
   }
+
   bool ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc,
                       zx_koid_t pid, const std::string& tag);
 
   bool DumpLogs(fuchsia::logger::LogPtr log_service,
                 DoneCallback done_callback);
+
+  bool Listen(fuchsia::logger::LogPtr log_service);
 
  private:
   ::fidl::Binding<fuchsia::logger::LogListener> binding_;
@@ -65,6 +68,14 @@ void StubLogListener::Done() {
   if (done_callback_) {
     done_callback_();
   }
+}
+
+bool StubLogListener::Listen(fuchsia::logger::LogPtr log_service) {
+  if (!log_listener_) {
+    return false;
+  }
+  log_service->Listen(std::move(log_listener_), nullptr);
+  return true;
 }
 
 bool StubLogListener::ListenFiltered(
@@ -169,6 +180,50 @@ TEST_F(LoggerIntegrationTest, DumpLogs) {
   auto& logs = log_listener.GetLogs();
   ASSERT_GE(logs.size(), 1u);
   EXPECT_EQ(logs[0].tags[0], "klog");
+}
+
+TEST_F(LoggerIntegrationTest, NoKlogs) {
+  auto svcs = CreateServices();
+  fuchsia::sys::LaunchInfo linfo;
+  linfo.url = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+  linfo.arguments.push_back("--disable-klog");
+  fuchsia::sys::LaunchInfo linfo_dup;
+  ASSERT_EQ(ZX_OK, linfo.Clone(&linfo_dup));
+  svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
+  svcs->AddServiceWithLaunchInfo(std::move(linfo_dup),
+                                 fuchsia::logger::LogSink::Name_);
+  auto env = CreateNewEnclosingEnvironment("no_klogs", std::move(svcs));
+  WaitForEnclosingEnvToStart(env.get());
+
+  auto logger_sink = env->ConnectToService<fuchsia::logger::LogSink>();
+  zx::socket logger_sock, server_end;
+  ASSERT_EQ(ZX_OK,
+            zx::socket::create(ZX_SOCKET_DATAGRAM, &logger_sock, &server_end));
+  logger_sink->Connect(std::move(server_end));
+
+  const char* tag = "my-tag";
+  const char** tags = &tag;
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_service_channel = logger_sock.release(),
+                               .tags = tags,
+                               .num_tags = 1};
+
+  fx_logger_t* logger;
+  ASSERT_EQ(ZX_OK, fx_logger_create(&config, &logger));
+  ASSERT_EQ(ZX_OK, fx_logger_log(logger, FX_LOG_INFO, nullptr, "hello world"));
+
+  StubLogListener log_listener;
+  ASSERT_TRUE(
+      log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
+
+  RunLoopUntil([&log_listener]() { return !log_listener.GetLogs().empty(); });
+  auto& logs = log_listener.GetLogs();
+  ASSERT_EQ(logs.size(), 1u);
+  auto& msg = logs[0];
+  ASSERT_EQ(msg.tags.size(), 1u);
+  ASSERT_EQ(msg.tags[0], tag);
 }
 
 }  // namespace
