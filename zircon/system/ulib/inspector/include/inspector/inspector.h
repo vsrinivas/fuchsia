@@ -96,14 +96,15 @@ void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t addr,
                             size_t length);
 
 // Prints to stdout the debug info (registers, bottom of user stack, dso list,
-// backtrace, etc.) of the given |thread| in |process|.
+// backtrace, etc.) of the given |thread| in |process|. The caller must be
+// holding |thread| in an exception while calling this function.
+//
+// If |type| or |regs| are non-null, also fills them with the information
+// extracted from |thread|.
+//
 // Does NOT close the handles nor resume the thread.
-void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread);
-
-// Same as above except that it resumes the thread from the exception port at
-// the end.
-void inspector_print_debug_info_and_resume_thread(zx_handle_t process,
-                                                  zx_handle_t thread,
-                                                  zx_handle_t exception_port);
+void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread,
+                                zx_excp_type_t* type,
+                                zx_thread_state_general_regs_t* regs);
 
 __END_CDECLS

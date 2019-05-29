@@ -41,6 +41,7 @@ if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
     ]
     deps = [
       ":headers",
+      "$zx/system/ulib/backtrace-request",
       "$zx/system/ulib/zircon",
     ]
 

@@ -8,6 +8,7 @@ library("crashsvc") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-crash:c",
+    "$zx/system/ulib/backtrace-request:utils",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/inspector",

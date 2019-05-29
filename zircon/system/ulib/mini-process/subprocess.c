@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "subprocess.h"
+
+#include <lib/backtrace-request/backtrace-request.h>
 #include <mini-process/mini-process.h>
 
 // This function is the entire program that the child process will execute. It
@@ -185,6 +187,13 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
 
                     uint8_t val = 0;
                     cmd.status = ctx.channel_write(original_handle, 0, &val, 1, NULL, 0u);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_BACKTRACE_REQUEST) {
+                    what &= ~MINIP_CMD_BACKTRACE_REQUEST;
+
+                    backtrace_request();
+                    cmd.status = ZX_OK;
                     goto reply;
                 }
 

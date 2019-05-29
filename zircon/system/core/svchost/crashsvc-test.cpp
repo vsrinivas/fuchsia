@@ -43,23 +43,43 @@ TEST(crashsvc, StartAndStop) {
     EXPECT_EQ(exit_code, 0);
 }
 
-// Creates a mini-process under |job| and tells it to crash.
-void CreateAndCrashProcess(const zx::job& job, zx::process* process, zx::thread* thread) {
+constexpr char kTaskName[] = "crashsvc-test";
+constexpr uint32_t kTaskNameLen = sizeof(kTaskName) - 1;
+
+// Creates a mini-process under |job|.
+void CreateMiniProcess(const zx::job& job, zx::process* process, zx::thread* thread,
+                       zx::channel* command_channel) {
     zx::vmar vmar;
-    constexpr char kTaskName[] = "crashsvc-test";
-    constexpr uint32_t kTaskNameLen = sizeof(kTaskName) - 1;
     ASSERT_OK(zx::process::create(job, kTaskName, kTaskNameLen, 0, process, &vmar));
     ASSERT_OK(zx::thread::create(*process, kTaskName, kTaskNameLen, 0, thread));
 
     zx::event event;
     ASSERT_OK(zx::event::create(0, &event));
 
-    zx::channel command_channel;
     ASSERT_OK(start_mini_process_etc(process->get(), thread->get(), vmar.get(), event.release(),
-                                     command_channel.reset_and_get_address()));
+                                     command_channel->reset_and_get_address()));
+}
 
+// Creates a mini-process under |job| and tells it to crash.
+void CreateAndCrashProcess(const zx::job& job, zx::process* process, zx::thread* thread) {
+    zx::channel command_channel;
+    ASSERT_NO_FATAL_FAILURES(CreateMiniProcess(job, process, thread, &command_channel));
+
+    // Use mini_process_cmd_send() here to send but not wait for a response
+    // so we can handle the exception.
     printf("Intentionally crashing test thread '%s', the following dump is expected\n", kTaskName);
     ASSERT_OK(mini_process_cmd_send(command_channel.get(), MINIP_CMD_BUILTIN_TRAP));
+}
+
+// Creates a mini-process under |job| and tells it to request a backtrace.
+// Blocks until the mini-process thread has successfully resumed.
+void CreateAndBacktraceProcess(const zx::job& job, zx::process* process, zx::thread* thread) {
+    zx::channel command_channel;
+    ASSERT_NO_FATAL_FAILURES(CreateMiniProcess(job, process, thread, &command_channel));
+
+    // Use mini_process_cmd() here to send and block until we get a response.
+    printf("Intentionally dumping test thread '%s', the following dump is expected\n", kTaskName);
+    ASSERT_OK(mini_process_cmd(command_channel.get(), MINIP_CMD_BACKTRACE_REQUEST, nullptr));
 }
 
 TEST(crashsvc, ThreadCrashNoAnalyzer) {
@@ -84,6 +104,29 @@ TEST(crashsvc, ThreadCrashNoAnalyzer) {
     // get the exception, kill the job which will stop exception handling and
     // cause the crashsvc thread to exit.
     ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+    ASSERT_OK(job.kill());
+    EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
+}
+
+TEST(crashsvc, ThreadBacktraceNoAnalyzer) {
+    zx::job job;
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+
+    zx::channel exception_channel;
+    ASSERT_OK(job.create_exception_channel(0, &exception_channel));
+
+    thrd_t cthread;
+    zx::job job_copy;
+    ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
+    ASSERT_OK(start_crashsvc(std::move(job_copy), ZX_HANDLE_INVALID, &cthread));
+
+    zx::process process;
+    zx::thread thread;
+    ASSERT_NO_FATAL_FAILURES(CreateAndBacktraceProcess(job, &process, &thread));
+
+    // The backtrace request exception should not make it out of crashsvc.
+    ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr),
+              ZX_ERR_TIMED_OUT);
     ASSERT_OK(job.kill());
     EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
@@ -134,6 +177,9 @@ public:
         ASSERT_OK((*vfs)->ServeDirectory(std::move(directory), std::move(server)));
     }
 
+    // Returns the number of times OnNativeException() has fired.
+    int on_native_exception_count() const { return on_native_exception_count_; }
+
 private:
     static zx_status_t OnNativeExceptionWrapper(void* ctx, zx_handle_t process, zx_handle_t thread,
                                                 zx_handle_t exception_port, fidl_txn_t* txn) {
@@ -143,6 +189,8 @@ private:
 
     zx_status_t OnNativeException(zx::process process, zx::thread thread, zx::port exception_port,
                                   fidl_txn_t* txn) {
+        ++on_native_exception_count_;
+
         // Make sure crashsvc passed us the correct task handles.
         EXPECT_EQ(process_koid_, GetKoid(process));
         EXPECT_EQ(thread_koid_, GetKoid(thread));
@@ -170,6 +218,7 @@ private:
     Behavior behavior_;
     zx_koid_t process_koid_ = ZX_KOID_INVALID;
     zx_koid_t thread_koid_ = ZX_KOID_INVALID;
+    int on_native_exception_count_ = 0;
 };
 
 // Creates a new thread, crashes it, and processes the resulting Analyzer FIDL
@@ -215,6 +264,7 @@ TEST(crashsvc, ThreadCrashAnalyzerSuccess) {
 
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
                                           CrashAnalyzerStub::Behavior::kResumeThread));
+    EXPECT_EQ(1, analyzer.on_native_exception_count());
 
     ASSERT_OK(job.kill());
     EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
@@ -236,6 +286,7 @@ TEST(crashsvc, ThreadCrashAnalyzerFailure) {
 
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
                                           CrashAnalyzerStub::Behavior::kError));
+    EXPECT_EQ(1, analyzer.on_native_exception_count());
 
     ASSERT_OK(job.kill());
     EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
@@ -264,6 +315,32 @@ TEST(crashsvc, MultipleThreadCrashAnalyzer) {
                                           CrashAnalyzerStub::Behavior::kResumeThread));
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
                                           CrashAnalyzerStub::Behavior::kError));
+    EXPECT_EQ(4, analyzer.on_native_exception_count());
+
+    ASSERT_OK(job.kill());
+    EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
+}
+
+TEST(crashsvc, ThreadBacktraceAnalyzer) {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    std::unique_ptr<fs::SynchronousVfs> vfs;
+    zx::channel client;
+    CrashAnalyzerStub analyzer;
+    ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
+
+    zx::job job;
+    zx::job job_copy;
+    thrd_t cthread;
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
+    ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
+
+    zx::process process;
+    zx::thread thread;
+    ASSERT_NO_FATAL_FAILURES(CreateAndBacktraceProcess(job, &process, &thread));
+
+    // Thread backtrace requests shouldn't be sent out to the analyzer.
+    EXPECT_EQ(0, analyzer.on_native_exception_count());
 
     ASSERT_OK(job.kill());
     EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);

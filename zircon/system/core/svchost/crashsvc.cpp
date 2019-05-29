@@ -12,6 +12,7 @@
 #include <fuchsia/crash/c/fidl.h>
 #include <inspector/inspector.h>
 
+#include <lib/backtrace-request/backtrace-request-utils.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -98,6 +99,39 @@ struct crash_ctx {
     zx::channel svc_request;
 };
 
+// Cleans up and resumes a thread in a manual backtrace request.
+//
+// This may modify |regs| via cleanup_backtrace_request().
+//
+// Returns true if this was a backtrace request and it successfully resumed.
+static bool ResumeIfBacktraceRequest(const zx::thread& thread, const zx::port& exception_port,
+                                     const zx_port_packet_t& packet,
+                                     zx_excp_type_t exception_type,
+                                     zx_thread_state_general_regs_t* regs) {
+    if (is_backtrace_request(exception_type, regs)) {
+        zx_status_t status = cleanup_backtrace_request(thread.get(), regs);
+        if (status != ZX_OK) {
+            fprintf(stderr, "crashsvc: failed to cleanup backtrace on thread %zu.%zu: %s (%d)\n",
+                    packet.exception.pid, packet.exception.tid, zx_status_get_string(status),
+                    status);
+            return false;
+        }
+
+        // Mark the exception as handled so the thread resumes execution.
+        status = thread.resume_from_exception(exception_port, 0);
+        if (status != ZX_OK) {
+            fprintf(stderr, "crashsvc: failed to resume thread %zu.%zu from backtrace: %s (%d)\n",
+                    packet.exception.pid, packet.exception.tid, zx_status_get_string(status),
+                    status);
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packet) {
     zx::process process;
     if (!FindProcess(ctx.root_job, packet.exception.pid, &process)) {
@@ -114,11 +148,18 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
         return;
     }
 
+    // Dump the crash info to the logs whether we have a FIDL analyzer or not.
+    zx_excp_type_t type;
+    zx_thread_state_general_regs_t regs;
+    inspector_print_debug_info(process.get(), thread.get(), &type, &regs);
+
+    // A backtrace request should just dump and continue.
+    if (ResumeIfBacktraceRequest(thread, ctx.exception_port, packet, type, &regs)) {
+        return;
+    }
+
     if (ctx.svc_request.is_valid()) {
         // Use the full system analyzer FIDL service, presumably crashpad_analyzer.
-
-        // First, we still dump the crash info in the logs.
-        inspector_print_debug_info(process.get(), thread.get());
 
         zx::port port;
         const zx_status_t port_status = ctx.exception_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port);
@@ -146,10 +187,9 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
             }
         }
     } else {
-        // Use the zircon built-in analyzer. Does not return status so we presume
-        // that upon failure it resumes the thread.
-        inspector_print_debug_info_and_resume_thread(process.get(), thread.get(),
-                                                     ctx.exception_port.get());
+        // Use RESUME_TRY_NEXT to pass it to the next handler, if we're the root
+        // job handler this will kill the process.
+        thread.resume_from_exception(ctx.exception_port, ZX_RESUME_TRY_NEXT);
     }
 }
 

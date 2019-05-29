@@ -44,35 +44,6 @@ static const char* excp_type_to_str(const zx_excp_type_t type) {
 // How much memory to dump, in bytes.
 static constexpr size_t kMemoryDumpSize = 256;
 
-static void resume_thread(zx_handle_t thread, zx_handle_t exception_port, bool handled) {
-    uint32_t options = 0;
-    if (!handled)
-        options |= ZX_RESUME_TRY_NEXT;
-    auto status = zx_task_resume_from_exception(thread, exception_port, options);
-    if (status != ZX_OK) {
-        print_zx_error("unable to \"resume\" thread", status);
-        // This shouldn't happen (unless someone killed it already).
-        // The task is now effectively hung (until someone kills it).
-        // TODO: Try to forcefully kill it ourselves?
-    }
-}
-
-static void resume_thread_from_exception(zx_handle_t thread, zx_handle_t exception_port,
-                                         zx_excp_type_t excp_type,
-                                         const zx_thread_state_general_regs_t* gregs) {
-    if (is_backtrace_request(excp_type, gregs)) {
-        zx_thread_state_general_regs_t regs = *gregs;
-        if (cleanup_backtrace_request(thread, &regs) == ZX_OK) {
-            resume_thread(thread, exception_port, true);
-            return;
-        }
-    }
-
-    // Tell the o/s to "resume" the thread by killing the process, the
-    // exception has not been handled.
-    resume_thread(thread, exception_port, false);
-}
-
 static zx_koid_t get_koid(zx_handle_t handle) {
     zx_info_handle_basic_t info;
     zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
@@ -83,9 +54,23 @@ static zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
-static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_type_t* type, zx_thread_state_general_regs_t* regs) {
-    zx_koid_t pid = get_koid(process);
-    zx_koid_t tid = get_koid(thread);
+} // namespace inspector
+
+__EXPORT void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread,
+                                         zx_excp_type_t* type,
+                                         zx_thread_state_general_regs_t* regs) {
+    // If the caller didn't supply |type| or |regs| use a local copy.
+    zx_excp_type_t local_type;
+    if (!type) {
+        type = &local_type;
+    }
+    zx_thread_state_general_regs_t local_regs;
+    if (!regs) {
+        regs = &local_regs;
+    }
+
+    zx_koid_t pid = inspector::get_koid(process);
+    zx_koid_t tid = inspector::get_koid(thread);
 
     zx_exception_report_t report;
     zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT,
@@ -195,7 +180,8 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 #endif
         printf("<== %s %s page fault, PC at 0x%" PRIxPTR "\n", access_type, violation , pc);
     } else {
-        printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), pc);
+        printf("<== %s, PC at 0x%" PRIxPTR "\n", inspector::excp_type_to_str(report.header.type),
+               pc);
     }
 
 #if defined(__x86_64__)
@@ -215,7 +201,7 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 #endif
 
     printf("bottom of user stack:\n");
-    inspector_print_memory(stdout, process, sp, kMemoryDumpSize);
+    inspector_print_memory(stdout, process, sp, inspector::kMemoryDumpSize);
 
     printf("arch: %s\n", arch);
 
@@ -238,26 +224,6 @@ static void print_debug_info(zx_handle_t process, zx_handle_t thread, zx_excp_ty
 
     // TODO(ZX-588): Print a backtrace of all other threads in the process.
 
-    if (verbosity_level >= 1)
+    if (inspector::verbosity_level >= 1)
         printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", pid, tid);
-}
-
-} // namespace inspector
-
- __EXPORT void inspector_print_debug_info(zx_handle_t process,
-                                          zx_handle_t thread) {
-    zx_excp_type_t type = 0;
-    zx_thread_state_general_regs_t regs;
-    inspector::print_debug_info(process, thread, &type, &regs);
-}
-
- __EXPORT void inspector_print_debug_info_and_resume_thread(
-     zx_handle_t process, zx_handle_t thread, zx_handle_t exception_port) {
-    zx_excp_type_t type = 0;
-    zx_thread_state_general_regs_t regs;
-    inspector::print_debug_info(process, thread, &type, &regs);
-
-    // allow the thread (and then process) to die, unless the exception is
-    // to just trigger a backtrace (if enabled).
-    inspector::resume_thread_from_exception(thread, exception_port, type, &regs);
 }

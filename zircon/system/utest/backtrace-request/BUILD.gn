@@ -2,14 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("backtrace-request") {
+# Integration test for requesting a backtrace.
+#
+# Related unittests exist alongside the backtrace and crashsvc code, but
+# this verifies that the pieces are working together correctly.
+test("backtrace-request-integration") {
   sources = [
-    "main.cpp",
+    "backtrace-request-test.cpp",
   ]
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/runtime",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }

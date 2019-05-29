@@ -120,7 +120,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/zxio/test",
       "$zx/system/ulib/zxtest/test",
       "abigen",
-      "backtrace-request",
+      "backtrace-request:backtrace-request-integration",
       "biotime",
       "blobfs",
       "blobfs-bench",
