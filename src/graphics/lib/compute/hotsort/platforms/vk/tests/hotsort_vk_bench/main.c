@@ -511,7 +511,7 @@ main(int argc, char const * argv[])
   // clumsily enable AMD GCN shader info extension
   //
   char const * const device_enabled_extensions[] = {
-#if defined(HOTSORT_VK_VERBOSE_STATISTICS_AMD) || defined(HOTSORT_VK_VERBOSE_DISASSEMBLY_AMD)
+#if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) || defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
     VK_AMD_SHADER_INFO_EXTENSION_NAME
 #else
     NULL
@@ -520,7 +520,7 @@ main(int argc, char const * argv[])
 
   uint32_t device_enabled_extension_count = 0;
 
-#if defined(HOTSORT_VK_VERBOSE_STATISTICS_AMD) || defined(HOTSORT_VK_VERBOSE_DISASSEMBLY_AMD)
+#if defined(HOTSORT_VK_SHADER_INFO_AMD_STATISTICS) || defined(HOTSORT_VK_SHADER_INFO_AMD_DISASSEMBLY)
   if (phy_device_props.vendorID == 0x1002)
     device_enabled_extension_count = 1;
 #endif
@@ -1068,7 +1068,7 @@ main(int argc, char const * argv[])
 
       fprintf(
         stdout,
-        "%s, %u.%u.%u.%u, %s, %s, %s, %8u, %8u, %8u, CPU, %s, %9.2f, %6.2f, GPU, %9u, %7.3f, %7.3f, %7.3f, %6.2f, %6.2f\n",
+        "%s, %u.%u.%u.%u, %s, %s, %s, %8u, %8u, %8u, CPU, %s, %9.2f, %6.2f, GPU, %9u, %7.3f, %7.3f, %7.3f, %7.2f, %7.2f\n",
         phy_device_props.deviceName,
         (phy_device_props.driverVersion >> 24) & 0xFF,
         (phy_device_props.driverVersion >> 16) & 0xFF,
