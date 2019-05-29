@@ -526,6 +526,17 @@ impl {{ $interface.Name }}Request {
 	}
 	{{ end }}
 	{{- end }}
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+            {{- range $method := $interface.Methods }}
+              {{- if $method.HasRequest }}
+                {{ $interface.Name }}Request::{{ $method.CamelName }}{..} => "{{ $method.Name }}",
+              {{- end }}
+            {{- end }}
+          }
+        }
 }
 
 pub struct {{ $interface.Name }}Encoder;

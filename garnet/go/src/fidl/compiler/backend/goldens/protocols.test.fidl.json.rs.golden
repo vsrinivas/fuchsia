@@ -616,6 +616,18 @@ impl WithAndWithoutRequestResponseRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                WithAndWithoutRequestResponseRequest::NoRequestNoResponse{..} => "no_request_no_response",
+                WithAndWithoutRequestResponseRequest::NoRequestEmptyResponse{..} => "no_request_empty_response",
+                WithAndWithoutRequestResponseRequest::NoRequestWithResponse{..} => "no_request_with_response",
+                WithAndWithoutRequestResponseRequest::WithRequestNoResponse{..} => "with_request_no_response",
+                WithAndWithoutRequestResponseRequest::WithRequestEmptyResponse{..} => "with_request_empty_response",
+                WithAndWithoutRequestResponseRequest::WithRequestWithResponse{..} => "with_request_with_response",
+          }
+        }
 }
 
 pub struct WithAndWithoutRequestResponseEncoder;
@@ -1445,6 +1457,14 @@ impl WithErrorSyntaxRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                WithErrorSyntaxRequest::ErrorAsPrimitive{..} => "error_as_primitive",
+                WithErrorSyntaxRequest::ErrorAsEnum{..} => "error_as_enum",
+          }
+        }
 }
 
 pub struct WithErrorSyntaxEncoder;
@@ -2116,6 +2136,15 @@ impl OvernetInternalProtocolRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                OvernetInternalProtocolRequest::MethodA{..} => "method_a",
+                OvernetInternalProtocolRequest::MethodB{..} => "method_b",
+                OvernetInternalProtocolRequest::MutateSocket{..} => "mutate_socket",
+          }
+        }
 }
 
 pub struct OvernetInternalProtocolEncoder;
@@ -2832,6 +2861,15 @@ impl SocketControlProtocolRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                SocketControlProtocolRequest::MethodA{..} => "method_a",
+                SocketControlProtocolRequest::MethodB{..} => "method_b",
+                SocketControlProtocolRequest::MutateSocket{..} => "mutate_socket",
+          }
+        }
 }
 
 pub struct SocketControlProtocolEncoder;
@@ -3548,6 +3586,15 @@ impl ChannelProtocolRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                ChannelProtocolRequest::MethodA{..} => "method_a",
+                ChannelProtocolRequest::MethodB{..} => "method_b",
+                ChannelProtocolRequest::MutateSocket{..} => "mutate_socket",
+          }
+        }
 }
 
 pub struct ChannelProtocolEncoder;
@@ -4264,6 +4311,15 @@ impl KitchenSinkRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                KitchenSinkRequest::MethodA{..} => "method_a",
+                KitchenSinkRequest::MethodB{..} => "method_b",
+                KitchenSinkRequest::MutateSocket{..} => "mutate_socket",
+          }
+        }
 }
 
 pub struct KitchenSinkEncoder;

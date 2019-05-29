@@ -382,6 +382,13 @@ impl InterfaceRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                InterfaceRequest::Method{..} => "method",
+          }
+        }
 }
 
 pub struct InterfaceEncoder;

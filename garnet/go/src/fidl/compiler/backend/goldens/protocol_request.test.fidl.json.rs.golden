@@ -238,6 +238,12 @@ pub enum ChildRequest {
 }
 
 impl ChildRequest {
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+          }
+        }
 }
 
 pub struct ChildEncoder;
@@ -664,6 +670,16 @@ impl ParentRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                ParentRequest::GetChild{..} => "get_child",
+                ParentRequest::GetChildRequest{..} => "get_child_request",
+                ParentRequest::TakeChild{..} => "take_child",
+                ParentRequest::TakeChildRequest{..} => "take_child_request",
+          }
+        }
 }
 
 pub struct ParentEncoder;

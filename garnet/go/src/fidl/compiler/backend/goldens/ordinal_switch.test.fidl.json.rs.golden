@@ -378,6 +378,14 @@ impl SwitchingOrdinalsRequest {
 		}
 	}
 	
+
+        /// Name of the method defined in FIDL
+        pub fn method_name(&self) -> &'static str {
+          match *self {
+                SwitchingOrdinalsRequest::OrdinalFive{..} => "ordinal_five",
+                SwitchingOrdinalsRequest::OnlyGeneratedOrdinal{..} => "only_generated_ordinal",
+          }
+        }
 }
 
 pub struct SwitchingOrdinalsEncoder;
