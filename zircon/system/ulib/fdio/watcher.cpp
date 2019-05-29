@@ -31,6 +31,10 @@ static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
     }
 
     fdio_t* io = fdio_unsafe_fd_to_io(dirfd);
+    if (io == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     zx_handle_t dir_channel = fdio_unsafe_borrow_channel(io);
     if (dir_channel == ZX_HANDLE_INVALID) {
         fdio_unsafe_release(io);
