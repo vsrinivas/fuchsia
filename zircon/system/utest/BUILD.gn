@@ -206,6 +206,7 @@ if (current_cpu != "") {
       "timers",
       "trace",
       "usb",
+      "usb-virtual-bus:test",
       "util",
       "vdso",
       "vdso-base",
