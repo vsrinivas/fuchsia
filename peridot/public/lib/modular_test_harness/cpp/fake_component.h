@@ -5,8 +5,8 @@
 #ifndef LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_
 #define LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_
 
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 
 namespace modular {
 namespace testing {

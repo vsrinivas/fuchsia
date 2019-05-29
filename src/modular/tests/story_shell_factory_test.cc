@@ -214,35 +214,49 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     // The session shell should be running and connected to PuppetMaster.
     FXL_CHECK(test_session_shell_->is_running());
     // The story should not already be created.
-    FXL_CHECK(!test_module_->is_running());
+    FXL_CHECK(!story_exists_);
 
     // Create a story
-    fuchsia::modular::Intent intent;
-    intent.handler = test_module_url_;
-    intent.action = "action";
-    AddModToStory(std::move(intent), mod_name, story_name);
+    fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+    puppet_master_->ControlStory(story_name, story_puppet_master.NewRequest());
+
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name_transitional = mod_name;
+    add_mod.intent.handler = test_module_url_;
+    add_mod.intent.action = "action";
+
+    std::vector<fuchsia::modular::StoryCommand> commands(1);
+    commands.at(0).set_add_mod(std::move(add_mod));
+
+    story_puppet_master->Enqueue(std::move(commands));
+    story_puppet_master->Execute(
+        [this](fuchsia::modular::ExecuteResult result) {
+          story_exists_ = true;
+        });
 
     // Wait for the story to be created.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return test_module_->is_running(); }, kTimeout));
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([this] { return story_exists_; }, kTimeout));
   }
 
   void DeleteStory() {
     // The session shell should be running and connected to PuppetMaster.
     FXL_CHECK(test_session_shell_->is_running());
     // The story should have been previously created through CreateStory.
-    FXL_CHECK(test_module_->is_running());
+    FXL_CHECK(story_exists_);
 
-    puppet_master_->DeleteStory(story_name, [this] {});
+    puppet_master_->DeleteStory(story_name, [this] { story_exists_ = true; });
 
     // Wait for the story to be deleted.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return !test_module_->is_running(); }, kTimeout));
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([this] { return story_exists_; }, kTimeout));
+
+    story_exists_ = false;
   }
 
   fuchsia::modular::StoryControllerPtr ControlStory() {
     // The story should have been previously created through CreateStory.
-    FXL_CHECK(test_module_->is_running());
+    FXL_CHECK(story_exists_);
 
     // Get a story controller.
     fuchsia::modular::StoryControllerPtr story_controller;
@@ -253,6 +267,8 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
   }
 
  private:
+  bool story_exists_{false};
+
   // Component URL of the |test_module_| intercepted in InitSession().
   std::string test_module_url_;
 

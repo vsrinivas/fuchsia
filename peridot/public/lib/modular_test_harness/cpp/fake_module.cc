@@ -9,13 +9,14 @@ namespace testing {
 
 FakeModule::FakeModule(
     fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
-    : on_intent_handled_(std::move(on_intent_handled)) {}
+    : on_intent_handled_(std::move(on_intent_handled)) {
+  ZX_ASSERT(on_intent_handled_);
+}
 
 FakeModule::~FakeModule() = default;
 
 // |modular::testing::FakeComponent|
 void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
-  component_context()->svc()->Connect(component_context_.NewRequest());
   component_context()->svc()->Connect(module_context_.NewRequest());
   module_context_.set_error_handler([this](zx_status_t err) {
     if (err != ZX_OK) {
@@ -33,7 +34,7 @@ void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
 }
 
 std::vector<std::string> FakeModule::GetSandboxServices() {
-  return {"fuchsia.modular.ComponentContext", "fuchsia.modular.ModuleContext"};
+  return {"fuchsia.modular.ModuleContext"};
 }
 
 // |IntentHandler|

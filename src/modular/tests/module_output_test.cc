@@ -32,6 +32,35 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
     test_harness()->Run(builder_.BuildSpec());
   }
 
+ protected:
+  void CreateStoryAndAddMod(fuchsia::modular::Intent intent) {
+    // Create an AddMod command
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name = {kModuleName};
+    add_mod.intent = std::move(intent);
+    add_mod.surface_relation = fuchsia::modular::SurfaceRelation{};
+
+    fuchsia::modular::StoryCommand cmd;
+    cmd.set_add_mod(std::move(add_mod));
+
+    std::vector<fuchsia::modular::StoryCommand> cmds;
+    cmds.push_back(std::move(cmd));
+
+    // Connect to PuppetMaster Service
+    fuchsia::modular::PuppetMasterPtr puppet_master;
+    fuchsia::modular::testing::ModularService svc;
+    svc.set_puppet_master(puppet_master.NewRequest());
+    test_harness()->ConnectToModularService(std::move(svc));
+
+    // Create a story
+    fuchsia::modular::StoryPuppetMasterPtr story_master;
+    puppet_master->ControlStory(kStoryName, story_master.NewRequest());
+
+    // Add the initial module to the story
+    story_master->Enqueue(std::move(cmds));
+    story_master->Execute([&](fuchsia::modular::ExecuteResult result) {});
+  }
+
   modular::testing::FakeComponent component_;
   modular::testing::TestHarnessBuilder builder_;
   std::string test_module_url_;
@@ -42,7 +71,7 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
   intent.handler = test_module_url_;
   intent.action = kIntentAction;
 
-  AddModToStory(std::move(intent), kModuleName, kStoryName);
+  CreateStoryAndAddMod(std::move(intent));
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return component_.is_running(); },
                                         kTimeout));
 
