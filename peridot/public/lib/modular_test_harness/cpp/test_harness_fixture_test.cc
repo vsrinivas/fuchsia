@@ -9,6 +9,11 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include "gmock/gmock.h"
+
+using testing::HasSubstr;
+using testing::Not;
+
 class TestHarnessFixtureTest : public modular::testing::TestHarnessFixture {};
 
 // Test that InterceptBaseShell() generates a base shell URL and sets it up for
@@ -119,6 +124,10 @@ TEST_F(TestHarnessFixtureTest, TestHarnessBuilderTest) {
 TEST_F(TestHarnessFixtureTest, GenerateFakeUrl) {
   modular::testing::TestHarnessBuilder builder;
   EXPECT_NE(builder.GenerateFakeUrl(), builder.GenerateFakeUrl());
+
+  EXPECT_THAT(builder.GenerateFakeUrl("foobar"), HasSubstr("foobar"));
+  EXPECT_THAT(builder.GenerateFakeUrl("foo!_bar"), HasSubstr("foobar"));
+  EXPECT_THAT(builder.GenerateFakeUrl("foo!_bar"), Not(HasSubstr("foo!_bar")));
 }
 
 // Test that the TestHarnessFixture is able to launch the modular runtime by

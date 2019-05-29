@@ -55,6 +55,7 @@ executable("test_harness_fixture_test_bin") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }
 

@@ -110,8 +110,9 @@ class TestHarnessBuilder {
       InterceptOptions options = InterceptOptions());
 
   // Returns a generated fake URL. Subsequent calls to this method will generate
-  // a different URL.
-  std::string GenerateFakeUrl() const;
+  // a different URL. If |name| is provided, adds its contents to the component
+  // name. Non alpha-num characters (a-zA-Z0-9) are stripped.
+  std::string GenerateFakeUrl(std::string name="") const;
 
  private:
   fuchsia::modular::testing::TestHarnessSpec spec_;

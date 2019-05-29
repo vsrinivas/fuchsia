@@ -106,7 +106,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(
 TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(
     OnNewComponentHandler on_new_component, InterceptOptions options) {
   if (options.url.empty()) {
-    options.url = GenerateFakeUrl();
+    options.url = GenerateFakeUrl("base_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
@@ -121,7 +121,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptBaseShell(
 TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(
     OnNewComponentHandler on_new_component, InterceptOptions options) {
   if (options.url.empty()) {
-    options.url = GenerateFakeUrl();
+    options.url = GenerateFakeUrl("session_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
@@ -136,7 +136,7 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptSessionShell(
 TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(
     OnNewComponentHandler on_new_component, InterceptOptions options) {
   if (options.url.empty()) {
-    options.url = GenerateFakeUrl();
+    options.url = GenerateFakeUrl("story_shell");
   }
   auto url = options.url;
   InterceptComponent(std::move(on_new_component), std::move(options));
@@ -148,7 +148,12 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(
   return *this;
 }
 
-std::string TestHarnessBuilder::GenerateFakeUrl() const {
+std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) const {
+  name.erase(
+      std::remove_if(name.begin(), name.end(),
+                     [](auto const& c) -> bool { return !std::isalnum(c); }),
+      name.end());
+
   uint32_t random_number = 0;
   zx_cprng_draw(&random_number, sizeof random_number);
   std::string rand_str = std::to_string(random_number);
@@ -159,6 +164,10 @@ std::string TestHarnessBuilder::GenerateFakeUrl() const {
   url = "fuchsia-pkg://example.com/GENERATED_URL_";
   url += rand_str;
   url += "#meta/GENERATED_URL_";
+  if (!name.empty()) {
+    url += name;
+    url += "_";
+  }
   url += rand_str;
   url += ".cmx";
 
