@@ -43,10 +43,10 @@ impl Realm {
         Ok(())
     }
 
-    fn make_child_realms(&self, decl: &ComponentDecl) -> ChildRealmMap {
+    fn make_static_child_realms(&self, decl: &ComponentDecl) -> ChildRealmMap {
         let mut child_realms = HashMap::new();
         for child in decl.children.iter() {
-            let moniker = ChildMoniker::new(child.name.clone());
+            let moniker = ChildMoniker::new(child.name.clone(), None);
             let abs_moniker = self.abs_moniker.child(moniker.clone());
             let realm = Arc::new(Realm {
                 resolver_registry: self.resolver_registry.clone(),
@@ -83,7 +83,7 @@ impl InstanceState {
             let decl = decl.unwrap().try_into().map_err(|e| {
                 ModelError::manifest_invalid(realm.instance.component_url.clone(), e)
             })?;
-            self.child_realms = Some(realm.make_child_realms(&decl));
+            self.child_realms = Some(realm.make_static_child_realms(&decl));
             self.decl = Some(decl);
         }
         Ok(())
@@ -104,7 +104,7 @@ pub struct Instance {
 pub struct InstanceState {
     /// Execution state for the component instance or `None` if not running.
     pub execution: Option<Execution>,
-    /// Realms of child instances, indexed by child moniker (name). Evaluated on demand.
+    /// Realms of child instances, indexed by child moniker. Evaluated on demand.
     pub child_realms: Option<ChildRealmMap>,
     /// The component's validated declaration. Evaluated on demand.
     pub decl: Option<ComponentDecl>,

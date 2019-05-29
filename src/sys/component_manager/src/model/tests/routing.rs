@@ -4,7 +4,6 @@
 
 use {
     crate::model::tests::routing_test_helpers::*,
-    crate::model::*,
     cm_rust::{
         self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeServiceDecl, ExposeSource, OfferDecl, OfferDest, OfferDirectoryDecl,
@@ -23,7 +22,7 @@ use {
 async fn use_ambient() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
-        users_to_check: vec![(AbsoluteMoniker::new(vec!["b"]), new_ambient_capability(), true),],
+        users_to_check: vec![(vec!["b"].into(), new_ambient_capability(), true),],
         components: vec![
             (
                 "a",
@@ -63,8 +62,8 @@ async fn use_from_parent() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["b"]), new_service_capability(), true),
+            (vec!["b"].into(), new_directory_capability(), true),
+            (vec!["b"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -133,8 +132,8 @@ async fn use_from_grandparent() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "c"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["b", "c"]), new_service_capability(), true),
+            (vec!["b", "c"].into(), new_directory_capability(), true),
+            (vec!["b", "c"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -229,8 +228,8 @@ async fn use_from_sibling_no_root() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "c"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["b", "c"]), new_service_capability(), true),
+            (vec!["b", "c"].into(), new_directory_capability(), true),
+            (vec!["b", "c"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -330,8 +329,8 @@ async fn use_from_sibling_root() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["c"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["c"]), new_service_capability(), true),
+            (vec!["c"].into(), new_directory_capability(), true),
+            (vec!["c"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -423,8 +422,8 @@ async fn use_from_niece() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["c"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["c"]), new_service_capability(), true),
+            (vec!["c"].into(), new_directory_capability(), true),
+            (vec!["c"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -541,10 +540,10 @@ async fn use_kitchen_sink() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "e"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["b", "e"]), new_service_capability(), true),
-            (AbsoluteMoniker::new(vec!["c", "f"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["c", "f"]), new_service_capability(), true),
+            (vec!["b", "e"].into(), new_directory_capability(), true),
+            (vec!["b", "e"].into(), new_service_capability(), true),
+            (vec!["c", "f"].into(), new_directory_capability(), true),
+            (vec!["c", "f"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -753,8 +752,8 @@ async fn use_from_component_manager_namespace() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), new_directory_capability(), true),
-            (AbsoluteMoniker::new(vec!["b"]), new_service_capability(), true),
+            (vec!["b"].into(), new_directory_capability(), true),
+            (vec!["b"].into(), new_service_capability(), true),
         ],
         components: vec![
             (
@@ -818,8 +817,8 @@ async fn use_not_offered() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), new_directory_capability(), false),
-            (AbsoluteMoniker::new(vec!["b"]), new_service_capability(), false),
+            (vec!["b"].into(), new_directory_capability(), false),
+            (vec!["b"].into(), new_service_capability(), false),
         ],
         components: vec![
             (
@@ -867,8 +866,8 @@ async fn use_offer_source_not_exposed() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["c"]), new_directory_capability(), false),
-            (AbsoluteMoniker::new(vec!["c"]), new_service_capability(), false),
+            (vec!["c"].into(), new_directory_capability(), false),
+            (vec!["c"].into(), new_service_capability(), false),
         ],
         components: vec![
             (
@@ -944,8 +943,8 @@ async fn use_offer_source_not_offered() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b", "c"]), new_directory_capability(), false),
-            (AbsoluteMoniker::new(vec!["b", "c"]), new_service_capability(), false),
+            (vec!["b", "c"].into(), new_directory_capability(), false),
+            (vec!["b", "c"].into(), new_service_capability(), false),
         ],
         components: vec![
             (
@@ -1024,8 +1023,8 @@ async fn use_from_expose() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), new_directory_capability(), false),
-            (AbsoluteMoniker::new(vec!["b"]), new_service_capability(), false),
+            (vec!["b"].into(), new_directory_capability(), false),
+            (vec!["b"].into(), new_service_capability(), false),
         ],
         components: vec![
             (
@@ -1096,8 +1095,8 @@ async fn offer_from_non_executable() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![
-            (AbsoluteMoniker::new(vec!["b"]), new_directory_capability(), false),
-            (AbsoluteMoniker::new(vec!["b"]), new_service_capability(), false),
+            (vec!["b"].into(), new_directory_capability(), false),
+            (vec!["b"].into(), new_service_capability(), false),
         ],
         components: vec![
             (

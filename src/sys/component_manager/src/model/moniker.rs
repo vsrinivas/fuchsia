@@ -2,45 +2,69 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt;
+use {failure::Fail, lazy_static::lazy_static, regex::Regex, std::fmt};
+
+lazy_static! {
+    pub static ref CHILD_MONIKER_RE: Regex = Regex::new(r"([^:]+)(:([^:]+))?").unwrap();
+}
 
 /// A child moniker locally identifies a child component instance using the name assigned by
-/// its parent.  It is a building block for more complex monikers.
+/// its parent and its collection (if present). It is a building block for more complex monikers.
 ///
-/// Display notation: "#name".
+/// Display notation: "name[:collection]".
 ///
 /// TODO: Add a mechanism for representing children grouped into collections by index.
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct ChildMoniker {
     name: String,
+    collection: Option<String>,
+    rep: String,
 }
 
 impl ChildMoniker {
-    pub fn new(name: String) -> ChildMoniker {
+    pub fn new(name: String, collection: Option<String>) -> Self {
         assert!(!name.is_empty());
-        ChildMoniker { name }
+        let rep = if let Some(c) = collection.as_ref() {
+            assert!(!c.is_empty());
+            format!("{}:{}", c, name)
+        } else {
+            name.clone()
+        };
+        ChildMoniker { name, collection, rep }
+    }
+
+    fn parse(rep: &str) -> Result<Self, MonikerError> {
+        let caps =
+            CHILD_MONIKER_RE.captures(rep).ok_or_else(|| MonikerError::invalid_moniker(rep))?;
+        let (name, coll) = match caps.get(3) {
+            Some(s) => (s.as_str().to_string(), Some(caps[1].to_string())),
+            None => (caps[1].to_string(), None),
+        };
+        Ok(ChildMoniker::new(name, coll))
     }
 
     pub fn name(&self) -> &str {
         &self.name
     }
-}
 
-impl From<&str> for ChildMoniker {
-    fn from(name: &str) -> Self {
-        ChildMoniker::new(name.to_string())
+    pub fn collection(&self) -> Option<&str> {
+        self.collection.as_ref().map(|s| &**s)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.rep
     }
 }
 
-impl From<String> for ChildMoniker {
-    fn from(name: String) -> Self {
-        ChildMoniker::new(name)
+impl From<&str> for ChildMoniker {
+    fn from(rep: &str) -> Self {
+        ChildMoniker::parse(rep).expect(&format!("child moniker failed to parse: {}", rep))
     }
 }
 
 impl fmt::Display for ChildMoniker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "#{}", self.name)
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -60,11 +84,14 @@ pub struct AbsoluteMoniker {
 }
 
 impl AbsoluteMoniker {
-    pub fn new<F>(path: Vec<F>) -> AbsoluteMoniker
-    where
-        F: Into<ChildMoniker>,
-    {
-        AbsoluteMoniker { path: path.into_iter().map(|x| x.into()).collect() }
+    pub fn new(path: Vec<ChildMoniker>) -> AbsoluteMoniker {
+        AbsoluteMoniker { path }
+    }
+
+    fn parse(path: &Vec<&str>) -> Result<Self, MonikerError> {
+        let path: Result<Vec<ChildMoniker>, MonikerError> =
+            path.iter().map(|x| ChildMoniker::parse(x)).collect();
+        Ok(AbsoluteMoniker::new(path?))
     }
 
     pub fn path(&self) -> &Vec<ChildMoniker> {
@@ -95,13 +122,20 @@ impl AbsoluteMoniker {
     }
 }
 
+impl From<Vec<&str>> for AbsoluteMoniker {
+    fn from(rep: Vec<&str>) -> Self {
+        AbsoluteMoniker::parse(&rep)
+            .expect(&format!("absolute moniker failed to parse: {:?}", &rep))
+    }
+}
+
 impl fmt::Display for AbsoluteMoniker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.path.is_empty() {
             write!(f, "/")?;
         } else {
             for segment in &self.path {
-                write!(f, "/{}", segment.name())?
+                write!(f, "/{}", segment.as_str())?
             }
         }
         Ok(())
@@ -161,12 +195,25 @@ impl fmt::Display for RelativeMoniker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, ".")?;
         for segment in &self.up_path {
-            write!(f, "\\{}", segment.name())?
+            write!(f, "\\{}", segment)?
         }
         for segment in &self.down_path {
-            write!(f, "/{}", segment.name())?
+            write!(f, "/{}", segment)?
         }
         Ok(())
+    }
+}
+
+/// Errors produced by `MonikerEnvironment`.
+#[derive(Debug, Fail)]
+pub enum MonikerError {
+    #[fail(display = "invalid moniker: {}", rep)]
+    InvalidMoniker { rep: String },
+}
+
+impl MonikerError {
+    pub fn invalid_moniker(rep: impl Into<String>) -> MonikerError {
+        MonikerError::InvalidMoniker { rep: rep.into() }
     }
 }
 
@@ -176,9 +223,19 @@ mod tests {
 
     #[test]
     fn child_monikers() {
-        let m = ChildMoniker::new("test".to_string());
+        let m = ChildMoniker::new("test".to_string(), None);
         assert_eq!("test", m.name());
-        assert_eq!("#test", format!("{}", m));
+        assert_eq!(None, m.collection());
+        assert_eq!("test", m.as_str());
+        assert_eq!("test", format!("{}", m));
+        assert_eq!(m, ChildMoniker::from("test"));
+
+        let m = ChildMoniker::new("test".to_string(), Some("coll".to_string()));
+        assert_eq!("test", m.name());
+        assert_eq!(Some("coll"), m.collection());
+        assert_eq!("coll:test", m.as_str());
+        assert_eq!("coll:test", format!("{}", m));
+        assert_eq!(m, ChildMoniker::from("coll:test"));
     }
 
     #[test]
@@ -186,13 +243,15 @@ mod tests {
         let root = AbsoluteMoniker::root();
         assert_eq!(true, root.is_root());
         assert_eq!("/", format!("{}", root));
+        assert_eq!(root, AbsoluteMoniker::from(vec![]));
 
         let leaf = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string()),
-            ChildMoniker::new("b".to_string()),
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), Some("coll".to_string())),
         ]);
         assert_eq!(false, leaf.is_root());
-        assert_eq!("/a/b", format!("{}", leaf));
+        assert_eq!("/a/coll:b", format!("{}", leaf));
+        assert_eq!(leaf, AbsoluteMoniker::from(vec!["a", "coll:b"]));
     }
 
     #[test]
@@ -202,8 +261,8 @@ mod tests {
         assert_eq!(None, root.parent());
 
         let leaf = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string()),
-            ChildMoniker::new("b".to_string()),
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
         ]);
         assert_eq!("/a/b", format!("{}", leaf));
         assert_eq!("/a", format!("{}", leaf.parent().unwrap()));
@@ -218,7 +277,10 @@ mod tests {
         assert_eq!(".", format!("{}", me));
 
         let ancestor = RelativeMoniker::new(
-            vec![ChildMoniker::new("a".to_string()), ChildMoniker::new("b".to_string())],
+            vec![
+                ChildMoniker::new("a".to_string(), None),
+                ChildMoniker::new("b".to_string(), None),
+            ],
             vec![],
         );
         assert_eq!(false, ancestor.is_self());
@@ -226,21 +288,30 @@ mod tests {
 
         let descendant = RelativeMoniker::new(
             vec![],
-            vec![ChildMoniker::new("a".to_string()), ChildMoniker::new("b".to_string())],
+            vec![
+                ChildMoniker::new("a".to_string(), None),
+                ChildMoniker::new("b".to_string(), None),
+            ],
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a/b", format!("{}", descendant));
 
         let sibling = RelativeMoniker::new(
-            vec![ChildMoniker::new("a".to_string())],
-            vec![ChildMoniker::new("b".to_string())],
+            vec![ChildMoniker::new("a".to_string(), None)],
+            vec![ChildMoniker::new("b".to_string(), None)],
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a/b", format!("{}", sibling));
 
         let cousin = RelativeMoniker::new(
-            vec![ChildMoniker::new("a".to_string()), ChildMoniker::new("a0".to_string())],
-            vec![ChildMoniker::new("b0".to_string()), ChildMoniker::new("b".to_string())],
+            vec![
+                ChildMoniker::new("a".to_string(), None),
+                ChildMoniker::new("a0".to_string(), None),
+            ],
+            vec![
+                ChildMoniker::new("b0".to_string(), None),
+                ChildMoniker::new("b".to_string(), None),
+            ],
         );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a\\a0/b0/b", format!("{}", cousin));

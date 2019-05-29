@@ -16,9 +16,7 @@ async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
 }
 
 async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    await!(realm.instance.state.lock()).child_realms.as_ref().unwrap()
-        [&ChildMoniker::new(child.to_string())]
-        .clone()
+    await!(realm.instance.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -59,13 +57,9 @@ async fn bind_instance_root_non_existent() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    let res =
-        await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-            "no-such-instance".to_string()
-        )])));
-    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(
-        AbsoluteMoniker::new(vec![ChildMoniker::new("no-such-instance".to_string())]),
-    ));
+    let res = await!(model.look_up_and_bind_instance(vec!["no-such-instance"].into()));
+    let expected_res: Result<(), ModelError> =
+        Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_urls = await!(urls_run.lock());
     let expected_urls: Vec<String> = vec![];
@@ -106,15 +100,15 @@ async fn bind_instance_child() {
         root_default_runner: Box::new(runner),
     });
     // bind to system
-    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["system"]))).is_ok());
+    assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
     assert_eq!(*await!(urls_run.lock()), expected_urls);
 
     // Validate children. system is resolved, but not echo.
     let actual_children = await!(get_children(&*model.root_realm));
     let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
-    expected_children.insert(ChildMoniker::new("system".to_string()));
-    expected_children.insert(ChildMoniker::new("echo".to_string()));
+    expected_children.insert("system".into());
+    expected_children.insert("echo".into());
     assert_eq!(actual_children, expected_children);
 
     let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
@@ -123,7 +117,7 @@ async fn bind_instance_child() {
     assert!(actual_children.is_empty());
     assert!(await!(echo_realm.instance.state.lock()).child_realms.is_none());
     // bind to echo
-    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["echo"]))).is_ok());
+    assert!(await!(model.look_up_and_bind_instance(vec!["echo"].into())).is_ok());
     let expected_urls =
         vec!["test:///system_resolved".to_string(), "test:///echo_resolved".to_string()];
     assert_eq!(*await!(urls_run.lock()), expected_urls);
@@ -160,12 +154,12 @@ async fn bind_instance_child_non_existent() {
         root_default_runner: Box::new(runner),
     });
     // bind to system
-    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["system"]))).is_ok());
+    assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
     assert_eq!(*await!(urls_run.lock()), expected_urls);
 
     // can't bind to logger: it does not exist
-    let moniker = AbsoluteMoniker::new(vec!["system", "logger"]);
+    let moniker: AbsoluteMoniker = vec!["system", "logger"].into();
     let res = await!(model.look_up_and_bind_instance(moniker.clone()));
     let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -254,10 +248,7 @@ async fn bind_instance_eager_children() {
 
     // Bind to the top component, and check that it and the eager components were started.
     {
-        let res =
-            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-                "a".to_string()
-            ),])));
+        let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["a".into(),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_urls = await!(urls_run.lock());
@@ -323,7 +314,7 @@ async fn bind_instance_no_execute() {
 
     // Bind to the parent component. The child should be started. However, the parent component
     // is non-executable so it is not run.
-    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["a"]))).is_ok());
+    assert!(await!(model.look_up_and_bind_instance(vec!["a"].into())).is_ok());
     let actual_urls = await!(urls_run.lock());
     let expected_urls = vec!["test:///b_resolved".to_string()];
     assert_eq!(*actual_urls, expected_urls);
@@ -375,24 +366,18 @@ async fn bind_instance_recursive_child() {
     });
 
     // bind to logger (before ever binding to system)
-    assert!(
-        await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["system", "logger"])))
-            .is_ok()
-    );
+    assert!(await!(model.look_up_and_bind_instance(vec!["system", "logger"].into())).is_ok());
     let expected_urls = vec!["test:///logger_resolved".to_string()];
     assert_eq!(*await!(urls_run.lock()), expected_urls);
 
     // bind to netstack
-    assert!(await!(
-        model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["system", "netstack"]))
-    )
-    .is_ok());
+    assert!(await!(model.look_up_and_bind_instance(vec!["system", "netstack"].into())).is_ok());
     let expected_urls =
         vec!["test:///logger_resolved".to_string(), "test:///netstack_resolved".to_string()];
     assert_eq!(*await!(urls_run.lock()), expected_urls);
 
     // finally, bind to system
-    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["system"]))).is_ok());
+    assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
     let expected_urls = vec![
         "test:///logger_resolved".to_string(),
         "test:///netstack_resolved".to_string(),
@@ -403,15 +388,15 @@ async fn bind_instance_recursive_child() {
     // validate children
     let actual_children = await!(get_children(&*model.root_realm));
     let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
-    expected_children.insert(ChildMoniker::new("system".to_string()));
+    expected_children.insert("system".into());
     assert_eq!(actual_children, expected_children);
 
     let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
 
     let actual_children = await!(get_children(&*system_realm));
     let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
-    expected_children.insert(ChildMoniker::new("logger".to_string()));
-    expected_children.insert(ChildMoniker::new("netstack".to_string()));
+    expected_children.insert("logger".into());
+    expected_children.insert("netstack".into());
     assert_eq!(actual_children, expected_children);
 
     let logger_realm = await!(get_child_realm(&*system_realm, "logger"));

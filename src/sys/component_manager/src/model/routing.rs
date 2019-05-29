@@ -179,7 +179,7 @@ async fn find_capability_source<'a>(
                     // The offered capability comes from a child, break the loop
                     // and begin walking the expose chain.
                     s.capability = offer.clone().into();
-                    s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string()));
+                    s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string(), None));
                     break 'offerloop;
                 }
             }
@@ -215,7 +215,7 @@ async fn find_capability_source<'a>(
                 ExposeSource::Child(child_name) => {
                     // The offered capability comes from a child, so follow the child.
                     s.capability = expose.clone().into();
-                    s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string()));
+                    s.moniker = s.moniker.child(ChildMoniker::new(child_name.to_string(), None));
                     continue;
                 }
             }
