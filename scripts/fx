@@ -142,6 +142,9 @@ fi
 declare -r vars_sh="${fuchsia_dir}/tools/devshell/lib/vars.sh"
 source "${vars_sh}" || exit $?
 
+declare -r metrics_sh="${fuchsia_dir}/tools/devshell/lib/metrics.sh"
+source "${metrics_sh}" || exit $?
+
 while [[ $# -ne 0 ]]; do
   case $1 in
     --config=*|--dir=*|-d=*)
@@ -233,6 +236,7 @@ fi
 declare -r cmd_and_args="$@"
 shift # Removes the command name.
 
+track-command-execution "${command_name}" "$@" &
 "${command_path}" "$@"
 declare -r retval=$?
 if [ -z "${iterative}" ]; then

@@ -127,3 +127,14 @@ appropriate.
 Where possible, a command can use `fx-command-help` to print out the
 long-form help (defined by `##` lines). Many commands implement `-h` and
 `--help` to invoke `fx-command-help` and this is recommended.
+
+## Testing
+
+Whenever possible, subcommands should have corresponding unit tests in
+//scripts/tests/. There are helper functions in //scripts/tests/lib/common.sh.
+
+End-to-end manual testing should be documented in separate files in this
+directory, and listed below.
+
+- [End-to-end testing of Metrics collection](metrics_testing.md)
+

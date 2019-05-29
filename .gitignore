@@ -7,6 +7,7 @@
 .classpath
 .config
 .fx-build-dir
+.fx-metrics-config
 .cproject
 .DS_Store
 .gdb_history

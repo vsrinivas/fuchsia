@@ -1,0 +1,70 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Unit tests for //tools/devshell/lib/metrics.sh
+#
+# Usage: metrics-tests
+
+set -o errexit
+set -o nounset
+
+# Read in the test framework and the library to test
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/lib >/dev/null 2>&1 && pwd)"/common.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/../../tools/devshell/lib >/dev/null 2>&1 && pwd)"/metrics.sh || exit $?
+
+function test::run_command_with_metrics_disabled {
+  _config_file="$(mktemp)"
+  _debug_file="$(mktemp)"
+  _enable_testing "${_debug_file}" 0 "${_config_file}"
+  metrics-write-config 0 "TEST"
+  metrics-read-config
+  track-command-execution "shell" "ls /"
+
+  # debug file is expected to be empty because debug is disabled
+  if [[ ! -s "$_debug_file" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function test::run_command_with_metrics_enabled {
+  _config_file="$(mktemp)"
+  _debug_file="$(mktemp)"
+  _enable_testing "${_debug_file}" 0 "${_config_file}"
+  metrics-write-config 1 "TEST"
+  metrics-read-config
+  track-command-execution "shell" "ls /"
+
+  # debug file is expected to be non-empty because debug is enabled
+  if [[ -s "$_debug_file" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function test::enable_metrics {
+  _config_file="$(mktemp)"
+  _debug_file="$(mktemp)"
+  _enable_testing "${_debug_file}" 0 "${_config_file}"
+  local enable=1
+  local test_uuid="__TEST__"
+  metrics-write-config $enable "$test_uuid"
+  metrics-read-config
+
+  track-command-execution "shell" "ls /"
+
+  # debug file is expected to contain the test UUID
+  if [[ -s "$_debug_file" && $(grep "$test_uuid" "$_debug_file") ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+
+test_main "$@"
+

@@ -1,0 +1,175 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### manage collection of metrics in fx tools
+
+## usage:
+##  fx metrics
+##       Show what metrics are collected when enabled
+##
+##  fx metrics status
+##       Show if metrics collection is enabled or disabled
+##
+##  fx metrics [--log=LOG_FILE] enable
+##       Enable metrics collection in fx tools
+##       --log=<LOG_FILE>  Log all metrics collected to LOG_FILE for
+##                      debugging purposes. The LOG_FILE setting is persisted
+##                      in a config file in the /tmp filesystem and will be
+##                      reset when the user logs out.
+##
+##  fx metrics disable
+##       Disable metrics collection in fx tools
+##
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
+source "${FUCHSIA_DIR}/tools/devshell/lib/metrics.sh" || exit $?
+
+fx-config-read
+
+function usage {
+  show-what-is-collected
+  fx-command-help
+}
+
+function show-what-is-collected {
+  cat <<EOF
+When enabled, this tool creates a random unique user ID (UUID) for the Fuchsia
+repository and uses that to collect the following anonymized metrics of
+the session and user workflow in order to improve the user experience:
+
+1. For every "fx" invocation:
+   - The output of "uname -rs" (Kernel name and release)
+   - The name of the "fx" subcommand invoked
+   - (in the future) Imports in BUILDDIR/args.gn for product and board
+   - (in the future) Value FUCHSIA_ARCH from BUILDDIR/fx.config
+
+2. For the following subcomand(s) [${TRACK_ALL_ARGS}]:
+   - All arguments passed to the subcommand
+
+3. (in the future) For the following subcomand(s) [${TRACK_RESULTS}]:
+   - Time taken to complete
+   - Exit status
+
+When metrics collection is disabled, any existing UUID is deleted, and a
+new UUID will be created if metrics is later re-enabled.
+
+When enabled, the UUID and the status are stored in ${METRICS_CONFIG}
+
+EOF
+}
+
+function maybe-print-metrics-logfile-status {
+  logfile=$(metrics-get-debug-logfile)
+  if [[ $logfile ]]; then
+    echo "Logging metrics collection for debugging purposes to $logfile"
+  fi
+}
+
+function styled-status {
+  enabled=$1
+  if [[ $METRICS_ENABLED -eq 1 ]]; then
+    metrics_status="enabled"
+    color="green"
+  else
+    metrics_status="disabled"
+    color="red"
+  fi
+  style::echo --bold --${color} ${metrics_status}
+}
+
+fx-standard-switches "$@"
+set -- "${FX_ARGV[@]}"
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 1
+fi
+
+debug_logfile=
+has_debug_logfile=0
+
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  --log)
+    if [[ $# -lt 2 ]]; then
+      fx-error Invalid syntax
+      fx-command-help
+      return 1
+    fi
+    has_debug_logfile=1
+    debug_logfile=$2
+    shift
+    ;;
+  enable|disable|status)
+    action=$1
+    ;;
+  *)
+    fx-error Invalid syntax
+    fx-command-help
+    exit 1
+  esac
+  shift
+done
+
+if [[ "$has_debug_logfile" -eq 1 ]]; then
+  if [[ $action != "enable" ]]; then
+    fx-error "Invalid syntax, you can only specify --log when enabling metrics"
+    fx-command-help
+    exit 1
+  fi
+  metrics-set-debug-logfile "$debug_logfile"
+fi
+
+# Read config, but doesn't exit (because of "set -e") if config file
+# doesn't exist
+metrics-read-config || true
+
+if [[ $action == "status" ]]; then
+  echo "Collection of metrics is currently $(styled-status "$METRICS_ENABLED") for ${FUCHSIA_DIR}"
+  maybe-print-metrics-logfile-status
+  echo "To change it, run fx metrics <enable|disable>"
+  if [[ $METRICS_ENABLED -eq 1 ]]; then
+    echo
+    show-what-is-collected
+  fi
+  exit 0
+fi
+
+if [[ $action == "enable" ]]; then
+  maybe-print-metrics-logfile-status
+  if [[ $METRICS_ENABLED -eq 1 ]]; then
+    echo "Metrics collection is already enabled."
+    exit 0
+  fi
+  if [[ -z "${METRICS_UUID}" ]]; then
+    uuidgen_cmd=uuidgen
+    if ! command -v $uuidgen_cmd >/dev/null 2>&1 ; then
+      fx-error "Command '$uuidgen_cmd' cannot be found, please add it to your PATH."
+      exit 1
+    fi
+    METRICS_UUID=$($uuidgen_cmd)
+  fi
+  METRICS_ENABLED=1
+  metrics-maybe-log "Metrics collection enabled at user's request"
+elif [[ $action == "disable" ]]; then
+  if [[ $METRICS_ENABLED -eq 0 ]]; then
+    echo "Metrics collection is already disabled."
+    exit 0
+  fi
+  METRICS_UUID=""
+  METRICS_ENABLED=0
+  metrics-maybe-log "Metrics collection disabled at user's request"
+fi
+
+metrics-write-config "${METRICS_ENABLED}" "${METRICS_UUID}"
+echo "Collection of metrics is now $(styled-status $METRICS_ENABLED) for ${FUCHSIA_DIR}"
+
