@@ -220,11 +220,10 @@ struct BufferMemoryConstraints {
 /// memory that isn't reachable from the CPU is CoherencyDomain Inaccessible,
 /// even if it's possible to cause a device (physical or virtual) to copy the
 /// data from the Inaccessible buffers to buffers that are visible to the CPU.
-/// TODO: Use upper snake case for these enum members.
 enum CoherencyDomain {
-    Cpu = 0;
-    Ram = 1;
-    Inaccessible = 2;
+    CPU = 0;
+    RAM = 1;
+    INACCESSIBLE = 2;
 };
 
 struct BufferMemorySettings {

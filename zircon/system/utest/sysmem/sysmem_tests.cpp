@@ -185,7 +185,7 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem_CoherencyDomain_Cpu, "");
+              fuchsia_sysmem_CoherencyDomain_CPU, "");
     ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
     for (uint32_t i = 0; i < 64; ++i) {
@@ -292,7 +292,7 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem_CoherencyDomain_Cpu, "");
+              fuchsia_sysmem_CoherencyDomain_CPU, "");
     // We specified image_format_constraints so the result must also have
     // image_format_constraints.
     ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, true, "");
@@ -434,7 +434,7 @@ extern "C" bool test_sysmem_no_token(void) {
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, false, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem_CoherencyDomain_Ram, "");
+              fuchsia_sysmem_CoherencyDomain_RAM, "");
     ASSERT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
     for (uint32_t i = 0; i < 64; ++i) {
@@ -957,7 +957,7 @@ extern "C" bool test_sysmem_heap_constraints(void) {
     ASSERT_EQ(allocation_status, ZX_OK, "");
     ASSERT_EQ(buffer_collection_info->buffer_count, 1, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
-              fuchsia_sysmem_CoherencyDomain_Inaccessible, "");
+              fuchsia_sysmem_CoherencyDomain_INACCESSIBLE, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings.heap,
               fuchsia_sysmem_HeapType_SYSTEM_RAM, "");
     ASSERT_EQ(buffer_collection_info->settings.buffer_settings

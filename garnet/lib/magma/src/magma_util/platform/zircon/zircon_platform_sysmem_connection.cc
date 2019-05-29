@@ -105,11 +105,11 @@ InitializeDescriptionFromSettings(const fuchsia::sysmem::SingleBufferSettings& s
                                   PlatformBufferDescription* description_out)
 {
     switch (settings.buffer_settings.coherency_domain) {
-        case fuchsia::sysmem::CoherencyDomain::Ram:
+        case fuchsia::sysmem::CoherencyDomain::RAM:
             description_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_RAM;
             break;
 
-        case fuchsia::sysmem::CoherencyDomain::Cpu:
+        case fuchsia::sysmem::CoherencyDomain::CPU:
             description_out->coherency_domain = MAGMA_COHERENCY_DOMAIN_CPU;
             break;
 

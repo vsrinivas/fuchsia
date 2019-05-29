@@ -682,7 +682,7 @@ void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
       buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   ZX_DEBUG_ASSERT(
       buffer_collection_info.settings.buffer_settings.coherency_domain ==
-      fuchsia::sysmem::CoherencyDomain::Cpu);
+      fuchsia::sysmem::CoherencyDomain::CPU);
   if (port == kOutputPort) {
     ZX_DEBUG_ASSERT(
         buffer_collection_info.settings.has_image_format_constraints);

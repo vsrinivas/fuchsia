@@ -68,9 +68,9 @@ struct ImageFormat;
 struct BufferFormat;
 struct BufferCollectionInfo;
 enum class CoherencyDomain : uint32_t {
-  Cpu = 0u,
-  Ram = 1u,
-  Inaccessible = 2u,
+  CPU = 0u,
+  RAM = 1u,
+  INACCESSIBLE = 2u,
 };
 
 

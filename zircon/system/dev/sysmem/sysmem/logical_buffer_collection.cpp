@@ -1142,7 +1142,7 @@ static bool GetCoherencyDomain(
     fuchsia_sysmem_CoherencyDomain* domain_out) {
     if (!constraints->has_buffer_memory_constraints) {
         // CPU domain by default.
-        *domain_out = fuchsia_sysmem_CoherencyDomain_Cpu;
+        *domain_out = fuchsia_sysmem_CoherencyDomain_CPU;
         return true;
     }
 
@@ -1152,7 +1152,7 @@ static bool GetCoherencyDomain(
         if (!constraints->buffer_memory_constraints.inaccessible_domain_supported) {
             return false;
         }
-        *domain_out = fuchsia_sysmem_CoherencyDomain_Inaccessible;
+        *domain_out = fuchsia_sysmem_CoherencyDomain_INACCESSIBLE;
         return true;
     }
 
@@ -1163,7 +1163,7 @@ static bool GetCoherencyDomain(
             // RAM coherency domain.
             //
             // TODO - base on the system in use.
-            *domain_out = fuchsia_sysmem_CoherencyDomain_Ram;
+            *domain_out = fuchsia_sysmem_CoherencyDomain_RAM;
             return true;
         }
     }
@@ -1172,12 +1172,12 @@ static bool GetCoherencyDomain(
     // in that order.
 
     if (constraints->buffer_memory_constraints.cpu_domain_supported) {
-        *domain_out = fuchsia_sysmem_CoherencyDomain_Cpu;
+        *domain_out = fuchsia_sysmem_CoherencyDomain_CPU;
         return true;
     }
 
     if (constraints->buffer_memory_constraints.ram_domain_supported) {
-        *domain_out = fuchsia_sysmem_CoherencyDomain_Ram;
+        *domain_out = fuchsia_sysmem_CoherencyDomain_RAM;
         return true;
     }
 
@@ -1185,7 +1185,7 @@ static bool GetCoherencyDomain(
         // Intentionally permit treating as Inaccessible if we reach here, even
         // if the heap permits CPU access.  Only domain in common among
         // participants is Inaccessible.
-        *domain_out = fuchsia_sysmem_CoherencyDomain_Inaccessible;
+        *domain_out = fuchsia_sysmem_CoherencyDomain_INACCESSIBLE;
         return true;
     }
 
@@ -1278,7 +1278,7 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
 
     ZX_DEBUG_ASSERT(
         constraints_->usage.cpu == 0 || buffer_settings->coherency_domain !=
-        fuchsia_sysmem_CoherencyDomain_Inaccessible);
+        fuchsia_sysmem_CoherencyDomain_INACCESSIBLE);
 
     // It's allowed for zero participants to have any ImageFormatConstraint(s),
     // in which case the combined constraints_ will have zero (and that's fine,
