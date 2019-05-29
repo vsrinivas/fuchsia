@@ -1163,6 +1163,7 @@ group("rust_crates") {
     "//garnet/lib/rust/ethernet:ethernet-tests",
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext:fidl_fuchsia_pkg_ext_tests",
     "//garnet/lib/rust/fuchsia_pkg:fuchsia_pkg_tests",
+    "//garnet/lib/rust/fuchsia_pkg_testing:tests",
     "//garnet/lib/rust/fuchsia_uri:fuchsia_uri_tests",
     "//garnet/lib/rust/fuchsia_uri_rewrite:fuchsia_uri_rewrite_tests",
     "//garnet/lib/rust/io_util:io_util_tests",

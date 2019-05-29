@@ -72,6 +72,13 @@ package("pm") {
       shell = true
     },
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/pm.cmx")
+      dest = "pm.cmx"
+    },
+  ]
 }
 
 install_host_tools("host") {

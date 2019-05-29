@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("fuchsia_pkg_testing") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/fuchsia_pkg",
+    "//garnet/lib/rust/fuchsia_uri",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-merkle",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:walkdir",
+  ]
+}
+
+test_package("fuchsia_pkg_testing_tests") {
+  deps = [
+    ":fuchsia_pkg_testing",
+  ]
+
+  resources = [
+    {
+      path = rebase_path(system_package_key)
+      dest = "development_package.key"
+    },
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_pkg_testing_lib_test"
+      dest = "fuchsia_pkg_testing_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fuchsia_pkg_testing_tests",
+    "//garnet/go/src/pm:pm",
+  ]
+}

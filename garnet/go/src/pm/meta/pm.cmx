@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/pm"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

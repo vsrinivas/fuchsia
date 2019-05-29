@@ -1,0 +1,13 @@
+{
+  "program": {
+    "binary": "test/fuchsia_pkg_testing_tests"
+  },
+  "sandbox": {
+    "features": [
+      "system-temp"
+    ],
+    "services": [
+      "fuchsia.sys.Launcher"
+    ]
+  }
+}

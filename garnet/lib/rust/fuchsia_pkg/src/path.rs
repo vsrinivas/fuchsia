@@ -9,7 +9,9 @@ use regex::Regex;
 pub const MAX_OBJECT_BYTES: usize = 255;
 pub const MAX_PACKAGE_NAME_BYTES: usize = 100;
 pub const MAX_PACKAGE_VARIANT_BYTES: usize = 100;
-pub const PACKAGE_NAME_REGEX: &str = r"^[-0-9a-z\.]{1, 100}$";
+// FIXME(PKG-757): '_' is not valid in package names, but many Fuchsia packages currently use that
+// character.
+pub const PACKAGE_NAME_REGEX: &str = r"^[-_0-9a-z\.]{1, 100}$";
 pub const PACKAGE_VARIANT_REGEX: &str = r"^[-0-9a-z\.]{1, 100}$";
 
 /// Checks if `input` is a valid path for a file in a Fuchsia package.
@@ -225,8 +227,9 @@ mod check_package_name_tests {
                 Err(PackageNameError::TooLong{invalid_name: s.to_string()}));
         }
 
+        // FIXME(PKG-757): '_' should be considered to be an invalid character.
         #[test]
-        fn test_reject_invalid_character(ref s in r"[-0-9a-z\.]{0, 48}[^-0-9a-z\.][-0-9a-z\.]{0, 48}")
+        fn test_reject_invalid_character(ref s in r"[-0-9a-z\.]{0, 48}[^-_0-9a-z\.][-0-9a-z\.]{0, 48}")
         {
             prop_assert_eq!(
                 check_package_name(s),
