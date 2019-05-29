@@ -30,7 +30,7 @@ public:
     }
 
     // Path to the test sysdev driver
-    static const char* kSysdevDriver;
+    static inline constexpr char kSysdevDriver[] = "/boot/driver/test/sysdev.so";
 
     // Get an args structure pre-populated with the test sysdev driver, the
     // test control driver, and the test driver directory.

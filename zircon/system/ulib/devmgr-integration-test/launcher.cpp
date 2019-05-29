@@ -101,8 +101,6 @@ int bootsvc_main(void* arg) {
 
 namespace devmgr_integration_test {
 
-const char* IsolatedDevmgr::kSysdevDriver = "/boot/driver/test/sysdev.so";
-
 devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
     devmgr_launcher::Args args;
     args.sys_device_driver = kSysdevDriver;
