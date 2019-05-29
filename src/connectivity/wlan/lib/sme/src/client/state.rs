@@ -2,18 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, warn};
 use wep_deprecated;
-use wlan_common::{
-    format::MacFmt,
-    ie::rsn::{
-        cipher,
-        suite_selector::{Factory, OUI},
-    },
-    RadioConfig,
-};
+use wlan_common::{format::MacFmt, ie::rsn::cipher, RadioConfig};
 use wlan_inspect::{inspect_log, log::InspectBytes};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
@@ -490,7 +482,7 @@ fn install_wep_key(context: &mut Context, bssid: [u8; 6], key: &wep_deprecated::
         wep_deprecated::Key::Bits104(_) => cipher::WEP_104,
     };
     // unwrap() is safe, OUI is defined in RSN and always compatible with ciphers.
-    let cipher = cipher::Cipher::new(Bytes::from(&OUI[..]), cipher_suite).unwrap();
+    let cipher = cipher::Cipher::new_dot11(cipher_suite);
     inspect_log!(context.inspect.rsn_events, {
         derived_key: "WEP",
         cipher: format!("{:?}", cipher),

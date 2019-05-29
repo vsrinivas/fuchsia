@@ -129,7 +129,6 @@ mod tests {
     use crate::rsna::{test_util, NegotiatedRsne, Role, VerifiedKeyFrame};
     use wlan_common::ie::rsn::akm::{Akm, PSK};
     use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
-    use wlan_common::ie::rsn::suite_selector::{Factory, OUI};
 
     fn make_verified(
         key_frame: &eapol::KeyFrame,
@@ -157,8 +156,8 @@ mod tests {
         const GTK_RSC: u64 = 81234;
         const GTK_KEY_ID: u8 = 2;
 
-        let psk = Akm::new(Bytes::from(&OUI[..]), PSK).expect("error creating AKM");
-        let ccmp = Cipher::new(Bytes::from(&OUI[..]), CCMP_128).expect("error creating cipher");
+        let psk = Akm::new_dot11(PSK);
+        let ccmp = Cipher::new_dot11(CCMP_128);
         let mut handshake = GroupKey::new(
             Config { role: Role::Supplicant, akm: psk.clone(), cipher: ccmp.clone() },
             &KCK[..],

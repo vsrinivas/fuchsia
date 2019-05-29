@@ -90,12 +90,10 @@ impl Ptk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::Bytes;
     use hex::FromHex;
     use wlan_common::ie::rsn::{
         akm::{Akm, PSK},
         cipher::{Cipher, CCMP_128, TKIP},
-        suite_selector::{Factory, OUI},
     };
 
     struct TestData {
@@ -124,8 +122,8 @@ mod tests {
     }
 
     fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk, failure::Error> {
-        let akm = Akm::new(Bytes::from(&OUI[..]), akm_suite).unwrap();
-        let cipher = Cipher::new(Bytes::from(&OUI[..]), cipher_suite).unwrap();
+        let akm = Akm::new_dot11(akm_suite);
+        let cipher = Cipher::new_dot11(cipher_suite);
         Ptk::new(&data.pmk[..], &data.aa, &data.spa, &data.anonce, &data.snonce, &akm, cipher)
     }
 

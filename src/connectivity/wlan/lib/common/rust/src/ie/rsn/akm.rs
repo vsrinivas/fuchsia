@@ -4,6 +4,7 @@
 
 use super::suite_selector;
 use super::Error;
+use crate::ie::rsn::suite_selector::OUI;
 use bytes::Bytes;
 use failure::{self, ensure};
 use std::fmt;
@@ -40,6 +41,12 @@ pub struct Akm {
 }
 
 impl Akm {
+    /// Creates a new AKM instance for 802.11 specified AKMs.
+    /// See IEEE Std 802.11-2016, 9.4.2.25.3, Table 9-133.
+    pub fn new_dot11(suite_type: u8) -> Self {
+        Akm { oui: Bytes::from(&OUI[..]), suite_type }
+    }
+
     /// Only AKMs specified in IEEE 802.11-2016, 9.4.2.25.4, Table 9-133 have known algorithms.
     pub fn has_known_algorithm(&self) -> bool {
         if self.is_reserved() || self.is_vendor_specific() {
@@ -152,5 +159,18 @@ impl suite_selector::Factory for Akm {
 impl fmt::Debug for Akm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_dot11() {
+        let psk = Akm::new_dot11(PSK);
+        assert!(!psk.is_vendor_specific());
+        assert!(psk.has_known_algorithm());
+        assert!(!psk.is_reserved());
     }
 }
