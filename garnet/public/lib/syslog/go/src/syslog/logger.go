@@ -354,7 +354,14 @@ func (l *Logger) VLogTf(verbosity int, tag, format string, a ...interface{}) err
 	return l.logf(2, LogLevel(-verbosity), tag, format, a...)
 }
 
-var defaultLogger *Logger
+var defaultLogger = &Logger{
+	options: LogInitOptions{
+		LogLevel:                      InfoLevel,
+		MinSeverityForFileAndLineInfo: ErrorLevel,
+		Writer: os.Stderr,
+	},
+	pid: uint64(os.Getpid()),
+}
 
 func logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
 	if l := GetDefaultLogger(); l != nil {
