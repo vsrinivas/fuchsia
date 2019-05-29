@@ -22,13 +22,13 @@ use fidl::endpoints::{ClientEnd};
 /// test. The reason for this design is that TokenManager caches auth provider clients and
 /// reuses them throughout its lifetime, hence it will never ask for the same auth provider
 /// (as defined by its `auth_provider_type`) twice.
-struct FakeAuthProviderSupplier {
+pub struct FakeAuthProviderSupplier {
     auth_providers: Mutex<HashMap<String, ClientEnd<AuthProviderMarker>>>,
     servers: Mutex<FuturesUnordered<BoxFuture<'static, Result<(), fidl::Error>>>>,
 }
 
 #[derive(Debug, Fail)]
-enum FakeAuthProviderError {
+pub enum FakeAuthProviderError {
     #[fail(display = "FakeAuthProvider error: Some auth providers were never used")]
     UnusedAuthProviders,
 
@@ -37,7 +37,7 @@ enum FakeAuthProviderError {
 }
 
 impl FakeAuthProviderSupplier {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             auth_providers: Mutex::new(HashMap::new()),
             servers: Mutex::new(FuturesUnordered::new()),
@@ -47,7 +47,7 @@ impl FakeAuthProviderSupplier {
     /// Add an auth provider, by supplying two arguments: the type, and a function which acts
     /// as the server end for the auth provider. This function will be invoked when `run()` is
     /// called.
-    fn add_auth_provider<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
+    pub fn add_auth_provider<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
     where
         F: (FnOnce(AuthProviderRequestStream) -> Fut),
         Fut: Future<Output = Result<(), fidl::Error>> + Send + 'static,
@@ -61,7 +61,7 @@ impl FakeAuthProviderSupplier {
     /// Run the added auth providers to completion. We return an error if a server function
     /// returns an error or if not all clients have been given out during the call.
     /// This is intended to run concurrently with the client code under test.
-    async fn run(&self) -> Result<(), FakeAuthProviderError> {
+    pub async fn run(&self) -> Result<(), FakeAuthProviderError> {
         let futs = std::mem::replace(&mut *self.servers.lock(), FuturesUnordered::new());
         await!(futs.collect::<Vec<_>>())
             .into_iter()
