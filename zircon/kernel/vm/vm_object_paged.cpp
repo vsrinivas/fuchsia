@@ -156,13 +156,25 @@ VmObjectPaged::~VmObjectPaged() {
         //
         // To prevent races with a hidden parent merging itself into this vmo, it is necessary
         // to hold the lock over the parent_ check and into the subsequent removal call.
-        Guard<fbl::Mutex> guard{&lock_};
-        if (parent_) {
-            // Release any COW pages in ancestors retained by this vmo.
-            ReleaseCowParentPagesLocked(0, parent_limit_, true, &list);
+        {
+            Guard<fbl::Mutex> guard{&lock_};
+            if (parent_) {
+                // Release any COW pages in ancestors retained by this vmo.
+                ReleaseCowParentPagesLocked(0, parent_limit_, true, &list);
 
-            LTRACEF("removing ourself from our parent %p\n", parent_.get());
-            parent_->RemoveChild(this, guard.take());
+                LTRACEF("removing ourself from our parent %p\n", parent_.get());
+                parent_->RemoveChild(this, guard.take());
+            }
+        }
+
+        if (is_contiguous()) {
+            // If we're contiguous, then all the ancestor pages we're freeing
+            // should be pages which looked contiguous to userspace.
+            vm_page_t* p;
+            list_for_every_entry(&list, p, vm_page_t, queue_node) {
+                p->object.pin_count--;
+                ASSERT(p->object.pin_count == 0);
+            }
         }
     } else {
         // Most of the hidden vmo's state should have already been cleaned up when it merged
@@ -421,11 +433,6 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
         return status;
     }
 
-    // TODO(stevensd): Add support for bidirectional contiguous clones.
-    if (type == CloneType::Bidirectional && is_contiguous()) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     auto options = resizable == Resizability::Resizable ? kResizable : 0u;
     // There are two reasons for declaring/allocating the clones outside of the vmo's lock. First,
     // the dtor might require taking the lock, so we need to ensure that it isn't called until
@@ -452,10 +459,15 @@ zx_status_t VmObjectPaged::CreateCowClone(Resizability resizable, CloneType type
             return ZX_ERR_NOT_SUPPORTED;
         }
 
+        uint32_t options = kHidden;
+        if (is_contiguous()) {
+            options |= kContiguous;
+        }
+
         // The initial size is 0. It will be initialized as part of the atomic
         // insertion into the child tree.
         hidden_parent = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(
-                kHidden, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
+                options, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -597,12 +609,34 @@ void VmObjectPaged::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
     // would need to be done to make the work proportional to the number of pages actually split.
     child.page_list_.MergeFrom(page_list_,
             merge_start_offset, merge_end_offset,
-            [](vm_page* page, uint64_t offset) {
-                // TODO(stevensd): Update per-page metadata here when available
+            [this_is_contig = this->is_contiguous()](vm_page* page, uint64_t offset) {
+                if (this_is_contig) {
+                    // If this vmo is contiguous, unpin the pages that aren't needed. The pages
+                    // are either original contig pages (which should have a pin_count of 1), or
+                    // they're forked pages where the original is already in the contig child (in
+                    // which case pin_count should be 0).
+                    DEBUG_ASSERT(page->object.pin_count <= 1);
+                    page->object.pin_count = 0;
+                }
             },
-            [merge_start_offset, merge_end_offset](vm_page* page, uint64_t offset) {
+            [this_is_contig = this->is_contiguous(), child_is_contig = child.is_contiguous(),
+             merge_start_offset, merge_end_offset](vm_page* page, uint64_t offset) {
                 // Only migrate pages in the child's range.
                 DEBUG_ASSERT(merge_start_offset <= offset && offset < merge_end_offset);
+
+                if (child_is_contig) {
+                    // We moved the page into the contiguous vmo, so we expect the page
+                    // to be a pinned contiguous page.
+                    DEBUG_ASSERT(page->object.pin_count == 1);
+                } else if (this_is_contig) {
+                    // This vmo was contiguous but the child isn't, so unpin the pages. Similar
+                    // to above, this should be at most 1.
+                    DEBUG_ASSERT(page->object.pin_count <= 1);
+                    page->object.pin_count = 0;
+                } else {
+                    // Neither is contiguous, so the page shouldn't have been pinned.
+                    DEBUG_ASSERT(page->object.pin_count == 0);
+                }
 
                 // Since we recursively fork on write, if the child doesn't have the
                 // page, then neither of its children do.
@@ -897,6 +931,8 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
     vm_page_t* target_page = page;
     VmObjectPaged* target_page_owner = page_owner;
     uint64_t target_page_offset = owner_offset;
+    VmObjectPaged* last_contig = nullptr;
+    uint64_t last_contig_offset = 0;
 
     bool alloc_failure = false;
 
@@ -946,6 +982,14 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
             }
             target_page = cover_page;
 
+            // To maintain the contiguity of the user-visible vmo, keep track of the
+            // leaf-most contiguous vmo that has a page inserted into it. We'll come
+            // back later and make sure this vmo sees the original contiguous page.
+            if (cur->is_contiguous()) {
+                last_contig = cur;
+                last_contig_offset = cur_offset;
+            }
+
             skip_range_update = false;
         }
 
@@ -983,11 +1027,94 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
     }
     DEBUG_ASSERT(alloc_failure || cur_offset == offset);
 
+    if (last_contig != nullptr) {
+        ContiguousCowFixupLocked(page_owner, owner_offset, last_contig, last_contig_offset);
+    }
+
     if (alloc_failure) {
+       // Note that this happens after fixing up the contiguous vmo invariant.
         return nullptr;
+    } else if (last_contig == this) {
+        return page;
     } else {
         return target_page;
     }
+}
+
+void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t page_owner_offset,
+                                             VmObjectPaged* last_contig,
+                                             uint64_t last_contig_offset) {
+    // If we're here, then |last_contig| must be contiguous, and all of its
+    // ancestors (including |page_owner|) must be contiguous.
+    DEBUG_ASSERT(last_contig->is_contiguous());
+    DEBUG_ASSERT(page_owner->is_contiguous());
+
+    // When this function is invoked, we know that the desired contiguous page is somewhere
+    // between |page_owner| and |last_contig|. Since ::CloneCowPageLocked will no longer
+    // migrate the original page once it forks that page, we know that the desired contiguous
+    // page is in the root-most vmo that has a page corresponding to the offset.
+    //
+    // In other words, we can start searching from |page_owner| and progress towards the
+    // leaf vmo, and the first page that is found will be the page that needs to be moved
+    // into |last_contig|.
+
+    // Use ::ForEveryPageInRange so that we can directly swap the vm_page_t entries
+    // in the page lists without having to worry about allocation.
+    bool found = false;
+    last_contig->page_list_.ForEveryPageInRange(
+        [page_owner, page_owner_offset, last_contig, &found](vm_page_t*& page1, uint64_t off)
+                // Walks the clone chain, which confuses analysis
+                TA_NO_THREAD_SAFETY_ANALYSIS {
+
+            auto swap_fn = [&page1, &found](vm_page_t*& page2, uint64_t off) {
+                // We're guaranteed that the first page we see is the one we want.
+                DEBUG_ASSERT(page2->object.pin_count == 1);
+                found = true;
+
+                vm_page* tmp = page1;
+                page1 = page2;
+                page2 = tmp;
+
+                bool flag = page1->object.cow_left_split;
+                page1->object.cow_left_split = page2->object.cow_left_split;
+                page2->object.cow_left_split = flag;
+
+                flag = page1->object.cow_right_split;
+                page1->object.cow_right_split = page2->object.cow_right_split;
+                page2->object.cow_right_split = flag;
+
+                // Don't swap the pin counts, since those are relevant to the
+                // actual physical pages, not to what vmo they're contained in.
+
+                return ZX_ERR_NEXT;
+            };
+
+            VmObjectPaged* cur = page_owner;
+            uint64_t cur_offset = page_owner_offset;
+            while (!found && cur != last_contig) {
+                zx_status_t status = cur->page_list_.ForEveryPageInRange(
+                    swap_fn, cur_offset, cur_offset + PAGE_SIZE);
+                DEBUG_ASSERT(status == ZX_OK);
+
+                if (found) {
+                    cur->RangeChangeUpdateLocked(cur_offset, PAGE_SIZE);
+                } else {
+                    cur = cur->page_stack_flag_ == StackDir::Left ?
+                        &cur->left_child_locked() : &cur->right_child_locked();
+                    cur_offset = cur_offset - cur->parent_offset_;
+
+                    DEBUG_ASSERT(cur->is_contiguous());
+                }
+            }
+            return ZX_ERR_NEXT;
+        },
+        last_contig_offset, last_contig_offset + PAGE_SIZE);
+    DEBUG_ASSERT(found);
+
+    // It's not necessary to invoke ::RangeChangeUpdateLocked on the |last_contig|, as it is a
+    // descendant of whatever vmo ::RangeChangeUpdateLocked was invoked when pages were swapped.
+
+    DEBUG_ASSERT(last_contig->page_list_.GetPage(last_contig_offset)->object.pin_count == 1);
 }
 
 vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,

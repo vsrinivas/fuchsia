@@ -268,6 +268,22 @@ private:
             // Reaching into the children confuses analysis
             TA_NO_THREAD_SAFETY_ANALYSIS;
 
+    // ::CloneCowPageLocked helper function that ensures contigous vmos remain contiguous.
+    //
+    // In general, it does not matter which vmo gets which physical page when forking pages in
+    // hidden vmos. However, if there are COW clones of a contiguous vmo, the original vmo
+    // must always see the original physical pages, so that it always looks contiguous to
+    // userspace.  This function is responsible for fixing up any violations to this property
+    // introduced by the primary page forking logic in ::CloneCowPageLocked.
+    //
+    // |page_owner| is the original owner of the page being forked, and |page_owner_offset|
+    // is the offset of the original page. |last_contig| is the last contiguous vmo between
+    // |this| and |page_owner| that can also no longer see the desired page.
+    void ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t page_owner_offset,
+                                  VmObjectPaged* last_contig, uint64_t last_contig_offset)
+            // Walking through the ancestors confuses analysis.
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
     // Releases this vmo's reference to any ancestor vmo's COW pages, for the range [start, end)
     // in this vmo. This is done by either setting the pages' split bits (if something else
     // can access the pages) or by freeing the pages onto |free_list| (if nothing else can

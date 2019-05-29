@@ -4,11 +4,16 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/iommu.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/iommu.h>
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 
@@ -100,6 +105,27 @@ private:
     uint64_t addr_ = 0;
     size_t len_ = 0;
 };
+
+// Helper function which checks that the give vmo is contiguous.
+template<size_t N>
+bool check_contig_state(const zx::bti& bti, const zx::vmo& vmo) {
+    zx::pmt pmt;
+    zx_paddr_t addrs[N];
+    zx_status_t status = bti.pin(ZX_BTI_PERM_READ, vmo, 0, N * ZX_PAGE_SIZE, addrs, N, &pmt);
+    if (status != ZX_OK) {
+        unittest_printf_critical(" pin failed %d", status);
+        return false;
+    }
+    pmt.unpin();
+
+    for (unsigned i = 0; i < N - 1; i++) {
+        if (addrs[i] + ZX_PAGE_SIZE != addrs[i + 1]) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 // Helper function for call_permutations
 template <typename T>
@@ -803,9 +829,27 @@ bool disjoint_clone_test2() {
     END_TEST;
 }
 
+enum class Contiguity {
+    Contig,
+    NonContig,
+};
+
+enum class ResizeTarget {
+    Parent,
+    Child,
+};
+
 // Tests that resizing a (clone|cloned) vmo frees unnecessary pages.
-bool resize_test(bool resize_child) {
+bool resize_test(Contiguity contiguity, ResizeTarget target) {
     BEGIN_TEST;
+
+    bool contiguous = contiguity == Contiguity::Contig;
+    bool resize_child = target == ResizeTarget::Child;
+
+    if (contiguous && !get_root_resource) {
+        unittest_printf_critical(" Root resource not available, skipping");
+        return true;
+    }
 
     uint64_t original = 0;
     if (get_root_resource) {
@@ -813,8 +857,22 @@ bool resize_test(bool resize_child) {
     }
 
     // Create a vmo and a clone of the same size.
+    zx::iommu iommu;
+    zx::bti bti;
     zx::vmo vmo;
-    ASSERT_TRUE(init_page_tagged_vmo(4, &vmo));
+    if (contiguous) {
+        zx_iommu_desc_dummy_t desc;
+        ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                                  &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+        ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+        ASSERT_EQ(zx::vmo::create_contiguous(bti, 4 * ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
+    } else {
+        ASSERT_EQ(zx::vmo::create(4 * ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+    }
+
+    for (unsigned i = 0; i < 4; i++) {
+        ASSERT_TRUE(vmo_write(vmo, i + 1, i * ZX_PAGE_SIZE));
+    }
 
     zx::vmo clone;
     ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2 | ZX_VMO_CHILD_RESIZABLE,
@@ -833,8 +891,15 @@ bool resize_test(bool resize_child) {
     const zx::vmo& resize_target = resize_child ? clone : vmo;
     const zx::vmo& original_size_vmo = resize_child ? vmo : clone;
 
+    if (contiguous && !resize_child) {
+        // Contigous vmos can't be resizable.
+        ASSERT_EQ(resize_target.set_size(ZX_PAGE_SIZE), ZX_ERR_UNAVAILABLE);
+        END_TEST;
+    } else {
+        ASSERT_EQ(resize_target.set_size(ZX_PAGE_SIZE), ZX_OK);
+    }
+
     // Check that the data in both vmos is correct.
-    ASSERT_EQ(resize_target.set_size(ZX_PAGE_SIZE), ZX_OK);
     for (unsigned i = 0; i < 4; i++) {
         // The index of original_size_vmo's page we wrote to depends on which vmo it is
         uint32_t written_page_idx = resize_child ? 1 : 2;
@@ -864,6 +929,11 @@ bool resize_test(bool resize_child) {
     }
 
     // Check that closing the non-resized vmo frees the the inaccessible pages.
+    if (contiguous) {
+        ASSERT_TRUE(check_contig_state<4>(bti, vmo));
+    }
+
+    // Check that closing the non-resized VMO frees the the inaccessible pages.
     if (resize_child) {
         vmo.reset();
     } else {
@@ -880,11 +950,11 @@ bool resize_test(bool resize_child) {
 }
 
 bool resize_child_test() {
-    return resize_test(true);
+    return resize_test(Contiguity::NonContig, ResizeTarget::Child);
 }
 
 bool resize_original_test() {
-    return resize_test(false);
+    return resize_test(Contiguity::NonContig, ResizeTarget::Parent);
 }
 
 // Tests that growing a clone exposes zeros and doesn't consume memory on parent writes.
@@ -1366,6 +1436,194 @@ bool progressive_clone_truncate_test() {
     return progressive_clone_discard_test(false);
 }
 
+// Tests that a contiguous VMO remains contiguous even after writes to its clones.
+bool contiguous_vmo_test() {
+    BEGIN_TEST;
+
+    if (!get_root_resource) {
+        unittest_printf_critical(" Root resource not available, skipping");
+        return true;
+    }
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+    zx::vmo vmos[4];
+    ASSERT_EQ(zx::vmo::create_contiguous(bti, 4 * ZX_PAGE_SIZE, 0, vmos), ZX_OK);
+
+    // Tag each page.
+    for (unsigned i = 0; i < 4; i++) {
+        ASSERT_TRUE(vmo_write(vmos[0], i + 1, i * ZX_PAGE_SIZE));
+    }
+
+    // Create two clones of the original VMO and one clone of one of those clones.
+    ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 4 * ZX_PAGE_SIZE, vmos + 1),
+              ZX_OK);
+    ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 4 * ZX_PAGE_SIZE, vmos + 2),
+              ZX_OK);
+    ASSERT_EQ(vmos[1].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 4 * ZX_PAGE_SIZE, vmos + 3),
+              ZX_OK);
+
+    // Write to one page in each different VMO.
+    for (unsigned i = 0; i < 4; i++) {
+        ASSERT_TRUE(vmo_write(vmos[i], 5, i * ZX_PAGE_SIZE));
+    }
+
+    // Verify that the data is correct in each VMO.
+    for (unsigned i = 0; i < 4; i++) {
+        for (unsigned j = 0; j < 4; j++) {
+            ASSERT_TRUE(vmo_check(vmos[i], i == j ? 5 : j + 1, j * ZX_PAGE_SIZE));
+        }
+    }
+
+    ASSERT_TRUE(check_contig_state<4>(bti, vmos[0]));
+
+    END_TEST;
+}
+
+// Tests that closing the clone of a contiguous VMO doesn't cause problems with contiguity.
+bool contiguous_vmo_close_child_test() {
+    BEGIN_TEST;
+
+    if (!get_root_resource) {
+        unittest_printf_critical(" Root resource not available, skipping");
+        return true;
+    }
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_EQ(zx::vmo::create_contiguous(bti, 2 * ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
+
+    ASSERT_TRUE(vmo_write(vmo, 1, 0), ZX_OK);
+    ASSERT_TRUE(vmo_write(vmo, 2, ZX_PAGE_SIZE), ZX_OK);
+
+    zx::vmo clone;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 2 * ZX_PAGE_SIZE, &clone), ZX_OK);
+
+    // Write to one page in the contig VMO so that one page is forked and one page isn't forked.
+    ASSERT_TRUE(vmo_write(vmo, 3, 0));
+
+    // Reset the original VMO and check that things got properly merged into the child.
+    clone.reset();
+
+    ASSERT_TRUE(vmo_check(vmo, 3, 0));
+    ASSERT_TRUE(vmo_check(vmo, 2, ZX_PAGE_SIZE));
+    ASSERT_TRUE(check_contig_state<2>(bti, vmo));
+
+    END_TEST;
+}
+
+// Tests that pages are properly become 'non-contiguous' after closing a contiguous VMO
+// with a child.
+bool contiguous_vmo_close_original_test() {
+    BEGIN_TEST;
+
+    if (!get_root_resource) {
+        unittest_printf_critical(" Root resource not available, skipping");
+        return true;
+    }
+
+    uint64_t original = kmem_vmo_mem_usage();
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_EQ(zx::vmo::create_contiguous(bti, 3 * ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
+
+    ASSERT_TRUE(vmo_write(vmo, 1, 0), ZX_OK);
+    ASSERT_TRUE(vmo_write(vmo, 2, ZX_PAGE_SIZE), ZX_OK);
+    ASSERT_TRUE(vmo_write(vmo, 3, 2 * ZX_PAGE_SIZE), ZX_OK);
+
+    // Create the clone so that there is a page before and after it.
+    zx::vmo clone;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, ZX_PAGE_SIZE, ZX_PAGE_SIZE, &clone),
+              ZX_OK);
+
+    ASSERT_TRUE(vmo_check(clone, 2));
+
+    vmo.reset();
+
+    ASSERT_TRUE(vmo_check(clone, 2));
+    ASSERT_EQ(vmo_committed_bytes(clone), ZX_PAGE_SIZE);
+    ASSERT_EQ(original + ZX_PAGE_SIZE, kmem_vmo_mem_usage());
+
+    END_TEST;
+}
+
+bool contiguous_vmo_resize_child_test() {
+    return resize_test(Contiguity::Contig, ResizeTarget::Child);
+}
+
+bool contiguous_vmo_resize_original_test() {
+    return resize_test(Contiguity::Contig, ResizeTarget::Parent);
+}
+
+// Tests partial clones of contiguous vmos.
+bool contiguous_vmo_partial_clone_test() {
+    BEGIN_TEST;
+
+    if (!get_root_resource) {
+        unittest_printf_critical(" Root resource not available, skipping");
+        return true;
+    }
+
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY,
+                              &desc, sizeof(desc), iommu.reset_and_get_address()), ZX_OK);
+    ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+
+    zx::vmo vmos[4];
+    ASSERT_EQ(zx::vmo::create_contiguous(bti, 3 * ZX_PAGE_SIZE, 0, vmos), ZX_OK);
+
+    // Tag each page.
+    for (unsigned i = 0; i < 3; i++) {
+        ASSERT_TRUE(vmo_write(vmos[0], i + 1, i * ZX_PAGE_SIZE));
+    }
+
+    // Create two clones of the original VMO and one clone of one of those clones.
+    ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, vmos + 1), ZX_OK);
+    ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, ZX_PAGE_SIZE, vmos + 2), ZX_OK);
+    ASSERT_EQ(vmos[0].create_child(ZX_VMO_CHILD_COPY_ON_WRITE2, 0, 4 * ZX_PAGE_SIZE, vmos + 3),
+              ZX_OK);
+
+    ASSERT_TRUE(vmo_write(vmos[0], 5, ZX_PAGE_SIZE));
+    ASSERT_TRUE(vmo_write(vmos[3], 6, ZX_PAGE_SIZE));
+
+    ASSERT_TRUE(vmo_write(vmos[3], 6, 2 * ZX_PAGE_SIZE));
+    ASSERT_TRUE(vmo_write(vmos[0], 5, 2 * ZX_PAGE_SIZE));
+
+    // Verify that the data is correct in each VMO.
+    for (unsigned i = 0; i < 4; i++) {
+        ASSERT_TRUE(vmo_check(vmos[i], 1, 0 * ZX_PAGE_SIZE));
+        if (i == 0 || i == 3) {
+            uint32_t target_val = i == 0 ? 5 : 6;
+            ASSERT_TRUE(vmo_check(vmos[i], target_val, 1 * ZX_PAGE_SIZE));
+            ASSERT_TRUE(vmo_check(vmos[i], target_val, 2 * ZX_PAGE_SIZE));
+        }
+    }
+
+    ASSERT_TRUE(check_contig_state<3>(bti, vmos[0]));
+
+    END_TEST;
+}
+
 // Tests that clones based on physical vmos can't be created.
 bool no_physical_test() {
     BEGIN_TEST;
@@ -1471,6 +1729,12 @@ RUN_TEST(many_clone_offset_test)
 RUN_TEST(many_clone_mapping_offset_test)
 RUN_TEST(progressive_clone_close_test)
 RUN_TEST(progressive_clone_truncate_test)
+RUN_TEST(contiguous_vmo_test)
+RUN_TEST(contiguous_vmo_close_child_test)
+RUN_TEST(contiguous_vmo_close_original_test)
+RUN_TEST(contiguous_vmo_resize_child_test)
+RUN_TEST(contiguous_vmo_resize_original_test)
+RUN_TEST(contiguous_vmo_partial_clone_test)
 RUN_TEST(no_physical_test)
 RUN_TEST(no_pager_test)
 RUN_TEST(uncached_test)
