@@ -1716,9 +1716,9 @@ where
     Ok(())
 }
 
-/// A macro which implements the FIDL `Encodable` and `Decodable` traits
-/// for an existing struct whose fields are all `Option`s and may or may not
-/// appear in the wire-format representation.
+/// A macro which implements the table empty constructor and the FIDL `Encodable` and `Decodable`
+/// traits for an existing struct whose fields are all `Option`s and may or may not appear in the
+/// wire-format representation.
 #[macro_export]
 macro_rules! fidl_table {
     (
@@ -1731,6 +1731,14 @@ macro_rules! fidl_table {
             },
         )*},
     ) => {
+        impl $name {
+            fn empty() -> Self {
+                Self {$(
+                        $member_name: None,
+                )*}
+            }
+        }
+
         impl $crate::encoding::Encodable for $name {
             fn inline_align(&self) -> usize { 8 }
             fn inline_size(&self) -> usize { 16 }
@@ -1780,9 +1788,7 @@ macro_rules! fidl_table {
             fn inline_align() -> usize { 8 }
             fn inline_size() -> usize { 16 }
             fn new_empty() -> Self {
-                Self {$(
-                        $member_name: None,
-                )*}
+                Self::empty()
             }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
                 // Decode envelope vector header
@@ -2964,6 +2970,15 @@ mod test {
                 ordinal: 2,
             },
         },
+    }
+
+    #[test]
+    fn empty_table() {
+        let mut table: MyTable = MyTable::empty();
+        assert_eq!(None, table.num);
+        table = MyTable { num: Some(32), ..MyTable::empty() };
+        assert_eq!(Some(32), table.num);
+        assert_eq!(None, table.string);
     }
 
     #[test]
