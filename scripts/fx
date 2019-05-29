@@ -241,33 +241,19 @@ track-command-execution "${command_name}" "$@" &
 declare -r retval=$?
 if [ -z "${iterative}" ]; then
   exit ${retval}
-elif which inotifywait >/dev/null; then
-  monitor_source_changes() {
-    # Watch everything except out/ and files/directories beginning with "."
-    # such as lock files, swap files, .git, etc'.
-    inotifywait -qrme modify \
-      --exclude "(/\.|lock|compile_commands.json)" \
-      "${fuchsia_dir}" \
-      @"${fuchsia_dir}"/out \
-      @"${fuchsia_dir}"/zircon/public
-  }
-elif which apt-get >/dev/null; then
-  echo "Missing inotifywait"
-  echo "Try: sudo apt-get install inotify-tools"
-  exit 1
 elif which fswatch >/dev/null; then
   monitor_source_changes() {
-    fswatch --one-per-batch --event=Updated \
+    fswatch --one-per-batch \
       -e "${fuchsia_dir}"/out/ \
       -e "${fuchsia_dir}"/zircon/public/ \
-      -e "/\." \
-      -e "lock" \
+      -e ".git" \
       -e "/compile_commands.json" \
+      -r \
       .
   }
 else
-  echo "Missing fswatch"
-  echo "Try: brew install fswatch"
+  fx-error "Missing fswatch"
+  fx-error "Try: $([ $(uname) = Darwin ] && echo "brew" || echo "apt") install fswatch"
   exit 1
 fi
 
@@ -282,15 +268,6 @@ monitor_and_run() {
   exec 3<"${event_pipe}"
 
   while read -u 3; do
-    if [[ "$(uname -s)" != "Darwin" ]]; then
-      # Drain all subsequent events in a batch.
-      # Otherwise when multiple files are changes at once we'd run multiple
-      # times.
-      read -u 3 -d "" -t .01
-    fi
-    # Allow at most one fx -i invocation per Fuchsia dir at a time.
-    # Otherwise multiple concurrent fx -i invocations can trigger each other
-    # and cause a storm.
     echo "---------------------------------- fx -i ${display_name} ---------------------------------------"
     "$@"
     echo "--- Done!"
