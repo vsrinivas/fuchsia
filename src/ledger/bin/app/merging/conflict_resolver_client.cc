@@ -147,22 +147,7 @@ void ConflictResolverClient::GetFullDiff(
   GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
 }
 
-void ConflictResolverClient::GetFullDiffNew(
-    std::unique_ptr<Token> token,
-    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
-        callback) {
-  GetDiff(diff_utils::DiffType::FULL, std::move(token), std::move(callback));
-}
-
 void ConflictResolverClient::GetConflictingDiff(
-    std::unique_ptr<Token> token,
-    fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
-        callback) {
-  GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token),
-          std::move(callback));
-}
-
-void ConflictResolverClient::GetConflictingDiffNew(
     std::unique_ptr<Token> token,
     fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
         callback) {

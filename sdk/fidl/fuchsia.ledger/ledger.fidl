@@ -265,15 +265,11 @@ protocol PageSnapshot {
     /// The returned |entries| are sorted by |key|.
     GetEntries(Key key_start, Token? token)
         -> (vector<Entry> entries, Token? next_token);
-    GetEntriesNew(Key key_start, Token? token)
-        -> (vector<Entry> entries, Token? next_token);
 
     /// Same as |GetEntries()|. The connection will be closed with a
     /// ZX_ERR_BAD_STATE epitaph if a value does not fit in a FIDL message.
     [Deprecated]
     GetEntriesInline(Key key_start, Token? token)
-        -> (vector<InlinedEntry> entries, Token? next_token);
-    GetEntriesInlineNew(Key key_start, Token? token)
         -> (vector<InlinedEntry> entries, Token? next_token);
 
     /// Returns the keys of all entries in the page which are greater or equal to
@@ -286,8 +282,6 @@ protocol PageSnapshot {
     /// previous call. |next_token| will not be NULL as long as there are more
     /// results and NULL once finished.
     GetKeys(Key key_start, Token? token)
-        -> (vector<Key> keys, Token? next_token);
-    GetKeysNew(Key key_start, Token? token)
         -> (vector<Key> keys, Token? next_token);
 
     /// Returns the value of a given key.
@@ -468,8 +462,6 @@ protocol MergeResultProvider {
     /// the results by calling |GetFullDiff()| with that token.
     GetFullDiff(Token? token)
         -> (vector<DiffEntry> changes, Token? next_token);
-    GetFullDiffNew(Token? token)
-        -> (vector<DiffEntry> changes, Token? next_token);
 
     /// |GetConflictingDiff| returns the set of all key/value pairs that were
     /// modified on both sides to different values, or deleted on one side and
@@ -478,8 +470,6 @@ protocol MergeResultProvider {
     /// It behaves like |GetFullDiff| otherwise.
     [Deprecated]
     GetConflictingDiff(Token? token)
-        -> (vector<DiffEntry> changes, Token? next_token);
-    GetConflictingDiffNew(Token? token)
         -> (vector<DiffEntry> changes, Token? next_token);
 
     /// Once the result of the merge has been computed |Merge()| can be called with

@@ -63,18 +63,10 @@ class ConflictResolverClient
                    fit::function<void(Status, std::vector<DiffEntry>,
                                       std::unique_ptr<Token>)>
                        callback) override;
-  void GetFullDiffNew(std::unique_ptr<Token> token,
-                      fit::function<void(Status, std::vector<DiffEntry>,
-                                         std::unique_ptr<Token>)>
-                          callback) override;
   void GetConflictingDiff(std::unique_ptr<Token> token,
                           fit::function<void(Status, std::vector<DiffEntry>,
                                              std::unique_ptr<Token>)>
                               callback) override;
-  void GetConflictingDiffNew(std::unique_ptr<Token> token,
-                             fit::function<void(Status, std::vector<DiffEntry>,
-                                                std::unique_ptr<Token>)>
-                                 callback) override;
   void Merge(std::vector<MergedValue> merged_values,
              fit::function<void(Status)> callback) override;
   void MergeNonConflictingEntries(

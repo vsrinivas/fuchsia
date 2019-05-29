@@ -260,13 +260,6 @@ void PageSnapshotImpl::GetEntries(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, std::vector<Entry>, std::unique_ptr<Token>)>
         callback) {
-  GetEntriesNew(std::move(key_start), std::move(token), std::move(callback));
-}
-
-void PageSnapshotImpl::GetEntriesNew(
-    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, std::vector<Entry>, std::unique_ptr<Token>)>
-        callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
                      std::move(key_start), std::move(token),
                      std::move(callback));
@@ -277,29 +270,12 @@ void PageSnapshotImpl::GetEntriesInline(
     fit::function<void(Status, std::vector<InlinedEntry>,
                        std::unique_ptr<Token>)>
         callback) {
-  GetEntriesInlineNew(std::move(key_start), std::move(token),
-                      std::move(callback));
-}
-
-void PageSnapshotImpl::GetEntriesInlineNew(
-    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, std::vector<InlinedEntry>,
-                       std::unique_ptr<Token>)>
-        callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
                             std::move(key_start), std::move(token),
                             std::move(callback));
 }
 
 void PageSnapshotImpl::GetKeys(
-    std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-    fit::function<void(Status, std::vector<std::vector<uint8_t>>,
-                       std::unique_ptr<Token>)>
-        callback) {
-  GetKeysNew(std::move(key_start), std::move(token), std::move(callback));
-}
-
-void PageSnapshotImpl::GetKeysNew(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
     fit::function<void(Status, std::vector<std::vector<uint8_t>>,
                        std::unique_ptr<Token>)>

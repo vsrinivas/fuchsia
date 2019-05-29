@@ -74,33 +74,15 @@ class FakeSnapshotImpl : public PageSnapshot {
     get_entries_inline_callback = std::move(callback);
   }
 
-  void GetEntriesInlineNew(std::vector<uint8_t> /*key_start*/,
-                           std::unique_ptr<Token> /*token*/,
-                           GetEntriesInlineNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
   void GetEntries(std::vector<uint8_t> /*key_start*/,
                   std::unique_ptr<Token> /*token*/,
                   GetEntriesCallback callback) override {
     get_entries_callback = std::move(callback);
   }
 
-  void GetEntriesNew(std::vector<uint8_t> /*key_start*/,
-                     std::unique_ptr<Token> /*token*/,
-                     GetEntriesNewCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
   void GetKeys(std::vector<uint8_t> /*key_start*/,
                std::unique_ptr<Token> /*token*/,
                GetKeysCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  void GetKeysNew(std::vector<uint8_t> /*key_start*/,
-                  std::unique_ptr<Token> /*token*/,
-                  GetKeysNewCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();
   }
 

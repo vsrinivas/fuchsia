@@ -29,28 +29,15 @@ class PageSnapshotImpl
       std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
       fit::function<void(Status, std::vector<Entry>, std::unique_ptr<Token>)>
           callback) override;
-  void GetEntriesNew(
-      std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-      fit::function<void(Status, std::vector<Entry>, std::unique_ptr<Token>)>
-          callback) override;
   void GetEntriesInline(std::vector<uint8_t> key_start,
                         std::unique_ptr<Token> token,
                         fit::function<void(Status, std::vector<InlinedEntry>,
                                            std::unique_ptr<Token>)>
                             callback) override;
-  void GetEntriesInlineNew(std::vector<uint8_t> key_start,
-                           std::unique_ptr<Token> token,
-                           fit::function<void(Status, std::vector<InlinedEntry>,
-                                              std::unique_ptr<Token>)>
-                               callback) override;
   void GetKeys(std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
                fit::function<void(Status, std::vector<std::vector<uint8_t>>,
                                   std::unique_ptr<Token>)>
                    callback) override;
-  void GetKeysNew(std::vector<uint8_t> key_start, std::unique_ptr<Token> token,
-                  fit::function<void(Status, std::vector<std::vector<uint8_t>>,
-                                     std::unique_ptr<Token>)>
-                      callback) override;
   void Get(std::vector<uint8_t> key,
            fit::function<void(Status, fuchsia::ledger::PageSnapshot_Get_Result)>
                callback) override;
