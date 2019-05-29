@@ -297,7 +297,7 @@ func (ni *netstackImpl) StartRouteTableTransaction(req netstack.RouteTableTransa
 
 		if ni.ns.mu.transactionRequest != nil {
 			oldChannel := ni.ns.mu.transactionRequest.ToChannel()
-			observed, _ := zxwait.Wait(*oldChannel.Handle(), 0, 0)
+			observed, _ := zxwait.Wait(zx.Handle(oldChannel), 0, 0)
 			// If the channel is neither readable nor writable, there is no
 			// data left to be processed (not readable) and we can't return
 			// any more results (not writable).  It's not enough to only
