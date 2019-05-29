@@ -85,6 +85,7 @@ class IdentifierBase {
   }
 
   Qualification qualification() const { return qualification_; }
+  void set_qualification(Qualification q) { qualification_ = q; }
 
   // Returns a new identifier that's the scope of this one. The scope is
   // everything but the last component. The qualification remains unchanged.

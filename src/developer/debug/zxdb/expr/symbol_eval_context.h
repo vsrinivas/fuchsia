@@ -50,6 +50,8 @@ class SymbolEvalContext : public ExprEvalContext {
 
   // ExprEvalContext implementation.
   void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) override;
+  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) override;
+  fxl::RefPtr<Type> GetConcreteType(const Type* type) override;
   SymbolVariableResolver& GetVariableResolver() override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;

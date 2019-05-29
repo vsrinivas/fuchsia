@@ -37,6 +37,18 @@ SymbolVariableResolver& MockExprEvalContext::GetVariableResolver() {
   return resolver_;
 }
 
+fxl::RefPtr<Type> MockExprEvalContext::ResolveForwardDefinition(
+    const Type* type) {
+  // Just return the input for mock purposes.
+  return fxl::RefPtr<Type>(const_cast<Type*>(type));
+}
+
+fxl::RefPtr<Type> MockExprEvalContext::GetConcreteType(const Type* type) {
+  // Just strip C-V qualifications, don't bother with the forward definitions
+  // for mock purposes.
+  return fxl::RefPtr<Type>(const_cast<Type*>(type->GetConcreteType()));
+}
+
 fxl::RefPtr<SymbolDataProvider> MockExprEvalContext::GetDataProvider() {
   return data_provider_;
 }

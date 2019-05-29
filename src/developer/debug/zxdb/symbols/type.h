@@ -22,7 +22,8 @@ class Type : public Symbol {
   // don't affect the stored data, and expand typedef and using statements.
   //
   // This does NOT expand forward definitions which will require a symbol
-  // name lookup.
+  // name lookup. If possible, use ExprValue::GetConcreteType() which adds this
+  // capability.
   //
   // It is on the Type class rather than the ModifiedType class so that calling
   // code can unconditionally call type->GetConcreteType()->byte_size() or

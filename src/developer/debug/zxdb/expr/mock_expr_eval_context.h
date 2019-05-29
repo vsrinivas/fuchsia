@@ -30,6 +30,8 @@ class MockExprEvalContext : public ExprEvalContext {
       std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb)
       override;
   SymbolVariableResolver& GetVariableResolver() override;
+  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) override;
+  fxl::RefPtr<Type> GetConcreteType(const Type* type) override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
 

@@ -44,6 +44,32 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   virtual void GetNamedValue(const ParsedIdentifier& identifier,
                              ValueCallback cb) = 0;
 
+  // Attempts to resolve a type that is a declaration (is_declaration() is set
+  // on the type) by looking up a non-declaration type with the same name.
+  //
+  // Most callers will want GetConcreteType() instead, of which this is one
+  // component.
+  //
+  // Some variables will be specified by DWARF as having a type that's only a
+  // declaration. Declarations don't have full definitions which makes it
+  // impossible to interpret the data.
+  //
+  // Since the lookup is by type name, it may fail. It could also refer to
+  // a different type, but if the user has more than one type with the same
+  // name bad things will happen anyway. On failure, the input type will be
+  // returned.
+  virtual fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) = 0;
+
+  // Strips C-V qualifications and resolves forward declarations.
+  //
+  // This is the function to use to properly resolve the type to something
+  // there the data of the ExprValue can be interpreted.
+  //
+  // It will return null only if the input type is null. Sometimes forward
+  // declarations can't be resolved or the "const" refers to nothing, in which
+  // case this function will return the original type.
+  virtual fxl::RefPtr<Type> GetConcreteType(const Type* type) = 0;
+
   // Returns the SymbolVariableResolver used to create variables from
   // memory for this context.
   virtual SymbolVariableResolver& GetVariableResolver() = 0;

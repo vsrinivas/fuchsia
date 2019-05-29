@@ -112,6 +112,56 @@ void SymbolEvalContext::GetNamedValue(const ParsedIdentifier& identifier,
       });
 }
 
+fxl::RefPtr<Type> SymbolEvalContext::ResolveForwardDefinition(
+    const Type* type) {
+  Identifier ident = type->GetIdentifier();
+  if (ident.empty()) {
+    // Some things like modified types don't have real identifier names.
+    return fxl::RefPtr<Type>(const_cast<Type*>(type));
+  }
+  ParsedIdentifier parsed_ident = ToParsedIdentifier(ident);
+
+  // Search for the first match of a type.
+  FindNameOptions opts(FindNameOptions::kNoKinds);
+  opts.find_types = true;
+  opts.max_results = 1;
+
+  // The type names will always be fully qualified. Mark the identifier as
+  // such and only search the global context by clearing the code location.
+  parsed_ident.set_qualification(IdentifierQualification::kGlobal);
+  auto context = GetFindNameContext();
+  context.block = nullptr;
+
+  if (FoundName result = FindName(context, opts, parsed_ident)) {
+    FXL_DCHECK(result.type());
+    return result.type();
+  }
+
+  // Nothing found in the index.
+  return fxl::RefPtr<Type>(const_cast<Type*>(type));
+}
+
+fxl::RefPtr<Type> SymbolEvalContext::GetConcreteType(const Type* type) {
+  if (!type)
+    return fxl::RefPtr<Type>();
+
+  // Iteratively strip C-V qualifications, follow typedefs, and follow forward
+  // declarations.
+  fxl::RefPtr<Type> cur(const_cast<Type*>(type));
+  do {
+    // Follow forward declarations.
+    if (cur->is_declaration()) {
+      cur = ResolveForwardDefinition(cur.get());
+      if (cur->is_declaration())
+        break;  // Declaration can't be resolved, give up.
+    }
+
+    // Strip C-V qualifiers and follow typedefs.
+    cur = fxl::RefPtr<Type>(const_cast<Type*>(cur->GetConcreteType()));
+  } while (cur && cur->is_declaration());
+  return cur;
+}
+
 SymbolVariableResolver& SymbolEvalContext::GetVariableResolver() {
   return resolver_;
 }

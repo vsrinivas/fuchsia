@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -67,6 +68,10 @@ int ExprValue::GetBaseType() const {
   if (!base_type)
     return BaseType::kBaseTypeNone;
   return base_type->base_type();
+}
+
+fxl::RefPtr<Type> ExprValue::GetConcreteType(ExprEvalContext* context) const {
+  return context->GetConcreteType(type_.get());
 }
 
 Err ExprValue::EnsureSizeIs(size_t size) const {

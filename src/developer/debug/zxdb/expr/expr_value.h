@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_VALUE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_VALUE_H_
 
 #include <inttypes.h>
 
 #include <vector>
 
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
 class Err;
+class ExprEvalContext;
 class Type;
 
 // Holds a value for an expression. This could be the value of a variable in
@@ -37,9 +38,12 @@ class ExprValue {
   explicit ExprValue(int64_t value);
   explicit ExprValue(uint64_t value);
 
-  // Full constructor.
+  // Full constructor. This takes the type and stores it assuming the type
+  // is good. Prefer the other version when possible unless you're sure the
+  // type is not a declaration.
   ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data,
             const ExprValueSource& source = ExprValueSource());
+
   ~ExprValue();
 
   // Used for tests. If a SymbolType is defined, the string representation is
@@ -57,8 +61,19 @@ class ExprValue {
 
   // Determines which base type the Value's Type is.
   //
-  // TODO(brettw) the base type should probably be turned into a proper enum.
+  // TODO(brettw) this should be removed, it does not support forward
+  // definitions. Callers should interrogate GetConcreteType() instead.
   int GetBaseType() const;
+
+  // Strips C-V qualifications and resolves forward declarations.
+  //
+  // It is a convenience wrapper for ExprEvalContext::GetConcreteType(), see
+  // that for more. The context can not be null.
+  //
+  // This is the function to use (with the context provided) to properly
+  // resolve the type to something there the data of the ExprValue can be
+  // interpreted.
+  fxl::RefPtr<Type> GetConcreteType(ExprEvalContext* context) const;
 
   // Returns an error if the size of the data doesn't match the parameter.
   Err EnsureSizeIs(size_t size) const;
@@ -124,3 +139,5 @@ template <>
 double ExprValue::GetAs<double>() const;
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_VALUE_H_

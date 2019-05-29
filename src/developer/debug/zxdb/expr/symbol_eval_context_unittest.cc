@@ -16,9 +16,12 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
 
@@ -355,6 +358,56 @@ TEST_F(SymbolEvalContextTest, RegisterShadowed) {
   EXPECT_TRUE(val.called);
   EXPECT_FALSE(val.err.has_error()) << val.err.msg();
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kVarValue)), val.value);
+}
+
+// Also tests ResolveForwardDefinition().
+TEST(ExprValue, GetConcreteType) {
+  ProcessSymbolsTestSetup setup;
+  auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
+  MockModuleSymbols* mod = mod_ref.get();  // Save for later.
+
+  constexpr uint64_t kLoadAddress = 0x1000000;
+  SymbolContext symbol_context(kLoadAddress);
+  setup.InjectModule("mod1", "1234", kLoadAddress, std::move(mod_ref));
+
+  auto& root = mod->index().root();  // Root of the index for module 1.
+
+  const char kMyStructName[] = "MyStruct";
+
+  // Make a forward definition for MyStruct. Is has the declaration flag set
+  // and no members or size.
+  auto forward_def = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
+  forward_def->set_assigned_name(kMyStructName);
+  forward_def->set_is_declaration(true);
+
+  // A const modification of the forward definition.
+  auto const_forward_def = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kConstType, LazySymbol(forward_def));
+
+  // Make a symbol context.
+  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+      setup.process().GetWeakPtr(), symbol_context, provider,
+      fxl::RefPtr<CodeBlock>());
+  fxl::RefPtr<ExprEvalContext> eval_context(context);
+
+  // Resolving the const forward-defined value gives the non-const version.
+  auto result_type = eval_context->GetConcreteType(const_forward_def.get());
+  EXPECT_EQ(forward_def.get(), result_type.get());
+
+  // Make a definition for the type. It has one 32-bit data member.
+  auto decl = MakeCollectionType(DwarfTag::kStructureType, kMyStructName,
+                                 {{"a", MakeInt32Type()}});
+
+  // Index the declaration of the type.
+  TestIndexedSymbol indexed_decl(mod, &root, kMyStructName, decl);
+
+  // Now that the index exists for the type, both the const and non-const
+  // declarations should resolve to the full definition.
+  result_type = eval_context->GetConcreteType(forward_def.get());
+  EXPECT_EQ(decl.get(), result_type.get());
+  result_type = eval_context->GetConcreteType(const_forward_def.get());
+  EXPECT_EQ(decl.get(), result_type.get());
 }
 
 }  // namespace zxdb
