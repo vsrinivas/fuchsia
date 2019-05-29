@@ -200,8 +200,6 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
             vmo_sz += actual;
             bytes_left -= actual;
 
-            LOG("Progress: %zu, left: %zu\n", vmo_sz, bytes_left);
-
             if (vmo_sz == 0) {
                 ERROR("Read nothing from src_fd; %zu bytes left\n", bytes_left);
                 return ZX_ERR_IO;
