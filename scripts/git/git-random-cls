@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Print links to 25 random CLs from the past week
+
+for commit in $(git log --since="one week ago" --format=%H | shuf | head -n 25)
+do
+    id=$(git show -s "$commit" | grep 'Change-Id:' | cut -d ' ' -f 6)
+    echo "http://fuchsia-review.googlesource.com/q/$id"
+done
