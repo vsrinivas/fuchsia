@@ -62,9 +62,8 @@ static int brcmf_fcmode;
 module_param_named(fcmode, brcmf_fcmode, int, 0)
 MODULE_PARM_DESC(fcmode, "Mode of firmware signalled flow control")
 
-static int brcmf_roamoff;
-module_param_named(roamoff, brcmf_roamoff, int, S_IRUSR)
-MODULE_PARM_DESC(roamoff, "Do not use internal roaming engine")
+/* Do not use internal roaming engine */
+static bool brcmf_roamoff = 1;
 
 #ifdef DEBUG
 /* always succeed brcmf_bus_started() */
@@ -424,7 +423,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
     settings->p2p_enable = !!brcmf_p2p_enable;
     settings->feature_disable = brcmf_feature_disable;
     settings->fcmode = brcmf_fcmode;
-    settings->roamoff = !!brcmf_roamoff;
+    settings->roamoff = brcmf_roamoff;
 #ifdef DEBUG
     settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
 #endif
