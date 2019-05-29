@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("test") {
+  testonly = true
+
+  sources = [
+    "audio_core_test_base.cc",
+    "audio_core_test_base.h",
+    "audio_test_base.cc",
+    "audio_test_base.h",
+    "test_fixture.cc",
+    "test_fixture.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fit",
+  ]
+}

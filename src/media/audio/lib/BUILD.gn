@@ -5,6 +5,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "test",
     "wav_writer",
   ]
 }

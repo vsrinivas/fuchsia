@@ -6,7 +6,7 @@ import("//build/package.gni")
 
 action_foreach("generate_schemas") {
   visibility = [ ":*" ]
-  
+
   script = "//src/media/audio/audio_core/schema/make_schema_header.py"
 
   outputs = [
@@ -137,6 +137,6 @@ group("tests") {
   deps = [
     "mixer:audio_mixer_tests",
     "test",
-    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests"
+    "//sdk/lib/media/audio_dfx/cpp:audio_dfx_tests",
   ]
 }
