@@ -20,7 +20,7 @@ source_set("lib") {
 
   public_deps = [
     ":protos",
-    "//src/lib/fxl",
+    "//garnet/lib/system_monitor:lib",
     "//third_party/grpc:grpc++",
   ]
 }

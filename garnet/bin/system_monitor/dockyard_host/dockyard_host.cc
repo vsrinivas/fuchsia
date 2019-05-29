@@ -9,7 +9,7 @@
 #include <chrono>
 #include <thread>
 
-#include "src/lib/fxl/logging.h"
+#include "garnet/lib/system_monitor/gt_log.h"
 
 DockyardHost::DockyardHost() : is_connected_(false) {
   dockyard_.SetConnectionHandler(
@@ -27,7 +27,7 @@ void DockyardHost::StartCollectingFrom(const std::string& device_name) {
 }
 
 void DockyardHost::OnConnection(const std::string& device_name) {
-  FXL_LOG(INFO) << "OnConnection from \"" << device_name << "\".";
+  GT_LOG(INFO) << "OnConnection from \"" << device_name << "\".";
   is_connected_ = true;
 
   // Check that the device is sending the total memory.
@@ -42,14 +42,14 @@ void DockyardHost::OnConnection(const std::string& device_name) {
 
 void DockyardHost::OnPaths(const std::vector<dockyard::PathInfo>& add,
                            const std::vector<dockyard::DockyardId>& remove) {
-  FXL_LOG(INFO) << "OnPaths";
+  GT_LOG(INFO) << "OnPaths";
   for (const auto& path_info : add) {
-    FXL_LOG(INFO) << "  add " << path_info.id << ": " << path_info.path;
+    GT_LOG(INFO) << "  add " << path_info.id << ": " << path_info.path;
     path_to_id_.emplace(path_info.path, path_info.id);
     id_to_path_.emplace(path_info.id, path_info.path);
   }
   for (const auto& dockyard_id : remove) {
-    FXL_LOG(INFO) << "  remove " << dockyard_id;
+    GT_LOG(INFO) << "  remove " << dockyard_id;
     auto search = id_to_path_.find(dockyard_id);
     if (search != id_to_path_.end()) {
       path_to_id_.erase(search->second);
@@ -60,11 +60,11 @@ void DockyardHost::OnPaths(const std::vector<dockyard::PathInfo>& add,
 
 void DockyardHost::OnStreamSets(const dockyard::StreamSetsResponse& response) {
   if (response.request_id != request_.request_id) {
-    FXL_LOG(INFO) << "OnStreamSets request_id " << response.request_id
-                  << " != " << request_.request_id;
+    GT_LOG(INFO) << "OnStreamSets request_id " << response.request_id
+                 << " != " << request_.request_id;
   }
-  FXL_LOG(INFO) << "OnStreamSets " << response;
+  GT_LOG(INFO) << "OnStreamSets " << response;
 
   // For now this is hard-coded to get the memory:device_total_bytes.
-  FXL_LOG(INFO) << "memory:device_total_bytes " << response.lowest_value;
+  GT_LOG(INFO) << "memory:device_total_bytes " << response.lowest_value;
 }

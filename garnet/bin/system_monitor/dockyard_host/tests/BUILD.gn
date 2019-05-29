@@ -14,6 +14,7 @@ if (current_toolchain == host_toolchain) {
 
     deps = [
       "//garnet/bin/system_monitor/dockyard_host:lib",
+      "//garnet/lib/system_monitor:lib",
       "//garnet/lib/system_monitor/dockyard:headers",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",

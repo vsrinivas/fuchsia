@@ -11,8 +11,8 @@
 #include <memory>
 #include <string>
 
+#include "garnet/lib/system_monitor/gt_log.h"
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
-#include "src/lib/fxl/logging.h"
 
 namespace dockyard {
 
@@ -72,8 +72,8 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
                                dockyard_proto::InspectJson>* stream) override {
     dockyard_proto::InspectJson inspect;
     while (stream->Read(&inspect)) {
-      FXL_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
-                    << inspect.dockyard_id() << ": " << inspect.json();
+      GT_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
+                   << inspect.dockyard_id() << ": " << inspect.json();
       // TODO(smbug.com/43): interpret the data.
     }
     return grpc::Status::OK;
@@ -88,8 +88,8 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
                                dockyard_proto::RawSample>* stream) override {
     dockyard_proto::RawSample sample;
     while (stream->Read(&sample)) {
-      FXL_LOG(INFO) << "Received sample at " << sample.time() << ", key "
-                    << sample.sample().key() << ": " << sample.sample().value();
+      GT_LOG(INFO) << "Received sample at " << sample.time() << ", key "
+                   << sample.sample().key() << ": " << sample.sample().value();
 
       dockyard_->AddSample(sample.sample().key(),
                            Sample(sample.time(), sample.sample().value()));
@@ -121,10 +121,8 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     for (int i = 0; i < request->path_size(); ++i) {
       DockyardId id = dockyard_->GetDockyardId(request->path(i));
       reply->add_id(id);
-#ifdef VERBOSE_OUTPUT
-      FXL_LOG(INFO) << "Received DockyardIds "
+      GT_LOG(DEBUG) << "Received DockyardIds "
                     << ": " << request->path(i) << ", id " << id;
-#endif  // VERBOSE_OUTPUT
     }
     return grpc::Status::OK;
   }
@@ -144,7 +142,7 @@ void RunGrpcServer(const char* listen_at, Dockyard* dockyard) {
   builder.RegisterService(&service);
   // Finally assemble the server.
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  FXL_LOG(INFO) << "Server listening on " << server_address;
+  GT_LOG(INFO) << "Server listening on " << server_address;
 
   // Wait for the server to shutdown. Note that some other thread must be
   // responsible for shutting down the server for this call to ever return.
@@ -225,9 +223,7 @@ Dockyard::Dockyard()
 
 Dockyard::~Dockyard() {
   std::lock_guard<std::mutex> guard(mutex_);
-#ifdef VERBOSE_OUTPUT
-  FXL_LOG(INFO) << "Stopping dockyard server";
-#endif  // VERBOSE_OUTPUT
+  GT_LOG(DEBUG) << "Stopping dockyard server";
   if (server_thread_.joinable()) {
     server_thread_.join();
   }
@@ -322,9 +318,7 @@ DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
   DockyardId id = dockyard_path_to_id_.size();
   dockyard_path_to_id_.emplace(dockyard_path, id);
   dockyard_id_to_path_.emplace(id, dockyard_path);
-#ifdef VERBOSE_OUTPUT
-  FXL_LOG(INFO) << "Path " << dockyard_path << ": ID " << id;
-#endif  // VERBOSE_OUTPUT
+  GT_LOG(DEBUG) << "Path " << dockyard_path << ": ID " << id;
   assert(dockyard_path_to_id_.find(dockyard_path) !=
          dockyard_path_to_id_.end());
   return id;
@@ -357,12 +351,12 @@ void Dockyard::OnConnection() {
 
 void Dockyard::StartCollectingFrom(const std::string& device) {
   Initialize();
-  FXL_LOG(INFO) << "Starting collecting from " << device;
+  GT_LOG(INFO) << "Starting collecting from " << device;
   // TODO(smbug.com/39): Connect to the device and start the harvester.
 }
 
 void Dockyard::StopCollectingFrom(const std::string& device) {
-  FXL_LOG(INFO) << "Stop collecting from " << device;
+  GT_LOG(INFO) << "Stop collecting from " << device;
   // TODO(smbug.com/40): Stop the harvester.
 }
 
@@ -370,7 +364,7 @@ bool Dockyard::Initialize() {
   if (server_thread_.joinable()) {
     return true;
   }
-  FXL_LOG(INFO) << "Starting dockyard server";
+  GT_LOG(INFO) << "Starting dockyard server";
   server_thread_ =
       std::thread([this] { RunGrpcServer(DEFAULT_SERVER_ADDRESS, this); });
   return server_thread_.joinable();
@@ -401,7 +395,6 @@ OnStreamSetsCallback Dockyard::SetStreamSetsHandler(
 void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
                                     StreamSetsResponse* response) const {
   std::lock_guard<std::mutex> guard(mutex_);
-  FXL_LOG(INFO) << "ProcessSingleRequest request " << request;
   response->request_id = request.request_id;
   for (auto dockyard_id = request.dockyard_ids.begin();
        dockyard_id != request.dockyard_ids.end(); ++dockyard_id) {
