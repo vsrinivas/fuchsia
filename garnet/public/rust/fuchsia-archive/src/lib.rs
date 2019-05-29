@@ -98,10 +98,7 @@ struct DirectoryEntry {
 const DIRECTORY_ENTRY_LEN: u64 = mem::size_of::<DirectoryEntry>() as u64;
 const CONTENT_ALIGNMENT: u64 = 4096;
 
-fn write_zeros<T>(target: &mut T, count: usize) -> Result<(), Error>
-where
-    T: Write,
-{
+fn write_zeros(mut target: impl Write, count: usize) -> Result<(), Error> {
     let b = vec![0u8; count];
     target.write_all(&b)?;
     Ok(())
@@ -114,8 +111,8 @@ where
 /// * `target` - receives the serialized bytes of the archive
 /// * `path_content_map` - map from archive relative path to (size, contents)
 pub fn write(
-    target: &mut impl Write,
-    path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)>,
+    mut target: impl Write,
+    path_content_map: BTreeMap<&str, (u64, Box<dyn Read + '_>)>,
 ) -> Result<(), Error> {
     let mut path_data: Vec<u8> = vec![];
     let mut directory_entries = vec![];
@@ -148,31 +145,31 @@ pub fn write(
         length: align(path_data.len() as u64, 8),
     };
 
-    serialize_into(&mut *target, &index)?;
+    serialize_into(&mut target, &index)?;
 
-    serialize_into(&mut *target, &dir_index)?;
+    serialize_into(&mut target, &dir_index)?;
 
-    serialize_into(&mut *target, &name_index)?;
+    serialize_into(&mut target, &name_index)?;
 
     let mut content_offset = align(name_index.offset + name_index.length, CONTENT_ALIGNMENT);
 
     for entry in &mut directory_entries {
         entry.data_offset = content_offset;
         content_offset = align(content_offset + entry.data_length, CONTENT_ALIGNMENT);
-        serialize_into(&mut *target, &entry)?;
+        serialize_into(&mut target, &entry)?;
     }
 
     target.write_all(&path_data)?;
 
-    write_zeros(target, name_index.length as usize - path_data.len())?;
+    write_zeros(&mut target, name_index.length as usize - path_data.len())?;
 
     let pos = name_index.offset + name_index.length;
     let padding_count = align(pos, CONTENT_ALIGNMENT) - pos;
-    write_zeros(target, padding_count as usize)?;
+    write_zeros(&mut target, padding_count as usize)?;
 
     for (entry_index, (archive_path, (_, mut contents))) in path_content_map.into_iter().enumerate()
     {
-        let bytes_read = copy(&mut contents, target)?;
+        let bytes_read = copy(&mut contents, &mut target)?;
         if bytes_read != directory_entries[entry_index].data_length {
             return Err(format_err!(
                 "File at archive path '{}' had expected size {} but Reader supplied {} bytes.",
@@ -184,7 +181,7 @@ pub fn write(
         let pos =
             directory_entries[entry_index].data_offset + directory_entries[entry_index].data_length;
         let padding_count = align(pos, CONTENT_ALIGNMENT) - pos;
-        write_zeros(target, padding_count as usize)?;
+        write_zeros(&mut target, padding_count as usize)?;
     }
 
     Ok(())
