@@ -12,6 +12,7 @@
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
+#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -89,6 +90,49 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
   flow.ScheduleActions(std::move(actions), &session, &console, callback);
 }
 
+void SetupCommandLineOptions(const CommandLineOptions& options,
+                             Session* session) {
+  // Symbol paths
+  std::vector<std::string> paths;
+  // At this moment, the build index has all the "default" paths.
+  BuildIDIndex& build_id_index =
+      session->system().GetSymbols()->build_id_index();
+  for (const auto& build_id_file : build_id_index.build_id_files())
+    paths.push_back(build_id_file);
+  for (const auto& source : build_id_index.sources())
+    paths.push_back(source);
+
+  // We add the options paths given paths.
+  paths.insert(paths.end(), options.symbol_paths.begin(),
+               options.symbol_paths.end());
+
+  if (options.symbol_cache_path) {
+    session->system().settings().SetString(ClientSettings::System::kSymbolCache,
+                                           *options.symbol_cache_path);
+  }
+
+  if (!options.symbol_servers.empty()) {
+    session->system().settings().SetList(ClientSettings::System::kSymbolServers,
+                                         options.symbol_servers);
+  }
+
+  // Adding it to the settings will trigger the loading of the symbols.
+  // Redundant adds are ignored.
+  session->system().settings().SetList(ClientSettings::System::kSymbolPaths,
+                                       std::move(paths));
+
+  // Filters, there should already be a default job context.
+  if (!options.filter.empty()) {
+    JobContext* default_job = session->system().GetJobContexts()[0];
+    Err err = default_job->settings().SetList(ClientSettings::Job::kFilters,
+                                              options.filter);
+
+    // The filters aren't currently validated when setting the list so an error
+    // here means we used the API wrong.
+    FXL_DCHECK(!err.has_error()) << err.msg();
+  }
+}
+
 }  // namespace
 
 int ConsoleMain(int argc, const char* argv[]) {
@@ -134,36 +178,7 @@ int ConsoleMain(int argc, const char* argv[]) {
           ClientSettings::System::kQuitAgentOnExit, true);
     }
 
-    // Save command-line switches ----------------------------------------------
-
-    // Symbol paths
-    std::vector<std::string> paths;
-    // At this moment, the build index has all the "default" paths.
-    BuildIDIndex& build_id_index =
-        session.system().GetSymbols()->build_id_index();
-    for (const auto& build_id_file : build_id_index.build_id_files())
-      paths.push_back(build_id_file);
-    for (const auto& source : build_id_index.sources())
-      paths.push_back(source);
-
-    // We add the options paths given paths.
-    paths.insert(paths.end(), options.symbol_paths.begin(),
-                 options.symbol_paths.end());
-
-    if (options.symbol_cache_path) {
-      session.system().settings().SetString(
-          ClientSettings::System::kSymbolCache, *options.symbol_cache_path);
-    }
-
-    if (!options.symbol_servers.empty()) {
-      session.system().settings().SetList(
-          ClientSettings::System::kSymbolServers, options.symbol_servers);
-    }
-
-    // Adding it to the settings will trigger the loading of the symbols.
-    // Redundant adds are ignored.
-    session.system().settings().SetList(ClientSettings::System::kSymbolPaths,
-                                        std::move(paths));
+    SetupCommandLineOptions(options, &session);
 
     if (!actions.empty()) {
       ScheduleActions(session, console, std::move(actions));

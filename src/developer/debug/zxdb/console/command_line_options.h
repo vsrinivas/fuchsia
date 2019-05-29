@@ -19,6 +19,7 @@ struct CommandLineOptions {
   bool quit_agent_on_quit = false;
   std::optional<std::string> core;
   std::optional<std::string> run;
+  std::vector<std::string> filter;
   std::optional<std::string> script_file;
   std::optional<std::string> symbol_cache_path;
   std::vector<std::string> symbol_paths;
