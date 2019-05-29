@@ -42,6 +42,10 @@ pub fn check_resource_path(input: &str) -> Result<&str, ResourcePathError> {
         if segment.len() > MAX_OBJECT_BYTES {
             return Err(ResourcePathError::NameTooLong);
         }
+        // TODO(PKG-597) allow newline once meta/contents supports it in blob paths
+        if segment.contains('\n') {
+            return Err(ResourcePathError::NameContainsNewline);
+        }
     }
     Ok(input)
 }
@@ -113,8 +117,8 @@ mod check_resource_path_tests {
         fn test_reject_contains_null(
             ref s in random_resource_path_with_regex_segment_string(
                 5, format!(r"{}{{0,3}}\x00{}{{0,3}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT))) {
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE))) {
             prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameContainsNull));
         }
 
@@ -134,7 +138,7 @@ mod check_resource_path_tests {
         fn test_reject_starts_with_slash(
             ref s in format!(
                 "/{}{{1,5}}",
-                ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT).as_str()) {
+                ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE).as_str()) {
             prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::PathStartsWithSlash));
         }
 
@@ -142,8 +146,17 @@ mod check_resource_path_tests {
         fn test_reject_ends_with_slash(
             ref s in format!(
                 "{}{{1,5}}/",
-                ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT).as_str()) {
+                ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE).as_str()) {
             prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::PathEndsWithSlash));
+        }
+
+        #[test]
+        fn test_reject_contains_newline(
+            ref s in random_resource_path_with_regex_segment_string(
+                5, format!(r"{}{{0,3}}\x0a{}{{0,3}}",
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE))) {
+            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameContainsNewline));
         }
     }
 
@@ -153,8 +166,8 @@ mod check_resource_path_tests {
         fn test_name_contains_dot(
             ref s in random_resource_path_with_regex_segment_string(
                 5, format!(r"{}{{1,4}}\.{}{{1,4}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT)))
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE)))
         {
             prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
         }
@@ -163,8 +176,8 @@ mod check_resource_path_tests {
         fn test_name_contains_dot_dot(
             ref s in random_resource_path_with_regex_segment_string(
                 5, format!(r"{}{{1,4}}\.\.{}{{1,4}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT)))
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
+                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE)))
         {
             prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
         }
@@ -185,7 +198,7 @@ mod check_resource_path_tests {
         #[test]
         fn test_long_name(
             ref s in random_resource_path_with_regex_segment_str(
-                5, "[[[:ascii:]]--\0--/]{255}"))
+                5, "[[[:ascii:]]--\0--/--\n]{255}")) // TODO(PKG-597) allow newline once meta/contents supports it in blob paths
         {
             prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
         }

@@ -29,6 +29,10 @@ pub enum ResourcePathError {
 
     #[fail(display = "object paths must be at least 1 byte")]
     PathIsEmpty,
+
+    // TODO(PKG-597) allow newline once meta/contents supports it in blob paths
+    #[fail(display = r"object names cannot contain the newline character '\n'")]
+    NameContainsNewline,
 }
 
 #[derive(Debug, Eq, Fail, PartialEq)]

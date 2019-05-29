@@ -21,10 +21,11 @@ macro_rules! assert_matches(
     )
 );
 
-pub const ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT: &str = r"[^/\x00\.]";
+// TODO(PKG-597) allow newline once meta/contents supports it in blob paths
+pub const ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE: &str = "[^/\0\\.\n]";
 
 prop_compose! {
-    [pub] fn always_valid_resource_path_char()(c in ANY_UNICODE_EXCEPT_SLASH_NULL_OR_DOT) -> String {
+    [pub] fn always_valid_resource_path_char()(c in ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE) -> String {
         c
     }
 }
