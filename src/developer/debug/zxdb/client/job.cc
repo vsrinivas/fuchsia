@@ -11,15 +11,4 @@ Job::~Job() = default;
 
 fxl::WeakPtr<Job> Job::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void Job::AddFilter(std::string filter) {
-  // not implemented
-}
-
-JobFilter Job::RemoveFilter(uint32_t index) {
-  FXL_DCHECK(filters_.size() > index);
-  auto filter = filters_.at(index);
-  filters_.erase(filters_.begin() + index);
-  return filter;
-}
-
 }  // namespace zxdb

@@ -17,13 +17,12 @@ namespace zxdb {
 
 class JobContext;
 
-class JobFilter {
-  // TODO: decide structure
-};
-
+// Represents a running job the debugger is attached to.
+//
+// This is owned by the JobContext when it is attached.
 class Job : public ClientObject {
  public:
-  Job(Session* session);
+  explicit Job(Session* session);
   ~Job() override;
 
   fxl::WeakPtr<Job> GetWeakPtr();
@@ -36,18 +35,6 @@ class Job : public ClientObject {
 
   // Returns the "name" of the job.
   virtual const std::string& GetName() const = 0;
-
-  // Get all filters from this job.
-  const std::vector<JobFilter>& GetFilters() const { return filters_; };
-
-  // Add filter to this job
-  void AddFilter(std::string filter);
-
-  // Remove filter from this job
-  JobFilter RemoveFilter(uint32_t index);
-
- protected:
-  std::vector<JobFilter> filters_;
 
  private:
   fxl::WeakPtrFactory<Job> weak_factory_;
