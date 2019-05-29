@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "mock_netstack.h"
+
+#include <lib/fit/defer.h>
 #include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
-
-#include <lib/fit/defer.h>
 #include <src/lib/fxl/logging.h>
 #include <zircon/device/ethernet.h>
-
-#include "mock_netstack.h"
 
 static constexpr size_t kMtu = 1500;
 static constexpr size_t kVmoSize = kMtu * 2;

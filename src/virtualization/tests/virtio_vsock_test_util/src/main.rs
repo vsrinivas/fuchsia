@@ -32,14 +32,12 @@ fn make_socket_pair() -> Result<(fasync::Socket, zx::Socket), Error> {
 }
 
 fn wait_socket_empty(socket: &fasync::Socket) {
-    socket
-        .as_handle_ref()
-        .wait(zx::Signals::SOCKET_WRITE_THRESHOLD, zx::Time::INFINITE)
-        .unwrap();
+    socket.as_handle_ref().wait(zx::Signals::SOCKET_WRITE_THRESHOLD, zx::Time::INFINITE).unwrap();
 }
 
 async fn test_read_write<'a>(
-    socket: &'a mut fasync::Socket, con: &'a ConnectionProxy,
+    socket: &'a mut fasync::Socket,
+    con: &'a ConnectionProxy,
 ) -> Result<(), Error> {
     let data = Box::new([42u8; TEST_DATA_LEN as usize]);
 
@@ -78,10 +76,7 @@ fn make_con() -> Result<(fasync::Socket, ConnectionProxy, ConnectionTransport), 
     let (data_stream, server_socket) = make_socket_pair()?;
     let (client_end, server_end) = endpoints::create_endpoints::<ConnectionMarker>()?;
     let client_end = client_end.into_proxy().unwrap();
-    let con = ConnectionTransport {
-        data: server_socket,
-        con: server_end,
-    };
+    let con = ConnectionTransport { data: server_socket, con: server_end };
     Ok((data_stream, client_end, con))
 }
 
@@ -105,9 +100,7 @@ async fn main() -> Result<(), Error> {
     await!(test_read_write(&mut data_stream, &client_end))?;
 
     client_end.shutdown()?;
-    data_stream
-        .as_handle_ref()
-        .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::INFINITE)?;
+    data_stream.as_handle_ref().wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::INFINITE)?;
 
     // Wait for a connection
     let AcceptorRequest::Accept { addr: _, responder } =
@@ -117,9 +110,7 @@ async fn main() -> Result<(), Error> {
 
     // Send data then wait for other end to shut us down.
     await!(test_read_write(&mut data_stream, &client_end))?;
-    data_stream
-        .as_handle_ref()
-        .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::INFINITE)?;
+    data_stream.as_handle_ref().wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::INFINITE)?;
 
     // Get next connection
     let AcceptorRequest::Accept { addr: _, responder } =

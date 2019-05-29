@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
-#define SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_
+#define SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -89,4 +89,4 @@ class FakeInputOnlyScenic
   FakeInputOnlySession session_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_

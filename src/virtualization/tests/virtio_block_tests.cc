@@ -347,11 +347,12 @@ TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
 TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
   std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioBlockUtil,
-                          {fxl::StringPrintf("%lu", kBlockSectorSize),
-                           fxl::StringPrintf("%u", kVirtioQcowBlockCount), "check"},
-                          &result),
-            ZX_OK);
+  EXPECT_EQ(
+      this->RunUtil(kVirtioBlockUtil,
+                    {fxl::StringPrintf("%lu", kBlockSectorSize),
+                     fxl::StringPrintf("%u", kVirtioQcowBlockCount), "check"},
+                    &result),
+      ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
