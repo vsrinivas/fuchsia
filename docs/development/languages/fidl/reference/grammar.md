@@ -56,9 +56,9 @@ file = library-header , ( using-list ) , declaration-list ;
 
 library-header = ( attribute-list ) , "library" , compound-identifier , ";" ;
 
-using-list = ( using )* ;
+using-list = ( using , ";" )* ;
 
-using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
+using = "using" , compound-identifier , ( "as" , IDENTIFIER ) ;
 
 declaration-list = ( declaration , ";" )* ;
 
@@ -114,7 +114,7 @@ table-field-ordinal = ordinal , ":" ;
 
 table-field-declaration = struct-field | "reserved" ;
 
-type-alias-declaration = "using" , IDENTIFIER ,  "=" , type-constructor , ";" ;
+type-alias-declaration = "using" , IDENTIFIER ,  "=" , type-constructor ;
 
 attribute-list = "[" , attributes , "]" ;
 
