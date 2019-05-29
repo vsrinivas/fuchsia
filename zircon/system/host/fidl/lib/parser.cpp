@@ -1056,9 +1056,12 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
         if (!Ok())
             return Fail();
     }
-
     if (!Ok())
-        Fail();
+        return Fail();
+
+    if (members.empty())
+        return Fail("must have at least one member; you can use an empty struct "
+                    "to define a placeholder variant, or use an optional union");
 
     return std::make_unique<raw::XUnionDeclaration>(scope.GetSourceElement(),
                                                     std::move(attributes), std::move(identifier),

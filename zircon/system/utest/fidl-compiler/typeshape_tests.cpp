@@ -1189,11 +1189,12 @@ static bool xunions() {
     TestLibrary test_library(R"FIDL(
 library example;
 
-xunion EmptyXUnion {
-};
-
 xunion XUnionWithOneBool {
   bool b;
+};
+
+struct StructWithOptionalXUnionWithOneBool {
+  XUnionWithOneBool? opt_xunion_with_bool;
 };
 
 xunion XUnionWithBoundedOutOfLineObject {
@@ -1218,21 +1219,8 @@ xunion XUnionWithUnboundedOutOfLineObject {
   string s;
 };
 
-struct StructWithOptionalEmptyXUnion {
-  EmptyXUnion? opt_empty;
-};
-
     )FIDL");
     ASSERT_TRUE(test_library.Compile());
-
-    auto empty = test_library.LookupXUnion("EmptyXUnion");
-    ASSERT_NONNULL(empty);
-    EXPECT_TRUE(CheckTypeShape(empty->typeshape, Expected {
-        .size = 24,
-        .alignment = 8,
-        .max_out_of_line = 0,
-        .depth = 0, // TODO(FIDL-457): wrong.
-    }));
 
     auto one_bool = test_library.LookupXUnion("XUnionWithOneBool");
     ASSERT_NONNULL(one_bool);
@@ -1246,6 +1234,16 @@ struct StructWithOptionalEmptyXUnion {
     ASSERT_EQ(one_bool->members.size(), 1);
     EXPECT_TRUE(CheckFieldShape(one_bool->members[0].fieldshape, ExpectedField {
         .padding = 7
+    }));
+
+    auto opt_one_bool = test_library.LookupStruct("StructWithOptionalXUnionWithOneBool");
+    ASSERT_NONNULL(opt_one_bool);
+    EXPECT_TRUE(CheckTypeShape(opt_one_bool->typeshape, Expected {
+        .size = 24,
+        .alignment = 8,
+        .max_out_of_line = 8,
+        .depth = 1, // TODO(FIDL-457): wrong.
+        .has_padding = true,
     }));
 
     auto xu = test_library.LookupXUnion("XUnionWithBoundedOutOfLineObject");
@@ -1265,15 +1263,6 @@ struct StructWithOptionalEmptyXUnion {
         .alignment = 8,
         .max_out_of_line = std::numeric_limits<uint32_t>::max(),
         .depth = 2, // TODO(FIDL-457): wrong.
-    }));
-
-    auto opt_empty = test_library.LookupStruct("StructWithOptionalEmptyXUnion");
-    ASSERT_NONNULL(opt_empty);
-    EXPECT_TRUE(CheckTypeShape(opt_empty->typeshape, Expected {
-        .size = 24,
-        .alignment = 8,
-        .max_out_of_line = 0,
-        .depth = 0, // TODO(FIDL-457): wrong.
     }));
 
     END_TEST;

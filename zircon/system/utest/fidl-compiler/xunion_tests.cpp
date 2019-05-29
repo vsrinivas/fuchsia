@@ -29,14 +29,6 @@ xunion Foo {
 };
 )FIDL"));
 
-    // Empty xunions are allowed.
-    EXPECT_TRUE(Compiles(R"FIDL(
-library fidl.test.xunions;
-
-xunion Foo {
-};
-)FIDL"));
-
     // Explicit ordinals are invalid.
     EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.xunions;
@@ -86,8 +78,26 @@ xunion Foo {
     END_TEST;
 }
 
+bool invalid_empty_xunions() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+xunion Foo {};
+
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "must have at least one member");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(xunion_tests)
 RUN_TEST(compiling)
+RUN_TEST(invalid_empty_xunions);
 END_TEST_CASE(xunion_tests)
