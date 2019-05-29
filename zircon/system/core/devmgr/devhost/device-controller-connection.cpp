@@ -6,7 +6,6 @@
 
 #include <fbl/auto_lock.h>
 #include <fuchsia/device/c/fidl.h>
-#include <lib/fit/defer.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 #include "../shared/fidl_txn.h"
@@ -25,51 +24,50 @@ struct DevhostRpcReadContext {
     DeviceControllerConnection* conn;
 };
 
-// Handles outstanding calls to fuchsia.device.Controller/Bind.
-void BindReply(const fbl::RefPtr<zx_device_t>& dev) {
+// Handles outstanding calls to fuchsia.device.manager.DeviceController/BindDriver
+// and fuchsia.device.Controller/Bind.
+zx_status_t BindReply(const fbl::RefPtr<zx_device_t>& dev, fidl_txn_t* txn, zx_status_t status) {
+    zx_status_t bind_driver_status =
+        fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, status);
+
+    zx_status_t bind_status = ZX_OK;
     fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
     if (dev->PopBindConn(&conn)) {
-        // TODO(ZX-3431): We ignore the status from device_bind() for
-        // bug-compatibility reasons.  Once this bug is resolved, we can
-        // return the actual status.
-        fuchsia_device_ControllerBind_reply(conn.Txn(), ZX_OK);
+        bind_status = fuchsia_device_ControllerBind_reply(conn.Txn(), status);
     }
+
+    return bind_driver_status != ZX_OK ? bind_driver_status : bind_status;
 }
 
 zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
                             size_t driver_path_size, zx_handle_t raw_driver_vmo,
                             fidl_txn_t* txn) {
     auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
+    const auto& dev = ctx->conn->dev();
     zx::vmo driver_vmo(raw_driver_vmo);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
-
-    // We can now reply to calls to fuchsia.device.Controller/Bind, as we have
-    // completed the request to bind the driver.
-    auto defer = fit::defer([dev = ctx->conn->dev()] {
-        BindReply(dev);
-    });
 
     // TODO: api lock integration
     log(RPC_IN, "devhost[%s] bind driver '%.*s'\n", ctx->path, static_cast<int>(driver_path_size),
         driver_path_data);
     fbl::RefPtr<zx_driver_t> drv;
-    if (ctx->conn->dev()->flags & DEV_FLAG_DEAD) {
+    if (dev->flags & DEV_FLAG_DEAD) {
         log(ERROR, "devhost[%s] bind to removed device disallowed\n", ctx->path);
-        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, ZX_ERR_IO_NOT_PRESENT);
+        return BindReply(dev, txn, ZX_ERR_IO_NOT_PRESENT);
     }
 
     zx_status_t r;
     if ((r = dh_find_driver(driver_path, std::move(driver_vmo), &drv)) < 0) {
         log(ERROR, "devhost[%s] driver load failed: %d\n", ctx->path, r);
-        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, r);
+        return BindReply(dev, txn, r);
     }
 
     if (drv->has_bind_op()) {
         BindContext bind_ctx = {
-            .parent = ctx->conn->dev(),
+            .parent = dev,
             .child = nullptr,
         };
-        r = drv->BindOp(&bind_ctx, ctx->conn->dev());
+        r = drv->BindOp(&bind_ctx, dev);
 
         if ((r == ZX_OK) && (bind_ctx.child == nullptr)) {
             printf("devhost: WARNING: driver '%.*s' did not add device in bind()\n",
@@ -79,14 +77,14 @@ zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
             log(ERROR, "devhost[%s] bind driver '%.*s' failed: %d\n", ctx->path,
                 static_cast<int>(driver_path_size), driver_path_data, r);
         }
-        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, r);
+        return BindReply(dev, txn, r);
     }
 
     if (!drv->has_create_op()) {
         log(ERROR, "devhost[%s] neither create nor bind are implemented: '%.*s'\n", ctx->path,
             static_cast<int>(driver_path_size), driver_path_data);
     }
-    return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    return BindReply(dev, txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t fidl_ConnectProxy(void* raw_ctx, zx_handle_t raw_shadow) {

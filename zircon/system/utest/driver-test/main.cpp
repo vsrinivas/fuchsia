@@ -27,7 +27,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#define DRIVER_TEST_DIR "/boot/driver/test"
+static constexpr const char kDriverTestDir[] = "/boot/driver/test";
+static constexpr const char kBindFailDriver[] = "bind-fail-test.so";
 
 using devmgr_integration_test::IsolatedDevmgr;
 
@@ -93,10 +94,19 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
     }
 
     char libpath[PATH_MAX];
-    int n = snprintf(libpath, sizeof(libpath), "%s/%s", DRIVER_TEST_DIR, drv_libname);
+    int n = snprintf(libpath, sizeof(libpath), "%s/%s", kDriverTestDir, drv_libname);
     status = fuchsia_device_ControllerBind(test_channel.get(), libpath, n, &call_status);
     if (status == ZX_OK) {
         status = call_status;
+    }
+    if (status == ZX_ERR_NOT_SUPPORTED &&
+        !strncmp(drv_libname, kBindFailDriver, strlen(kBindFailDriver))) {
+        *report = {
+            .test_count = 1,
+            .success_count = 1,
+            .failure_count = 0,
+        };
+        return;
     }
     if (status != ZX_OK) {
         printf("driver-tests: error %d binding to %s\n", status, libpath);
@@ -214,14 +224,14 @@ int main(int argc, char** argv) {
 
     fuchsia_device_test_TestReport final_report = {};
 
-    DIR* dir = opendir(DRIVER_TEST_DIR);
+    DIR* dir = opendir(kDriverTestDir);
     if (dir == NULL) {
-        printf("driver-tests: failed to open %s\n", DRIVER_TEST_DIR);
+        printf("driver-tests: failed to open %s\n", kDriverTestDir);
         return -1;
     }
     int dfd = dirfd(dir);
     if (dfd < 0) {
-        printf("driver-tests: failed to get fd for %s\n", DRIVER_TEST_DIR);
+        printf("driver-tests: failed to get fd for %s\n", kDriverTestDir);
         return -1;
     }
     struct dirent* de;

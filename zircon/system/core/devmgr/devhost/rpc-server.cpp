@@ -573,11 +573,7 @@ static zx_status_t fidl_DeviceControllerBind(void* ctx, const char* driver_data,
         conn->dev->PushBindConn(fs::FidlConnection::CopyTxn(txn));
     }
 
-    // TODO(ZX-3431): We ignore the status from device_bind() for
-    // bug-compatibility reasons.  Once this bug is resolved, we can return the
-    // actual status.
-    __UNUSED zx_status_t status = device_bind(conn->dev, drv_libname);
-    return ZX_OK;
+    return device_bind(conn->dev, drv_libname);
 }
 
 static zx_status_t fidl_DeviceControllerUnbind(void* ctx, fidl_txn_t* txn) {
