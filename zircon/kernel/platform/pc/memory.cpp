@@ -25,6 +25,7 @@
 #include <object/handle.h>
 #include <object/resource_dispatcher.h>
 
+#include "debug.h"
 #include "platform_p.h"
 
 #define LOCAL_TRACE 0
@@ -52,10 +53,25 @@ typedef struct reserved_mmio_space {
 reserved_mmio_space_t reserved_mmio_entries[kMaxReservedMmioEntries];
 static uint8_t reserved_mmio_count = 0;
 
+constexpr uint8_t kMaxReservedPioEntries = 64;
+typedef struct reserved_pio_space {
+    uint64_t base;
+    size_t len;
+    KernelHandle<ResourceDispatcher> handle;
+} reserved_pio_space_t;
+reserved_pio_space_t reserved_pio_entries[kMaxReservedPioEntries];
+static uint8_t reserved_pio_count = 0;
+
 static void mark_mmio_region_to_reserve(uint64_t base, size_t len) {
     reserved_mmio_entries[reserved_mmio_count].base = base;
     reserved_mmio_entries[reserved_mmio_count].len = len;
     reserved_mmio_count++;
+}
+
+static void mark_pio_region_to_reserve(uint64_t base, size_t len) {
+    reserved_pio_entries[reserved_pio_count].base = base;
+    reserved_pio_entries[reserved_pio_count].len = len;
+    reserved_pio_count++;
 }
 
 #define DEFAULT_MEMEND (16 * 1024 * 1024)
@@ -432,8 +448,6 @@ void pc_mem_init(void) {
     }
 }
 
-
-
 // Initialize the higher level PhysicalAspaceManager after the heap is initialized.
 static void x86_resource_init_hook(unsigned int rl) {
     // An error is likely fatal if the bookkeeping is broken and driver
@@ -447,6 +461,18 @@ static void x86_resource_init_hook(unsigned int rl) {
                                             interrupt_get_base_vector(),
                                             interrupt_get_max_vector());
 
+    DebugUartInfo debug_uart = debug_uart_info();
+    switch (debug_uart.type) {
+    case DebugUartInfo::Type::None:
+        break;
+    case DebugUartInfo::Type::Port:
+        mark_pio_region_to_reserve(debug_uart.io_port, 8);
+        break;
+    case DebugUartInfo::Type::Mmio:
+        mark_mmio_region_to_reserve(debug_uart.mem_addr, PAGE_SIZE);
+        break;
+    }
+
     // Exclusively reserve the regions marked as memory earlier so that physical
     // vmos cannot be created against them.
     for (uint8_t i = 0; i < reserved_mmio_count; i++) {
@@ -456,13 +482,27 @@ static void x86_resource_init_hook(unsigned int rl) {
         zx_status_t st = ResourceDispatcher::Create(&entry.handle, &rights, ZX_RSRC_KIND_MMIO,
                                                     entry.base, entry.len, ZX_RSRC_FLAG_EXCLUSIVE,
                                                     "platform_memory");
-        if (st == ZX_OK) {
-        } else {
+        if (st != ZX_OK) {
             TRACEF("failed to create backing resource for boot memory region %#lx - %#lx: %d\n",
                    entry.base, entry.base + entry.len, st);
         }
-
     }
+
+    // Exclusively reserve io ports in use
+    for (uint8_t i = 0; i < reserved_pio_count; i++) {
+        zx_rights_t rights;
+        auto& entry = reserved_pio_entries[i];
+
+        zx_status_t st = ResourceDispatcher::Create(&entry.handle, &rights, ZX_RSRC_KIND_IOPORT,
+                                                    entry.base, entry.len, ZX_RSRC_FLAG_EXCLUSIVE,
+                                                    "platform_io_port");
+        if (st != ZX_OK) {
+            TRACEF("failed to create backing resource for io port region %#lx - %#lx: %d\n",
+                   entry.base, entry.base + entry.len, st);
+        }
+    }
+
+    // debug_uart.irq needs to be reserved here. See ZX-4155.
 }
 
 LK_INIT_HOOK(x86_resource_init, x86_resource_init_hook, LK_INIT_LEVEL_HEAP)

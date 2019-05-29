@@ -32,11 +32,33 @@
 #include <zircon/types.h>
 
 #include "platform_p.h"
+#include "debug.h"
 
 static const int uart_baud_rate = 115200;
 static int uart_io_port = 0x3f8;
 static uint64_t uart_mem_addr = 0;
 static uint32_t uart_irq = ISA_IRQ_SERIAL1;
+
+DebugUartInfo debug_uart_info() {
+    DebugUartInfo::Type type;
+    switch (bootloader.uart.type) {
+    case ZBI_UART_PC_PORT:
+        type = DebugUartInfo::Type::Port;
+        break;
+    case ZBI_UART_PC_MMIO:
+        type = DebugUartInfo::Type::Mmio;
+        break;
+    default:
+        type = DebugUartInfo::Type::None;
+        break;
+    }
+    return DebugUartInfo {
+        .mem_addr = uart_mem_addr,
+        .io_port = static_cast<uint32_t>(uart_io_port),
+        .irq = uart_irq,
+        .type = type,
+    };
+}
 
 cbuf_t console_input_buf;
 static bool output_enabled = false;
