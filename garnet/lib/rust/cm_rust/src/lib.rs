@@ -342,7 +342,7 @@ fidl_translations_opt_type!(fsys::Durability);
 fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct CapabilityPath {
     pub dirname: String,
     pub basename: String,
@@ -557,12 +557,10 @@ impl NativeIntoFidl<Option<fsys::ExposeSource>> for ExposeSource {
     fn native_into_fidl(self) -> Option<fsys::ExposeSource> {
         Some(match self {
             ExposeSource::Myself => fsys::ExposeSource::Myself(fsys::SelfRef {}),
-            ExposeSource::Child(child_name) => {
-                fsys::ExposeSource::Child(fsys::ChildRef {
-                    name: Some(child_name),
-                    collection: None,
-                })
-            }
+            ExposeSource::Child(child_name) => fsys::ExposeSource::Child(fsys::ChildRef {
+                name: Some(child_name),
+                collection: None,
+            }),
         })
     }
 }
@@ -590,12 +588,10 @@ impl NativeIntoFidl<Option<fsys::OfferSource>> for OfferSource {
         Some(match self {
             OfferSource::Realm => fsys::OfferSource::Realm(fsys::RealmRef {}),
             OfferSource::Myself => fsys::OfferSource::Myself(fsys::SelfRef {}),
-            OfferSource::Child(child_name) => {
-                fsys::OfferSource::Child(fsys::ChildRef {
-                    name: Some(child_name),
-                    collection: None,
-                })
-            }
+            OfferSource::Child(child_name) => fsys::OfferSource::Child(fsys::ChildRef {
+                name: Some(child_name),
+                collection: None,
+            }),
         })
     }
 }
@@ -620,10 +616,7 @@ impl NativeIntoFidl<Option<fsys::OfferDest>> for OfferDest {
     fn native_into_fidl(self) -> Option<fsys::OfferDest> {
         Some(match self {
             OfferDest::Child(child_name) => {
-                fsys::OfferDest::Child(fsys::ChildRef {
-                    name: Some(child_name),
-                    collection: None,
-                })
+                fsys::OfferDest::Child(fsys::ChildRef { name: Some(child_name), collection: None })
             }
             OfferDest::Collection(collection_name) => {
                 fsys::OfferDest::Collection(fsys::CollectionRef { name: Some(collection_name) })

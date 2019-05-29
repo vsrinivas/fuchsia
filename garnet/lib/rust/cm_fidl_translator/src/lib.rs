@@ -489,6 +489,12 @@ mod tests {
                         }
                     },
                     {
+                        "service": {
+                            "source_path": "/svc/fuchsia.sys2.Realm",
+                            "target_path": "/svc/fuchsia.sys2.Realm"
+                        }
+                    },
+                    {
                         "directory": {
                             "source_path": "/data/assets",
                             "target_path": "/data"
@@ -501,6 +507,10 @@ mod tests {
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
                         source_path: Some("/fonts/CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                    }),
+                    fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        source_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source_path: Some("/data/assets".to_string()),

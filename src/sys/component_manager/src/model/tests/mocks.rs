@@ -5,12 +5,13 @@
 use {
     crate::model::*,
     cm_rust::ComponentDecl,
-    failure::format_err,
+    failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
     futures::future::FutureObj,
     futures::lock::Mutex,
+    futures::prelude::*,
     lazy_static::lazy_static,
     regex::Regex,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
@@ -25,7 +26,7 @@ lazy_static! {
 }
 
 impl MockResolver {
-    pub fn new() -> MockResolver {
+    pub fn new() -> Self {
         MockResolver { components: HashMap::new() }
     }
 
@@ -62,7 +63,7 @@ pub struct MockRunner {
 }
 
 impl MockRunner {
-    pub fn new() -> MockRunner {
+    pub fn new() -> Self {
         MockRunner {
             urls_run: Arc::new(Mutex::new(vec![])),
             namespaces: Arc::new(Mutex::new(HashMap::new())),
@@ -88,5 +89,55 @@ impl MockRunner {
 impl Runner for MockRunner {
     fn start(&self, start_info: fsys::ComponentStartInfo) -> FutureObj<Result<(), RunnerError>> {
         FutureObj::new(Box::new(self.start_async(start_info)))
+    }
+}
+
+pub struct MockAmbientEnvironment {
+    /// List of calls to `BindChild` with component's relative moniker.
+    pub bind_calls: Arc<Mutex<Vec<String>>>,
+}
+
+impl AmbientEnvironment for MockAmbientEnvironment {
+    fn serve_realm_service(
+        &self,
+        realm: Arc<Realm>,
+        stream: fsys::RealmRequestStream,
+    ) -> FutureObj<Result<(), AmbientError>> {
+        FutureObj::new(Box::new(async move {
+            await!(self.do_serve_realm_service(realm, stream))
+                .expect(&format!("serving {} failed", REALM_SERVICE.to_string()));
+            Ok(())
+        }))
+    }
+}
+
+impl MockAmbientEnvironment {
+    pub fn new() -> Self {
+        MockAmbientEnvironment { bind_calls: Arc::new(Mutex::new(vec![])) }
+    }
+
+    async fn do_serve_realm_service(
+        &self,
+        realm: Arc<Realm>,
+        mut stream: fsys::RealmRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = await!(stream.try_next())? {
+            match request {
+                fsys::RealmRequest::BindChild { responder, .. } => {
+                    await!(self.bind_calls.lock()).push(
+                        realm
+                            .abs_moniker
+                            .path()
+                            .last()
+                            .expect("did not expect root component")
+                            .name()
+                            .to_string(),
+                    );
+                    responder.send(&mut Ok(()))?;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 }

@@ -18,6 +18,42 @@ use {
 ///    \
 ///     b
 ///
+/// b: uses ambient service /svc/fuchsia.sys2.Realm
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_ambient() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![(AbsoluteMoniker::new(vec!["b"]), new_ambient_capability(), true),],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    }),],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///
 /// a: offers directory /data/foo from self as /data/bar
 /// a: offers service /svc/foo from self as /svc/bar
 /// b: uses directory /data/bar as /data/hippo

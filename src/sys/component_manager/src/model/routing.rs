@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, Capability, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
+    cm_rust::{self, Capability, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
     failure::format_err,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fuchsia_zircon as zx,
@@ -18,6 +18,8 @@ enum CapabilitySource {
     Component(Capability, Arc<Realm>),
     /// This capability originates from component manager's namespace.
     ComponentMgrNamespace(Capability),
+    /// This capability is an ambient service and originates from component manager itself.
+    AmbientService(CapabilityPath, Arc<Realm>),
 }
 
 /// `route_directory` will find the source of the directory capability used at `source_path` by
@@ -44,7 +46,7 @@ pub async fn route_service<'a>(
     await!(route_capability(model, MODE_TYPE_SERVICE, capability, abs_moniker, server_chan))
 }
 
-/// `route_capability` will find the source of the capability `type_` used at `source_path` by
+/// `route_capability` will find the source of the `capability` used by
 /// `absolute_moniker`, and pass along the `server_chan` to the hosting component's out
 /// directory (or componentmgr's namespace, if applicable) using an open request with
 /// `open_mode`.
@@ -73,9 +75,34 @@ async fn route_capability<'a>(
                 server_chan
             ))?;
         }
+        CapabilitySource::AmbientService(source_capability_path, realm) => {
+            await!(AmbientEnvironment::serve(
+                model.ambient.clone(),
+                realm,
+                &source_capability_path,
+                server_chan
+            ))?;
+        }
     }
 
     Ok(())
+}
+
+/// Check if a used capability is ambient, and if so return the ambient `CapabilitySource`.
+async fn find_ambient_capability<'a>(
+    model: &'a Model,
+    used_capability: &'a Capability,
+    abs_moniker: &'a AbsoluteMoniker,
+) -> Result<Option<CapabilitySource>, ModelError> {
+    if let Some(path) = AMBIENT_SERVICES.iter().find(|p| match used_capability {
+        Capability::Service(s) => **p == s,
+        _ => false,
+    }) {
+        let realm = await!(model.look_up_realm(abs_moniker))?;
+        Ok(Some(CapabilitySource::AmbientService((*path).clone(), realm)))
+    } else {
+        Ok(None)
+    }
 }
 
 /// find_capability_source will walk the component tree to find the originating source of a
@@ -88,6 +115,12 @@ async fn find_capability_source<'a>(
     used_capability: &'a Capability,
     abs_moniker: AbsoluteMoniker,
 ) -> Result<CapabilitySource, ModelError> {
+    if let Some(ambient_capability) =
+        await!(find_ambient_capability(model, used_capability, &abs_moniker))?
+    {
+        return Ok(ambient_capability);
+    }
+
     // Holds mutable state as we walk the tree
     struct State {
         // The capability as it's represented in the current component

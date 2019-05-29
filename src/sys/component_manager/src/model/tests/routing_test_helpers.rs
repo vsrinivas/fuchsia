@@ -186,7 +186,7 @@ pub async fn read_data(
 
 /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
 /// to be fidl.examples.echo.Echo.
-async fn call_svc(
+async fn call_echo_svc(
     path: CapabilityPath,
     resolved_url: String,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
@@ -208,6 +208,42 @@ async fn call_svc(
             } else {
                 panic!("unexpected error value: {}", err);
             }
+        }
+    }
+}
+
+/// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
+/// to be fuchsia.sys2.Realm.
+async fn call_realm_svc(
+    path: CapabilityPath,
+    resolved_url: String,
+    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    bind_calls: Arc<Mutex<Vec<String>>>,
+    should_succeed: bool,
+) {
+    let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
+    let node_proxy =
+        io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
+            .expect("failed to open realm service");
+    let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
+    let child_ref = fsys::ChildRef { name: Some("my_child".to_string()), collection: None };
+    let (_client_chan, server_chan) = zx::Channel::create().unwrap();
+    let exposed_capabilities = ServerEnd::new(server_chan);
+    let res = await!(realm_proxy.bind_child(child_ref, exposed_capabilities));
+
+    match should_succeed {
+        true => {
+            // Check for side effects: ambient environment should have received the `bind_child`
+            // call.
+            let _ = res.expect("failed to use realm service");
+            let bind_url = format!(
+                "test:///{}_resolved",
+                await!(bind_calls.lock()).last().expect("no bind call")
+            );
+            assert_eq!(bind_url, resolved_url);
+        }
+        false => {
+            let _ = res.expect_err("used realm service successfully when it should fail");
         }
     }
 }
@@ -287,6 +323,11 @@ pub fn new_service_capability() -> Capability {
     Capability::Service(CapabilityPath::try_from("/svc/hippo").unwrap())
 }
 
+/// Construct a capability for the ambient service fuchsia.sys2.Realm.
+pub fn new_ambient_capability() -> Capability {
+    Capability::Service(CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap())
+}
+
 /// Construct a capability for the hippo directory.
 pub fn new_directory_capability() -> Capability {
     Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
@@ -329,7 +370,10 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         mock_resolver.add_component(name, decl);
     }
     resolver.register("test".to_string(), Box::new(mock_resolver));
+    let ambient = MockAmbientEnvironment::new();
+    let bind_calls = ambient.bind_calls.clone();
     let model = Model::new(ModelParams {
+        ambient: Box::new(ambient),
         root_component_url: format!("test:///{}", test.root_component),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -341,9 +385,28 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         let component_resolved_url = format!("test:///{}_resolved", &component_name);
         await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
         match capability {
-            Capability::Service(path) => {
-                await!(call_svc(path, component_resolved_url, namespaces.clone(), should_succeed))
-            }
+            Capability::Service(path) => match &path.to_string() as &str {
+                "/svc/hippo" => {
+                    await!(call_echo_svc(
+                        path,
+                        component_resolved_url,
+                        namespaces.clone(),
+                        should_succeed
+                    ));
+                }
+                "/svc/fuchsia.sys2.Realm" => {
+                    await!(call_realm_svc(
+                        path,
+                        component_resolved_url,
+                        namespaces.clone(),
+                        bind_calls.clone(),
+                        should_succeed
+                    ));
+                }
+                p => {
+                    panic!("Unexpected service capability {}", p);
+                }
+            },
             Capability::Directory(path) => {
                 await!(read_data(path, component_resolved_url, namespaces.clone(), should_succeed))
             }

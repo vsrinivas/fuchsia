@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod ambient;
 mod component;
 mod error;
 mod model;
@@ -14,5 +15,6 @@ mod runner;
 mod tests;
 
 pub use self::{
-    component::*, error::*, model::*, moniker::*, namespace::*, resolver::*, routing::*, runner::*,
+    ambient::*, component::*, error::*, model::*, moniker::*, namespace::*, resolver::*,
+    routing::*, runner::*,
 };

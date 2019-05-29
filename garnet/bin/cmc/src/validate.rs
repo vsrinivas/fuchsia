@@ -157,7 +157,7 @@ impl<'a> ValidationContext<'a> {
                 {
                     return Err(Error::validate(format!(
                         "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
-                        or \"collections\"",
+                         or \"collections\"",
                         &to.dest,
                     )));
                 }
@@ -227,10 +227,18 @@ impl<'a> ValidationContext<'a> {
         };
 
         // Get the target capability's path (defaults to the source path).
-        let ref target_path = match &target_obj.r#as() {
+        let target_path: &str = match &target_obj.r#as() {
             Some(a) => a,
             None => source_path,
         };
+
+        // Check that the target path is not an ambient capability.
+        if cml::AMBIENT_PATHS.contains(&target_path) {
+            return Err(Error::validate(format!(
+                "Target `{}` path \"{}\" shares the path of an ambient capability.",
+                keyword, target_path
+            )));
+        }
 
         // Check that target path is not a duplicate of another capability.
         let target_name = target_obj.dest().unwrap_or("");
@@ -1087,6 +1095,17 @@ mod tests {
             }),
             result = Err(Error::validate("\"/thing\" is a duplicate \"expose\" target path")),
         },
+        test_cml_expose_ambient_path => {
+            input = json!({
+                "expose": [
+                    {
+                        "service": "/svc/fuchsia.sys2.Realm",
+                        "from": "self",
+                    },
+                ],
+            }),
+            result = Err(Error::validate("Target `expose` path \"/svc/fuchsia.sys2.Realm\" shares the path of an ambient capability.")),
+        },
         test_cml_expose_bad_from => {
             input = json!({
                 "expose": [ {
@@ -1301,6 +1320,26 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate("\"/thing\" is a duplicate \"offer\" target path for \"#echo_server\"")),
+        },
+        test_cml_offer_ambient_target_path => {
+            input = json!({
+                "offer": [
+                    {
+                        "service": "/svc/realm",
+                        "from": "self",
+                        "to": [
+                            { "dest": "#logger", "as": "/svc/fuchsia.sys2.Realm" },
+                        ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ],
+            }),
+            result = Err(Error::validate("Target `offer` path \"/svc/fuchsia.sys2.Realm\" shares the path of an ambient capability.")),
         },
 
         // children

@@ -30,6 +30,7 @@ async fn bind_instance_root() {
     mock_resolver.add_component("root", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -53,6 +54,7 @@ async fn bind_instance_root_non_existent() {
     mock_resolver.add_component("root", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -98,6 +100,7 @@ async fn bind_instance_child() {
     mock_resolver.add_component("echo", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -151,6 +154,7 @@ async fn bind_instance_child_non_existent() {
     mock_resolver.add_component("system", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -242,6 +246,7 @@ async fn bind_instance_eager_children() {
     mock_resolver.add_component("e", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -310,6 +315,7 @@ async fn bind_instance_no_execute() {
     mock_resolver.add_component("b", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
@@ -362,6 +368,7 @@ async fn bind_instance_recursive_child() {
     mock_resolver.add_component("netstack", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
+        ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),

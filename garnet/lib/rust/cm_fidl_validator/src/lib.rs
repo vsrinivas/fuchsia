@@ -16,6 +16,7 @@ lazy_static! {
     static ref NAME: Identifier = Identifier::new(r"^[0-9a-z_\-\.]+$", 100);
     static ref URL: Identifier = Identifier::new(r"^[0-9a-z\+\-\.]+://.+$", 4096);
 }
+const AMBIENT_PATHS: [&str; 1] = ["/svc/fuchsia.sys2.Realm"];
 
 /// Enum type that can represent any error encountered durlng validation.
 #[derive(Debug)]
@@ -26,6 +27,7 @@ pub enum Error {
     DuplicateField(String, String, String),
     InvalidField(String, String),
     FieldTooLong(String, String),
+    AmbientTargetPath(String, String),
     OfferTargetEqualsSource(String),
     InvalidChild(String, String),
     InvalidCollection(String, String),
@@ -60,8 +62,15 @@ impl Error {
         Error::FieldTooLong(decl_type.into(), keyword.into())
     }
 
-    pub fn offer_target_equals_source(decl_type: impl Into<String>) -> Self {
-        Error::OfferTargetEqualsSource(decl_type.into())
+    pub fn ambient_target_path(
+        decl_type: impl Into<String>,
+        target_path: impl Into<String>,
+    ) -> Self {
+        Error::AmbientTargetPath(decl_type.into(), target_path.into())
+    }
+
+    pub fn offer_target_equals_source(dest: impl Into<String>) -> Self {
+        Error::OfferTargetEqualsSource(dest.into())
     }
 
     pub fn invalid_child(decl_type: impl Into<String>, child: impl Into<String>) -> Self {
@@ -84,6 +93,9 @@ impl fmt::Display for Error {
             Error::DuplicateField(d, k, v) => write!(f, "\"{}\" is a duplicate {} {}", v, d, k),
             Error::InvalidField(d, k) => write!(f, "{} has invalid {}", d, k),
             Error::FieldTooLong(d, k) => write!(f, "{}'s {} is too long", d, k),
+            Error::AmbientTargetPath(d, p) => {
+                write!(f, "{}'s target path \"{}\" collides with an ambient capability", d, p)
+            }
             Error::OfferTargetEqualsSource(d) => {
                 write!(f, "OfferTarget \"{}\" is same as source", d)
             }
@@ -182,7 +194,7 @@ impl<'a> ValidationContext<'a> {
         // Validate "offers".
         if let Some(offers) = self.decl.offers.as_ref() {
             for offer in offers.iter() {
-                self.validate_offer_decl(&offer);
+                self.validate_offers_decl(&offer);
             }
         }
 
@@ -331,16 +343,19 @@ impl<'a> ValidationContext<'a> {
         PATH.check(source_path, decl, "source_path", &mut self.errors);
         if PATH.check(target_path, decl, "target_path", &mut self.errors) {
             let target_path: &str = target_path.unwrap();
+            if AMBIENT_PATHS.contains(&target_path) {
+                self.errors.push(Error::ambient_target_path(decl, target_path));
+            }
             if !prev_child_target_paths.insert(target_path) {
                 self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
             }
         }
     }
 
-    fn validate_offer_decl(&mut self, offer: &'a fsys::OfferDecl) {
+    fn validate_offers_decl(&mut self, offer: &'a fsys::OfferDecl) {
         match offer {
             fsys::OfferDecl::Service(o) => {
-                self.validate_offer_fields(
+                self.validate_offers_fields(
                     "OfferServiceDecl",
                     o.source.as_ref(),
                     o.source_path.as_ref(),
@@ -348,7 +363,7 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::OfferDecl::Directory(o) => {
-                self.validate_offer_fields(
+                self.validate_offers_fields(
                     "OfferDirectoryDecl",
                     o.source.as_ref(),
                     o.source_path.as_ref(),
@@ -361,7 +376,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_offer_fields(
+    fn validate_offers_fields(
         &mut self,
         decl: &str,
         source: Option<&fsys::OfferSource>,
@@ -409,7 +424,12 @@ impl<'a> ValidationContext<'a> {
             errors.push(Error::empty_field(decl, "targets"));
         }
         for target in targets.iter() {
-            PATH.check(target.target_path.as_ref(), "OfferTarget", "target_path", errors);
+            if PATH.check(target.target_path.as_ref(), "OfferTarget", "target_path", errors) {
+                let target_path: &str = target.target_path.as_ref().unwrap();
+                if AMBIENT_PATHS.contains(&target_path) {
+                    errors.push(Error::ambient_target_path(decl, target_path));
+                }
+            }
             match target.dest {
                 Some(_) => match target.dest.as_ref().unwrap() {
                     fsys::OfferDest::Child(c) => {
@@ -960,6 +980,30 @@ mod tests {
                                        "/svc/fuchsia.logger.Log"),
             ])),
         },
+        test_validate_exposes_ambient_target_path => {
+           input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(ExposeSource::Myself(SelfRef{})),
+                        source_path: Some("/svc/realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(ExposeSource::Myself(SelfRef{})),
+                        source_path: Some("/data/realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::ambient_target_path("ExposeServiceDecl", "/svc/fuchsia.sys2.Realm"),
+                Error::ambient_target_path("ExposeDirectoryDecl", "/svc/fuchsia.sys2.Realm"),
+                Error::duplicate_field("ExposeDirectoryDecl", "target_path",
+                                       "/svc/fuchsia.sys2.Realm"),
+            ])),
+        },
 
         // offers
         test_validate_offers_empty => {
@@ -1166,7 +1210,7 @@ mod tests {
                 Error::invalid_child("OfferDirectoryDecl source", "logger"),
             ])),
         },
-        test_validate_offer_target_empty => {
+        test_validate_offers_target_empty => {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
@@ -1190,7 +1234,7 @@ mod tests {
                 Error::missing_field("OfferTarget", "dest"),
             ])),
         },
-        test_validate_offer_targets_empty => {
+        test_validate_offers_targets_empty => {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
@@ -1212,7 +1256,7 @@ mod tests {
                 Error::empty_field("OfferDirectoryDecl", "targets"),
             ])),
         },
-        test_validate_offer_target_equals_from => {
+        test_validate_offers_target_equals_from => {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
@@ -1261,7 +1305,7 @@ mod tests {
                 Error::offer_target_equals_source("logger"),
             ])),
         },
-        test_validate_offer_target_duplicate_path => {
+        test_validate_offers_target_duplicate_path => {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![
@@ -1328,7 +1372,31 @@ mod tests {
                 Error::duplicate_field("OfferTarget", "target_path", "/data"),
             ])),
         },
-        test_validate_offer_target_invalid => {
+        test_validate_offers_ambient_target_path => {
+           input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(ExposeSource::Myself(SelfRef{})),
+                        source_path: Some("/svc/realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(ExposeSource::Myself(SelfRef{})),
+                        source_path: Some("/data/realm".to_string()),
+                        target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::ambient_target_path("ExposeServiceDecl", "/svc/fuchsia.sys2.Realm"),
+                Error::ambient_target_path("ExposeDirectoryDecl", "/svc/fuchsia.sys2.Realm"),
+                Error::duplicate_field("ExposeDirectoryDecl", "target_path",
+                                       "/svc/fuchsia.sys2.Realm"),
+            ])),
+        },
+        test_validate_offers_target_invalid => {
             input = {
                 let mut decl = new_component_decl();
                 decl.offers = Some(vec![

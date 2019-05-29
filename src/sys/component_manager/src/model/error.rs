@@ -35,6 +35,11 @@ pub enum ModelError {
         #[fail(cause)]
         err: RunnerError,
     },
+    #[fail(display = "ambient error")]
+    AmbientError {
+        #[fail(cause)]
+        err: AmbientError,
+    },
     #[fail(display = "capability discovery error")]
     CapabilityDiscoveryError {
         #[fail(cause)]
@@ -69,5 +74,11 @@ impl From<ResolverError> for ModelError {
 impl From<RunnerError> for ModelError {
     fn from(err: RunnerError) -> Self {
         ModelError::RunnerError { err }
+    }
+}
+
+impl From<AmbientError> for ModelError {
+    fn from(err: AmbientError) -> Self {
+        ModelError::AmbientError { err }
     }
 }

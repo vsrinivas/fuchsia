@@ -17,6 +17,7 @@ pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
+pub const AMBIENT_PATHS: [&str; 1] = ["/svc/fuchsia.sys2.Realm"];
 
 #[derive(Deserialize, Debug)]
 pub struct Document {
@@ -35,7 +36,10 @@ impl Document {
         if let Some(children) = self.children.as_ref() {
             for child in children.iter() {
                 if !all_children.insert(&child.name as &str) {
-                    return Err(Error::validate(format!("Duplicate child name: \"{}\"", &child.name)));
+                    return Err(Error::validate(format!(
+                        "Duplicate child name: \"{}\"",
+                        &child.name
+                    )));
                 }
             }
         }

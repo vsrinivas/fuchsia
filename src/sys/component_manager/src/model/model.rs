@@ -20,6 +20,8 @@ use {
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
+    /// The ambient environment.
+    pub ambient: Box<dyn AmbientEnvironment>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -40,12 +42,14 @@ pub struct ModelParams {
 #[derive(Clone)]
 pub struct Model {
     pub root_realm: Arc<Realm>,
+    pub ambient: Arc<dyn AmbientEnvironment>,
 }
 
 impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
         Model {
+            ambient: params.ambient.into(),
             root_realm: Arc::new(Realm {
                 resolver_registry: Arc::new(params.root_resolver_registry),
                 default_runner: Arc::new(params.root_default_runner),

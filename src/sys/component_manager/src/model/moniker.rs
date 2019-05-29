@@ -54,7 +54,7 @@ impl fmt::Display for ChildMoniker {
 /// information which is disclosed about the overall structure of the component instance tree.
 ///
 /// Display notation: "/", "/name1", "/name1/name2", ...
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct AbsoluteMoniker {
     path: Vec<ChildMoniker>,
 }

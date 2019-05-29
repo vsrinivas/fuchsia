@@ -335,8 +335,9 @@ mod tests {
             input = json!({
                 "use": [
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                    { "directory": "/data/assets" }
-                ]
+                    { "service": "/svc/fuchsia.sys2.Realm" },
+                    { "directory": "/data/assets" },
+                ],
             }),
             output = r#"{
     "uses": [
@@ -344,6 +345,12 @@ mod tests {
             "service": {
                 "source_path": "/fonts/CoolFonts",
                 "target_path": "/svc/fuchsia.fonts.Provider"
+            }
+        },
+        {
+            "service": {
+                "source_path": "/svc/fuchsia.sys2.Realm",
+                "target_path": "/svc/fuchsia.sys2.Realm"
             }
         },
         {
