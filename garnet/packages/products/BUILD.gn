@@ -51,10 +51,9 @@ group("network_wifi") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:network",
-    "//garnet/packages/config:wlan",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:runtime",
-    "//src/connectivity/wlan:bin",
+    "//src/connectivity/wlan:service",
   ]
 }
 
@@ -67,7 +66,6 @@ group("base") {
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
-    "//garnet/packages/config:wlan",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:auth",
     "//garnet/packages/prod:bluetooth_core",
@@ -91,7 +89,7 @@ group("base") {
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
-    "//src/connectivity/wlan:bin",
+    "//src/connectivity/wlan:service",
   ]
 }
 

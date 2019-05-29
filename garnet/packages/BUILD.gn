@@ -27,7 +27,7 @@ group("buildbot") {
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
-    "//garnet/packages/config:wlan",
+    "//src/connectivity/wlan:service",
   ]
 }
 
@@ -39,7 +39,7 @@ group("kitchen_sink") {
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
-    "//garnet/packages/config:wlan",
+    "//src/connectivity/wlan:service",
   ]
 }
 
@@ -50,8 +50,8 @@ group("garnet") {
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
-    "//garnet/packages/config:wlan",
     "//garnet/packages/prod:all",
+    "//src/connectivity/wlan:service",
   ]
 }
 
@@ -66,6 +66,6 @@ group("default") {
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
-    "//garnet/packages/config:wlan",
+    "//src/connectivity/wlan:service",
   ]
 }

@@ -302,7 +302,7 @@ group("all") {
     "//garnet/packages/prod:xi_core",
     "//src/connectivity/dhcp:dhcpd",
     "//src/connectivity/telephony:drivers",
-    "//src/connectivity/wlan:bin",
+    "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
   ]
 }
@@ -362,8 +362,8 @@ group("memory_monitor") {
   testonly = true
   public_deps = [
     "//garnet/bin/memory_monitor",
-    "//garnet/bin/memory_monitor:mem",
     "//garnet/bin/memory_monitor:config",
+    "//garnet/bin/memory_monitor:mem",
     "//garnet/packages/config:services",
   ]
 }

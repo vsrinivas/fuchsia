@@ -38,7 +38,7 @@ base_package_labels += [
   "//garnet/packages/tools:boringssl",
   "//garnet/packages/tools:netstack",
   "//src/connectivity/dhcp:dhcpd",
-  "//src/connectivity/wlan:bin",
+  "//src/connectivity/wlan:service",
   "//src/connectivity/wlan:tests",
   "//src/connectivity/wlan:tools",
   "//third_party/boringssl:boringssl_tool",

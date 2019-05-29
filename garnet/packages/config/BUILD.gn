@@ -76,13 +76,6 @@ group("router") {
   ]
 }
 
-group("wlan") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/wlan/wlancfg:config",
-  ]
-}
-
 group("amber") {
   testonly = true
   public_deps = [
