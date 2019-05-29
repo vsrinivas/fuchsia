@@ -4,8 +4,10 @@
 
 //! Type-safe bindings for Zircon jobs.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Process, Status, Vmar};
 use crate::ok;
+use crate::{object_get_info, ObjectQuery, Topic};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Process, Status, Task, Vmar};
+
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon job.
@@ -15,6 +17,29 @@ use fuchsia_zircon_sys as sys;
 #[repr(transparent)]
 pub struct Job(Handle);
 impl_handle_based!(Job);
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct JobInfo {
+    pub return_code: i64,
+    pub exited: bool,
+    pub kill_on_oom: bool,
+    pub debugger_attached: bool,
+}
+
+impl From<sys::zx_info_job_t> for JobInfo {
+    fn from(
+        sys::zx_info_job_t { return_code, exited, kill_on_oom, debugger_attached }: sys::zx_info_job_t,
+    ) -> JobInfo {
+        JobInfo { return_code, exited, kill_on_oom, debugger_attached }
+    }
+}
+
+// JobInfo is able to be safely replaced with a byte representation
+unsafe impl ObjectQuery for JobInfo {
+    const TOPIC: Topic = Topic::JOB;
+    type InfoTy = JobInfo;
+}
 
 impl Job {
     /// Create a new job as a child of the current job.
@@ -46,18 +71,75 @@ impl Job {
         let options = 0;
         let mut process_out = 0;
         let mut vmar_out = 0;
-        let status = unsafe { sys::zx_process_create(
-            parent_job_raw,
-            name_ptr,
-            name_len,
-            options,
-            &mut process_out,
-            &mut vmar_out,
-        ) };
+        let status = unsafe {
+            sys::zx_process_create(
+                parent_job_raw,
+                name_ptr,
+                name_len,
+                options,
+                &mut process_out,
+                &mut vmar_out,
+            )
+        };
         ok(status)?;
-        unsafe { Ok((
-            Process::from(Handle::from_raw(process_out)),
-            Vmar::from(Handle::from_raw(vmar_out)),
-        )) }
+        unsafe {
+            Ok((
+                Process::from(Handle::from_raw(process_out)),
+                Vmar::from(Handle::from_raw(vmar_out)),
+            ))
+        }
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_JOB topic.
+    pub fn info(&self) -> Result<JobInfo, Status> {
+        let mut info = JobInfo::default();
+        object_get_info::<JobInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
+}
+
+impl Task for Job {}
+
+#[cfg(test)]
+mod tests {
+    // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
+    // fuchsia_zircon::Job that we need to use.
+    use fuchsia_zircon::{sys, AsHandleRef, JobInfo, Signals, Task, Time};
+
+    #[test]
+    fn info_default() {
+        let job = fuchsia_runtime::job_default();
+        let info = job.info().unwrap();
+        assert_eq!(
+            info,
+            JobInfo { return_code: 0, exited: false, kill_on_oom: false, debugger_attached: false }
+        );
+    }
+
+    #[test]
+    fn kill_and_info() {
+        let default_job = fuchsia_runtime::job_default();
+        let job = default_job.create_child_job().expect("Failed to create child job");
+        let info = job.info().unwrap();
+        assert_eq!(
+            info,
+            JobInfo { return_code: 0, exited: false, kill_on_oom: false, debugger_attached: false }
+        );
+
+        job.kill().expect("Failed to kill job");
+        job.wait_handle(Signals::TASK_TERMINATED, Time::INFINITE).unwrap();
+
+        let info = job.info().unwrap();
+        assert_eq!(
+            info,
+            JobInfo {
+                return_code: sys::ZX_TASK_RETCODE_SYSCALL_KILL,
+                exited: true,
+                kill_on_oom: false,
+                debugger_attached: false
+            }
+        );
     }
 }

@@ -16,7 +16,6 @@ unittest_package("rust-crates-tests") {
     "fuchsia-merkle",
     "fuchsia-trace",
     "fuchsia-vfs/pseudo-fs",
-    "fuchsia-zircon",
     "mapped-vmo",
     "mundane",
     "packet",
@@ -51,10 +50,6 @@ unittest_package("rust-crates-tests") {
     },
     {
       name = "fuchsia_vfs_pseudo_fs_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "fuchsia_zircon_lib_test"
       environments = basic_envs
     },
     {

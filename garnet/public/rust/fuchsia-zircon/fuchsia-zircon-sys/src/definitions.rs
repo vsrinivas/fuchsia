@@ -251,7 +251,7 @@ extern {
 
     pub fn zx_process_exit(
         retcode: i64
-        );
+        ) -> !;
 
     pub fn zx_process_create(
         job: zx_handle_t,

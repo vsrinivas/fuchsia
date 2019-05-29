@@ -2,15 +2,77 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-zircon") {
   version = "0.3.3"
+  edition = "2018"
+  deps = [
+    "fuchsia-zircon-sys",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+# Certain unit tests for fuchsia-zircon need dependencies which can't be added
+# to the main library's without causing circular dependencies. Only the test
+# artifact is used, not the main artifact.
+# TODO: If we add test-only deps to rustc_artifact, this can merge back in.
+rustc_library("fuchsia-zircon-unittest") {
   edition = "2018"
   with_unit_tests = true
   deps = [
     "fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:failure",
+
+    # Test-only deps
+    ":fuchsia-zircon",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-runtime",
+  ]
+}
+
+rustc_binary("exit_with_code_util") {
+  edition = "2018"
+  source_root = "test_util/exit_with_code_util.rs"
+  deps = [
+    ":fuchsia-zircon",
+  ]
+}
+
+rustc_binary("sleep_forever_util") {
+  edition = "2018"
+  source_root = "test_util/sleep_forever_util.rs"
+  deps = [
+    ":fuchsia-zircon",
+  ]
+}
+
+test_package("fuchsia-zircon-tests") {
+  deps = [
+    ":exit_with_code_util",
+    ":fuchsia-zircon-unittest",
+    ":sleep_forever_util",
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_zircon_unittest_lib_test"
+      dest = "fuchsia_zircon_tests"
+      environments = basic_envs
+    },
+  ]
+
+  binaries = [
+    {
+      name = "exit_with_code_util"
+    },
+    {
+      name = "sleep_forever_util"
+    },
   ]
 }

@@ -156,8 +156,9 @@ mod rights;
 mod socket;
 mod signals;
 mod status;
-mod time;
+mod task;
 mod thread;
+mod time;
 mod vmar;
 mod vmo;
 
@@ -181,6 +182,7 @@ pub use self::rights::*;
 pub use self::socket::*;
 pub use self::signals::*;
 pub use self::status::*;
+pub use self::task::*;
 pub use self::thread::*;
 pub use self::time::*;
 pub use self::vmar::*;

@@ -4,8 +4,9 @@
 
 //! Type-safe bindings for Zircon processes.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status, Thread};
 use crate::ok;
+use crate::{object_get_info, ObjectQuery, Topic};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Task, Thread};
 
 use fuchsia_zircon_sys as sys;
 
@@ -16,6 +17,29 @@ use fuchsia_zircon_sys as sys;
 #[repr(transparent)]
 pub struct Process(Handle);
 impl_handle_based!(Process);
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct ProcessInfo {
+    pub return_code: i64,
+    pub started: bool,
+    pub exited: bool,
+    pub debugger_attached: bool,
+}
+
+impl From<sys::zx_info_process_t> for ProcessInfo {
+    fn from(
+        sys::zx_info_process_t { return_code, started, exited, debugger_attached }: sys::zx_info_process_t,
+    ) -> ProcessInfo {
+        ProcessInfo { return_code, started, exited, debugger_attached }
+    }
+}
+
+// ProcessInfo is able to be safely replaced with a byte representation
+unsafe impl ObjectQuery for ProcessInfo {
+    const TOPIC: Topic = Topic::PROCESS;
+    type InfoTy = ProcessInfo;
+}
 
 impl Process {
     /// Similar to `Thread::start`, but is used to start the first thread in a process.
@@ -34,13 +58,10 @@ impl Process {
         let process_raw = self.raw_handle();
         let thread_raw = thread.raw_handle();
         let arg1 = arg1.into_raw();
-        ok(unsafe {
-            sys::zx_process_start(
-                process_raw, thread_raw, entry, stack, arg1, arg2)
-        })
+        ok(unsafe { sys::zx_process_start(process_raw, thread_raw, entry, stack, arg1, arg2) })
     }
 
-    /// Create a thread inside the current process.
+    /// Create a thread inside a process.
     ///
     /// Wraps the
     /// [zx_thread_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/thread_create.md)
@@ -51,16 +72,117 @@ impl Process {
         let name_len = name.len();
         let options = 0;
         let mut thread_out = 0;
-        let status = unsafe { sys::zx_thread_create(
-            process_raw,
-            name_ptr,
-            name_len,
-            options,
-            &mut thread_out,
-        ) };
+        let status = unsafe {
+            sys::zx_thread_create(process_raw, name_ptr, name_len, options, &mut thread_out)
+        };
         ok(status)?;
-        unsafe {
-            Ok(Thread::from(Handle::from_raw(thread_out)))
-        }
+        unsafe { Ok(Thread::from(Handle::from_raw(thread_out))) }
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_PROCESS topic.
+    pub fn info(&self) -> Result<ProcessInfo, Status> {
+        let mut info = ProcessInfo::default();
+        object_get_info::<ProcessInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
+
+    /// Exit the current process with the given return code.
+    ///
+    /// Wraps the
+    /// [zx_process_exit](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/process_exit.md)
+    /// syscall.
+    pub fn exit(retcode: i64) -> ! {
+        unsafe { sys::zx_process_exit(retcode) }
+    }
+}
+
+impl Task for Process {}
+
+#[cfg(test)]
+mod tests {
+    use crate::cprng_draw;
+    // The unit tests are built with a different crate name, but fdio and fuchsia_runtime return a
+    // "real" fuchsia_zircon::Process that we need to use.
+    use fuchsia_zircon::{sys, AsHandleRef, ProcessInfo, Signals, Task, Time};
+    use std::ffi::CString;
+
+    #[test]
+    fn info_self() {
+        let process = fuchsia_runtime::process_self();
+        let info = process.info().unwrap();
+        assert_eq!(
+            info,
+            ProcessInfo { return_code: 0, started: true, exited: false, debugger_attached: false }
+        );
+    }
+
+    #[test]
+    fn exit_and_info() {
+        let mut randbuf = [0; 8];
+        cprng_draw(&mut randbuf).unwrap();
+        let expected_code = i64::from_le_bytes(randbuf);
+        let arg = CString::new(format!("{}", expected_code)).unwrap();
+
+        // This test utility will exercise zx::Process::exit, using the provided argument as the
+        // return code.
+        let binpath = CString::new("/pkg/bin/exit_with_code_util").unwrap();
+        let process = fdio::spawn(
+            &fuchsia_runtime::job_default(),
+            fdio::SpawnOptions::DEFAULT_LOADER,
+            &binpath,
+            &[&arg],
+        )
+        .expect("Failed to spawn process");
+
+        process
+            .wait_handle(Signals::PROCESS_TERMINATED, Time::INFINITE)
+            .expect("Wait for process termination failed");
+        let info = process.info().unwrap();
+        assert_eq!(
+            info,
+            ProcessInfo {
+                return_code: expected_code,
+                started: true,
+                exited: true,
+                debugger_attached: false
+            }
+        );
+    }
+
+    #[test]
+    fn kill_and_info() {
+        // This test utility will sleep "forever" without exiting, so that we can kill it..
+        let binpath = CString::new("/pkg/bin/sleep_forever_util").unwrap();
+        let process = fdio::spawn(
+            &fuchsia_runtime::job_default(),
+            fdio::SpawnOptions::DEFAULT_LOADER,
+            &binpath,
+            &[&binpath],
+        )
+        .expect("Failed to spawn process");
+
+        let info = process.info().unwrap();
+        assert_eq!(
+            info,
+            ProcessInfo { return_code: 0, started: true, exited: false, debugger_attached: false }
+        );
+
+        process.kill().expect("Failed to kill process");
+        process
+            .wait_handle(Signals::PROCESS_TERMINATED, Time::INFINITE)
+            .expect("Wait for process termination failed");
+
+        let info = process.info().unwrap();
+        assert_eq!(
+            info,
+            ProcessInfo {
+                return_code: sys::ZX_TASK_RETCODE_SYSCALL_KILL,
+                started: true,
+                exited: true,
+                debugger_attached: false
+            }
+        );
     }
 }

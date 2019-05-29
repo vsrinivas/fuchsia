@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia_zircon_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

@@ -350,6 +350,13 @@ pub const ZX_VMO_CHILD_RESIZABLE: u32 = 1 << 2;
 pub const ZX_CHANNEL_MAX_MSG_HANDLES: u32 = 64;
 pub const ZX_CHANNEL_MAX_MSG_BYTES: u32 = 65536;
 
+// Task response codes if a process is externally killed
+pub const ZX_TASK_RETCODE_SYSCALL_KILL: i64 = -1024;
+pub const ZX_TASK_RETCODE_OOM_KILL: i64 = -1025;
+pub const ZX_TASK_RETCODE_POLICY_KILL: i64 = -1026;
+pub const ZX_TASK_RETCODE_VDSO_KILL: i64 = -1027;
+pub const ZX_TASK_RETCODE_EXCEPTION_KILL: i64 = -1028;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum zx_cache_policy_t {
@@ -555,6 +562,8 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_BTI                        = 20; // zx_info_bti_t[1]
     ZX_INFO_PROCESS_HANDLE_STATS       = 21; // zx_info_process_handle_stats_t[1]
     ZX_INFO_SOCKET                     = 22; // zx_info_socket_t[1]
+    ZX_INFO_VMO                        = 23; // zx_info_vmo_t[1]
+    ZX_INFO_JOB                        = 24; // zx_info_job_t[1]
 ]);
 
 #[repr(C)]
@@ -576,6 +585,24 @@ pub struct zx_info_socket_t {
     pub rx_buf_available: usize,
     pub tx_buf_max: usize,
     pub tx_buf_size: usize,
+}
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_info_process_t {
+    pub return_code: i64,
+    pub started: bool,
+    pub exited: bool,
+    pub debugger_attached: bool,
+}
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_info_job_t {
+    pub return_code: i64,
+    pub exited: bool,
+    pub kill_on_oom: bool,
+    pub debugger_attached: bool,
 }
 
 multiconst!(zx_guest_trap_t, [
