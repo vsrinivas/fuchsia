@@ -89,7 +89,7 @@ pub fn gtk_bytes() -> Vec<u8> {
 }
 
 pub fn gtk() -> Gtk {
-    Gtk::from_gtk(gtk_bytes(), 2, cipher()).expect("failed creating GTK")
+    Gtk::from_gtk(gtk_bytes(), 2, cipher(), 0).expect("failed creating GTK")
 }
 
 pub fn akm() -> Akm {

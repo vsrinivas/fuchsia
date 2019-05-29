@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::integrity::{self, integrity_algorithm};
+use crate::integrity::integrity_algorithm;
 use crate::key::exchange::{
     handshake::group_key::{self, Config, GroupKeyHandshakeFrame},
     Key,
@@ -14,6 +14,7 @@ use crate::Error;
 use bytes::Bytes;
 use eapol;
 use failure::{self, bail};
+use wlan_common::ie::rsn::akm::Akm;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
@@ -56,7 +57,10 @@ impl Supplicant {
         }
         let gtk = match gtk {
             None => bail!("GTK KDE not present in key data of Group-Key Handshakes's 1st message"),
-            Some(gtk) => Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.cipher.clone())?,
+            Some(gtk) => {
+                let rsc = msg1.frame.key_rsc;
+                Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.cipher.clone(), rsc)?
+            }
         };
 
         // Construct second message of handshake.
@@ -94,10 +98,7 @@ impl Supplicant {
         msg2.update_packet_body_len();
 
         // Update the frame's MIC.
-        let akm = &self.cfg.akm;
-        let integrity_alg = integrity_algorithm(&akm).ok_or(Error::UnsupportedAkmSuite)?;
-        let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
-        update_mic(&self.kck[..], mic_len, integrity_alg, &mut msg2)?;
+        update_mic(&self.kck[..], &self.cfg.akm, &mut msg2)?;
 
         Ok(msg2)
     }
@@ -107,17 +108,97 @@ impl Supplicant {
     }
 }
 
-fn update_mic(
-    kck: &[u8],
-    mic_len: u16,
-    alg: Box<integrity::Algorithm>,
-    frame: &mut eapol::KeyFrame,
-) -> Result<(), failure::Error> {
+fn update_mic(kck: &[u8], akm: &Akm, frame: &mut eapol::KeyFrame) -> Result<(), failure::Error> {
+    let integrity_alg = integrity_algorithm(&akm).ok_or(Error::UnsupportedAkmSuite)?;
+    let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
+
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(true, &mut buf);
     let written = buf.len();
     buf.truncate(written);
-    let mic = alg.compute(kck, &buf[..])?;
+    let mic = integrity_alg.compute(kck, &buf[..])?;
     frame.key_mic = Bytes::from(&mic[..mic_len as usize]);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::key::exchange::handshake::group_key::GroupKey;
+    use crate::key_data::{self, kde};
+    use crate::rsna::{test_util, NegotiatedRsne, Role, VerifiedKeyFrame};
+    use wlan_common::ie::rsn::akm::{Akm, PSK};
+    use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
+    use wlan_common::ie::rsn::suite_selector::{Factory, OUI};
+
+    fn make_verified(
+        key_frame: &eapol::KeyFrame,
+        role: Role,
+    ) -> Result<VerifiedKeyFrame, failure::Error> {
+        let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
+        VerifiedKeyFrame::from_key_frame(&key_frame, &role, &rsne, 0)
+    }
+
+    fn fake_msg1() -> eapol::KeyFrame {
+        eapol::KeyFrame {
+            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
+            packet_type: eapol::PacketType::Key as u8,
+            descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
+            key_info: eapol::KeyInformation(0b01001110000010),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn full_supplicant_test() {
+        const KCK: [u8; 16] = [1; 16];
+        const KEK: [u8; 16] = [2; 16];
+        const GTK: [u8; 16] = [3; 16];
+        const GTK_RSC: u64 = 81234;
+        const GTK_KEY_ID: u8 = 2;
+
+        let psk = Akm::new(Bytes::from(&OUI[..]), PSK).expect("error creating AKM");
+        let ccmp = Cipher::new(Bytes::from(&OUI[..]), CCMP_128).expect("error creating cipher");
+        let mut handshake = GroupKey::new(
+            Config { role: Role::Supplicant, akm: psk.clone(), cipher: ccmp.clone() },
+            &KCK[..],
+            &KEK[..],
+        )
+        .expect("error creating Group Key Handshake");
+
+        // Write GTK KDE
+        let mut buf = Vec::with_capacity(256);
+        let gtk_kde = kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]);
+        if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
+            hdr.as_bytes(&mut buf);
+            gtk.as_bytes(&mut buf);
+        }
+        key_data::add_padding(&mut buf);
+        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &buf[..]);
+
+        // Construct key frame.
+        let mut key_frame = eapol::KeyFrame {
+            key_rsc: GTK_RSC,
+            key_data_len: encrypted_key_data.len() as u16,
+            key_data: Bytes::from(encrypted_key_data),
+            ..fake_msg1()
+        };
+        key_frame.update_packet_body_len();
+        update_mic(&KCK[..], &psk, &mut key_frame).expect("error updating MIC");
+        let key_frame = test_util::finalize_key_frame(key_frame, Some(&KCK[..]));
+        let msg1 =
+            make_verified(&key_frame, Role::Supplicant).expect("error verifying group frame");
+
+        // Let Supplicant handle key frame.
+        let mut update_sink = UpdateSink::default();
+        handshake
+            .on_eapol_key_frame(&mut update_sink, 0, msg1)
+            .expect("error processing msg1 of Group Key Handshake");
+
+        // Verify correct GTK was derived.
+        let actual_gtk = test_util::extract_reported_gtk(&update_sink);
+        let expected_gtk = Gtk::from_gtk(GTK.to_vec(), GTK_KEY_ID, ccmp, GTK_RSC)
+            .expect("error creating expected GTK");
+        assert_eq!(actual_gtk, expected_gtk);
+    }
 }

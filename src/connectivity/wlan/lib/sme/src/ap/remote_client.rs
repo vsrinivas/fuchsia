@@ -146,7 +146,7 @@ impl RemoteClient {
                 key_id: gtk.key_id() as u16,
                 key_type: fidl_mlme::KeyType::Group,
                 address: [0xFFu8; 6],
-                rsc: 0,
+                rsc: gtk.rsc,
                 cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
                 cipher_suite_type: gtk.cipher.suite_type,
             },

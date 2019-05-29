@@ -695,7 +695,7 @@ fn inspect_log_key(context: &mut Context, key: &Key) {
     let (cipher, key_index) = match key {
         Key::Ptk(ptk) => (Some(&ptk.cipher), None),
         Key::Gtk(gtk) => (Some(&gtk.cipher), Some(gtk.key_id())),
-        _ => (None, None)
+        _ => (None, None),
     };
     inspect_log!(context.inspect.rsn_events, {
         derived_key: key.name(),
@@ -753,7 +753,7 @@ fn send_keys(mlme_sink: &MlmeSink, bssid: [u8; 6], key: Key) {
                     address: [0xFFu8; 6],
                     cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
                     cipher_suite_type: gtk.cipher.suite_type,
-                    rsc: 0,
+                    rsc: gtk.rsc,
                 }],
             }));
         }

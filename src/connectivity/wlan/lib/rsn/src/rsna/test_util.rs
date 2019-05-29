@@ -320,7 +320,7 @@ fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Ptk {
         .clone()
 }
 
-fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
+pub fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
     updates
         .iter()
         .filter_map(|u| match u {

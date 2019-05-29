@@ -340,7 +340,7 @@ pub fn derive_key_descriptor_version(
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Role {
     Authenticator,
     Supplicant,

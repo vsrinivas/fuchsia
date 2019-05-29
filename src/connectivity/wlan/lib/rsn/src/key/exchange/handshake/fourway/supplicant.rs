@@ -123,7 +123,8 @@ fn handle_message_3(
         (Some(gtk), Some(rsne)) => {
             ensure!(&rsne == &cfg.a_rsne, Error::InvalidKeyDataRsne);
             let msg4 = create_message_4(&negotiated_rsne, kck, frame)?;
-            Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_rsne.group_data)?))
+            let rsc = msg3.frame.key_rsc;
+            Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_rsne.group_data, rsc)?))
         }
         _ => bail!(Error::InvalidKeyDataContent),
     }

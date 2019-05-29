@@ -527,4 +527,22 @@ mod tests {
 
         env.send_msg3_to_supplicant_expect_err(msg3, 13);
     }
+
+    #[test]
+    fn derive_correct_gtk_rsc() {
+        const GTK_RSC: u64 = 981234;
+        let mut env = test_util::FourwayTestEnv::new();
+
+        let msg1 = env.initiate(12);
+        let (msg2, ptk) = env.send_msg1_to_supplicant(msg1, 12);
+        let mut msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
+        msg3.key_rsc = GTK_RSC;
+        msg3 = test_util::finalize_key_frame(msg3, Some(ptk.kck()));
+
+        let (msg4, _, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        env.send_msg4_to_authenticator(msg4, 13);
+
+        // Verify Supplicant picked up the Authenticator's GTK RSC.
+        assert_eq!(s_gtk.rsc, GTK_RSC);
+    }
 }
