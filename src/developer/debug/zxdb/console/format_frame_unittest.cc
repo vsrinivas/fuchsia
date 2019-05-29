@@ -51,10 +51,9 @@ std::string SyncFormatFrameLong(const Frame* frame,
 }  // namespace
 
 TEST(FormatFrame, Unsymbolized) {
-  debug_ipc::StackFrame stack_frame(0x12345678, 0x567890);
-  MockFrame frame(nullptr, nullptr, stack_frame,
-                  Location(Location::State::kSymbolized, stack_frame.ip),
-                  0xdeadbeef);
+  MockFrame frame(nullptr, nullptr,
+                  Location(Location::State::kSymbolized, 0x12345678), 0x567890,
+                  std::vector<Register>(), 0xdeadbeef);
 
   OutputBuffer out;
 
@@ -73,23 +72,22 @@ TEST(FormatFrame, Unsymbolized) {
 }
 
 TEST(FormatFrame, Inline) {
-  debug_ipc::StackFrame stack_frame(0x12345678, 0x567890);
-
   // This is to have some place for the inline frame to refer to as the
   // underlying physical frame. The values are ignored.
-  MockFrame physical_frame(
-      nullptr, nullptr, stack_frame,
-      Location(Location::State::kSymbolized, stack_frame.ip));
+  MockFrame physical_frame(nullptr, nullptr,
+                           Location(Location::State::kSymbolized, 0x12345678),
+                           0x567890);
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   function->set_assigned_name("Function");
 
-  MockFrame inline_frame(nullptr, nullptr, stack_frame,
-                         Location(stack_frame.ip, FileLine("file.cc", 22), 0,
+  MockFrame inline_frame(nullptr, nullptr,
+                         Location(0x12345678, FileLine("file.cc", 22), 0,
                                   symbol_context, LazySymbol(function)),
-                         0xdeadbeef, &physical_frame);
+                         0x567890, std::vector<Register>(), 0xdeadbeef,
+                         &physical_frame);
 
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"

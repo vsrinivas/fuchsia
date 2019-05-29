@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -39,7 +40,7 @@ class InlineFrame final : public Frame {
   const Frame* GetPhysicalFrame() const override { return physical_frame_; }
   const Location& GetLocation() const override { return location_; }
   uint64_t GetAddress() const override { return location_.address(); }
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override {
+  const std::vector<Register>& GetGeneralRegisters() const override {
     return physical_frame_->GetGeneralRegisters();
   }
   std::optional<uint64_t> GetBasePointer() const override {

@@ -7,6 +7,7 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -26,15 +27,12 @@ class MockFrame : public Frame {
   // The physical frame is the non-inlined call frame associated with this one.
   // The pointer must outlive this class (normally both are owned by the
   // Stack). A null physical frame indicates that this is not inline.
-  MockFrame(Session* session, Thread* thread,
-            const debug_ipc::StackFrame& stack_frame, const Location& location,
+  MockFrame(Session* session, Thread* thread, const Location& location,
+            uint64_t sp, std::vector<Register> regs = {},
             uint64_t frame_base = 0, const Frame* physical_frame = nullptr,
             bool is_ambiguous_inline = false);
 
   ~MockFrame() override;
-
-  const debug_ipc::StackFrame& stack_frame() const { return stack_frame_; }
-  void set_stack_frame(debug_ipc::StackFrame sf) { stack_frame_ = sf; }
 
   // Use GetLocation() to retrieve the location.
   void set_location(Location l) { location_ = std::move(l); }
@@ -57,7 +55,7 @@ class MockFrame : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override;
+  const std::vector<Register>& GetGeneralRegisters() const override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -68,7 +66,8 @@ class MockFrame : public Frame {
  private:
   Thread* thread_;
 
-  debug_ipc::StackFrame stack_frame_;
+  uint64_t sp_;
+  std::vector<Register> registers_;
   uint64_t frame_base_;
   const Frame* physical_frame_;  // Null if non-inlined.
   Location location_;

@@ -76,10 +76,10 @@ TEST(InputLocationParser, Parse) {
   EXPECT_TRUE(err.has_error());
 
   // Implicit file name and valid frame but the location has no file name.
-  debug_ipc::StackFrame stack_frame(0x1234, 0x12345678);
   MockFrame frame_no_file(
-      nullptr, nullptr, stack_frame,
-      Location(0x1234, FileLine(), 0, relative_context, LazySymbol()));
+      nullptr, nullptr,
+      Location(0x1234, FileLine(), 0, relative_context, LazySymbol()),
+      0x12345678);
   location = InputLocation();
   err = ParseInputLocation(&frame_no_file, "21", &location);
   EXPECT_TRUE(err.has_error());
@@ -87,8 +87,9 @@ TEST(InputLocationParser, Parse) {
   // Valid implicit file name.
   std::string file = "foo.cc";
   MockFrame frame_valid(
-      nullptr, nullptr, stack_frame,
-      Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()));
+      nullptr, nullptr,
+      Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()),
+      0x12345678);
   location = InputLocation();
   err = ParseInputLocation(&frame_valid, "21", &location);
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -215,7 +216,7 @@ TEST(InputLocation, CompleteInputLocation) {
   process.set_symbols(&symbols.process());
 
   Location loc;
-  MockFrame frame(&session, nullptr, debug_ipc::StackFrame(), loc);
+  MockFrame frame(&session, nullptr, loc, 0);
 
   target.SetRunningProcess(&process);
 

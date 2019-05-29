@@ -144,9 +144,9 @@ Examples
   stack --num=128 0x43011a14bfc8
 )";
 Err DoStack(ConsoleContext* context, const Command& cmd) {
-  // FIXME(brettw) should be AssertStoppedThreadCommand like "finish".
-  if (!cmd.frame())
-    return Err("Can't analyze the stack without a valid frame.");
+  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stack");
+  if (err.has_error())
+    return err;
 
   AnalyzeMemoryOptions opts;
   opts.process = cmd.target()->GetProcess();
@@ -174,11 +174,13 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
 
   // Length parameters.
   std::optional<uint32_t> input_size;
-  Err err = ReadNumAndSize(cmd, &input_size);
+  err = ReadNumAndSize(cmd, &input_size);
   if (err.has_error())
     return err;
   if (!input_size)
-    input_size = kDefaultAnalyzeByteSize;
+    opts.bytes_to_read = kDefaultAnalyzeByteSize;
+  else
+    opts.bytes_to_read = *input_size;
 
   AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](const Err& err,
                                                            OutputBuffer output,

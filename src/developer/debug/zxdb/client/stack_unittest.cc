@@ -46,7 +46,7 @@ class MockStackDelegate : public Stack::Delegate {
 
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
                                            Location location) override {
-    return std::make_unique<MockFrame>(nullptr, nullptr, input, location);
+    return std::make_unique<MockFrame>(nullptr, nullptr, location, input.sp);
   }
 
   Location GetSymbolizedLocationForStackFrame(
@@ -77,36 +77,35 @@ constexpr uint64_t kBottomSP = 0x2040;
 //   [5] = physical frame at kBottomSP
 std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
   // Create three physical frames.
-  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
-  Location top_location(Location::State::kSymbolized, phys_top_record.ip);
-  debug_ipc::StackFrame phys_middle_record(0x1010, kMiddleSP);
-  Location middle_location(Location::State::kSymbolized, phys_middle_record.ip);
-  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP);
-  Location bottom_location(Location::State::kSymbolized, phys_bottom_record.ip);
+  Location top_location(Location::State::kSymbolized, 0x1000);
+  Location middle_location(Location::State::kSymbolized, 0x1010);
+  Location bottom_location(Location::State::kSymbolized, 0x1020);
 
-  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
-                                              top_location);
-  auto phys_middle = std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_middle_record, middle_location);
-  auto phys_bottom = std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_bottom_record, bottom_location);
+  auto phys_top =
+      std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP);
+  auto phys_middle =
+      std::make_unique<MockFrame>(nullptr, nullptr, middle_location, kMiddleSP);
+  auto phys_bottom =
+      std::make_unique<MockFrame>(nullptr, nullptr, bottom_location, kBottomSP);
 
   std::vector<std::unique_ptr<Frame>> frames;
 
   // Top frame has two inline functions expanded on top of it. This uses the
   // same Location object for simplicity, in real life these will be different.
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, kTopSP, phys_top.get()));
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_top_record, top_location, kTopSP, phys_top.get()));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location,
+                                               kTopSP, std::vector<Register>(),
+                                               kTopSP, phys_top.get()));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location,
+                                               kTopSP, std::vector<Register>(),
+                                               kTopSP, phys_top.get()));
 
   // Physical top frame below those.
   frames.push_back(std::move(phys_top));
 
   // Middle frame has one inline function expanded on top of it.
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_middle_record, middle_location, kMiddleSP,
-      phys_middle.get()));
+      nullptr, nullptr, middle_location, kMiddleSP, std::vector<Register>(),
+      kMiddleSP, phys_middle.get()));
   frames.push_back(std::move(phys_middle));
 
   // Bottom frame has no inline frame.
@@ -380,24 +379,22 @@ TEST_F(StackTest, InlineHiding) {
   constexpr uint64_t kBottomSP = 0x2020;
 
   // Create two physical frames.
-  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
-  Location top_location(Location::State::kSymbolized, phys_top_record.ip);
-  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP);
-  Location bottom_location(Location::State::kSymbolized, phys_bottom_record.ip);
+  Location top_location(Location::State::kSymbolized, 0x1000);
+  Location bottom_location(Location::State::kSymbolized, 0x1020);
 
-  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
-                                              top_location);
-  auto phys_bottom = std::make_unique<MockFrame>(
-      nullptr, nullptr, phys_bottom_record, bottom_location);
+  auto phys_top =
+      std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP);
+  auto phys_bottom =
+      std::make_unique<MockFrame>(nullptr, nullptr, bottom_location, kBottomSP);
 
   std::vector<std::unique_ptr<Frame>> frames;
 
   // Top frame has two inline functions expanded on top of it.
-  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
-                                               phys_top_record, top_location,
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location,
+                                               kTopSP, std::vector<Register>(),
                                                kTopSP, phys_top.get(), true));
-  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
-                                               phys_top_record, top_location,
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location,
+                                               kTopSP, std::vector<Register>(),
                                                kTopSP, phys_top.get(), true));
 
   // Physical top frame below those.
@@ -433,13 +430,12 @@ TEST_F(StackTest, UpdateExisting) {
   delegate.set_stack(&stack);
 
   // Make a stack with one physial frame and one inline frame above it.
-  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
-  Location top_location(Location::State::kSymbolized, phys_top_record.ip);
-  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
-                                              top_location, kTopSP);
-  auto inline_top =
-      std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
-                                  top_location, kTopSP, phys_top.get(), true);
+  Location top_location(Location::State::kSymbolized, 0x1000);
+  auto phys_top = std::make_unique<MockFrame>(
+      nullptr, nullptr, top_location, kTopSP, std::vector<Register>(), kTopSP);
+  auto inline_top = std::make_unique<MockFrame>(nullptr, nullptr, top_location,
+                                                kTopSP, std::vector<Register>(),
+                                                kTopSP, phys_top.get(), true);
   inline_top->set_is_ambiguous_inline(true);
 
   // Save for verification later.
@@ -461,6 +457,7 @@ TEST_F(StackTest, UpdateExisting) {
   // physical frame from above. This uses the non-test update flow which should
   // preserve the frame objects that haven't changed.
   std::vector<debug_ipc::StackFrame> raw_frames;
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP);
   raw_frames.push_back(phys_top_record);
   debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP);
   raw_frames.push_back(phys_bottom_record);

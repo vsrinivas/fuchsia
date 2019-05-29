@@ -53,14 +53,11 @@ bool FrameSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
     return false;  // Don't have non-general register synchronously.
 
   for (const auto& r : frame_->GetGeneralRegisters()) {
-    if (r.id == id) {
+    if (r.id() == id) {
       // Currently we expect all general registers to be <= 64 bits and we're
       // returning the value in 64 bits.
-      if (r.data.size() > 0 && r.data.size() <= sizeof(uint64_t)) {
-        uint64_t result_value = 0;
-        memcpy(&result_value, &r.data[0], r.data.size());
-        *value = result_value;
-      }
+      if (r.size() > 0 && r.size() <= sizeof(uint64_t))
+        *value = r.GetValue();
       return true;
     }
   }

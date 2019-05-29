@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/client/register.h"
+
 #include <inttypes.h>
 
-#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -66,6 +67,9 @@ inline UintType ReadRegisterData(const Register& reg) {
 }  // namespace
 
 Register::Register(debug_ipc::Register reg) : reg_(std::move(reg)) {}
+
+Register::Register(debug_ipc::RegisterID id, uint64_t value)
+    : reg_(id, value) {}
 
 uint64_t Register::GetValue() const {
   switch (size()) {

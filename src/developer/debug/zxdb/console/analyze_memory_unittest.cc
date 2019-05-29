@@ -85,16 +85,30 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   aspace[1].depth = 1;
   analysis->SetAspace(aspace);
 
-  // Setup frames.
-  std::vector<std::unique_ptr<Frame>> frames;
   const uint64_t kStack0SP = kBegin;
   const uint64_t kStack1SP = kBegin + 8;
+
+  constexpr uint64_t kAway = 0xFF00000000000;  // Points out of the dump.
+  std::vector<Register> frame0_regs = {
+      Register(RegisterID::kX64_rax, kBegin),
+      Register(RegisterID::kX64_rcx, kAway),
+      Register(RegisterID::kX64_rsp, kStack0SP)};
+
+  // Frame 1 duplicates rax (should not have both in the output), but rcx is
+  // different and this should be called out in the dump.
+  std::vector<Register> frame1_regs = {
+      Register(RegisterID::kX64_rax, kBegin),
+      Register(RegisterID::kX64_rcx, kBegin + 16),
+      Register(RegisterID::kX64_rsp, kStack1SP)};
+
+  // Setup frames.
+  std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(0x100, kStack0SP),
-      Location(Location::State::kSymbolized, 0x1234), kStack0SP));
+      nullptr, nullptr, Location(Location::State::kSymbolized, 0x1234),
+      kStack0SP, frame0_regs, kStack0SP));
   frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, debug_ipc::StackFrame(0x108, kStack1SP),
-      Location(Location::State::kSymbolized, 0x1234), kStack1SP));
+      nullptr, nullptr, Location(Location::State::kSymbolized, 0x1234),
+      kStack1SP, frame1_regs, kStack1SP));
 
   // Stack to hold our mock frames. This stack doesn't need to do anything
   // other than return the frames again, so the delegate can be null.
@@ -115,16 +129,6 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   };
   analysis->SetMemory(MemoryDump(std::move(blocks)));
 
-  // Setup registers (ESP points to beginning of block).
-  constexpr uint64_t kAway = 0xFF00000000000;
-
-  MyMockRegisterSet registers;
-  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rax,
-                        8u, kBegin);
-  registers.AddRegister(RegisterCategory::Type::kGeneral, RegisterID::kX64_rcx,
-                        8u, kAway);
-  analysis->SetRegisters(registers);
-
   analysis->Schedule(opts);
   debug_ipc::MessageLoop::Current()->Run();
 
@@ -132,9 +136,10 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   // aspace entry is too large and so will be omitted.
   EXPECT_EQ(
       "Address               Data \n"
-      " 0x1000 0x0000000000001000 ◁ rax. ▷ inside map \"inner\"\n"
-      " 0x1008 0x0000000010000000 ◁ frame 1 BP, frame 1 SP\n"
-      " 0x1010 0x0000000000000000 \n",
+      " 0x1000 0x0000000000001000 ◁ rax, rsp, frame 0 base. ▷ inside map "
+      "\"inner\"\n"
+      " 0x1008 0x0000000010000000 ◁ frame 1 rsp, frame 1 base\n"
+      " 0x1010 0x0000000000000000 ◁ frame 1 rcx\n",
       output.AsString());
 }
 

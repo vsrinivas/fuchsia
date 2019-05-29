@@ -19,6 +19,7 @@ namespace zxdb {
 class ExprEvalContext;
 class Location;
 class Thread;
+class Register;
 
 // Represents one stack frame.
 //
@@ -59,11 +60,7 @@ class Frame : public ClientObject {
   //
   // Inline frames will report the registers from the physical frame they're
   // associated with.
-  //
-  // Note for future: If this is commonly used, we should convert the array to
-  // zxdb::Register when it comes down from the agent.
-  virtual const std::vector<debug_ipc::Register>& GetGeneralRegisters()
-      const = 0;
+  virtual const std::vector<Register>& GetGeneralRegisters() const = 0;
 
   // The frame base pointer.
   //

@@ -6,33 +6,40 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/console/mock_console.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
 
-class ConsoleTest : public testing::Test {
+namespace {
+
+class VerbsSymbolTest : public RemoteAPITest {
  public:
-  ConsoleTest() { loop_.Init(); }
-  ~ConsoleTest() { loop_.Cleanup(); }
+  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() {
+    auto remote_api = std::make_unique<MockRemoteAPI>();
+    mock_remote_api_ = remote_api.get();
+    return remote_api;
+  }
+
+  MockRemoteAPI* mock_remote_api() const { return mock_remote_api_; }
 
  private:
-  debug_ipc::PlatformMessageLoop loop_;
+  MockRemoteAPI* mock_remote_api_ = nullptr;  // Owned by System.
 };
 
-TEST_F(ConsoleTest, SymStat) {
-  auto remote_api = std::make_unique<MockRemoteAPI>();
-  auto session =
-      std::make_unique<Session>(std::move(remote_api), debug_ipc::Arch::kX64);
-  MockConsole console(session.get());
+}  // namespace
+
+TEST_F(VerbsSymbolTest, SymStat) {
+  MockConsole console(&session());
 
   console.ProcessInputLine("attach 1234");
 
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ(OutputBuffer("Attached Process 1 [Running] koid=1234 <mock>"),
-            event.output);
+  ASSERT_EQ("Attached Process 1 [Running] koid=1234 <mock>",
+            event.output.AsString());
 
   auto target = console.context().GetActiveTarget();
   ASSERT_NE(nullptr, target);
@@ -42,7 +49,7 @@ TEST_F(ConsoleTest, SymStat) {
       "fakelib", "abc123",
       std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0));
 
-  auto download = session->system().InjectDownloadForTesting("abc123");
+  auto download = session().system().InjectDownloadForTesting("abc123");
 
   console.ProcessInputLine("sym-stat");
 

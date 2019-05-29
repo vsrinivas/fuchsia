@@ -8,8 +8,6 @@
 
 #include <map>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -24,6 +22,8 @@
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -63,15 +63,6 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
   fxl::RefPtr<MemoryAnalysis> this_ref(this);
 
   if (opts.thread) {
-    // Request registers. Only need the general registers.
-    if (!have_registers_) {
-      opts.thread->ReadRegisters(
-          {debug_ipc::RegisterCategory::Type::kGeneral},
-          [this_ref](const Err& err, const RegisterSet& registers) {
-            this_ref->OnRegisters(err, registers);
-          });
-    }
-
     // Request stack dump.
     if (!have_frames_) {
       if (opts.thread->GetStack().has_all_frames()) {
@@ -87,7 +78,6 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
     }
   } else {
     // Mark these as complete so we can continue when everything else is done.
-    have_registers_ = true;
     have_frames_ = true;
   }
 
@@ -125,15 +115,18 @@ void MemoryAnalysis::SetStack(const Stack& stack) {
   FXL_DCHECK(!have_frames_);
   have_frames_ = true;
 
-  // This loop avoids adding frame 0's information because that should be
-  // covered by the CPU registers.
-  for (int i = 1; i < static_cast<int>(stack.size()); i++) {
-    AddAnnotation(stack[i]->GetAddress(), fxl::StringPrintf("frame %d IP", i));
-    // TODO(brettw) make this work when the BP is asynchronous.
+  for (size_t i = 0; i < stack.size(); i++) {
+    // Only add the registers once per inline function call sequence. It makes
+    // the most sense for the frames to reference the topmost frame of an
+    // inline call sequence so this skips everything with an inline frame
+    // immediately above it.
+    if (i + 1 < stack.size() && stack[i + 1]->IsInline())
+      continue;
+    AddRegisters(i, stack[i]->GetGeneralRegisters());
+
+    // TODO(brettw) make this work when the frame base is asynchronous.
     if (auto bp = stack[i]->GetBasePointer())
-      AddAnnotation(*bp, fxl::StringPrintf("frame %d BP", i));
-    AddAnnotation(stack[i]->GetStackPointer(),
-                  fxl::StringPrintf("frame %d SP", i));
+      AddAnnotation(*bp, fxl::StringPrintf("frame %zu base", i));
   }
 }
 
@@ -141,18 +134,6 @@ void MemoryAnalysis::SetMemory(MemoryDump dump) {
   FXL_DCHECK(!have_memory_);
   have_memory_ = true;
   memory_ = std::move(dump);
-}
-
-void MemoryAnalysis::SetRegisters(const RegisterSet& registers) {
-  FXL_DCHECK(!have_registers_);
-  have_registers_ = true;
-  for (const auto& kv : registers.category_map()) {
-    // We look for the general section registers
-    if (kv.first == debug_ipc::RegisterCategory::Type::kGeneral) {
-      for (const auto& reg : kv.second)
-        AddAnnotation(reg.GetValue(), RegisterIDToString(reg.id()));
-    }
-  }
 }
 
 void MemoryAnalysis::DoAnalysis() {
@@ -215,18 +196,6 @@ void MemoryAnalysis::OnAspace(const Err& err,
     DoAnalysis();
 }
 
-void MemoryAnalysis::OnRegisters(const Err& err, const RegisterSet& registers) {
-  if (aborted_)
-    return;
-
-  // This function can continue without registers (say, if the thread has been
-  // resumed by the time the request got executed). So just ignore failures.
-  SetRegisters(registers);
-
-  if (HasEverything())
-    DoAnalysis();
-}
-
 void MemoryAnalysis::OnMemory(const Err& err, MemoryDump dump) {
   if (aborted_)
     return;
@@ -257,7 +226,7 @@ void MemoryAnalysis::OnFrames(fxl::WeakPtr<Thread> thread) {
 }
 
 bool MemoryAnalysis::HasEverything() const {
-  return have_registers_ && have_memory_ && have_frames_ && have_aspace_;
+  return have_memory_ && have_frames_ && have_aspace_;
 }
 
 void MemoryAnalysis::IssueError(const Err& err) {
@@ -266,6 +235,39 @@ void MemoryAnalysis::IssueError(const Err& err) {
 
   // Reset so we notice if there's an accidental double-call.
   callback_ = Callback();
+}
+
+void MemoryAnalysis::AddRegisters(int frame_no,
+                                  const std::vector<Register>& regs) {
+  // Frames can have saved registers. Sometimes these will be the same as frame
+  // 0 (the current CPU state). We want to make them say, e.g. "rax" if the
+  // value matches the top frame, but if the current frame's register value is
+  // different, we want e.g. "frame 5's rax".
+  for (const auto& r : regs) {
+    if (r.size() > sizeof(uint64_t))
+      continue;  // Weird register, don't bother.
+
+    uint64_t value = r.GetValue();
+    std::string reg_desc;
+
+    if (frame_no == 0) {
+      // Frame 0 always gets added with no frame annotation.
+      reg_desc = RegisterIDToString(r.id());
+      frame_0_regs_[r.id()] = value;
+    } else {
+      // Later frames get an annotation and only get added if they're
+      // different than frame 0.
+      auto found_frame_0 = frame_0_regs_.find(r.id());
+      if (found_frame_0 != frame_0_regs_.end() &&
+          found_frame_0->second == value)
+        continue;  // Matches frame 0, don't add a record.
+
+      reg_desc = fxl::StringPrintf("frame %d %s", frame_no,
+                                   RegisterIDToString(r.id()));
+    }
+
+    AddAnnotation(value, reg_desc);
+  }
 }
 
 void MemoryAnalysis::AddAnnotation(uint64_t address, const std::string& str) {

@@ -22,8 +22,12 @@ FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame,
                      Location location)
     : Frame(thread->session()),
       thread_(thread),
-      stack_frame_(stack_frame),
-      location_(std::move(location)) {}
+      sp_(stack_frame.sp),
+      location_(std::move(location)) {
+  registers_.reserve(stack_frame.regs.size());
+  for (const auto& r : stack_frame.regs)
+    registers_.emplace_back(r);
+}
 
 FrameImpl::~FrameImpl() {
   if (symbol_data_provider_)
@@ -43,8 +47,8 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
-const std::vector<debug_ipc::Register>& FrameImpl::GetGeneralRegisters() const {
-  return stack_frame_.regs;
+const std::vector<Register>& FrameImpl::GetGeneralRegisters() const {
+  return registers_;
 }
 
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {
@@ -71,7 +75,7 @@ void FrameImpl::GetBasePointerAsync(std::function<void(uint64_t bp)> cb) {
   }
 }
 
-uint64_t FrameImpl::GetStackPointer() const { return stack_frame_.sp; }
+uint64_t FrameImpl::GetStackPointer() const { return sp_; }
 
 void FrameImpl::EnsureSymbolized() const {
   if (location_.is_symbolized())

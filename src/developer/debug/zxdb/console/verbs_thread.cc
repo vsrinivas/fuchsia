@@ -1100,8 +1100,8 @@ RegisterSet FrameRegistersToSet(const Frame* frame) {
   auto& general =
       result_set.category_map()[debug_ipc::RegisterCategory::Type::kGeneral];
 
-  for (const debug_ipc::Register& reg : frame->GetGeneralRegisters())
-    general.emplace_back(reg);
+  for (const Register& reg : frame->GetGeneralRegisters())
+    general.push_back(reg);
 
   std::sort(general.begin(), general.end(), [](auto& a, auto& b) {
     return static_cast<uint32_t>(a.id()) < static_cast<uint32_t>(b.id());

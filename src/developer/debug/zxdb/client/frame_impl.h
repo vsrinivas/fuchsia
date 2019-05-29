@@ -10,6 +10,7 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -33,7 +34,7 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>& GetGeneralRegisters() const override;
+  const std::vector<Register>& GetGeneralRegisters() const override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
@@ -53,14 +54,15 @@ class FrameImpl final : public Frame {
 
   Thread* thread_;
 
-  debug_ipc::StackFrame stack_frame_;
+  uint64_t sp_;
+  std::vector<Register> registers_;
 
   mutable Location location_;  // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
   mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;         // Lazy.
 
   // The lazily computed frame base. This will be from DW_AT_frame_base on the
-  // function if there is one, or the BP from the stack_frame_ if not.
+  // function if there is one.
   std::optional<uint64_t> computed_base_pointer_;
 
   // Non-null when evaluating a frame base pointer expression.

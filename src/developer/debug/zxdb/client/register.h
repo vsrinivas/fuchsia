@@ -62,6 +62,9 @@ class Register {
 
   explicit Register(debug_ipc::Register);
 
+  // Creates a 64-bit register of the given value. Used for testing.
+  Register(debug_ipc::RegisterID, uint64_t value);
+
   debug_ipc::RegisterID id() const { return reg_.id; }
 
   size_t size() const { return reg_.data.size(); }  // In bytes.
