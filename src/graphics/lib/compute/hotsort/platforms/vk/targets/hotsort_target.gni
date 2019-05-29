@@ -4,6 +4,8 @@
 
 import("//build/compiled_action.gni")
 
+_hotsort_dir = "//src/graphics/lib/compute/hotsort"
+
 #
 # Generates a HotSort target by performing the following steps:
 #
@@ -40,7 +42,7 @@ template("hotsort_target") {
   #   $hotsort_target_name:
   #
   #   A name that conveys the configuration of the generated HotSort
-  #   algorithm.
+  #   algorithm. If not provided, defaults to the short name of ${target_name}.
   #
   #   $hotsort_target_args:
   #
@@ -67,8 +69,11 @@ template("hotsort_target") {
   assert(defined(invoker.hotsort_target_config_files),
          "config file list must be defined for hotsort_target")
 
-  assert(defined(invoker.hotsort_target_name),
-         "name must be defined for hotsort_target")
+  if (defined(invoker.hotsort_target_name)) {
+    _hs_target_name = invoker.hotsort_target_name
+  } else {
+    _hs_target_name = get_label_info(target_name, "name")
+  }
 
   assert(defined(invoker.hotsort_target_args),
          "args must be defined for hotsort_target")
@@ -76,40 +81,41 @@ template("hotsort_target") {
   #
   # Either dump a binary or produce a source set
   #
-  _hs_target_dump = false
+  _hs_target_dump =
+      defined(invoker.hotsort_target_dump) && invoker.hotsort_target_dump
 
-  if (defined(invoker.hotsort_target_dump)) {
-    _hs_target_dump = invoker.hotsort_target_dump
-  }
+  #
+  # Location of all generated files.
+  #
+  _hs_output_dir = "${target_gen_dir}/${_hs_target_name}"
 
   #
   # prefix target args with implicit args
   #
   _hs_target_gen_args = [
-    "-o" ,
-    rebase_path(target_gen_dir,root_build_dir),
-  ] + invoker.hotsort_target_args
+                          "-o",
+                          rebase_path(_hs_output_dir, root_build_dir),
+                        ] + invoker.hotsort_target_args
 
   #
   # define generated sources, includes and deps
   #
-  _hs_target_gen_includes_public = [ "$target_gen_dir/hs_target.h" ]
+  _hs_target_gen_includes_public = [ "${_hs_output_dir}/hs_target.h" ]
 
   _hs_target_gen_includes =
-      [ "$target_gen_dir/hs_config.h" ] + _hs_target_gen_includes_public
+      [ "${_hs_output_dir}/hs_config.h" ] + _hs_target_gen_includes_public
 
-  _hs_target_gen_sources =
-      [ "$target_gen_dir/" + invoker.hotsort_target_name + ".c" ]
+  _hs_target_gen_sources = [ "${_hs_output_dir}/" + _hs_target_name + ".c" ]
 
-  _hs_target_gen_inlines = [ "$target_gen_dir/hs_modules.inl" ]
+  _hs_target_gen_inlines = [ "${_hs_output_dir}/hs_modules.inl" ]
 
   #
   # define source set sources
   #
   _hs_target_include_dirs = [
-    "$target_gen_dir",
-    "//src/graphics/lib/compute/hotsort/platforms/vk/targets",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
+    _hs_output_dir,
+    "${_hotsort_dir}/platforms/vk/targets",
+    "${_hotsort_dir}/platforms/vk",
   ]
 
   _hs_target_sources =
@@ -118,76 +124,82 @@ template("hotsort_target") {
   #
   # generated compute shaders
   #
-  _hs_comp_names = exec_script(
-          "//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_comp_names.py",
-          _hs_target_gen_args,
-          "list lines")
+  _hs_comp_names =
+      exec_script("${_hotsort_dir}/platforms/vk/targets/hotsort_comp_names.py",
+                  _hs_target_gen_args,
+                  "list lines")
 
   _hs_comp_sources =
       process_file_template(_hs_comp_names,
-                            "$target_gen_dir/comp/{{source_file_part}}")
+                            "${_hs_output_dir}/comp/{{source_file_part}}")
 
   #
   # generate the .comp shaders
   #
   # Note that hs_modules.txt should match names returned by script
   #
-  compiled_action("gen_comp") {
-    tool = "//src/graphics/lib/compute/hotsort/hotsort_gen"
+  _gen_comp_target_name = "gen_comp_${_hs_target_name}"
+  compiled_action(_gen_comp_target_name) {
+    tool = "${_hotsort_dir}/hotsort_gen"
     outputs =
         _hs_comp_sources + _hs_target_gen_sources + _hs_target_gen_includes
     args = [
              "-D",
-             invoker.hotsort_target_name,
+             _hs_target_name,
            ] + _hs_target_gen_args
   }
 
   #
   # copy any configuration files to the target directory
   #
-  copy("gen_copy") {
+  _gen_copy_target_name = "gen_copy_${_hs_target_name}"
+  copy(_gen_copy_target_name) {
     sources = invoker.hotsort_target_config_files
-    outputs = [ "$target_gen_dir/{{source_file_part}}" ]
+    outputs = [
+      "${_hs_output_dir}/{{source_file_part}}",
+    ]
   }
 
   #
   # compile the .comp shaders to SPIR-V modules
   #
-  compiled_action_foreach("gen_spv") {
+  _gen_spv_target_name = "gen_spv_${_hs_target_name}"
+  compiled_action_foreach(_gen_spv_target_name) {
     tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
     sources = _hs_comp_sources
-    inputs = _hs_target_gen_includes + get_target_outputs(":gen_copy")
+    inputs = _hs_target_gen_includes +
+             get_target_outputs(":${_gen_copy_target_name}")
     outputs = [
-      "$target_gen_dir/spv/{{source_name_part}}.spv",
+      "${_hs_output_dir}/spv/{{source_name_part}}.spv",
     ]
     args = [
       "-s",  # Note: '-s' silences glslangValidator printing filename
              # but detailed error messages are also silenced
+
       "--target-env",
       "vulkan1.1",
-      "-I" + # <target>
-      rebase_path(target_gen_dir, root_build_dir),
-      "-I" + # <default>
-      rebase_path("//src/graphics/lib/compute/hotsort/platforms/vk/targets",
-                  root_build_dir),
       "-o",
       rebase_path(outputs[0], root_build_dir),
       "{{source}}",
     ]
-    public_deps = [
-      ":gen_comp",
-      ":gen_copy",
+    foreach(include_dir, _hs_target_include_dirs) {
+      args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
+    }
+    deps = [
+      ":${_gen_comp_target_name}",
+      ":${_gen_copy_target_name}",
     ]
   }
 
   #
   # optimize the modules
   #
-  compiled_action_foreach("gen_opt") {
+  _gen_opt_target_name = "gen_opt_${_hs_target_name}"
+  compiled_action_foreach(_gen_opt_target_name) {
     tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
-    sources = get_target_outputs(":gen_spv")
+    sources = get_target_outputs(":${_gen_spv_target_name}")
     outputs = [
-      "$target_gen_dir/opt/{{source_name_part}}.spv",
+      "${_hs_output_dir}/opt/{{source_name_part}}.spv",
     ]
     args = [
       "-O",
@@ -195,43 +207,46 @@ template("hotsort_target") {
       "-o",
       rebase_path(outputs[0], root_build_dir),
     ]
-    public_deps = [
-      ":gen_spv",
+    deps = [
+      ":${_gen_spv_target_name}",
     ]
   }
 
   #
   # remap the optimized modules
   #
-  compiled_action_foreach("gen_remap") {
+  _gen_remap_target_name = "gen_remap_${_hs_target_name}"
+  compiled_action_foreach(_gen_remap_target_name) {
     tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
-    sources = get_target_outputs(":gen_opt")
+    sources = get_target_outputs(":${_gen_opt_target_name}")
+    _output_dir = "${_hs_output_dir}/remap"
     outputs = [
-      "$target_gen_dir/remap/{{source_name_part}}.spv",
+      "${_output_dir}/{{source_name_part}}.spv",
     ]
     args = [
       "--do-everything",
       "--input",
       "{{source}}",
       "--output",
-      rebase_path(target_gen_dir, root_build_dir) + "/remap",
+      rebase_path(_output_dir, root_build_dir),
     ]
-    public_deps = [
-      ":gen_opt",
+    deps = [
+      ":${_gen_opt_target_name}",
     ]
   }
 
   #
   # dump the modules as uint32_t literals
   #
-  compiled_action("gen_modules") {
-    tool = "//src/graphics/lib/compute/hotsort/platforms/vk/targets:hotsort_modules_to_literals"
-    sources = get_target_outputs(":gen_remap")
+  _gen_modules_target_name = "gen_modules_${_hs_target_name}"
+  compiled_action(_gen_modules_target_name) {
+    tool = "${_hotsort_dir}/platforms/vk/targets:hotsort_modules_to_literals"
+    inputs = get_target_outputs(":${_gen_remap_target_name}")
     outputs = _hs_target_gen_inlines
     args = rebase_path(outputs, root_build_dir) +
-           rebase_path(sources, root_build_dir)
-    public_deps = [
-      ":gen_remap",
+           rebase_path(inputs, root_build_dir)
+    deps = [
+      ":${_gen_remap_target_name}",
     ]
   }
 
@@ -248,19 +263,20 @@ template("hotsort_target") {
       defines = [ "HS_DUMP" ]
       sources = _hs_target_gen_sources
       include_dirs = _hs_target_include_dirs
-      public_deps = [
-        ":gen_modules",
+      deps = [
+        "${_gen_comp_target_name}",
       ]
     }
 
     #
     # dump a binary image of target
     #
-    compiled_action("gen_bin") {
+    _gen_bin_target_name = "gen_bin_${_hs_target_name}"
+    compiled_action(_gen_bin_target_name) {
       tool = ":$_hs_target_dump_name"
       sources = _hs_target_sources
       outputs = [
-        "$target_gen_dir/hs_target.bin",
+        "${_hs_output_dir}/hs_target.bin",
       ]
       args = rebase_path(outputs, root_build_dir)
       public_deps = [
@@ -273,7 +289,7 @@ template("hotsort_target") {
     #
     group(target_name) {
       public_deps = [
-        ":gen_bin($host_toolchain)",
+        ":${_gen_bin_target_name}($host_toolchain)",
       ]
     }
   } else {
@@ -282,12 +298,14 @@ template("hotsort_target") {
     #
     source_set(target_name) {
       public = [
-        "$target_gen_dir/hs_target.h",
+        "${_hs_output_dir}/hs_target.h",
       ]
       sources = _hs_target_sources
       include_dirs = _hs_target_include_dirs
-      public_deps = [
-        ":gen_modules",
+      deps = [
+        ":${_gen_comp_target_name}",
+        ":${_gen_modules_target_name}",
+        ":${_gen_remap_target_name}",
       ]
     }
   }

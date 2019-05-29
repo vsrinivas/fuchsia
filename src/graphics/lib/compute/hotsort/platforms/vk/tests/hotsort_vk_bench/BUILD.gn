@@ -4,19 +4,21 @@
 
 import("//build/package.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+import("../../targets/hotsort_target.gni")
 
 #
-# Generate and build several HotSort targets
+# Generate and build several HotSort targets.
+# See exact definitions below.
 #
 
 group("targets") {
   public_deps = [
-    "targets/amd/gcn3/u32:generate",
-    "targets/amd/gcn3/u64:generate",
-    "targets/intel/gen8/u32:generate",
-    "targets/intel/gen8/u64:generate",
-    "targets/nvidia/sm35/u32:generate",
-    "targets/nvidia/sm35/u64:generate",
+    ":hs_amd_gcn3_u32",
+    ":hs_amd_gcn3_u64",
+    ":hs_intel_gen8_u32",
+    ":hs_intel_gen8_u64",
+    ":hs_nvidia_sm35_u32",
+    ":hs_nvidia_sm35_u64",
   ]
 }
 
@@ -69,3 +71,194 @@ package(package_name) {
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
 }
+
+_hotsort_targets_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets"
+
+#
+# configuration
+#
+# $HS_GEN -v -a "glsl" -D HS_AMD_GCN3 -t 1 -w 64 -r 16 -s 32768 -S 32768 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+
+hotsort_target("hs_amd_gcn3_u32") {
+  hotsort_target_config_files = [
+    "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "1",
+    "-w", "64",
+    "-r", "16",
+    "-s", "32768",
+    "-S", "32768",
+    "-b", "16",
+    "-m", "1",
+    "-M", "1",
+    "-f", "1",
+    "-F", "1",
+    "-c", "1",
+    "-C", "1",
+    "-L", "0,1,0,0",
+    "-z",
+  ]
+}
+
+#
+# configuration
+#
+# $HS_GEN -v -a "glsl" -D HS_AMD_GCN3 -t 2 -w 64 -r 8 -s 32768 -S 32768 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+
+hotsort_target("hs_amd_gcn3_u64") {
+  hotsort_target_config_files = [
+    "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "2",
+    "-w", "64",
+    "-r", "8",
+    "-s", "32768",
+    "-S", "32768",
+    "-b", "16",
+    "-m", "1",
+    "-M", "1",
+    "-f", "1",
+    "-F", "1",
+    "-c", "1",
+    "-C", "1",
+    "-L", "0,1,0,0",
+    "-z",
+  ]
+}
+
+#
+# configuration
+#
+# $HS_GEN -v -a "glsl" -D HS_INTEL_GEN8 -t 1 -w 16 -r 8 -s 21504 -S 65536 -b 16 -B 48 -m 1 -M 1 -f 0 -F 0 -c 0 -C 0 -z
+#
+
+hotsort_target("hs_intel_gen8_u32") {
+  hotsort_target_config_files = [
+    "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "1",
+    "-w", "16",
+    "-r", "8",
+    "-s", "21504",
+    "-S", "65536",
+    "-b", "16",
+    "-B", "48",
+    "-m", "1",
+    "-M", "1",
+    "-f", "0",
+    "-F", "0",
+    "-c", "0",
+    "-C", "0",
+    "-L", "0,1,0,0",
+    "-z",
+  ]
+}
+
+#
+# configuration
+#
+# $HS_GEN -v -a "glsl" -D HS_INTEL_GEN8 -t 2 -w 8 -r 16 -s 21504 -S 65536 -b 16 -B 48 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+
+hotsort_target("hs_intel_gen8_u64") {
+  hotsort_target_config_files = [
+    "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "2",
+    "-w", "8",
+    "-r", "16",
+    "-s", "21504",
+    "-S", "65536",
+    "-b", "16",
+    "-B", "48",
+    "-m", "1",
+    "-M", "1",
+    "-f", "1",
+    "-F", "1",
+    "-c", "1",
+    "-C", "1",
+    "-L", "0,1,0,0",
+    "-z",
+  ]
+}
+
+#
+# configuration
+#
+# OLD: $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 1 -w 32 -r 32 -s 49152 -S 65536 -b 32 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+# NEW: $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 1 -w 32 -r 16 -s 32768 -S 32768 -b 16 -m 1 -M 1 -p 1 -P 1 -f 0 -F 0 -c 0 -C 0 -z
+#
+
+hotsort_target("hs_nvidia_sm35_u32") {
+  hotsort_target_config_files = [
+    "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "1",
+    "-w", "32",
+    "-r", "16",
+    "-s", "32768",
+    "-S", "32768",
+    "-b", "16",
+    "-m", "1",
+    "-M", "1",
+    "-p", "1",
+    "-P", "1",
+    "-f", "0",
+    "-F", "0",
+    "-c", "0",
+    "-C", "0",
+    "-L", "0,1,0,0",
+    "-z",
+  ]
+}
+
+#
+# configuration
+#
+# OLD: $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 2 -w 32 -r 32 -s 49152 -S 65536 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+# NEW: $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 2 -w 32 -r 8 -s 32768 -S 32768 -b 16 -m 1 -M 1 -p 1 -P 1 -f 0 -F 0 -c 0 -C 0 -z
+#
+
+hotsort_target("hs_nvidia_sm35_u64") {
+  hotsort_target_config_files = [
+    "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "2",
+    "-w", "32",
+    "-r", "8",
+    "-s", "32768",
+    "-S", "32768",
+    "-b", "16",
+    "-m", "1",
+    "-M", "1",
+    "-p", "1",
+    "-P", "1",
+    "-f", "0",
+    "-F", "0",
+    "-c", "0",
+    "-C", "0",
+    "-L", "0,1,0,0",
+    "-z",
+  ]
+}
+

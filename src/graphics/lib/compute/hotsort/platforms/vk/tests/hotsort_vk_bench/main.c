@@ -30,12 +30,12 @@
 // Compile-time images of HotSort targets
 //
 
-#include "targets/amd/gcn3/u32/hs_target.h"
-#include "targets/amd/gcn3/u64/hs_target.h"
-#include "targets/intel/gen8/u32/hs_target.h"
-#include "targets/intel/gen8/u64/hs_target.h"
-#include "targets/nvidia/sm35/u32/hs_target.h"
-#include "targets/nvidia/sm35/u64/hs_target.h"
+#include "hs_amd_gcn3_u32/hs_target.h"
+#include "hs_amd_gcn3_u64/hs_target.h"
+#include "hs_intel_gen8_u32/hs_target.h"
+#include "hs_intel_gen8_u64/hs_target.h"
+#include "hs_nvidia_sm35_u32/hs_target.h"
+#include "hs_nvidia_sm35_u64/hs_target.h"
 
 //
 // This test reads the target's architectural configuration
