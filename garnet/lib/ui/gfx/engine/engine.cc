@@ -313,6 +313,8 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
     return false;
   }
 
+  TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
+
   CleanupEscher();
   return true;
 }

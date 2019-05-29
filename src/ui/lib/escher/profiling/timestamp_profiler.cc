@@ -217,6 +217,15 @@ void TimestampProfiler::TraceGpuQueryResults(
       }
     }
   }
+
+  // Flow event tracking the progress of a Scenic frame.
+  TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame",
+                          gpu_vthread_literal, gpu_vthread_id,
+                          frame_number, frame_start_ticks);
+
+  TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame",
+                          gpu_vthread_literal, gpu_vthread_id,
+                          frame_number, frame_end_ticks);
 }
 #else
 void TimestampProfiler::TraceGpuQueryResults(

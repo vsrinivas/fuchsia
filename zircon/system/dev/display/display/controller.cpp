@@ -504,6 +504,9 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
                 cur->self->OnRetire();
                 // Older images may not be presented. Ending their flows here
                 // ensures the sanity of traces.
+                //
+                // NOTE: If changing this flow name or ID, please also do so in the
+                // corresponding FLOW_BEGIN in display_swapchain.cc.
                 TRACE_FLOW_END("gfx", "present_image", cur->self->id);
                 cur->self.reset();
             }
@@ -520,6 +523,9 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
             for (unsigned i = 0; i < handle_count; i++) {
                 if (handles[i] == cur->self->info().handle) {
                     // End of the flow for the image going to be presented.
+                    //
+                    // NOTE: If changing this flow name or ID, please also do so in the
+                    // corresponding FLOW_BEGIN in display_swapchain.cc.
                     TRACE_FLOW_END("gfx", "present_image", cur->self->id);
                     images[i] = cur->self->id;
                     break;

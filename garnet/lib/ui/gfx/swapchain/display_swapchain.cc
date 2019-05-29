@@ -505,6 +505,17 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index,
                                        zx_time_t render_finished_time) {
   FXL_DCHECK(frame_index < kSwapchainImageCount);
   auto& record = frames_[frame_index];
+
+  uint64_t frame_number = record->frame_timings->frame_number();
+
+  TRACE_DURATION("gfx", "DisplaySwapchain::OnFrameRendered",
+          "frame count", frame_number,
+          "frame index", frame_index);
+  TRACE_FLOW_END("gfx", "scenic_frame", frame_number);
+
+  // It is effectively 1-indexed in the display.
+  TRACE_FLOW_BEGIN("gfx", "present_image", frame_index + 1);
+
   FXL_DCHECK(record);
   record->frame_timings->OnFrameRendered(record->swapchain_index,
                                          render_finished_time);
