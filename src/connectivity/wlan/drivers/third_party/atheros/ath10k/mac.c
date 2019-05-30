@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/protocol/ieee80211.h>
 #include <zircon/status.h>
 
@@ -143,7 +144,7 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 // Band information that is consistent across all supported ath10k chipsets
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
-        .band_id = WLAN_BAND_2GHZ,
+        .band_id = WLAN_INFO_BAND_2GHZ,
         .ht_supported = true,
         .vht_supported = false,
         // TODO(WLAN-269):
@@ -157,7 +158,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
     },
 
     {
-        .band_id = WLAN_BAND_5GHZ,
+        .band_id = WLAN_INFO_BAND_5GHZ,
         .ht_supported = true,
         .vht_supported = true,
         // TODO(WLAN-269):
@@ -177,8 +178,8 @@ static const struct ath10k_band ath10k_supported_bands[] = {
 
 // Gets the band ID from |channel| number.
 //
-// Returns: WLAN_BAND_COUNT if |channel| is not found in the band info.
-static enum Band chan_to_band(uint8_t channel) {
+// Returns: WLAN_INFO_BAND_COUNT if |channel| is not found in the band info.
+static wlan_info_band_t chan_to_band(uint8_t channel) {
     for(size_t band_idx = 0; band_idx < countof(ath10k_supported_bands); band_idx++) {
         const struct ath10k_band* band = &ath10k_supported_bands[band_idx];
 
@@ -190,7 +191,7 @@ static enum Band chan_to_band(uint8_t channel) {
     }
 
     ZX_DEBUG_ASSERT(false);  // This should not happen since MLME should honor what ath10k reports.
-    return WLAN_BAND_COUNT;  // Not found
+    return WLAN_INFO_BAND_COUNT;  // Not found
 }
 
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role);
@@ -1423,13 +1424,13 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
                                                       uint32_t* ptr_center_freq,
                                                       enum wmi_phy_mode* ptr_phymode) {
     uint8_t primary_chan = chandef->primary;
-    enum Band band = chan_to_band(primary_chan);
+    wlan_info_band_t band = chan_to_band(primary_chan);
     enum CBW cbw = chandef->cbw;
     uint16_t new_center_freq = 0;
     enum wmi_phy_mode phymode = MODE_UNKNOWN;
 
     switch (band) {
-    case WLAN_BAND_2GHZ:
+    case WLAN_INFO_BAND_2GHZ:
         switch (cbw) {
         case CBW20:
             new_center_freq = center_freq->cbw20;
@@ -1449,7 +1450,7 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
         }
         break;
 
-    case WLAN_BAND_5GHZ:
+    case WLAN_INFO_BAND_5GHZ:
         switch (cbw) {
         case CBW20:
             new_center_freq = center_freq->cbw20;
@@ -2378,7 +2379,7 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
 static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
                                    wlan_assoc_ctx_t* assoc,
                                    struct wmi_peer_assoc_complete_arg* arg) {
-    const wlan_ht_caps_t* ht_cap = &assoc->ht_cap;
+    const ieee80211_ht_capabilities_t* ht_cap = &assoc->ht_cap;
     size_t i, n;
     uint8_t max_nss;
     uint32_t stbc;
@@ -2426,14 +2427,14 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
         arg->peer_flags |= ar->wmi.peer_flags->stbc;
     }
 
-    if (ht_cap->supported_mcs_set[1] && ht_cap->supported_mcs_set[2]) {
+    if (ht_cap->supported_mcs_set.bytes[1] && ht_cap->supported_mcs_set.bytes[2]) {
         arg->peer_rate_caps |= WMI_RC_TS_FLAG;
-    } else if (ht_cap->supported_mcs_set[1]) {
+    } else if (ht_cap->supported_mcs_set.bytes[1]) {
         arg->peer_rate_caps |= WMI_RC_DS_FLAG;
     }
 
     for (i = 0, n = 0, max_nss = 0; i < IEEE80211_HT_MCS_MASK_LEN * 8; i++) {
-        if (ht_cap->supported_mcs_set[i / 8] & BIT(i % 8)) {
+        if (ht_cap->supported_mcs_set.bytes[i / 8] & BIT(i % 8)) {
             max_nss = (i / 8) + 1;
             arg->peer_ht_rates.rates[n++] = i;
         }
@@ -2596,8 +2597,8 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
 
     arg->peer_flags |= ar->wmi.peer_flags->vht;
 
-    enum Band band = chan_to_band(assoc->chan.primary);
-    if (band == WLAN_BAND_2GHZ) {
+    wlan_info_band_t band = chan_to_band(assoc->chan.primary);
+    if (band == WLAN_INFO_BAND_2GHZ) {
         arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
     }
 
@@ -2705,39 +2706,39 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(enum CBW cbw) {
 
 static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(wlan_assoc_ctx_t* assoc) {
     enum wmi_phy_mode phymode = MODE_UNKNOWN;
-    enum Band band = chan_to_band(assoc->chan.primary);
+    wlan_info_band_t band = chan_to_band(assoc->chan.primary);
     enum CBW cbw = assoc->chan.cbw;
 
     COND_WARN(__builtin_popcount(assoc->phy) != 1);  // Assume only one bit asserted.
 
     switch (band) {
-    case WLAN_BAND_2GHZ:
-        if ((assoc->phy == WLAN_PHY_VHT) && assoc->has_vht_cap) {
+    case WLAN_INFO_BAND_2GHZ:
+        if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
             if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
                 phymode = MODE_11AC_VHT40;
             } else {
                 phymode = MODE_11AC_VHT20;
             }
-        } else if ((assoc->phy == WLAN_PHY_HT) && assoc->has_ht_cap) {
+        } else if ((assoc->phy == WLAN_INFO_PHY_TYPE_HT) && assoc->has_ht_cap) {
             if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
                 phymode = MODE_11NG_HT40;
             } else {
                 phymode = MODE_11NG_HT20;
             }
-        } else if (assoc->phy == WLAN_PHY_OFDM) {  // Has OFDM ONLY.
+        } else if (assoc->phy == WLAN_INFO_PHY_TYPE_OFDM) {  // Has OFDM ONLY.
             phymode = MODE_11G;
         } else {
             phymode = MODE_11B;
         }
         break;
 
-    case WLAN_BAND_5GHZ:
+    case WLAN_INFO_BAND_5GHZ:
         /*
          * Check VHT first.
          */
-        if ((assoc->phy == WLAN_PHY_VHT) && assoc->has_vht_cap) {
+        if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
             phymode = ath10k_mac_get_phymode_vht(assoc->chan.cbw);
-        } else if ((assoc->phy == WLAN_PHY_HT) && assoc->has_ht_cap) {
+        } else if ((assoc->phy == WLAN_INFO_PHY_TYPE_HT) && assoc->has_ht_cap) {
             if (cbw == CBW40ABOVE || cbw == CBW40BELOW) {
                 phymode = MODE_11NA_HT40;
             } else {
@@ -4808,7 +4809,7 @@ static zx_status_t ath10k_mac_set_txbf_conf(struct ath10k_vif* arvif) {
                                      ar->wmi.vdev_param->txbf, value);
 }
 
-// Role is one of the supported roles in WLAN_MAC_ROLE_* values
+// Role is one of the supported roles in WLAN_INFO_MAC_ROLE_* values
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
     struct ath10k_vif* arvif = &ar->arvif;
     zx_status_t ret = ZX_OK;
@@ -4865,7 +4866,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         arvif->vdev_subtype = ath10k_wmi_get_vdev_subtype(ar, WMI_VDEV_SUBTYPE_P2P_DEVICE);
         break;
 #endif  // NEEDS PORTING
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
         arvif->vdev_type = WMI_VDEV_TYPE_STA;
         ath10k_info("adding a station interface (vdev_id=%d) ...\n", arvif->vdev_id);
 #if 0   // NEEDS PORTING
@@ -4879,7 +4880,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         arvif->vdev_type = WMI_VDEV_TYPE_IBSS;
         break;
 #endif  // NEEDS PORTING
-    case WLAN_MAC_ROLE_MESH:
+    case WLAN_INFO_MAC_ROLE_MESH:
         if (!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_MESH_11S)) {
             ret = ZX_ERR_INVALID_ARGS;
             ath10k_err("the firmware does not support MESH_11S vif subtype\n");
@@ -4892,7 +4893,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
         }
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
         break;
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
         arvif->vdev_type = WMI_VDEV_TYPE_AP;
         ath10k_info("adding an AP interface (vdev_id=%d) ...\n", arvif->vdev_id);
         break;
@@ -4940,7 +4941,7 @@ static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role) {
      * become corrupted, e.g. have garbled IEs or out-of-date TIM bitmap.
      */
     if (/* vif_type == NL80211_IFTYPE_ADHOC || */
-        vif_role == WLAN_MAC_ROLE_MESH || vif_role == WLAN_MAC_ROLE_AP)
+        vif_role == WLAN_INFO_MAC_ROLE_MESH || vif_role == WLAN_INFO_MAC_ROLE_AP)
     {
         ret = ath10k_msg_buf_alloc(ar, &arvif->beacon_buf, ATH10K_MSG_TYPE_BASE,
                                    ATH10K_MAX_BCN_TMPL_SIZE);

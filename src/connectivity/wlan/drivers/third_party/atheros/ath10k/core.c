@@ -21,8 +21,8 @@
 #include <string.h>
 
 #include <ddk/driver.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/protocol/mac.h>
-#include <wlan/protocol/phy-impl.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -2240,7 +2240,7 @@ static zx_protocol_device_t device_phy_ops = {
     .release = ath10k_core_phy_release,
 };
 
-static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_info_t* phy_info) {
+static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
     struct ath10k* ar = ctx;
 
     // Reset the output values.
@@ -2251,7 +2251,7 @@ static zx_status_t ath10k_core_phy_query(void* ctx, wlanphy_info_t* phy_info) {
     return ZX_OK;
 }
 
-static zx_status_t ath10k_core_create_iface(void* ctx, wlanphy_create_iface_req_t req, 
+static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                                             uint16_t* out_iface_id) {
     struct ath10k* ar = ctx;
     zx_status_t status = ZX_OK;
@@ -2272,7 +2272,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, wlanphy_create_iface_req_
     // Currently we only support one interface, so that it is okay to save MAC role in *ar*.
     // We have to review this when we want to support mulitple interfaces.
     // TODO(WLAN-641): for support multiple.
-    ar->mac_role = req.role;
+    ar->mac_role = req->role;
 
     // Add MAC interface
     device_add_args_t mac_args = {

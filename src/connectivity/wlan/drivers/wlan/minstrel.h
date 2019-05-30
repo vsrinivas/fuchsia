@@ -12,8 +12,6 @@
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/station.h>
 #include <wlan/mlme/timer_manager.h>
-#include <wlan/protocol/info.h>
-#include <wlan/protocol/mac.h>
 
 #include <array>
 #include <unordered_map>

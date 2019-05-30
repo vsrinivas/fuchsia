@@ -5,8 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <wlan/protocol/mac.h>
+#include <wlan/protocol/info.h>
 
 #include <cstdint>
 #include <string>
@@ -44,7 +45,7 @@ uint8_t GetCenterChanIdx(const wlan_channel_t& chan);
 std::string ChanStr(const wlan_channel_t& chan);
 std::string ChanStrLong(const wlan_channel_t& chan);
 
-std::string GetPhyStr(enum PHY phy);
+std::string GetPhyStr(wlan_info_phy_type_t phy);
 
 struct Channel {
   wlan_channel_t chan;
@@ -58,8 +59,8 @@ struct Channel {
 wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChan& fidl_chan);
 ::fuchsia::wlan::common::WlanChan ToFidl(const wlan_channel_t& chan);
 
-PHY FromFidl(::fuchsia::wlan::common::PHY phy);
-::fuchsia::wlan::common::PHY ToFidl(PHY phy);
+wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy);
+::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy);
 
 const char* CbwSuffix(uint8_t cbw);
 const char* CbwStr(uint8_t cbw);

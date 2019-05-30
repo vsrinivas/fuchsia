@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library ddk.hw.wlan.ieee80211;
+
+/// This header contains structs and enums derived from the IEEE 802.11
+/// specification, in particular IEEE Std 802.11-2016. Accordingly:
+///
+/// * All uses of declarations from 802.11-2016 should be placed in this file.
+/// * This file should not contain anything that is not explicitly defined in
+///   802.11-2016.
+
+/// Bitfields in the HT Capabilities element "Supported MCS Set" field. These
+/// are approximately as defined in 9.4.2.56.4.
+[Packed]
+struct Ieee80211HtCapabilitiesSupportedMcsSetFields {
+    uint64 rx_mcs_head;
+    uint32 rx_mcs_tail;
+    uint32 tx_mcs;
+};
+
+[Packed]
+union Ieee80211HtCapabilitiesSupportedMcsSet {
+    array<uint8>:16 bytes;
+    Ieee80211HtCapabilitiesSupportedMcsSetFields fields;
+};
+
+/// The HT capabilities element, as defined in 9.4.2.56.
+[Packed]
+struct Ieee80211HtCapabilities {
+    uint16 ht_capability_info;
+    uint8 ampdu_params;
+    Ieee80211HtCapabilitiesSupportedMcsSet supported_mcs_set;
+    uint16 ht_ext_capabilities;
+    uint32 tx_beamforming_capabilities;
+    uint8 asel_capabilities;
+};
+
+/// The VHT capabilities element, as defined in 9.4.2.158.
+[Packed]
+struct Ieee80211VhtCapabilities {
+    uint32 vht_capability_info;
+    uint64 supported_vht_mcs_and_nss_set;
+};

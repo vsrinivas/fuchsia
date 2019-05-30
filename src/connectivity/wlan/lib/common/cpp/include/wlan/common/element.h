@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
+#include <ddk/hw/wlan/ieee80211.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element_id.h>
@@ -975,26 +976,26 @@ struct HtCapabilities {
   TxBfCapability txbf_cap;
   AselCapability asel_cap;
 
-  static HtCapabilities FromDdk(const wlan_ht_caps_t& ddk) {
+  static HtCapabilities FromDdk(const ieee80211_ht_capabilities_t& ddk) {
     HtCapabilities dst{};
     dst.ht_cap_info.set_val(ddk.ht_capability_info);
     dst.ampdu_params.set_val(ddk.ampdu_params);
-    dst.mcs_set.rx_mcs_head.set_val(ddk.mcs_set.rx_mcs_head);
-    dst.mcs_set.rx_mcs_tail.set_val(ddk.mcs_set.rx_mcs_tail);
-    dst.mcs_set.tx_mcs.set_val(ddk.mcs_set.tx_mcs);
+    dst.mcs_set.rx_mcs_head.set_val(ddk.supported_mcs_set.fields.rx_mcs_head);
+    dst.mcs_set.rx_mcs_tail.set_val(ddk.supported_mcs_set.fields.rx_mcs_tail);
+    dst.mcs_set.tx_mcs.set_val(ddk.supported_mcs_set.fields.tx_mcs);
     dst.ht_ext_cap.set_val(ddk.ht_ext_capabilities);
     dst.txbf_cap.set_val(ddk.tx_beamforming_capabilities);
     dst.asel_cap.set_val(ddk.asel_capabilities);
     return dst;
   }
 
-  wlan_ht_caps_t ToDdk() const {
-    wlan_ht_caps_t ddk{};
+  ieee80211_ht_capabilities_t ToDdk() const {
+    ieee80211_ht_capabilities_t ddk{};
     ddk.ht_capability_info = ht_cap_info.val();
     ddk.ampdu_params = ampdu_params.val();
-    ddk.mcs_set.rx_mcs_head = mcs_set.rx_mcs_head.val();
-    ddk.mcs_set.rx_mcs_tail = mcs_set.rx_mcs_tail.val();
-    ddk.mcs_set.tx_mcs = mcs_set.tx_mcs.val();
+    ddk.supported_mcs_set.fields.rx_mcs_head = mcs_set.rx_mcs_head.val();
+    ddk.supported_mcs_set.fields.rx_mcs_tail = mcs_set.rx_mcs_tail.val();
+    ddk.supported_mcs_set.fields.tx_mcs = mcs_set.tx_mcs.val();
     ddk.ht_ext_capabilities = ht_ext_cap.val();
     ddk.tx_beamforming_capabilities = txbf_cap.val();
     ddk.asel_capabilities = asel_cap.val();
@@ -1399,15 +1400,15 @@ struct VhtCapabilities {
   VhtCapabilitiesInfo vht_cap_info;
   VhtMcsNss vht_mcs_nss;
 
-  static VhtCapabilities FromDdk(const wlan_vht_caps_t& ddk) {
+  static VhtCapabilities FromDdk(const ieee80211_vht_capabilities_t& ddk) {
     VhtCapabilities dst{};
     dst.vht_cap_info.set_val(ddk.vht_capability_info);
     dst.vht_mcs_nss.set_val(ddk.supported_vht_mcs_and_nss_set);
     return dst;
   }
 
-  wlan_vht_caps_t ToDdk() const {
-    wlan_vht_caps_t ddk{};
+  ieee80211_vht_capabilities_t ToDdk() const {
+    ieee80211_vht_capabilities_t ddk{};
     ddk.vht_capability_info = vht_cap_info.val();
     ddk.supported_vht_mcs_and_nss_set = vht_mcs_nss.val();
     return ddk;

@@ -146,17 +146,17 @@ std::string Describe(const DataFrameHeader& hdr) {
   return std::string(buf);
 }
 
-std::string Describe(const PHY& phy) {
+std::string Describe(const wlan_info_phy_type_t& phy) {
   switch (phy) {
-    case WLAN_PHY_CCK:
+    case WLAN_INFO_PHY_TYPE_CCK:
       return "CCK";
-    case WLAN_PHY_DSSS:
+    case WLAN_INFO_PHY_TYPE_DSSS:
       return "DSSS";
-    case WLAN_PHY_ERP:
+    case WLAN_INFO_PHY_TYPE_ERP:
       return "ERP";
-    case WLAN_PHY_HT:
+    case WLAN_INFO_PHY_TYPE_HT:
       return " HT";
-    case WLAN_PHY_VHT:
+    case WLAN_INFO_PHY_TYPE_VHT:
       return "VHT";
     default:
       return "PHY---";
@@ -541,7 +541,7 @@ std::string Describe(const HtCapabilities& ht_cap) {
   return std::string(buf);
 }
 
-std::string Describe(const wlan_ht_caps& ht_caps) {
+std::string Describe(const ieee80211_ht_capabilities& ht_caps) {
   return Describe(HtCapabilities::FromDdk(ht_caps));
 }
 
@@ -634,7 +634,7 @@ std::string Describe(const VhtOperation& vht_op) {
   return oss.str();
 }
 
-std::string Describe(const wlan_chan_list& wl) {
+std::string Describe(const wlan_info_channel_list& wl) {
   char buf[512];
   size_t offset = 0;
   BUFFER("base_freq:%u", wl.base_freq);
@@ -642,10 +642,10 @@ std::string Describe(const wlan_chan_list& wl) {
   return std::string(buf);
 }
 
-std::string Describe(const wlan_band_info& bi) {
+std::string Describe(const wlan_info_band_info& bi) {
   char buf[1024];
   size_t offset = 0;
-  BUFFER("band_id:%s", common::BandStr(bi.band_id).c_str());
+  BUFFER("band:%s", common::BandStr(bi.band).c_str());
   BUFFER("ht_caps:[%s]", Describe(bi.ht_caps).c_str());
   BUFFER("vht_supported:%u", bi.vht_supported);
   BUFFER("vht_caps:[to implement]");
@@ -664,8 +664,8 @@ std::string Describe(const wlanmac_info& wi) {
   BUFFER("phys:0x%04x", ii.supported_phys);
   BUFFER("feat:0x%08x", ii.driver_features);
   BUFFER("cap:0x%08x", ii.caps);
-  BUFFER("#bands:%u", ii.num_bands);
-  for (uint8_t i = 0; i < ii.num_bands; i++) {
+  BUFFER("#bands:%zu", ii.bands_count);
+  for (uint8_t i = 0; i < ii.bands_count; i++) {
     BUFFER("[band %u]%s", i, Describe(ii.bands[i]).c_str());
   }
   return std::string(buf);

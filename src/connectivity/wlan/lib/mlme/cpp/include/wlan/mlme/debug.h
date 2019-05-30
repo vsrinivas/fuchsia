@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
 
+#include <ddk/hw/wlan/ieee80211.h>
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/client/join_context.h>
 #include <wlan/mlme/client/station.h>
@@ -22,7 +24,7 @@ std::string Describe(const SequenceControl& sc);
 std::string Describe(const MgmtFrameHeader& hdr);
 std::string Describe(const DataFrameHeader& hdr);
 
-std::string Describe(const PHY& phy);
+std::string Describe(const wlan_info_phy_type_t& phy);
 std::string Describe(const GI& gi);
 std::string Describe(const TxVector& tx_vec,
                      tx_vec_idx_t tx_vec_idx = kInvalidTxVectorIdx);
@@ -59,9 +61,9 @@ std::string Describe(const VhtCapabilities& vht_cap);
 std::string Describe(const BasicVhtMcsNss& bvmn);
 std::string Describe(const VhtOperation& vht_op);
 
-std::string Describe(const wlan_ht_caps& ht_caps);
-std::string Describe(const wlan_chan_list& wl);
-std::string Describe(const wlan_band_info& bi);
+std::string Describe(const ieee80211_ht_capabilities& ht_caps);
+std::string Describe(const wlan_info_channel_list& wl);
+std::string Describe(const wlan_info_band_info& bi);
 std::string Describe(const wlanmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);
 std::string Describe(const AssocContext& assoc_ctx);

@@ -55,11 +55,12 @@ struct MinstrelTest : public ::testing::Test {
           {
               // left->right: SGI 40 MHz, SGI 20 MHz, 40 MHz
               .ht_capability_info = 0b01100010,
-              .supported_mcs_set =
-                  {
+              .supported_mcs_set = {
+                  .bytes = {
                       0xff,  // MCS 0-7
                       0xff,  // MCS 8-15
                   },
+              },
           },
   };
   // Note: 16 is the max throughput and 136 is the highest basic rate. They will

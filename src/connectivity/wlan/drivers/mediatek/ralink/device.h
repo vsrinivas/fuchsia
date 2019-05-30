@@ -9,14 +9,15 @@
 #include <bitmap/storage.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <usb/usb.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/mac.h>
-#include <wlan/protocol/phy-impl.h>
 #include <zircon/compiler.h>
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
@@ -83,9 +84,9 @@ class Device {
     void MacUnbind();
     void MacRelease();
 
-    // ddk wlanphy_protocol_ops
-    zx_status_t PhyQuery(wlanphy_info_t* info);
-    zx_status_t CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id);
+    // ddk wlanphy_impl_protocol_ops
+    zx_status_t Query(wlanphy_impl_info_t* info);
+    zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id);
     zx_status_t DestroyIface(uint16_t id);
 
     // ddk wlanmac_protocol_ops methods

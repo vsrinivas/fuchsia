@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_STATION_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
@@ -96,7 +97,7 @@ class Station : public ClientInterface {
   zx_status_t SendAddBaRequestFrame();
   zx_status_t SendKeepAliveResponse();
 
-  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, PHY phy);
+  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, wlan_info_phy_type_t phy);
   zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet);
   zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast,
                             uint32_t flags = 0);
@@ -126,7 +127,7 @@ class Station : public ClientInterface {
   zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);
   std::optional<AssocContext> BuildAssocCtx(
       const MgmtFrameView<AssociationResponse>& frame,
-      const wlan_channel_t& join_chan, PHY join_phy, uint16_t listen_interval);
+      const wlan_channel_t& join_chan, wlan_info_phy_type_t join_phy, uint16_t listen_interval);
 
   zx_status_t NotifyAssocContext();
 

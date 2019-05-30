@@ -23,19 +23,19 @@ uint16_t ConvertSupportedPhys(
   for (auto sp : phys) {
     switch (sp) {
       case wlan_device::SupportedPhy::DSSS:
-        ret |= WLAN_PHY_DSSS;
+        ret |= WLAN_INFO_PHY_TYPE_DSSS;
         break;
       case wlan_device::SupportedPhy::CCK:
-        ret |= WLAN_PHY_CCK;
+        ret |= WLAN_INFO_PHY_TYPE_CCK;
         break;
       case wlan_device::SupportedPhy::OFDM:
-        ret |= WLAN_PHY_OFDM;
+        ret |= WLAN_INFO_PHY_TYPE_OFDM;
         break;
       case wlan_device::SupportedPhy::HT:
-        ret |= WLAN_PHY_HT;
+        ret |= WLAN_INFO_PHY_TYPE_HT;
         break;
       case wlan_device::SupportedPhy::VHT:
-        ret |= WLAN_PHY_VHT;
+        ret |= WLAN_INFO_PHY_TYPE_VHT;
         break;
     }
   }
@@ -48,21 +48,21 @@ uint32_t ConvertDriverFeatures(
   for (auto df : dfs) {
     switch (df) {
       case wlan_common::DriverFeature::SCAN_OFFLOAD:
-        ret |= WLAN_DRIVER_FEATURE_SCAN_OFFLOAD;
+        ret |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
         break;
       case wlan_common::DriverFeature::RATE_SELECTION:
-        ret |= WLAN_DRIVER_FEATURE_RATE_SELECTION;
+        ret |= WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION;
         break;
       case wlan_common::DriverFeature::SYNTH:
-        ret |= WLAN_DRIVER_FEATURE_SYNTH;
+        ret |= WLAN_INFO_DRIVER_FEATURE_SYNTH;
         break;
       case wlan_common::DriverFeature::TX_STATUS_REPORT:
-        ret |= WLAN_DRIVER_FEATURE_TX_STATUS_REPORT;
+        ret |= WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT;
         break;
       case wlan_common::DriverFeature::DFS:
-        ret |= WLAN_DRIVER_FEATURE_DFS;
+        ret |= WLAN_INFO_DRIVER_FEATURE_DFS;
       case wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL:
-        ret |= WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
+        ret |= WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
         break;
     }
   }
@@ -72,21 +72,21 @@ uint32_t ConvertDriverFeatures(
 uint16_t ConvertMacRole(wlan_device::MacRole role) {
   switch (role) {
     case wlan_device::MacRole::AP:
-      return WLAN_MAC_ROLE_AP;
+      return WLAN_INFO_MAC_ROLE_AP;
     case wlan_device::MacRole::CLIENT:
-      return WLAN_MAC_ROLE_CLIENT;
+      return WLAN_INFO_MAC_ROLE_CLIENT;
     case wlan_device::MacRole::MESH:
-      return WLAN_MAC_ROLE_MESH;
+      return WLAN_INFO_MAC_ROLE_MESH;
   }
 }
 
 wlan_device::MacRole ConvertMacRole(uint16_t role) {
   switch (role) {
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
       return wlan_device::MacRole::AP;
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
       return wlan_device::MacRole::CLIENT;
-    case WLAN_MAC_ROLE_MESH:
+    case WLAN_INFO_MAC_ROLE_MESH:
       return wlan_device::MacRole::MESH;
   }
   ZX_ASSERT(0);
@@ -105,25 +105,25 @@ uint32_t ConvertCaps(const ::std::vector<wlan_device::Capability>& caps) {
   for (auto cap : caps) {
     switch (cap) {
       case wlan_device::Capability::SHORT_PREAMBLE:
-        ret |= WLAN_CAP_SHORT_PREAMBLE;
+        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE;
         break;
       case wlan_device::Capability::SPECTRUM_MGMT:
-        ret |= WLAN_CAP_SPECTRUM_MGMT;
+        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT;
         break;
       case wlan_device::Capability::SHORT_SLOT_TIME:
-        ret |= WLAN_CAP_SHORT_SLOT_TIME;
+        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
         break;
       case wlan_device::Capability::RADIO_MSMT:
-        ret |= WLAN_CAP_RADIO_MSMT;
+        ret |= WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT;
         break;
     }
   }
   return ret;
 }
 
-void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
+void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out) {
   memset(out, 0, sizeof(*out));
-  out->band_id = static_cast<uint8_t>(wlan::common::BandFromFidl(in.band_id));
+  out->band = static_cast<uint8_t>(wlan::common::BandFromFidl(in.band_id));
 
   if (in.ht_caps != nullptr) {
     out->ht_supported = true;
@@ -140,13 +140,13 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
   }
 
   std::copy_n(in.basic_rates.data(),
-              std::min<size_t>(in.basic_rates.size(), WLAN_BASIC_RATES_MAX_LEN),
+              std::min<size_t>(in.basic_rates.size(), WLAN_INFO_BAND_INFO_MAX_BASIC_RATES),
               out->basic_rates);
 
   out->supported_channels.base_freq = in.supported_channels.base_freq;
   std::copy_n(in.supported_channels.channels.data(),
               std::min<size_t>(in.supported_channels.channels.size(),
-                               WLAN_CHANNELS_MAX_LEN),
+                               WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),
               out->supported_channels.channels);
 }
 
@@ -157,9 +157,9 @@ zx_status_t ConvertPhyInfo(wlan_info_t* out, const wlan_device::PhyInfo& in) {
   out->driver_features = ConvertDriverFeatures(in.driver_features);
   out->mac_role = ConvertMacRoles(in.mac_roles);
   out->caps = ConvertCaps(in.caps);
-  out->num_bands =
-      std::min(in.bands.size(), static_cast<size_t>(WLAN_MAX_BANDS));
-  for (size_t i = 0; i < out->num_bands; ++i) {
+  out->bands_count =
+      std::min(in.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
+  for (size_t i = 0; i < out->bands_count; ++i) {
     ConvertBandInfo((in.bands)[i], &out->bands[i]);
   }
   return ZX_OK;

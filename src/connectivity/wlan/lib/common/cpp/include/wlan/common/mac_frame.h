@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <endian.h>
 #include <fbl/algorithm.h>
 #include <lib/zx/time.h>
@@ -192,10 +193,14 @@ class CapabilityInfo : public common::BitField<uint16_t> {
   static CapabilityInfo FromDdk(uint32_t ddk_caps) {
     CapabilityInfo cap{};
 #define BITFLAG_TO_BIT(x, y) ((x & y) > 0 ? 1 : 0)
-    cap.set_short_preamble(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_SHORT_PREAMBLE));
-    cap.set_spectrum_mgmt(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_SPECTRUM_MGMT));
-    cap.set_short_slot_time(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_SHORT_SLOT_TIME));
-    cap.set_radio_msmt(BITFLAG_TO_BIT(ddk_caps, WLAN_CAP_RADIO_MSMT));
+    cap.set_short_preamble(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE));
+    cap.set_spectrum_mgmt(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT));
+    cap.set_short_slot_time(BITFLAG_TO_BIT(
+        ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME));
+    cap.set_radio_msmt(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
 #undef BITFLAG_TO_BIT
     return cap;
   }

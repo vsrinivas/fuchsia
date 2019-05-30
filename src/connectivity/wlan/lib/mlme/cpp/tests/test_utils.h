@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_UTILS_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/protocol/info.h>
 
 #include <algorithm>
 #include <array>
@@ -96,7 +96,7 @@ static inline fbl::unique_ptr<Packet> MakeEthPacket(
 }
 
 AssocContext FakeAssocCtx();
-wlan_band_info_t FakeBandInfo(Band band);
+wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band);
 
 }  // namespace test_utils
 }  // namespace wlan

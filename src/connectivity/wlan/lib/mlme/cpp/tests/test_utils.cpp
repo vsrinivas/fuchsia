@@ -55,12 +55,12 @@ AssocContext FakeAssocCtx() {
   };
 }
 
-wlan_band_info_t FakeBandInfo(Band band) {
-  ZX_DEBUG_ASSERT(band == WLAN_BAND_2GHZ || band == WLAN_BAND_5GHZ);
+wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
+  ZX_DEBUG_ASSERT(band == WLAN_INFO_BAND_2GHZ || band == WLAN_INFO_BAND_5GHZ);
 
   // Construct a base
-  wlan_band_info_t bi = {
-      .band_id = static_cast<uint8_t>(band),
+  wlan_info_band_info_t bi = {
+      .band = static_cast<uint8_t>(band),
       .basic_rates = {12, 24, 48, 54, 96, 108},
       .supported_channels =
           {
@@ -72,8 +72,8 @@ wlan_band_info_t FakeBandInfo(Band band) {
           {
               .ht_capability_info = 0x0063,
               .ampdu_params = 0x17,
-              .supported_mcs_set =
-                  {
+              .supported_mcs_set = {
+                  .bytes = {
                       // Rx MCS bitmask
                       // Supported MCS values: 0-7
                       // clang-format off
@@ -83,6 +83,7 @@ wlan_band_info_t FakeBandInfo(Band band) {
                         0x01, 0x00, 0x00, 0x00,
                       // clang-format on
                   },
+              },
               .ht_ext_capabilities = 0x0000,
               .tx_beamforming_capabilities = 0x00000000,
               .asel_capabilities = 0x00,
@@ -95,20 +96,20 @@ wlan_band_info_t FakeBandInfo(Band band) {
           },
   };
 
-  if (band == WLAN_BAND_5GHZ) {
+  if (band == WLAN_INFO_BAND_5GHZ) {
     bi.supported_channels.base_freq = 5000;
-    uint8_t fake[WLAN_CHANNELS_MAX_LEN] = {36, 40, 44, 48, 149, 153, 157, 161};
+    uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {36, 40, 44, 48, 149, 153, 157, 161};
     memcpy(bi.supported_channels.channels, fake,
-           WLAN_CHANNELS_MAX_LEN * sizeof(uint8_t));
+           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
   } else {
     bi.supported_channels.base_freq = 2407;
-    uint8_t fake[WLAN_CHANNELS_MAX_LEN] = {1, 2, 3,  4,  5,  6,  7,
+    uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {1, 2, 3,  4,  5,  6,  7,
                                            8, 9, 10, 11, 12, 13, 14};
     memcpy(bi.supported_channels.channels, fake,
-           WLAN_CHANNELS_MAX_LEN * sizeof(uint8_t));
+           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
 
     bi.vht_supported = false;
-    bi.vht_caps = wlan_vht_caps_t{};
+    bi.vht_caps = {};
   }
   return bi;
 }

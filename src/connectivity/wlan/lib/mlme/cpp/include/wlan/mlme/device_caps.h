@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/span.h>
-#include <wlan/protocol/info.h>
 
 #include <cstddef>
 
@@ -13,8 +13,8 @@
 
 namespace wlan {
 
-const wlan_band_info_t* FindBandByChannel(const wlan_info_t& device_info,
-                                          uint8_t channel);
+const wlan_info_band_info_t* FindBandByChannel(const wlan_info_t& device_info,
+                                               uint8_t channel);
 
 const Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info,
                                             uint8_t channel);

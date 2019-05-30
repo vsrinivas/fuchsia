@@ -1,0 +1,167 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library ddk.hw.wlan.wlaninfo;
+
+using ddk.hw.wlan.ieee80211;
+
+enum WlanInfoMacRole {
+    /// Device operating as a non-AP station (i.e., a client of an AP).
+    client = 0x1;
+
+    /// Device operating as an access point.
+    ap = 0x2;
+
+    /// Device operating as a mesh node.
+    mesh = 0x4;
+};
+
+enum WlanInfoPhyType {
+    /// IEEE 802.11 for 1, 2 Mbps.
+    dsss = 0x01;
+
+    /// IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
+    cck = 0x02;
+
+    /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
+    erp = 0x04;
+
+    /// IEEE 802.11a/g.
+    ofdm = 0x4;
+
+    /// IEEE 802.11n.
+    ht = 0x08;
+
+    /// IEEE 802.11ac.
+    vht = 0x10;
+
+    /// IEEE 802.11ax.
+    hew = 0x20;
+};
+
+enum WlanInfoDriverFeature {
+    /// Device or driver implements scanning.
+    scan_offload = 0x00000001;
+
+    /// Device or driver implements rate selection.
+    rate_selection = 0x00000002;
+
+    /// Device is not a physical device.
+    synth = 0x00000004;
+
+    /// Driver supports transmission reports, and will use the
+    /// wlanmac_ifc.report_tx_status() callback to report the status of each queued
+    /// transmission.
+    tx_status_report = 0x00000008;
+
+    /// Set this flag to indicate whether SME should trust this device or driver to
+    /// handle DFS channels correctly in an active scan (e.g. it makes sure DFS
+    /// channel is safe to transmit before doing so).
+    dfs = 0x00000010;
+
+    /// Temporary feature flag for incrementally transitioning drivers to use SME
+    /// channel on iface creation.
+    temp_direct_sme_channel = 0x40000000;
+};
+
+enum WlanInfoHardwareCapability {
+    /// Short packet preamble.
+    short_preamble = 0x01;
+
+    /// Spectrum management.
+    spectrum_mgmt = 0x02;
+
+    /// Short slot times after packet collision.
+    short_slot_time = 0x04;
+
+    /// Radio measurement.
+    radio_msmt = 0x08;
+};
+
+/// This is a simplified expression of channel starting frequencies. Expand this
+/// list as Fuchsia evolves.
+enum WlanInfoBand {
+    /// Channel starting frequency: 2.407 GHz.
+    2ghz = 0;
+
+    /// Channel starting frequency: 5.000 GHz.
+    5ghz = 1;
+
+    /// The number of defined bands.
+    count = 2;
+};
+
+/// The maximum number of supported channels in a WlanInfoChannelList.
+const usize WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS = 64;
+
+/// A list of channels in a band. Channels are numbered as in IEEE Std 802.11-2016,
+/// 17.3.8.4.2, where each channel is defined as:
+///
+///   (base_freq + 5 * n) MHz
+///
+/// where n is between 1 and 200 (inclusive). Here n represents the channel number.
+///
+/// Example:
+///   Standard 2.4GHz channels:
+///     base_freq = 2407 MHz
+///     n = 1-14
+struct WlanInfoChannelList {
+    /// The base frequency in this band.
+    uint16 base_freq;
+
+    /// A list of channel center frequencies, as multiples of 5 MHz above base_freq.
+    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+};
+
+/// The maximum number of basic rates in WlanInfoBandInfo.
+const usize WLAN_INFO_BAND_INFO_MAX_BASIC_RATES = 12;
+
+/// Information about a particular WLAN band. Capabilities are grouped by band, by
+/// de facto industry standard.
+struct WlanInfoBandInfo {
+    /// The supported band.
+    WlanInfoBand band;
+
+    /// HT PHY capabilities, if supported.
+    bool ht_supported;
+    ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_caps;
+
+    /// VHT PHY capabilities, if supported.
+    bool vht_supported;
+    ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_caps;
+
+    /// Basic rates supported in this band, in units of 500 kbit/s (as defined in
+    /// IEEE Std 802.11-2016, 9.4.2.3). For example, 1 Mbit/s is represented as 0x02.
+    array<uint8>:WLAN_INFO_BAND_INFO_MAX_BASIC_RATES basic_rates;
+
+    /// Channels supported in this band.
+    WlanInfoChannelList supported_channels;
+};
+
+/// The maximum number of bands supported in a WlanInfo struct. For now this is 2
+/// to keep the struct a small, fixed size.
+const usize WLAN_INFO_MAX_BANDS = 2;
+
+struct WlanInfo {
+    /// MAC address.
+    array<uint8>:6 mac_addr;
+
+    /// Bitmask for MAC roles supported. For an interface, this will be a single
+    /// value.
+    WlanInfoMacRole mac_role;
+
+    /// Bitmask indicating the WlanInfoPhyType values supported by the hardware.
+    WlanInfoPhyType supported_phys;
+
+    /// Bitmask indicating the WlanInfoDriverFeature values supported by the driver
+    /// and hardware.
+    WlanInfoDriverFeature driver_features;
+
+    /// Bitmask indicating WlanInfoHardwareCapability values.
+    WlanInfoHardwareCapability caps;
+
+    /// Supported bands.
+    array<WlanInfoBandInfo>:WLAN_INFO_MAX_BANDS bands;
+    usize bands_count;
+};

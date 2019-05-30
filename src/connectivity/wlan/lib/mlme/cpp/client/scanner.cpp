@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <lib/zx/time.h>
@@ -111,7 +112,7 @@ zx_status_t Scanner::Start(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
   }
 
   if (device_->GetWlanInfo().ifc_info.driver_features &
-      WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
+      WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
     debugscan("starting a hardware scan\n");
     return StartHwScan();
   } else {
@@ -337,7 +338,7 @@ void Scanner::SendProbeRequest(wlan_channel_t channel) {
       FindBand(device_->GetWlanInfo().ifc_info, common::Is5Ghz(channel));
   ZX_DEBUG_ASSERT(band_info != nullptr);
   if (band_info) {
-    SupportedRate rates[WLAN_BASIC_RATES_MAX_LEN];
+    SupportedRate rates[WLAN_INFO_BAND_INFO_MAX_BASIC_RATES];
     uint8_t num_rates = 0;
     for (uint8_t rate : band_info->basic_rates) {
       if (rate == 0) {

@@ -46,10 +46,11 @@ zx_status_t WlanPhy::Create(zx_device_t* bus_device) {
     };
 
     static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
-        .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
+        .query = [](void* ctx, wlanphy_impl_info_t* info) -> zx_status_t {
             return reinterpret_cast<WlanPhy*>(ctx)->Query(info);
         },
-        .create_iface = [](void* ctx, wlanphy_create_iface_req_t req, uint16_t* out_iface_id)
+        .create_iface = [](void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                           uint16_t* out_iface_id)
                 -> zx_status_t {
             return reinterpret_cast<WlanPhy*>(ctx)->CreateIface(req, out_iface_id);
         },
@@ -90,12 +91,13 @@ void WlanPhy::Release() {
     delete this;
 }
 
-zx_status_t WlanPhy::Query(wlanphy_info_t* info) {
+zx_status_t WlanPhy::Query(wlanphy_impl_info_t* info) {
     if (wlan_mac_ == nullptr) { return ZX_ERR_NOT_FOUND; }
     return wlan_mac_->Query(info);
 }
 
-zx_status_t WlanPhy::CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id) {
+zx_status_t WlanPhy::CreateIface(const wlanphy_impl_create_iface_req_t* req,
+                                 uint16_t* out_iface_id) {
     if (wlan_mac_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
     WlanMac* wlan_mac = nullptr;
     const zx_status_t status = device_->CreateWlanMac(zx_device_, &wlan_mac);

@@ -32,7 +32,7 @@ namespace {
 struct WlanPacket {
   fbl::unique_ptr<Packet> pkt;
   CBW cbw;
-  PHY phy;
+  wlan_info_phy_type_t phy;
   uint32_t flags;
 };
 
@@ -49,12 +49,13 @@ struct MockDevice : public DeviceInterface {
 
     auto info = &wlanmac_info.ifc_info;
     memcpy(info->mac_addr, addr.byte, 6);
-    info->mac_role = WLAN_MAC_ROLE_CLIENT;
-    info->supported_phys = WLAN_PHY_OFDM | WLAN_PHY_HT | WLAN_PHY_VHT;
+    info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    info->supported_phys = WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT |
+                           WLAN_INFO_PHY_TYPE_VHT;
     info->driver_features = 0;
-    info->num_bands = 2;
-    info->bands[0] = test_utils::FakeBandInfo(WLAN_BAND_2GHZ);
-    info->bands[1] = test_utils::FakeBandInfo(WLAN_BAND_5GHZ);
+    info->bands_count = 2;
+    info->bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
+    info->bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
     state->set_channel(wlan_channel_t{.cbw = CBW20, .primary = 1});
   }
 

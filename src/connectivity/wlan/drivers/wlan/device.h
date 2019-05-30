@@ -15,6 +15,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/protocol/mac.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/dispatcher.h>
 #include <wlan/mlme/packet.h>

@@ -14,13 +14,14 @@ all_hdrs = [
 all_src = [
   "convert.cpp",
   "device.cpp",
-  "driver.cpp"
+  "driver.cpp",
 ]
 
 all_deps = [
   "//garnet/lib/wlan/fidl",
   "//garnet/lib/wlan/protocol",
   "//src/connectivity/wlan/lib/common/cpp:common",
+  "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
   "//zircon/public/lib/async-cpp",
   "//zircon/public/lib/async-loop-cpp",
   "//zircon/public/lib/ddk",

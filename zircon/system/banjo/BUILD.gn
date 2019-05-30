@@ -8,6 +8,8 @@
 group("banjo") {
   deps = [
     "ddk.driver",
+    "ddk.hw.wlan.ieee80211",
+    "ddk.hw.wlan.wlaninfo",
     "ddk.physiter",
     "ddk.protocol.acpi",
     "ddk.protocol.amlogiccanvas",
@@ -64,6 +66,8 @@ group("banjo") {
     "ddk.protocol.usb.hub",
     "ddk.protocol.usb.modeswitch",
     "ddk.protocol.usb.request",
+    "ddk.protocol.wlanphy",
+    "ddk.protocol.wlanphyimpl",
     "zircon.device.audio",
     "zircon.device.block",
     "zircon.device.camera",

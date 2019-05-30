@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
-#include <wlan/protocol/info.h>
 #include <wlan/protocol/mac.h>
 
 #include "utils.h"
@@ -25,7 +25,7 @@ uint16_t ConvertMacRoles(::std::vector<::fuchsia::wlan::device::MacRole>& role);
 uint32_t ConvertCaps(
     const ::std::vector<::fuchsia::wlan::device::Capability>& caps);
 void ConvertBandInfo(const ::fuchsia::wlan::device::BandInfo& in,
-                     wlan_band_info_t* out);
+                     wlan_info_band_info_t* out);
 zx_status_t ConvertPhyInfo(wlan_info_t* out,
                            const ::fuchsia::wlan::device::PhyInfo& in);
 wlan_tx_status_t ConvertTxStatus(const ::fuchsia::wlan::tap::WlanTxStatus& in);

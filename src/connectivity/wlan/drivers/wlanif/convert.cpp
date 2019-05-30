@@ -4,6 +4,7 @@
 
 #include "convert.h"
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <net/ethernet.h>
 #include <wlan/common/band.h>
 #include <wlan/common/element.h>
@@ -828,11 +829,11 @@ wlan_mlme::EapolResultCodes ConvertEapolResultCode(uint8_t code) {
 
 wlan_mlme::MacRole ConvertMacRole(uint8_t role) {
     switch (role) {
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
         return wlan_mlme::MacRole::CLIENT;
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
         return wlan_mlme::MacRole::AP;
-    case WLAN_MAC_ROLE_MESH:
+    case WLAN_INFO_MAC_ROLE_MESH:
         return wlan_mlme::MacRole::MESH;
     default:
         ZX_ASSERT(0);

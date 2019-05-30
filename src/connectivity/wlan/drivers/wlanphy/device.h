@@ -5,8 +5,8 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/common/dispatcher.h>
-#include <wlan/protocol/phy-impl.h>
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
 

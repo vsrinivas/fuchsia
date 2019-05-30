@@ -21,7 +21,7 @@ zx_status_t rtl88xx_bind_wlan_phy(void* ctx, zx_device_t* device);
 
 #include <memory>
 
-#include <wlan/protocol/phy-impl.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <zircon/types.h>
 
 #include "device.h"
@@ -52,8 +52,8 @@ class WlanPhy {
     void Release();
 
     // wlanphy_impl_protocol_ops implementation.
-    zx_status_t Query(wlanphy_info_t* info);
-    zx_status_t CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id);
+    zx_status_t Query(wlanphy_impl_info_t* info);
+    zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id);
     zx_status_t DestroyIface(uint16_t id);
 
     std::unique_ptr<Device> device_;

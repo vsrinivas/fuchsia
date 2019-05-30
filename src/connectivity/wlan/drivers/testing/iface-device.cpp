@@ -5,6 +5,7 @@
 #include "iface-device.h"
 
 #include <ddk/debug.h>
+#include <ddk/hw/wlan/wlaninfo.h>
 
 #include <stdio.h>
 
@@ -92,14 +93,15 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     std::memcpy(ifc_info->mac_addr, mac, ETH_MAC_SIZE);
 
     // Fill out a minimal set of wlan device capabilities
-    ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    ifc_info->driver_features = WLAN_DRIVER_FEATURE_SYNTH;
+    ifc_info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+                               WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
+    ifc_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
     ifc_info->mac_role = role_;
     ifc_info->caps = 0;
-    ifc_info->num_bands = 2;
+    ifc_info->bands_count = 2;
     // clang-format off
     ifc_info->bands[0] = {
-        .band_id = WLAN_BAND_2GHZ,
+        .band = WLAN_INFO_BAND_2GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,
@@ -112,7 +114,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
             },
     };
     ifc_info->bands[1] = {
-        .band_id = WLAN_BAND_5GHZ,
+        .band = WLAN_INFO_BAND_5GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,

@@ -25,9 +25,9 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/hw/wlan/ieee80211.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
-#include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -2780,7 +2780,7 @@ static void ath10k_chan_query_info(const struct ath10k_channel* dev_channel, voi
     }
 }
 
-static void ath10k_get_ht_cap(struct ath10k* ar, struct wlan_ht_caps* ht_caps) {
+static void ath10k_get_ht_cap(struct ath10k* ar, ieee80211_ht_capabilities_t* ht_caps) {
     memset(ht_caps, 0, sizeof(*ht_caps));
 
     if (!(ar->ht_cap_info & WMI_HT_CAP_ENABLED)) { return; }
@@ -2850,10 +2850,10 @@ static void ath10k_get_ht_cap(struct ath10k* ar, struct wlan_ht_caps* ht_caps) {
 
     // supported_mcs_set
     for (uint8_t i = 0; i < ar->num_rf_chains; i++) {
-        ZX_DEBUG_ASSERT(i < countof(ht_caps->supported_mcs_set));
-        if (ar->cfg_rx_chainmask & (1 << i)) { ht_caps->supported_mcs_set[i] = 0xFF; }
+        ZX_DEBUG_ASSERT(i < countof(ht_caps->supported_mcs_set.bytes));
+        if (ar->cfg_rx_chainmask & (1 << i)) { ht_caps->supported_mcs_set.bytes[i] = 0xFF; }
     }
-    ht_caps->supported_mcs_set[12] |= 0x1;  // B96:97 Tx MCS == Rx MCS
+    ht_caps->supported_mcs_set.bytes[12] |= 0x1;  // B96:97 Tx MCS == Rx MCS
 }
 
 static uint32_t ath10k_mac_get_vht_cap_bf_sts(struct ath10k* ar) {
@@ -2885,7 +2885,7 @@ static uint32_t ath10k_mac_get_vht_cap_bf_sound_dim(struct ath10k* ar) {
     return sound_dim;
 }
 
-static void ath10k_get_vht_cap(struct ath10k* ar, struct wlan_vht_caps* vht_caps) {
+static void ath10k_get_vht_cap(struct ath10k* ar, ieee80211_vht_capabilities_t* vht_caps) {
     memset(vht_caps, 0, sizeof(*vht_caps));
     vht_caps->vht_capability_info = ar->vht_cap_info;
 
@@ -2957,9 +2957,9 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
                                    void* cookie) {
     wlan_info_t* ifc_info = cookie;
 
-    ZX_DEBUG_ASSERT(ifc_info->num_bands < WLAN_MAX_BANDS);
-    wlan_band_info_t* wlan_band = &ifc_info->bands[ifc_info->num_bands++];
-    wlan_band->band_id = dev_band->band_id;
+    ZX_DEBUG_ASSERT(ifc_info->bands_count < WLAN_INFO_MAX_BANDS);
+    wlan_info_band_info_t* wlan_band = &ifc_info->bands[ifc_info->bands_count++];
+    wlan_band->band = dev_band->band_id;
 
     // ht_caps
     if (dev_band->ht_supported) {
@@ -2997,16 +2997,19 @@ void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info) {
     ifc_info->mac_role = ar->mac_role;
 
     // supported_phys
-    ifc_info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM;
-    if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) { ifc_info->supported_phys |= WLAN_PHY_HT; }
-    ifc_info->supported_phys |= WLAN_PHY_VHT;
+    ifc_info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+                               WLAN_INFO_PHY_TYPE_OFDM;
+    if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) { ifc_info->supported_phys |= WLAN_INFO_PHY_TYPE_HT; }
+    ifc_info->supported_phys |= WLAN_INFO_PHY_TYPE_VHT;
 
     // driver_features
     ifc_info->driver_features =
-        WLAN_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_DRIVER_FEATURE_RATE_SELECTION;
+        WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION;
 
     // caps
-    ifc_info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SPECTRUM_MGMT | WLAN_CAP_SHORT_SLOT_TIME;
+    ifc_info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
+                     WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
+                     WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
 
     // bands
     ath10k_foreach_band(ar, ath10k_band_query_info, ifc_info);

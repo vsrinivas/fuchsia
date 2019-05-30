@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -40,7 +41,7 @@ static constexpr wlan_channel_t kBssChannel = {
     .primary = 36,
     .cbw = CBW40,
 };
-static constexpr PHY kBssPhy = PHY::WLAN_PHY_HT;
+static constexpr wlan_info_phy_type_t kBssPhy = WLAN_INFO_PHY_TYPE_HT;
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's',
                                     'i', 'a', '-', 'A', 'P'};
 static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};

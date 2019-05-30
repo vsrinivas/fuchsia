@@ -1,0 +1,39 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library ddk.protocol.wlanphyimpl;
+
+using ddk.hw.wlan.wlaninfo;
+using zx;
+
+/// Parameters to create an interface.
+struct WlanphyImplCreateIfaceReq {
+    /// The station role for this interface. A device may support multiple roles,
+    /// but an interface is instantiated with a single role.
+    ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
+
+    /// A handle to the direct SME channel, if supported by the driver.
+    handle<channel> sme_channel;
+};
+
+/// Info about this WLAN PHY.
+struct WlanphyImplInfo {
+    // WLAN capabilities information.
+    ddk.hw.wlan.wlaninfo.WlanInfo wlan_info;
+};
+
+[Layout = "ddk-protocol"]
+protocol WlanphyImpl {
+    /// Get information about the capabilities of the physical device.
+    Query() -> (zx.status s, WlanphyImplInfo info);
+
+    /// Create a new interface with the specified role, returning the interface id.
+    /// Some common error codes are:
+    /// ZX_ERR_NO_RESOURCES: maximum number of interfaces have already been created
+    /// ZX_ERR_NOT_SUPPORTED: device does not support the specified role
+    CreateIface(WlanphyImplCreateIfaceReq req) -> (zx.status s, uint16 iface_id);
+
+    /// Destroy the interface with the matching id.
+    DestroyIface(uint16 iface_id) -> (zx.status s);
+};

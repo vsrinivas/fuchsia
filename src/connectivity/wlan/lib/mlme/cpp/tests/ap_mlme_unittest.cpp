@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/hw/wlan/ieee80211.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -421,17 +422,17 @@ TEST_F(ApInfraBssTest, Associate_AssociationContext) {
     EXPECT_EQ(actual_ctx->rates[i], rates[i]);
   }
   EXPECT_TRUE(actual_ctx->has_ht_cap);
-  const wlan_ht_caps_t expected_ht_cap =
+  const ieee80211_ht_capabilities_t expected_ht_cap =
       BuildHtCapabilities(ctx.ap->Ht()).ToDdk();
-  const wlan_ht_caps_t actual_ht_cap = actual_ctx->ht_cap;
+  const ieee80211_ht_capabilities_t actual_ht_cap = actual_ctx->ht_cap;
   EXPECT_EQ(actual_ht_cap.ht_capability_info,
             expected_ht_cap.ht_capability_info);
   EXPECT_EQ(actual_ht_cap.ampdu_params, expected_ht_cap.ampdu_params);
-  size_t len = sizeof(expected_ht_cap.supported_mcs_set) /
-               sizeof(expected_ht_cap.supported_mcs_set[0]);
+  size_t len = sizeof(expected_ht_cap.supported_mcs_set.bytes) /
+               sizeof(expected_ht_cap.supported_mcs_set.bytes[0]);
   for (size_t i = 0; i < len; i++) {
-    EXPECT_EQ(actual_ht_cap.supported_mcs_set[i],
-              expected_ht_cap.supported_mcs_set[i]);
+    EXPECT_EQ(actual_ht_cap.supported_mcs_set.bytes[i],
+              expected_ht_cap.supported_mcs_set.bytes[i]);
   }
   EXPECT_EQ(actual_ht_cap.ht_ext_capabilities,
             expected_ht_cap.ht_ext_capabilities);

@@ -5,12 +5,12 @@
 #include "wlantap-phy.h"
 
 #include <ddk/debug.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/c/fidl.h>
 #include <wlan/common/dispatcher.h>
 #include <wlan/protocol/mac.h>
-#include <wlan/protocol/phy-impl.h>
 #include <zircon/status.h>
 
 #include <array>
@@ -183,7 +183,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   // wlanphy-impl DDK interface
 
-  zx_status_t Query(wlanphy_info_t* info) {
+  zx_status_t Query(wlanphy_impl_info_t* info) {
     zxlogf(INFO, "wlantap phy: received a 'Query' DDK request\n");
     zx_status_t status =
         ConvertPhyInfo(&info->wlan_info, phy_config_->phy_info);
@@ -197,10 +197,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return std::find(v.cbegin(), v.cend(), t) != v.cend();
   }
 
-  zx_status_t CreateIface(wlanphy_create_iface_req_t req,
+  zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req,
                           uint16_t* out_iface_id) {
     zxlogf(INFO, "wlantap phy: received a 'CreateIface' DDK request\n");
-    wlan_device::MacRole dev_role = ConvertMacRole(req.role);
+    wlan_device::MacRole dev_role = ConvertMacRole(req->role);
     if (!contains(phy_config_->phy_info.mac_roles, dev_role)) {
       zxlogf(ERROR, "wlantap phy: CreateIface: role not supported\n");
       return ZX_ERR_NOT_SUPPORTED;
@@ -367,10 +367,10 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
 #define DEV(c) static_cast<WlantapPhy*>(c)
 static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
-    .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
+    .query = [](void* ctx, wlanphy_impl_info_t* info) -> zx_status_t {
       return DEV(ctx)->Query(info);
     },
-    .create_iface = [](void* ctx, wlanphy_create_iface_req_t req,
+    .create_iface = [](void* ctx, const wlanphy_impl_create_iface_req_t* req,
                        uint16_t* out_iface_id) -> zx_status_t {
       return DEV(ctx)->CreateIface(req, out_iface_id);
     },

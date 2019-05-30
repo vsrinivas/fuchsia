@@ -18,8 +18,10 @@
 
 #include "cfg80211.h"
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
+#include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 
 #include <threads.h>
@@ -285,7 +287,7 @@ static void brcmf_cfg80211_update_proto_addr_mode(struct wireless_dev* wdev) {
     vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
     ifp = vif->ifp;
 
-    if (wdev->iftype == WLAN_MAC_ROLE_AP) {
+    if (wdev->iftype == WLAN_INFO_MAC_ROLE_AP) {
         brcmf_proto_configure_addr_mode(ifp->drvr, ifp->ifidx, ADDR_DIRECT);
     } else {
         brcmf_proto_configure_addr_mode(ifp->drvr, ifp->ifidx, ADDR_INDIRECT);
@@ -351,7 +353,7 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
 
     brcmf_dbg(INFO, "Adding vif \"%s\"\n", name);
 
-    err = brcmf_alloc_vif(cfg, WLAN_MAC_ROLE_AP, &vif);
+    err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_AP, &vif);
     if (err != ZX_OK) {
         if (dev_out) {
             *dev_out = NULL;
@@ -408,7 +410,7 @@ static bool brcmf_is_apmode(struct brcmf_cfg80211_vif* vif) {
     uint16_t iftype;
 
     iftype = vif->wdev.iftype;
-    return iftype == WLAN_MAC_ROLE_AP;
+    return iftype == WLAN_INFO_MAC_ROLE_AP;
 }
 
 zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
@@ -426,7 +428,7 @@ zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
         return err;
     }
     switch (type) {
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
         err = brcmf_ap_add_vif(wiphy, name, params, wdev_out);
         break;
     default:
@@ -567,10 +569,10 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
         return err;
     }
     switch (type) {
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
         infra = 1;
         break;
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
         ap = 1;
         break;
     default:
@@ -871,7 +873,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
         if (err != ZX_OK) {
             brcmf_err("WLC_DISASSOC failed (%d)\n", err);
         }
-        if (vif->wdev.iftype == WLAN_MAC_ROLE_CLIENT) {
+        if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
             cfg80211_disconnected(vif, reason);
         }
     }
@@ -1708,7 +1710,7 @@ static zx_status_t brcmf_internal_escan_add_info(wlanif_scan_req_t* req, uint8_t
         }
     }
     if (i == req->num_channels) {
-        if (req->num_channels < WLAN_CHANNELS_MAX_LEN) {
+        if (req->num_channels < WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
             req->channel_list[req->num_channels++] = channel;
         } else {
             brcmf_err("escan channel list full, suppressing channel %d\n", channel);
@@ -2921,13 +2923,13 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, uint32_t bw_cap[]) {
     uint32_t val = WLC_BAND_2G;
     zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
     if (status == ZX_OK) {
-        bw_cap[WLAN_BAND_2GHZ] = val;
+        bw_cap[WLAN_INFO_BAND_2GHZ] = val;
 
         // 5 GHz
         val = WLC_BAND_5G;
         status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
         if (status == ZX_OK) {
-            bw_cap[WLAN_BAND_5GHZ] = val;
+            bw_cap[WLAN_INFO_BAND_5GHZ] = val;
             return;
         }
         brcmf_err("Unable to get bw_cap for 5GHz bands\n");
@@ -2945,14 +2947,14 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, uint32_t bw_cap[]) {
 
     switch (mimo_bwcap) {
     case WLC_N_BW_40ALL:
-        bw_cap[WLAN_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
+        bw_cap[WLAN_INFO_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
         /* fall-thru */
     case WLC_N_BW_20IN2G_40IN5G:
-        bw_cap[WLAN_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
+        bw_cap[WLAN_INFO_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
         /* fall-thru */
     case WLC_N_BW_20ALL:
-        bw_cap[WLAN_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
-        bw_cap[WLAN_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;
+        bw_cap[WLAN_INFO_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
+        bw_cap[WLAN_INFO_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;
         break;
     default:
         brcmf_err("invalid mimo_bw_cap value\n");
@@ -3019,8 +3021,8 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t
     band->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
 
     // Supported MCS Set
-    ZX_ASSERT(nchain <= sizeof(band->ht_caps.supported_mcs_set));
-    memset(band->ht_caps.supported_mcs_set, 0xff, nchain);
+    ZX_ASSERT(nchain <= sizeof(band->ht_caps.supported_mcs_set.bytes));
+    memset(&band->ht_caps.supported_mcs_set.bytes[0], 0xff, nchain);
 }
 
 static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t* band,
@@ -3110,14 +3112,14 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
 
 }
 
-static void brcmf_dump_ht_caps(wlan_ht_caps_t* caps) {
+static void brcmf_dump_ht_caps(ieee80211_ht_capabilities_t* caps) {
     BRCMF_LOGF(INFO, "brcmfmac:     ht_capability_info: %#x\n", caps->ht_capability_info);
     BRCMF_LOGF(INFO, "brcmfmac:     ampdu_params: %#x\n", caps->ampdu_params);
 
-    char mcs_set_str[countof(caps->supported_mcs_set) * 5 + 1];
+    char mcs_set_str[countof(caps->supported_mcs_set.bytes) * 5 + 1];
     char* str = mcs_set_str;
-    for (unsigned i = 0; i < countof(caps->supported_mcs_set); i++) {
-        str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set[i]);
+    for (unsigned i = 0; i < countof(caps->supported_mcs_set.bytes); i++) {
+        str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set.bytes[i]);
     }
 
     BRCMF_LOGF(INFO, "brcmfmac:     mcs_set: %s\n", mcs_set_str);
@@ -3125,7 +3127,7 @@ static void brcmf_dump_ht_caps(wlan_ht_caps_t* caps) {
     BRCMF_LOGF(INFO, "brcmfmac:     asel_capabilities: %#x\n", caps->asel_capabilities);
 }
 
-static void brcmf_dump_vht_caps(wlan_vht_caps_t* caps) {
+static void brcmf_dump_vht_caps(ieee80211_vht_capabilities_t* caps) {
     BRCMF_LOGF(INFO, "brcmfmac:     vht_capability_info: %#x\n", caps->vht_capability_info);
     BRCMF_LOGF(INFO, "brcmfmac:     supported_vht_mcs_and_nss_set: %#" PRIx64 "\n",
                caps->supported_vht_mcs_and_nss_set);
@@ -3134,10 +3136,10 @@ static void brcmf_dump_vht_caps(wlan_vht_caps_t* caps) {
 static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     char band_id_str[32];
     switch (band->band_id) {
-    case WLAN_BAND_2GHZ:
+    case WLAN_INFO_BAND_2GHZ:
         sprintf(band_id_str, "2GHz");
         break;
-    case WLAN_BAND_5GHZ:
+    case WLAN_INFO_BAND_5GHZ:
         sprintf(band_id_str, "5GHz");
         break;
     default:
@@ -3146,8 +3148,8 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
     }
     BRCMF_LOGF(INFO, "brcmfmac:   band_id: %s\n", band_id_str);
 
-    ZX_ASSERT(band->num_basic_rates <= WLAN_BASIC_RATES_MAX_LEN);
-    char basic_rates_str[WLAN_BASIC_RATES_MAX_LEN * 6 + 1];
+    ZX_ASSERT(band->num_basic_rates <= WLAN_INFO_BAND_INFO_MAX_BASIC_RATES);
+    char basic_rates_str[WLAN_INFO_BAND_INFO_MAX_BASIC_RATES * 6 + 1];
     char* str = basic_rates_str;
     for (unsigned i = 0; i < band->num_basic_rates; i++) {
         str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rates[i]);
@@ -3156,8 +3158,8 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
 
     BRCMF_LOGF(INFO, "brcmfmac:     base_frequency: %d\n", band->base_frequency);
 
-    ZX_ASSERT(band->num_channels <= WLAN_CHANNELS_MAX_LEN);
-    char channels_str[WLAN_CHANNELS_MAX_LEN * 4 + 1];
+    ZX_ASSERT(band->num_channels <= WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+    char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
     str = channels_str;
     for (unsigned i = 0; i < band->num_channels; i++) {
         str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
@@ -3181,9 +3183,9 @@ static void brcmf_dump_query_info(wlanif_query_info_t* info) {
                info->mac_addr[0], info->mac_addr[1], info->mac_addr[2],
                info->mac_addr[3], info->mac_addr[4], info->mac_addr[5]);
     BRCMF_LOGF(INFO, "brcmfmac:   role(s): %s%s%s\n",
-               info->role & WLAN_MAC_ROLE_CLIENT ? "client " : "",
-               info->role & WLAN_MAC_ROLE_AP ? "ap " : "",
-               info->role & WLAN_MAC_ROLE_MESH ? "mesh " : "");
+               info->role & WLAN_INFO_MAC_ROLE_CLIENT ? "client " : "",
+               info->role & WLAN_INFO_MAC_ROLE_AP ? "ap " : "",
+               info->role & WLAN_INFO_MAC_ROLE_MESH ? "mesh " : "");
     BRCMF_LOGF(INFO, "brcmfmac:   feature(s): %s%s\n",
                info->features & WLANIF_FEATURE_DMA ? "DMA " : "",
                info->features & WLANIF_FEATURE_SYNTH ? "SYNTH " : "");
@@ -3219,7 +3221,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     info->role = wdev->iftype;
 
     // features
-    info->driver_features |= WLAN_DRIVER_FEATURE_DFS;
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
 
     // bands
     uint32_t bandlist[3];
@@ -3241,14 +3243,14 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
         }
         wlanif_band_capabilities_t* band = &info->bands[i - 1];
         if (bandlist[i] == WLC_BAND_2G) {
-            band->band_id = WLAN_BAND_2GHZ;
-            band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_g_rates_size);
+            band->band_id = WLAN_INFO_BAND_2GHZ;
+            band->num_basic_rates = min(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES, wl_g_rates_size);
             memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
             band->base_frequency = 2407;
             band_2ghz = band;
         } else if (bandlist[i] == WLC_BAND_5G) {
-            band->band_id = WLAN_BAND_5GHZ;
-            band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_a_rates_size);
+            band->band_id = WLAN_INFO_BAND_5GHZ;
+            band->num_basic_rates = min(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES, wl_a_rates_size);
             memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
             band->base_frequency = 5000;
             band_5ghz = band;
@@ -3322,8 +3324,8 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
         brcmf_get_bwcap(ifp, bw_cap);
     }
     brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, bw_cap=(%d, %d)\n",
-              nmode, vhtmode, bw_cap[WLAN_BAND_2GHZ],
-              bw_cap[WLAN_BAND_5GHZ]);
+              nmode, vhtmode, bw_cap[WLAN_INFO_BAND_2GHZ],
+              bw_cap[WLAN_INFO_BAND_5GHZ]);
 
     // LDPC support, applies to both HT and VHT
     ldpc_cap = 0;
@@ -3391,14 +3393,14 @@ void brcmf_hook_stats_query_req(void* ctx) {
 
     // TODO(cphoenix): Fill in all the stats fields.
     switch (wdev->iftype) {
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
         {
             mlme_stats.tag = WLANIF_MLME_STATS_TYPE_CLIENT;
             wlanif_client_mlme_stats_t* stats = &mlme_stats.client_mlme_stats;
             memset(stats, 0, sizeof(*stats));
             break;
         }
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
         {
             mlme_stats.tag = WLANIF_MLME_STATS_TYPE_AP;
             wlanif_ap_mlme_stats_t* stats = &mlme_stats.ap_mlme_stats;
@@ -3468,7 +3470,7 @@ static zx_protocol_device_t if_impl_device_ops = {
     .release = brcmf_release_zx_if_device,
 };
 
-zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
+zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                                    uint16_t* out_iface_id) {
     struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
     struct net_device* ndev = ifp->ndev;
@@ -3499,7 +3501,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, wlanphy_create_iface_req_t req,
 
     *out_iface_id = 42;
 
-    wdev->iftype = req.role;
+    wdev->iftype = req->role;
 
     /* set appropriate operations */
     ndev->initialized_for_ap = true;
@@ -3532,10 +3534,10 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,
 
     brcmf_init_prof(&vif->profile);
 
-    if (type == WLAN_MAC_ROLE_AP) {
+    if (type == WLAN_INFO_MAC_ROLE_AP) {
         mbss = false;
         list_for_every_entry(&cfg->vif_list, vif_walk, struct brcmf_cfg80211_vif, list) {
-            if (vif_walk->wdev.iftype == WLAN_MAC_ROLE_AP) {
+            if (vif_walk->wdev.iftype == WLAN_INFO_MAC_ROLE_AP) {
                 mbss = true;
                 break;
             }
@@ -4392,7 +4394,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     init_vif_event(&cfg->vif_event);
     list_initialize(&cfg->vif_list);
 
-    err = brcmf_alloc_vif(cfg, WLAN_MAC_ROLE_CLIENT, &vif);
+    err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_CLIENT, &vif);
     if (err != ZX_OK) {
         goto wiphy_out;
     }

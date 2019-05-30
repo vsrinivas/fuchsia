@@ -280,55 +280,55 @@ wlan_common::WlanChan ToFidl(const wlan_channel_t& chan) {
   };
 }
 
-std::string GetPhyStr(PHY phy) {
+std::string GetPhyStr(wlan_info_phy_type_t phy) {
   switch (phy) {
-    case WLAN_PHY_DSSS:
+    case WLAN_INFO_PHY_TYPE_DSSS:
       return "802.11 DSSS";
-    case WLAN_PHY_CCK:
+    case WLAN_INFO_PHY_TYPE_CCK:
       return "802.11b CCK/DSSS";
-    case WLAN_PHY_OFDM:  // and WLAN_PHY_ERP
+    case WLAN_INFO_PHY_TYPE_OFDM:  // and WLAN_INFO_PHY_TYPE_ERP
       return "802.11a/g OFDM";
-    case WLAN_PHY_HT:
+    case WLAN_INFO_PHY_TYPE_HT:
       return "802.11n HT";
-    case WLAN_PHY_VHT:
+    case WLAN_INFO_PHY_TYPE_VHT:
       return "802.11ac VHT";
     default:
       return "UNKNOWN_PHY";
   }
 }
 
-PHY FromFidl(::fuchsia::wlan::common::PHY phy) {
+wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy) {
   // TODO(NET-1845): Streamline the enum values
   switch (phy) {
     case wlan_common::PHY::HR:
-      return WLAN_PHY_CCK;
+      return WLAN_INFO_PHY_TYPE_CCK;
     case wlan_common::PHY::ERP:
-      return WLAN_PHY_OFDM;
+      return WLAN_INFO_PHY_TYPE_OFDM;
     case wlan_common::PHY::HT:
-      return WLAN_PHY_HT;
+      return WLAN_INFO_PHY_TYPE_HT;
     case wlan_common::PHY::VHT:
-      return WLAN_PHY_VHT;
+      return WLAN_INFO_PHY_TYPE_VHT;
     case wlan_common::PHY::HEW:
-      return WLAN_PHY_HEW;
+      return WLAN_INFO_PHY_TYPE_HEW;
     default:
       errorf("Unknown phy value: %d\n", phy);
       ZX_DEBUG_ASSERT(false);
-      return WLAN_PHY_HEW;
+      return WLAN_INFO_PHY_TYPE_HEW;
   }
 }
 
-::fuchsia::wlan::common::PHY ToFidl(PHY phy) {
+::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy) {
   // TODO(NET-1845): Streamline the enum values
   switch (phy) {
-    case WLAN_PHY_CCK:
+    case WLAN_INFO_PHY_TYPE_CCK:
       return wlan_common::PHY::HR;
-    case WLAN_PHY_OFDM:
+    case WLAN_INFO_PHY_TYPE_OFDM:
       return wlan_common::PHY::ERP;
-    case WLAN_PHY_HT:
+    case WLAN_INFO_PHY_TYPE_HT:
       return wlan_common::PHY::HT;
-    case WLAN_PHY_VHT:
+    case WLAN_INFO_PHY_TYPE_VHT:
       return wlan_common::PHY::VHT;
-    case WLAN_PHY_HEW:
+    case WLAN_INFO_PHY_TYPE_HEW:
       return wlan_common::PHY::HEW;
     default:
       errorf("Unknown phy value: %d\n", phy);

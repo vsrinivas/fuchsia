@@ -8,9 +8,9 @@
 #include "iface-device.h"
 
 #include <ddk/debug.h>
+#include <ddk/protocol/wlanphy.h>
 #include <wlan/common/element.h>
 #include <wlan/protocol/ioctl.h>
-#include <wlan/protocol/phy.h>
 
 #include <fuchsia/wlan/device/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -37,7 +37,7 @@ static zx_protocol_device_t wlanphy_test_device_ops = {
 #undef DEV
 
 static wlanphy_protocol_ops_t wlanphy_test_ops = {
-    .reserved = 0,
+    .dummy = nullptr,
 };
 
 PhyDevice::PhyDevice(zx_device_t* device) : parent_(device) {}
@@ -186,13 +186,13 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
     uint16_t role = 0;
     switch (req.role) {
     case wlan_device::MacRole::CLIENT:
-        role = WLAN_MAC_ROLE_CLIENT;
+        role = WLAN_INFO_MAC_ROLE_CLIENT;
         break;
     case wlan_device::MacRole::AP:
-        role = WLAN_MAC_ROLE_AP;
+        role = WLAN_INFO_MAC_ROLE_AP;
         break;
     case wlan_device::MacRole::MESH:
-        role = WLAN_MAC_ROLE_MESH;
+        role = WLAN_INFO_MAC_ROLE_MESH;
         break;
     default:
         resp.status = ZX_ERR_NOT_SUPPORTED;

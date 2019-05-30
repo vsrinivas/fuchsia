@@ -42,8 +42,8 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci-lib.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <wlan/protocol/mac.h>
-#include <wlan/protocol/phy-impl.h>
 #include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"

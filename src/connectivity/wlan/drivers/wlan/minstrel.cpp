@@ -4,6 +4,7 @@
 
 #include "minstrel.h"
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
@@ -60,7 +61,7 @@ std::unordered_set<tx_vec_idx_t> AddSupportedErp(
     zx_status_t status = TxVector::FromSupportedRate(rate, &tx_vector);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     // Fuchsia only uses 802.11a/g/n and later data rates for transmission.
-    if (tx_vector.phy != WLAN_PHY_ERP) {
+    if (tx_vector.phy != WLAN_INFO_PHY_TYPE_ERP) {
       continue;
     }
     tx_vec_idx_t tx_vector_idx;
@@ -151,7 +152,7 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map,
     }
 
     TxVector tx_vector{
-        .phy = WLAN_PHY_HT,
+        .phy = WLAN_INFO_PHY_TYPE_HT,
         .gi = gi,
         .cbw = cbw,
         .mcs_idx = mcs_idx,

@@ -11,53 +11,53 @@ namespace common {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 
-Band GetBand(const wlan_channel_t& chan) {
-  return Is2Ghz(chan) ? WLAN_BAND_2GHZ : WLAN_BAND_5GHZ;
+wlan_info_band_t GetBand(const wlan_channel_t& chan) {
+  return Is2Ghz(chan) ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
 }
 
 std::string BandStr(uint8_t band) {
-  if (band > WLAN_BAND_COUNT) {
-    band = WLAN_BAND_COUNT;
+  if (band > WLAN_INFO_BAND_COUNT) {
+    band = WLAN_INFO_BAND_COUNT;
   }
   switch (band) {
-    case WLAN_BAND_2GHZ:
+    case WLAN_INFO_BAND_2GHZ:
       return "2 GHz";
-    case WLAN_BAND_5GHZ:
+    case WLAN_INFO_BAND_5GHZ:
       return "5 GHz";
     default:
       return "BAND_INV";
   }
 }
 
-std::string BandStr(Band band) { return BandStr(static_cast<uint8_t>(band)); }
+std::string BandStr(wlan_info_band_t band) { return BandStr(static_cast<uint8_t>(band)); }
 
 std::string BandStr(const wlan_channel_t& chan) {
   return BandStr(GetBand(chan));
 }
 
 wlan_common::Band BandToFidl(uint8_t band) {
-  return BandToFidl(static_cast<Band>(band));
+  return BandToFidl(static_cast<wlan_info_band_t>(band));
 }
 
-wlan_common::Band BandToFidl(Band band) {
+wlan_common::Band BandToFidl(wlan_info_band_t band) {
   switch (band) {
-    case WLAN_BAND_2GHZ:
+    case WLAN_INFO_BAND_2GHZ:
       return wlan_common::Band::WLAN_BAND_2GHZ;
-    case WLAN_BAND_5GHZ:
+    case WLAN_INFO_BAND_5GHZ:
       return wlan_common::Band::WLAN_BAND_5GHZ;
     default:
       return wlan_common::Band::WLAN_BAND_COUNT;
   }
 }
 
-Band BandFromFidl(wlan_common::Band band) {
+wlan_info_band_t BandFromFidl(wlan_common::Band band) {
   switch (band) {
     case wlan_common::Band::WLAN_BAND_2GHZ:
-      return WLAN_BAND_2GHZ;
+      return WLAN_INFO_BAND_2GHZ;
     case wlan_common::Band::WLAN_BAND_5GHZ:
-      return WLAN_BAND_5GHZ;
+      return WLAN_INFO_BAND_5GHZ;
     default:
-      return WLAN_BAND_COUNT;
+      return WLAN_INFO_BAND_COUNT;
   }
 }
 

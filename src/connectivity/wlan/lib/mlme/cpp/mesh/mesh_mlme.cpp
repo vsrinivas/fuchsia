@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/beacon.h>
@@ -231,7 +232,7 @@ void MeshMlme::ConfigurePeering(
       .rates_cnt = static_cast<uint16_t>(
           std::min(req.body()->rates.size(), sizeof(ctx.rates))),
       .chan = device_->GetState()->channel(),
-      .phy = WLAN_PHY_OFDM,  // TODO(gbonik): get PHY from MeshPeeringParams
+      .phy = WLAN_INFO_PHY_TYPE_OFDM,  // TODO(gbonik): get PHY from MeshPeeringParams
   };
   memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
   memcpy(ctx.rates, req.body()->rates.data(), ctx.rates_cnt);

@@ -5,6 +5,7 @@
 #include "device.h"
 
 #include <ddk/device.h>
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <lib/async/cpp/task.h>
 #include <net/ethernet.h>
 #include <wlan/common/logging.h>
@@ -186,7 +187,7 @@ zx_status_t Device::Bind() {
     }
 
 
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
         ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
         status = AddEthDevice(parent_);
         if (status != ZX_OK) {
@@ -268,7 +269,7 @@ void Device::EthUnbind() {
     debugfn();
 
     // Do proper clean-up if |zxdev_| wasn't added. Otherwise, simply remove |ethdev_|.
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
         StopMessageLoop(ethdev_);
     } else {
         device_remove(ethdev_);
@@ -279,7 +280,7 @@ void Device::EthRelease() {
     debugfn();
     // Free memory if |zxdev_| wasn't added, otherwise, |zxdev_|'s `Release()` will 
     // take care of that.
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
         delete this;
     }
 }
@@ -316,10 +317,10 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     impl_req.probe_delay = req.probe_delay;
 
     // channel_list
-    if (req.channel_list->size() > WLAN_CHANNELS_MAX_LEN) {
+    if (req.channel_list->size() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
         warnf("wlanif: truncating channel list from %lu to %d\n", req.channel_list->size(),
-              WLAN_CHANNELS_MAX_LEN);
-        impl_req.num_channels = WLAN_CHANNELS_MAX_LEN;
+              WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+        impl_req.num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
     } else {
         impl_req.num_channels = req.channel_list->size();
     }
@@ -591,19 +592,19 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
 
     // driver features flag
     fidl_resp.driver_features.resize(0);
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
         fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
     }
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
         fidl_resp.driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
     }
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
         fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
     }
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
         fidl_resp.driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
     }
-    if (query_info_.driver_features & WLAN_DRIVER_FEATURE_DFS) {
+    if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
         fidl_resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
     }
 

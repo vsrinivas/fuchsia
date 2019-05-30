@@ -4,7 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_WLAN_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_WLAN_MAC_H_
 
-#include <wlan/protocol/phy.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -20,7 +20,7 @@ class WlanMac {
     virtual ~WlanMac() = 0;
 
     // Query this WlanMac instance.
-    virtual zx_status_t Query(wlanphy_info_t* info) = 0;
+    virtual zx_status_t Query(wlanphy_impl_info_t* info) = 0;
 
     // Destroy this WlanMac instance.
     virtual zx_status_t Destroy() = 0;

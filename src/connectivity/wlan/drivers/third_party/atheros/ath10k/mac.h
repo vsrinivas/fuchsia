@@ -18,6 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 
+#include <ddk/hw/wlan/ieee80211.h>
 #include <wlan/protocol/mac.h>
 
 #include "core.h"
@@ -74,7 +75,7 @@ struct ath10k_band {
 
     bool ht_supported;
     bool vht_supported;
-    wlan_vht_caps_t vht_caps;
+    ieee80211_vht_capabilities_t vht_caps;
     uint8_t basic_rates[12];
     uint16_t base_freq;
     size_t n_channels;

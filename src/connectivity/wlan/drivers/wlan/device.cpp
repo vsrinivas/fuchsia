@@ -5,6 +5,7 @@
 #include "device.h"
 
 #include <ddk/device.h>
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <wlan/common/channel.h>
@@ -162,15 +163,15 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   // mac_role is a bitfield, but only a single value is supported for an
   // interface
   switch (wlanmac_info_.ifc_info.mac_role) {
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
       infof("Initialize a client MLME.\n");
       mlme.reset(new ClientMlme(this));
       break;
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
       infof("Initialize an AP MLME.\n");
       mlme.reset(new ApMlme(this));
       break;
-    case WLAN_MAC_ROLE_MESH:
+    case WLAN_INFO_MAC_ROLE_MESH:
       infof("Initialize a mesh MLME.\n");
       mlme.reset(new MeshMlme(this));
       break;
@@ -195,7 +196,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   work_thread_ = std::thread(&Device::MainLoop, this);
 
   if (wlanmac_info_.ifc_info.driver_features &
-      WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+      WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
     ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
     status = AddEthDevice(parent_);
     if (status != ZX_OK) {
@@ -369,7 +370,7 @@ void Device::EthRelease() {
   // If no wlanif device was added we need to clean-up memory here. Otherwise
   // WlanRelease() will do the clean-up as |ethdev_| is a child of |zxdev_|.
   if (wlanmac_info_.ifc_info.driver_features &
-      WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
+      WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
     DestroySelf();
   }
 }
@@ -382,7 +383,7 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
   memset(info, 0, sizeof(*info));
   memcpy(info->mac, wlanmac_info_.ifc_info.mac_addr, ETH_MAC_SIZE);
   info->features = ETHMAC_FEATURE_WLAN;
-  if (wlanmac_info_.ifc_info.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
+  if (wlanmac_info_.ifc_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
     info->features |= ETHMAC_FEATURE_SYNTH;
   }
   info->mtu = 1500;
@@ -575,12 +576,12 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
     // Note: This section has no practical effect on ralink and ath10k. It is
     // only effective if the underlying device meets both criteria below:
     // 1. Does not support tx status report. i.e.
-    // WLAN_DRIVER_FEATURE_TX_STATUS_REPORT NOT set
+    // WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT NOT set
     // 2. Hornors our instruction on tx_vector to use.
     // TODO(NET-645): Choose an optimal MCS for management frames
     const uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
     return {
-        .phy = WLAN_PHY_ERP,
+        .phy = WLAN_INFO_PHY_TYPE_ERP,
         .cbw = CBW20,
         .mcs_idx = mcs,
         .nss = 1,
@@ -955,7 +956,7 @@ zx_status_t Device::GetChannel(zx::channel* out) {
 }
 
 zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
-  for (uint8_t i = 0; i < wlanmac_info.ifc_info.num_bands; i++) {
+  for (uint8_t i = 0; i < wlanmac_info.ifc_info.bands_count; i++) {
     auto bandinfo = wlanmac_info.ifc_info.bands[i];
 
     // Validate channels
@@ -1003,8 +1004,8 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
 
 bool Device::ShouldEnableMinstrel() {
   const auto& info = wlanmac_info_.ifc_info;
-  return (info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) &&
-         !(info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION);
+  return (info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) &&
+         !(info.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION);
 }
 
 zx_status_t Device::CreateMinstrel(uint32_t features) {
@@ -1020,7 +1021,7 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
     return status;
   }
   const zx::duration minstrel_update_interval =
-      (features & WLAN_DRIVER_FEATURE_SYNTH) != 0
+      (features & WLAN_INFO_DRIVER_FEATURE_SYNTH) != 0
           ? kMinstrelUpdateIntervalForHwSim
           : kMinstrelUpdateIntervalNormal;
   minstrel_.reset(new MinstrelRateSelector(std::move(timer),

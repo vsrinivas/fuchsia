@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/write_element.h>
@@ -370,7 +371,7 @@ TEST(Frame, DdkConversion) {
   auto ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
   EXPECT_EQ(0, ieee_caps.val());
 
-  ddk_caps |= WLAN_CAP_SHORT_PREAMBLE;
+  ddk_caps |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE;
   ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
   EXPECT_EQ(1, ieee_caps.short_preamble());
   EXPECT_EQ(0, ieee_caps.spectrum_mgmt());
@@ -378,7 +379,8 @@ TEST(Frame, DdkConversion) {
   EXPECT_EQ(0, ieee_caps.radio_msmt());
   EXPECT_EQ(0x0020, ieee_caps.val());
 
-  ddk_caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
+  ddk_caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
+             WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
   ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
   EXPECT_EQ(1, ieee_caps.short_preamble());
   EXPECT_EQ(0, ieee_caps.spectrum_mgmt());

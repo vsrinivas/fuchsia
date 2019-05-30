@@ -5,10 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <lib/zx/time.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
-#include <wlan/protocol/info.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -38,7 +38,7 @@ static constexpr tx_vec_idx_t kMaxValidIdx =
     kDsssCckStartIdx + kDsssCckNumTxVector - 1;
 
 // Extend the definition of MCS index for ERP
-// OFDM/ERP-OFDM, represented by WLAN_PHY_ERP:
+// OFDM/ERP-OFDM, represented by WLAN_INFO_PHY_TYPE_ERP:
 // 0: BPSK,   1/2 -> Data rate  6 Mbps
 // 1: BPSK,   3/4 -> Data rate  9 Mbps
 // 2: QPSK,   1/2 -> Data rate 12 Mbps
@@ -47,14 +47,14 @@ static constexpr tx_vec_idx_t kMaxValidIdx =
 // 5: 16-QAM, 3/4 -> Data rate 36 Mbps
 // 6: 64-QAM, 2/3 -> Data rate 48 Mbps
 // 7: 64-QAM, 3/4 -> Data rate 54 Mbps
-// DSSS, HR/DSSS, and ERP-DSSS/CCK, reprsented by WLAN_PHY_DSSS and WLAN_PHY_CCK
+// DSSS, HR/DSSS, and ERP-DSSS/CCK, reprsented by WLAN_INFO_PHY_TYPE_DSSS and WLAN_INFO_PHY_TYPE_CCK
 // 0:  2 -> 1   Mbps DSSS
 // 1:  4 -> 2   Mbps DSSS
 // 2: 11 -> 5.5 Mbps CCK
 // 3: 22 -> 11  Mbps CCK
 
 struct TxVector {
-  PHY phy;
+  wlan_info_phy_type_t phy;
   GI gi;
   CBW cbw;
   // number of spatial streams, for VHT and beyond

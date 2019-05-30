@@ -19,8 +19,8 @@
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
+#include <ddk/protocol/wlanphyimpl.h>
 #include <netinet/if_ether.h>
-#include <wlan/protocol/phy-impl.h>
 #include <zircon/status.h>
 
 #include <endian.h>
@@ -515,19 +515,19 @@ static zx_protocol_device_t phy_impl_device_ops = {
     .release = brcmf_release_zx_phy_device,
 };
 
-zx_status_t brcmf_phy_query(void* ctx, wlanphy_info_t* phy_info) {
+zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
     struct brcmf_if* ifp = static_cast<decltype(ifp)>(ctx);
     // See wlan/protocol/info.h
     wlan_info_t* info = &phy_info->wlan_info;
     memset(info, 0, sizeof(*info));
     memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
-    info->mac_role = WLAN_MAC_ROLE_CLIENT | WLAN_MAC_ROLE_AP;
-    info->supported_phys = 0x1f; //WLAN_PHY_;
-    info->driver_features = WLAN_DRIVER_FEATURE_SCAN_OFFLOAD
-        | WLAN_DRIVER_FEATURE_DFS;
-    info->caps = 0xf; //WLAN_CAP_;
-    info->num_bands = 1;
-    info->bands[0].band_id = WLAN_BAND_2GHZ;
+    info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
+    info->supported_phys = 0x1f; //WLAN_INFO_PHY_TYPE_;
+    info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
+                            WLAN_INFO_DRIVER_FEATURE_DFS;
+    info->caps = 0xf; //WLAN_INFO_HARDWARE_CAPABILITY_;
+    info->bands_count = 1;
+    info->bands[0].band = WLAN_INFO_BAND_2GHZ;
     // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.
     info->bands[0].ht_supported = false;
     info->bands[0].ht_caps.ht_capability_info = 0;

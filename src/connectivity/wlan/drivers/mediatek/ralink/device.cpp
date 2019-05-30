@@ -19,7 +19,6 @@
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
-#include <wlan/protocol/phy-impl.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 #include <zircon/status.h>
@@ -128,10 +127,11 @@ static zx_protocol_device_t wlanmac_device_ops = {
 };
 
 static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
-    .query = [](void* ctx, wlanphy_info_t* info) -> zx_status_t {
-        return DEV(ctx)->PhyQuery(info);
+    .query = [](void* ctx, wlanphy_impl_info_t* info) -> zx_status_t {
+        return DEV(ctx)->Query(info);
     },
-    .create_iface = [](void* ctx, wlanphy_create_iface_req_t req, uint16_t* out_iface_id)
+    .create_iface = [](void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                       uint16_t* out_iface_id)
             -> zx_status_t {
         return DEV(ctx)->CreateIface(req, out_iface_id);
     },
@@ -3184,14 +3184,14 @@ static uint8_t ralink_mcs_to_rate(uint8_t phy_mode, uint8_t mcs, bool is_40mhz, 
 static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
     switch (ralink_phy) {
     case PhyMode::kLegacyCck:
-        return WLAN_PHY_CCK;
+        return WLAN_INFO_PHY_TYPE_CCK;
     case PhyMode::kLegacyOfdm:
-        return WLAN_PHY_OFDM;
+        return WLAN_INFO_PHY_TYPE_OFDM;
     case PhyMode::kHtMixMode:
     case PhyMode::kHtGreenfield:
         // TODO(tkilbourn): set a bit somewhere indicating greenfield format, if we ever support
         // it.
-        return WLAN_PHY_HT;
+        return WLAN_INFO_PHY_TYPE_HT;
     default:
         warnf("received unknown PHY: %u\n", ralink_phy);
         ZX_DEBUG_ASSERT(0);  // TODO: Define Undefined Phy in DDK.
@@ -3201,11 +3201,11 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
 
 static uint8_t ddk_phy_to_ralink_phy(uint16_t ddk_phy) {
     switch (ddk_phy) {
-    case WLAN_PHY_CCK:
+    case WLAN_INFO_PHY_TYPE_CCK:
         return PhyMode::kLegacyCck;
-    case WLAN_PHY_OFDM:
+    case WLAN_INFO_PHY_TYPE_OFDM:
         return PhyMode::kLegacyOfdm;
-    case WLAN_PHY_HT:
+    case WLAN_INFO_PHY_TYPE_HT:
         return PhyMode::kHtMixMode;
     default:
         warnf("invalid DDK phy: %u. Fallback to PHY_OFDM\n", ddk_phy);
@@ -3445,13 +3445,15 @@ zx_status_t Device::Query(wlan_info_t* info) {
     memset(info, 0, sizeof(*info));
     std::memcpy(info->mac_addr, mac_addr_, ETH_MAC_SIZE);
 
-    info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    info->mac_role = WLAN_MAC_ROLE_CLIENT;
-    info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
-    info->driver_features = WLAN_DRIVER_FEATURE_TX_STATUS_REPORT;
-    info->num_bands = 1;
+    info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+                           WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
+    info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
+                 WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+    info->driver_features = WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT;
+    info->bands_count = 1;
     info->bands[0] = {
-        .band_id = WLAN_BAND_2GHZ,
+        .band = WLAN_INFO_BAND_2GHZ,
         // These hard-coded values are experimentally proven to work,
         // but does not necessarily reflect the true capabilities of the chipset.
         .ht_supported = true,
@@ -3459,8 +3461,8 @@ zx_status_t Device::Query(wlan_info_t* info) {
             {
                 .ht_capability_info = 0x016e,
                 .ampdu_params = 0x17,
-                .supported_mcs_set =
-                    {
+                .supported_mcs_set = {
+                    .bytes = {
                         // Rx MCS bitmask
                         // Supported MCS values: 0-7, 32
                         0xff,
@@ -3484,6 +3486,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
                         0x00,
                         0x00,
                     },
+                },
                 // No ext capabilities (PCO, MCS feedback, HT control, RD responder)
                 .ht_ext_capabilities = 0x0000,
                 // No Tx beamforming
@@ -3506,19 +3509,19 @@ zx_status_t Device::Query(wlan_info_t* info) {
     };
 
     if (rt_type_ == RT5592) {
-        info->num_bands = 2;
+        info->bands_count = 2;
         // Add MCS 8-15 to band 0
-        info->bands[0].ht_caps.supported_mcs_set[1] = 0xff;
+        info->bands[0].ht_caps.supported_mcs_set.bytes[1] = 0xff;
         info->bands[1] = {
-            .band_id = WLAN_BAND_5GHZ,
+            .band = WLAN_INFO_BAND_5GHZ,
             // See above for descriptions of these capabilities
             .ht_supported = true,
             .ht_caps =
                 {
                     .ht_capability_info = 0x016e,
                     .ampdu_params = 0x17,
-                    .supported_mcs_set =
-                        {
+                    .supported_mcs_set = {
+                        .bytes = {
                             // Rx MCS bitmask
                             // Supported MCS values: 0-15, 32
                             0xff,
@@ -3539,6 +3542,7 @@ zx_status_t Device::Query(wlan_info_t* info) {
                             0x00,
                             0x00,
                         },
+                    },
                     .ht_ext_capabilities = 0x0000,
                     .tx_beamforming_capabilities = 0x00000000,
                     .asel_capabilities = 0x00,
@@ -3571,11 +3575,12 @@ zx_status_t Device::Query(wlan_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t Device::PhyQuery(wlanphy_info_t* info) {
+zx_status_t Device::Query(wlanphy_impl_info_t* info) {
     return Query(&info->wlan_info);
 }
 
-zx_status_t Device::CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_iface_id) {
+zx_status_t Device::CreateIface(const wlanphy_impl_create_iface_req_t* req,
+                                uint16_t* out_iface_id) {
     debugfn();
 
     {
@@ -3597,7 +3602,7 @@ zx_status_t Device::CreateIface(wlanphy_create_iface_req_t req, uint16_t* out_if
     {
         std::lock_guard<std::mutex> guard(lock_);
         *out_iface_id = iface_id_;
-        iface_role_ = req.role;
+        iface_role_ = req->role;
         iface_state_ = IFC_RUNNING;
     }
 
@@ -4276,7 +4281,7 @@ int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
 
 ::wlan::TxVector FromStatFifoRegister(const TxStatFifo& stat_fifo) {
     return ::wlan::TxVector{
-        .phy = static_cast<PHY>(ralink_phy_to_ddk_phy(stat_fifo.txq_phy())),
+        .phy = static_cast<wlan_info_phy_type_t>(ralink_phy_to_ddk_phy(stat_fifo.txq_phy())),
         .cbw = stat_fifo.txq_bw() == 1 ? CBW40 : CBW20,
         .gi = stat_fifo.txq_sgi() == 1 ? WLAN_GI_400NS : WLAN_GI_800NS,
         .mcs_idx = stat_fifo.txq_mcs(),
@@ -4404,7 +4409,7 @@ zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* 
     txwi0.set_mpdu_density(Txwi0::kFourUsec);  // Aruba
     txwi0.set_txop(Txwi0::kHtTxop);
 
-    uint8_t phy_mode = ddk_phy_to_ralink_phy(WLAN_PHY_OFDM);  // Default
+    uint8_t phy_mode = ddk_phy_to_ralink_phy(WLAN_INFO_PHY_TYPE_OFDM);  // Default
     if (wlan_pkt->info.valid_fields & WLAN_TX_INFO_VALID_PHY) {
         phy_mode = ddk_phy_to_ralink_phy(wlan_pkt->info.phy);
     }

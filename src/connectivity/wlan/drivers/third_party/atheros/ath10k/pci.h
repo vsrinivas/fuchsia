@@ -18,6 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_PCI_H_
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
 

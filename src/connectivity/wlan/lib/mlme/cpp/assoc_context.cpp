@@ -12,21 +12,21 @@
 
 namespace wlan {
 
-PHY AssocContext::DerivePhy() const {
+wlan_info_phy_type_t AssocContext::DerivePhy() const {
   if (ht_cap.has_value() && ht_op.has_value()) {
     if (vht_cap.has_value() && vht_op.has_value()) {
-      return WLAN_PHY_VHT;
+      return WLAN_INFO_PHY_TYPE_VHT;
     } else {
-      return WLAN_PHY_HT;
+      return WLAN_INFO_PHY_TYPE_HT;
     }
   }
-  return WLAN_PHY_ERP;
+  return WLAN_INFO_PHY_TYPE_ERP;
 }
 
-const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
-  ZX_DEBUG_ASSERT(ifc_info.num_bands <= WLAN_MAX_BANDS);
+const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
+  ZX_DEBUG_ASSERT(ifc_info.bands_count <= WLAN_INFO_MAX_BANDS);
 
-  for (uint8_t idx = 0; idx < ifc_info.num_bands; idx++) {
+  for (uint8_t idx = 0; idx < ifc_info.bands_count; idx++) {
     auto bi = &ifc_info.bands[idx];
     auto base_freq = bi->supported_channels.base_freq;
 
@@ -142,7 +142,7 @@ AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info,
     assoc_ctx.rates.emplace_back(rate);
   }
 
-  if (ifc_info.supported_phys & WLAN_PHY_HT) {
+  if (ifc_info.supported_phys & WLAN_INFO_PHY_TYPE_HT) {
     assoc_ctx.ht_cap = HtCapabilities::FromDdk(band_info->ht_caps);
   }
 

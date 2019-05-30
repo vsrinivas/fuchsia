@@ -23,6 +23,8 @@ driver_module("wlantap_driver") {
     "//garnet/lib/wlan/fidl:wlantap",
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/lib/common/cpp:common",
+    "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
+    "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/driver",

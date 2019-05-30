@@ -25,7 +25,7 @@ TEST(FindBandByChannel, OneBands) {
                       },
               },
           },
-      .num_bands = 1,
+      .bands_count = 1,
   };
   EXPECT_EQ(&info.bands[0], FindBandByChannel(info, 3));
   EXPECT_EQ(nullptr, FindBandByChannel(info, 4));
@@ -49,7 +49,7 @@ TEST(FindBandByChannel, TwoBands) {
                       },
               },
           },
-      .num_bands = 2,
+      .bands_count = 2,
   };
 
   EXPECT_EQ(&info.bands[0], FindBandByChannel(info, 3));
@@ -77,7 +77,7 @@ TEST(GetRatesByChannel, SimpleTest) {
                                   120},
               },
           },
-      .num_bands = 2,
+      .bands_count = 2,
   };
 
   auto rates = GetRatesByChannel(info, 2);
@@ -86,7 +86,7 @@ TEST(GetRatesByChannel, SimpleTest) {
 
   rates = GetRatesByChannel(info, 5);
   EXPECT_EQ(info.bands[1].basic_rates, rates.data());
-  EXPECT_EQ(static_cast<size_t>(WLAN_BASIC_RATES_MAX_LEN), rates.size());
+  EXPECT_EQ(static_cast<size_t>(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES), rates.size());
 
   rates = GetRatesByChannel(info, 17);
   EXPECT_EQ(nullptr, rates.data());

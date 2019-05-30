@@ -443,7 +443,7 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   ASSERT_TRUE(sta_assoc_ctx != nullptr);
   EXPECT_EQ(sta_assoc_ctx->aid, kAid);
   EXPECT_EQ(sta_assoc_ctx->listen_interval, 0);
-  EXPECT_EQ(sta_assoc_ctx->phy, WLAN_PHY_HT);
+  EXPECT_EQ(sta_assoc_ctx->phy, WLAN_INFO_PHY_TYPE_HT);
   EXPECT_EQ(sta_assoc_ctx->chan.primary, 36);
   EXPECT_EQ(sta_assoc_ctx->chan.cbw, CBW40);
   EXPECT_TRUE(sta_assoc_ctx->has_ht_cap);

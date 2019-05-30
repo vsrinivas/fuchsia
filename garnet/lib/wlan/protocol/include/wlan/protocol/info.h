@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <ddk/hw/wlan/ieee80211.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -18,16 +19,6 @@ typedef struct wlan_ssid {
     uint8_t len;
     uint8_t ssid[WLAN_MAX_SSID_LEN];
 } wlan_ssid_t;
-
-enum Band {
-    // See IEEE Std 802.11-2016 Annex E
-    // This is a simplified expression of channel starting frequencies.
-    // Expand this list as Fuchsia evolves.
-    WLAN_BAND_2GHZ = 0,  // Channel starting frequency: 2.407 GHz
-    WLAN_BAND_5GHZ = 1,  // Channel starting frequency: 5.000 GHz
-
-    WLAN_BAND_COUNT,
-};
 
 enum CBW {
     // Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
@@ -60,18 +51,6 @@ enum {
     // Bits 7-31 reserved
 };
 
-// PHY values may be used in a bitfield (e.g., device capabilities) or as a value (e.g., rx/tx
-// info and association context).
-enum PHY {
-    WLAN_PHY_DSSS = (1 << 0),  // IEEE 802.11 for 1, 2 Mbps
-    WLAN_PHY_CCK = (1 << 1),   // IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
-    WLAN_PHY_ERP = (1 << 2),   // IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps
-    WLAN_PHY_OFDM = (1 << 2),  // IEEE 802.11a/g
-    WLAN_PHY_HT = (1 << 3),    // IEEE 802.11n
-    WLAN_PHY_VHT = (1 << 4),   // IEEE 802.11ac
-    WLAN_PHY_HEW = (1 << 5),   // IEEE 802.11ax
-};
-
 // Guard Interval
 enum GI {
     WLAN_GI_800NS = (1 << 0),   // all 802.11 phy
@@ -97,64 +76,6 @@ typedef struct wlan_bss_config {
     bool remote;
 } wlan_bss_config_t;
 
-enum {
-    // Device or driver implements scanning
-    WLAN_DRIVER_FEATURE_SCAN_OFFLOAD = (1 << 0),
-    // Device or driver implements rate selection. The data_rate and mcs fields of wlan_tx_info_t
-    // should not be populated, unless the MLME wishes to force a given rate for a packet.
-    WLAN_DRIVER_FEATURE_RATE_SELECTION = (1 << 1),
-    // Device is not a physical device.
-    WLAN_DRIVER_FEATURE_SYNTH = (1 << 2),
-    // Driver supports transmission reports, and will use the wlanmac_ifc.report_tx_status()
-    // callback to report the status of each queued transmission.
-    WLAN_DRIVER_FEATURE_TX_STATUS_REPORT = (1 << 3),
-    // Set this flag to indicate whether SME should trust this device or driver to handle DFS
-    // channels correctly in an active scan (e.g. it makes sure DFS channel is safe to transmit
-    // before doing so).
-    WLAN_DRIVER_FEATURE_DFS = (1 << 4),
-    // Temporary feature flag for incrementally transitioning drivers to use
-    // SME channel on iface creation.
-    WLAN_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL = (1 << 30),
-};
-
-// Mac roles: a device may support multiple roles, but an interface is instantiated with
-// a single role.
-enum {
-    // Device operating as a non-AP station (i.e., a client of an AP).
-    WLAN_MAC_ROLE_CLIENT = (1 << 0),
-    // Device operating as an access point.
-    WLAN_MAC_ROLE_AP = (1 << 1),
-    // Device operating as a mesh node
-    WLAN_MAC_ROLE_MESH = (1 << 2),
-    // TODO: IBSS, PBSS
-};
-
-// Hardware capabilities.
-// Some bits are inspired from IEEE Std 802.11-2016, 9.4.1.4
-enum {
-    WLAN_CAP_SHORT_PREAMBLE = (1 << 0),
-    WLAN_CAP_SPECTRUM_MGMT = (1 << 1),
-    WLAN_CAP_SHORT_SLOT_TIME = (1 << 2),
-    WLAN_CAP_RADIO_MSMT = (1 << 3),
-};
-
-// HT capabilities. IEEE Std 802.11-2016, 9.4.2.56
-typedef struct wlan_ht_caps {
-    uint16_t ht_capability_info;
-    uint8_t ampdu_params;
-    union {
-        uint8_t supported_mcs_set[16];
-        struct {
-            uint64_t rx_mcs_head;
-            uint32_t rx_mcs_tail;
-            uint32_t tx_mcs;
-        } __PACKED mcs_set;
-    };
-    uint16_t ht_ext_capabilities;
-    uint32_t tx_beamforming_capabilities;
-    uint8_t asel_capabilities;
-} __PACKED wlan_ht_caps_t;
-
 // HT Operation. IEEE Std 802.11-2016,
 typedef struct wlan_ht_op {
     uint8_t primary_chan;
@@ -175,12 +96,6 @@ typedef struct wlan_ht_op {
     };
 } __PACKED wlan_ht_op_t;
 
-// VHT capabilities. IEEE Std 802.11-2016, 9.4.2.158
-typedef struct wlan_vht_caps {
-    uint32_t vht_capability_info;
-    uint64_t supported_vht_mcs_and_nss_set;
-} __PACKED wlan_vht_caps_t;
-
 // VHT Operation. IEEE Std 802.11-2016, 9.4.2.159
 typedef struct wlan_vht_op {
     uint8_t vht_cbw;
@@ -188,65 +103,6 @@ typedef struct wlan_vht_op {
     uint8_t center_freq_seg1;
     uint16_t basic_mcs;
 } __PACKED wlan_vht_op_t;
-
-// Channels are numbered as in IEEE Std 802.11-2016, 17.3.8.4.2
-// Each channel is defined as base_freq + 5 * n MHz, where n is between 1 and 200 (inclusive). Here
-// n represents the channel number.
-// Example:
-//   Standard 2.4GHz channels:
-//     base_freq = 2407 MHz
-//     n = 1-14
-
-#define WLAN_CHANNELS_MAX_LEN 64
-typedef struct wlan_chan_list {
-    uint16_t base_freq;
-    // Each entry in this array represents a value of n in the above channel numbering formula.
-    // The array size is roughly based on what is needed to represent the most common 5GHz
-    // operating classes.
-    // List up valid channels. A value of 0 indicates the end of the list if less than
-    // WLAN_CHANNELS_MAX_LEN channels are defined.
-    uint8_t channels[WLAN_CHANNELS_MAX_LEN];
-} wlan_chan_list_t;
-
-#define WLAN_BASIC_RATES_MAX_LEN 12
-
-// Capabilities are grouped by band, by industry de facto standard.
-typedef struct wlan_band_info {
-    // Values from enum Band (WLAN_BAND_*)
-    uint8_t band_id;
-    // HT PHY capabilities.
-    bool ht_supported;
-    wlan_ht_caps_t ht_caps;
-    // VHT PHY capabilities.
-    bool vht_supported;
-    wlan_vht_caps_t vht_caps;
-    // Basic rates supported in this band, as defined in IEEE Std 802.11-2016, 9.4.2.3.
-    // Each rate is given in units of 500 kbit/s, so 1 Mbit/s is represent as 0x02.
-    uint8_t basic_rates[WLAN_BASIC_RATES_MAX_LEN];
-    // Channels supported in this band.
-    wlan_chan_list_t supported_channels;
-} wlan_band_info_t;
-
-// For now up to 2 bands are supported in order to keep the wlan_info struct a small, fixed
-// size.
-#define WLAN_MAX_BANDS 2
-
-typedef struct wlan_info {
-    uint8_t mac_addr[6];
-    // Bitmask for MAC roles supported (WLAN_MAC_ROLE_*). For an interface, this will be a
-    // single value.
-    uint16_t mac_role;
-    // Bitmask indicating the WLAN_PHY_* values supported by the hardware.
-    uint16_t supported_phys;
-    // Bitmask indicating the WLAN_DRIVER_FEATURE_* values supported by the driver and hardware.
-    uint32_t driver_features;
-    // Bitmask indicating WLAN_CAP_* capabilities. Note this differs from IEEE Std
-    // 802.11-2016, 9.4.1.4.
-    uint32_t caps;
-    // Supported bands.
-    uint8_t num_bands;
-    wlan_band_info_t bands[WLAN_MAX_BANDS];
-} wlan_info_t;
 
 // Information defined only within a context of association
 // Beware the subtle interpretation of each field: they are designed to
@@ -277,13 +133,13 @@ typedef struct wlan_assoc_ctx {
     // Rx MCS Bitmask in Supported MCS Set field represents the set of MCS
     // the peer can receive at from this device, considering this device's Tx capability.
     bool has_ht_cap;
-    wlan_ht_caps_t ht_cap;
+    ieee80211_ht_capabilities_t ht_cap;
     bool has_ht_op;
     wlan_ht_op_t ht_op;
 
     // IEEE Std 802.11-2016, 9.4.2.158, 159
     bool has_vht_cap;
-    wlan_vht_caps_t vht_cap;
+    ieee80211_vht_capabilities_t vht_cap;
     bool has_vht_op;
     wlan_vht_op_t vht_op;
 } wlan_assoc_ctx_t;

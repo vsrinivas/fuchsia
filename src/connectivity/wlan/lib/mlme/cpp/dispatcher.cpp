@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -215,13 +216,13 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   // mac_role is a bitfield, but only a single value is supported for an
   // interface
   switch (info.mac_role) {
-    case WLAN_MAC_ROLE_CLIENT:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
       resp.role = wlan_mlme::MacRole::CLIENT;
       break;
-    case WLAN_MAC_ROLE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
       resp.role = wlan_mlme::MacRole::AP;
       break;
-    case WLAN_MAC_ROLE_MESH:
+    case WLAN_INFO_MAC_ROLE_MESH:
       resp.role = wlan_mlme::MacRole::MESH;
       break;
     default:
@@ -232,10 +233,10 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   auto wlanmac_info = device_->GetWlanInfo().ifc_info;
 
   resp.bands.resize(0);
-  for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
-    const wlan_band_info_t& band_info = info.bands[band_idx];
+  for (uint8_t band_idx = 0; band_idx < info.bands_count; band_idx++) {
+    const wlan_info_band_info_t& band_info = info.bands[band_idx];
     wlan_mlme::BandCapabilities band;
-    band.band_id = wlan::common::BandToFidl(band_info.band_id);
+    band.band_id = wlan::common::BandToFidl(band_info.band);
     band.basic_rates.resize(0);
     for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates);
          rate_idx++) {
@@ -243,7 +244,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
         band.basic_rates.push_back(band_info.basic_rates[rate_idx]);
       }
     }
-    const wlan_chan_list_t& chan_list = band_info.supported_channels;
+    const wlan_info_channel_list_t& chan_list = band_info.supported_channels;
     band.base_frequency = chan_list.base_freq;
     band.channels.resize(0);
     for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels);
@@ -270,20 +271,20 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   }
 
   resp.driver_features.resize(0);
-  if (info.driver_features & WLAN_DRIVER_FEATURE_SCAN_OFFLOAD) {
+  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
     resp.driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
   }
-  if (info.driver_features & WLAN_DRIVER_FEATURE_RATE_SELECTION) {
+  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
     resp.driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
   }
-  if (info.driver_features & WLAN_DRIVER_FEATURE_SYNTH) {
+  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
     resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
   }
-  if (info.driver_features & WLAN_DRIVER_FEATURE_TX_STATUS_REPORT) {
+  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
     resp.driver_features.push_back(
         wlan_common::DriverFeature::TX_STATUS_REPORT);
   }
-  if (info.driver_features & WLAN_DRIVER_FEATURE_DFS) {
+  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
     resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
   }
 

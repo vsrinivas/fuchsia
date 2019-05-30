@@ -10,12 +10,13 @@ source_set("protocol") {
   sources = [
     "include/wlan/protocol/ioctl.h",
     "include/wlan/protocol/mac.h",
-    "include/wlan/protocol/phy.h",
   ]
 
   public_configs = [ ":wlan_protocol_config" ]
 
   public_deps = [
+    "//zircon/public/banjo/ddk.hw.wlan.ieee80211",
+    "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/public/banjo/ddk.protocol.ethernet",
     "//zircon/public/lib/ddk",
   ]

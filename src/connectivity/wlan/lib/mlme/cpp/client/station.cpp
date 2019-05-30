@@ -1055,7 +1055,7 @@ void Station::DumpDataFrame(const DataFrameView<>& frame) {
 }
 
 zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw,
-                                   PHY phy) {
+                                   wlan_info_phy_type_t phy) {
   chan_sched_->EnsureOnChannel(timer_mgr_.Now() + kOnChannelTimeAfterSend);
   return SendWlan(std::move(packet));
 }
@@ -1130,7 +1130,7 @@ zx_status_t Station::SendPsPoll() {
   CBW cbw = (assoc_ctx_.is_cbw40_tx ? CBW40 : CBW20);
 
   packet->set_len(w.WrittenBytes());
-  auto status = SendCtrlFrame(std::move(packet), cbw, WLAN_PHY_HT);
+  auto status = SendCtrlFrame(std::move(packet), cbw, WLAN_INFO_PHY_TYPE_HT);
   if (status != ZX_OK) {
     errorf("could not send power management packet: %d\n", status);
     return status;
@@ -1228,7 +1228,7 @@ bool Station::IsQosReady() const {
 
   // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the
   // BlockAck session, independently of 40MHz operation.
-  return assoc_ctx_.phy == WLAN_PHY_HT || assoc_ctx_.phy == WLAN_PHY_VHT;
+  return assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_HT || assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_VHT;
 }
 
 CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
@@ -1366,10 +1366,10 @@ zx_status_t Station::SetAssocContext(
 
   assoc_ctx_.phy = join_ctx_->phy();
   if (assoc_ctx_.ht_cap.has_value() && assoc_ctx_.ht_op.has_value()) {
-    assoc_ctx_.phy = WLAN_PHY_HT;
+    assoc_ctx_.phy = WLAN_INFO_PHY_TYPE_HT;
   }
   if (assoc_ctx_.vht_cap.has_value() && assoc_ctx_.vht_op.has_value()) {
-    assoc_ctx_.phy = WLAN_PHY_VHT;
+    assoc_ctx_.phy = WLAN_INFO_PHY_TYPE_VHT;
   }
 
   // Validate if the AP accepted the requested PHY
@@ -1438,7 +1438,7 @@ void Station::ResetStats() { stats_.Reset(); }
 // TODO(porce): replace SetAssocContext()
 std::optional<AssocContext> Station::BuildAssocCtx(
     const MgmtFrameView<AssociationResponse>& frame,
-    const wlan_channel_t& join_chan, PHY join_phy, uint16_t listen_interval) {
+    const wlan_channel_t& join_chan, wlan_info_phy_type_t join_phy, uint16_t listen_interval) {
   auto assoc_resp_frame = frame.NextFrame();
   Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
   auto bssid = frame.hdr()->addr3;
