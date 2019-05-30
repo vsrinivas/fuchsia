@@ -682,6 +682,7 @@ group("guest") {
     "//src/virtualization/lib/grpc:grpc_vsock_tests",
     "//src/virtualization/lib/vsh:vsh_tests",
     "//src/virtualization/tests:guest_integration_tests",
+    "//src/virtualization/tests:guest_unit_tests",
   ]
 }
 

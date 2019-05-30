@@ -7,11 +7,21 @@
 
 #include <lib/zx/socket.h>
 
+#include <memory>
 #include <string>
+
+#include "src/virtualization/tests/socket.h"
 
 class GuestConsole {
  public:
-  zx_status_t Start(zx::socket socket);
+  GuestConsole(std::unique_ptr<SocketInterface> socket);
+
+  // Initialize the socket, attempting to reach a state where we have a
+  // useable shell.
+  //
+  // Skips over noise (such as boot logs, etc) that may be present on
+  // the socket interface.
+  zx_status_t Start();
 
   // Executes a command and waits for a response. Uses a header and a footer to
   // ensure the command finished executing and to capture output. Blocks on the
@@ -44,11 +54,13 @@ class GuestConsole {
                             std::string* result = nullptr);
 
  private:
-  zx_status_t WaitForAny();
+  // Waits for something to be written to the socket and drains it.
+  zx_status_t WaitForAny(zx::duration timeout);
 
+  // Read all pending data from the socket. Non-blocking.
   zx_status_t Drain();
 
-  zx::socket socket_;
+  std::unique_ptr<SocketInterface> socket_;
   std::string buffer_;
 };
 

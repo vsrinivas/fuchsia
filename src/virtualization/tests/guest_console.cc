@@ -13,7 +13,6 @@
 
 #include "logger.h"
 
-static constexpr size_t kSerialBufferSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 
@@ -26,31 +25,43 @@ static std::string command_hash(const std::string& command) {
   return fxl::StringPrintf("%zu", hash(command));
 }
 
-zx_status_t GuestConsole::Start(zx::socket socket) {
-  socket_ = std::move(socket);
+static std::string normalize_new_lines(const std::string& s) {
+  std::string result;
+  // Strip carriage returns to normalise both guests on newlines only.
+  for (const char c : s) {
+    if (c != '\r') {
+      result.push_back(c);
+    }
+  }
+  return result;
+}
+
+GuestConsole::GuestConsole(std::unique_ptr<SocketInterface> socket)
+    : socket_(std::move(socket)) {}
+
+zx_status_t GuestConsole::Start() {
+  zx_status_t status;
 
   // Wait for something to be sent over serial. Both Zircon and Debian will send
   // at least a command prompt. For Debian, this is necessary since any commands
   // we send will be ignored until the guest is ready.
-  zx_status_t status = WaitForAny();
+  status = WaitForAny(kTestTimeout);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start serial";
+    return status;
   }
 
-  // Wait for output to stabilize
-  zx_signals_t pending = 0;
+  // Wait for output to stabilize.
+  //
+  // In particular, we wait for a duration of kSerialStableDelay to pass
+  // without any output on the line before we consider the output stable.
   do {
-    zx_status_t status =
-        socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                         zx::deadline_after(kSerialStableDelay), &pending);
+    status = WaitForAny(kSerialStableDelay);
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
-      FXL_LOG(ERROR) << "Error waiting for socket " << status;
       return status;
     }
-    Drain();
-  } while (pending & ZX_SOCKET_READABLE);
+  } while (status == ZX_OK);
 
-  return status;
+  return ZX_OK;
 }
 
 // Sends a command and waits for the response. We capture output by echoing a
@@ -105,43 +116,17 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command,
 }
 
 zx_status_t GuestConsole::SendBlocking(const std::string& message) {
-  zx_status_t status;
-  const char* data = message.data();
-  size_t len = message.size();
-  while (true) {
-    zx_signals_t pending = 0;
-    status = socket_.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                              zx::deadline_after(kTestTimeout), &pending);
-    if (status != ZX_OK) {
-      return status;
-    } else if (pending & ZX_SOCKET_PEER_CLOSED) {
-      return ZX_ERR_PEER_CLOSED;
-    } else if (!(pending & ZX_SOCKET_WRITABLE)) {
-      continue;
-    }
-    size_t actual;
-    status = socket_.write(0, data, len, &actual);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      continue;
-    } else if (status != ZX_OK) {
-      return status;
-    }
-    if (actual == len) {
-      return ZX_OK;
-    }
-    data += actual;
-    len -= actual;
-  }
+  return socket_->Send(zx::deadline_after(kTestTimeout), message);
 }
 
 zx_status_t GuestConsole::WaitForMarker(const std::string& marker,
                                         std::string* result) {
   std::string output = buffer_;
   buffer_.erase();
-  zx_status_t status;
   while (true) {
+    // Check if the marker is already in our buffer.
     auto marker_loc = output.rfind(marker);
-    if (marker_loc != std::string::npos && !output.empty()) {
+    if (marker_loc != std::string::npos) {
       // If we have read the socket past the end of the marker, make sure
       // what's left is kept in the buffer for the next read.
       if (marker_loc + marker.size() < output.size()) {
@@ -155,60 +140,33 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker,
       return ZX_OK;
     }
 
-    zx_signals_t pending = 0;
-    status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                              zx::deadline_after(kTestTimeout), &pending);
+    // Marker is not present: read some more data into the buffer.
+    std::string buff;
+    zx_status_t status =
+        socket_->Receive(zx::deadline_after(kTestTimeout), &buff);
     if (status != ZX_OK) {
       return status;
-    } else if (pending & ZX_SOCKET_PEER_CLOSED) {
-      return ZX_ERR_PEER_CLOSED;
     }
-    char buf[kSerialBufferSize];
-    size_t actual;
-    status = socket_.read(0, buf, sizeof(buf), &actual);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      continue;
-    } else if (status != ZX_OK) {
-      return status;
-    }
-    Logger::Get().Write(buf, actual);
-    // Strip carriage returns to normalise both guests on newlines only.
-    for (size_t i = 0; i != actual; ++i) {
-      if (buf[i] == '\r') {
-        continue;
-      }
-      output.push_back(buf[i]);
-    }
+    Logger::Get().Write(buff);
+    output.append(normalize_new_lines(buff));
   }
-  return status;
 }
 
 zx_status_t GuestConsole::Drain() {
-  while (true) {
-    char buf[kSerialBufferSize];
-    size_t actual;
-    zx_status_t status = socket_.read(0, buf, sizeof(buf), &actual);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      return ZX_ERR_SHOULD_WAIT;
-    }
-    if (status != ZX_OK) {
-      return status;
-    }
-    Logger::Get().Write(buf, actual);
-  }
+  std::string result;
+  zx_status_t status = DrainSocket(socket_.get(), &result);
+  Logger::Get().Write(result);
+  return status;
 }
 
-// Waits for something to be written to the socket and drains it.
-zx_status_t GuestConsole::WaitForAny() {
-  zx_status_t status;
-  zx_signals_t pending = 0;
-  status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                            zx::deadline_after(kTestTimeout), &pending);
+zx_status_t GuestConsole::WaitForAny(zx::duration timeout) {
+  std::string result;
+  zx_status_t status = socket_->Receive(deadline_after(timeout), &result);
   if (status != ZX_OK) {
     return status;
-  } else if (pending & ZX_SOCKET_PEER_CLOSED) {
-    return ZX_ERR_PEER_CLOSED;
   }
-  status = Drain();
-  return status == ZX_ERR_SHOULD_WAIT ? ZX_OK : status;
+  Logger::Get().Write(result);
+
+  Drain();
+  return ZX_OK;
 }

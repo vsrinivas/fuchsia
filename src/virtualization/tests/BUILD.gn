@@ -12,10 +12,48 @@ group("tests") {
     ":bin",
     ":guest_integration_tests",
     ":guest_integration_tests_utils",
+    ":guest_unit_tests",
     "virtio_block_test_util",
     "virtio_net_test_util",
     "virtio_rng_test_util",
     "virtio_vsock_test_util",
+  ]
+}
+
+source_set("guest_console") {
+  visibility = [ ":*" ]
+  sources = [
+    "guest_console.cc",
+    "guest_console.h",
+    "logger.cc",
+    "logger.h",
+    "socket.cc",
+    "socket.h",
+  ]
+  deps = [
+    "//garnet/lib/inet",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
+  ]
+  public_deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("unit_tests") {
+  testonly = true
+  output_name = "guest_unit_tests"
+  sources = [
+    "guest_console_test.cc",
+  ]
+  deps = [
+    ":guest_console",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -29,11 +67,7 @@ executable("bin") {
     "enclosed_guest.h",
     "fake_input_only_scenic.cc",
     "fake_input_only_scenic.h",
-    "guest_console.cc",
-    "guest_console.h",
     "guest_test.h",
-    "logger.cc",
-    "logger.h",
     "main.cc",
     "mock_netstack.cc",
     "mock_netstack.h",
@@ -44,6 +78,7 @@ executable("bin") {
   ]
 
   deps = [
+    ":guest_console",
     "//garnet/lib/inet",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.netstack",
@@ -57,6 +92,19 @@ executable("bin") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
+  ]
+}
+
+unittest_package("guest_unit_tests") {
+  deps = [
+    ":unit_tests",
+  ]
+
+  tests = [
+    {
+      name = "guest_unit_tests"
+      environments = basic_envs
+    },
   ]
 }
 

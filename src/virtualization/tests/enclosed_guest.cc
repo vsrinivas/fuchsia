@@ -50,7 +50,7 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
 zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    std::string* result) {
   auto command = JoinArgVector(argv);
-  return console_.ExecuteBlocking(command, ShellPrompt(), result);
+  return console_->ExecuteBlocking(command, ShellPrompt(), result);
 }
 
 zx_status_t EnclosedGuest::Start() {
@@ -109,13 +109,17 @@ zx_status_t EnclosedGuest::Start() {
                          });
   loop_.Run();
 
-  zx::socket socket;
-  guest_->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
-  bool socket_valid = RunLoopUntil(&loop_, [&] { return socket.is_valid(); });
+  zx::socket serial_socket;
+  guest_->GetSerial(
+      [&serial_socket](zx::socket s) { serial_socket = std::move(s); });
+  bool socket_valid =
+      RunLoopUntil(&loop_, [&] { return serial_socket.is_valid(); });
   if (!socket_valid) {
     return ZX_ERR_BAD_STATE;
   }
-  status = console_.Start(std::move(socket));
+  console_ = std::make_unique<GuestConsole>(
+      std::make_unique<ZxSocket>(std::move(serial_socket)));
+  status = console_->Start();
   if (status != ZX_OK) {
     return status;
   }

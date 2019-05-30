@@ -79,7 +79,7 @@ class EnclosedGuest {
 
   FakeInputOnlyScenic* GetScenic() { return &fake_scenic_; }
 
-  GuestConsole* GetConsole() { return &console_; }
+  GuestConsole* GetConsole() { return console_.get(); }
 
  protected:
   // Provides guest specific |launch_info|, called by Start.
@@ -101,7 +101,7 @@ class EnclosedGuest {
   fuchsia::virtualization::GuestPtr guest_;
   FakeInputOnlyScenic fake_scenic_;
   MockNetstack mock_netstack_;
-  GuestConsole console_;
+  std::unique_ptr<GuestConsole> console_;
   uint32_t guest_cid_;
   bool ready_ = false;
 };
