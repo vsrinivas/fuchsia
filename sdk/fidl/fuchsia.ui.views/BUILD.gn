@@ -10,11 +10,6 @@ fidl("fuchsia.ui.views") {
   sources = [
     "commands.fidl",
     "view.fidl",
-    "view_config.fidl",
     "view_token.fidl",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.intl",
   ]
 }

@@ -44,7 +44,7 @@ class App : public fuchsia::ui::views::View {
 
  private:
   // |fuchsia::ui::view::View|
-  void Present2(fuchsia::ui::views::ViewToken view_token) override {
+  void Present(fuchsia::ui::views::ViewToken view_token) override {
     auto scenic =
         context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext view_context = {

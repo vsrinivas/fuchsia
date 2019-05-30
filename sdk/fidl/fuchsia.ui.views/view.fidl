@@ -77,9 +77,6 @@ library fuchsia.ui.views;
 /// TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
 [Discoverable]
 protocol View {
-    /// DEPRECATED
-    [Transitional]
-    Present(ViewToken view_token, ViewConfig initial_config);
 
     /// Provides the View with an attachment point to Scenic's scene graph.
     ///
@@ -95,13 +92,8 @@ protocol View {
     /// with an error.
     ///
     /// TODO(SCN-1271): Allow re-parenting |View|s with a new |Present()| call.
-    /// TODO(SCN-1343): Rename to |Present()|.
     [Transitional]
-    Present2(ViewToken view_token);
-
-    /// DEPRECATED
-    [Transitional]
-    SetConfig(ViewConfig config);
+    Present(ViewToken view_token);
 };
 
 /// A ViewRef is a handle to a kernel object which identifies a unique View

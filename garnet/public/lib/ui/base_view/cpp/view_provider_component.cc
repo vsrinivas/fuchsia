@@ -54,7 +54,7 @@ ViewProviderComponent::ViewImpl::ViewImpl(
       startup_context_(startup_context),
       binding_(this, std::move(view_request)) {}
 
-void ViewProviderComponent::ViewImpl::Present2(
+void ViewProviderComponent::ViewImpl::Present(
     fuchsia::ui::views::ViewToken view_token) {
   if (view_) {
     // This should only be called once.

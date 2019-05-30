@@ -48,7 +48,7 @@ class ViewProviderComponent {
     ~ViewImpl() override = default;
 
     // |fuchsia::ui::views::View|
-    void Present2(fuchsia::ui::views::ViewToken view_token) override;
+    void Present(fuchsia::ui::views::ViewToken view_token) override;
 
     // Sets the given closure as an error handler for all error types.
     void SetErrorHandler(fit::closure error_handler);

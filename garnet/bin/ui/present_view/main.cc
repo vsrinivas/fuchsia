@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
     command_line.GetOptionValue(kKeyLocale, &locale_str);
     // Create a view using the |fuchsia::ui::views::View| interface.
     services.ConnectToService<fuchsia::ui::views::View>(view.NewRequest());
-    view->Present2(std::move(view_token));
+    view->Present(std::move(view_token));
     // TODO(I18N-13): Provide fuchsia.intl.PropertyProvider instance.
   } else {
     // Create the view using the |fuchsia::ui::app::ViewProvider| interface.
