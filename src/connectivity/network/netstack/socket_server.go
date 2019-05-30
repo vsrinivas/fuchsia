@@ -401,6 +401,40 @@ func (ios *iostate) loopControl() error {
 			return err
 		}
 
+		{
+			verbosity := syslog.DebugVerbosity
+			var method string
+			switch header.Ordinal {
+			case net.SocketControlBindOrdinal:
+				method = "Bind"
+			case net.SocketControlConnectOrdinal:
+				method = "Connect"
+			case net.SocketControlListenOrdinal:
+				method = "Listen"
+			case net.SocketControlAcceptOrdinal:
+				method = "Accept"
+			case net.SocketControlCloseOrdinal:
+				method = "Close"
+			case net.SocketControlGetSockNameOrdinal:
+				method = "GetSockName"
+				// This gets called much more often than the others.
+				verbosity = syslog.TraceVerbosity
+			case net.SocketControlGetPeerNameOrdinal:
+				method = "GetPeerName"
+			case net.SocketControlSetSockOptOrdinal:
+				method = "SetSockOpt"
+			case net.SocketControlGetSockOptOrdinal:
+				method = "GetSockOpt"
+			case net.SocketControlIoctlOrdinal:
+				method = "Ioctl"
+			default:
+				panic(fmt.Sprintf("unknown ordinal %b", header.Ordinal))
+			}
+			if len(method) > 0 {
+				syslog.VLogTf(verbosity, method, "%p", ios)
+			}
+		}
+
 		p, err := stub.DispatchNew(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
 		if err != nil {
 			return err
