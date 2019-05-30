@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_COBALT_APP_H_
-#define GARNET_BIN_COBALT_APP_COBALT_APP_H_
+#ifndef SRC_COBALT_BIN_APP_COBALT_APP_H_
+#define SRC_COBALT_BIN_APP_COBALT_APP_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <stdlib.h>
 
 #include <chrono>
 #include <fstream>
 #include <string>
-
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/async/cpp/task.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/network_wrapper/network_wrapper_impl.h"
@@ -21,13 +20,10 @@
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
-#include "third_party/cobalt/config/client_config.h"
 #include "third_party/cobalt/config/project_configs.h"
 #include "third_party/cobalt/encoder/client_secret.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
-#include "third_party/cobalt/encoder/send_retryer.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
-#include "third_party/cobalt/encoder/shuffler_client.h"
 #include "third_party/cobalt/logger/encoder.h"
 #include "third_party/cobalt/logger/event_aggregator.h"
 #include "third_party/cobalt/logger/observation_writer.h"
@@ -103,16 +99,10 @@ class CobaltApp {
 
   std::unique_ptr<sys::ComponentContext> context_;
 
-  encoder::ShufflerClient shuffler_client_;
-  encoder::send_retryer::SendRetryer send_retryer_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
-  std::unique_ptr<encoder::ObservationStore> legacy_observation_store_;
   std::unique_ptr<encoder::ObservationStore> observation_store_;
-  std::unique_ptr<util::EncryptedMessageMaker> legacy_encrypt_to_analyzer_;
-  std::unique_ptr<util::EncryptedMessageMaker> legacy_encrypt_to_shuffler_;
   std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_analyzer_;
   std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_shuffler_;
-  encoder::LegacyShippingManager legacy_shipping_manager_;
   encoder::ClearcutV1ShippingManager clearcut_shipping_manager_;
   TimerManager timer_manager_;
 
@@ -138,4 +128,4 @@ class CobaltApp {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_COBALT_APP_H_
+#endif  // SRC_COBALT_BIN_APP_COBALT_APP_H_

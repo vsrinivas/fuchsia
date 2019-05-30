@@ -20,7 +20,6 @@ using clearcut::ClearcutUploader;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::FileObservationStore;
-using encoder::LegacyShippingManager;
 using encoder::MemoryObservationStore;
 using encoder::ObservationStore;
 using encoder::ShippingManager;
@@ -28,25 +27,14 @@ using encoder::UploadScheduler;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
-// Each "send attempt" is actually a cycle of potential retries. These
-// two parameters configure the SendRetryer.
-const std::chrono::seconds kInitialRpcDeadline(10);
-const std::chrono::seconds kDeadlinePerSendAttempt(60);
-
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
 
-constexpr char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
 constexpr char kClearcutEndpoint[] = "https://jmt17.google.com/log";
 
-constexpr char kAnalyzerPublicKeyPemPath[] =
-    "/pkg/data/certs/cobaltv0.1/analyzer_public.pem";
-constexpr char kShufflerPublicKeyPemPath[] =
-    "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
 constexpr char kAnalyzerTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_public";
 constexpr char kShufflerTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_public";
 constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
-constexpr char kLegacyObservationStorePath[] = "/data/legacy_observation_store";
 constexpr char kObservationStorePath[] = "/data/observation_store";
 constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
 constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
@@ -82,34 +70,17 @@ CobaltApp::CobaltApp(
     const std::string& version)
     : system_data_(product_name, board_name, version),
       context_(sys::ComponentContext::Create()),
-      shuffler_client_(kCloudShufflerUri, true),
-      send_retryer_(&shuffler_client_),
       network_wrapper_(
           dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
           [this] { return context_->svc()->Connect<http::HttpService>(); }),
-      // NOTE: Currently all observations are immediate observations and so it
-      // makes sense to use MAX_BYTES_PER_EVENT as the value of
-      // max_bytes_per_observation. But when we start implementing non-immediate
-      // observations this needs to be revisited.
       // TODO(pesk): Observations for UniqueActives reports are of comparable
-      // size to the events logged for them, so no change is needed now. Update
-      // this comment as we add more non-immediate report types.
-      legacy_observation_store_(NewObservationStore(
-          fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
-          max_bytes_per_observation_store, kLegacyObservationStorePath,
-          "Legacy", use_memory_observation_store)),
+      // size to the events logged for them, so it makes sense to use
+      // MAX_BYTES_PER_EVENT as the value of max_bytes_per_observation.
+      // Revisit this as we add more non-immediate report types.
       observation_store_(NewObservationStore(
           fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
           max_bytes_per_observation_store, kObservationStorePath, "V1",
           use_memory_observation_store)),
-      legacy_encrypt_to_analyzer_(
-          util::EncryptedMessageMaker::MakeHybridEcdh(
-              ReadPublicKeyPem(kAnalyzerPublicKeyPemPath))
-              .ValueOrDie()),
-      legacy_encrypt_to_shuffler_(
-          util::EncryptedMessageMaker::MakeHybridEcdh(
-              ReadPublicKeyPem(kShufflerPublicKeyPemPath))
-              .ValueOrDie()),
       encrypt_to_analyzer_(
           util::EncryptedMessageMaker::MakeHybridTinkForObservations(
               ReadPublicKeyPem(kAnalyzerTinkPublicKeyPath))
@@ -118,13 +89,6 @@ CobaltApp::CobaltApp(
           util::EncryptedMessageMaker::MakeHybridTinkForEnvelopes(
               ReadPublicKeyPem(kShufflerTinkPublicKeyPath))
               .ValueOrDie()),
-
-      legacy_shipping_manager_(
-          UploadScheduler(target_interval, min_interval, initial_interval),
-          legacy_observation_store_.get(), legacy_encrypt_to_shuffler_.get(),
-          LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
-                                                   kDeadlinePerSendAttempt),
-          &send_retryer_),
 
       clearcut_shipping_manager_(
           UploadScheduler(target_interval, min_interval, initial_interval),
@@ -146,9 +110,8 @@ CobaltApp::CobaltApp(
           &logger_encoder_, &observation_writer_, &local_aggregate_proto_store_,
           &obs_history_proto_store_, event_aggregator_backfill_days),
       controller_impl_(new CobaltControllerImpl(
-          dispatcher, {&legacy_shipping_manager_, &clearcut_shipping_manager_},
-          &event_aggregator_, observation_store_.get())) {
-  legacy_shipping_manager_.Start();
+          dispatcher, {&clearcut_shipping_manager_}, &event_aggregator_,
+          observation_store_.get())) {
   clearcut_shipping_manager_.Start();
   if (start_event_aggregator_worker) {
     event_aggregator_.Start();
@@ -169,9 +132,7 @@ CobaltApp::CobaltApp(
       << kMetricsRegistryPath;
 
   logger_factory_impl_.reset(new LoggerFactoryImpl(
-      global_metrics_registry_bytes, getClientSecret(),
-      legacy_observation_store_.get(), legacy_encrypt_to_analyzer_.get(),
-      &legacy_shipping_manager_, &system_data_, &timer_manager_,
+      global_metrics_registry_bytes, getClientSecret(), &timer_manager_,
       &logger_encoder_, &observation_writer_, &event_aggregator_));
 
   context_->outgoing()->AddPublicService(
