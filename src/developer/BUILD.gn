@@ -7,6 +7,7 @@ group("developer") {
   deps = [
     ":tests",
     "bugreport",
+    "bugreport:client($host_toolchain)",
     "crashpad_agent",
     "debug",
     "feedback_agent",
@@ -19,8 +20,8 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//src/developer/bugreport/tests:bugreport_tests",
     "//src/developer/bugreport/tests:bugreport_client_tests($host_toolchain)",
+    "//src/developer/bugreport/tests:bugreport_tests",
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//src/developer/feedback_agent/tests:feedback_agent_tests",
     "//src/developer/tracing:tests",

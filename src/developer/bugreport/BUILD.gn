@@ -65,7 +65,7 @@ source_set("bug_report_schema") {
 # Host side client -------------------------------------------------------------
 
 if (current_toolchain == host_toolchain) {
-  source_set("bug_report_client_lib") {
+  source_set("client_lib") {
     sources = [
       "bug_report_client.cc",
       "bug_report_client.h",
@@ -74,6 +74,18 @@ if (current_toolchain == host_toolchain) {
     deps = [
       "//src/lib/fxl",
       "//third_party/rapidjson",
+    ]
+  }
+
+  executable("client") {
+    output_name = "bugreport_client"
+
+    sources = [
+      "bug_report_client_main.cc",
+    ]
+
+    deps = [
+      ":client_lib",
     ]
   }
 }

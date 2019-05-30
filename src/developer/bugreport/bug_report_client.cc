@@ -24,7 +24,7 @@ std::optional<std::string> PrettyPrintJson(const JsonNode& json_node) {
   if (json_node.IsString())
     return json_node.GetString();
 
-  if (json_node.IsObject()) {
+  if (json_node.IsObject() || json_node.IsArray()) {
     rapidjson::StringBuffer buf;
     rapidjson::PrettyWriter json_writer(buf);
     json_node.Accept(json_writer);
@@ -132,9 +132,27 @@ bool Validate(const rapidjson::Document& document,
   return true;
 }
 
+std::optional<std::string> ReadStream(std::istream* input) {
+  std::string contents;
+  while (!input->eof()) {
+    char buf[4096];
+    input->read(buf, sizeof(buf) - 1);
+    // This string constructor permits embedded zeroes.
+    std::string read(buf, input->gcount());
+    contents.append(std::move(read));
+  }
+
+  if (!input->eof() && !input->good()) {
+    FXL_LOG(ERROR) << "Error reading the input stream.";
+    return std::nullopt;
+  }
+
+  return contents;
+}
+
 }  // namespace
 
-std::optional<std::vector<Target>> HandleBugReport(const std::string& input) {
+std::optional<std::vector<Target>> ProcessBugReport(const std::string& input) {
   auto opt_document = ParseDocument(input);
   if (!opt_document)
     return std::nullopt;
@@ -191,6 +209,22 @@ bool Export(const std::vector<Target>& targets,
   }
 
   return no_errors;
+}
+
+std::optional<std::vector<Target>> HandleBugReport(
+    const std::filesystem::path& output_path, std::istream* input) {
+  auto content = ReadStream(input);
+  if (!content)
+    return std::nullopt;
+
+  auto targets = ProcessBugReport(*content);
+  if (!targets)
+    return std::nullopt;
+
+  if (!Export(*targets, output_path))
+    return std::nullopt;
+
+  return *targets;
 }
 
 }  // namespace bugreport

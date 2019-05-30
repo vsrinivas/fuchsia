@@ -37,6 +37,24 @@ constexpr char kValidDocument[] = R"(
   }
 )";
 
+// The stream reader loads data in chunk, so a long document will be effectively
+// split several times during load. This long (valid) document is meant to test
+// that case.
+constexpr char kValidDocumentLongDocument[] = R"(
+  {
+    "annotations":
+    {
+      "annotation.1.key": "annotation.1.value",
+      "annotation.2.key": "annotation.2.value"
+    },
+    "attachments":
+    {
+      "attachment.1.key": "{\"embedded\": [\"array\"], \"another\": \"key\",\"embedded\": [\"array\"], \"another\": \"key\",\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"\"embedded\": [\"array\"], \"another\": \"key\"}",
+      "attachment.2.key": "attachment.2.value"
+    }
+  }
+)";
+
 constexpr char kEmpty[] = R"(
   {
     "annotations": { },
@@ -103,14 +121,27 @@ class BugReportClientTest : public ::testing::Test {
     }
   }
 
+  bool SetupTempFiles() {
+    // Setup.
+    std::error_code ec;
+    auto test_path = std::filesystem::temp_directory_path(ec);
+    if (ec) {
+      ADD_FAILURE() << ec.message();
+      return false;
+    }
+
+    base_path_ = test_path;
+    return true;
+  }
+
   std::filesystem::path base_path_;
   std::vector<Target> targets_;
 };
 
 }  // namespace
 
-TEST_F(BugReportClientTest, ValidDocument) {
-  auto targets = HandleBugReport(kValidDocument);
+TEST_F(BugReportClientTest, ProcessBugReport_ValidDocument) {
+  auto targets = ProcessBugReport(kValidDocument);
   ASSERT_TRUE(targets);
 
   ASSERT_EQ(targets->size(), 3u);
@@ -138,30 +169,92 @@ TEST_F(BugReportClientTest, ValidDocument) {
   EXPECT_EQ(attachment2.contents, "attachment.2.value");
 }
 
-TEST_F(BugReportClientTest, EdgeCases) {
-  EXPECT_TRUE(HandleBugReport(kEmpty));
-  EXPECT_FALSE(HandleBugReport("{{{{"));
-  EXPECT_FALSE(HandleBugReport(kMissingAnnotations));
-  EXPECT_FALSE(HandleBugReport(kMissingAttachments));
-  EXPECT_FALSE(HandleBugReport(kWrongAnnotationType));
-  EXPECT_FALSE(HandleBugReport(kWrongAttachmentType));
+TEST_F(BugReportClientTest, ProcessBugReport_EdgeCases) {
+  EXPECT_TRUE(ProcessBugReport(kEmpty));
+  EXPECT_FALSE(ProcessBugReport("{{{{"));
+  EXPECT_FALSE(ProcessBugReport(kMissingAnnotations));
+  EXPECT_FALSE(ProcessBugReport(kMissingAttachments));
+  EXPECT_FALSE(ProcessBugReport(kWrongAnnotationType));
+  EXPECT_FALSE(ProcessBugReport(kWrongAttachmentType));
 }
 
 
 TEST_F(BugReportClientTest, Export) {
-  // Setup.
-  std::error_code ec;
-  auto test_path = std::filesystem::temp_directory_path(ec);
-  ASSERT_FALSE(ec) << ec.message();
+  ASSERT_TRUE(SetupTempFiles());
 
-  auto targets = HandleBugReport(kValidDocument);
+  auto targets = ProcessBugReport(kValidDocument);
   ASSERT_TRUE(targets);
   ASSERT_EQ(targets->size(), 3u);
 
-  base_path_ = test_path;
   targets_ = std::move(*targets);
 
-  ASSERT_TRUE(Export(targets_, test_path));
+  ASSERT_TRUE(Export(targets_, base_path_));
+
+  // Verify.
+  std::optional<std::string> contents;
+
+  contents = ReadWholeFile(base_path_ / targets_.at(0).name);
+  if (!contents) {
+    ADD_FAILURE() << "Error for: " << targets_.at(0).name;
+  } else {
+    EXPECT_EQ(*contents, targets_.at(0).contents);
+  }
+
+  contents = ReadWholeFile(base_path_ / targets_.at(1).name);
+  if (!contents) {
+    ADD_FAILURE() << "Error for: " << targets_.at(1).name;
+  } else {
+    EXPECT_EQ(*contents, targets_.at(1).contents);
+  }
+
+  contents = ReadWholeFile(base_path_ / targets_.at(2).name);
+  if (!contents) {
+    ADD_FAILURE() << "Error for: " << targets_.at(2).name;
+  } else {
+    EXPECT_EQ(*contents, targets_.at(2).contents);
+  }
+}
+
+TEST_F(BugReportClientTest, HandleBugReport_ValidDocument) {
+  ASSERT_TRUE(SetupTempFiles());
+
+  std::istringstream iss(kValidDocument);
+  auto targets = HandleBugReport(base_path_, &iss);
+  ASSERT_TRUE(targets);
+  targets_ = std::move(*targets);
+
+  // Verify.
+  std::optional<std::string> contents;
+
+  contents = ReadWholeFile(base_path_ / targets_.at(0).name);
+  if (!contents) {
+    ADD_FAILURE() << "Error for: " << targets_.at(0).name;
+  } else {
+    EXPECT_EQ(*contents, targets_.at(0).contents);
+  }
+
+  contents = ReadWholeFile(base_path_ / targets_.at(1).name);
+  if (!contents) {
+    ADD_FAILURE() << "Error for: " << targets_.at(1).name;
+  } else {
+    EXPECT_EQ(*contents, targets_.at(1).contents);
+  }
+
+  contents = ReadWholeFile(base_path_ / targets_.at(2).name);
+  if (!contents) {
+    ADD_FAILURE() << "Error for: " << targets_.at(2).name;
+  } else {
+    EXPECT_EQ(*contents, targets_.at(2).contents);
+  }
+}
+
+TEST_F(BugReportClientTest, HandleBugReport_LongDocument) {
+  ASSERT_TRUE(SetupTempFiles());
+
+  std::istringstream iss(kValidDocumentLongDocument);
+  auto targets = HandleBugReport(base_path_, &iss);
+  ASSERT_TRUE(targets);
+  targets_ = std::move(*targets);
 
   // Verify.
   std::optional<std::string> contents;
