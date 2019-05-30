@@ -26,6 +26,7 @@ group("banjo") {
     "ddk.protocol.ethernet",
     "ddk.protocol.ethernet.board",
     "ddk.protocol.ethernet.mac",
+    "ddk.protocol.gdc",
     "ddk.protocol.goldfish.pipe",
     "ddk.protocol.gpio",
     "ddk.protocol.gpioimpl",

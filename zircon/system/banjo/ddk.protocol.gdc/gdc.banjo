@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.gdc;
+using zx;
+using zircon.device.sysmem;
+
+
+[Layout = "ddk-callback"]
+protocol GdcCallback {
+    // This is called by the GDC driver, every time a frame is ready to be
+    // consumed.
+    FrameReady(uint32 buffer_index);
+};
+
+[Layout = "ddk-protocol"]
+protocol Gdc {
+    // Registers the buffer collections and configuration which the GDC will be using
+    // for this task and also the callback functions for a particular task and
+    // returns a task index.
+    // |input_buffer_collection| : Pool of VMOs as input to the GDC.
+    // |output_buffer_collection| : Pool of VMOs as output to the GDC.
+    // |config_vmo| : Static configuration for GDC is stored in this vmo for this task.
+    // |callback| : This function is called when GDC is done processing the task.
+    // @Returns: |task_index| : Task ID for this task.
+    InitTask(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
+             zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
+             handle<vmo> config_vmo,
+             GdcCallback callback) -> (zx.status s, uint32 task_index);
+
+    // De-registers the task.
+    RemoveTask(uint32 task_index);
+
+    // Processes the frame at |input_buffer_index| within |input_buffer_collection|
+    // in the task corresponding to |task_index| and stores the ouput in the
+    // |output_buffer_collection| after applying the correct configuration.
+    // After processing we call the callback registered for this task with the
+    // output buffer index.
+    ProcessFrame(uint32 task_index, uint32 input_buffer_index) -> (zx.status s);
+
+    // Releases the frame |buffer_index| from the |output_buffer_collection| to be
+    // used again by GDC driver again later.
+    ReleaseFrame(uint32 task_index, uint32 buffer_index);
+};
