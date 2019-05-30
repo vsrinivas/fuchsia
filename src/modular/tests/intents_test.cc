@@ -31,11 +31,11 @@ constexpr char kIntentAction[] = "action";
 class IntentsTest : public modular::testing::TestHarnessFixture {
  protected:
   void SetUp() override {
-    intent_handled_ = false;
+    number_of_intents_handled_ = 0;
     test_module_ = std::make_unique<modular::testing::FakeModule>(
         [this](fuchsia::modular::Intent intent) {
           latest_handled_intent_ = std::move(intent);
-          intent_handled_ = true;
+          number_of_intents_handled_++;
         });
     test_module_url_ = builder_.GenerateFakeUrl();
     builder_.InterceptComponent(
@@ -133,22 +133,23 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
     return false;
   }
 
+  int number_of_intents_handled_;
   std::unique_ptr<modular::testing::FakeModule> test_module_;
   modular::testing::TestHarnessBuilder builder_;
   std::string test_module_url_;
   fuchsia::modular::Intent latest_handled_intent_;
-  bool intent_handled_;
 };
 
 // Launches a single module with an intent. Checks that the module exposes an
 // intent handler and gets notified of the intent by the framework.
-TEST_F(IntentsTest, DISABLED_ModuleUsesIntentHandler) {
+TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   ExecutePuppetMasterAddMod(std::move(initial_module_intent));
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intent_handled_; }, kTimeout));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  ASSERT_TRUE(test_module_->is_running());
 
   // Check that the intent handler received the intent
   EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
@@ -159,13 +160,14 @@ TEST_F(IntentsTest, DISABLED_ModuleUsesIntentHandler) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent sent to an already running module with the same parameters but
 // different data notifies the intent handler of the new intent.
-TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerSameParamName) {
+TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   ExecutePuppetMasterAddMod(std::move(initial_module_intent));
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module_->is_running(); }, kTimeout));
+      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  ASSERT_TRUE(test_module_->is_running());
 
   // Launch second module using first module's |module_context|
   fuchsia::modular::ModuleControllerPtr second_module_controller;
@@ -178,9 +180,8 @@ TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerSameParamName) {
                                 second_module_param_data),
                    second_module_controller.NewRequest(), &module_started);
 
-  intent_handled_ = false;
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intent_handled_; }, kTimeout));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return number_of_intents_handled_ == 2; }, kTimeout));
 
   EXPECT_TRUE(IntentMatchesExpectations(
       &latest_handled_intent_, kIntentParameterName, second_module_param_data));
@@ -189,29 +190,29 @@ TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerSameParamName) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent with different parameters is delivered to to the already
 // running intent handler.
-TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerDifferentParam) {
+TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   ExecutePuppetMasterAddMod(std::move(initial_module_intent));
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module_->is_running(); }, kTimeout));
+      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  ASSERT_TRUE(test_module_->is_running());
 
   // Launch second module using first module's |module_context|
   fuchsia::modular::ModuleControllerPtr second_module_controller;
   bool module_started{false};
 
   // Use different param name and data
-  auto second_module_param_name = "different_param_name";
+  auto second_module_param_name = "second_param_name";
   auto second_module_param_data = "\"second_module_param_data\"";
   AddModuleToStory(test_module_->module_context(),
                    CreateIntent(test_module_url_, second_module_param_name,
                                 second_module_param_data),
                    second_module_controller.NewRequest(), &module_started);
 
-  intent_handled_ = false;
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return intent_handled_; }, kTimeout));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return number_of_intents_handled_ == 2; }, kTimeout));
 
   EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
                                         second_module_param_name,
@@ -221,13 +222,14 @@ TEST_F(IntentsTest, DISABLED_ReuseIntentHandlerDifferentParam) {
 // Launches a module that exposes an intent handler service then tests that a
 // second intent with different handler is not delivered to the running
 // intent handler.
-TEST_F(IntentsTest, DISABLED_DifferentHandler) {
+TEST_F(IntentsTest, DifferentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   ExecutePuppetMasterAddMod(std::move(initial_module_intent));
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module_->is_running(); }, kTimeout));
+      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  ASSERT_TRUE(test_module_->is_running());
 
   // Launch second module using first module's |module_context|
   fuchsia::modular::ModuleControllerPtr second_module_controller;
