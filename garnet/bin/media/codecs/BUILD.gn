@@ -7,9 +7,18 @@ group("codecs") {
   deps = [
     ":chunk_input_stream",
     ":mpsc_queue",
+    ":output_sink",
     ":timestamp_extrapolator",
     "sw",
     "test",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "test",
+    "//garnet/examples/media:use_h264_decoder_test",
   ]
 }
 
@@ -55,10 +64,18 @@ source_set("chunk_input_stream") {
   ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    "test",
-    "//garnet/examples/media:use_h264_decoder_test",
+source_set("output_sink") {
+  public = [
+    "output_sink.h",
+  ]
+  sources = [
+    "output_sink.cc",
+  ]
+  public_configs = [ ":local_header_include_config" ]
+  public_deps = [
+    "//garnet/bin/media/codecs:mpsc_queue",
+    "//garnet/lib/media/codec_impl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
   ]
 }

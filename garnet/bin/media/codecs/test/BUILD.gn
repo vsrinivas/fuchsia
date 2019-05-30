@@ -11,6 +11,7 @@ group("test") {
   deps = [
     ":chunk_input_stream_tests",
     ":mpsc_queue_tests",
+    ":output_sink_tests",
     ":raw_frames",
     ":raw_frames_test",
     ":raw_frames_test_bin",
@@ -133,6 +134,17 @@ test_package("mpsc_queue_tests") {
   ]
 }
 
+source_set("test_codec_packets") {
+  testonly = true
+  public = [
+    "test_codec_packets.h",
+  ]
+  public_deps = [
+    "//garnet/lib/media/codec_impl",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
 executable("chunk_input_stream_test_bin") {
   output_name = "chunk_input_stream_tests"
 
@@ -143,6 +155,7 @@ executable("chunk_input_stream_test_bin") {
   ]
 
   deps = [
+    ":test_codec_packets",
     "//garnet/bin/media/codecs:chunk_input_stream",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -157,6 +170,36 @@ test_package("chunk_input_stream_tests") {
   tests = [
     {
       name = "chunk_input_stream_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("output_sink_test_bin") {
+  output_name = "output_sink_tests"
+
+  testonly = true
+
+  sources = [
+    "output_sink_tests.cc",
+  ]
+
+  deps = [
+    ":test_codec_packets",
+    "//garnet/bin/media/codecs:output_sink",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("output_sink_tests") {
+  deps = [
+    ":output_sink_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "output_sink_tests"
       environments = basic_envs
     },
   ]

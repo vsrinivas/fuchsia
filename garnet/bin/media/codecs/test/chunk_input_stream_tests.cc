@@ -9,73 +9,7 @@
 
 #include "../chunk_input_stream.h"
 #include "gtest/gtest.h"
-
-constexpr uint32_t kBufferLifetimeOrdinal = 1;
-
-class CodecPacketForTest : public CodecPacket {
- public:
-  CodecPacketForTest(uint32_t index)
-      : CodecPacket(kBufferLifetimeOrdinal, index) {}
-};
-
-fuchsia::media::StreamBuffer StreamBufferOfSize(size_t size, uint32_t index) {
-  zx::vmo vmo_handle;
-  zx_status_t err = zx::vmo::create(size, 0u, &vmo_handle);
-  FXL_CHECK(err == ZX_OK) << "Failed to create vmo: " << err;
-
-  fuchsia::media::StreamBufferDataVmo vmo;
-  vmo.set_vmo_handle(std::move(vmo_handle));
-  vmo.set_vmo_usable_start(0);
-  vmo.set_vmo_usable_size(size);
-
-  fuchsia::media::StreamBufferData data;
-  data.set_vmo(std::move(vmo));
-
-  fuchsia::media::StreamBuffer buffer;
-  buffer.set_data(std::move(data));
-  buffer.set_buffer_index(index);
-  buffer.set_buffer_lifetime_ordinal(kBufferLifetimeOrdinal);
-
-  return buffer;
-}
-
-class CodecBufferForTest : public CodecBuffer {
- public:
-  CodecBufferForTest(size_t size, uint32_t index)
-      : CodecBuffer(/*parent=*/nullptr, kOutputPort,
-                    StreamBufferOfSize(size, index)) {
-    Init();
-  }
-};
-
-struct TestPackets {
-  std::vector<std::unique_ptr<CodecPacketForTest>> packets;
-  std::vector<CodecPacket*> ptrs;
-};
-
-TestPackets Packets(size_t count) {
-  TestPackets packets;
-  for (size_t i = 0; i < count; ++i) {
-    packets.packets.push_back(std::make_unique<CodecPacketForTest>(i));
-    packets.ptrs.push_back(packets.packets[i].get());
-  }
-  return packets;
-}
-
-struct TestBuffers {
-  std::vector<std::unique_ptr<CodecBufferForTest>> buffers;
-  std::vector<const CodecBuffer*> ptrs;
-};
-
-TestBuffers Buffers(std::vector<size_t> sizes) {
-  TestBuffers buffers;
-  for (size_t i = 0; i < sizes.size(); ++i) {
-    buffers.buffers.push_back(
-        std::make_unique<CodecBufferForTest>(sizes[i], i));
-    buffers.ptrs.push_back(buffers.buffers[i].get());
-  }
-  return buffers;
-}
+#include "test_codec_packets.h"
 
 size_t AlignUp(size_t v, size_t alignment) {
   ZX_ASSERT(alignment);
@@ -94,7 +28,7 @@ TEST(ChunkInputStream, ChunkBoundaries) {
     // bytes to complete a chunk and force the output.
     const size_t buffer_size = AlignUp(100, chunk_size);
     auto buffers = Buffers({buffer_size});
-    auto buffer = buffers.ptrs[0];
+    auto buffer = buffers.ptr(0);
 
     // Initialize buffer with bytes counting from 0 to (>=99).
     const uint8_t* end = buffer->buffer_base() + buffer->buffer_size();
@@ -116,9 +50,9 @@ TEST(ChunkInputStream, ChunkBoundaries) {
     auto packets = Packets(packet_lengths_and_offsets.size());
     size_t i = 0;
     for (auto [packet_length, packet_offset] : packet_lengths_and_offsets) {
-      packets.ptrs[i]->SetValidLengthBytes(packet_length);
-      packets.ptrs[i]->SetBuffer(buffer);
-      packets.ptrs[i]->SetStartOffset(packet_offset);
+      packets.ptr(i)->SetValidLengthBytes(packet_length);
+      packets.ptr(i)->SetBuffer(buffer);
+      packets.ptr(i)->SetStartOffset(packet_offset);
       ++i;
     }
 
@@ -136,8 +70,9 @@ TEST(ChunkInputStream, ChunkBoundaries) {
         };
     auto under_test = ChunkInputStream(chunk_size, TimestampExtrapolator(),
                                        std::move(input_block_processor));
-    for (auto packet : packets.ptrs) {
-      EXPECT_EQ(under_test.ProcessInputPacket(packet), ChunkInputStream::kOk);
+    for (size_t i = 0; i < packets.packets.size(); ++i) {
+      EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(i)),
+                ChunkInputStream::kOk);
     }
     EXPECT_EQ(seen, buffer_size) << "Failure on chunk size " << chunk_size;
   };
@@ -153,8 +88,8 @@ TEST(ChunkInputStream, FlushIncomplete) {
   auto packets = Packets(1);
   auto buffers = Buffers({kPacketLen});
 
-  auto packet = packets.ptrs[0];
-  auto buffer = buffers.ptrs[0];
+  auto packet = packets.ptr(0);
+  auto buffer = buffers.ptr(0);
 
   constexpr size_t kExpectedByte = 44;
   packet->SetValidLengthBytes(kPacketLen);
@@ -201,8 +136,8 @@ TEST(ChunkInputStream, FlushLeftover) {
   auto packets = Packets(1);
   auto buffers = Buffers({kPacketLen});
 
-  auto packet = packets.ptrs[0];
-  auto buffer = buffers.ptrs[0];
+  auto packet = packets.ptr(0);
+  auto buffer = buffers.ptr(0);
 
   const uint8_t kExpectedBytes[kPacketLen] = {3, 4, 5, 88, 92, 101, 77};
   packet->SetValidLengthBytes(kPacketLen);
@@ -255,8 +190,8 @@ TEST(ChunkInputStream, TimestampsCarry) {
   auto packets = Packets(1);
   auto buffers = Buffers({kPacketLen});
 
-  auto packet = packets.ptrs[0];
-  auto buffer = buffers.ptrs[0];
+  auto packet = packets.ptr(0);
+  auto buffer = buffers.ptr(0);
 
   const uint64_t kExpectedTimestamp = 30;
   packet->SetValidLengthBytes(kPacketLen);
@@ -304,16 +239,16 @@ TEST(ChunkInputStream, TimestampsExtrapolate) {
   // Configure two packets, the first length 4. The second will contain a
   // timestamp. Since the chunk size is 5, the second packet will need its
   // timestamp extrapolated 1 byte.
-  packets.ptrs[0]->SetValidLengthBytes(kPacketLen);
-  packets.ptrs[0]->SetStartOffset(0);
-  packets.ptrs[0]->SetBuffer(buffers.ptrs[0]);
+  packets.ptr(0)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(0)->SetStartOffset(0);
+  packets.ptr(0)->SetBuffer(buffers.ptr(0));
   const uint64_t kInputTimestamp = 30;
   our_extrapolator.Inform(4, kInputTimestamp);
   const uint64_t kExpectedTimestamp = *our_extrapolator.Extrapolate(5);
-  packets.ptrs[1]->SetValidLengthBytes(kPacketLen);
-  packets.ptrs[1]->SetBuffer(buffers.ptrs[1]);
-  packets.ptrs[1]->SetStartOffset(0);
-  packets.ptrs[1]->SetTimstampIsh(kInputTimestamp);
+  packets.ptr(1)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(1)->SetBuffer(buffers.ptr(1));
+  packets.ptr(1)->SetStartOffset(0);
+  packets.ptr(1)->SetTimstampIsh(kInputTimestamp);
 
   size_t packet_index = 0;  // We use this to run different code when processing
                             // each packet.
@@ -351,7 +286,7 @@ TEST(ChunkInputStream, TimestampsExtrapolate) {
 
   // We send a short packet in that isn't a full input block to bring our
   // stream out of alignment. This one doesn't have a timestamp.
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[0]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
             ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_0);
 
@@ -359,7 +294,7 @@ TEST(ChunkInputStream, TimestampsExtrapolate) {
   // timestamp even though the new packet has one, because we only extrapolate
   // forward.
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[1]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
             ChunkInputStream::kOk);
   EXPECT_TRUE(was_called_for_packet_1);
 
@@ -380,23 +315,23 @@ TEST(ChunkInputStream, TimestampsDropWhenInsideBlock) {
   // timestamp for the first packet, and a timestamp extrapolated from the 4th
   // packet, where the middle 2 timestamps do not influence the output.
   const uint64_t kExpectedTimestamp = 5;
-  packets.ptrs[0]->SetValidLengthBytes(kPacketLen);
-  packets.ptrs[0]->SetStartOffset(0);
-  packets.ptrs[0]->SetBuffer(buffers.ptrs[0]);
-  packets.ptrs[0]->SetTimstampIsh(kExpectedTimestamp);
-  packets.ptrs[1]->SetValidLengthBytes(kPacketLen);
-  packets.ptrs[1]->SetBuffer(buffers.ptrs[1]);
-  packets.ptrs[1]->SetStartOffset(0);
-  packets.ptrs[1]->SetTimstampIsh(4096);
-  packets.ptrs[2]->SetValidLengthBytes(kPacketLen);
-  packets.ptrs[2]->SetBuffer(buffers.ptrs[2]);
-  packets.ptrs[2]->SetStartOffset(0);
-  packets.ptrs[2]->SetTimstampIsh(2048);
+  packets.ptr(0)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(0)->SetStartOffset(0);
+  packets.ptr(0)->SetBuffer(buffers.ptr(0));
+  packets.ptr(0)->SetTimstampIsh(kExpectedTimestamp);
+  packets.ptr(1)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(1)->SetBuffer(buffers.ptr(1));
+  packets.ptr(1)->SetStartOffset(0);
+  packets.ptr(1)->SetTimstampIsh(4096);
+  packets.ptr(2)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(2)->SetBuffer(buffers.ptr(2));
+  packets.ptr(2)->SetStartOffset(0);
+  packets.ptr(2)->SetTimstampIsh(2048);
 
-  packets.ptrs[3]->SetValidLengthBytes(kChunkSize);
-  packets.ptrs[3]->SetBuffer(buffers.ptrs[3]);
-  packets.ptrs[3]->SetStartOffset(0);
-  packets.ptrs[3]->SetTimstampIsh(10);
+  packets.ptr(3)->SetValidLengthBytes(kChunkSize);
+  packets.ptr(3)->SetBuffer(buffers.ptr(3));
+  packets.ptr(3)->SetStartOffset(0);
+  packets.ptr(3)->SetTimstampIsh(10);
   const uint64_t kExpectedExtrapolatedTimestamp = 12;
 
   size_t packet_index = 0;  // We use this to run different code when processing
@@ -446,22 +381,22 @@ TEST(ChunkInputStream, TimestampsDropWhenInsideBlock) {
       ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
                        input_block_processor);
 
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[0]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
             ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_0);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[1]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
             ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_1);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[2]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(2)),
             ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_2);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[3]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(3)),
             ChunkInputStream::kOk);
   EXPECT_TRUE(was_called_for_packet_3);
 
@@ -477,15 +412,15 @@ TEST(ChunkInputStream, ReportsErrorWhenMissingTimebase) {
   // Configure two packets, the first length 4. The second will contain a
   // timestamp. Since the chunk size is 5, the second packet will need its
   // timestamp extrapolated 1 byte.
-  packets.ptrs[0]->SetValidLengthBytes(buffers.ptrs[0]->buffer_size());
-  packets.ptrs[0]->SetStartOffset(0);
-  packets.ptrs[0]->SetBuffer(buffers.ptrs[0]);
+  packets.ptr(0)->SetValidLengthBytes(buffers.ptr(0)->buffer_size());
+  packets.ptr(0)->SetStartOffset(0);
+  packets.ptr(0)->SetBuffer(buffers.ptr(0));
 
   const uint64_t kInputTimestamp = 30;
-  packets.ptrs[1]->SetValidLengthBytes(buffers.ptrs[1]->buffer_size());
-  packets.ptrs[1]->SetBuffer(buffers.ptrs[1]);
-  packets.ptrs[1]->SetStartOffset(0);
-  packets.ptrs[1]->SetTimstampIsh(kInputTimestamp);
+  packets.ptr(1)->SetValidLengthBytes(buffers.ptr(1)->buffer_size());
+  packets.ptr(1)->SetBuffer(buffers.ptr(1));
+  packets.ptr(1)->SetStartOffset(0);
+  packets.ptr(1)->SetTimstampIsh(kInputTimestamp);
 
   size_t packet_index = 0;  // We use this to run different code when processing
                             // each packet.
@@ -510,12 +445,12 @@ TEST(ChunkInputStream, ReportsErrorWhenMissingTimebase) {
   auto under_test = ChunkInputStream(kChunkSize, TimestampExtrapolator(),
                                      input_block_processor);
 
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[0]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
             ChunkInputStream::kOk);
   EXPECT_FALSE(was_called_for_packet_0);
 
   packet_index += 1;
-  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptrs[1]),
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
             ChunkInputStream::kExtrapolationFailedWithoutTimebase);
   // Should have been called once for finishing the first input packet, without
   // timestamp.
