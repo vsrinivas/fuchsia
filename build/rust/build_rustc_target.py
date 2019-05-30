@@ -50,7 +50,7 @@ def main():
                         required=True)
     parser.add_argument("--cargo-toml-dir",
                         help="Path to directory in which a Cargo.toml for this target may be generated",
-                        required=True)
+                        required=False)
     parser.add_argument("--crate-type",
                         help="Type of crate to build",
                         required=True,
@@ -63,7 +63,7 @@ def main():
                         required=True)
     parser.add_argument("--version",
                         help="Semver version of the crate being built",
-                        required=True)
+                        required=False)
     parser.add_argument("--edition",
                         help="Edition of rust to use when compiling the crate",
                         required=True,
@@ -82,16 +82,13 @@ def main():
     parser.add_argument("--depfile",
                         help="Path at which the output depfile should be stored",
                         required=True)
+    parser.add_argument("--test",
+                        action="store_true",
+                        help="Whether to build the target in test configuration",
+                        default=False)
     parser.add_argument("--root-out-dir",
                         help="Root output dir on which depfile paths should be rebased",
                         required=True)
-    parser.add_argument("--test-output-file",
-                        help="Path at which the unit test output file should be stored if --with-unit-tests is supplied",
-                        required=False)
-    parser.add_argument("--with-unit-tests",
-                        help="Whether or not to build unit tests",
-                        action="store_true",
-                        required=False)
     parser.add_argument("--target",
                         help="Target for which this crate is being compiled",
                         required=True)
@@ -120,7 +117,7 @@ def main():
                         required=True)
     parser.add_argument("--out-info",
                         help="Path metadata output",
-                        required=True)
+                        required=False)
     parser.add_argument("--dep-data",
                         action="append",
                         help="Path to metadata from a crate dependency",
@@ -188,6 +185,8 @@ def main():
         "-Zallow-features=%s" % ",".join(args.unstable_rust_features or [])
     ]
     call_args += ["-Lnative=%s" % dir for dir in args.lib_dir]
+    if args.test:
+        call_args += ["--test"]
     if args.features:
         for feature in args.features:
             call_args += ["--cfg", "feature=\"%s\"" % feature]
@@ -272,52 +271,38 @@ def main():
         "-o%s" % args.depfile,
         "--emit=dep-info",
     ]
-    if args.with_unit_tests:
-        depfile_args += ["--test"]
     depfile_job = start_command(depfile_args, env)
 
     # Build the desired output
     build_args = call_args + ["-o%s" % args.output_file]
     build_job = start_command(build_args, env)
 
-    # Build the test harness
-    if args.with_unit_tests:
-        build_test_args = call_args + [
-            "-o%s" % args.test_output_file,
-            "--test",
-        ]
-        test_job = start_command(build_test_args, env)
-
     # Write output dependency info
-    create_base_directory(args.out_info)
-    with open(args.out_info, "w") as file:
-        file.write(json.dumps({
-            "crate_name": args.crate_name,
-            "package_name": args.package_name,
-            "third_party": False,
-            "cargo_toml_dir": args.cargo_toml_dir,
-            "lib_path": args.output_file,
-            "version": args.version,
-        }, sort_keys=True, indent=4, separators=(",", ": ")))
+    if args.out_info:
+        if args.cargo_toml_dir is None or args.version is None:
+            parser.error("--out-info requires --package-name and --version")
+        create_base_directory(args.out_info)
+        with open(args.out_info, "w") as file:
+            file.write(json.dumps({
+                "crate_name": args.crate_name,
+                "package_name": args.package_name,
+                "third_party": False,
+                "cargo_toml_dir": args.cargo_toml_dir,
+                "lib_path": args.output_file,
+                "version": args.version,
+            }, sort_keys=True, indent=4, separators=(",", ": ")))
 
     # Wait for build jobs to complete
-
     stdout, stderr = depfile_job.communicate()
     if depfile_job.returncode != 0:
         print(stdout + stderr)
-        return depfile_job.returncode
+        return build_job.returncode
     fix_depfile(args.depfile, os.getcwd(), args.output_file)
 
     stdout, stderr = build_job.communicate()
     if build_job.returncode != 0:
         print(stdout + stderr)
         return build_job.returncode
-
-    if args.with_unit_tests:
-        stdout, stderr = test_job.communicate()
-        if test_job.returncode != 0:
-            print(stdout + stderr)
-            return test_job.returncode
 
 if __name__ == '__main__':
     sys.exit(main())

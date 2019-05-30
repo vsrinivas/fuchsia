@@ -254,13 +254,19 @@ template("rustc_artifact") {
   }
   output_file = "${first_party_crate_root}/$output_filename"
   output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
-  test_filename = "${crate_name}_${invoker.type}_test"
-  test_output_file = "${root_out_dir}/exe.unstripped/${test_filename}"
 
   build_target_name = "${target_name}_build"
   group_deps += [ ":${build_target_name}" ]
 
   with_unit_tests = defined(invoker.with_unit_tests) && invoker.with_unit_tests
+  if (with_unit_tests) {
+    test_filename = "${crate_name}_${invoker.type}_test"
+    test_output_file = "${root_out_dir}/exe.unstripped/${test_filename}"
+    test_depfile = "${test_output_file}.d"
+
+    build_test_target_name = "${target_name}_test_build"
+    test_group_deps = [ ":${build_test_target_name}" ]
+  }
 
   # Test specs are used for linux and mac tests to record metadata for testing
   # instruction; this happens within package.gni for fuchsia tests.
@@ -324,9 +330,13 @@ template("rustc_artifact") {
   extra_inputs = [ zircon_lib_dirs_file ]
   generated_file("${build_target_name}_zircon_libs") {
     forward_variables_from(invoker, [ "testonly" ])
+
     # Clear possibly inherited visibility before setting our own.
     visibility = []
     visibility = [ ":$build_target_name" ]
+    if (with_unit_tests) {
+      visibility += [ ":$build_test_target_name" ]
+    }
     deps = [
       third_party_build,
     ]
@@ -343,140 +353,166 @@ template("rustc_artifact") {
     output_conversion = "list lines"
   }
 
-  # Declare the action target that performs the build itself
-  action(build_target_name) {
-    script = "//build/rust/build_rustc_target.py"
+  # Declare the action targets that perform the build itself
+  rustc_target_script = "//build/rust/build_rustc_target.py"
+  rustc_target_pool = "//build/rust:pool($default_toolchain)"
 
-    pool = "//build/rust:pool($default_toolchain)"
+  rustc_target_deps = []
+  if (defined(invoker.deps)) {
+    rustc_target_deps += invoker.deps
+  }
+  rustc_target_deps += [ third_party_build ]
+  rustc_target_inputs = [ root_file ]
 
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    if (!defined(deps)) {
-      deps = []
+  rustc_target_public_deps = []
+  if (defined(invoker.non_rust_deps)) {
+    rustc_target_public_deps += invoker.non_rust_deps
+  }
+
+  # The set of unstable features permitted as per
+  # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/languages/rust/unstable.md
+  unstable_rust_features = [
+    "async_await",
+    "await_macro",
+    "futures_api",
+  ]
+
+  # Specifically enable specialization for use in recovery_netstack.
+  # This flag is not allowed to be introduced in new code.
+  if (defined(
+      invoker.__unstable_recovery_netstack_only_specialization_bypass)) {
+    unstable_rust_features +=
+        invoker.__unstable_recovery_netstack_only_specialization_bypass
+  }
+
+  # Make builds independent of absolute file path.  The file names
+  # embedded in debugging information will be expressed as relative to
+  # the build directory, e.g. "../.." for an "out/subdir" under //.
+  absolute_path = rebase_path("//.")
+  relative_path = rebase_path("//.", root_build_dir)
+
+  rustc_target_args = [
+    "--crate-root",
+    rebase_path(root_file),
+    "--crate-type",
+    type,
+    "--crate-name",
+    crate_name,
+    "--package-name",
+    package_name,
+    "--root-out-dir",
+    rebase_path(root_out_dir),
+    "--first-party-crate-root",
+    rebase_path(first_party_crate_root),
+    "--third-party-deps-data",
+    rebase_path(third_party_deps_data),
+    "--edition",
+    edition,
+    "--warnings",
+    rust_warnings,
+    "--remap-path-prefix",
+    "$absolute_path=$relative_path",
+  ]
+
+  if (defined(invoker.features)) {
+    foreach(feature, invoker.features) {
+      rustc_target_args += [
+        "--feature",
+        feature,
+      ]
     }
-    deps += [ third_party_build ]
-    inputs = [
-      root_file,
+  }
+
+  foreach(unstable_rust_feature, unstable_rust_features) {
+    rustc_target_args += [
+      "--unstable-rust-feature",
+      unstable_rust_feature,
     ]
-    depfile = output_depfile
+  }
 
-    if (defined(invoker.non_rust_deps)) {
-      public_deps = invoker.non_rust_deps
+  rustc_target_args += rust_build_args + extra_args
+  rustc_target_deps += rust_build_deps + extra_deps
+  rustc_target_inputs += rust_build_inputs + extra_inputs
+
+  if (with_lto != "none") {
+    rustc_target_args += [
+      "--lto",
+      with_lto,
+    ]
+  }
+
+  if (defined(invoker.non_rust_deps)) {
+    foreach(dep, invoker.non_rust_deps) {
+      rustc_target_args += [
+        "--lib-dir",
+        rebase_path(get_label_info(dep, "target_out_dir")),
+      ]
     }
+  }
+
+  rustc_target_args += dep_info_paths
+
+  action(build_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    script = rustc_target_script
+    pool = rustc_target_pool
 
     out_info_path = "${target_out_dir}/${target_name}_info.json"
 
-    # The set of unstable features permitted as per
-    # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/languages/rust/unstable.md
-    unstable_rust_features = [
-      "async_await",
-      "await_macro",
-      "futures_api",
-    ]
-
-    # Specifically enable specialization for use in recovery_netstack.
-    # This flag is not allowed to be introduced in new code.
-    if (defined(
-        invoker.__unstable_recovery_netstack_only_specialization_bypass)) {
-      unstable_rust_features +=
-          invoker.__unstable_recovery_netstack_only_specialization_bypass
-    }
-
-
-    # Make builds independent of absolute file path.  The file names
-    # embedded in debugging information will be expressed as relative to
-    # the build directory, e.g. "../.." for an "out/subdir" under //.
-    absolute_path = rebase_path("//.")
-    relative_path = rebase_path("//.", root_build_dir)
-
-    args = [
-      "--crate-root",
-      rebase_path(root_file),
+    args = rustc_target_args
+    args += [
       "--cargo-toml-dir",
       rebase_path(cargo_toml_dir),
-      "--crate-type",
-      type,
-      "--crate-name",
-      crate_name,
-      "--package-name",
-      package_name,
-      "--depfile",
-      rebase_path(output_depfile),
-      "--root-out-dir",
-      rebase_path(root_out_dir),
-      "--output-file",
-      rebase_path(output_file),
-      "--test-output-file",
-      rebase_path(test_output_file),
-      "--first-party-crate-root",
-      rebase_path(first_party_crate_root),
-      "--third-party-deps-data",
-      rebase_path(third_party_deps_data),
-      "--out-info",
-      rebase_path(out_info_path),
       "--version",
       version,
-      "--edition",
-      edition,
-      "--warnings",
-      rust_warnings,
-      "--remap-path-prefix",
-      "$absolute_path=$relative_path",
+      "--out-info",
+      rebase_path(out_info_path),
+      "--output-file",
+      rebase_path(output_file),
+      "--depfile",
+      rebase_path(output_depfile),
     ]
 
-    if (defined(invoker.features)) {
-      foreach(feature, invoker.features) {
-        args += [
-          "--feature",
-          feature,
-        ]
-      }
-    }
-
-    foreach(unstable_rust_feature, unstable_rust_features) {
-      args += [
-        "--unstable-rust-feature",
-        unstable_rust_feature,
-      ]
-    }
-
-    args += rust_build_args + extra_args
-    deps += rust_build_deps + extra_deps
-    inputs += rust_build_inputs + extra_inputs
-
-    if (with_lto != "none") {
-      args += [
-        "--lto",
-        with_lto,
-      ]
-    }
-    if (with_unit_tests) {
-      args += [ "--with-unit-tests" ]
-    }
-
-    if (defined(invoker.non_rust_deps)) {
-      foreach(dep, invoker.non_rust_deps) {
-        args += [
-          "--lib-dir",
-          rebase_path(get_label_info(dep, "target_out_dir")),
-        ]
-      }
-    }
-
-    args += dep_info_paths
+    inputs = rustc_target_inputs
     outputs = [
       output_file,
       out_info_path,
     ]
-    if (with_unit_tests) {
-      outputs += [ test_output_file ]
 
+    depfile = output_depfile
+    deps = rustc_target_deps
+    public_deps = rustc_target_public_deps
+  }
+
+  if (with_unit_tests) {
+    action(build_test_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      script = rustc_target_script
+      pool = rustc_target_pool
+
+      args = rustc_target_args
+      args += [
+        "--test",
+        "--output-file",
+        rebase_path(test_output_file),
+        "--depfile",
+        rebase_path(test_depfile),
+      ]
+
+      inputs = rustc_target_inputs
+      outputs = [
+        test_output_file,
+      ]
+
+      # TODO(tmandry): Add `testonly = true` here once tests only depend on the test group.
+      depfile = test_depfile
+      deps = rustc_target_deps
       if (is_linux || is_mac) {
         deps += [ ":$test_spec_target_name" ]
       }
+      public_deps = rustc_target_public_deps
     }
   }
 
@@ -582,7 +618,7 @@ template("rustc_artifact") {
 
   if (with_unit_tests) {
     strip_test_target_name = "${target_name}_test_strip"
-    group_deps += [ ":${strip_test_target_name}" ]
+    test_group_deps += [ ":${strip_test_target_name}" ]
 
     test_output_path = "${root_out_dir}/${test_filename}"
 
@@ -590,7 +626,7 @@ template("rustc_artifact") {
       forward_variables_from(invoker, [ "testonly" ])
 
       deps = [
-        ":${build_target_name}",
+        ":${build_test_target_name}",
       ]
       sources = [
         test_output_file,
@@ -659,6 +695,17 @@ template("rustc_artifact") {
     outputs = [
       "${cargo_toml_dir}/Cargo.toml",
     ]
+  }
+
+  if (with_unit_tests) {
+    test_target_name = "${target_name}_test"
+    group(test_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      public_deps = test_group_deps
+    }
+
+    # TODO(tmandry): Remove this once we have everyone depending on the right group.
+    group_deps += [ ":${test_target_name}" ]
   }
 
   group(target_name) {
