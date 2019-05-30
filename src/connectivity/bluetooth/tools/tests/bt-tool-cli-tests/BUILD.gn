@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("lib") {
+  name = "bt_tool_cli"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+test_package("bt-tool-cli-tests") {
+  deps = [
+    ":lib",
+    "//src/connectivity/bluetooth/tools/bt-avrcp-controller",
+    "//src/connectivity/bluetooth/tools/bt-snoop-cli",
+  ]
+
+  # include these binaries in our package so we aren't dependent on the /bin ones.
+  binaries = [
+    {
+      name = "bt_avrcp_controller"
+      dest = "bt-avrcp-controller"
+    },
+    {
+      name = "bt_snoop_cli"
+      dest = "bt-snoop-cli"
+    },
+  ]
+
+  tests = [
+    {
+      name = "bt_tool_cli_lib_test"
+      dest = "bt-tool-cli-tests"
+      environments = basic_envs
+    },
+  ]
+}

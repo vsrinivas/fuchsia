@@ -190,3 +190,26 @@ pub enum ReplControl {
     Break,
     Continue,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parking_lot::Mutex;
+    use std::{collections::HashMap, sync::Arc};
+
+    #[test]
+    fn test_gen_commands_macro() {
+        assert!(Cmd::variants().contains(&"connect".to_string()));
+        assert_eq!(Cmd::GetDevice.arguments(), "<id|addr> ");
+        assert!(Cmd::help_msg().starts_with("Commands:\n"));
+    }
+
+    #[test]
+    fn test_completer() {
+        let state = Arc::new(Mutex::new(State { devices: HashMap::new() }));
+        let cmdhelper = CmdHelper::new(state);
+        assert!(cmdhelper.complete("he", 0).unwrap().1.contains(&"help".to_string()));
+        assert!(cmdhelper.complete("dis", 0).unwrap().1.contains(&"discoverable".to_string()));
+        assert!(cmdhelper.complete("set-", 0).unwrap().1.contains(&"set-local-name".to_string()));
+    }
+}

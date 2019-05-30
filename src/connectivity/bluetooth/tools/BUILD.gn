@@ -6,7 +6,9 @@ import("//build/package.gni")
 
 # Package containing command-line developer tools. bt-snoop lives in a separate
 # package defined under the bt-snoop/ directory.
-package("tools") {
+package("bluetooth-tools") {
+  name = "bluetooth_tools"
+
   deps = [
     "bt-avrcp-controller",
     "bt-cli",
@@ -63,5 +65,12 @@ package("tools") {
       dest = "bt-pairing-tool"
       shell = true
     },
+  ]
+}
+
+group("tools") {
+  testonly = true
+  deps = [
+    ":bluetooth-tools",
   ]
 }

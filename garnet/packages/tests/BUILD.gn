@@ -1146,7 +1146,10 @@ group("bluetooth") {
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
     "//src/connectivity/bluetooth/tests",
+    "//src/connectivity/bluetooth/tools/bt-avrcp-controller:tests",
+    "//src/connectivity/bluetooth/tools/bt-cli:tests",
     "//src/connectivity/bluetooth/tools/bt-snoop:tests",
+    "//src/connectivity/bluetooth/tools/tests/bt-tool-cli-tests",
   ]
 }
 

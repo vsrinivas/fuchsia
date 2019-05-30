@@ -4,10 +4,13 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_binary("bt-avrcp-controller") {
   name = "bt_avrcp_controller"
   edition = "2018"
+  with_unit_tests = true
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -21,5 +24,21 @@ rustc_binary("bt-avrcp-controller") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates/transitional/rustyline",
+  ]
+}
+
+test_package("tests") {
+  package_name = "bt-avrcp-controller-tests"
+
+  deps = [
+    ":bt-avrcp-controller",
+  ]
+
+  tests = [
+    {
+      name = "bt_avrcp_controller_bin_test"
+      dest = "bt-avrcp-controller-unittests"
+      environments = basic_envs
+    },
   ]
 }
