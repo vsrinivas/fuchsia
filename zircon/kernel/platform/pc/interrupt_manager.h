@@ -30,6 +30,8 @@ public:
     InterruptManager& operator=(InterruptManager&&) = delete;
     InterruptManager& operator=(const InterruptManager&) = delete;
 
+    static constexpr unsigned int kNumCpuVectors = X86_INT_PLATFORM_MAX - X86_INT_PLATFORM_BASE + 1;
+
     ~InterruptManager() {
         if (initialized_) {
             p2ra_free(&x86_irq_vector_allocator_);
@@ -45,8 +47,7 @@ public:
         initialized_ = true;
 
         return p2ra_add_range(&x86_irq_vector_allocator_,
-                              X86_INT_PLATFORM_BASE,
-                              X86_INT_PLATFORM_MAX - X86_INT_PLATFORM_BASE + 1);
+                              X86_INT_PLATFORM_BASE, kNumCpuVectors);
     }
 
     zx_status_t MaskInterrupt(unsigned int vector) {
@@ -101,11 +102,14 @@ public:
             x86_vector = 0;
         }
 
+        if (x86_vector == 0 && handler == nullptr) {
+            return ZX_OK;
+        }
+
         if (x86_vector && !handler) {
             /* If the x86 vector is valid, and we are unregistering the handler,
              * return the x86 vector to the pool. */
             p2ra_free_range(&x86_irq_vector_allocator_, x86_vector, 1);
-            x86_vector = 0;
         } else if (!x86_vector && handler) {
             /* If the x86 vector is invalid, and we are registering a handler,
              * attempt to get a new x86 vector from the pool. */
@@ -116,7 +120,6 @@ public:
              * builds, we log a message and then silently ignore the request to
              * register a new handler. */
             result = p2ra_allocate_range(&x86_irq_vector_allocator_, 1, &range_start);
-            DEBUG_ASSERT(result == ZX_OK);
 
             if (result != ZX_OK) {
                 TRACEF("Failed to allocate x86 IRQ vector for global IRQ (%u) when "
@@ -130,7 +133,7 @@ public:
             x86_vector = (uint8_t)range_start;
         }
 
-        DEBUG_ASSERT(!!x86_vector == !!handler);
+        DEBUG_ASSERT(x86_vector != 0);
 
         // Update the handler table and register the x86 vector with the io_apic.
         bool set = handler_table_[x86_vector].SetHandler(handler, arg);
@@ -141,7 +144,7 @@ public:
             return ZX_ERR_ALREADY_BOUND;
         }
 
-        IoApic::ConfigureIrqVector(vector, x86_vector);
+        IoApic::ConfigureIrqVector(vector, handler != nullptr ? x86_vector : 0);
 
         return ZX_OK;
     }
@@ -283,4 +286,3 @@ private:
 
     bool initialized_ = false;
 };
-

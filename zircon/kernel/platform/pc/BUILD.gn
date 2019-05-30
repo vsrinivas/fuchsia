@@ -20,6 +20,7 @@ library("pc") {
     "timer.cpp",
   ]
   deps = [
+    ":tests",
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pcie",
     "$zx/kernel/lib/acpi_tables",
@@ -33,6 +34,7 @@ library("pc") {
     "$zx/kernel/lib/memory_limit",
     "$zx/kernel/lib/pow2_range_allocator",
     "$zx/kernel/lib/topology",
+    "$zx/kernel/lib/unittest",
     "$zx/kernel/lib/version",
     "$zx/system/ulib/libzbi",
     "$zx/system/ulib/smbios",
@@ -42,7 +44,22 @@ library("pc") {
   public_deps = [
     # <platform/pc/smbios.h> has #include <lib/smbios/smbios.h>.
     "$zx/system/ulib/smbios:headers",
+
     # <platform/pc/acpi.h> has #include <acpica/acpi.h>.
     "$zx/third_party/lib/acpica:headers",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [
+    "interrupts_test.cpp",
+  ]
+  deps = [
+    ":headers",
+    "$zx/kernel/dev/interrupt",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/pow2_range_allocator",
+    "$zx/kernel/lib/unittest",
   ]
 }
