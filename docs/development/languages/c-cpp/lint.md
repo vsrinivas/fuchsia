@@ -59,10 +59,6 @@ This list tracks the reasons for which we disabled in particular [checks]:
     braced initialization list for constructor arguments, prefer to use a
     constructor explicitly
  - `modernize-use-equals-delete` - flagging all gtest TEST_F
- - `modernize-use-equals-default` - Fuchsia chose not to impose a preference for
-   "= default"
- - `performance-unnecessary-value-param` - it was flagging view classes
-   which we prefer to pass by value
  - `readability-implicit-bool-conversion` - Fuchsia C++ code commonly uses implicit
    bool cast of pointers and numbers
  - `readability-isolate-declaration` - Zircon code commonly uses paired declarations.
