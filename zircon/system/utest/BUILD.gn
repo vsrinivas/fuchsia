@@ -38,6 +38,7 @@ if (current_cpu != "") {
       "$zx/system/dev/bus/pci:pci_tests",
       "$zx/system/dev/bus/virtio:virtio-test",
       "$zx/system/dev/camera/arm-isp/test:arm-isp",
+      "$zx/system/dev/camera/arm-isp/test:arm-isp-on-device",
       "$zx/system/dev/clk/amlogic-clk:amlogic-clk-test",
       "$zx/system/dev/clk/msm8x53-clk:msm8x53-clk-test",
       "$zx/system/dev/display/display/test",

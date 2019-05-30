@@ -76,7 +76,7 @@ auto DmaManager::GetUvActiveDim() {
 
 void DmaManager::OnFrameWritten(bool is_uv) {
     // TODO(garratt): this assumes that the uv component is always written second.
-    if (current_format_.HasSecondaryChannel() && !is_uv) {
+    if (current_format_->HasSecondaryChannel() && !is_uv) {
         return;
     }
     ZX_ASSERT(publish_buffer_callback_ != nullptr);
@@ -86,6 +86,10 @@ void DmaManager::OnFrameWritten(bool is_uv) {
 
 // Called as one of the later steps when a new frame arrives.
 void DmaManager::OnNewFrame() {
+    // If we have not initialized yet with a format, just skip.
+    if (!current_format_) {
+        return;
+    }
     // 1) Get another buffer
     auto buffer = buffers_.LockBufferForWrite();
     if (!buffer) {
@@ -99,18 +103,18 @@ void DmaManager::OnNewFrame() {
 
     // clang-format off
     GetPrimaryBank0().FromValue(0)
-      .set_value(memory_address + current_format_.GetBank0Offset())
+      .set_value(memory_address + current_format_->GetBank0Offset())
       .WriteTo(&isp_mmio_local_);
-    if (current_format_.HasSecondaryChannel()) {
+    if (current_format_->HasSecondaryChannel()) {
         GetUvBank0().FromValue(0)
-          .set_value(memory_address + current_format_.GetBank0OffsetUv())
+          .set_value(memory_address + current_format_->GetBank0OffsetUv())
           .WriteTo(&isp_mmio_local_);
     }
     // 4) Optional? Enable Write_on
     GetPrimaryMisc().ReadFrom(&isp_mmio_local_)
         .set_frame_write_on(1)
         .WriteTo(&isp_mmio_local_);
-    if (current_format_.HasSecondaryChannel()) {
+    if (current_format_->HasSecondaryChannel()) {
         GetUvMisc().ReadFrom(&isp_mmio_local_)
             .set_frame_write_on(1)
             .WriteTo(&isp_mmio_local_);
@@ -133,8 +137,8 @@ void DmaManager::SetFormat(DmaFormat format) {
         .set_plane_select(format.GetPlaneSelect())
         .WriteTo(&isp_mmio_local_);
     GetPrimaryActiveDim().ReadFrom(&isp_mmio_local_)
-        .set_active_width(format.width_)
-        .set_active_height(format.height_)
+        .set_active_width(format.width())
+        .set_active_height(format.height())
         .WriteTo(&isp_mmio_local_);
     GetPrimaryLineOffset().ReadFrom(&isp_mmio_local_)
         .set_value(format.GetLineOffset())
@@ -146,8 +150,8 @@ void DmaManager::SetFormat(DmaFormat format) {
             .set_plane_select(format.GetPlaneSelect())
             .WriteTo(&isp_mmio_local_);
         GetUvActiveDim().ReadFrom(&isp_mmio_local_)
-            .set_active_width(format.width_)
-            .set_active_height(format.height_)
+            .set_active_width(format.width())
+            .set_active_height(format.height())
             .WriteTo(&isp_mmio_local_);
         GetUvLineOffset().ReadFrom(&isp_mmio_local_)
             .set_value(format.GetLineOffset())

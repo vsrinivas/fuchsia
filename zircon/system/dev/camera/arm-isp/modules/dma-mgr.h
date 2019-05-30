@@ -37,7 +37,7 @@ private:
     fzl::VmoPool buffers_;
     std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
     uint32_t fps_;
-    DmaFormat current_format_;
+    std::optional<DmaFormat> current_format_;
     bool downscaled_ = false;
     fit::function<void(uint32_t buffer_index)> publish_buffer_callback_;
 

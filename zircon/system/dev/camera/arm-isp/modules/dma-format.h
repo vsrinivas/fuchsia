@@ -4,18 +4,19 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <stdint.h>
 
+#include <fuchsia/sysmem/c/fidl.h>
+
 namespace camera {
 
-// DmaFormat is a local format that is compatible with the sysmem::ImageFormat_2.
+// DmaFormat is a local format that is compatible with the sysmem::ImageFormat.
 // DmaFormat provides a single point of conversion between sysmem and the ISP driver.
 class DmaFormat {
-    uint8_t pixel_format_ = PixelType::INVALID;
-    bool flip_vertical_ = false;
-    uint8_t secondary_plane_select_ = 0;
-
+public:
+    static constexpr uint8_t kPlaneSelectShift = 6;
     enum PixelType {
         INVALID = 0,
         RGB32 = 1,
@@ -30,37 +31,52 @@ class DmaFormat {
         YUY2 = 10,
         UYVY = 11,
         Y210 = 12,
+        // The NV12 and YV12 formats are only used internally.  They should not be passed
+        // to DmaFormat during initialization.
         NV12 = 13,
         YV12 = 14,
-        // The types below are just to specify formats which have
-        // different plane_select values.  They will not be used internally.
-        NV12_YUV = 13 | (1 << 6),
-        NV12_YVU = 13 | (2 << 6),
-        NV12_GREY = 13 | (3 << 6),
-        YV12_YU = 14 | (1 << 6),
-        YV12_YV = 14 | (2 << 6),
+        // The types below are variants of NV12 and YV12 used to specify the configuration
+        // of the UV planes.  These formats should be used in the constructor.
+        NV12_YUV = NV12 | (1 << kPlaneSelectShift),
+        NV12_YVU = NV12 | (2 << kPlaneSelectShift),
+        NV12_GREY = NV12 | (3 << kPlaneSelectShift),
+        YV12_YU = YV12 | (1 << kPlaneSelectShift),
+        YV12_YV = YV12 | (2 << kPlaneSelectShift),
     };
 
-public:
-    uint32_t width_, height_;
+    explicit DmaFormat(const fuchsia_sysmem_ImageFormat& format);
+    DmaFormat(uint32_t width, uint32_t height, PixelType pixel_format, bool flip_vertical);
 
+    // Indicates whether the format produces a second plane of output.
     bool HasSecondaryChannel() const;
 
-    void Set(uint32_t width, uint32_t height, PixelType pixel_format, bool vflip);
-
-    uint32_t BytesPerPixel() const;
-
-    // Get the value that should be written into the line_offset register.
+    uint32_t GetBytesPerPixel() const;
+    // Gets the value that should be written into the line_offset register.
+    // This value corresponds to the stride.
     // Note that the register expects a negative value if the frame is vertically flipped.
     uint32_t GetLineOffset() const;
 
-    // This is added to the address of the memory we are DMAing to.
+    // Gets the offset into our address space of the location to which we start the DMA engine.
     uint32_t GetBank0Offset() const;
     uint32_t GetBank0OffsetUv() const;
+    size_t GetImageSize() const;
 
-    uint8_t GetPlaneSelect() const { return 0; }
+    // Gets the value that should be written to the plane_select register when configuring
+    // the format of the ISP.
+    uint8_t GetPlaneSelect() const;
     uint8_t GetPlaneSelectUv() const;
-    uint8_t GetBaseMode() const { return pixel_format_; }
+    // Gets the value that should be written to the base_mode register when configuring
+    // the format of the ISP.
+    uint8_t GetBaseMode() const;
+
+    uint32_t width() const { return width_; }
+    uint32_t height() const { return height_; }
+
+private:
+    uint32_t width_, height_;
+    bool flip_vertical_ = false;
+    uint8_t base_mode_ = PixelType::INVALID;
+    uint8_t secondary_plane_select_ = 0;
 };
 
 } // namespace camera
