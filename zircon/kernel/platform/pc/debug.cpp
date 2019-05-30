@@ -163,10 +163,12 @@ static void init_uart() {
     uart_write(3, 0x80);                               // set up to load divisor latch
     uart_write(0, static_cast<uint8_t>(divisor));      // lsb
     uart_write(1, static_cast<uint8_t>(divisor >> 8)); // msb
-    uart_write(3, 3);                                  // 8N1
     // enable FIFO, rx FIFO reset, tx FIFO reset, 16750 64 byte fifo enable,
-    // Rx FIFO irq trigger level at 14-bytes
+    // Rx FIFO irq trigger level at 14-bytes, must be done while divisor
+    // latch is enabled in order to write the 16750 64 byte fifo enable bit
     uart_write(2, 0xe7);
+    uart_write(3, 3);                                  // 8N1
+
     // Drive flow control bits high since we don't actively manage them
     uart_write(4, 0x3);
 
