@@ -4,13 +4,13 @@
 
 pub mod hmac_sha1;
 
-use failure;
+use crate::Error;
 use hmac_sha1::HmacSha1;
 use wlan_common::ie::rsn::akm::Akm;
 
 pub trait Algorithm {
     fn verify(&self, key: &[u8], data: &[u8], expected: &[u8]) -> bool;
-    fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, failure::Error>;
+    fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error>;
 }
 
 pub fn integrity_algorithm(akm: &Akm) -> Option<Box<Algorithm>> {

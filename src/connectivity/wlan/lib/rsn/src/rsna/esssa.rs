@@ -405,6 +405,7 @@ impl EssSa {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::key::exchange::compute_mic;
     use crate::rsna::test_util;
     use crate::Supplicant;
 
@@ -689,7 +690,8 @@ mod tests {
         assert_eq!(msg4.key_data.len(), 0);
         assert!(test_util::is_zero(&msg4.key_data[..]));
         // Verify the message's MIC.
-        let mic = test_util::compute_mic(ptk.kck(), &msg4);
+        let mic =
+            compute_mic(ptk.kck(), &test_util::get_akm(), &msg4).expect("error computing MIC");
         assert_eq!(&msg4.key_mic[..], &mic[..]);
 
         // Verify PTK was reported.
@@ -733,7 +735,8 @@ mod tests {
         assert_eq!(msg2.key_data.len(), 0);
         assert!(test_util::is_zero(&msg2.key_data[..]));
         // Verify the message's MIC.
-        let mic = test_util::compute_mic(ptk.kck(), &msg2);
+        let mic =
+            compute_mic(ptk.kck(), &test_util::get_akm(), &msg2).expect("error computing MIC");
         assert_eq!(&msg2.key_mic[..], &mic[..]);
 
         // Verify PTK was NOT reported.

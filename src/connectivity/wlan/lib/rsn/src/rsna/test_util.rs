@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::crypto_utils::nonce::NonceReader;
-use crate::integrity::integrity_algorithm;
+use crate::key::exchange::compute_mic;
 use crate::key::exchange::handshake::fourway::{self, Fourway};
 use crate::key::{
     gtk::{Gtk, GtkProvider},
@@ -108,20 +108,6 @@ pub fn get_pmk() -> Vec<u8> {
         .expect("error reading PMK from hex")
 }
 
-pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
-    let akm = get_akm();
-    let integrity_alg =
-        integrity_algorithm(&akm).expect("error AKM has no known integrity Algorithm");
-    let mut buf = Vec::with_capacity(frame.len());
-    frame.as_bytes(true, &mut buf);
-    let written = buf.len();
-    buf.truncate(written);
-    let mut mic: Vec<u8> =
-        integrity_alg.compute(kck, &buf[..]).expect("error computing MIC for message");
-    mic.truncate(mic_len());
-    mic
-}
-
 pub fn encrypt_key_data(kek: &[u8], key_data: &[u8]) -> Vec<u8> {
     let keywrap_alg =
         keywrap_algorithm(&get_akm()).expect("error AKM has no known keywrap Algorithm");
@@ -201,7 +187,7 @@ where
     msg_modifier(&mut msg);
     msg.update_packet_body_len();
 
-    let mic = compute_mic(ptk.kck(), &msg);
+    let mic = compute_mic(ptk.kck(), &get_akm(), &msg).expect("error computing MIC");
     msg.key_mic = Bytes::from(mic);
 
     msg
@@ -244,7 +230,7 @@ where
     msg_modifier(&mut msg);
     msg.update_packet_body_len();
 
-    let mic = compute_mic(ptk.kck(), &msg);
+    let mic = compute_mic(ptk.kck(), &get_akm(), &msg).expect("error computing MIC");
     msg.key_mic = Bytes::from(mic);
 
     msg
@@ -280,7 +266,7 @@ pub fn finalize_key_frame(mut frame: eapol::KeyFrame, kck: Option<&[u8]>) -> eap
     frame.update_packet_body_len();
 
     if let Some(kck) = kck {
-        let mic = compute_mic(kck, &frame);
+        let mic = compute_mic(kck, &get_akm(), &frame).expect("error computing MIC");
         frame.key_mic = Bytes::from(mic);
     }
 

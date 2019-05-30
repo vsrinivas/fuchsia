@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::integrity::integrity_algorithm;
 use crate::key::exchange::{
+    compute_mic,
     handshake::group_key::{self, Config, GroupKeyHandshakeFrame},
     Key,
 };
 use crate::key::gtk::Gtk;
 use crate::key_data;
 use crate::rsna::{KeyFrameKeyDataState, KeyFrameState, SecAssocUpdate, UpdateSink};
-use crate::Error;
 use bytes::Bytes;
 use eapol;
 use failure::{self, bail};
-use wlan_common::ie::rsn::akm::Akm;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
@@ -98,7 +96,7 @@ impl Supplicant {
         msg2.update_packet_body_len();
 
         // Update the frame's MIC.
-        update_mic(&self.kck[..], &self.cfg.akm, &mut msg2)?;
+        msg2.key_mic = Bytes::from(compute_mic(&self.kck[..], &self.cfg.akm, &msg2)?);
 
         Ok(msg2)
     }
@@ -106,19 +104,6 @@ impl Supplicant {
     pub fn destroy(self) -> Config {
         self.cfg
     }
-}
-
-fn update_mic(kck: &[u8], akm: &Akm, frame: &mut eapol::KeyFrame) -> Result<(), failure::Error> {
-    let integrity_alg = integrity_algorithm(&akm).ok_or(Error::UnsupportedAkmSuite)?;
-    let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
-
-    let mut buf = Vec::with_capacity(frame.len());
-    frame.as_bytes(true, &mut buf);
-    let written = buf.len();
-    buf.truncate(written);
-    let mic = integrity_alg.compute(kck, &buf[..])?;
-    frame.key_mic = Bytes::from(&mic[..mic_len as usize]);
-    Ok(())
 }
 
 #[cfg(test)]
@@ -144,6 +129,7 @@ mod tests {
             packet_type: eapol::PacketType::Key as u8,
             descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
             key_info: eapol::KeyInformation(0b01001110000010),
+            key_mic: Bytes::from(vec![0; 16]),
             ..Default::default()
         }
     }
@@ -183,8 +169,8 @@ mod tests {
             ..fake_msg1()
         };
         key_frame.update_packet_body_len();
-        update_mic(&KCK[..], &psk, &mut key_frame).expect("error updating MIC");
-        let key_frame = test_util::finalize_key_frame(key_frame, Some(&KCK[..]));
+        let mic = compute_mic(&KCK[..], &psk, &mut key_frame).expect("error updating MIC");
+        key_frame.key_mic = Bytes::from(mic);
         let msg1 =
             make_verified(&key_frame, Role::Supplicant).expect("error verifying group frame");
 

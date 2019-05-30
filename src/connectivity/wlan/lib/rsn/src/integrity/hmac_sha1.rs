@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use super::Algorithm;
+use crate::Error;
 use crypto::hmac::Hmac;
 use crypto::mac::{Mac, MacResult};
 use crypto::sha1::Sha1;
-use failure;
 
 pub struct HmacSha1;
 
@@ -27,7 +27,7 @@ impl Algorithm for HmacSha1 {
         }
     }
 
-    fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, failure::Error> {
+    fn compute(&self, key: &[u8], data: &[u8]) -> Result<Vec<u8>, Error> {
         let mut hmac = Hmac::new(Sha1::new(), key);
         let mut out = vec![0u8; hmac.output_bytes()];
         hmac.input(data);

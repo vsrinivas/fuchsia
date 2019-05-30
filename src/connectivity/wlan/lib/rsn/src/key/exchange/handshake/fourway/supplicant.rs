@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use crate::crypto_utils::nonce::Nonce;
-use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
-use crate::key::exchange::Key;
+use crate::key::exchange::{compute_mic, Key};
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
@@ -75,8 +74,7 @@ fn create_message_2(
     };
     msg2.update_packet_body_len();
 
-    let integrity_alg = integrity_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?;
-    update_mic(kck, rsne.mic_size, integrity_alg, &mut msg2)?;
+    msg2.key_mic = Bytes::from(compute_mic(kck, &rsne.akm, &msg2)?);
 
     Ok(msg2)
 }
@@ -159,8 +157,7 @@ fn create_message_4(
     };
     msg4.update_packet_body_len();
 
-    let integrity_alg = integrity_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?;
-    update_mic(kck, rsne.mic_size, integrity_alg, &mut msg4)?;
+    msg4.key_mic = Bytes::from(compute_mic(kck, &rsne.akm, &msg4)?);
 
     Ok(msg4)
 }
@@ -294,19 +291,4 @@ impl State {
             State::KeysInstalled { cfg, .. } => cfg,
         }
     }
-}
-
-fn update_mic(
-    kck: &[u8],
-    mic_len: u16,
-    alg: Box<integrity::Algorithm>,
-    frame: &mut eapol::KeyFrame,
-) -> Result<(), failure::Error> {
-    let mut buf = Vec::with_capacity(frame.len());
-    frame.as_bytes(true, &mut buf);
-    let written = buf.len();
-    buf.truncate(written);
-    let mic = alg.compute(kck, &buf[..])?;
-    frame.key_mic = Bytes::from(&mic[..mic_len as usize]);
-    Ok(())
 }
