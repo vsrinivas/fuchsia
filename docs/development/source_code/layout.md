@@ -106,8 +106,9 @@ A directory inside an area that contains an `OWNERS` file is considered a
 subarea and must adhere to the contract for areas. A directory lacking an
 `OWNERS` file is considered part of the same area.
 
-At the top of the `fuchsia.git` repository, there exist directories with
-`OWNERS` that are not considered areas, e.g. the `products` directory.
+In the `fuchsia.git` repository, there exist directories with `OWNERS` that are
+not considered areas, e.g. the top level `products` directory, or subdirectories
+of the `/src/lib` directory.
 
 ### Dependency Structure
 
