@@ -676,7 +676,7 @@ group("guest") {
     "//garnet/bin/vsock_service:vsock_service-tests",
     "//garnet/packages/experimental:debian_guest",
     "//garnet/packages/experimental:zircon_guest",
-    "//garnet/public/lib/guest:guest_lib_tests",
+    "//sdk/lib/virtualization:virtualization_lib_tests",
     "//src/virtualization/bin/guest_manager:guest_manager_tests",
     "//src/virtualization/bin/vmm:vmm_tests",
     "//src/virtualization/lib/grpc:grpc_vsock_tests",

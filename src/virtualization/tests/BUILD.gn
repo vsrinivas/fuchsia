@@ -46,7 +46,6 @@ executable("bin") {
   deps = [
     "//garnet/lib/inet",
     "//garnet/public/lib/svc/cpp",
-    "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization",

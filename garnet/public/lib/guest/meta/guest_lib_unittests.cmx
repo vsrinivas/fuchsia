@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/guest_lib_unittests"
-    }
-}
