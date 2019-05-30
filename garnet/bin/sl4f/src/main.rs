@@ -19,6 +19,7 @@ mod audio;
 mod auth;
 mod basemgr;
 mod bluetooth;
+mod file;
 mod logging;
 mod netstack;
 mod scenic;

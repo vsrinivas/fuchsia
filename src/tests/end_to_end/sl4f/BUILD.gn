@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+dart_test("sl4f_test") {
+  sources = [
+    "file_facade_test.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  # The test runs on CI/CQ try builders
+  # in these environments.
+  environments = [ nuc_env ]
+
+  # The test runs only on fyi builders
+  # in these environments, indicated by
+  # a tag.
+  _fyi_environments = [ astro_env ]
+
+  foreach(env, _fyi_environments) {
+    if (!defined(env.tags)) {
+      env.tags = []
+    }
+    env.tags += [ "e2e-terminal" ]
+    environments += [ env ]
+  }
+}
+
+group("test") {
+  testonly = true
+
+  deps = [
+    ":sl4f_test($host_toolchain)",
+  ]
+}

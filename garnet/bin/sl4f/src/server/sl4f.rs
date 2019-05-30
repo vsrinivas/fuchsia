@@ -38,6 +38,9 @@ use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 
+// File related includes
+use crate::file::facade::FileFacade;
+
 // Logging related includes
 use crate::logging::facade::LoggingFacade;
 
@@ -79,7 +82,7 @@ pub struct Sl4f {
     // auth_facade: Thread safe object for injecting credentials for tests.
     auth_facade: Arc<AuthFacade>,
 
-    // auth_facade: Thread safe object for restarting sessions for tests.
+    // basemgr_facade: Thread safe object for restarting sessions for tests.
     basemgr_facade: Arc<BaseManagerFacade>,
 
     // bt_facade: Thread safe object for state for ble functions.
@@ -90,6 +93,9 @@ pub struct Sl4f {
 
     // bt_control_facade: Thread safe object for state for  Bluetooth control tests
     bt_control_facade: Arc<BluetoothControlFacade>,
+
+    // file_facade: Thread safe object for state for  File control functions
+    file_facade: Arc<FileFacade>,
 
     // gatt_client_facade: Thread safe object for state for Gatt Client tests
     gatt_client_facade: Arc<GattClientFacade>,
@@ -128,6 +134,7 @@ impl Sl4f {
         let basemgr_facade = Arc::new(BaseManagerFacade::new());
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         let bt_control_facade = Arc::new(BluetoothControlFacade::new());
+        let file_facade = Arc::new(FileFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
         let gatt_server_facade = Arc::new(GattServerFacade::new());
         let logging_facade = Arc::new(LoggingFacade::new());
@@ -143,6 +150,7 @@ impl Sl4f {
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
             bt_control_facade,
+            file_facade,
             gatt_client_facade,
             gatt_server_facade,
             logging_facade,
@@ -177,6 +185,10 @@ impl Sl4f {
 
     pub fn get_bt_control_facade(&self) -> Arc<BluetoothControlFacade> {
         self.bt_control_facade.clone()
+    }
+
+    pub fn get_file_facade(&self) -> Arc<FileFacade> {
+        self.file_facade.clone()
     }
 
     pub fn get_gatt_client_facade(&self) -> Arc<GattClientFacade> {
