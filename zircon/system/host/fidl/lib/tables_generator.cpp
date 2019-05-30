@@ -10,6 +10,34 @@ namespace fidl {
 
 namespace {
 
+std::string PrimitiveSubtypeToString(fidl::types::PrimitiveSubtype subtype) {
+    using fidl::types::PrimitiveSubtype;
+    switch (subtype) {
+    case PrimitiveSubtype::kBool:
+        return "Bool";
+    case PrimitiveSubtype::kInt8:
+        return "Int8";
+    case PrimitiveSubtype::kInt16:
+        return "Int16";
+    case PrimitiveSubtype::kInt32:
+        return "Int32";
+    case PrimitiveSubtype::kInt64:
+        return "Int64";
+    case PrimitiveSubtype::kUint8:
+        return "Uint8";
+    case PrimitiveSubtype::kUint16:
+        return "Uint16";
+    case PrimitiveSubtype::kUint32:
+        return "Uint32";
+    case PrimitiveSubtype::kUint64:
+        return "Uint64";
+    case PrimitiveSubtype::kFloat32:
+        return "Float32";
+    case PrimitiveSubtype::kFloat64:
+        return "Float64";
+    }
+}
+
 // When generating coding tables for containers employing envelopes (xunions & tables),
 // we need to reference coding tables for primitives, in addition to types that need coding.
 // This function handles naming coding tables for both cases.
@@ -19,32 +47,8 @@ std::string CodedNameForEnvelope(const fidl::coded::Type* type) {
         using fidl::types::PrimitiveSubtype;
         // To save space, all primitive types of the same underlying subtype
         // share the same table.
-        std::string suffix = ([type]() -> std::string {
-            switch (static_cast<const coded::PrimitiveType*>(type)->subtype) {
-            case PrimitiveSubtype::kBool:
-                return "Bool";
-            case PrimitiveSubtype::kInt8:
-                return "Int8";
-            case PrimitiveSubtype::kInt16:
-                return "Int16";
-            case PrimitiveSubtype::kInt32:
-                return "Int32";
-            case PrimitiveSubtype::kInt64:
-                return "Int64";
-            case PrimitiveSubtype::kUint8:
-                return "Uint8";
-            case PrimitiveSubtype::kUint16:
-                return "Uint16";
-            case PrimitiveSubtype::kUint32:
-                return "Uint32";
-            case PrimitiveSubtype::kUint64:
-                return "Uint64";
-            case PrimitiveSubtype::kFloat32:
-                return "Float32";
-            case PrimitiveSubtype::kFloat64:
-                return "Float64";
-            }
-        })();
+        std::string suffix =
+            PrimitiveSubtypeToString(static_cast<const coded::PrimitiveType*>(type)->subtype);
         return "::fidl::internal::k" + suffix;
     }
     default:
@@ -132,6 +136,24 @@ void TablesGenerator::GenerateArray(const Collection& collection) {
         EmitNewlineAndIndent(&tables_file_, --indent_level_);
 
     EmitArrayEnd(&tables_file_);
+}
+
+void TablesGenerator::Generate(const coded::EnumType& enum_type) {
+    Emit(&tables_file_, "const fidl_type_t ");
+    Emit(&tables_file_, NameTable(enum_type.coded_name));
+    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedEnum(");
+    Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
+    Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
+    Emit(&tables_file_, "));\n\n");
+}
+
+void TablesGenerator::Generate(const coded::BitsType& bits_type) {
+    Emit(&tables_file_, "const fidl_type_t ");
+    Emit(&tables_file_, NameTable(bits_type.coded_name));
+    Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedBits(");
+    Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
+    Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
+    Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
@@ -373,6 +395,18 @@ void TablesGenerator::Generate(const coded::XUnionField& field) {
     Emit(&tables_file_, ")");
 }
 
+void TablesGenerator::GenerateForward(const coded::EnumType& enum_type) {
+    Emit(&tables_file_, "extern const fidl_type_t ");
+    Emit(&tables_file_, NameTable(enum_type.coded_name));
+    Emit(&tables_file_, ";\n");
+}
+
+void TablesGenerator::GenerateForward(const coded::BitsType& bits_type) {
+    Emit(&tables_file_, "extern const fidl_type_t ");
+    Emit(&tables_file_, NameTable(bits_type.coded_name));
+    Emit(&tables_file_, ";\n");
+}
+
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
     Emit(&tables_file_, "extern const fidl_type_t ");
     Emit(&tables_file_, NameTable(struct_type.coded_name));
@@ -402,12 +436,18 @@ std::ostringstream TablesGenerator::Produce() {
 
     GenerateFilePreamble();
 
-    // Generate forward declarations of coding tables for named container declarations.
+    // Generate forward declarations of coding tables for named declarations.
     for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
         auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
         if (!coded_type)
             continue;
         switch (coded_type->kind) {
+        case coded::Type::Kind::kEnum:
+            GenerateForward(*static_cast<const coded::EnumType*>(coded_type));
+            break;
+        case coded::Type::Kind::kBits:
+            GenerateForward(*static_cast<const coded::BitsType*>(coded_type));
+            break;
         case coded::Type::Kind::kStruct:
             GenerateForward(*static_cast<const coded::StructType*>(coded_type));
             break;
@@ -427,7 +467,7 @@ std::ostringstream TablesGenerator::Produce() {
 
     Emit(&tables_file_, "\n");
 
-    // Generate coding table definitions necessary for nullable types.
+    // Generate pointer coding tables necessary for nullable types.
     for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
         auto coded_type = coded_types_generator_.CodedTypeFor(&decl->name);
         if (!coded_type)
@@ -461,11 +501,16 @@ std::ostringstream TablesGenerator::Produce() {
 
     Emit(&tables_file_, "\n");
 
+    // Generate coding table definitions for unnamed declarations.
+    // These are composed in an ad-hoc way in FIDL source, hence we generate "static" coding tables
+    // local to the translation unit.
     for (const auto& coded_type : coded_types_generator_.coded_types()) {
         if (coded_type->coding_needed == coded::CodingNeeded::kEnvelopeOnly)
             continue;
 
         switch (coded_type->kind) {
+        case coded::Type::Kind::kEnum:
+        case coded::Type::Kind::kBits:
         case coded::Type::Kind::kStruct:
         case coded::Type::Kind::kTable:
         case coded::Type::Kind::kUnion:
@@ -514,7 +559,7 @@ std::ostringstream TablesGenerator::Produce() {
 
     Emit(&tables_file_, "\n");
 
-    // Generate coding table definitions for named container declarations.
+    // Generate coding table definitions for named declarations.
     for (const auto& decl : coded_types_generator_.library()->declaration_order_) {
         // Definition will be generated elsewhere.
         if (decl->name.library() != coded_types_generator_.library())
@@ -524,6 +569,12 @@ std::ostringstream TablesGenerator::Produce() {
         if (!coded_type)
             continue;
         switch (coded_type->kind) {
+        case coded::Type::Kind::kEnum:
+            Generate(*static_cast<const coded::EnumType*>(coded_type));
+            break;
+        case coded::Type::Kind::kBits:
+            Generate(*static_cast<const coded::BitsType*>(coded_type));
+            break;
         case coded::Type::Kind::kStruct:
             Generate(*static_cast<const coded::StructType*>(coded_type));
             break;

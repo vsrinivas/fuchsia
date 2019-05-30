@@ -46,6 +46,8 @@ private:
     template <typename Collection>
     void GenerateArray(const Collection& collection);
 
+    void Generate(const coded::EnumType& struct_type);
+    void Generate(const coded::BitsType& struct_type);
     void Generate(const coded::StructType& struct_type);
     void Generate(const coded::TableType& table_type);
     void Generate(const coded::UnionType& union_type);
@@ -65,6 +67,8 @@ private:
     void Generate(const coded::TableField& field);
     void Generate(const coded::XUnionField& field);
 
+    void GenerateForward(const coded::EnumType& enum_type);
+    void GenerateForward(const coded::BitsType& bits_type);
     void GenerateForward(const coded::StructType& struct_type);
     void GenerateForward(const coded::TableType& table_type);
     void GenerateForward(const coded::UnionType& union_type);

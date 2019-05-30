@@ -1572,8 +1572,8 @@ TEST(Compatibility, EchoVectors) {
 
 TEST(Compatibility, EchoTable) {
   ForSomeServers(
-      // See: FIDL-644, FIDL-645
-      Exclude({"llcpp", "rust"}),
+      // See: FIDL-644
+      Exclude({"rust"}),
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by
@@ -1603,9 +1603,7 @@ TEST(Compatibility, EchoTable) {
 }
 
 TEST(Compatibility, EchoXunions) {
-  ForSomeServers(
-      // See: FIDL-645
-      Exclude({"llcpp"}),
+  ForAllServers(
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url) {
         // Using randomness to avoid having to come up with varied values by

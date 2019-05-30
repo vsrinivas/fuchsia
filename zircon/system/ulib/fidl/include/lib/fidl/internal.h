@@ -95,6 +95,8 @@ struct FidlXUnionField {
 
 enum FidlTypeTag : uint32_t {
     kFidlTypePrimitive,
+    kFidlTypeEnum,
+    kFidlTypeBits,
     kFidlTypeStruct,
     kFidlTypeStructPointer,
     kFidlTypeUnion,
@@ -119,6 +121,20 @@ enum struct FidlCodedPrimitive : uint32_t {
     kUint64,
     kFloat32,
     kFloat64,
+};
+
+struct FidlCodedEnum {
+    const FidlCodedPrimitive underlying_type;
+
+    constexpr explicit FidlCodedEnum(FidlCodedPrimitive underlying_type)
+        : underlying_type(underlying_type) {}
+};
+
+struct FidlCodedBits {
+    const FidlCodedPrimitive underlying_type;
+
+    constexpr explicit FidlCodedBits(FidlCodedPrimitive underlying_type)
+        : underlying_type(underlying_type) {}
 };
 
 // Though the |size| is implied by the fields, computing that information is not the purview of this
@@ -256,6 +272,8 @@ struct fidl_type {
     const fidl::FidlTypeTag type_tag;
     const union {
         const fidl::FidlCodedPrimitive coded_primitive;
+        const fidl::FidlCodedEnum coded_enum;
+        const fidl::FidlCodedBits coded_bits;
         const fidl::FidlCodedStruct coded_struct;
         const fidl::FidlCodedStructPointer coded_struct_pointer;
         const fidl::FidlCodedTable coded_table;
@@ -270,6 +288,12 @@ struct fidl_type {
 
     constexpr fidl_type(fidl::FidlCodedPrimitive coded_primitive) noexcept
         : type_tag(fidl::kFidlTypePrimitive), coded_primitive(coded_primitive) {}
+
+    constexpr fidl_type(fidl::FidlCodedEnum coded_enum) noexcept
+        : type_tag(fidl::kFidlTypeEnum), coded_enum(coded_enum) {}
+
+    constexpr fidl_type(fidl::FidlCodedBits coded_bits) noexcept
+        : type_tag(fidl::kFidlTypeBits), coded_bits(coded_bits) {}
 
     constexpr fidl_type(fidl::FidlCodedStruct coded_struct) noexcept
         : type_tag(fidl::kFidlTypeStruct), coded_struct(coded_struct) {}

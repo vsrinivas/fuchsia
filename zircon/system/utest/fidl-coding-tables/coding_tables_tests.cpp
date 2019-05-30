@@ -111,3 +111,33 @@ TEST(MyXUnion, CodingTableWhenNonnullable) {
     // The xunion in vector<MyXUnion> is not nullable.
     ASSERT_EQ(fidl::kNonnullable, coded_xunion.nullable);
 }
+
+TEST(MyBits, CodingTable) {
+    const fidl_type& type = fidl_test_example_codingtables_CodingMyBitsRequestTable;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
+    const fidl::FidlCodedStruct& request_struct = type.coded_struct;
+    ASSERT_EQ(1, request_struct.field_count);
+    ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyBitsRequest",
+                  request_struct.name);
+    const fidl::FidlStructField& my_bits_field = request_struct.fields[0];
+    ASSERT_EQ(16, my_bits_field.offset);
+    const fidl_type& my_bits_type = *my_bits_field.type;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeBits, my_bits_type.type_tag);
+    const fidl::FidlCodedBits& my_bits_table = my_bits_type.coded_bits;
+    ASSERT_EQ(fidl::FidlCodedPrimitive::kUint8, my_bits_table.underlying_type);
+}
+
+TEST(MyEnum, CodingTable) {
+    const fidl_type& type = fidl_test_example_codingtables_CodingMyEnumRequestTable;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
+    const fidl::FidlCodedStruct& request_struct = type.coded_struct;
+    ASSERT_EQ(1, request_struct.field_count);
+    ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyEnumRequest",
+                  request_struct.name);
+    const fidl::FidlStructField& my_enum_field = request_struct.fields[0];
+    ASSERT_EQ(16, my_enum_field.offset);
+    const fidl_type& my_enum_type = *my_enum_field.type;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeEnum, my_enum_type.type_tag);
+    const fidl::FidlCodedEnum& my_enum_table = my_enum_type.coded_enum;
+    ASSERT_EQ(fidl::FidlCodedPrimitive::kUint32, my_enum_table.underlying_type);
+}

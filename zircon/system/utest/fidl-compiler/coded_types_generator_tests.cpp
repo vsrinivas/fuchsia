@@ -518,6 +518,66 @@ table MyTable {
     END_TEST;
 }
 
+bool CodedTypesOfBits() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+bits MyBits : uint8 {
+    HELLO = 0x1;
+    WORLD = 0x10;
+};
+
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    ASSERT_EQ(0, gen.coded_types().size());
+    auto name_bits = fidl::flat::Name(library.library(), "MyBits");
+    auto type_bits = gen.CodedTypeFor(&name_bits);
+    ASSERT_NONNULL(type_bits);
+    ASSERT_STR_EQ("example_MyBits", type_bits->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_bits->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kBits, type_bits->kind);
+    auto type_bits_bits = static_cast<const fidl::coded::BitsType*>(type_bits);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kUint8, type_bits_bits->subtype);
+
+    END_TEST;
+}
+
+bool CodedTypesOfEnum() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+enum MyEnum : uint16 {
+    HELLO = 0x1;
+    WORLD = 0x10;
+};
+
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    ASSERT_EQ(0, gen.coded_types().size());
+
+    ASSERT_EQ(0, gen.coded_types().size());
+    auto name_enum = fidl::flat::Name(library.library(), "MyEnum");
+    auto type_enum = gen.CodedTypeFor(&name_enum);
+    ASSERT_NONNULL(type_enum);
+    ASSERT_STR_EQ("example_MyEnum", type_enum->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_enum->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kEnum, type_enum->kind);
+    auto type_enum_enum = static_cast<const fidl::coded::EnumType*>(type_enum);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kUint16, type_enum_enum->subtype);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(coded_types_generator_tests)
@@ -531,5 +591,7 @@ RUN_TEST(CodedTypesOfNullablePointers);
 RUN_TEST(CodedTypesOfStructsWithPaddings);
 RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfTables);
+RUN_TEST(CodedTypesOfBits);
+RUN_TEST(CodedTypesOfEnum);
 
 END_TEST_CASE(coded_types_generator_tests)

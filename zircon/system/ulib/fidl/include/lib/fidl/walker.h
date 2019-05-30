@@ -37,27 +37,35 @@ static_assert(sizeof(fidl_envelope_t) == 16u, "fidl_envelope_t layout");
 
 static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT, "invalid handle equals absence marker");
 
+constexpr uint32_t PrimitiveSize(const FidlCodedPrimitive primitive) {
+    switch (primitive) {
+    case FidlCodedPrimitive::kBool:
+    case FidlCodedPrimitive::kInt8:
+    case FidlCodedPrimitive::kUint8:
+        return 1;
+    case FidlCodedPrimitive::kInt16:
+    case FidlCodedPrimitive::kUint16:
+        return 2;
+    case FidlCodedPrimitive::kInt32:
+    case FidlCodedPrimitive::kUint32:
+    case FidlCodedPrimitive::kFloat32:
+        return 4;
+    case FidlCodedPrimitive::kInt64:
+    case FidlCodedPrimitive::kUint64:
+    case FidlCodedPrimitive::kFloat64:
+        return 8;
+    }
+    __builtin_unreachable();
+}
+
 constexpr uint32_t TypeSize(const fidl_type_t* type) {
     switch (type->type_tag) {
     case fidl::kFidlTypePrimitive:
-        switch (type->coded_primitive) {
-        case FidlCodedPrimitive::kBool:
-        case FidlCodedPrimitive::kInt8:
-        case FidlCodedPrimitive::kUint8:
-            return 1;
-        case FidlCodedPrimitive::kInt16:
-        case FidlCodedPrimitive::kUint16:
-            return 2;
-        case FidlCodedPrimitive::kInt32:
-        case FidlCodedPrimitive::kUint32:
-        case FidlCodedPrimitive::kFloat32:
-            return 4;
-        case FidlCodedPrimitive::kInt64:
-        case FidlCodedPrimitive::kUint64:
-        case FidlCodedPrimitive::kFloat64:
-            return 8;
-        }
-        __builtin_unreachable();
+        return PrimitiveSize(type->coded_primitive);
+    case fidl::kFidlTypeEnum:
+        return PrimitiveSize(type->coded_enum.underlying_type);
+    case fidl::kFidlTypeBits:
+        return PrimitiveSize(type->coded_bits.underlying_type);
     case fidl::kFidlTypeStructPointer:
     case fidl::kFidlTypeUnionPointer:
         return sizeof(uint64_t);
@@ -132,6 +140,14 @@ private:
         Frame(const fidl_type_t* fidl_type, Position position)
             : position(position) {
             switch (fidl_type->type_tag) {
+            case fidl::kFidlTypeEnum:
+                state = kStateEnum;
+                enum_state.underlying_type = fidl_type->coded_enum.underlying_type;
+                break;
+            case fidl::kFidlTypeBits:
+                state = kStateBits;
+                bits_state.underlying_type = fidl_type->coded_bits.underlying_type;
+                break;
             case fidl::kFidlTypeStruct:
                 state = kStateStruct;
                 struct_state.fields = fidl_type->coded_struct.fields;
@@ -271,6 +287,8 @@ private:
         }
 
         enum : int {
+            kStateEnum,
+            kStateBits,
             kStateStruct,
             kStateStructPointer,
             kStateTable,
@@ -292,6 +310,12 @@ private:
         // fidl_type structures needed for coding state. For
         // example, struct sizes do not need to be present here.
         union {
+            struct {
+                fidl::FidlCodedPrimitive underlying_type;
+            } enum_state;
+            struct {
+                fidl::FidlCodedPrimitive underlying_type;
+            } bits_state;
             struct {
                 const fidl::FidlStructField* fields;
                 uint32_t field_count;
@@ -427,6 +451,16 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         Frame* frame = Peek();
 
         switch (frame->state) {
+        case Frame::kStateEnum: {
+            // TODO(FIDL-627): Validate enums
+            Pop();
+            continue;
+        }
+        case Frame::kStateBits: {
+            // TODO(FIDL-659): Validate bits
+            Pop();
+            continue;
+        }
         case Frame::kStateStruct: {
             const uint32_t field_index = frame->NextStructField();
             if (field_index == frame->struct_state.field_count) {

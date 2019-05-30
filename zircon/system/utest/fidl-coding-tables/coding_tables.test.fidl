@@ -22,6 +22,16 @@ table MyTable {
     5: vector<uint64>:42 qux;
 };
 
+bits MyBits : uint8 {
+    HELLO = 0x1;
+    WORLD = 0x10;
+};
+
+enum MyEnum : uint32 {
+    FOO = 1;
+    BAR = 42;
+};
+
 // fidlc will only expose coding tables for message types.
 // However, we can obtain the coding tables for SomeStruct/MyXUnion etc. via the coding table
 // for request message types, by defining dummy methods which take a single desired argument.
@@ -35,4 +45,7 @@ protocol Coding {
     MyXUnion2(MyXUnion? x);
     VectorOfMyTable(vector<MyTable> t);
     VectorOfMyXUnion(vector<MyXUnion> x);
+
+    MyBits(MyBits b);
+    MyEnum(MyEnum e);
 };

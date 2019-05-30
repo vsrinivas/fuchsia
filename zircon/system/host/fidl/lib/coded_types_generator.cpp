@@ -108,7 +108,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             // Structs were compiled as part of decl compilation,
             // but we may now need to generate the StructPointer.
             if (identifier_type->nullability != types::Nullability::kNullable)
-                break;
+                return coded_type;
             auto iter = struct_type_map_.find(identifier_type);
             if (iter != struct_type_map_.end()) {
                 return iter->second;
@@ -124,13 +124,13 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         case coded::Type::Kind::kTable: {
             // Tables cannot be nullable, nothing to do.
             assert(identifier_type->nullability != types::Nullability::kNullable);
-            break;
+            return coded_type;
         }
         case coded::Type::Kind::kUnion: {
             // Unions were compiled as part of decl compilation,
             // but we may now need to generate the UnionPointer.
             if (identifier_type->nullability != types::Nullability::kNullable)
-                break;
+                return coded_type;
             auto iter = union_type_map_.find(identifier_type);
             if (iter != union_type_map_.end()) {
                 return iter->second;
@@ -147,7 +147,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             // XUnions were compiled as part of decl compilation,
             // but we may now need to generate a nullable counterpart.
             if (identifier_type->nullability != types::Nullability::kNullable)
-                break;
+                return coded_type;
             auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
             assert(coded_xunion_type->nullability != types::Nullability::kNullable);
             auto iter = xunion_type_map_.find(identifier_type);
@@ -176,9 +176,10 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             coded_types_.push_back(std::move(coded_interface_type));
             return coded_types_.back().get();
         }
+        case coded::Type::Kind::kEnum:
+        case coded::Type::Kind::kBits:
+            return coded_type;
         case coded::Type::Kind::kPrimitive:
-            // These are from enums. We don't need to do anything with them.
-            break;
         case coded::Type::Kind::kInterfaceHandle:
         case coded::Type::Kind::kPointer:
         case coded::Type::Kind::kMessage:
@@ -190,7 +191,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             assert(false && "anonymous type in named type map!");
             break;
         }
-        return coded_type;
+        __builtin_unreachable();
     }
     }
 }
@@ -337,12 +338,12 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kBits: {
         auto bits_decl = static_cast<const flat::Bits*>(decl);
         std::string bits_name = NameName(bits_decl->name, "_", "_");
-        auto bits_subtype = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type)->subtype;
+        auto bits_subtype =
+            static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type)->subtype;
         named_coded_types_.emplace(&bits_decl->name,
-                                   std::make_unique<coded::PrimitiveType>(
+                                   std::make_unique<coded::BitsType>(
                                        std::move(bits_name), bits_subtype,
-                                       flat::PrimitiveType::SubtypeSize(bits_subtype),
-                                       coded::CodingContext::kOutsideEnvelope));
+                                       flat::PrimitiveType::SubtypeSize(bits_subtype)));
         break;
     }
     case flat::Decl::Kind::kConst:
@@ -352,10 +353,9 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         auto enum_decl = static_cast<const flat::Enum*>(decl);
         std::string enum_name = NameName(enum_decl->name, "_", "_");
         named_coded_types_.emplace(&enum_decl->name,
-                                   std::make_unique<coded::PrimitiveType>(
+                                   std::make_unique<coded::EnumType>(
                                        std::move(enum_name), enum_decl->type->subtype,
-                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype),
-                                       coded::CodingContext::kOutsideEnvelope));
+                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype)));
         break;
     }
     case flat::Decl::Kind::kInterface: {

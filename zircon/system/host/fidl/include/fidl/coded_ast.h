@@ -109,6 +109,8 @@ struct Type {
 
     enum struct Kind {
         kPrimitive,
+        kEnum,
+        kBits,
         kHandle,
         kInterfaceHandle,
         kRequestHandle,
@@ -138,6 +140,22 @@ struct PrimitiveType : public Type {
                   CodingContext context)
         : Type(Kind::kPrimitive, std::move(name), size,
                WhichCodingNeeded(context, CodingNeeded::kEnvelopeOnly)),
+          subtype(subtype) {}
+
+    const types::PrimitiveSubtype subtype;
+};
+
+struct EnumType : public Type {
+    EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
+        : Type(Kind::kEnum, std::move(name), size, CodingNeeded::kAlways),
+          subtype(subtype) {}
+
+    const types::PrimitiveSubtype subtype;
+};
+
+struct BitsType : public Type {
+    BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
+        : Type(Kind::kBits, std::move(name), size, CodingNeeded::kAlways),
           subtype(subtype) {}
 
     const types::PrimitiveSubtype subtype;
