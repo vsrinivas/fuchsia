@@ -2262,6 +2262,8 @@ static void demo_init_vk(struct demo* demo) {
 #if VK_USE_PLATFORM_FUCHSIA
 #if CUBE_USE_IMAGE_PIPE
   const char* kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain";
+#elif CUBE_SKIP_PRESENT
+  const char* kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present";
 #else
   const char* kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
 #endif

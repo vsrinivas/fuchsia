@@ -93,6 +93,7 @@ group("all") {
     "//garnet/packages/examples:tcp",
     "//garnet/packages/examples:vkcube_on_fb",
     "//garnet/packages/examples:vkcube_on_scenic",
+    "//garnet/packages/examples:vkcube_skip_present",
     "//garnet/packages/examples:vklatency_on_fb",
     "//garnet/packages/examples:vklatency_on_scenic",
     "//garnet/packages/examples:vulkaninfo",
@@ -263,5 +264,12 @@ group("vkcube_on_fb") {
   testonly = true
   public_deps = [
     "//garnet/lib/vulkan:vkcube_on_fb",
+  ]
+}
+
+group("vkcube_skip_present") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/vulkan:vkcube_skip_present",
   ]
 }

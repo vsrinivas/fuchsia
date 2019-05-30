@@ -22,7 +22,11 @@ namespace image_pipe_swapchain {
 
 // Useful for testing app performance without external restriction
 // (due to composition, vsync, etc.)
+#if SKIP_PRESENT
+constexpr bool kSkipPresent = true;
+#else
 constexpr bool kSkipPresent = false;
+#endif
 
 struct LayerData {
   VkInstance instance;
@@ -50,8 +54,8 @@ static const VkExtensionProperties device_extensions[] = {{
 }};
 
 constexpr VkLayerProperties swapchain_layer = {
-#if USE_IMAGEPIPE_SURFACE_FB
-    "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb",
+#ifdef USE_IMAGEPIPE_LAYER_NAME
+    USE_IMAGEPIPE_LAYER_NAME,
 #else
     "VK_LAYER_FUCHSIA_imagepipe_swapchain",
 #endif

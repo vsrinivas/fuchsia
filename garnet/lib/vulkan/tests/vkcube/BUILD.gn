@@ -55,3 +55,26 @@ executable("vkcube_on_fb") {
     "//zircon/public/lib/fit",
   ]
 }
+
+executable("vkcube_skip_present") {
+  sources = [
+    "//garnet/lib/vulkan/third_party/vkcube/cube.cc",
+    "//garnet/lib/vulkan/third_party/vkcube/cube.h",
+    "main.cc",
+    "test_vk_cube.h",
+  ]
+  defines = [
+    "VK_USE_PLATFORM_FUCHSIA",
+    "CUBE_SKIP_PRESENT",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
+    "$zircon_build_root/public/lib/trace-provider",
+    "//garnet/public/lib/vulkan",
+    "//src/lib/fxl",
+  ]
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+}

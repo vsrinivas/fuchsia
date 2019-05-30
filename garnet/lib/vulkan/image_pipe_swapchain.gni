@@ -59,3 +59,22 @@ image_pipe_swapchain_fb = {
     "//garnet/lib/vulkan/src/swapchain:fb",
   ]
 }
+
+image_pipe_swapchain_fb_skip_present = {
+  loadable_modules = [
+    {
+      name = "libVkLayer_image_pipe_swapchain_fb_skip_present.so"
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path(
+              "src/swapchain/VkLayer_image_pipe_swapchain_fb_skip_present.json")
+      dest = "vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain_fb_skip_present.json"
+    },
+  ]
+
+  public_deps = [
+    "//garnet/lib/vulkan/src/swapchain:fb_skip_present",
+  ]
+}

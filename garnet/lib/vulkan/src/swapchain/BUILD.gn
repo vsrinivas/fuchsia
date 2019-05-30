@@ -36,12 +36,35 @@ loadable_module("swapchain") {
   ldflags = [ "-static-libstdc++" ]
 }
 
-loadable_module("fb") {
-  output_name = "libVkLayer_image_pipe_swapchain_fb"
-  defines = [ "USE_IMAGEPIPE_SURFACE_FB" ]
+source_set("display") {
   sources = [
     "image_pipe_surface_display.cc",
     "image_pipe_surface_display.h",
+  ]
+  deps = [
+    ":surface_header",
+    "$loader_build_root:extra_vulkan_headers",
+    "$loader_build_root/layers:micro_layer_common",
+    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
+    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+  ]
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+loadable_module("fb") {
+  output_name = "libVkLayer_image_pipe_swapchain_fb"
+  defines = [
+    "USE_IMAGEPIPE_SURFACE_FB",
+    "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb\"",
+  ]
+  sources = [
     "image_pipe_swapchain_layer.cc",
   ]
   include_dirs = [
@@ -51,17 +74,35 @@ loadable_module("fb") {
     "$loader_build_root/icd/common/",
   ]
   deps = [
+    ":display",
     ":surface_header",
     "$loader_build_root:extra_vulkan_headers",
     "$loader_build_root/layers:micro_layer_common",
-    "//zircon/public/fidl/fuchsia-hardware-display",
-    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
-    "//zircon/public/fidl/fuchsia-sysmem",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
+  ]
+  ldflags = [ "-static-libstdc++" ]
+}
+
+loadable_module("fb_skip_present") {
+  output_name = "libVkLayer_image_pipe_swapchain_fb_skip_present"
+  defines = [
+    "USE_IMAGEPIPE_SURFACE_FB",
+    "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present\"",
+    "SKIP_PRESENT",
+  ]
+  sources = [
+    "image_pipe_swapchain_layer.cc",
+  ]
+  include_dirs = [
+    "$loader_build_root/include",
+    "$loader_build_root/loader",
+    "$loader_build_root/layers",
+    "$loader_build_root/icd/common/",
+  ]
+  deps = [
+    ":display",
+    ":surface_header",
+    "$loader_build_root:extra_vulkan_headers",
+    "$loader_build_root/layers:micro_layer_common",
   ]
   ldflags = [ "-static-libstdc++" ]
 }
