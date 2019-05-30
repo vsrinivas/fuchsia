@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
+use failure::{self, Fail};
+use std::io;
 
 #[derive(Clone, Debug, PartialEq, Eq, Fail)]
 pub enum ResourcePathError {
@@ -104,6 +105,30 @@ pub enum MetaContentsError {
 
     #[fail(display = "package external content cannot be in 'meta/' directory: '{}'", path)]
     ExternalContentInMetaDirectory { path: String },
+
+    #[fail(display = "entry has no '=': '{}'", entry)]
+    EntryHasNoEqualsSign { entry: String },
+
+    #[fail(display = "duplicate resource path: '{}'", path)]
+    DuplicateResourcePath { path: String },
+
+    #[fail(display = "io error: '{}'", _0)]
+    IoError(#[cause] io::Error),
+
+    #[fail(display = "invalid hash: '{}'", _0)]
+    ParseHash(#[cause] fuchsia_merkle::ParseHashError),
+}
+
+impl From<io::Error> for MetaContentsError {
+    fn from(err: io::Error) -> Self {
+        MetaContentsError::IoError(err)
+    }
+}
+
+impl From<fuchsia_merkle::ParseHashError> for MetaContentsError {
+    fn from(err: fuchsia_merkle::ParseHashError) -> Self {
+        MetaContentsError::ParseHash(err)
+    }
 }
 
 #[derive(Debug, Fail)]

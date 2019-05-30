@@ -75,6 +75,18 @@ prop_compose! {
 }
 
 prop_compose! {
+    [pub] fn random_external_resource_path()
+        (s in random_resource_path(1, 4)
+         .prop_filter(
+             "External package contents cannot be in the 'meta/' directory",
+             |s| !s.starts_with("meta/"))
+        ) -> String
+    {
+        s
+    }
+}
+
+prop_compose! {
     [pub] fn random_merkle_hex()(s in "[[:xdigit:]]{64}") -> String {
         s
     }

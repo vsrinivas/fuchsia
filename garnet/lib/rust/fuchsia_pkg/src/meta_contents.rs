@@ -4,14 +4,15 @@
 
 use crate::errors::MetaContentsError;
 use fuchsia_merkle::Hash;
-use std::collections::BTreeMap;
-use std::io;
+use std::collections::{btree_map, BTreeMap};
+use std::io::{self, BufRead};
+use std::str::FromStr;
 
 /// A `MetaContents` represents the "meta/contents" file of a Fuchsia archive
 /// file of a Fuchsia package.
 /// It validates that all resource paths are valid and that none of them start
 /// with "meta/".
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MetaContents {
     contents: BTreeMap<String, Hash>,
 }
@@ -83,6 +84,58 @@ impl MetaContents {
         }
         Ok(())
     }
+
+    /// Deserializes a "meta/contents" file from a `reader`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use fuchsia_merkle::Hash;
+    /// # use fuchsia_pkg::MetaContents;
+    /// # use maplit::btreemap;
+    /// # use std::str::FromStr;
+    /// let bytes = "bin/my_prog=0000000000000000000000000000000000000000000000000000000000000000\n\
+    ///              lib/mylib.so=1111111111111111111111111111111111111111111111111111111111111111\n".as_bytes();
+    /// let meta_contents = MetaContents::deserialize(bytes).unwrap();
+    /// let expected_contents = btreemap! {
+    ///     "bin/my_prog".to_string() =>
+    ///         Hash::from_str(
+    ///             "0000000000000000000000000000000000000000000000000000000000000000")
+    ///         .unwrap(),
+    ///     "lib/mylib.so".to_string() =>
+    ///         Hash::from_str(
+    ///             "1111111111111111111111111111111111111111111111111111111111111111")
+    ///         .unwrap(),
+    /// };
+    /// assert_eq!(meta_contents.contents(), &expected_contents);
+    /// ```
+    pub fn deserialize(reader: impl io::Read) -> Result<Self, MetaContentsError> {
+        let reader = io::BufReader::new(reader);
+        let mut contents = BTreeMap::new();
+        for line in reader.lines() {
+            let line = line?;
+            let i = line
+                .rfind('=')
+                .ok_or_else(|| MetaContentsError::EntryHasNoEqualsSign { entry: line.clone() })?;
+
+            let hash = Hash::from_str(&line[i + 1..])?;
+            let path = line[..i].to_string();
+
+            match contents.entry(path) {
+                btree_map::Entry::Vacant(entry) => entry.insert(hash),
+                btree_map::Entry::Occupied(entry) => {
+                    return Err(MetaContentsError::DuplicateResourcePath {
+                        path: entry.key().clone(),
+                    });
+                }
+            };
+        }
+        Ok(MetaContents { contents })
+    }
+
+    /// Get the map from blob resource paths to Merkle Tree root hashes.
+    pub fn contents(&self) -> &BTreeMap<String, Hash> {
+        &self.contents
+    }
 }
 
 #[cfg(test)]
@@ -91,8 +144,42 @@ mod tests {
     use crate::errors::ResourcePathError;
     use crate::test::*;
     use maplit::btreemap;
-    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
+    use proptest::prelude::*;
+    use proptest::{
+        prop_assert, prop_assert_eq, prop_assume, prop_compose, proptest, proptest_helper,
+    };
     use std::str::FromStr;
+
+    #[test]
+    fn test_deserialize_empty_file() {
+        let empty = Vec::new();
+        let meta_contents = MetaContents::deserialize(empty.as_slice()).unwrap();
+        assert_eq!(meta_contents.contents(), &BTreeMap::new());
+    }
+
+    #[test]
+    fn test_deserialize_known_file() {
+        let bytes =
+            "a-host/path=0000000000000000000000000000000000000000000000000000000000000000\n\
+             other/host/path=1111111111111111111111111111111111111111111111111111111111111111\n"
+                .as_bytes();
+        let meta_contents = MetaContents::deserialize(bytes).unwrap();
+        let expected_contents = btreemap! {
+            "a-host/path".to_string() =>
+                Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            "other/host/path".to_string() =>
+                Hash::from_str("1111111111111111111111111111111111111111111111111111111111111111").unwrap(),
+        };
+        assert_eq!(meta_contents.contents(), &expected_contents);
+    }
+
+    prop_compose! {
+        fn random_hash()
+            (ref s in random_merkle_hex()) -> Hash
+        {
+            Hash::from_str(s).unwrap()
+        }
+    }
 
     proptest! {
         #[test]
@@ -161,6 +248,18 @@ mod tests {
                 second_path,
                 second_hex.to_ascii_lowercase());
             prop_assert_eq!(bytes.as_slice(), expected.as_bytes());
+        }
+
+        #[test]
+        fn test_serialize_deserialize_is_id(
+            contents in prop::collection::btree_map(
+                random_external_resource_path(), random_hash(), 0..4)
+        ) {
+            let meta_contents = MetaContents::from_map(contents).unwrap();
+            let mut serialized = Vec::new();
+            meta_contents.serialize(&mut serialized).unwrap();
+            let deserialized = MetaContents::deserialize(serialized.as_slice()).unwrap();
+            prop_assert_eq!(meta_contents, deserialized);
         }
     }
 }
