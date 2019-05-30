@@ -8,6 +8,7 @@ static_library("lib") {
   friend = [ ":tests" ]
 
   public = [
+    "display_options.h",
     "library_loader.h",
     "memory_helpers.h",
     "message_decoder.h",
@@ -74,6 +75,7 @@ source_set("tests") {
   testonly = true
   sources = [
     "library_loader_test.cc",
+    "message_decoder_test.cc",
     "wire_parser_test.cc",
   ]
 

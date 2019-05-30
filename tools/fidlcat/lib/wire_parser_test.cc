@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "wire_parser.h"
+#include "tools/fidlcat/lib/wire_parser.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -14,55 +14,19 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
-#include "library_loader.h"
-#include "message_decoder.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "test/fidlcat/examples/cpp/fidl.h"
+#include "tools/fidlcat/lib/fidlcat_test.h"
+#include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/library_loader_test_data.h"
-#include "wire_object.h"
-#include "wire_parser.h"
+#include "tools/fidlcat/lib/message_decoder.h"
+#include "tools/fidlcat/lib/wire_object.h"
 
 namespace fidlcat {
 
 const Colors FakeColors(/*reset=*/"#rst#", /*red=*/"#red#", /*green=*/"#gre#",
                         /*blue=*/"#blu#", /*white_on_magenta=*/"#wom#");
-
-// Stolen from //sdk/lib/fidl/cpp/test/async_loop_for_test.{h,cc}; cc
-// is not public
-
-class AsyncLoopForTestImpl;
-
-class AsyncLoopForTest {
- public:
-  // The AsyncLoopForTest constructor should also call
-  // async_set_default_dispatcher() with the chosen dispatcher implementation.
-  AsyncLoopForTest();
-  ~AsyncLoopForTest();
-
-  // This call matches the behavior of async_loop_run_until_idle().
-  zx_status_t RunUntilIdle();
-
-  // This call matches the behavior of async_loop_run().
-  zx_status_t Run();
-
-  // Returns the underlying async_t.
-  async_dispatcher_t* dispatcher();
-
- private:
-  std::unique_ptr<AsyncLoopForTestImpl> impl_;
-};
-
-class AsyncLoopForTestImpl {
- public:
-  AsyncLoopForTestImpl() : loop_(&kAsyncLoopConfigAttachToThread) {}
-  ~AsyncLoopForTestImpl() = default;
-
-  async::Loop* loop() { return &loop_; }
-
- private:
-  async::Loop loop_;
-};
 
 AsyncLoopForTest::AsyncLoopForTest()
     : impl_(std::make_unique<AsyncLoopForTestImpl>()) {}
@@ -105,38 +69,6 @@ class WireParserTest : public ::testing::Test {
   LibraryLoader* loader_;
 };
 
-// The tests in this file work the following way:
-// 1) Create a channel.
-// 2) Bind an interface pointer to the client side of that channel.
-// 3) Listen at the other end of the channel for the message.
-// 4) Convert the message to JSON using the JSON message converter, and check
-//    that the results look as expected.
-
-// This binds |invoke| to one end of a channel, invokes it, and drops the wire
-// format bits it picks up off the other end into |message|.
-template <class T>
-void InterceptRequest(fidl::Message& message,
-                      std::function<void(fidl::InterfacePtr<T>&)> invoke) {
-  AsyncLoopForTest loop;
-
-  zx::channel h1, h2;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  fidl::InterfacePtr<T> ptr;
-  int error_count = 0;
-  ptr.set_error_handler([&error_count](zx_status_t status) {
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-    ++error_count;
-  });
-
-  EXPECT_EQ(ZX_OK, ptr.Bind(std::move(h1)));
-
-  invoke(ptr);
-
-  loop.RunUntilIdle();
-
-  EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
-}
-
 TEST_F(WireParserTest, ParseSingleString) {
   fidl::MessageBuffer buffer;
   fidl::Message message = buffer.CreateEmptyMessage();
@@ -148,8 +80,8 @@ TEST_F(WireParserTest, ParseSingleString) {
 
   fidl_message_header_t header = message.header();
 
-  const InterfaceMethod* method;
-  ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));
+  const InterfaceMethod* method = loader_->GetByOrdinal(header.ordinal);
+  ASSERT_NE(method, nullptr);
   ASSERT_EQ("Grob", method->name());
   std::unique_ptr<fidlcat::Object> decoded_request;
   fidlcat::DecodeRequest(method, message, &decoded_request);
@@ -167,7 +99,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 // results.  It can be generalized to a wide variety of types (and is, below).
 // It checks for successful parsing, as well as failure when parsing truncated
 // values.
-// |_iface| is the interface method name on examples::this_is_an_interface
+// |_iface| is the interface method name on examples::FidlcatTestInterface
 //    (TODO: generalize which interface to use)
 // |_json_value| is the expected JSON representation of the message.
 // |_pretty_print| is the expected pretty print of the message.
@@ -177,16 +109,16 @@ TEST_F(WireParserTest, ParseSingleString) {
   do {                                                                         \
     fidl::MessageBuffer buffer;                                                \
     fidl::Message message = buffer.CreateEmptyMessage();                       \
-    using test::fidlcat::examples::this_is_an_interface;                       \
-    InterceptRequest<this_is_an_interface>(                                    \
-        message, [&](fidl::InterfacePtr<this_is_an_interface>& ptr) {          \
+    using test::fidlcat::examples::FidlcatTestInterface;                       \
+    InterceptRequest<FidlcatTestInterface>(                                    \
+        message, [&](fidl::InterfacePtr<FidlcatTestInterface>& ptr) {          \
           ptr->_iface(__VA_ARGS__);                                            \
         });                                                                    \
                                                                                \
     fidl_message_header_t header = message.header();                           \
                                                                                \
-    const InterfaceMethod* method;                                             \
-    ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));               \
+    const InterfaceMethod* method = loader_->GetByOrdinal(header.ordinal);     \
+    ASSERT_NE(method, nullptr);                                                \
     ASSERT_EQ(#_iface, method->name());                                        \
                                                                                \
     std::unique_ptr<fidlcat::Object> decoded_request;                          \
@@ -252,7 +184,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 // This is a convenience wrapper for calling TEST_DECODE_WIRE_BODY that simply
 // executes the code in a test.
 // |_testname| is the name of the test (prepended by Parse in the output)
-// |_iface| is the interface method name on examples::this_is_an_interface
+// |_iface| is the interface method name on examples::FidlcatTestInterface
 //    (TODO: generalize which interface to use)
 // |_json_value| is the expected JSON representation of the message.
 // |_pretty_print| is the expected pretty print of the message.
@@ -1026,21 +958,21 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   "enum_declarations": [],
   "interface_declarations": [
     {
-      "name": "test.fidlcat.examples/this_is_an_interface",
+      "name": "test.fidlcat.examples/FidlcatTestInterface",
       "location": {
         "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
-        "line": 7,
-        "column": 9
+        "line": 11,
+        "column": 10
       },
       "methods": [
         {
-          "ordinal": 912304001,
-          "generated_ordinal": 912304001,
+          "ordinal": 1625951384,
+          "generated_ordinal": 1625951384,
           "name": "Int32",
           "location": {
             "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
-            "line": 12,
-            "column": 4
+            "line": 16,
+            "column": 5
           },
           "has_request": true,
           "maybe_request": [
@@ -1051,8 +983,8 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
               "name": "i32",
               "location": {
                 "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
-                "line": 12,
-                "column": 16
+                "line": 16,
+                "column": 17
               },
               "size": 4,
               "max_out_of_line": 0,
@@ -1082,16 +1014,16 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   fidl::MessageBuffer buffer;
   fidl::Message message = buffer.CreateEmptyMessage();
 
-  InterceptRequest<test::fidlcat::examples::this_is_an_interface>(
+  InterceptRequest<test::fidlcat::examples::FidlcatTestInterface>(
       message,
-      [](fidl::InterfacePtr<test::fidlcat::examples::this_is_an_interface>&
+      [](fidl::InterfacePtr<test::fidlcat::examples::FidlcatTestInterface>&
              ptr) { ptr->Int32(0xdeadbeef); });
 
   fidl_message_header_t header = message.header();
 
-  const InterfaceMethod* method;
-  // If this is false, you probably have to update the schema above.
-  ASSERT_TRUE(loader.GetByOrdinal(header.ordinal, &method));
+  const InterfaceMethod* method = loader.GetByOrdinal(header.ordinal);
+  // If this is null, you probably have to update the schema above.
+  ASSERT_NE(method, nullptr);
 
   std::unique_ptr<fidlcat::Object> decoded_request;
   fidlcat::DecodeRequest(method, message, &decoded_request);

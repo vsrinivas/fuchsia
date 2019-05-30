@@ -68,8 +68,10 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
   const char* argv[] = {"fakebinary", "--fidl-ir-path", param.c_str()};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &params);
+  auto status =
+      ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(0U, params.size())
       << "Expected 0 params, got (at least) " << params[0];
@@ -99,8 +101,10 @@ TEST_F(CommandLineOptionsTest, BadOptionsTest) {
                         "--fidl-ir-path", "@all_files.txt"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &params);
+  auto status =
+      ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(0U, params.size())
       << "Expected 0 params, got (at least) " << params[0];
@@ -132,8 +136,10 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                         "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
+  DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &params);
+  auto status =
+      ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(2U, params.size())
       << "Expected 0 params, got (at least) " << params[0];

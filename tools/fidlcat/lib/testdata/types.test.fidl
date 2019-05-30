@@ -4,7 +4,11 @@
 
 library test.fidlcat.examples;
 
-protocol this_is_an_interface {
+protocol Echo {
+    EchoString(string? value) -> (string? response);
+};
+
+protocol FidlcatTestInterface {
     String(string s);
     Bool(bool b);
     Int8(int8 i8);

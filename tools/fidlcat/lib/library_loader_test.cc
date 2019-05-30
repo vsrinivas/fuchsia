@@ -71,8 +71,8 @@ TEST(LibraryLoader, LoadFromOrdinal) {
       "test.fidlcat.sys/ComponentController.OnDirectoryReady", &found_method);
 
   Ordinal correct_ordinal = found_method->ordinal();
-  const InterfaceMethod* ordinal_method;
-  ASSERT_TRUE(loader.GetByOrdinal(correct_ordinal, &ordinal_method));
+  const InterfaceMethod* ordinal_method = loader.GetByOrdinal(correct_ordinal);
+  ASSERT_NE(ordinal_method, nullptr);
   ASSERT_EQ(kDesiredInterfaceName,
             ordinal_method->enclosing_interface().name());
   ASSERT_EQ("OnDirectoryReady", ordinal_method->name());

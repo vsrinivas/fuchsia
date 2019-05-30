@@ -5,13 +5,16 @@
 #ifndef TOOLS_FIDLCAT_LIB_MESSAGE_DECODER_H_
 #define TOOLS_FIDLCAT_LIB_MESSAGE_DECODER_H_
 
-#include <lib/fidl/cpp/message.h>
 #include <src/lib/fxl/logging.h>
 
 #include <memory>
+#include <ostream>
 #include <string_view>
 #include <vector>
 
+#include "lib/fidl/cpp/message.h"
+#include "tools/fidlcat/lib/display_options.h"
+#include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/memory_helpers.h"
 
 namespace fidlcat {
@@ -20,6 +23,8 @@ class Field;
 class Object;
 class Struct;
 class Type;
+
+enum class Direction { kUnknown, kClient, kServer };
 
 // Helper to decode a message (request or response). It generates an Object.
 class MessageDecoder {
@@ -150,6 +155,12 @@ bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
   *value = internal::MemoryFrom<T>(byte_pos_ + offset);
   return true;
 }
+
+void DecodeMessage(
+    LibraryLoader* loader,
+    std::map<std::tuple<zx_handle_t, uint64_t>, Direction>* handle_directions,
+    const DisplayOptions& options, uint64_t process_koid, zx_handle_t handle,
+    const fidl::Message& message, bool read, std::ostream& os);
 
 }  // namespace fidlcat
 

@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include "tools/fidlcat/lib/display_options.h"
+
 namespace fidlcat {
 
 const char kHelpIntro[] = R"(fidlcat [ <options> ] [ command [args] ]
@@ -74,6 +76,7 @@ const char kHelpHelp[] = R"(  --help
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[],
                                  CommandLineOptions* options,
+                                 DisplayOptions* display_options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
@@ -102,18 +105,24 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
+  display_options->pretty_print = options->pretty_print;
+
   struct winsize term_size;
   term_size.ws_col = 0;
   int ioctl_result = ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_size);
   if (options->columns == 0) {
-    options->columns = term_size.ws_col;
-    options->columns = std::max(options->columns, 80);
+    display_options->columns = term_size.ws_col;
+    display_options->columns = std::max(display_options->columns, 80);
+  } else {
+    display_options->columns = options->columns;
   }
 
   if (options->pretty_print) {
     if ((options->colors == "always") ||
         ((options->colors == "auto") && (ioctl_result != -1))) {
-      options->needs_colors = true;
+      display_options->needs_colors = true;
+    } else {
+      display_options->needs_colors = false;
     }
   }
 

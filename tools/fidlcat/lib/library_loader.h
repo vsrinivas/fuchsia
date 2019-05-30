@@ -26,8 +26,7 @@
 // following, if they have a fidl::Message:
 //
 // fidl_message_header_t header = message.header();
-// const InterfaceMethod* method;
-// loader_->GetByOrdinal(header.ordinal, &method);
+// const InterfaceMethod* method = loader_->GetByOrdinal(header.ordinal);
 // rapidjson::Document actual;
 // fidlcat::RequestToJSON(method, message, actual);
 //
@@ -408,13 +407,12 @@ class LibraryLoader {
 
   // Returns true and sets **method if the ordinal was present in the map, and
   // false otherwise.
-  bool GetByOrdinal(Ordinal ordinal, const InterfaceMethod** method) {
+  const InterfaceMethod* GetByOrdinal(Ordinal ordinal) {
     auto m = ordinal_map_.find(ordinal);
     if (m != ordinal_map_.end()) {
-      *method = m->second;
-      return true;
+      return m->second;
     }
-    return false;
+    return nullptr;
   }
 
   // If the library with name |name| is present in this loader, returns the

@@ -20,12 +20,9 @@
 #undef __TA_REQUIRES
 
 #include "lib/fidl/cpp/message.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "tools/fidlcat/lib/library_loader.h"
-#include "tools/fidlcat/lib/wire_object.h"
-#include "tools/fidlcat/lib/wire_parser.h"
+#include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/zx_channel_params.h"
 
 namespace fidlcat {
@@ -59,135 +56,12 @@ void CatchSigterm() {
   sigaction(SIGINT, &action, NULL);
 }
 
-std::string DocumentToString(rapidjson::Document& document) {
-  rapidjson::StringBuffer output;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(output);
-  document.Accept(writer);
-  return output.GetString();
-}
-
-void OnZxChannelAction(LibraryLoader* loader, const CommandLineOptions& options,
-                       const zxdb::Err& err, const ZxChannelParams& params) {
-  fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
-                       params.GetNumBytes());
-  fidl::HandlePart handles(params.GetHandles().get(), params.GetNumHandles(),
-                           params.GetNumHandles());
-  fidl::Message message(std::move(bytes), std::move(handles));
-  if (message.payload().data() == nullptr) {
-    FXL_LOG(WARNING) << "Message to be decoded contains no data.";
-    return;
-  }
-  fidl_message_header_t header = message.header();
-  const fidlcat::InterfaceMethod* method;
-  if (!loader->GetByOrdinal(header.ordinal, &method)) {
-    // Probably should print out raw bytes here instead.
-    FXL_LOG(WARNING) << "Protocol method with ordinal " << header.ordinal
-                     << " not found";
-    return;
-  }
-
-  std::unique_ptr<fidlcat::Object> decoded_request;
-  int matched_request_count =
-      fidlcat::DecodeRequest(method, message, &decoded_request) ? 1 : 0;
-
-  std::unique_ptr<fidlcat::Object> decoded_response;
-  int matched_response_count =
-      fidlcat::DecodeResponse(method, message, &decoded_response) ? 1 : 0;
-
-  rapidjson::Document actual_request;
-  rapidjson::Document actual_response;
-  if (!options.pretty_print) {
-    if (decoded_request != nullptr) {
-      decoded_request->ExtractJson(actual_request.GetAllocator(),
-                                   actual_request);
-    }
-
-    if (decoded_response != nullptr) {
-      decoded_response->ExtractJson(actual_response.GetAllocator(),
-                                    actual_response);
-    }
-  }
-
-  const Colors& colors = options.needs_colors ? WithColors : WithoutColors;
-
-#if 0
-  fprintf(stderr, "ordinal = %d\n", header.ordinal);
-#endif
-
-  std::cout << colors.white_on_magenta << method->enclosing_interface().name()
-            << '.' << method->name() << colors.reset << " = ";
-
-  int size =
-      method->enclosing_interface().name().size() + method->name().size() + 4;
-
-  if (matched_request_count + matched_response_count == 1) {
-    if (matched_request_count > 0) {
-      if (options.pretty_print) {
-        std::cout << colors.green << "request" << colors.reset << ' ';
-        size += 8;
-        decoded_request->PrettyPrint(std::cout, colors, 1,
-                                     options.columns - size, options.columns);
-      } else {
-        std::cout << "(request):\n    " << DocumentToString(actual_request);
-      }
-    } else {
-      if (options.pretty_print) {
-        std::cout << colors.green << "response" << colors.reset << ' ';
-        size += 9;
-        decoded_response->PrettyPrint(std::cout, colors, 1,
-                                      options.columns - size, options.columns);
-      } else {
-        std::cout << "(response):\n    " << DocumentToString(actual_response);
-      }
-    }
-  } else {
-    if (matched_request_count + matched_response_count == 0) {
-      FXL_LOG(WARNING) << "Could not parse data with type " << method->name()
-                       << ", best effort displayed";
-    }
-    // TODO(DX-1307): We can track whether this process has historically been
-    // sending requests or responses on this channel, and surface based on that.
-    // We may be able to indicate directionality in the message itself (e.g.,
-    // with a bit in the txid).  Or do something else that's smarter than print
-    // both out.
-    if (options.pretty_print) {
-      std::cout << colors.green << "request" << colors.reset << ' ';
-      decoded_request->PrettyPrint(std::cout, colors, 1, 0, options.columns);
-      std::cout << " or " << colors.green << "response" << colors.reset << ' ';
-      decoded_response->PrettyPrint(std::cout, colors, 1, 0, options.columns);
-    } else {
-      std::cout << "One of (request):\n    " << DocumentToString(actual_request)
-                << "\nor (response):\n    "
-                << DocumentToString(actual_response);
-    }
-  }
-  std::cout << '\n';
-}
-
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
-void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
-                    const CommandLineOptions& options,
-                    std::vector<std::string>& params) {
-  workflow.SetZxChannelWriteCallback(
-      [loader = &loader, &options](const zxdb::Err& err,
-                                   const ZxChannelParams& params) {
-        if (!err.ok()) {
-          FXL_LOG(INFO) << "Unable to decode zx_channel_write params: "
-                        << err.msg();
-          return;
-        }
-        OnZxChannelAction(loader, options, err, params);
-      });
-  workflow.SetZxChannelReadCallback([loader = &loader, &options](
-                                        const zxdb::Err& err,
-                                        const ZxChannelParams& params) {
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Unable to decode zx_channel_read params: " << err.msg();
-      return;
-    }
-    OnZxChannelAction(loader, options, err, params);
-  });
-
+void EnqueueStartup(
+    InterceptionWorkflow& workflow, LibraryLoader& loader,
+    std::map<std::tuple<zx_handle_t, uint64_t>, Direction>* handle_directions,
+    const CommandLineOptions& options, const DisplayOptions& display_options,
+    std::vector<std::string>& params) {
   uint64_t process_koid = ULLONG_MAX;
   if (options.remote_pid) {
     const std::string& pid_str = *options.remote_pid;
@@ -199,6 +73,44 @@ void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
       exit(1);
     }
   }
+
+  // Currently, we only display messages for one process. process_koid is
+  // correctly set when we attach to a process but is ULLONG_MAX when we create
+  // the process.
+  workflow.SetZxChannelWriteCallback(
+      [loader = &loader, handle_directions, &display_options, process_koid](
+          const zxdb::Err& err, const ZxChannelParams& params) {
+        if (!err.ok()) {
+          FXL_LOG(INFO) << "Unable to decode zx_channel_write params: "
+                        << err.msg();
+          return;
+        }
+        fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
+                             params.GetNumBytes());
+        fidl::HandlePart handles(params.GetHandles().get(),
+                                 params.GetNumHandles(),
+                                 params.GetNumHandles());
+        fidl::Message message(std::move(bytes), std::move(handles));
+        DecodeMessage(loader, handle_directions, display_options, process_koid,
+                      params.GetHandle(), message, /*read=*/false, std::cout);
+      });
+  workflow.SetZxChannelReadCallback(
+      [loader = &loader, handle_directions, &display_options, process_koid](
+          const zxdb::Err& err, const ZxChannelParams& params) {
+        if (!err.ok()) {
+          FXL_LOG(INFO) << "Unable to decode zx_channel_read params: "
+                        << err.msg();
+          return;
+        }
+        fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
+                             params.GetNumBytes());
+        fidl::HandlePart handles(params.GetHandles().get(),
+                                 params.GetNumHandles(),
+                                 params.GetNumHandles());
+        fidl::Message message(std::move(bytes), std::move(handles));
+        DecodeMessage(loader, handle_directions, display_options, process_koid,
+                      params.GetHandle(), message, /*read=*/true, std::cout);
+      });
 
   std::string host;
   uint16_t port;
@@ -235,8 +147,10 @@ void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
 
 int ConsoleMain(int argc, const char* argv[]) {
   CommandLineOptions options;
+  DisplayOptions display_options;
   std::vector<std::string> params;
-  cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
+  cmdline::Status status =
+      ParseCommandLine(argc, argv, &options, &display_options, &params);
   if (status.has_error()) {
     fprintf(stderr, "%s\n", status.error_message().c_str());
     return 1;
@@ -268,7 +182,10 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  EnqueueStartup(workflow, loader, options, params);
+  std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions;
+
+  EnqueueStartup(workflow, loader, &handle_directions, options, display_options,
+                 params);
 
   // TODO: When the attached koid terminates normally, we should exit and call
   // QuitNow() on the MessageLoop.
