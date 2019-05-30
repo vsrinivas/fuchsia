@@ -4,6 +4,7 @@
 
 #include <lib/devmgr-integration-test/fixture.h>
 
+#include <errno.h>
 #include <fcntl.h>
 
 #include <fbl/unique_fd.h>
@@ -101,7 +102,18 @@ zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path,
         return ZX_ERR_INVALID_ARGS;
     }
     strcpy(path_copy, path);
-    return RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, deadline, out);
+    zx_status_t status = RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, deadline, out);
+    if (status != ZX_OK) {
+        // TODO(FLK-299): Remove this once the root cause is found.
+        fbl::unique_fd check(openat(dir.get(), path, O_RDWR));
+        if (check.is_valid()) {
+            printf("wait-for-file failed with %d, but opening %s succeeded\n", status, path);
+        } else {
+            printf("wait-for-file failed with %d, and opening %s failed with %d\n", status, path,
+                errno);
+        }
+    }
+    return status;
 }
 
 } // namespace devmgr_integration_test
