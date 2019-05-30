@@ -1772,94 +1772,6 @@ static bool exit_closing_excp_handle_test()
     END_TEST;
 }
 
-static bool full_queue_sending_exception_packet_test()
-{
-    BEGIN_TEST;
-
-    zx_handle_t child, eport, our_channel;
-    start_test_child_with_eport(zx_job_default(), test_child_name,
-                                &child, &eport, &our_channel);
-
-    zx_koid_t initial_tid;
-    ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING, &initial_tid), "");
-    resume_thread_from_exception(child, initial_tid,
-                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
-
-    // Tell the subprocess to create a second thread.
-    // We need to observe a thread without the process exiting (process exits
-    // can make thread exceptions vanish).
-    send_msg(our_channel, MSG_CREATE_AUX_THREAD);
-    // Wait for the ZX_EXCP_THREAD_STARTING message about that thread.
-    zx_koid_t tid;
-    ASSERT_TRUE(read_and_verify_exception(eport, child, ZX_EXCP_THREAD_STARTING,
-                                          &tid), "");
-    EXPECT_NE(tid, initial_tid, "");
-    resume_thread_from_exception(child, tid,
-                                 ZX_EXCEPTION_PORT_TYPE_DEBUGGER, eport, 0);
-
-    // Fill the port with packets thus preventing us from receiving the
-    // segfault exception.
-    zx_port_packet_t pkt = {};
-    pkt.key = USER_PACKET_KEY;
-
-    zx_status_t status;
-    size_t packet_count = 0;
-    while ((status = zx_port_queue(eport, &pkt)) == ZX_OK) {
-        ++packet_count;
-    }
-    unittest_printf("Queued %zu packets\n", packet_count);
-
-    // Grab a handle to the thread before we cause it to exit.
-    // The kernel will kill the process when it tries to send the exception,
-    // after which we won't be able to get a handle.
-    zx_handle_t thread = tu_process_get_thread(child, tid);
-    ASSERT_NE(thread, ZX_HANDLE_INVALID, "");
-
-    // Alert the user about the kernel message that will get printed.
-    unittest_printf_critical(
-        "\nNote: We're intentionally crashing a thread in a way that cannot be handled.\n"
-        "The kernel will detect this and may print a helpful message,\n"
-        "which can be ignored.\n");
-
-    // Tell the second thread to crash, causing an exception to try to be sent,
-    // which should fail.
-    send_msg(our_channel, MSG_CRASH_AUX_THREAD);
-
-    // Wait for the second thread to be in the exception. Before we start
-    // reading the user packets we stuffed into the port we want to make sure
-    // the kernel tried to send the exception packet.
-    uint32_t state;
-    do {
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-        state = tu_thread_get_state(thread);
-    } while (state != ZX_THREAD_STATE_BLOCKED_EXCEPTION &&
-             state != ZX_THREAD_STATE_DEAD);
-
-    zx_port_packet_t out_pkt;
-    for (size_t i = 0; i < packet_count; ++i) {
-        ASSERT_TRUE(read_packet(eport, &out_pkt), "");
-        ASSERT_TRUE(ZX_PKT_IS_USER(out_pkt.type), "");
-    }
-
-    // The process should now be dead, or will be shortly.
-    // TODO(ZX-2853): Or should it?
-    ASSERT_EQ(zx_object_wait_one(child, ZX_PROCESS_TERMINATED,
-                                 ZX_TIME_INFINITE, NULL), ZX_OK, "");
-
-
-    zx_info_process_t info;
-    ASSERT_EQ(zx_object_get_info(
-            child, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), ZX_OK);
-    EXPECT_TRUE(info.exited, "");
-    EXPECT_EQ(info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL, "");
-
-    tu_handle_close(child);
-    tu_handle_close(eport);
-    tu_handle_close(our_channel);
-
-    END_TEST;
-}
-
 namespace {
 
 // Same as send_msg() but also allows ZX_ERR_PEER_CLOSED.
@@ -2881,7 +2793,6 @@ RUN_TEST(death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(multiple_threads_registered_death_test);
 RUN_TEST(exit_closing_excp_handle_test);
-RUN_TEST(full_queue_sending_exception_packet_test);
 RUN_TEST(create_exception_channel_test);
 RUN_TEST(create_exception_channel_rights_test);
 RUN_TEST(create_exception_channel_invalid_args_test);
