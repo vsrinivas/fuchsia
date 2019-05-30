@@ -173,10 +173,10 @@ void Tracee::OnFifoReadable(async_dispatcher_t* dispatcher,
   auto status2 =
       zx_fifo_read(wait_.object(), sizeof(packet), &packet, 1u, nullptr);
   FXL_DCHECK(status2 == ZX_OK);
-  if (packet.reserved != 0) {
+  if (packet.data16 != 0) {
     FXL_LOG(ERROR) << *bundle_
-                   << ": Received bad packet, non-zero reserved field: "
-                   << packet.reserved;
+                   << ": Received bad packet, non-zero data16 field: "
+                   << packet.data16;
     Stop();
     return;
   }

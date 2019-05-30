@@ -165,9 +165,9 @@ bool Session::ReadFifoMessage() {
     trace_provider_packet_t packet;
     auto status = fifo_.read(sizeof(packet), &packet, 1u, nullptr);
     ZX_DEBUG_ASSERT(status == ZX_OK);
-    if (packet.reserved != 0) {
-        fprintf(stderr, "Session: Reserved field non-zero from TraceManager: %u\n",
-               packet.reserved);
+    if (packet.data16 != 0) {
+        fprintf(stderr, "Session: data16 field non-zero from TraceManager: %u\n",
+               packet.data16);
         return false;
     }
     switch (packet.request) {

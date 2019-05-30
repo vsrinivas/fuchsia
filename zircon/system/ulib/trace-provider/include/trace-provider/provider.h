@@ -15,18 +15,23 @@
 
 __BEGIN_CDECLS
 
+// Contents of the provider/manager FIFO.
+// One important function the FIFO serves is to support TraceHandler and
+// TraceProvider having potentially disjoint lifetimes: The trace engine can
+// be running (for however brief a time) after the trace provider goes away,
+// and therefore the FIDL channel can go away while the engine is still
+// running.
+
 // The format of fifo packets for messages passed between the trace manager
 // and trace providers.
 typedef struct trace_provider_packet {
     // One of TRACE_PROVIDER_*.
     uint16_t request;
 
-    // For alignment and future concerns, must be zero.
-    uint16_t reserved;
-
     // Optional data for the request.
     // The contents depend on the request.
     // If unused they must be passed as zero.
+    uint16_t data16;
     uint32_t data32;
     uint64_t data64;
 } trace_provider_packet_t;
@@ -40,19 +45,15 @@ typedef struct trace_provider_packet {
 
 // Indicate the provider successfully started.
 // |data32| is TRACE_PROVIDER_FIFO_PROTOCOL_VERSION
-// |data64| is unused (must be zero).
+// |data16,data64| are unused (must be zero).
 #define TRACE_PROVIDER_STARTED (0x1)
 
-// Provider->Manager
 // A buffer is full and needs to be saved (streaming mode only).
+// |data16| is unused (must be zero).
 // |data32| is the "wrapped count", which is a count of the number of times
 // a buffer has filled.
 // |data64| is current offset in the durable buffer
 #define TRACE_PROVIDER_SAVE_BUFFER (0x2)
-
-// Temporary to ease soft-roll into garnet.
-// Can be removed when garnet side lands.
-#define TRACE_PROVIDER_BUFFER_OVERFLOW (0x2)
 
 // Next Provider->Manager packet = 0x3
 
@@ -60,7 +61,7 @@ typedef struct trace_provider_packet {
 // A buffer has been saved (streaminng mode only).
 // |data32| is the "wrapped count", which is a count of the number of times
 // a buffer has filled.
-// |data64| is unused (must be zero).
+// |data16,data64| are unused (must be zero).
 #define TRACE_PROVIDER_BUFFER_SAVED (0x100)
 
 // Next Manager->Provider packet = 0x101
