@@ -17,6 +17,7 @@
 #ifdef __cplusplus
 
 #include <atomic>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
@@ -28,6 +29,7 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 
 #include "slice-extent.h"
@@ -188,6 +190,9 @@ private:
 
     // Lock used to prevent multiple device remove calls.
     std::atomic<bool> device_remove_ = false;
+
+    // Worker completion.
+    sync_completion_t worker_completed_;
 };
 
 } // namespace fvm

@@ -75,6 +75,7 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
                 device_get_name(dev));
         // See comment in Load()
         if (!vpm->device_remove_.exchange(true)) {
+            sync_completion_signal(&vpm->worker_completed_);
             vpm->DdkRemove();
         }
         return ZX_ERR_NO_MEMORY;
@@ -89,7 +90,8 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
 zx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) const {
     auto ename = reinterpret_cast<const char*>(GetAllocatedVPartEntry(vp->GetEntryIndex())->name);
     char name[fvm::kMaxVPartitionNameLength + 32];
-    snprintf(name, sizeof(name), "%.*s-p-%zu", fvm::kMaxVPartitionNameLength, ename, vp->GetEntryIndex());
+    snprintf(name, sizeof(name), "%.*s-p-%zu", fvm::kMaxVPartitionNameLength, ename,
+             vp->GetEntryIndex());
 
     zx_status_t status;
     if ((status = vp->DdkAdd(name)) != ZX_OK) {
@@ -170,6 +172,11 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
 
 zx_status_t VPartitionManager::Load() {
     fbl::AutoLock lock(&lock_);
+
+    // Signal all threads blocked on this thread completion. Join Only happens in DdkRelease, but we
+    // need to block earlier to avoid races between DdkRemove and any API call.
+    auto singal_completion =
+        fbl::MakeAutoCall([this]() { sync_completion_signal(&worker_completed_); });
 
     auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         // Need to release the lock before calling DdkRemove(), since it will
@@ -660,12 +667,16 @@ zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partiti
 }
 
 void VPartitionManager::DdkUnbind() {
+    // Wait untill all work has been completed, before removing the device.
+    sync_completion_wait(&worker_completed_, zx::duration::infinite().get());
+
     if (!device_remove_.exchange(true)) {
         DdkRemove();
     }
 }
 
 void VPartitionManager::DdkRelease() {
+    // Wait until the worker thread exits before freeing the resources.
     thrd_join(initialization_thread_, nullptr);
     delete this;
 }
