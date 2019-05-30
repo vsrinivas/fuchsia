@@ -56,6 +56,9 @@ use crate::setui::facade::SetUiFacade;
 // Traceutil related includes
 use crate::traceutil::facade::TraceutilFacade;
 
+// Webdriver related includes
+use crate::webdriver::facade::WebdriverFacade;
+
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
@@ -118,6 +121,9 @@ pub struct Sl4f {
     // traceutil_facade: Thread safe object for state for Traceutil functions.
     traceutil_facade: Arc<TraceutilFacade>,
 
+    // webdriver_facade: thread safe object for state for webdriver functions.
+    webdriver_facade: Arc<WebdriverFacade>,
+
     // wlan_facade: Thread safe object for state for wlan connectivity tests
     wlan_facade: Arc<WlanFacade>,
 
@@ -142,6 +148,7 @@ impl Sl4f {
         let scenic_facade = Arc::new(ScenicFacade::new());
         let setui_facade = Arc::new(SetUiFacade::new()?);
         let traceutil_facade = Arc::new(TraceutilFacade::new());
+        let webdriver_facade = Arc::new(WebdriverFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
         Ok(Arc::new(RwLock::new(Sl4f {
             audio_facade,
@@ -158,6 +165,7 @@ impl Sl4f {
             scenic_facade,
             setui_facade,
             traceutil_facade,
+            webdriver_facade,
             wlan_facade,
             clients: Arc::new(Mutex::new(HashMap::new())),
         })))
@@ -217,6 +225,10 @@ impl Sl4f {
 
     pub fn get_traceutil_facade(&self) -> Arc<TraceutilFacade> {
         self.traceutil_facade.clone()
+    }
+
+    pub fn get_webdriver_facade(&self) -> Arc<WebdriverFacade> {
+        self.webdriver_facade.clone()
     }
 
     pub fn get_wlan_facade(&self) -> Arc<WlanFacade> {

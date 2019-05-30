@@ -19,5 +19,6 @@ fidl("fuchsia.web") {
     "//sdk/fidl/fuchsia.net.http",
     "//sdk/fidl/fuchsia.ui.views",
     "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }

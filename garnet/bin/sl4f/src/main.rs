@@ -26,6 +26,7 @@ mod scenic;
 mod server;
 mod setui;
 mod traceutil;
+mod webdriver;
 mod wlan;
 
 use fuchsia_syslog::macros::*;

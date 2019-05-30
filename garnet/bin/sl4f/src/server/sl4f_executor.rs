@@ -30,6 +30,7 @@ use crate::netstack::commands::netstack_method_to_fidl;
 use crate::scenic::commands::scenic_method_to_fidl;
 use crate::setui::commands::setui_method_to_fidl;
 use crate::traceutil::commands::traceutil_method_to_fidl;
+use crate::webdriver::commands::webdriver_method_to_fidl;
 use crate::wlan::commands::wlan_method_to_fidl;
 
 pub async fn run_fidl_loop(
@@ -145,7 +146,12 @@ async fn method_to_fidl(
         FacadeType::TraceutilFacade => await!(traceutil_method_to_fidl(
             method_name,
             args,
-            sl4f_session.read().get_traceutil_facade(),
+            sl4f_session.read().get_traceutil_facade()
+        )),
+        FacadeType::WebdriverFacade => await!(webdriver_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.read().get_webdriver_facade(),
         )),
         FacadeType::Wlan => {
             await!(wlan_method_to_fidl(method_name, args, sl4f_session.read().get_wlan_facade()))
