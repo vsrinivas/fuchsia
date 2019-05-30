@@ -460,7 +460,7 @@ static void brcmf_msgbuf_ioctl_resp_wake(struct brcmf_msgbuf* msgbuf) {
 }
 
 static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                           uint len, zx_status_t* fwerr) {
+                                           uint len, int32_t* fwerr) {
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
     struct brcmf_netbuf* netbuf = NULL;
     zx_status_t err;
@@ -496,7 +496,7 @@ static zx_status_t brcmf_msgbuf_query_dcmd(struct brcmf_pub* drvr, int ifidx, ui
 }
 
 static zx_status_t brcmf_msgbuf_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                         uint len, zx_status_t* fwerr) {
+                                         uint len, int32_t* fwerr) {
     return brcmf_msgbuf_query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 

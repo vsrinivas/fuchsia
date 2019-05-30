@@ -29,9 +29,9 @@ struct brcmf_proto {
     zx_status_t (*hdrpull)(struct brcmf_pub* drvr, bool do_fws, struct brcmf_netbuf* netbuf,
                            struct brcmf_if** ifp);
     zx_status_t (*query_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
-                              zx_status_t* fwerr);
+                              int32_t* fwerr);
     zx_status_t (*set_dcmd)(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf, uint len,
-                            zx_status_t* fwerr);
+                            int32_t* fwerr);
     zx_status_t (*tx_queue_data)(struct brcmf_pub* drvr, int ifidx, struct brcmf_netbuf* netbuf);
     int (*txdata)(struct brcmf_pub* drvr, int ifidx, uint8_t offset, struct brcmf_netbuf* netbuf);
     void (*configure_addr_mode)(struct brcmf_pub* drvr, int ifidx, enum proto_addr_mode addr_mode);
@@ -63,11 +63,11 @@ static inline int brcmf_proto_hdrpull(struct brcmf_pub* drvr, bool do_fws,
     return drvr->proto->hdrpull(drvr, do_fws, netbuf, ifp);
 }
 static inline zx_status_t brcmf_proto_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                                 void* buf, uint len, zx_status_t* fwerr) {
+                                                 void* buf, uint len, int32_t* fwerr) {
     return drvr->proto->query_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 static inline zx_status_t brcmf_proto_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                               void* buf, uint len, zx_status_t* fwerr) {
+                                               void* buf, uint len, int32_t* fwerr) {
     return drvr->proto->set_dcmd(drvr, ifidx, cmd, buf, len, fwerr);
 }
 

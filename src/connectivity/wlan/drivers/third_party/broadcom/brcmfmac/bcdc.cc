@@ -37,7 +37,7 @@ struct brcmf_proto_bcdc_dcmd {
     uint32_t len;       /* lower 16: output buflen;
                          * upper 16: input buflen (excludes header) */
     uint32_t flags;     /* flag defns given below */
-    zx_status_t status; /* status code returned from the device */
+    int32_t status;     /* status code returned from the device */
 };
 
 // clang-format off
@@ -164,7 +164,7 @@ static zx_status_t brcmf_proto_bcdc_cmplt(struct brcmf_pub* drvr, uint32_t id, u
 }
 
 static zx_status_t brcmf_proto_bcdc_query_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd,
-                                               void* buf, uint len, zx_status_t* fwerr) {
+                                               void* buf, uint len, int32_t* fwerr) {
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
     void* info;
@@ -224,7 +224,7 @@ done:
 }
 
 static zx_status_t brcmf_proto_bcdc_set_dcmd(struct brcmf_pub* drvr, int ifidx, uint cmd, void* buf,
-                                             uint len, zx_status_t* fwerr) {
+                                             uint len, int32_t* fwerr) {
     struct brcmf_bcdc* bcdc = (struct brcmf_bcdc*)drvr->proto->pd;
     struct brcmf_proto_bcdc_dcmd* msg = &bcdc->msg;
     zx_status_t ret;

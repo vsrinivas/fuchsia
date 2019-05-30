@@ -21,6 +21,7 @@
 #include "fwil.h"
 
 #include <threads.h>
+#include <zircon/status.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -105,7 +106,8 @@ static const char* brcmf_fil_get_errstr(uint32_t err) {
 static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
                                       bool set) {
     struct brcmf_pub* drvr = ifp->drvr;
-    zx_status_t err, fwerr;
+    zx_status_t err;
+    int32_t fwerr;
 
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
         brcmf_err("bus is down. we have nothing to do.\n");
@@ -122,9 +124,9 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     }
 
     if (err != ZX_OK) {
-        brcmf_dbg(FIL, "Failed: %s (%d)\n", brcmf_fil_get_errstr(err), err);
+        brcmf_dbg(FIL, "Failed: %s\n", zx_status_get_string(err));
     } else if (fwerr != 0) {
-        brcmf_dbg(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr(-fwerr), fwerr);
+        brcmf_dbg(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr((uint32_t) -fwerr), fwerr);
         if (fwerr == BRCMF_ERR_FIRMWARE_UNSUPPORTED) {
             err = ZX_ERR_NOT_SUPPORTED;
         } else {
