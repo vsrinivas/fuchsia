@@ -144,8 +144,7 @@ pub(crate) fn send_icmp_parameter_problem<D: EventDispatcher, A: IpAddress, B: B
 ) {
     increment_counter!(ctx, "send_icmp_parameter_problem");
 
-    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
-    // whether we MUST NOT send an ICMP error message.
+    // Check whether we MUST NOT send an ICMP error message.
     if !should_send_icmp_error(frame_dst, src_ip, dst_ip) {
         return;
     }
@@ -204,8 +203,7 @@ pub(crate) fn send_icmp_protocol_unreachable<D: EventDispatcher, A: IpAddress, B
 ) {
     increment_counter!(ctx, "send_icmp_protocol_unreachable");
 
-    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
-    // whether we MUST NOT send an ICMP error message. Unlike other
+    // Check whether we MUST NOT send an ICMP error message. Unlike other
     // send_icmp_xxx functions, we do not check to see whether the inbound
     // packet is an ICMP error message - we already know it's not since its
     // protocol was unsupported.
@@ -275,8 +273,7 @@ pub(crate) fn send_icmp_port_unreachable<D: EventDispatcher, A: IpAddress, B: Bu
 ) {
     increment_counter!(ctx, "send_icmp_port_unreachable");
 
-    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
-    // whether we MUST NOT send an ICMP error message. Unlike other
+    // Check whether we MUST NOT send an ICMP error message. Unlike other
     // send_icmp_xxx functions, we do not check to see whether the inbound
     // packet is an ICMP error message - we already know it's not since ICMP is
     // not one of the protocols that can generate "port unreachable" errors.
@@ -330,8 +327,7 @@ pub(crate) fn send_icmp_net_unreachable<D: EventDispatcher, A: IpAddress, B: Buf
 ) {
     increment_counter!(ctx, "send_icmp_net_unreachable");
 
-    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
-    // whether we MUST NOT send an ICMP error message. should_send_icmp_error
+    // Check whether we MUST NOT send an ICMP error message. should_send_icmp_error
     // does not handle the "ICMP error message" case, so we check that
     // separately with a call to is_icmp_error_message.
     if !should_send_icmp_error(frame_dst, src_ip, dst_ip)
@@ -388,8 +384,7 @@ pub(crate) fn send_icmp_ttl_expired<D: EventDispatcher, A: IpAddress, B: BufferM
 ) {
     increment_counter!(ctx, "send_icmp_ttl_expired");
 
-    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
-    // whether we MUST NOT send an ICMP error message. should_send_icmp_error
+    // Check whether we MUST NOT send an ICMP error message. should_send_icmp_error
     // does not handle the "ICMP error message" case, so we check that
     // separately with a call to is_icmp_error_message.
     if !should_send_icmp_error(frame_dst, src_ip, dst_ip)
@@ -462,11 +457,16 @@ pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
 ) {
     increment_counter!(ctx, "send_icmpv6_packet_too_big");
 
-    // Check the conditions of RFC 1122 section 3.2.2 in order to determine
-    // whether we MUST NOT send an ICMP error message. should_send_icmp_error
+    // Check whether we MUST NOT send an ICMP error message. should_send_icmp_error
     // does not handle the "ICMP error message" case, so we check that
     // separately with a call to is_icmp_error_message.
-    if !should_send_icmp_error(frame_dst, src_ip, dst_ip)
+    //
+    // Note, here we explicitly let `should_send_icmpv6_error` allow a multicast
+    // destination (link-layer or destination ip) as RFC 4443 section 2.4.e
+    // explicitly allows sending an ICMP response if the original packet was
+    // sent to a multicast IP or link layer if the ICMP response message will be
+    // a Packet Too Big Message.
+    if !should_send_icmpv6_error(frame_dst, src_ip, dst_ip, true)
         || is_icmp_error_message(proto, &original_packet.as_ref()[header_len..])
     {
         return;
@@ -587,8 +587,27 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
 }
 
 /// Should we send an ICMP response?
+#[specialize_ip_address]
+fn should_send_icmp_error<A: IpAddress>(frame_dst: FrameDestination, src_ip: A, dst_ip: A) -> bool {
+    #[ipv4addr]
+    let ret = should_send_icmpv4_error(frame_dst, src_ip, dst_ip);
+
+    // When checking with ICMPv6 rules, do not allow exceptions if the destination
+    // is a multicast (outlined by RFC 4443 section 2.4.e).
+    //
+    // `should_send_icmp_error` is used for the general case where there will be
+    // no exceptions. When exceptions are needed, `should_send_icmpv6_error` should
+    // be called directly without calling `should_send_icmp_error`
+    // (i.e. `send_icmpv6_packet_too_big`).
+    #[ipv6addr]
+    let ret = should_send_icmpv6_error(frame_dst, src_ip, dst_ip, false);
+
+    ret
+}
+
+/// Should we send an ICMP(v4) response?
 ///
-/// `should_send_icmp_error` implements the logic described in RFC 1122 section
+/// `should_send_icmpv4_error` implements the logic described in RFC 1122 section
 /// 3.2.2. It decides whether, upon receiving an incoming packet with the given
 /// parameters, we should send an ICMP response or not. In particular, we do not
 /// send an ICMP response if we've received:
@@ -599,23 +618,65 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
 ///   zero/unspecified address, a loopback address, a broadcast address, a
 ///   multicast address, or a Class E address)
 ///
-/// Note that `should_send_icmp_error` does NOT check whether the incoming
+/// Note that `should_send_icmpv4_error` does NOT check whether the incoming
 /// packet contained an ICMP error message. This is because that check is
 /// unnecessary for some ICMP error conditions. The ICMP error message check can
 /// be performed separately with `is_icmp_error_message`.
-fn should_send_icmp_error<A: IpAddress>(frame_dst: FrameDestination, src_ip: A, dst_ip: A) -> bool {
+fn should_send_icmpv4_error(
+    frame_dst: FrameDestination,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
+) -> bool {
     // TODO(joshlf): Implement the rest of the rules:
     // - a packet destined to a subnet broadcast address
     // - a non-initial fragment
     // - a packet whose source address is a subnet broadcast address
     !(dst_ip.is_multicast()
-        || dst_ip.with_v4(Ipv4Addr::is_global_broadcast, false)
+        || dst_ip.is_global_broadcast()
         || frame_dst.is_broadcast()
         || src_ip.is_unspecified()
         || src_ip.is_loopback()
-        || src_ip.with_v4(Ipv4Addr::is_global_broadcast, false)
+        || src_ip.is_global_broadcast()
         || src_ip.is_multicast()
-        || src_ip.with_v4(Ipv4Addr::is_class_e, false))
+        || src_ip.is_class_e())
+}
+
+/// Should we send an ICMPv6 response?
+///
+/// `should_send_icmpv6_error` implements the logic described in RFC 4443 section
+/// 2.4.e. It decides whether, upon receiving an incoming packet with the given
+/// parameters, we should send an ICMP response or not. In particular, we do not
+/// send an ICMP response if we've received:
+/// - a packet destined to a multicast address
+///   - Two exceptions to this rules:
+///     1) the Packet Too Big Message to allow Path MTU discovery to work for IPv6
+///        multicast
+///     2) the Parameter Problem Message, Code 2 reporting an unrecognized IPv6
+///        option that has the Option Type highest-order two bits set to 10
+/// - a packet sent as a link-layer multicast or broadcast
+///   - same exceptions apply here as well.
+/// - a packet whose source address does not define a single host (a
+///   zero/unspecified address, a loopback address, or a multicast address)
+///
+/// If an ICMP response will be a Packet Too Big Message or a Parameter Problem
+/// Message, Code 2 reporting an unrecognized IPv6 option that has the Option Type
+/// highest-order two bits set to 10, `allow_dst_multicast` must be set to `true`
+/// so this function will allow the exception mentioned above.
+///
+/// Note that `should_send_icmpv6_error` does NOT check whether the incoming
+/// packet contained an ICMP error message. This is because that check is
+/// unnecessary for some ICMP error conditions. The ICMP error message check can
+/// be performed separately with `is_icmp_error_message`.
+fn should_send_icmpv6_error(
+    frame_dst: FrameDestination,
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
+    allow_dst_multicast: bool,
+) -> bool {
+    !((!allow_dst_multicast && (dst_ip.is_multicast() || frame_dst.is_broadcast()))
+        || src_ip.is_unspecified()
+        || src_ip.is_loopback()
+        || src_ip.is_multicast())
 }
 
 /// Determine whether or not an IP packet body contains an ICMP error message
@@ -648,8 +709,10 @@ mod tests {
 
     use super::*;
     use crate::device::{DeviceId, FrameDestination};
-    use crate::ip::{receive_ip_packet, IpExt, Ipv4, Ipv4Addr};
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
+    use crate::ip::{receive_ip_packet, Ip, IpExt, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use crate::testutil::{
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
+    };
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody,
     };
@@ -843,5 +906,93 @@ mod tests {
             // ensure packet is truncated to the right length
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
+    }
+
+    #[test]
+    fn test_should_send_icmpv4_error() {
+        let src_ip = DUMMY_CONFIG_V4.local_ip;
+        let dst_ip = DUMMY_CONFIG_V4.remote_ip;
+        let frame_dst = FrameDestination::Unicast;
+        let multicast_ip_1 = Ipv4Addr::new([224, 0, 0, 1]);
+        let multicast_ip_2 = Ipv4Addr::new([224, 0, 0, 2]);
+
+        // Should Send.
+        assert!(should_send_icmpv4_error(frame_dst, src_ip, dst_ip));
+
+        // Should not send because destined for IP broadcast addr
+        assert!(!should_send_icmpv4_error(frame_dst, src_ip, Ipv4Addr::new([255, 255, 255, 255])));
+
+        // Should not send because destined for multicast addr
+        assert!(!should_send_icmpv4_error(frame_dst, src_ip, multicast_ip_1));
+
+        // Should not send because Link Layer Broadcast.
+        assert!(!should_send_icmpv4_error(FrameDestination::Broadcast, src_ip, dst_ip));
+
+        // Should not send because from unspecified addr
+        assert!(!should_send_icmpv4_error(frame_dst, Ipv4::UNSPECIFIED_ADDRESS, dst_ip));
+
+        // Should not send because from loopback addr
+        assert!(!should_send_icmpv4_error(frame_dst, Ipv4::LOOPBACK_ADDRESS, dst_ip));
+
+        // Should not send because from global broadcast addr
+        assert!(!should_send_icmpv4_error(frame_dst, Ipv4::GLOBAL_BROADCAST_ADDRESS, dst_ip));
+
+        // Should not send because from multicast addr
+        assert!(!should_send_icmpv4_error(frame_dst, multicast_ip_2, dst_ip));
+
+        // Should not send because from class e addr
+        assert!(!should_send_icmpv4_error(frame_dst, Ipv4Addr::new([240, 0, 0, 1]), dst_ip));
+    }
+
+    #[test]
+    fn test_should_send_icmpv6_error() {
+        let src_ip = DUMMY_CONFIG_V6.local_ip;
+        let dst_ip = DUMMY_CONFIG_V6.remote_ip;
+        let frame_dst = FrameDestination::Unicast;
+        let multicast_ip_1 = Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        let multicast_ip_2 = Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+
+        // Should Send.
+        assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, false));
+        assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, true));
+
+        // Should not send because destined for multicast addr,
+        // unless exception applies
+        assert!(!should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, false));
+        assert!(should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, true));
+
+        // Should not send because Link Layer Broadcast.,
+        // unless exception applies
+        assert!(!should_send_icmpv6_error(FrameDestination::Broadcast, src_ip, dst_ip, false));
+        assert!(should_send_icmpv6_error(FrameDestination::Broadcast, src_ip, dst_ip, true));
+
+        // Should not send because from unspecified addr
+        assert!(!should_send_icmpv6_error(frame_dst, Ipv6::UNSPECIFIED_ADDRESS, dst_ip, false));
+        assert!(!should_send_icmpv6_error(frame_dst, Ipv6::UNSPECIFIED_ADDRESS, dst_ip, true));
+
+        // Should not send because from loopback addr
+        assert!(!should_send_icmpv6_error(frame_dst, Ipv6::LOOPBACK_ADDRESS, dst_ip, false));
+        assert!(!should_send_icmpv6_error(frame_dst, Ipv6::LOOPBACK_ADDRESS, dst_ip, true));
+
+        // Should not send because from multicast addr
+        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, false));
+        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, true));
+
+        // Should not send becuase from multicast addr,
+        // even though dest multicast exception applies
+        assert!(!should_send_icmpv6_error(
+            FrameDestination::Broadcast,
+            multicast_ip_2,
+            dst_ip,
+            false
+        ));
+        assert!(!should_send_icmpv6_error(
+            FrameDestination::Broadcast,
+            multicast_ip_2,
+            dst_ip,
+            true
+        ));
+        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, false));
+        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, true));
     }
 }
