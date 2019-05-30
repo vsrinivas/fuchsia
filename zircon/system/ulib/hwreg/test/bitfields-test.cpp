@@ -380,6 +380,64 @@ static bool reg_field_test() {
     END_TEST;
 }
 
+static bool reg_enum_field_test() {
+    BEGIN_TEST;
+    class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
+    public:
+        enum MyEnum { Test0 = 0, Test1 = 1, Test2 = 2, Test3 = 3 };
+        DEF_ENUM_FIELD(MyEnum, 3, 2, TestField);
+        static auto Get() { return hwreg::RegisterAddr<TestReg8>(0); }
+    };
+    class TestReg8WithEnumClass : public hwreg::RegisterBase<TestReg8WithEnumClass, uint8_t> {
+    public:
+        enum class MyEnum { Test0 = 0, Test1 = 1, Test2 = 2, Test3 = 3 };
+        DEF_ENUM_FIELD(MyEnum, 3, 2, TestField);
+        static auto Get() { return hwreg::RegisterAddr<TestReg8WithEnumClass>(0); }
+    };
+    {
+        uint8_t result = []() {
+            TestReg8WithEnumClass reg = TestReg8WithEnumClass::Get().FromValue(255);
+            reg.set_TestField(TestReg8WithEnumClass::MyEnum::Test0);
+            return reg.reg_value();
+        }();
+        int mask = 0xF3;
+        ASSERT_TRUE(result == mask);
+        ASSERT_TRUE(TestReg8WithEnumClass::Get().FromValue(result).TestField() ==
+                    TestReg8WithEnumClass::MyEnum::Test0);
+    }
+    {
+        uint8_t result = []() {
+            TestReg8 reg = TestReg8::Get().FromValue(255);
+            reg.set_TestField(TestReg8::Test1);
+            return reg.reg_value();
+        }();
+        int mask = 0xF3;
+        ASSERT_TRUE(result == (mask | (1 << 2)));
+        ASSERT_TRUE(TestReg8::Get().FromValue(result).TestField() == TestReg8::Test1);
+    }
+    {
+        uint8_t result = []() {
+            TestReg8 reg = TestReg8::Get().FromValue(255);
+            reg.set_TestField(TestReg8::Test2);
+            return reg.reg_value();
+        }();
+        int mask = 0xF3;
+        ASSERT_TRUE(result == (mask | (2 << 2)));
+        ASSERT_TRUE(TestReg8::Get().FromValue(result).TestField() == TestReg8::Test2);
+    }
+    {
+        uint8_t result = []() {
+            TestReg8 reg = TestReg8::Get().FromValue(255);
+            reg.set_TestField(TestReg8::Test3);
+            return reg.reg_value();
+        }();
+        constexpr int mask = 0xF3;
+        ASSERT_TRUE(result == (mask | (3 << 2)));
+        ASSERT_TRUE(TestReg8::Get().FromValue(result).TestField() == TestReg8::Test3);
+    }
+    END_TEST;
+}
+
 static bool reg_unshifted_field_test() {
     BEGIN_TEST;
 
@@ -580,6 +638,7 @@ RUN_TEST_FOR_UINTS(struct_sub_bit_test)
 RUN_TEST_FOR_UINTS(struct_sub_field_test)
 RUN_TEST(reg_rsvdz_test)
 RUN_TEST(reg_rsvdz_full_test)
+RUN_TEST(reg_enum_field_test)
 RUN_TEST(reg_field_test)
 RUN_TEST(reg_unshifted_field_test)
 RUN_TEST(print_test)
