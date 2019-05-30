@@ -20,6 +20,7 @@ driver("sherlock") {
     "sherlock-mali.cpp",
     "sherlock-sdio.cpp",
     "sherlock-sysmem.cpp",
+    "sherlock-tee.cpp",
     "sherlock-thermal.cpp",
     "sherlock-touch.cpp",
     "sherlock-usb.cpp",

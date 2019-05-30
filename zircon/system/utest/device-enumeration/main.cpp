@@ -261,7 +261,8 @@ bool sherlock_enumeration_test() {
         "sys/platform/05:04:17/aml-gpu",
         "sys/platform/05:04:16/sherlock-audio-in",
         "SherlockAudio",
-        "ft5726-touch"
+        "ft5726-touch",
+        "sys/platform/00:00:e/optee-tz"
     };
 
     ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

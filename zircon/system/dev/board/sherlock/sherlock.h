@@ -34,6 +34,7 @@ enum {
     BTI_AUDIO_IN,
     BTI_SYSMEM,
     BTI_THERMAL,
+    BTI_TEE,
 };
 
 // MAC address metadata indices
@@ -87,6 +88,7 @@ private:
     zx_status_t ClkInit();
     zx_status_t CameraInit();
     zx_status_t MaliInit();
+    zx_status_t TeeInit();
     zx_status_t VideoInit();
     zx_status_t ButtonsInit();
     zx_status_t DisplayInit();

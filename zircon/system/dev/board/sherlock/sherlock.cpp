@@ -121,6 +121,10 @@ int Sherlock::Thread() {
         zxlogf(ERROR, "CameraInit() failed\n");
     }
 
+    if (TeeInit() != ZX_OK) {
+        zxlogf(ERROR, "TeeInit() failed\n");
+    }
+
     if (VideoInit() != ZX_OK) {
         zxlogf(ERROR, "VideoInit() failed\n");
     }
