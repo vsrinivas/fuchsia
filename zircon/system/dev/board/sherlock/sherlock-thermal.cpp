@@ -102,14 +102,13 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t tem
  * 2 - 500 MHz
  * 3 - 666 MHz
  * 4 - 800 MHz
- * 5 - 846 MHz
  */
 
 // clang-format off
 
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-static fuchsia_hardware_thermal_ThermalDeviceInfo aml_astro_config = {
+static fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config = {
     .active_cooling                     = false,
     .passive_cooling                    = true,
     .gpu_throttling                     = true,
@@ -117,7 +116,7 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo aml_astro_config = {
     .big_little                         = false,
     .critical_temp                      = 102,
     .trip_point_info                    = {
-        TripPoint(55, 10, 5),
+        TripPoint(55, 10, 4),
         TripPoint(75, 9, 4),
         TripPoint(80, 7, 3),
         TripPoint(90, 6, 3),
@@ -224,8 +223,8 @@ static aml_opp_info_t aml_opp_info = {
 static const pbus_metadata_t thermal_metadata[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &aml_astro_config,
-        .data_size = sizeof(aml_astro_config),
+        .data_buffer = &aml_sherlock_config,
+        .data_size = sizeof(aml_sherlock_config),
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
