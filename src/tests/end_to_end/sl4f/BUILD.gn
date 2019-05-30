@@ -15,22 +15,25 @@ dart_test("sl4f_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  # The test runs on CI/CQ try builders
-  # in these environments.
-  environments = [ nuc_env ]
 
-  # The test runs only on fyi builders
-  # in these environments, indicated by
-  # a tag.
-  _fyi_environments = [ astro_env ]
+  environments = [
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+    },
 
-  foreach(env, _fyi_environments) {
-    if (!defined(env.tags)) {
-      env.tags = []
-    }
-    env.tags += [ "e2e-terminal" ]
-    environments += [ env ]
-  }
+    # The astro environment has tags as it is still to be run on an FYI builder.
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+      tags = [
+        "astro",
+        "e2e-terminal",
+      ]
+    },
+  ]
 }
 
 group("test") {

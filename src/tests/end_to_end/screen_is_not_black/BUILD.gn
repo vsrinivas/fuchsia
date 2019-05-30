@@ -17,21 +17,24 @@ dart_test("screen_is_not_black_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  _untagged_envs = [
-    nuc_env,
-    astro_env,
+  environments = [
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+    },
+
+    # The astro environment has tags as it is still to be run on an FYI builder.
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+      tags = [
+        "astro",
+        "e2e-terminal",
+      ]
+    },
   ]
-  environments = []
-  foreach(env, _untagged_envs) {
-    if (!defined(env.tags)) {
-      env.tags = []
-    }
-    # This test is in production for x64 builds alone.
-    if (target_cpu != "x64") {
-      env.tags += ["e2e-terminal"]
-    }
-    environments += [env]
-  }
 }
 
 group("test") {
