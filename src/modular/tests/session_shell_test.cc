@@ -122,7 +122,7 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
   MockSessionShell mock_session_shell_;
 };
 
-TEST_F(SessionShellTest, DISABLED_GetPackageName) {
+TEST_F(SessionShellTest, GetPackageName) {
   fuchsia::modular::testing::TestHarnessSpec spec;
   test_harness()->Run(std::move(spec));
 
@@ -137,10 +137,10 @@ TEST_F(SessionShellTest, DISABLED_GetPackageName) {
     got_name = true;
   });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return got_name; }, zx::sec(10)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return got_name; }, zx::sec(30)));
 }
 
-TEST_F(SessionShellTest, DISABLED_GetStoryInfoNonexistentStory) {
+TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   RunHarnessAndInterceptSessionShell();
 
   fuchsia::modular::StoryProvider* story_provider =
@@ -155,10 +155,10 @@ TEST_F(SessionShellTest, DISABLED_GetStoryInfoNonexistentStory) {
       });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return tried_get_story_info; },
-                                        zx::sec(10)));
+                                        zx::sec(30)));
 }
 
-TEST_F(SessionShellTest, DISABLED_GetLink) {
+TEST_F(SessionShellTest, GetLink) {
   RunHarnessAndInterceptSessionShell();
 
   fuchsia::modular::SessionShellContext* session_shell_context;
@@ -174,10 +174,10 @@ TEST_F(SessionShellTest, DISABLED_GetLink) {
       });
 
   ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return called_get_link; }, zx::sec(10)));
+      RunLoopWithTimeoutOrUntil([&] { return called_get_link; }, zx::sec(30)));
 }
 
-TEST_F(SessionShellTest, DISABLED_GetStoriesEmpty) {
+TEST_F(SessionShellTest, GetStoriesEmpty) {
   RunHarnessAndInterceptSessionShell();
 
   fuchsia::modular::StoryProvider* story_provider =
@@ -193,10 +193,10 @@ TEST_F(SessionShellTest, DISABLED_GetStoriesEmpty) {
       });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_get_stories; },
-                                        zx::sec(10)));
+                                        zx::sec(30)));
 }
 
-TEST_F(SessionShellTest, DISABLED_StartAndStopStoryWithExtraInfoMod) {
+TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell,
@@ -270,7 +270,7 @@ TEST_F(SessionShellTest, DISABLED_StartAndStopStoryWithExtraInfoMod) {
                                    StoryState::STOPPING, StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, DISABLED_StoryInfoBeforeAndAfterDelete) {
+TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell.
@@ -314,7 +314,7 @@ TEST_F(SessionShellTest, DISABLED_StoryInfoBeforeAndAfterDelete) {
             });
       });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return execute_and_get_story_info_called; }, zx::sec(10)));
+      [&] { return execute_and_get_story_info_called; }, zx::sec(30)));
 
   // Delete the story and confirm that the story info is null now.
   bool delete_called = false;
@@ -327,10 +327,10 @@ TEST_F(SessionShellTest, DISABLED_StoryInfoBeforeAndAfterDelete) {
         delete_called = true;
       });
   ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return delete_called; }, zx::sec(10)));
+      RunLoopWithTimeoutOrUntil([&] { return delete_called; }, zx::sec(30)));
 }
 
-TEST_F(SessionShellTest, DISABLED_KindOfProtoStoryNotInStoryList) {
+TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and launch a new story shell,
@@ -367,10 +367,10 @@ TEST_F(SessionShellTest, DISABLED_KindOfProtoStoryNotInStoryList) {
   });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_get_stories; },
-                                        zx::sec(10)));
+                                        zx::sec(30)));
 }
 
-TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
+TEST_F(SessionShellTest, AttachesAndDetachesView) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
@@ -417,7 +417,7 @@ TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
       [&called_attach_view](ViewIdentifier) { called_attach_view = true; });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_attach_view; },
-                                        zx::sec(10)));
+                                        zx::sec(30)));
 
   // Stop the story. Confirm that:
   //  a. DetachView() was called.
@@ -433,18 +433,18 @@ TEST_F(SessionShellTest, DISABLED_AttachesAndDetachesView) {
   bool stop_called = false;
   story_controller->Stop([&stop_called] { stop_called = true; });
   ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(10)));
+      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(30)));
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(10)));
+      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(30)));
   EXPECT_TRUE(called_detach_view);
   EXPECT_THAT(sequence_of_story_states,
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
                                    StoryState::STOPPING, StoryState::STOPPED));
 }
 
-TEST_F(SessionShellTest, DISABLED_StoryStopDoesntWaitOnDetachView) {
+TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   RunHarnessAndInterceptSessionShell();
 
   // Create a new story using PuppetMaster and start a new story shell.
@@ -491,7 +491,7 @@ TEST_F(SessionShellTest, DISABLED_StoryStopDoesntWaitOnDetachView) {
       [&called_attach_view](ViewIdentifier) { called_attach_view = true; });
 
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_attach_view; },
-                                        zx::sec(10)));
+                                        zx::sec(30)));
 
   // Stop the story. Confirm that:
   //  a. The story stopped, even though it didn't see the DetachView() response
@@ -506,11 +506,11 @@ TEST_F(SessionShellTest, DISABLED_StoryStopDoesntWaitOnDetachView) {
   story_controller->Stop([&stop_called] { stop_called = true; });
 
   ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(10)));
+      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(30)));
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(10)));
+      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(30)));
   EXPECT_THAT(sequence_of_story_states,
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
                                    StoryState::STOPPING, StoryState::STOPPED));

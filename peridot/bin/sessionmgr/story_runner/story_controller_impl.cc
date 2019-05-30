@@ -1319,6 +1319,10 @@ void StoryControllerImpl::RequestStart() {
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
+  // TODO(MF-399): Remove this log line.
+  FXL_LOG(INFO)
+      << "Calling StoryControllerImpl::Stop(). See MF-399 for explanation of "
+         "this log message, and when it will be removed.";
   operation_queue_.Add(
       std::make_unique<StopCall>(this, false /* bulk */, std::move(done)));
 }
