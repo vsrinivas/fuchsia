@@ -7,8 +7,8 @@
 use failure;
 use fuchsia_zircon_sys as sys;
 use std::ffi::NulError;
-use std::io;
 use std::fmt;
+use std::io;
 
 /// Status type indicating the result of a Fuchsia syscall.
 ///
@@ -124,11 +124,7 @@ impl From<io::ErrorKind> for Status {
             InvalidInput => Status::INVALID_ARGS,
             TimedOut => Status::TIMED_OUT,
             Interrupted => Status::INTERRUPTED_RETRY,
-            UnexpectedEof |
-            WriteZero |
-            ConnectionReset |
-            NotConnected |
-            Other | _ => Status::IO,
+            UnexpectedEof | WriteZero | ConnectionReset | NotConnected | Other | _ => Status::IO,
         }
     }
 }
@@ -150,29 +146,28 @@ impl From<Status> for io::ErrorKind {
             Status::IO_REFUSED => ConnectionRefused,
             Status::IO_DATA_INTEGRITY => InvalidData,
 
-            Status::BAD_PATH |
-            Status::INVALID_ARGS |
-            Status::OUT_OF_RANGE |
-            Status::WRONG_TYPE => InvalidInput,
+            Status::BAD_PATH | Status::INVALID_ARGS | Status::OUT_OF_RANGE | Status::WRONG_TYPE => {
+                InvalidInput
+            }
 
-            Status::OK |
-            Status::NEXT |
-            Status::STOP |
-            Status::NO_SPACE |
-            Status::FILE_BIG |
-            Status::NOT_FILE |
-            Status::NOT_DIR |
-            Status::IO_DATA_LOSS |
-            Status::IO |
-            Status::CANCELED |
-            Status::BAD_STATE |
-            Status::BUFFER_TOO_SMALL |
-            Status::BAD_SYSCALL |
-            Status::INTERNAL |
-            Status::NOT_SUPPORTED |
-            Status::NO_RESOURCES |
-            Status::NO_MEMORY |
-            _ => Other,
+            Status::OK
+            | Status::NEXT
+            | Status::STOP
+            | Status::NO_SPACE
+            | Status::FILE_BIG
+            | Status::NOT_FILE
+            | Status::NOT_DIR
+            | Status::IO_DATA_LOSS
+            | Status::IO
+            | Status::CANCELED
+            | Status::BAD_STATE
+            | Status::BUFFER_TOO_SMALL
+            | Status::BAD_SYSCALL
+            | Status::INTERNAL
+            | Status::NOT_SUPPORTED
+            | Status::NO_RESOURCES
+            | Status::NO_MEMORY
+            | _ => Other,
         }
     }
 }
@@ -181,7 +176,7 @@ impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.assoc_const_name() {
             Some(name) => name.fmt(f),
-            None => write!(f, "Unknown zircon status code: {}", self.0)
+            None => write!(f, "Unknown zircon status code: {}", self.0),
         }
     }
 }

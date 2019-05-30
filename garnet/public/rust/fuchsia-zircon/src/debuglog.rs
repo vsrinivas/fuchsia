@@ -4,8 +4,8 @@
 
 //! Type-safe bindings for Zircon resources.
 
-use crate::{AsHandleRef, HandleBased, HandleRef, Handle, Status};
 use crate::ok;
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 
@@ -36,13 +36,9 @@ impl DebugLog {
         // parameter to this call.
         let resource = sys::ZX_HANDLE_INVALID;
         let mut handle = 0;
-        let status = unsafe {
-            sys::zx_debuglog_create(resource, opts.bits(), &mut handle)
-        };
+        let status = unsafe { sys::zx_debuglog_create(resource, opts.bits(), &mut handle) };
         ok(status)?;
-        unsafe {
-            Ok(DebugLog::from(Handle::from_raw(handle)))
-        }
+        unsafe { Ok(DebugLog::from(Handle::from_raw(handle))) }
     }
 
     /// Write a message to the kernel debug log.
@@ -54,12 +50,7 @@ impl DebugLog {
         // TODO(ZX-3187): Discussion ongoing over whether debuglog levels are supported, so no
         // options parameter for now.
         let status = unsafe {
-            sys::zx_debuglog_write(
-                self.raw_handle(),
-                0,
-                message.as_ptr(),
-                message.len()
-            )
+            sys::zx_debuglog_write(self.raw_handle(), 0, message.as_ptr(), message.len())
         };
         ok(status)
     }
@@ -80,9 +71,8 @@ impl DebugLog {
         // zx_debuglog_read options appear to be unused.
         // zx_debuglog_read returns either an error status or, on success, the actual size of bytes
         // read into the buffer.
-        let status_or_actual = unsafe {
-            sys::zx_debuglog_read(self.raw_handle(), 0, buf.as_mut_ptr(), buf.len())
-        };
+        let status_or_actual =
+            unsafe { sys::zx_debuglog_read(self.raw_handle(), 0, buf.as_mut_ptr(), buf.len()) };
         let actual = Status::ioctl_ok(status_or_actual)? as usize;
 
         record.clear();
@@ -126,7 +116,6 @@ mod tests {
                     panic!("Unexpected error from zx_debuglog_read: {}", status);
                 }
             }
-
         }
         panic!("first 10000 log messages didn't include the one we sent!");
     }

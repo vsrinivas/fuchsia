@@ -4,8 +4,8 @@
 
 //! Type-safe bindings for Zircon vmo objects.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 use std::ptr;
@@ -40,9 +40,7 @@ impl Vmo {
         let mut handle = 0;
         let status = unsafe { sys::zx_vmo_create(size, opts.bits(), &mut handle) };
         ok(status)?;
-        unsafe {
-            Ok(Vmo::from(Handle::from_raw(handle)))
-        }
+        unsafe { Ok(Vmo::from(Handle::from_raw(handle))) }
     }
 
     /// Read from a virtual memory object.
@@ -50,8 +48,7 @@ impl Vmo {
     /// Wraps the `zx_vmo_read` syscall.
     pub fn read(&self, data: &mut [u8], offset: u64) -> Result<(), Status> {
         unsafe {
-            let status = sys::zx_vmo_read(self.raw_handle(), data.as_mut_ptr(),
-                offset, data.len());
+            let status = sys::zx_vmo_read(self.raw_handle(), data.as_mut_ptr(), offset, data.len());
             ok(status)
         }
     }
@@ -61,8 +58,7 @@ impl Vmo {
     /// Wraps the `zx_vmo_write` syscall.
     pub fn write(&self, data: &[u8], offset: u64) -> Result<(), Status> {
         unsafe {
-            let status = sys::zx_vmo_write(self.raw_handle(), data.as_ptr(),
-                offset, data.len());
+            let status = sys::zx_vmo_write(self.raw_handle(), data.as_ptr(), offset, data.len());
             ok(status)
         }
     }
@@ -88,7 +84,8 @@ impl Vmo {
     ///
     /// Wraps the `zx_vmo_set_cache_policy` syscall.
     pub fn set_cache_policy(&self, cache_policy: sys::zx_cache_policy_t) -> Result<(), Status> {
-        let status = unsafe { sys::zx_vmo_set_cache_policy(self.raw_handle(), cache_policy as u32) };
+        let status =
+            unsafe { sys::zx_vmo_set_cache_policy(self.raw_handle(), cache_policy as u32) };
         ok(status)
     }
 
@@ -183,7 +180,6 @@ assoc_values!(VmoOp, [
     CACHE_CLEAN =      sys::ZX_VMO_OP_CACHE_CLEAN;
     CACHE_CLEAN_INVALIDATE = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
 ]);
-
 
 #[cfg(test)]
 mod tests {

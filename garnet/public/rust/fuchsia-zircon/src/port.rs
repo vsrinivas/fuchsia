@@ -6,8 +6,8 @@
 
 use std::mem;
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Signals, Status, Time, GPAddr, guest};
 use crate::ok;
+use crate::{guest, AsHandleRef, GPAddr, Handle, HandleBased, HandleRef, Signals, Status, Time};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -39,7 +39,7 @@ pub enum PacketContents {
     GuestIo(GuestIoPacket),
 
     #[doc(hidden)]
-    __Nonexhaustive
+    __Nonexhaustive,
 }
 
 /// Contents of a user packet (one sent by `port_queue`). This is a type-safe wrapper for
@@ -70,14 +70,12 @@ pub struct GuestIoPacket(sys::zx_packet_guest_io_t);
 impl Packet {
     /// Creates a new packet with `UserPacket` data.
     pub fn from_user_packet(key: u64, status: i32, user: UserPacket) -> Packet {
-        Packet(
-            sys::zx_port_packet_t {
-                key: key,
-                packet_type: sys::zx_packet_type_t::ZX_PKT_TYPE_USER,
-                status: status,
-                union: user.0,
-            }
-        )
+        Packet(sys::zx_port_packet_t {
+            key: key,
+            packet_type: sys::zx_packet_type_t::ZX_PKT_TYPE_USER,
+            status: status,
+            union: user.0,
+        })
     }
 
     /// The packet's key.
@@ -309,8 +307,7 @@ impl Port {
     /// syscall.
     pub fn queue(&self, packet: &Packet) -> Result<(), Status> {
         let status = unsafe {
-            sys::zx_port_queue(self.raw_handle(),
-                &packet.0 as *const sys::zx_port_packet_t)
+            sys::zx_port_queue(self.raw_handle(), &packet.0 as *const sys::zx_port_packet_t)
         };
         ok(status)
     }
@@ -323,8 +320,11 @@ impl Port {
     pub fn wait(&self, deadline: Time) -> Result<Packet, Status> {
         let mut packet = Default::default();
         let status = unsafe {
-            sys::zx_port_wait(self.raw_handle(), deadline.into_nanos(),
-                &mut packet as *mut sys::zx_port_packet_t)
+            sys::zx_port_wait(
+                self.raw_handle(),
+                deadline.into_nanos(),
+                &mut packet as *mut sys::zx_port_packet_t,
+            )
         };
         ok(status)?;
         Ok(Packet(packet))
@@ -335,10 +335,11 @@ impl Port {
     /// Wraps the
     /// [zx_port_cancel](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/port_cancel.md)
     /// syscall.
-    pub fn cancel<H>(&self, source: &H, key: u64) -> Result<(), Status> where H: HandleBased {
-        let status = unsafe {
-            sys::zx_port_cancel(self.raw_handle(), source.raw_handle(), key)
-        };
+    pub fn cancel<H>(&self, source: &H, key: u64) -> Result<(), Status>
+    where
+        H: HandleBased,
+    {
+        let status = unsafe { sys::zx_port_cancel(self.raw_handle(), source.raw_handle(), key) };
         ok(status)
     }
 }
@@ -365,11 +366,7 @@ mod tests {
         assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
 
         // Send a valid packet.
-        let packet = Packet::from_user_packet(
-            42,
-            123,
-            UserPacket::from_u8_array([13; 32]),
-        );
+        let packet = Packet::from_user_packet(42, 123, UserPacket::from_u8_array([13; 32]));
         assert!(port.queue(&packet).is_ok());
 
         // Waiting should succeed this time. We should get back the packet we sent.
@@ -385,8 +382,9 @@ mod tests {
         let port = Port::create().unwrap();
         let event = Event::create().unwrap();
 
-        assert!(event.wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1,
-            WaitAsyncOpts::Once).is_ok());
+        assert!(event
+            .wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1, WaitAsyncOpts::Once)
+            .is_ok());
 
         // Waiting without setting any signal should time out.
         assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
@@ -429,7 +427,7 @@ mod tests {
         assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
 
         // If the event is signalled after the cancel, we also shouldn't get a packet.
-        assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok());  // clear signal
+        assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok()); // clear signal
         assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());

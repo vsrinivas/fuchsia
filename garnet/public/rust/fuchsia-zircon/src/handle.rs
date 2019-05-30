@@ -36,10 +36,7 @@ pub struct Handle(sys::zx_handle_t);
 
 impl AsHandleRef for Handle {
     fn as_handle_ref(&self) -> HandleRef {
-        Unowned {
-            inner: ManuallyDrop::new(Handle(self.0)),
-            marker: PhantomData,
-        }
+        Unowned { inner: ManuallyDrop::new(Handle(self.0)), marker: PhantomData }
     }
 }
 
@@ -75,7 +72,6 @@ impl Handle {
         let status = unsafe { sys::zx_handle_replace(handle, rights.bits(), &mut out) };
         ok(status).map(|()| Handle(out))
     }
-
 }
 
 struct NameProperty();
@@ -113,10 +109,7 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
     /// outlive the lifetime during which the handle is owned by the current process. It is unsafe
     /// because most of the time, it is better to use a `Handle` to prevent leaking resources.
     pub unsafe fn from_raw_handle(handle: sys::zx_handle_t) -> Self {
-        Unowned {
-            inner: ManuallyDrop::new(T::from(Handle::from_raw(handle))),
-            marker: PhantomData,
-        }
+        Unowned { inner: ManuallyDrop::new(T::from(Handle::from_raw(handle))), marker: PhantomData }
     }
 
     pub fn raw_handle(&self) -> sys::zx_handle_t {
@@ -125,18 +118,14 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
 
     pub fn duplicate(&self, rights: Rights) -> Result<T, Status> {
         let mut out = 0;
-        let status = unsafe {
-            sys::zx_handle_duplicate(
-                self.raw_handle(), rights.bits(), &mut out)
-        };
+        let status =
+            unsafe { sys::zx_handle_duplicate(self.raw_handle(), rights.bits(), &mut out) };
         ok(status).map(|()| T::from(Handle(out)))
     }
 
     pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        let status = unsafe {
-            sys::zx_object_signal(
-                self.raw_handle(), clear_mask.bits(), set_mask.bits())
-        };
+        let status =
+            unsafe { sys::zx_object_signal(self.raw_handle(), clear_mask.bits(), set_mask.bits()) };
         ok(status)
     }
 
@@ -144,17 +133,30 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
         let mut pending = Signals::empty().bits();
         let status = unsafe {
             sys::zx_object_wait_one(
-                self.raw_handle(), signals.bits(), deadline.into_nanos(), &mut pending)
+                self.raw_handle(),
+                signals.bits(),
+                deadline.into_nanos(),
+                &mut pending,
+            )
         };
         ok(status).map(|()| Signals::from_bits_truncate(pending))
     }
 
-    pub fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
-        -> Result<(), Status>
-    {
+    pub fn wait_async(
+        &self,
+        port: &Port,
+        key: u64,
+        signals: Signals,
+        options: WaitAsyncOpts,
+    ) -> Result<(), Status> {
         let status = unsafe {
             sys::zx_object_wait_async(
-                self.raw_handle(), port.raw_handle(), key, signals.bits(), options as u32)
+                self.raw_handle(),
+                port.raw_handle(),
+                key,
+                signals.bits(),
+                options as u32,
+            )
         };
         ok(status)
     }
@@ -200,9 +202,13 @@ pub trait AsHandleRef {
     /// Causes packet delivery on the given port when the object changes state and matches signals.
     /// [zx_object_wait_async](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_async.md)
     /// syscall.
-    fn wait_async_handle(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
-        -> Result<(), Status>
-    {
+    fn wait_async_handle(
+        &self,
+        port: &Port,
+        key: u64,
+        signals: Signals,
+        options: WaitAsyncOpts,
+    ) -> Result<(), Status> {
         self.as_handle_ref().wait_async(port, key, signals, options)
     }
 
@@ -241,10 +247,7 @@ pub trait AsHandleRef {
 
 impl<'a, T: HandleBased> AsHandleRef for Unowned<'a, T> {
     fn as_handle_ref(&self) -> HandleRef {
-        Unowned {
-            inner: ManuallyDrop::new(Handle(self.raw_handle())),
-            marker: PhantomData,
-        }
+        Unowned { inner: ManuallyDrop::new(Handle(self.raw_handle())), marker: PhantomData }
     }
 }
 
@@ -268,8 +271,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
     /// [zx_handle_replace](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/handle_replace.md)
     /// syscall.
     fn replace_handle(self, rights: Rights) -> Result<Self, Status> {
-        <Self as Into<Handle>>::into(self)
-            .replace(rights).map(|handle| Self::from(handle))
+        <Self as Into<Handle>>::into(self).replace(rights).map(|handle| Self::from(handle))
     }
 
     /// Converts the value into its inner handle.
@@ -287,7 +289,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
         let r = h.0;
         mem::forget(h);
         r
-   }
+    }
 
     /// Creates an instance of this type from a handle.
     ///
@@ -319,9 +321,8 @@ pub trait Peered: HandleBased {
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.raw_handle();
-        let status = unsafe {
-            sys::zx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
-        };
+        let status =
+            unsafe { sys::zx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits()) };
         ok(status)
     }
 }
@@ -360,8 +361,7 @@ mod tests {
     #[test]
     fn set_get_max_len_name() {
         let vmo = Vmo::create(1).unwrap();
-        let max_len_name =
-            CStr::from_bytes_with_nul(b"a_great_maximum_length_vmo_name\0").unwrap(); // 32 bytes
+        let max_len_name = CStr::from_bytes_with_nul(b"a_great_maximum_length_vmo_name\0").unwrap(); // 32 bytes
         assert!(vmo.set_name(max_len_name).is_ok());
         assert_eq!(vmo.get_name(), Ok(max_len_name.to_owned()));
     }

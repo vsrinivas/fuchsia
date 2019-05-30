@@ -4,8 +4,8 @@
 
 //! Type-safe bindings for Zircon timer objects.
 
-use crate::{AsHandleRef, ClockId, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
+use crate::{AsHandleRef, ClockId, Handle, HandleBased, HandleRef, Status};
 use fuchsia_zircon_sys as sys;
 use std::ops;
 use std::time as stdtime;
@@ -20,8 +20,8 @@ pub struct Time(sys::zx_time_t);
 
 impl From<stdtime::Duration> for Duration {
     fn from(dur: stdtime::Duration) -> Self {
-        Duration::from_seconds(dur.as_secs() as i64) +
-        Duration::from_nanos(dur.subsec_nanos() as i64)
+        Duration::from_seconds(dur.as_secs() as i64)
+            + Duration::from_nanos(dur.subsec_nanos() as i64)
     }
 }
 
@@ -92,7 +92,8 @@ impl ops::SubAssign<Duration> for Time {
 }
 
 impl<T> ops::Mul<T> for Duration
-    where T: Into<i64>
+where
+    T: Into<i64>,
 {
     type Output = Self;
     fn mul(self, mul: T) -> Self {
@@ -101,7 +102,8 @@ impl<T> ops::Mul<T> for Duration
 }
 
 impl<T> ops::Div<T> for Duration
-    where T: Into<i64>
+where
+    T: Into<i64>,
 {
     type Output = Self;
     fn div(self, div: T) -> Self {
@@ -215,11 +217,21 @@ pub trait DurationNum: Sized {
     fn hours(self) -> Duration;
 
     // Singular versions to allow for `1.milli()` and `1.second()`, etc.
-    fn micro(self) -> Duration { self.micros() }
-    fn milli(self) -> Duration { self.millis() }
-    fn second(self) -> Duration { self.seconds() }
-    fn minute(self) -> Duration { self.minutes() }
-    fn hour(self) -> Duration { self.hours() }
+    fn micro(self) -> Duration {
+        self.micros()
+    }
+    fn milli(self) -> Duration {
+        self.millis()
+    }
+    fn second(self) -> Duration {
+        self.seconds()
+    }
+    fn minute(self) -> Duration {
+        self.minutes()
+    }
+    fn hour(self) -> Duration {
+        self.hours()
+    }
 }
 
 // Note: this could be implemented for other unsized integer types, but it doesn't seem
@@ -282,7 +294,9 @@ impl Time {
     /// [zx_nanosleep](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/nanosleep.md)
     /// syscall.
     pub fn sleep(self) {
-        unsafe { sys::zx_nanosleep(self.0); }
+        unsafe {
+            sys::zx_nanosleep(self.0);
+        }
     }
 
     pub fn into_nanos(self) -> i64 {
@@ -333,9 +347,7 @@ impl Timer {
         let opts = 0;
         let status = unsafe { sys::zx_timer_create(opts, clock_id as u32, &mut out) };
         ok(status)?;
-        unsafe {
-            Ok(Self::from(Handle::from_raw(out)))
-        }
+        unsafe { Ok(Self::from(Handle::from_raw(out))) }
     }
 
     /// Start a one-shot timer that will fire when `deadline` passes. Wraps the
@@ -400,19 +412,22 @@ mod tests {
         // Should not signal yet.
         assert_eq!(
             timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
-            Err(Status::TIMED_OUT));
+            Err(Status::TIMED_OUT)
+        );
 
         // Set it, and soon it should signal.
         assert_eq!(timer.set(five_secs.after_now(), slack), Ok(()));
         assert_eq!(
             timer.wait_handle(Signals::TIMER_SIGNALED, six_secs.after_now()),
-            Ok(Signals::TIMER_SIGNALED));
+            Ok(Signals::TIMER_SIGNALED)
+        );
 
         // Cancel it, and it should stop signalling.
         assert_eq!(timer.cancel(), Ok(()));
         assert_eq!(
             timer.wait_handle(Signals::TIMER_SIGNALED, ten_ms.after_now()),
-            Err(Status::TIMED_OUT));
+            Err(Status::TIMED_OUT)
+        );
     }
 
     #[test]

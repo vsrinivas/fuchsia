@@ -31,7 +31,7 @@ macro_rules! impl_handle_based {
         }
 
         impl HandleBased for $type_name {}
-    }
+    };
 }
 
 /// Convenience macro for creating get/set property functions on an object.
@@ -153,8 +153,8 @@ mod process;
 mod property;
 mod resource;
 mod rights;
-mod socket;
 mod signals;
+mod socket;
 mod status;
 mod task;
 mod thread;
@@ -179,8 +179,8 @@ pub use self::process::*;
 pub use self::property::*;
 pub use self::resource::*;
 pub use self::rights::*;
-pub use self::socket::*;
 pub use self::signals::*;
+pub use self::socket::*;
 pub use self::status::*;
 pub use self::task::*;
 pub use self::thread::*;
@@ -191,12 +191,7 @@ pub use self::vmo::*;
 /// Prelude containing common utility traits.
 /// Designed for use like `use fuchsia_zircon::prelude::*;`
 pub mod prelude {
-    pub use crate::{
-        AsHandleRef,
-        DurationNum,
-        HandleBased,
-        Peered,
-    };
+    pub use crate::{AsHandleRef, DurationNum, HandleBased, Peered};
 }
 
 /// Convenience re-export of `Status::ok`.
@@ -246,59 +241,62 @@ pub enum ClockId {
 /// Wraps the
 /// [zx_object_wait_many](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_many.md)
 /// syscall.
-pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status>
-{
+pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status> {
     let items_ptr = items.as_mut_ptr() as *mut sys::zx_wait_item_t;
-    let status = unsafe { sys::zx_object_wait_many( items_ptr, items.len(), deadline.into_nanos()) };
+    let status = unsafe { sys::zx_object_wait_many(items_ptr, items.len(), deadline.into_nanos()) };
     if status == sys::ZX_ERR_CANCELED {
-        return Ok(true)
+        return Ok(true);
     }
     ok(status).map(|()| false)
 }
 
 /// Query information about a zircon object.
 /// Returns `(num_returned, num_remaining)` on success.
-pub fn object_get_info<Q: ObjectQuery>(handle: HandleRef, out: &mut [Q::InfoTy])
-    -> Result<(usize, usize), Status>
-{
-        let mut actual = 0;
-        let mut avail = 0;
-        let status = unsafe {
-            sys::zx_object_get_info(
-                handle.raw_handle(),
-                *Q::TOPIC,
-                out.as_mut_ptr() as *mut u8,
-                std::mem::size_of_val(out),
-                &mut actual as *mut usize,
-                &mut avail as *mut usize,
-            )
-        };
-        ok(status).map(|_| (actual, avail - actual))
+pub fn object_get_info<Q: ObjectQuery>(
+    handle: HandleRef,
+    out: &mut [Q::InfoTy],
+) -> Result<(usize, usize), Status> {
+    let mut actual = 0;
+    let mut avail = 0;
+    let status = unsafe {
+        sys::zx_object_get_info(
+            handle.raw_handle(),
+            *Q::TOPIC,
+            out.as_mut_ptr() as *mut u8,
+            std::mem::size_of_val(out),
+            &mut actual as *mut usize,
+            &mut avail as *mut usize,
+        )
+    };
+    ok(status).map(|_| (actual, avail - actual))
 }
 
 /// Get a property on a zircon object
 pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef) -> Result<P::PropTy, Status> {
     // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.
-    let mut out: P::PropTy = unsafe{std::mem::uninitialized()};
+    let mut out: P::PropTy = unsafe { std::mem::uninitialized() };
     let status = unsafe {
         sys::zx_object_get_property(
             handle.raw_handle(),
             *P::PROPERTY,
             &mut out as *mut P::PropTy as *mut u8,
-            std::mem::size_of::<P::PropTy>()
+            std::mem::size_of::<P::PropTy>(),
         )
     };
     ok(status).map(|_| out)
 }
 
 /// Set a property on a zircon object
-pub fn object_set_property<P: PropertyQuerySet>(handle: HandleRef, val: &P::PropTy) -> Result<(), Status> {
+pub fn object_set_property<P: PropertyQuerySet>(
+    handle: HandleRef,
+    val: &P::PropTy,
+) -> Result<(), Status> {
     let status = unsafe {
         sys::zx_object_set_property(
             handle.raw_handle(),
             *P::PROPERTY,
             val as *const P::PropTy as *const u8,
-            std::mem::size_of::<P::PropTy>()
+            std::mem::size_of::<P::PropTy>(),
         )
     };
     ok(status)
@@ -306,9 +304,9 @@ pub fn object_set_property<P: PropertyQuerySet>(handle: HandleRef, val: &P::Prop
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[allow(unused_imports)]
     use super::prelude::*;
+    use super::*;
 
     #[test]
     fn monotonic_time_increases() {
@@ -418,22 +416,24 @@ mod tests {
         let ten_ms = 10.millis();
 
         // Waiting on it without setting any signal should time out.
-        assert_eq!(event.wait_handle(
-            Signals::USER_0, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(event.wait_handle(Signals::USER_0, ten_ms.after_now()), Err(Status::TIMED_OUT));
 
         // If we set a signal, we should be able to wait for it.
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        assert_eq!(event.wait_handle(Signals::USER_0, ten_ms.after_now()).unwrap(),
-            Signals::USER_0);
+        assert_eq!(
+            event.wait_handle(Signals::USER_0, ten_ms.after_now()).unwrap(),
+            Signals::USER_0
+        );
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(event.wait_handle(Signals::USER_0, ten_ms.after_now()).unwrap(),
-            Signals::USER_0);
+        assert_eq!(
+            event.wait_handle(Signals::USER_0, ten_ms.after_now()).unwrap(),
+            Signals::USER_0
+        );
 
         // Now clear it, and waiting should time out again.
         assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok());
-        assert_eq!(event.wait_handle(
-            Signals::USER_0, ten_ms.after_now()), Err(Status::TIMED_OUT));
+        assert_eq!(event.wait_handle(Signals::USER_0, ten_ms.after_now()), Err(Status::TIMED_OUT));
     }
 
     #[test]
@@ -444,8 +444,16 @@ mod tests {
 
         // Waiting on them now should time out.
         let mut items = vec![
-          WaitItem { handle: e1.as_handle_ref(), waitfor: Signals::USER_0, pending: Signals::NONE },
-          WaitItem { handle: e2.as_handle_ref(), waitfor: Signals::USER_1, pending: Signals::NONE },
+            WaitItem {
+                handle: e1.as_handle_ref(),
+                waitfor: Signals::USER_0,
+                pending: Signals::NONE,
+            },
+            WaitItem {
+                handle: e2.as_handle_ref(),
+                waitfor: Signals::USER_1,
+                pending: Signals::NONE,
+            },
         ];
         assert_eq!(object_wait_many(&mut items, ten_ms.after_now()), Err(Status::TIMED_OUT));
         assert_eq!(items[0].pending, Signals::NONE);
@@ -474,7 +482,7 @@ mod tests {
 
 pub fn usize_into_u32(n: usize) -> Result<u32, ()> {
     if n > ::std::u32::MAX as usize || n < ::std::u32::MIN as usize {
-        return Err(())
+        return Err(());
     }
     Ok(n as u32)
 }

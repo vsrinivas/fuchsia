@@ -4,8 +4,8 @@
 
 //! Type-safe bindings for Zircon threads.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 
 use fuchsia_zircon_sys as sys;
 
@@ -31,13 +31,7 @@ impl Thread {
         arg2: usize,
     ) -> Result<(), Status> {
         let thread_raw = self.raw_handle();
-        let status = unsafe { sys::zx_thread_start(
-            thread_raw,
-            thread_entry,
-            stack,
-            arg1,
-            arg2,
-        ) };
+        let status = unsafe { sys::zx_thread_start(thread_raw, thread_entry, stack, arg1, arg2) };
         ok(status)
     }
 

@@ -4,8 +4,8 @@
 
 //! Type-safe bindings for Zircon fifo objects.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon fifo.
@@ -21,20 +21,14 @@ impl Fifo {
     /// element into the fifo from which the opposing endpoint reads. Wraps the
     /// [zx_fifo_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/fifo_create.md)
     /// syscall.
-    pub fn create(elem_count: usize, elem_size: usize)
-        -> Result<(Fifo, Fifo), Status>
-    {
+    pub fn create(elem_count: usize, elem_size: usize) -> Result<(Fifo, Fifo), Status> {
         let mut out0 = 0;
         let mut out1 = 0;
         let options = 0;
-        let status = unsafe {
-            sys::zx_fifo_create(elem_count, elem_size, options, &mut out0, &mut out1)
-        };
+        let status =
+            unsafe { sys::zx_fifo_create(elem_count, elem_size, options, &mut out0, &mut out1) };
         ok(status)?;
-        unsafe { Ok((
-            Self::from(Handle::from_raw(out0)),
-            Self::from(Handle::from_raw(out1))
-        ))}
+        unsafe { Ok((Self::from(Handle::from_raw(out0)), Self::from(Handle::from_raw(out1)))) }
     }
 
     /// Attempts to write some number of elements into the fifo. The length of `bytes` must be
@@ -45,12 +39,19 @@ impl Fifo {
     /// [zx_fifo_write](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/fifo_write.md).
     pub fn write(&self, elem_size: usize, bytes: &[u8]) -> Result<usize, Status> {
         let count = bytes.len() / elem_size;
-        debug_assert!(count * elem_size == bytes.len(),
-                      "bytes.len() must be divisible by elem_size");
+        debug_assert!(
+            count * elem_size == bytes.len(),
+            "bytes.len() must be divisible by elem_size"
+        );
         let mut actual_count = 0;
         let status = unsafe {
-            sys::zx_fifo_write(self.raw_handle(), elem_size, bytes.as_ptr(), count,
-                               &mut actual_count)
+            sys::zx_fifo_write(
+                self.raw_handle(),
+                elem_size,
+                bytes.as_ptr(),
+                count,
+                &mut actual_count,
+            )
         };
         ok(status).map(|()| actual_count)
     }
@@ -63,12 +64,19 @@ impl Fifo {
     /// [zx_fifo_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/fifo_read.md).
     pub fn read(&self, elem_size: usize, bytes: &mut [u8]) -> Result<usize, Status> {
         let count = bytes.len() / elem_size;
-        debug_assert!(count * elem_size == bytes.len(),
-                      "bytes.len() must be divisible by elem_size");
+        debug_assert!(
+            count * elem_size == bytes.len(),
+            "bytes.len() must be divisible by elem_size"
+        );
         let mut actual_count = 0;
         let status = unsafe {
-            sys::zx_fifo_read(self.raw_handle(), elem_size, bytes.as_mut_ptr(), count,
-                              &mut actual_count)
+            sys::zx_fifo_read(
+                self.raw_handle(),
+                elem_size,
+                bytes.as_mut_ptr(),
+                count,
+                &mut actual_count,
+            )
         };
         ok(status).map(|()| actual_count)
     }

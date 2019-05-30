@@ -4,8 +4,8 @@
 
 //! Type-safe bindings for Zircon event objects.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -26,8 +26,6 @@ impl Event {
         let opts = 0;
         let status = unsafe { sys::zx_event_create(opts, &mut out) };
         ok(status)?;
-        unsafe {
-            Ok(Self::from(Handle::from_raw(out)))
-        }
+        unsafe { Ok(Self::from(Handle::from_raw(out))) }
     }
 }

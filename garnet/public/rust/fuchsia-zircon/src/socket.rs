@@ -4,12 +4,12 @@
 
 //! Type-safe bindings for Zircon sockets.
 
-use bitflags::bitflags;
 use crate::{object_get_info, object_get_property, object_set_property};
 use crate::{ok, Status};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Peered};
 use crate::{ObjectQuery, Topic};
 use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
+use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -21,7 +21,6 @@ use fuchsia_zircon_sys as sys;
 pub struct Socket(Handle);
 impl_handle_based!(Socket);
 impl Peered for Socket {}
-
 
 bitflags! {
     #[repr(transparent)]
@@ -104,10 +103,7 @@ impl Socket {
             let mut out1 = 0;
             let status = sys::zx_socket_create(sock_opts.bits(), &mut out0, &mut out1);
             ok(status)?;
-            Ok((
-                Self::from(Handle::from_raw(out0)),
-                Self::from(Handle::from_raw(out1)),
-            ))
+            Ok((Self::from(Handle::from_raw(out0)), Self::from(Handle::from_raw(out1))))
         }
     }
 
@@ -164,14 +160,12 @@ impl Socket {
                 &mut actual,
             )
         };
-        ok(status)
-            .map(|()| actual)
-            .map_err(|status| {
-                // If an error is returned then actual is undefined, so to be safe
-                // we set it to 0 and ignore any data that is set in bytes.
-                actual = 0;
-                status
-            })
+        ok(status).map(|()| actual).map_err(|status| {
+            // If an error is returned then actual is undefined, so to be safe
+            // we set it to 0 and ignore any data that is set in bytes.
+            actual = 0;
+            status
+        })
     }
 
     /// Close half of the socket, so attempts by the other side to write will fail.
@@ -179,12 +173,8 @@ impl Socket {
     /// Implements the `ZX_SOCKET_SHUTDOWN_WRITE` option of
     /// [zx_socket_shutdown](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_shutdown.md).
     pub fn half_close(&self) -> Result<(), Status> {
-        let status = unsafe {
-            sys::zx_socket_shutdown(
-                self.raw_handle(),
-                sys::ZX_SOCKET_SHUTDOWN_WRITE,
-            )
-        };
+        let status =
+            unsafe { sys::zx_socket_shutdown(self.raw_handle(), sys::ZX_SOCKET_SHUTDOWN_WRITE) };
         ok(status)
     }
 
@@ -262,7 +252,7 @@ mod tests {
         assert_eq!(s1info.tx_buf_size, 0);
 
         // Put some data in one end.
-        assert_eq!(s1.write(b"hello").unwrap(),5);
+        assert_eq!(s1.write(b"hello").unwrap(), 5);
 
         // We should see the info change on each end correspondingly.
         let s1info = s1.info().unwrap();

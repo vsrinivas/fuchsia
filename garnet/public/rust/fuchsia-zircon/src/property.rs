@@ -35,9 +35,9 @@ pub unsafe trait PropertyQuery {
 }
 
 /// Indicates that it is valid to get the property for an object.
-pub unsafe trait PropertyQueryGet : PropertyQuery {}
+pub unsafe trait PropertyQueryGet: PropertyQuery {}
 /// Indicates that it is valid to set the property for an object.
-pub unsafe trait PropertyQuerySet : PropertyQuery {}
+pub unsafe trait PropertyQuerySet: PropertyQuery {}
 
 assoc_values!(Property, [
     NONE =  sys::ZX_OBJ_PROP_NONE;

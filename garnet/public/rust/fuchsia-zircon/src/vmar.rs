@@ -4,10 +4,10 @@
 
 //! Type-safe bindings for Zircon vmar objects.
 
-use bitflags::bitflags;
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Vmo};
 use crate::{object_get_info, ObjectQuery, Topic};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Vmo};
+use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -21,7 +21,10 @@ impl_handle_based!(Vmar);
 
 impl Vmar {
     pub fn allocate(
-        &self, offset: usize, size: usize, flags: VmarFlags,
+        &self,
+        offset: usize,
+        size: usize,
+        flags: VmarFlags,
     ) -> Result<(Vmar, usize), Status> {
         let mut mapped = 0;
         let mut handle = 0;
@@ -40,12 +43,15 @@ impl Vmar {
     }
 
     pub fn map(
-        &self, vmar_offset: usize, vmo: &Vmo, vmo_offset: u64, len: usize, flags: VmarFlags,
+        &self,
+        vmar_offset: usize,
+        vmo: &Vmo,
+        vmo_offset: u64,
+        len: usize,
+        flags: VmarFlags,
     ) -> Result<usize, Status> {
         let flags = VmarFlagsExtended::from_bits_truncate(flags.bits());
-        unsafe {
-            self.map_unsafe(vmar_offset, vmo, vmo_offset, len, flags)
-        }
+        unsafe { self.map_unsafe(vmar_offset, vmo, vmo_offset, len, flags) }
     }
 
     /// Directly call zx_vmar_map.
@@ -55,7 +61,11 @@ impl Vmar {
     /// This function is unsafe because certain flags to `zx_vmar_map` may
     /// replace an existing mapping which is referenced elsewhere.
     pub unsafe fn map_unsafe(
-        &self, vmar_offset: usize, vmo: &Vmo, vmo_offset: u64, len: usize,
+        &self,
+        vmar_offset: usize,
+        vmo: &Vmo,
+        vmo_offset: u64,
+        len: usize,
         flags: VmarFlagsExtended,
     ) -> Result<usize, Status> {
         let mut mapped = 0;

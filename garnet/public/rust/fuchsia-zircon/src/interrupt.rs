@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon interrupts.
 
-use crate::{AsHandleRef, HandleBased, Handle, HandleRef};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef};
 
 /// An object representing a Zircon interrupt.
 ///

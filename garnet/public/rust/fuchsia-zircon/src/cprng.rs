@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for the Zircon kernel's CPRNG.
 //!
-use crate::{Status, ok};
+use crate::{ok, Status};
 use fuchsia_zircon_sys as sys;
 
 /// Draw random bytes from the kernel's CPRNG to fill the given buffer. Returns the actual number of

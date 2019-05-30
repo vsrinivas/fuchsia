@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon resources.
 
-use crate::{AsHandleRef, HandleBased, HandleRef, Handle};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef};
 
 /// An object representing a Zircon resource.
 ///

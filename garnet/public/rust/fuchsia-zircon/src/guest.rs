@@ -24,7 +24,11 @@ impl Guest {
 
     /// Set a bell trap for the given guest physical address range that will be delivered on the specified `Port`.
     pub fn set_trap_bell(
-        &self, addr: GPAddr, size: usize, port: &Port, key: u64,
+        &self,
+        addr: GPAddr,
+        size: usize,
+        port: &Port,
+        key: u64,
     ) -> Result<(), Status> {
         ok(unsafe {
             sys::zx_guest_set_trap(
