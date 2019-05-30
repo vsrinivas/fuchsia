@@ -11,8 +11,19 @@ import 'package:meta/meta.dart';
 import 'dump.dart';
 import 'sl4f_client.dart';
 
-String _traceNameToTargetPath(String traceName) {
-  return '/tmp/$traceName-trace.json';
+String _traceExtension({bool binary, bool compress}) {
+  String extension = 'json';
+  if (binary) {
+    extension = 'fxt';
+  }
+  if (compress) {
+    extension += '.gz';
+  }
+  return extension;
+}
+
+String _traceNameToTargetPath(String traceName, String extension) {
+  return '/tmp/$traceName-trace.$extension';
 }
 
 final _log = Logger('Performance');
@@ -38,27 +49,40 @@ class Performance {
 
   /// Starts tracing for the given [duration].
   ///
-  /// The trace output will be saved to a path implied by [traceName], and can
-  /// be retrieved later via [downloadTraceFile].
+  /// If [binary] is true, then the trace will be captured in Fuchsia Trace
+  /// Format (by default, it is in Chrome JSON Format). If [compress] is true,
+  /// the trace will be gzip-compressed. The trace output will be saved to a
+  /// path implied by [traceName], [binary], and [compress], and can be
+  /// retrieved later via [downloadTraceFile].
   Future<bool> trace(
       {@required Duration duration,
       @required String traceName,
       String categories,
-      int bufferSize}) {
+      int bufferSize,
+      bool binary = false,
+      bool compress = false}) {
     // Invoke `/bin/trace record --duration=$duration --categories=$categories
     // --output-file=$outputFile --buffer-size=$bufferSize` on the target
     // device via ssh.
-    final outputFile = _traceNameToTargetPath(traceName);
     final durationSeconds = duration.inSeconds;
     String command = 'trace record --duration=$durationSeconds';
     if (categories != null) {
       command += ' --categories=$categories';
     }
-    if (outputFile != null) {
-      command += ' --output-file=$outputFile';
-    }
     if (bufferSize != null) {
       command += ' --buffer-size=$bufferSize';
+    }
+    if (binary) {
+      command += ' --binary';
+    }
+    if (compress) {
+      command += ' --compress';
+    }
+    final String extension =
+        _traceExtension(binary: binary, compress: compress);
+    final outputFile = _traceNameToTargetPath(traceName, extension);
+    if (outputFile != null) {
+      command += ' --output-file=$outputFile';
     }
     return _sl4f.ssh(command);
   }
@@ -66,17 +90,20 @@ class Performance {
   /// Copies the trace file specified by [traceName] off of the target device,
   /// and then saves it to the dump directory.
   ///
-  /// A [trace] call with the same [traceName] must have successfully
-  /// completed before calling [downloadTraceFile].
+  /// A [trace] call with the same [traceName], [binary], and [compress] must
+  /// have successfully completed before calling [downloadTraceFile].
   ///
   /// Returns the download trace [File].
-  Future<File> downloadTraceFile(String traceName) async {
+  Future<File> downloadTraceFile(String traceName,
+      {bool binary = false, bool compress = false}) async {
     _log.info('Performance: Downloading trace $traceName');
-    final tracePath = _traceNameToTargetPath(traceName);
+    final String extension =
+        _traceExtension(binary: binary, compress: compress);
+    final tracePath = _traceNameToTargetPath(traceName, extension);
     final String response = await _sl4f
         .request('traceutil_facade.GetTraceFile', {'path': tracePath});
     return _dump.writeAsBytes(
-        '$traceName-trace', 'json', base64.decode(response));
+        '$traceName-trace', extension, base64.decode(response));
   }
 
   /// A helper function that runs a process with the given args.

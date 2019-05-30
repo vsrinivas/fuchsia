@@ -132,4 +132,48 @@ void main(List<String> args) {
     expect(capturedArgs[1], endsWith('test1-benchmark.json'));
     expect(capturedArgs[2], endsWith('sample-trace.json'));
   });
+
+  test('trace options', () async {
+    final List<int> data = [0x10, 0x00, 0x04, 0x46, 0x78, 0x54, 0x16, 0x00];
+
+    Future<void> doTest(String expectedExtension,
+        {bool binary, bool compress}) async {
+      final mockDump = MockDump();
+      final mockSl4f = MockSl4f();
+
+      when(mockSl4f.request(sl4fTraceRequestMethod, any))
+          .thenAnswer((_) => Future.value(base64.encode(data)));
+
+      final performance = Performance(mockSl4f, mockDump);
+      Map<Symbol, dynamic> traceOptions = {};
+      if (binary != null) {
+        traceOptions[#binary] = binary;
+      }
+      if (compress != null) {
+        traceOptions[#compress] = compress;
+      }
+      await Function.apply(
+          performance.downloadTraceFile, ['options'], traceOptions);
+
+      final verifyMockSl4fRequest =
+          verify(mockSl4f.request(sl4fTraceRequestMethod, captureAny))
+            ..called(1);
+      expect(verifyMockSl4fRequest.captured.single,
+          {'path': '/tmp/options-trace.$expectedExtension'});
+
+      final verifyMockDumpWriteAsBytes =
+          verify(mockDump.writeAsBytes(captureAny, captureAny, captureAny))
+            ..called(1);
+      expect(verifyMockDumpWriteAsBytes.captured,
+          ['options-trace', expectedExtension, data]);
+    }
+
+    await doTest('json');
+    await doTest('json', binary: false, compress: false);
+    await doTest('json.gz', compress: true);
+    await doTest('json.gz', binary: false, compress: true);
+    await doTest('fxt', binary: true);
+    await doTest('fxt', binary: true, compress: false);
+    await doTest('fxt.gz', binary: true, compress: true);
+  });
 }

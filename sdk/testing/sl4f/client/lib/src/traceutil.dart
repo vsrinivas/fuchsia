@@ -17,13 +17,19 @@ class Traceutil {
           {@required Duration duration,
           @required String traceName,
           String categories,
-          int bufferSize}) =>
+          int bufferSize,
+          bool binary = false,
+          bool compress = false}) =>
       _performance.trace(
           duration: duration,
           traceName: traceName,
           categories: categories,
-          bufferSize: bufferSize);
+          bufferSize: bufferSize,
+          binary: binary,
+          compress: compress);
 
-  Future<File> downloadTraceFile(String traceName) async =>
-      _performance.downloadTraceFile(traceName);
+  Future<File> downloadTraceFile(String traceName,
+          {bool binary = false, bool compress = false}) async =>
+      _performance.downloadTraceFile(traceName,
+          binary: binary, compress: compress);
 }
