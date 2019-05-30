@@ -12,6 +12,7 @@ use {
         TapControlMarker, TapDeviceEvent, TapDeviceMarker, TapDeviceProxy,
     },
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
+    fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
@@ -38,6 +39,15 @@ const DEFAULT_METRIC: u32 = 100;
 const ETHERTAP_PATH: &'static str = "/dev/misc/tapctl";
 const ETHERNET_DIR: &'static str = "/dev/class/ethernet";
 const TAP_MAC: [u8; 6] = [12, 1, 2, 3, 4, 5];
+const BUS_NAME: &'static str = "netstack-itm-bus";
+const SRV_NAME: &'static str = "echo_server";
+
+fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
+    let syncm = client::connect_to_service::<SyncManagerMarker>()?;
+    let (bus, bus_server_end) = fidl::endpoints::create_proxy::<BusMarker>()?;
+    syncm.bus_subscribe(BUS_NAME, cli_name, bus_server_end)?;
+    Ok(bus)
+}
 
 async fn open_ethertap() -> Result<TapDeviceProxy, Error> {
     let (tapctl, tapctl_server) = fidl::endpoints::create_proxy::<TapControlMarker>()?;
@@ -53,7 +63,7 @@ async fn open_ethertap() -> Result<TapDeviceProxy, Error> {
             mtu: 1500,
             mac: fidl_fuchsia_hardware_ethernet::MacAddress { octets: TAP_MAC },
         },
-        tap_server
+        tap_server,
     ))?;
     let status = zx::Status::from_raw(status);
 
@@ -110,6 +120,10 @@ async fn run_mock_guest() -> Result<(), Error> {
     let echo_string = String::from("hello");
 
     tap.set_online(true)?;
+
+    let bus = open_bus("mock_guest")?;
+    await!(bus.wait_for_clients(&mut vec!(SRV_NAME).drain(..), 0))?;
+
     tap.write_frame(&mut echo_string.clone().into_bytes().drain(0..))?;
 
     println!("To Server: {}", echo_string);
@@ -169,6 +183,10 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     // message, and then exit.
     let mut eth_events = eth_client.get_stream();
     let mut sent_response = false;
+
+    // get on bus to unlock mock_guest part of test
+    let _bus = open_bus(SRV_NAME)?;
+
     while let Some(event) = await!(eth_events.try_next())? {
         match event {
             ethernet::Event::Receive(rx, _flags) => {
