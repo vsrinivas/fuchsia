@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/test/test_package.gni")
 
 group("tests") {
@@ -31,6 +32,29 @@ executable("last_focus_time_test") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("queue_persistence_test") {
+  testonly = true
+
+  output_name = "queue_persistence_test"
+
+  sources = [
+    "queue_persistence_test.cc",
+  ]
+
+  deps = [
+    ":queue_persistence_test_service",
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/message_queue/cpp",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -125,6 +149,10 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
+      name = "queue_persistence_test"
+      environments = basic_envs
+    },
+    {
       name = "session_shell_test"
       environments = basic_envs
     },
@@ -146,6 +174,7 @@ test_package("modular_integration_tests") {
     ":intents_test",
     ":last_focus_time_test",
     ":module_output_test",
+    ":queue_persistence_test",
     ":session_shell_test",
     ":story_shell_factory_test",
     "//garnet/public/lib/callback",
@@ -153,5 +182,12 @@ test_package("modular_integration_tests") {
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+fidl("queue_persistence_test_service") {
+  name = "test.modular.queuepersistence"
+  sources = [
+    "queue_persistence_test_service.test.fidl",
   ]
 }

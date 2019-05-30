@@ -69,37 +69,6 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
     return intent;
   }
 
-  // Uses the PuppetMaster service to lauch an initial module.
-  // This initial module is required to test the reissuing of intents to
-  // additional modules.
-  void ExecutePuppetMasterAddMod(fuchsia::modular::Intent intent) {
-    // Create an AddMod command
-    fuchsia::modular::AddMod add_mod;
-    add_mod.mod_name = {kModuleName};
-    add_mod.intent = std::move(intent);
-    add_mod.surface_relation = fuchsia::modular::SurfaceRelation{};
-
-    fuchsia::modular::StoryCommand cmd;
-    cmd.set_add_mod(std::move(add_mod));
-
-    std::vector<fuchsia::modular::StoryCommand> cmds;
-    cmds.push_back(std::move(cmd));
-
-    // Connect to PuppetMaster Service
-    fuchsia::modular::PuppetMasterPtr puppet_master;
-    fuchsia::modular::testing::ModularService svc;
-    svc.set_puppet_master(puppet_master.NewRequest());
-    test_harness()->ConnectToModularService(std::move(svc));
-
-    // Create a story
-    fuchsia::modular::StoryPuppetMasterPtr story_master;
-    puppet_master->ControlStory(kStoryName, story_master.NewRequest());
-
-    // Add the initial module to the story
-    story_master->Enqueue(std::move(cmds));
-    story_master->Execute([&](fuchsia::modular::ExecuteResult result) {});
-  }
-
   // Starts a second module by calling AddModuleToStory() using the
   // ModuleContext of the original module. The intent is expected to be handled
   // by the original module if the modules' intent handlers match.
@@ -146,7 +115,7 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  ExecutePuppetMasterAddMod(std::move(initial_module_intent));
+  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return number_of_intents_handled_ == 1; }, kTimeout));
   ASSERT_TRUE(test_module_->is_running());
@@ -164,7 +133,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  ExecutePuppetMasterAddMod(std::move(initial_module_intent));
+  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return number_of_intents_handled_ == 1; }, kTimeout));
   ASSERT_TRUE(test_module_->is_running());
@@ -194,7 +163,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  ExecutePuppetMasterAddMod(std::move(initial_module_intent));
+  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return number_of_intents_handled_ == 1; }, kTimeout));
   ASSERT_TRUE(test_module_->is_running());
@@ -226,7 +195,7 @@ TEST_F(IntentsTest, DifferentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  ExecutePuppetMasterAddMod(std::move(initial_module_intent));
+  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return number_of_intents_handled_ == 1; }, kTimeout));
   ASSERT_TRUE(test_module_->is_running());
