@@ -17,7 +17,7 @@ namespace overnet {
 enum class Module {
   NUB,
   ROUTER,
-  PACKET_LINK,
+  LINK,
   DATAGRAM_STREAM,
   DATAGRAM_STREAM_SEND_OP,
   DATAGRAM_STREAM_RECV_OP,

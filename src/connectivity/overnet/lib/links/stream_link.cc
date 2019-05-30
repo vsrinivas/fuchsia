@@ -15,6 +15,11 @@ StreamLink::StreamLink(Router *router, NodeId peer,
       packet_stuffer_(router->node_id(), peer) {}
 
 void StreamLink::Forward(Message message) {
+  ScopedModule<StreamLink> in_link(this);
+
+  OVERNET_TRACE(DEBUG) << "StreamLink::Forward: emitting=" << emitting_
+                       << " closed=" << closed_ << " has_pending="
+                       << packet_stuffer_.HasPendingMessages();
   if (closed_) {
     return;
   }
@@ -24,11 +29,13 @@ void StreamLink::Forward(Message message) {
 }
 
 void StreamLink::SetClosed() {
+  ScopedModule<StreamLink> in_link(this);
   closed_ = true;
   packet_stuffer_.DropPendingMessages();
 }
 
 void StreamLink::EmitOne() {
+  ScopedModule<StreamLink> in_link(this);
   static uint64_t num_forwards = 0;
   auto n = num_forwards++;
   OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n
@@ -39,15 +46,17 @@ void StreamLink::EmitOne() {
   assert(!closed_);
   assert(packet_stuffer_.HasPendingMessages());
 
+  emitting_ = true;
+
   auto packet = packet_stuffer_.BuildPacket(
       LazySliceArgs{framer_->desired_border, framer_->maximum_segment_size});
 
   OVERNET_TRACE(TRACE) << "StreamLink::EmitOne[" << n << "]: emit " << packet;
 
-  emitting_ = true;
   stats_.outgoing_packet_count++;
   Emit(framer_->Frame(std::move(packet)),
        StatusCallback(ALLOCATED_CALLBACK, [this, n](const Status &status) {
+         ScopedModule<StreamLink> in_link(this);
          if (status.is_error()) {
            OVERNET_TRACE(ERROR) << "Write failed: " << status;
            SetClosed();
@@ -63,12 +72,16 @@ void StreamLink::EmitOne() {
 }
 
 void StreamLink::Process(TimeStamp received, Slice bytes) {
+  ScopedModule<StreamLink> in_link(this);
   OVERNET_TRACE(TRACE) << "StreamLink.Read: " << bytes;
+
+  assert(!processing_);
 
   if (closed_) {
     return;
   }
 
+  processing_ = true;
   framer_->Push(std::move(bytes));
 
   for (;;) {
@@ -76,10 +89,10 @@ void StreamLink::Process(TimeStamp received, Slice bytes) {
     if (input.is_error()) {
       OVERNET_TRACE(ERROR) << input.AsStatus();
       SetClosed();
-      return;
+      break;
     }
     if (!input->has_value()) {
-      return;
+      break;
     }
 
     stats_.incoming_packet_count++;
@@ -89,12 +102,16 @@ void StreamLink::Process(TimeStamp received, Slice bytes) {
         status.is_error()) {
       OVERNET_TRACE(ERROR) << input.AsStatus();
       SetClosed();
-      return;
+      break;
     }
   }
+
+  processing_ = false;
+  MaybeQuiesce();
 }
 
 void StreamLink::Close(Callback<void> quiesced) {
+  ScopedModule<StreamLink> in_link(this);
   OVERNET_TRACE(DEBUG) << "Stream link closed by router";
   SetClosed();
   on_quiesced_ = std::move(quiesced);
@@ -102,13 +119,15 @@ void StreamLink::Close(Callback<void> quiesced) {
 }
 
 void StreamLink::MaybeQuiesce() {
-  if (closed_ && !emitting_ && !on_quiesced_.empty()) {
+  ScopedModule<StreamLink> in_link(this);
+  if (closed_ && !emitting_ && !processing_ && !on_quiesced_.empty()) {
     auto cb = std::move(on_quiesced_);
     cb();
   }
 }
 
 fuchsia::overnet::protocol::LinkStatus StreamLink::GetLinkStatus() {
+  ScopedModule<StreamLink> in_link(this);
   // Advertise MSS as smaller than it is to account for some bugs that exist
   // right now.
   // TODO(ctiller): eliminate this - we should be precise.

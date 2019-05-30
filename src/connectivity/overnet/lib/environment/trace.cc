@@ -25,8 +25,8 @@ std::ostream& operator<<(std::ostream& out, Module module) {
       return out << "<<ERROR>>";
     case Module::NUB:
       return out << "nub";
-    case Module::PACKET_LINK:
-      return out << "packet_link";
+    case Module::LINK:
+      return out << "link";
     case Module::DATAGRAM_STREAM:
       return out << "dg_stream";
     case Module::DATAGRAM_STREAM_SEND_OP:

@@ -413,6 +413,7 @@ class PacketProtocol {
     bool all_acks_acknowledged_ = true;
     bool suppress_need_acks_ = false;
     AckUrgency urgency_ = AckUrgency::NOT_REQUIRED;
+    TimeStamp urgency_set_ = TimeStamp::Epoch();
     Optional<Timeout> send_ack_timer_;
 
     std::string SentFullAcksString() const;

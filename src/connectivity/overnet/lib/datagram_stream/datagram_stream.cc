@@ -249,7 +249,10 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
                       return;
                     }
                     if (status.is_error()) {
-                      OVERNET_TRACE(WARNING) << "Receive failed: " << status;
+                      OVERNET_TRACE(WARNING)
+                          << "Receive failed for msg-id " << msg_id
+                          << " on stream " << peer_ << "/" << stream_id_ << ": "
+                          << status;
                       messages_.erase(it);
                       return;
                     }

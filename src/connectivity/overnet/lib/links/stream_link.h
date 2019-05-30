@@ -12,10 +12,12 @@ namespace overnet {
 
 class StreamLink : public Link {
  public:
+  static inline constexpr auto kModule = Module::LINK;
+
   StreamLink(Router* router, NodeId peer, std::unique_ptr<StreamFramer> framer,
              uint64_t label);
 
-  void Close(Callback<void> quiesced) override final;
+  void Close(Callback<void> quiesced) override;
   void Forward(Message message) override final;
   fuchsia::overnet::protocol::LinkStatus GetLinkStatus() override final;
   const LinkStats* GetStats() const override final { return &stats_; }
@@ -36,6 +38,7 @@ class StreamLink : public Link {
   const uint64_t local_id_;
   bool emitting_ = false;
   bool closed_ = false;
+  bool processing_ = false;
   Callback<void> on_quiesced_;
   PacketStuffer packet_stuffer_;
   LinkStats stats_;

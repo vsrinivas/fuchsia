@@ -13,6 +13,7 @@ bool PacketStuffer::Forward(Message message) {
   // TODO(ctiller): do some real thinking about what this value should be
   constexpr size_t kMaxBufferedMessages = 32;
   if (outgoing_.size() >= kMaxBufferedMessages) {
+    OVERNET_TRACE(DEBUG) << "PacketStuffer: Drop packet";
     auto drop = std::move(outgoing_.front());
     outgoing_.pop();
   }
@@ -23,7 +24,9 @@ bool PacketStuffer::Forward(Message message) {
 
 void PacketStuffer::DropPendingMessages() {
   stashed_.Reset();
+  std::vector<Message> drop;
   while (!outgoing_.empty()) {
+    drop.emplace_back(std::move(outgoing_.front()));
     outgoing_.pop();
   }
 }
@@ -33,6 +36,7 @@ bool PacketStuffer::HasPendingMessages() const {
 }
 
 Slice PacketStuffer::BuildPacket(LazySliceArgs args) {
+  assert(send_slices_.empty());
   OVERNET_TRACE(DEBUG)
       << "Build outgoing=" << outgoing_.size() << " stashed="
       << (stashed_ ? [&](){

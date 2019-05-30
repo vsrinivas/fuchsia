@@ -15,7 +15,7 @@ namespace overnet {
 
 class PacketLink : public Link, private PacketProtocol::PacketSender {
  public:
-  static inline constexpr auto kModule = Module::PACKET_LINK;
+  static inline constexpr auto kModule = Module::LINK;
 
   PacketLink(Router* router, NodeId peer, uint32_t mss, uint64_t label);
   void Close(Callback<void> quiesced) override final;

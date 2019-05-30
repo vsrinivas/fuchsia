@@ -876,7 +876,7 @@ std::string PacketProtocol::AckSender::Acksplanation() const {
   out << "{sent_full_acks=" << SentFullAcksString()
       << " all_acks_acked=" << all_acks_acknowledged_
       << " suppress_need_acks=" << suppress_need_acks_
-      << " urgency=" << urgency_
+      << " urgency=" << urgency_ << " set=" << urgency_set_
       << " send_ack_timer=" << send_ack_timer_.has_value() << "}";
   return out.str();
 }
@@ -905,6 +905,7 @@ void PacketProtocol::AckSender::NeedAck(Transaction* transaction,
 
   const auto old_urgency = urgency_;
   urgency_ = urgency;
+  urgency_set_ = protocol_->timer_->Now();
   assert(protocol_->state_.has_value());
   sent_full_acks_.clear();
   all_acks_acknowledged_ = false;
@@ -915,8 +916,7 @@ void PacketProtocol::AckSender::NeedAck(Transaction* transaction,
       suppress_need_acks_ = false;
       break;
     case AckUrgency::SEND_SOON: {
-      const auto when =
-          protocol_->timer_->Now() + protocol_->TailLossProbeDelay();
+      const auto when = urgency_set_ + protocol_->TailLossProbeDelay();
       OVERNET_TRACE(DEBUG) << "AckSender.NeedAck: schedule ack start for "
                            << when;
       if (old_urgency != AckUrgency::SEND_BUNDLED) {
@@ -1044,6 +1044,7 @@ void PacketProtocol::OutstandingMessages::CheckRetransmit(
   OVERNET_TRACE(DEBUG) << "OutstandingMessages.CheckRetransmit: nack_before="
                        << nack_before
                        << " current_rtt=" << protocol_->CurrentRTT()
+                       << " retransmit_delay=" << protocol_->RetransmitDelay()
                        << " outstanding=" << OutstandingString();
   for (size_t i = 0; i < outstanding_.size(); i++) {
     if (outstanding_[i].is_finalized()) {

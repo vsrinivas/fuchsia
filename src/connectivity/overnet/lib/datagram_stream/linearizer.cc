@@ -57,6 +57,9 @@ void Linearizer::AssertValid(const char* marker, const char* pretty_function,
     assert(seen_to <= el.first);
     seen_to = el.first + el.second.length();
   }
+  // TODO(ctiller): re-enable buffer upper-limit once we have a global
+  // accounting of memory usage
+#if 0
   // Should not exceed our buffering limits (or there should just be one pending
   // item on an idle read)
   if (!pending_push_.empty()) {
@@ -65,6 +68,7 @@ void Linearizer::AssertValid(const char* marker, const char* pretty_function,
            (read_mode_ == ReadMode::Idle && pending_push_.size() == 1 &&
             pending_push_.begin()->first == offset_));
   }
+#endif
 
   std::ostringstream rep;
   rep << "MODE:" << read_mode_ << " LENGTH:" << length_ << " OFFSET:" << offset_
@@ -136,6 +140,9 @@ bool Linearizer::Push(Chunk chunk) {
                        << " end-of-message=" << chunk.end_of_message
                        << " lin-offset=" << offset_;
 
+  // TODO(ctiller): re-enable buffer upper-limit once we have a global
+  // accounting of memory usage
+#if 0
   // Check whether the chunk is within our buffering limits
   // (if not we can reject and hope for a resend.)
   if (chunk_start > offset_ && chunk_end > offset_ + max_buffer_) {
@@ -144,6 +151,7 @@ bool Linearizer::Push(Chunk chunk) {
     stats_->linearizer_reject_past_end_of_buffering++;
     return false;
   }
+#endif
 
   if (length_) {
     if (chunk_end > *length_) {

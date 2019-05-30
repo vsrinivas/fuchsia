@@ -68,19 +68,21 @@ void ReliableUnordered::Begin(uint64_t seq, BeginCallback ready) {
     ready(closed_->OrCancelled());
     return;
   }
-  if (seq < tip_)
+  if (seq < tip_) {
+    ready(Status(StatusCode::CANCELLED, "Old sequence received"));
     return;
-  if (seq >= tip_ + kLookaheadWindow)
+  }
+  if (seq >= tip_ + kLookaheadWindow) {
+    ready(Status(StatusCode::CANCELLED, "Sequence too far in the future"));
     return;
+  }
   auto idx = seq - tip_;
-  if (in_progress_.test(idx))
+  if (in_progress_.test(idx)) {
+    ready(Status(StatusCode::CANCELLED, "Already reading sequence"));
     return;
+  }
   in_progress_.set(idx);
   ready(Status::Ok());
-  for (uint64_t i = 0; i < idx; i++) {
-    if (!in_progress_.test(i))
-      return;
-  }
 }
 
 void ReliableUnordered::Completed(uint64_t seq, const Status& status) {
