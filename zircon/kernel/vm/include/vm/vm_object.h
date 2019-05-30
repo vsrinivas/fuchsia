@@ -250,10 +250,16 @@ public:
     // Notifies the child observer that there is one child.
     void NotifyOneChild() TA_EXCL(lock_);
 
+    // Removes the child |child| from this vmo.
+    //
+    // Subclasses which override this function should be sure that ::DropChildLocked
+    // and ::OnUserChildRemoved are called where appropraite.
+    //
     // |guard| must be this vmo's lock.
-    void RemoveChild(VmObjectPaged* r, Guard<Mutex>&& guard)
+    virtual void RemoveChild(VmObjectPaged* child, Guard<Mutex>&& guard)
         // Analysis doesn't know |guard| is this vmo's lock.
         TA_NO_THREAD_SAFETY_ANALYSIS;
+
     // Drops |c| from the child list without going through the full removal
     // process. ::RemoveChild is probably what you want here.
     void DropChildLocked(VmObjectPaged* c) TA_REQ(lock_);
@@ -261,13 +267,11 @@ public:
     uint32_t num_user_children() const;
     uint32_t num_children() const;
 
-    // Called by RemoveChild. VmObject::OnChildRemoved eventually needs to be invoked
-    // on the VmObject which is held by the dispatcher which matches |user_id|. Implementations
-    // should forward this call towards that VmObject and eventually call this class's
-    // implementation.
+    // Function that should be invoked when a userspace visible child of
+    // this vmo is removed. Updates state and notifies userspace if necessary.
     //
     // The guard passed to this function is the vmo's lock.
-    virtual void OnChildRemoved(Guard<Mutex>&& guard)
+    void OnUserChildRemoved(Guard<Mutex>&& guard)
         // Analysis doesn't know |guard| is this vmo's lock.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 

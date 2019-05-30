@@ -140,7 +140,7 @@ public:
     uint32_t GetMappingCachePolicy() const override;
     zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
-    void OnChildRemoved(Guard<Mutex>&& guard) override
+    void RemoveChild(VmObjectPaged* child, Guard<Mutex>&& guard) override
         // Analysis doesn't know that the guard passed to this function is the vmo's lock.
         TA_NO_THREAD_SAFETY_ANALYSIS;
     bool OnChildAddedLocked() override TA_REQ(lock_);

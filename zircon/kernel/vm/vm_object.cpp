@@ -215,10 +215,10 @@ void VmObject::RemoveChild(VmObjectPaged* o, Guard<Mutex>&& adopt) {
 
     DropChildLocked(o);
 
-    OnChildRemoved(guard.take());
+    OnUserChildRemoved(guard.take());
 }
 
-void VmObject::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
+void VmObject::OnUserChildRemoved(Guard<fbl::Mutex>&& adopt) {
     DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
     Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
 

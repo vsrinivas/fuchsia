@@ -550,35 +550,21 @@ bool VmObjectPaged::OnChildAddedLocked() {
     }();
 }
 
-void VmObjectPaged::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
+void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adopt) {
+    if (!is_hidden()) {
+        VmObject::RemoveChild(removed, adopt.take());
+        return;
+    }
+
     DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
     Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
 
-    if (!is_hidden()) {
-        VmObject::OnChildRemoved(guard.take());
-        return;
-    }
+    // Hidden vmos always have 0 or 2 children, but we can't be here with 0 children.
+    DEBUG_ASSERT(children_list_len_ == 2);
+    // A hidden vmo must be fully initialized to have 2 children.
+    DEBUG_ASSERT(user_id_ != ZX_KOID_INVALID);
 
-    if (children_list_len_ == 2) {
-        // If there are multiple eager COW clones of one vmo, we need to proxy clone closure
-        // to the original vmo to update the userspace-visible child count. In this situation,
-        // we use user_id_ to walk the tree to find the original vmo.
-
-        // A hidden vmo must be fully initialized to have 2 children.
-        DEBUG_ASSERT(user_id_ != ZX_KOID_INVALID);
-
-        for (auto& c : children_list_) {
-            if (c.user_id_ == user_id_) {
-                c.OnChildRemoved(guard.take());
-                return;
-            }
-        }
-        return;
-    }
-
-    // Hidden vmos have at most 2 children, and this function ensures that that OnChildRemoved
-    // isn't called on the last child. So at this point we know that there is exactly one child.
-    DEBUG_ASSERT(children_list_len_ == 1);
+    DropChildLocked(removed);
     auto& child = children_list_.front();
 
     const uint64_t merge_start_offset = child.parent_offset_;
@@ -693,9 +679,21 @@ void VmObjectPaged::OnChildRemoved(Guard<fbl::Mutex>&& adopt) {
     }
     child.parent_ = std::move(parent_);
 
-    if (child.user_id_ == user_id_) {
-        // Pass the removal notification towards the original vmo.
-        child.OnChildRemoved(guard.take());
+    // We need to proxy the closure down to the original user-visible vmo. To find
+    // that, we can walk down the clone tree following the user_id_.
+    VmObjectPaged* descendant = &child;
+    while (descendant && descendant->user_id_ == user_id_) {
+        if (!descendant->is_hidden()) {
+            descendant->OnUserChildRemoved(guard.take());
+            return;
+        }
+        if (descendant->left_child_locked().user_id_ == user_id_) {
+            descendant = &descendant->left_child_locked();
+        } else if (descendant->right_child_locked().user_id_ == user_id_) {
+            descendant = &descendant->right_child_locked();
+        } else {
+            descendant = nullptr;
+        }
     }
 }
 
