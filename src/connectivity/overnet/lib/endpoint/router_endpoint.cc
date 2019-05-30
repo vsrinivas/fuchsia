@@ -420,14 +420,16 @@ void RouterEndpoint::OnNodeDescriptionTableChange(uint64_t last_seen_version,
                                                   StatusCallback on_change) {
   if (last_seen_version == node_description_table_version_) {
     on_node_description_table_change_.emplace_back(std::move(on_change));
+  } else {
+    on_change(Status::Ok());
   }
-  // else don't store on_change, forcing its destructor to be called, forcing it
-  // to be called.
 }
 
 void RouterEndpoint::NewNodeDescriptionTableVersion() {
   ++node_description_table_version_;
-  for (auto& cb : std::move(on_node_description_table_change_)) {
+  auto cbs = std::move(on_node_description_table_change_);
+  assert(on_node_description_table_change_.empty());
+  for (auto& cb : cbs) {
     cb(Status::Ok());
   }
 }
