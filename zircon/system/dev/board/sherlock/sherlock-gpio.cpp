@@ -84,6 +84,7 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_VANA_ENABLE},
     {GPIO_VDIG_ENABLE},
     {GPIO_CAM_RESET},
+    {GPIO_LIGHT_INTERRUPT},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

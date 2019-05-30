@@ -16,6 +16,7 @@ driver("sherlock") {
     "sherlock-emmc.cpp",
     "sherlock-gpio.cpp",
     "sherlock-i2c.cpp",
+    "sherlock-light.cpp",
     "sherlock-mali.cpp",
     "sherlock-sdio.cpp",
     "sherlock-sysmem.cpp",

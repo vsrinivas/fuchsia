@@ -93,6 +93,7 @@ private:
     zx_status_t AudioInit();
     zx_status_t ThermalInit();
     zx_status_t TouchInit();
+    zx_status_t LightInit();
     int Thread();
 
     ddk::PBusProtocolClient pbus_;

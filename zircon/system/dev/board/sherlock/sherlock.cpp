@@ -143,6 +143,11 @@ int Sherlock::Thread() {
         return -1;
     }
 
+    if (LightInit() != ZX_OK) {
+        zxlogf(ERROR, "LightInit() failed\n");
+        return -1;
+    }
+
     return 0;
 }
 
