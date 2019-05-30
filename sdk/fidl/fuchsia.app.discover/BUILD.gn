@@ -5,14 +5,16 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.app.discover") {
-  sdk_category = "partner"
+  sdk_category = "internal"
 
   sources = [
     "discover_registry.fidl",
     "module_output.fidl",
+    "suggestions_service.fidl",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.app",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
