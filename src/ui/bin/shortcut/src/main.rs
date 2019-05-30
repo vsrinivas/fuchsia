@@ -115,18 +115,21 @@ mod test {
     use fuchsia_async;
     use fuchsia_component::client::{launch, launcher};
     use fuchsia_zircon as zx;
+    use futures::future;
     use futures::StreamExt;
 
     static COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx";
     static TEST_SHORTCUT_ID: u32 = 123;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore]
-    async fn test_as_client() -> Result<(), Error> {
+    #[test]
+    fn test_as_client() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["shortcut"])
             .expect("shortcut syslog init should not fail");
 
+        let mut executor = fuchsia_async::Executor::new()?;
+
         let launcher = launcher().context("Failed to open launcher service")?;
+
         let app = launch(&launcher, COMPONENT_URL.to_string(), None)
             .context("Failed to launch Shortcut manager")?;
 
@@ -155,38 +158,50 @@ mod test {
         };
         registry.register_shortcut(shortcut).expect("register_shortcut");
 
-        // Process key event that *does not* trigger a shortcut.
-        let event = ui_input::KeyEvent {
-            key: None,
-            modifiers: None,
-            phase: Some(ui_input::KeyEventPhase::Pressed),
-        };
-        let was_handled = await!(manager.handle_key_event(event)).expect("handle_key_event false");
-        assert_eq!(false, was_handled);
+        // get event loop to deliver readiness notifications to channels
+        // this fixes race condition when test is executed before listeners is registered.
+        let _ = executor.run_until_stalled(&mut future::empty::<()>());
 
-        // Process key event that triggers a shortcut.
-        let event = ui_input::KeyEvent {
-            key: Some(ui_input::Key::A),
-            modifiers: None,
-            phase: Some(ui_input::KeyEventPhase::Pressed),
-        };
-
-        let was_handled = manager.handle_key_event(event);
-
-        // React to one shortcut activation message from the listener stream.
-        if let Some(Ok(req)) = await!(listener_stream.next()) {
-            match req {
-                ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
-                    assert_eq!(id, TEST_SHORTCUT_ID);
-                    responder.send(true).expect("responding from shortcut listener")
-                }
+        let test = async move {
+            // Process key event that *does not* trigger a shortcut.
+            let event = ui_input::KeyEvent {
+                key: None,
+                modifiers: None,
+                phase: Some(ui_input::KeyEventPhase::Pressed),
             };
-        }
 
-        let was_handled = await!(was_handled).expect("handle_key_event true");
-        // Expect key event to be handled.
-        assert_eq!(true, was_handled);
+            let was_handled =
+                await!(manager.handle_key_event(event)).expect("handle_key_event false");
 
+            assert_eq!(false, was_handled);
+
+            // Process key event that triggers a shortcut.
+            let event = ui_input::KeyEvent {
+                key: Some(ui_input::Key::A),
+                modifiers: None,
+                phase: Some(ui_input::KeyEventPhase::Pressed),
+            };
+
+            let was_handled = manager.handle_key_event(event);
+
+            // React to one shortcut activation message from the listener stream.
+            if let Some(Ok(req)) = await!(listener_stream.next()) {
+                match req {
+                    ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
+                        assert_eq!(id, TEST_SHORTCUT_ID);
+                        responder.send(true).expect("responding from shortcut listener")
+                    }
+                };
+            } else {
+                panic!("Error from listener_stream.next()");
+            }
+
+            let was_handled = await!(was_handled).expect("handle_key_event true");
+            // Expect key event to be handled.
+            assert_eq!(true, was_handled);
+        };
+
+        executor.run_singlethreaded(test);
         Ok(())
     }
 }
