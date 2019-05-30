@@ -16,7 +16,7 @@
 //! local address and port and a single remote address and port. By virtue of
 //! being bound to a local address, it is also bound to a local interface. This
 //! means that, regardless of the entries in the forwarding table, all traffic
-//! on that connection will always egress over the same interface. [1] This also
+//! on that connection will always egress over the same interface. [^1] This also
 //! means that, if the interface's address changes, any connections bound to it
 //! are severed.
 //!
@@ -51,9 +51,9 @@
 //! happen to bind all of the addresses, rather than appearing like wildcard
 //! listeners.
 //!
-//! [1] It is an open design question as to whether incoming traffic on the
-//! connection will be accepted from a different interface. This is part of the
-//! "weak host model" vs "strong host model" discussion.
+//! [^1]: It is an open design question as to whether incoming traffic on the
+//!       connection will be accepted from a different interface. This is part
+//!       of the "weak host model" vs "strong host model" discussion.
 
 pub(crate) mod tcp;
 pub(crate) mod udp;

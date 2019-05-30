@@ -1005,8 +1005,8 @@ mod internal {
     ///
     /// See [Wikipedia] or [RFC 791] for more details.
     ///
-    /// [Wikipedia]: https://en.wikipedia.org/wiki/IPv4#Options [RFC 791]:
-    /// https://tools.ietf.org/html/rfc791#page-15
+    /// [Wikipedia]: https://en.wikipedia.org/wiki/IPv4#Options
+    /// [RFC 791]: https://tools.ietf.org/html/rfc791#page-15
     pub(crate) struct Ipv4Option<'a> {
         /// Whether this option needs to be copied into all fragments of a fragmented packet.
         pub(crate) copied: bool,

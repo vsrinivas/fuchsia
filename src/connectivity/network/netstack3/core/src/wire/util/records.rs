@@ -148,7 +148,7 @@ where
     /// has not been reached and `bytes` has not been exhausted, `LimitedRecordsImpl::parse`
     /// will be called to do the actual parsing of a record.
     ///
-    /// ['EXACT_LIMIT_ERROR`]: LimitedRecordsImplLayout::EXACT_LIMIT_ERROR
+    /// [`EXACT_LIMIT_ERROR`]: LimitedRecordsImplLayout::EXACT_LIMIT_ERROR
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         bytes: &mut BV,
         context: &mut Self::Context,
