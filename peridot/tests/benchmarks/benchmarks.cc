@@ -5,6 +5,7 @@
 // This target runs all benchmarks for the Peridot layer.
 
 #include "garnet/testing/benchmarking/benchmarking.h"
+#include "peridot/tests/benchmarks/gfx_benchmarks.h"
 #include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
@@ -15,6 +16,54 @@ int main(int argc, const char** argv) {
   }
 
   auto& benchmarks_runner = *maybe_benchmarks_runner;
+
+  // Benchmark example, here for demonstration.
+  benchmarks_runner.AddTspecBenchmark(
+      "benchmark_example",
+      "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
+
+  // Performance tests implemented in the Zircon repo.
+  benchmarks_runner.AddLibPerfTestBenchmark(
+      "zircon.perf_test",
+      "/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test");
+
+  // Performance tests implemented in the Garnet repo (the name
+  // "zircon_benchmarks" is now misleading).
+  benchmarks_runner.AddLibPerfTestBenchmark(
+      "zircon_benchmarks",
+      "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
+
+  std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
+
+  // TODO(PT-118): Input latency tests are only currently supported on NUC.
+  if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
+    // simplest_app
+    {
+      constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
+      std::string out_file = benchmarks_runner.MakeTempFile();
+      benchmarks_runner.AddCustomBenchmark(
+          kLabel,
+          {"/bin/run",
+           "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+           "run_simplest_app_benchmark.cmx",
+           "--out_file", out_file, "--benchmark_label", kLabel},
+          out_file);
+    }
+    // yuv_to_image_pipe
+    {
+      constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
+      std::string out_file = benchmarks_runner.MakeTempFile();
+      benchmarks_runner.AddCustomBenchmark(
+          kLabel,
+          {"/bin/run",
+           "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+           "run_yuv_to_image_pipe_benchmark.cmx",
+           "--out_file", out_file, "--benchmark_label", kLabel},
+          out_file);
+    }
+  }
+
+  AddGraphicsBenchmarks(&benchmarks_runner);
 
   // Run "local" Ledger benchmarks.  These don't need external services to
   // function properly.

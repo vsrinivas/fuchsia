@@ -11,13 +11,10 @@ executable("garnet_benchmarks_bin") {
 
   sources = [
     "benchmarks.cc",
-    "gfx_benchmarks.cc",
-    "gfx_benchmarks.h",
   ]
 
   deps = [
     "//garnet/testing/benchmarking:benchmarking",
-    "//garnet/testing/benchmarking:is_vulkan_supported",
   ]
 }
 
