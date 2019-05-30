@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/fuchsia_pkg_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
     }
 }

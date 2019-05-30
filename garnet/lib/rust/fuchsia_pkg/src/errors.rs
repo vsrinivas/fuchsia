@@ -160,3 +160,42 @@ impl From<serde_json::Error> for MetaPackageError {
         MetaPackageError::Json(err)
     }
 }
+
+#[derive(Debug, Fail)]
+pub enum BuildError {
+    #[fail(display = "io error: '{}'", _0)]
+    IoError(#[cause] io::Error),
+
+    #[fail(display = "meta contents error: '{}'", _0)]
+    MetaContents(#[cause] MetaContentsError),
+
+    #[fail(display = "meta package error: '{}'", _0)]
+    MetaPackage(#[cause] MetaPackageError),
+
+    #[fail(
+        display = "the creation manifest contained a resource path that conflicts with a generated resource path: '{}'",
+        conflicting_resource_path
+    )]
+    ConflictingResource { conflicting_resource_path: String },
+
+    #[fail(display = "fuchsia_archive::write error: {}", _0)]
+    ArchiveWrite(#[cause] failure::Error),
+}
+
+impl From<io::Error> for BuildError {
+    fn from(err: io::Error) -> Self {
+        BuildError::IoError(err)
+    }
+}
+
+impl From<MetaContentsError> for BuildError {
+    fn from(err: MetaContentsError) -> Self {
+        BuildError::MetaContents(err)
+    }
+}
+
+impl From<MetaPackageError> for BuildError {
+    fn from(err: MetaPackageError) -> Self {
+        BuildError::MetaPackage(err)
+    }
+}

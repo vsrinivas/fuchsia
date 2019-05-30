@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::CreationManifest;
 use crate::MetaPackage;
 use proptest::prelude::*;
 use proptest::{prop_compose, proptest_helper};
@@ -87,6 +88,14 @@ prop_compose! {
 }
 
 prop_compose! {
+    [pub] fn random_far_resource_path()
+        (s in random_resource_path(1, 4)) -> String
+    {
+        format!("meta/{}", s)
+    }
+}
+
+prop_compose! {
     [pub] fn random_merkle_hex()(s in "[[:xdigit:]]{64}") -> String {
         s
     }
@@ -111,5 +120,19 @@ prop_compose! {
         ) -> MetaPackage
     {
         MetaPackage::from_name_and_variant(name, variant).unwrap()
+    }
+}
+
+prop_compose! {
+    [pub] fn random_creation_manifest()
+        (external_content in prop::collection::btree_map(
+            random_external_resource_path(), random_resource_path(1, 2), 1..4),
+         far_content in prop::collection::btree_map(
+             random_far_resource_path(), random_resource_path(1, 2), 1..4),)
+         -> CreationManifest
+    {
+        CreationManifest::from_external_and_far_contents(
+            external_content, far_content)
+            .unwrap()
     }
 }
