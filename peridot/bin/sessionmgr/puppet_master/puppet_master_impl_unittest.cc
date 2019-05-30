@@ -303,7 +303,7 @@ TEST_F(PuppetMasterTest, CreateStoryWithOptions) {
 
 // Verifies that the StoryInfo extra field is set when calling SetStoryInfoExtra
 // prior to creating the story and executing story commands
-TEST_F(PuppetMasterTest, CreateStoryWithStoryInfoExtra) {
+TEST_F(PuppetMasterTest, DISABLED_CreateStoryWithStoryInfoExtra) {
   const auto story_name = "story_info_extra_1";
   const auto extra_entry_key = "test_key";
   const auto extra_entry_value = "test_value";
