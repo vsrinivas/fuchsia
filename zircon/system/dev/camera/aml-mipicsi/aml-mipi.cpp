@@ -224,9 +224,7 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     }
 
     zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_T931},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_MIPI_CSI},
+        {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_MIPI_CSI},
     };
 
     status = mipi_device->DdkAdd("aml-mipi", 0,  props, countof(props));

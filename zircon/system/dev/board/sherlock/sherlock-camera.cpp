@@ -124,9 +124,7 @@ static const zx_bind_inst_t clk_sensor_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_CAM_INCK_24M),
 };
 static const zx_bind_inst_t mipicsi_match[] = {
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MIPI_CSI),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MIPI_CSI),
 };
 static const device_component_part_t i2c_component[] = {
     {countof(root_match), root_match},
@@ -245,6 +243,10 @@ zx_status_t Sherlock::CameraInit() {
     status = DdkAddComposite("imx227-sensor", sensor_props, countof(sensor_props),
                              imx227_sensor_components, countof(imx227_sensor_components),
                              UINT32_MAX);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
+        return status;
+    }
 
     // Add a composite device for ARM ISP
     return pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
