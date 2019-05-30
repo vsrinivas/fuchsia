@@ -21,7 +21,7 @@ def main():
     with open(os.path.join(args.build_dir, "amber-files", "repository", "targets.json")) as f:
       data = json.load(f)
 
-    published_packages = set([s.split('/')[1] for s in data['signed']['targets'].keys()])
+    published_packages = set([s.split('/')[0] for s in data['signed']['targets'].keys()])
 
     universe_packages = published_packages & universe_build_packages
 
