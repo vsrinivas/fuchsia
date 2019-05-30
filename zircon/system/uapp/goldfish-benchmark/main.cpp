@@ -167,8 +167,17 @@ int main(int argc, char** argv) {
     ZX_ASSERT(res == ZX_OK);
     ZX_ASSERT(actual == bytes);
 
-    RunPingPongBenchmark(channel.get(), kMb, 50);
-    RunPingPongBenchmark(channel.get(), ZX_PAGE_SIZE, kKb);
+    if (argc > 1) {
+        for (int i = 1; (i + 1) < argc; i += 2) {
+            unsigned size = atoi(argv[i]);
+            unsigned iterations = atoi(argv[i + 1]);
+
+            RunPingPongBenchmark(channel.get(), size, iterations);
+        }
+    } else {
+        RunPingPongBenchmark(channel.get(), ZX_PAGE_SIZE, 500);
+        RunPingPongBenchmark(channel.get(), kMb, 5);
+    }
 
     printf("\nGoldfish benchmarks completed.\n");
 
