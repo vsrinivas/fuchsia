@@ -10,7 +10,8 @@ This document is a description of the Fuchsia Interface Definition Language
 *   [Compiler Specification]
 *   [API Readability / Style Guide]
 *   [C Language Bindings]
-*   [C++ Language Bindings]
+*   [Low-Level C++ Language Bindings]
+*   [High-Level C++ Language Bindings]
 *   [Examples]: Some small example code used during development
 *   [Tutorial]: A tutorial on using FIDL services in several languages
 
@@ -21,7 +22,9 @@ This document is a description of the Fuchsia Interface Definition Language
 [Compiler Specification]: ../reference/compiler.md
 [API Readability / Style Guide]: ../../../api/fidl.md
 [C Language Bindings]: ../languages/c.md
-[C++ Language Bindings]: ../languages/cpp.md
+[Low-Level C++ Language Bindings]: ../languages/llcpp.md
+[High-Level C++ Language Bindings]: ../languages/cpp.md
+[C/Low-Level/High-Level C++ Bindings Comparison]: ../languages/c-family-comparison.md
 [Examples]: /zircon/system/host/fidl/examples
 [Tutorial]: ../tutorial/README.md
 
@@ -113,7 +116,7 @@ Requirements
 # Ergonomics
 
 *   Programming language bindings maintained by Fuchsia team:
-    *   C, C++ (native), C++ (idiomatic), Dart, Go, Rust
+    *   C, low-level C++, high-level C++, Dart, Go, Rust
 *   Keeping in mind we might want to support other languages in the future, such
     as:
     *   Java, Javascript, etc.
@@ -140,8 +143,8 @@ Requirements
 ## Where to Find the Code
 
 - [The compiler](/zircon/system/host/fidl)
-- [C bindings](/zircon/system/ulib/fidl)
-- [C++ bindings](/sdk/lib/fidl/cpp)
+- [C and low-level C++ bindings](/zircon/system/ulib/fidl)
+- [High-level C++ bindings](/sdk/lib/fidl/cpp)
 - [Go bindings](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
 - [Rust bindings](/garnet/public/lib/fidl/rust)
 
@@ -177,7 +180,7 @@ protocols.
 Languages-specific topics:
 
 *   [C Language Bindings]
-*   [C++ Language Bindings]
+*   [High-Level C++ Language Bindings]
 
 Bindings are available in various flavors depending on the language:
 

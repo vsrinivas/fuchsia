@@ -14,7 +14,8 @@ The following topics are presented:
 # Supported Languages
 
 * [C](languages/c.md)
-* [C++](languages/cpp.md)
+* [Low-Level C++](languages/llcpp.md)
+* [C++](languages/cpp.md) / [Tutorial](tutorial/tutorial-cpp.md)
 * [Dart](tutorial/tutorial-dart.md)
 * [Go](tutorial/tutorial-go.md)
 * [Rust](tutorial/tutorial-rust.md)

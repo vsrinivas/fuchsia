@@ -27,11 +27,17 @@ Fuchsia has adopted a [readability rubric](../../../api/fidl.md) for FIDL librar
 - [Documentation](../languages/c.md)
 - [Echo server example](/garnet/examples/fidl/echo_server_c/)
 
-### C++
+### High-Level C++
 
 - [Documentation](../languages/cpp.md)
 - [Echo server example](/garnet/examples/fidl/echo_server_cpp/)
 - [Echo client example](/garnet/examples/fidl/echo_client_cpp/)
+
+### Low-Level C++
+
+- [Documentation](../languages/llcpp.md)
+- [Echo server example](/garnet/examples/fidl/echo_server_llcpp/)
+- [Echo client example](/garnet/examples/fidl/echo_client_llcpp/)
 
 ### Dart
 
