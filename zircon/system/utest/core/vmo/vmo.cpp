@@ -1075,8 +1075,9 @@ bool vmo_cache_flush_test() {
 
     uintptr_t ptr_rw;
     EXPECT_EQ(ZX_OK,
-            zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr_rw),
-            "map");
+              zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size,
+                          &ptr_rw),
+              "map");
     EXPECT_NE(ptr_rw, 0, "map address");
     void *prw = (void*)ptr_rw;
 
@@ -1084,11 +1085,38 @@ bool vmo_cache_flush_test() {
 
     EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_INSN), "rw flush insn");
     EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_DATA), "rw clean");
-    EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE), "rw clean/invalidate");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INSN),
+              "rw clean w/ insn");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(prw, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE),
+              "rw clean/invalidate");
+    EXPECT_EQ(ZX_OK,
+              zx_cache_flush(prw, size,
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_INSN),
+              "rw all");
 
     EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_INSN), "ro flush insn");
     EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA), "ro clean");
-    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE), "ro clean/invalidate");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INSN),
+              "ro clean w/ insn");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE),
+              "ro clean/invalidate");
+    EXPECT_EQ(ZX_OK, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE),
+              "ro clean/invalidate");
+    EXPECT_EQ(ZX_OK,
+              zx_cache_flush(pro, size,
+                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_INSN),
+              "ro all");
+
+    // Above checks all valid options combinations; check that invalid
+    // combinations are handled correctly here.
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_cache_flush(pro, size, 0), "no args");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_cache_flush(pro, size, ZX_CACHE_FLUSH_INVALIDATE),
+              "invalidate requires data");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              zx_cache_flush(pro, size, ZX_CACHE_FLUSH_INSN | ZX_CACHE_FLUSH_INVALIDATE),
+              "invalidate requires data");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_cache_flush(pro, size, 1u << 3), "out of range a");
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_cache_flush(pro, size, ~0u), "out of range b");
 
     zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size);
     zx_vmar_unmap(zx_vmar_root_self(), ptr_ro, size);

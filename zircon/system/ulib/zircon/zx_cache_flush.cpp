@@ -31,8 +31,8 @@ void for_each_icache_line(const void* addr, size_t len, T func) {
 
 }  // anonymous namespace
 
-zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
-    switch (flags) {
+zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t options) {
+    switch (options) {
     case ZX_CACHE_FLUSH_INSN:
         break;
     case ZX_CACHE_FLUSH_DATA:
@@ -68,11 +68,11 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
 
 #elif defined(__aarch64__)
 
-    if (flags & ZX_CACHE_FLUSH_DATA) {
+    if (options & ZX_CACHE_FLUSH_DATA) {
         // Flush data to the point of coherency which effectively means
         // making sure cache data is written back to main mmemory and optionally
         // invalidated.
-        if (flags & ZX_CACHE_FLUSH_INVALIDATE) {
+        if (options & ZX_CACHE_FLUSH_INVALIDATE) {
             for_each_dcache_line(addr, len, [](uintptr_t p) {
                     // Clean and invalidate data cache to point of coherency.
                     __asm__ volatile("dc civac, %0" :: "r"(p));
@@ -87,12 +87,12 @@ zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t flags) {
         __asm__ volatile("dsb sy" : : : "memory");
     }
 
-    if (flags & ZX_CACHE_FLUSH_INSN) {
+    if (options & ZX_CACHE_FLUSH_INSN) {
         // If we didn't already clean the dcache all the way to the point
         // of coherency, clean it the point to unification.
         // Point of unification is the level within the cache heirarchy where the
         // the instruction and data cache are no longer separate. This is usually L2.
-        if (!(flags & ZX_CACHE_FLUSH_DATA)) {
+        if (!(options & ZX_CACHE_FLUSH_DATA)) {
             for_each_dcache_line(addr, len, [](uintptr_t p) {
                     // Clean data cache (dc) to point of unification (cvau).
                     __asm__ volatile("dc cvau, %0" :: "r"(p));
