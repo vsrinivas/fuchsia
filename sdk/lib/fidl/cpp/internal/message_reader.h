@@ -140,6 +140,7 @@ class MessageReader final {
   zx::channel channel_;
   async_dispatcher_t* dispatcher_;
   bool* should_stop_;  // See |Canary| in message_reader.cc.
+  bool* destroyed_;  // See |Canary| in message_reader.cc.
   MessageHandler* message_handler_;
   fit::function<void(zx_status_t)> error_handler_;
 };

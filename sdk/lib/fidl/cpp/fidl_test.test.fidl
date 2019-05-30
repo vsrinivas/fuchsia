@@ -121,3 +121,7 @@ struct VariousDefaults {
     SampleEnum enum_with_default = MEMBER_B;
     bool bool_with_default = true;
 };
+
+protocol Echo {
+    EchoString(string? value) -> (string? response);
+};

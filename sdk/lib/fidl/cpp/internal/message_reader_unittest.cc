@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/misc/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/internal/message_reader.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
+#include "lib/fidl/cpp/binding.h"
 
 namespace fidl {
 namespace internal {
@@ -68,6 +70,23 @@ class DestructionCounter {
  private:
   int* counter_ = nullptr;
 };
+
+class EchoServer : public fidl::test::misc::Echo {
+ public:
+  explicit EchoServer(
+      fidl::InterfaceRequest<fidl::test::misc::Echo> request)
+      : binding_(this, std::move(request)) {}
+
+  void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
+    callback(value);
+  }
+
+  void Close() { binding_.Close(10); }
+
+ private:
+  fidl::Binding<fidl::test::misc::Echo> binding_;
+};
+
 
 TEST(MessageReader, Trivial) { MessageReader reader; }
 
@@ -605,6 +624,24 @@ TEST(MessageReader, DoubleReentrantUnbind) {
   EXPECT_EQ(2, read_count);
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, "\n", 1, nullptr, 0));
 }
+
+TEST(MessageReader, ReentrantErrorHandler) {
+  fidl::test::AsyncLoopForTest loop;
+
+  fidl::test::misc::EchoPtr echo_ptr;
+  EchoServer server(echo_ptr.NewRequest());
+
+  echo_ptr.set_error_handler(
+      [](zx_status_t status) { });
+
+  auto* echo_ptr_ptr = echo_ptr.get();
+  echo_ptr_ptr->EchoString("Some string", [echo_ptr = std::move(echo_ptr)](
+                                              fidl::StringPtr echoed_value) {
+  });
+  server.Close();
+  loop.RunUntilIdle();
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace fidl

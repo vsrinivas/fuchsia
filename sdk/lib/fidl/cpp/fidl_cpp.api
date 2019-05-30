@@ -8,7 +8,7 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "86ab0ed0df18e64d2dcf61f1b9b159a5",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/implementation.h": "8dfc64d045bbfb27491e60988ba56c07",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_handler.h": "adbe35ee73b7ec16fda90e48bb2ef2d1",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "3b143ba48b66373d8f84dc6f96d96d14",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "e3797df1fd7f43d1f9696764a94d47a7",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/pending_response.h": "abb1fd9e60635a14262149117054a664",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy.h": "12a79be8ee86efcf3600c2d39b38c454",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h": "e7587733d8fbae165690a8221e449014",

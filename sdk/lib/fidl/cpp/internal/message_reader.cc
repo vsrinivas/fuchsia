@@ -77,11 +77,16 @@ MessageReader::MessageReader(MessageHandler* message_handler)
             kSignals},
       dispatcher_(nullptr),
       should_stop_(nullptr),
+      destroyed_(nullptr),
       message_handler_(message_handler),
       error_handler_(nullptr) {}
 
 MessageReader::~MessageReader() {
   Stop();
+  if (destroyed_) {
+    *destroyed_ = true;
+    destroyed_ = nullptr;
+  }
   if (dispatcher_)
     async_cancel_wait(dispatcher_, &wait_);
 }
@@ -251,7 +256,11 @@ zx_status_t MessageReader::Close(zx_status_t epitaph_value) {
 }
 
 void MessageReader::NotifyError(zx_status_t epitaph_value) {
+  Canary canary(&destroyed_);
   Unbind();
+  if (canary.should_stop()) {
+    return;
+  }
   if (error_handler_) {
     error_handler_(epitaph_value);
   }
