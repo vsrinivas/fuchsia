@@ -307,7 +307,7 @@ void add_to_site_cache(trace_site_t* site, trace_site_state_t current_state, boo
     // - |g_site_cache| to point to |new_cache_ptr| (which is our entry)
     // - |*state_ptr| (our entry) to point to the old |g_site_cache|
     // This works because until our entry is live only its flag values
-    // matter to other threads. See the discussion in |trace_stop_engine()|.
+    // matter to other threads. See the discussion in |trace_engine_stop()|.
     trace_site_t* new_cache_ptr = site;
     while (!g_site_cache.compare_exchange_weak(
                old_cache_ptr, new_cache_ptr,
@@ -325,7 +325,7 @@ void add_to_site_cache(trace_site_t* site, trace_site_state_t current_state, boo
 /*** Trace engine functions ***/
 
 // thread-safe
-EXPORT_NO_DDK zx_status_t trace_start_engine(
+EXPORT_NO_DDK zx_status_t trace_engine_start(
         async_dispatcher_t* dispatcher, trace_handler_t* handler,
         trace_buffering_mode_t buffering_mode,
         void* buffer, size_t buffer_num_bytes) {
@@ -411,7 +411,7 @@ EXPORT_NO_DDK zx_status_t trace_start_engine(
 }
 
 // thread-safe
-EXPORT_NO_DDK zx_status_t trace_stop_engine(zx_status_t disposition) {
+EXPORT_NO_DDK zx_status_t trace_engine_stop(zx_status_t disposition) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have have an active trace in order to stop it.
@@ -576,7 +576,7 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
 // our last chance to stop the engine and await for all contexts to be released.
 void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
     // Stop the engine, in case it hasn't noticed yet.
-    trace_stop_engine(ZX_ERR_CANCELED);
+    trace_engine_stop(ZX_ERR_CANCELED);
 
     // There may still be outstanding references to the trace context.
     // We don't know when or whether they will be cleared but we can't complete

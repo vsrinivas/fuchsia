@@ -98,15 +98,15 @@ struct trace_handler_ops {
 // the trace engine may fail to come to a complete stop if there remain outstanding
 // references to the trace context during dispatcher shutdown.  When this happens,
 // the trace handler will not be notified of trace completion and subsequent calls
-// to |trace_start_engine()| will return |ZX_ERR_BAD_STATE|.
+// to |trace_engine_start()| will return |ZX_ERR_BAD_STATE|.
 //
-// For this reason, it is a good idea to call |trace_stop_engine()| and wait
+// For this reason, it is a good idea to call |trace_engine_stop()| and wait
 // for the handler to receive the |trace_handler_ops.trace_stopped()| callback
 // prior to shutting down the trace engine's asynchronous dispatcher.
 //
 // Better yet, don't shut down the trace engine's asynchronous dispatcher unless
 // the process is already about to exit.
-zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
+zx_status_t trace_engine_start(async_dispatcher_t* dispatcher,
                                trace_handler_t* handler,
                                trace_buffering_mode_t buffering_mode,
                                void* buffer,
@@ -124,7 +124,7 @@ zx_status_t trace_start_engine(async_dispatcher_t* dispatcher,
 // Returns |ZX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
 //
 // This function is thread-safe.
-zx_status_t trace_stop_engine(zx_status_t disposition);
+zx_status_t trace_engine_stop(zx_status_t disposition);
 
 // Asynchronously notifies the engine that buffers up to |wrapped_count|
 // have been saved.

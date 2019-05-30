@@ -43,7 +43,7 @@ public:
     trace_buffering_mode_t mode() const { return mode_; }
 
     void Start() {
-        zx_status_t status = trace_start_engine(loop_->dispatcher(),
+        zx_status_t status = trace_engine_start(loop_->dispatcher(),
                                                 this, mode_,
                                                 buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
@@ -61,7 +61,7 @@ public:
         trace::internal::trace_buffer_header header;
         {
             auto context = trace::TraceProlongedContext::Acquire();
-            auto status = trace_stop_engine(ZX_OK);
+            auto status = trace_engine_stop(ZX_OK);
             ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
                                 "trace_stop_engine returned %s\n",
                                 zx_status_get_string(status));

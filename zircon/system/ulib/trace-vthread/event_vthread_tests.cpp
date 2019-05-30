@@ -35,14 +35,14 @@ public:
     }
 
     bool StartTracing() {
-        zx_status_t status = trace_start_engine(loop_.dispatcher(), this,
+        zx_status_t status = trace_engine_start(loop_.dispatcher(), this,
                                                 kBufferingMode,
                                                 buffer_->data(), buffer_->size());
         return status == ZX_OK;
     }
 
     bool StopTracing() {
-        zx_status_t status = trace_stop_engine(ZX_OK);
+        zx_status_t status = trace_engine_stop(ZX_OK);
         loop_.RunUntilIdle();
         return status == ZX_OK;
     }

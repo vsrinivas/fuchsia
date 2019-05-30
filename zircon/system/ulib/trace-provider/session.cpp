@@ -105,7 +105,7 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
         return;
     }
 
-    status = trace_start_engine(dispatcher, session, buffering_mode,
+    status = trace_engine_start(dispatcher, session, buffering_mode,
                                 session->buffer_, session->buffer_num_bytes_);
     if (status != ZX_OK) {
         fprintf(stderr, "Session: error starting engine, status=%d(%s)\n",
@@ -118,7 +118,7 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
 }
 
 void Session::StopEngine() {
-    auto status = trace_stop_engine(ZX_OK);
+    auto status = trace_engine_stop(ZX_OK);
     if (status != ZX_OK) {
         // During shutdown this can happen twice: once for the Stop() request
         // and once when the channel is closed. Don't print anything for this
