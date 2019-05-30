@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{block::Block, block_type::BlockType, constants, utils},
+    crate::vmo::{block::Block, block_type::BlockType, constants, utils, Inspector},
     failure::{self, format_err, Error},
     fuchsia_zircon::Vmo,
     std::convert::TryFrom,
@@ -129,6 +129,14 @@ impl TryFrom<&Vmo> for Snapshot {
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         Snapshot::try_from_with_callback(vmo, || {})
+    }
+}
+
+impl TryFrom<&Inspector> for Snapshot {
+    type Error = failure::Error;
+
+    fn try_from(inspector: &Inspector) -> Result<Self, Self::Error> {
+        Snapshot::try_from(&inspector.vmo)
     }
 }
 

@@ -28,7 +28,7 @@ pub struct Inspector {
     root_node: Node,
 
     /// The VMO backing the inspector
-    vmo: zx::Vmo,
+    pub(super) vmo: zx::Vmo,
 }
 
 /// Trait implemented by properties.
