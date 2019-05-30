@@ -53,7 +53,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -61,7 +61,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:14
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//topaz/bundles:buildbot"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
