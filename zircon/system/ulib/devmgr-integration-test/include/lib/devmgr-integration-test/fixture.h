@@ -5,7 +5,6 @@
 #pragma once
 
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
