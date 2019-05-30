@@ -11,8 +11,6 @@ extern crate serde;
 
 /// More ergonomic wrapper types for FIDL auth states.
 mod auth_state;
-/// Async cancellable task-management.
-pub mod context;
 /// An error type for problems encountered in the account manager and account handler.
 mod error;
 /// More ergonomic wrapper types for FIDL account and persona identifiers.

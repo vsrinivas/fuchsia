@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/identity_common_lib_test"
+    },
+    "sandbox": {
+        "services": []
+    }
+}
