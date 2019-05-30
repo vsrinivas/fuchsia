@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("experiences") {
+  testonly = true
+  deps = [
+    "bin",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":dart_unittests",
+  ]
+}
+
+group("dart_unittests") {
+  testonly = true
+  deps = [
+    "bin:dart_unittests",
+  ]
+}

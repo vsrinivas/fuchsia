@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+import("//topaz/runtime/dart/flutter_test.gni")
+
+flutter_app("hello_experiences") {
+  main_dart = "lib/main.dart"
+
+  meta = [
+    {
+      path = rebase_path("meta/hello_experiences.cmx")
+      dest = "hello_experiences.cmx"
+    },
+  ]
+
+  package_name = "hello_experiences"
+
+  manifest = "pubspec.yaml"
+
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//topaz/public/dart/fuchsia_logger",
+  ]
+}
+
+flutter_test("hello_experiences_unittests") {
+  sources = [
+    "sample_test.dart",
+  ]
+
+  deps = [
+   "//third_party/dart-pkg/pub/test",
+  ] 
+}

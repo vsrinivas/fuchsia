@@ -1,0 +1,33 @@
+{
+    "facets": {
+        "fuchsia.modular": {
+            "@version": 2,
+            "binary": "hello_experiences",
+            "intent_filters": []
+        }
+    },
+    "program": {
+        "data": "data/hello_experiences"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.web.ContextProvider"
+        ]
+    }
+}
