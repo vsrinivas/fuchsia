@@ -42,5 +42,6 @@ group("tests") {
     "testing:tests",
     "tests",
     "ui:tests",
+    "virtualization:tests",
   ]
 }

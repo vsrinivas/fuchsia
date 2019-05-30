@@ -4,6 +4,24 @@
 
 import("//build/test/test_package.gni")
 
+group("vsh") {
+  testonly = true
+
+  deps = [
+    ":client",
+    ":tests",
+    ":util",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":vsh_tests",
+  ]
+}
+
 source_set("util") {
   sources = [
     "util.cc",
