@@ -21,13 +21,13 @@
 #ifndef BRCMFMAC_CORE_H
 #define BRCMFMAC_CORE_H
 
+#include <threads.h>
+#include <atomic>
+
 #include <ddk/protocol/ethernet.h>
 #include <netinet/if_ether.h>
 #include <lib/sync/completion.h>
 #include <wlan/protocol/if-impl.h>
-
-#include <stdatomic.h>
-#include <threads.h>
 
 #include "fweh.h"
 #include "linuxisms.h"
@@ -206,7 +206,7 @@ struct brcmf_if {
     uint8_t netif_stop;
     struct wlanif_bss_description bss;
     //spinlock_t netif_stop_lock;
-    atomic_int pend_8021x_cnt;
+    std::atomic<int> pend_8021x_cnt;
     sync_completion_t pend_8021x_wait;
     struct in6_addr ipv6_addr_tbl[NDOL_MAX_ENTRIES];
     uint8_t ipv6addr_idx;

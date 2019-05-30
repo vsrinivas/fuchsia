@@ -133,7 +133,7 @@ struct afx_hdl {
  */
 struct brcmf_p2p_info {
     struct brcmf_cfg80211_info* cfg;
-    atomic_ulong status;
+    std::atomic<unsigned long> status;
     uint8_t dev_addr[ETH_ALEN];
     uint8_t int_addr[ETH_ALEN];
     struct p2p_bss bss_idx[P2PAPI_BSSCFG_MAX];

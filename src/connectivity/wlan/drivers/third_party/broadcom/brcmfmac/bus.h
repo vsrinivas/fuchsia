@@ -17,6 +17,8 @@
 #ifndef BRCMFMAC_BUS_H
 #define BRCMFMAC_BUS_H
 
+#include <atomic>
+
 #include <ddk/device.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/usb.h>
@@ -129,8 +131,8 @@ struct brcmf_bus_msgbuf {
  * @pktcow_failed: packets dropped due to failed cow-ing.
  */
 struct brcmf_bus_stats {
-    atomic_int pktcowed;
-    atomic_int pktcow_failed;
+    std::atomic<int> pktcowed;
+    std::atomic<int> pktcow_failed;
 };
 
 /**

@@ -15,6 +15,9 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
+#include <atomic>
+#include <pthread.h>
+
 // TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
 #if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
 #include <ddk/device.h>
@@ -27,8 +30,6 @@
 #include <wifi/wifi-config.h>
 #include <zircon/status.h>
 
-#include <pthread.h>
-#include <stdatomic.h>
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE // Enables thrd_create_with_name in <threads.h>.
 #endif
@@ -65,8 +66,8 @@
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
 
 struct brcmf_sdiod_freezer {
-    atomic_int freezing;
-    atomic_int thread_count;
+    std::atomic<int> freezing;
+    std::atomic<int> thread_count;
     uint32_t frozen_count;
     sync_completion_t thread_freeze;
     sync_completion_t resumed;
@@ -672,8 +673,8 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
     sdiodev->freezer =
         static_cast<decltype(sdiodev->freezer)>(calloc(1, sizeof(*sdiodev->freezer)));
     if (!sdiodev->freezer) { return ZX_ERR_NO_MEMORY; }
-    atomic_store(&sdiodev->freezer->thread_count, 0);
-    atomic_store(&sdiodev->freezer->freezing, 0);
+    sdiodev->freezer->thread_count.store(0);
+    sdiodev->freezer->freezing.store(0);
     sdiodev->freezer->thread_freeze = {};
     sdiodev->freezer->resumed = {};
     return ZX_OK;
@@ -681,7 +682,7 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
 
 static void brcmf_sdiod_freezer_detach(struct brcmf_sdio_dev* sdiodev) {
     if (sdiodev->freezer) {
-        WARN_ON(atomic_load(&sdiodev->freezer->freezing));
+        WARN_ON(sdiodev->freezer->freezing.load());
         free(sdiodev->freezer);
     }
 }
@@ -692,7 +693,7 @@ static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
     sdiodev->freezer->frozen_count = 0;
     sync_completion_reset(&sdiodev->freezer->resumed);
     sync_completion_reset(&sdiodev->freezer->thread_freeze);
-    atomic_store(&sdiodev->freezer->freezing, 1);
+    sdiodev->freezer->freezing.store(1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
     sync_completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
     sdio_claim_host(sdiodev->func1);
@@ -705,12 +706,12 @@ static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
     sdio_claim_host(sdiodev->func1);
     brcmf_sdio_sleep(sdiodev->bus, false);
     sdio_release_host(sdiodev->func1);
-    atomic_store(&sdiodev->freezer->freezing, 0);
+    sdiodev->freezer->freezing.store(0);
     sync_completion_signal(&sdiodev->freezer->resumed);
 }
 
 bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev) {
-    return atomic_load(&sdiodev->freezer->freezing);
+    return sdiodev->freezer->freezing.load();
 }
 
 void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
@@ -718,18 +719,18 @@ void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
         return;
     }
     sdiodev->freezer->frozen_count++;
-    if (atomic_load(&sdiodev->freezer->thread_count) == sdiodev->freezer->frozen_count) {
+    if (sdiodev->freezer->thread_count.load() == sdiodev->freezer->frozen_count) {
         sync_completion_signal(&sdiodev->freezer->thread_freeze);
     }
     sync_completion_wait(&sdiodev->freezer->resumed, ZX_TIME_INFINITE);
 }
 
 void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev) {
-    atomic_fetch_add(&sdiodev->freezer->thread_count, 1);
+    sdiodev->freezer->thread_count.fetch_add(1);
 }
 
 void brcmf_sdiod_freezer_uncount(struct brcmf_sdio_dev* sdiodev) {
-    atomic_fetch_sub(&sdiodev->freezer->thread_count, 1);
+    sdiodev->freezer->thread_count.fetch_sub(1);
 }
 #else
 static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {

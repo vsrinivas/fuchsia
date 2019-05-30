@@ -18,19 +18,21 @@
 #define BRCMF_DEVICE_H
 
 #include <assert.h>
+#include <pthread.h>
+#include <string.h>
+#include <threads.h>
+
+#include <atomic>
+
 #include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
+#include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb.h>
 #include <lib/async-loop/loop.h> // to start the worker thread
 #include <lib/async/default.h>  // for async_get_default_dispatcher()
 #include <lib/async/task.h>     // for async_post_task()
 #include <lib/async/time.h>     // for async_now()
-#include <pthread.h>
-#include <string.h>
 #include <lib/sync/completion.h>
-#include <stdatomic.h>
-#include <threads.h>
 #include <wlan/protocol/if-impl.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -224,15 +226,15 @@ static inline struct brcmf_usb_device* intf_to_usbdev(const struct brcmf_usb_int
 // TODO(cphoenix): Fix this hack
 #define ieee80211_frequency_to_channel(freq) (freq)
 
-bool brcmf_test_and_set_bit_in_array(size_t bit_number, atomic_ulong* addr);
+bool brcmf_test_and_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
 
-bool brcmf_test_and_clear_bit_in_array(size_t bit_number, atomic_ulong* addr);
+bool brcmf_test_and_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
 
-bool brcmf_test_bit_in_array(size_t bit_number, atomic_ulong* addr);
+bool brcmf_test_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
 
-void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr);
+void brcmf_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
 
-void brcmf_set_bit_in_array(size_t bit_number, atomic_ulong* addr);
+void brcmf_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
 
 zx_status_t brcmf_debugfs_create_directory(const char *name, zx_handle_t parent,
                                            zx_handle_t* new_directory_out);

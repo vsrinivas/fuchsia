@@ -15,7 +15,8 @@
 #ifndef BRCMFMAC_COMMONRING_H
 #define BRCMFMAC_COMMONRING_H
 
-#include <stdatomic.h>
+#include <atomic>
+
 #include <zircon/types.h>
 
 struct brcmf_commonring {
@@ -39,7 +40,7 @@ struct brcmf_commonring {
     bool inited;
     bool was_full;
 
-    atomic_int outstanding_tx;
+    std::atomic<int> outstanding_tx;
 };
 
 void brcmf_commonring_register_cb(struct brcmf_commonring* commonring,

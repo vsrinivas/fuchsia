@@ -108,7 +108,7 @@
 
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
     if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
-        brcmf_dbg(INFO, "device is not ready : status (%lu)\n", vif->sme_state);
+        brcmf_dbg(INFO, "device is not ready : status (%lu)\n", vif->sme_state.load());
         return false;
     }
     return true;
@@ -762,19 +762,19 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, wlanif_scan_req_t* req)
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
 
     if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-        brcmf_err("Scanning already: status (%lu)\n", cfg->scan_status);
+        brcmf_err("Scanning already: status (%lu)\n", cfg->scan_status.load());
         return ZX_ERR_UNAVAILABLE;
     }
     if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
-        brcmf_err("Scanning being aborted: status (%lu)\n", cfg->scan_status);
+        brcmf_err("Scanning being aborted: status (%lu)\n", cfg->scan_status.load());
         return ZX_ERR_UNAVAILABLE;
     }
     if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
-        brcmf_err("Scanning suppressed: status (%lu)\n", cfg->scan_status);
+        brcmf_err("Scanning suppressed: status (%lu)\n", cfg->scan_status.load());
         return ZX_ERR_UNAVAILABLE;
     }
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
-        brcmf_err("Connecting: status (%lu)\n", vif->sme_state);
+        brcmf_err("Connecting: status (%lu)\n", vif->sme_state.load());
         return ZX_ERR_UNAVAILABLE;
     }
     /* If scan req comes for p2p0, send it over primary I/F */

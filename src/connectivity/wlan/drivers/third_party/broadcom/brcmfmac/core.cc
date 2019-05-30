@@ -16,17 +16,17 @@
 
 #include "core.h"
 
+#include <endian.h>
+#include <pthread.h>
+#include <threads.h>
+#include <atomic>
+
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <netinet/if_ether.h>
 #include <zircon/status.h>
-
-#include <endian.h>
-#include <pthread.h>
-#include <stdatomic.h>
-#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -268,11 +268,11 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
         head_delta = max((int)(drvr->hdrlen - brcmf_netbuf_head_space(netbuf)), 0);
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
-        atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
+        drvr->bus_if->stats.pktcowed.fetch_add(1);
         ret = brcmf_netbuf_grow_realloc(netbuf, ALIGN(head_delta, NET_NETBUF_PAD), 0);
         if (ret != ZX_OK) {
             brcmf_err("%s: failed to expand headroom\n", brcmf_ifname(ifp));
-            atomic_fetch_add(&drvr->bus_if->stats.pktcow_failed, 1);
+            drvr->bus_if->stats.pktcow_failed.fetch_add(1);
             // TODO(cphoenix): Shouldn't I brcmf_netbuf_free here?
             goto done;
         }
@@ -288,7 +288,7 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
     eh = (struct ethhdr*)(netbuf->data);
 
     if (eh->h_proto == htobe16(ETH_P_PAE)) {
-        atomic_fetch_add(&ifp->pend_8021x_cnt, 1);
+        ifp->pend_8021x_cnt.fetch_add(1);
     }
 
     /* determine the priority */
@@ -443,7 +443,7 @@ void brcmf_txfinalize(struct brcmf_if* ifp, struct brcmf_netbuf* txp, bool succe
     type = be16toh(eh->h_proto);
 
     if (type == ETH_P_PAE) {
-        if (atomic_fetch_sub(&ifp->pend_8021x_cnt, 1) == 1) {
+        if (ifp->pend_8021x_cnt.fetch_sub(1) == 1) {
             sync_completion_signal(&ifp->pend_8021x_wait);
         }
     }
@@ -483,7 +483,7 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev) {
         return ZX_ERR_UNAVAILABLE;
     }
 
-    atomic_store(&ifp->pend_8021x_cnt, 0);
+    ifp->pend_8021x_cnt.store(0);
 
     /* Get current TOE mode from dongle */
     if (brcmf_fil_iovar_int_get(ifp, "toe_ol", &toe_ol) == ZX_OK &&
@@ -1197,7 +1197,7 @@ zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, voi
 }
 
 static int brcmf_get_pend_8021x_cnt(struct brcmf_if* ifp) {
-    return atomic_load(&ifp->pend_8021x_cnt);
+    return ifp->pend_8021x_cnt.load();
 }
 
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {

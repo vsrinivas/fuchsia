@@ -17,10 +17,11 @@
 #ifndef BRCMFMAC_CFG80211_H
 #define BRCMFMAC_CFG80211_H
 
+#include <threads.h>
+#include <atomic>
+
 #include <ddk/protocol/wlanphyimpl.h>
 #include <lib/sync/completion.h>
-#include <threads.h>
-
 #include <zircon/listnode.h>
 
 /* for brcmu_d11inf */
@@ -208,7 +209,7 @@ struct brcmf_cfg80211_vif {
     struct brcmf_if* ifp;
     struct wireless_dev wdev;
     struct brcmf_cfg80211_profile profile;
-    atomic_ulong sme_state;
+    std::atomic<unsigned long> sme_state;
     struct vif_saved_ie saved_ie;
     struct list_node list;
     uint16_t mgmt_rx_reg;
@@ -330,7 +331,7 @@ struct brcmf_cfg80211_info {
     struct wl_cfg80211_bss_info* bss_info;
     struct brcmf_cfg80211_connect_info conn_info;
     struct brcmf_pmk_list_le pmk_list;
-    atomic_ulong scan_status;
+    std::atomic<unsigned long> scan_status;
     struct brcmf_pub* pub;
     uint32_t channel;
     uint32_t int_escan_map;

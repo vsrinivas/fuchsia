@@ -16,13 +16,14 @@
 
 #include "usb.h"
 
+#include <threads.h>
+#include <atomic>
+
 #include <ddk/protocol/usb.h>
 #include <usb/usb.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
-
-#include <threads.h>
 
 #include "bcdc.h"
 #include "brcm_hw_ids.h"
@@ -171,7 +172,7 @@ struct brcmf_usbdev_info {
     uint32_t ctl_urb_actual_length;
     int ctl_urb_status;
     sync_completion_t ioctl_resp_wait;
-    atomic_ulong ctl_op;
+    std::atomic<unsigned long> ctl_op;
     uint8_t ifnum;
 
     struct brcmf_urb* bulk_urb; /* used for FW download */

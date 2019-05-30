@@ -23,11 +23,11 @@
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
-#include <stdatomic.h>
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE
 #endif
 #include <threads.h>
+#include <atomic>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -441,8 +441,8 @@ struct brcmf_sdio {
     struct brcmf_core* sdio_core;   /* sdio core info struct */
 
     uint32_t hostintmask;    /* Copy of Host Interrupt Mask */
-    atomic_int intstatus; /* Intstatus bits (events) pending */
-    atomic_int fcstate;   /* State of dongle flow-control */
+    std::atomic<int> intstatus; /* Intstatus bits (events) pending */
+    std::atomic<int> fcstate;   /* State of dongle flow-control */
 
     uint16_t blocksize; /* Block size of SDIO transfers */
     uint roundup;   /* Max roundup limit */
@@ -478,7 +478,7 @@ struct brcmf_sdio {
 
     bool intr;      /* Use interrupts */
     bool poll;      /* Use polling */
-    atomic_int ipend; /* Device interrupt is pending */
+    std::atomic<int> ipend; /* Device interrupt is pending */
     uint spurious;  /* Count of spurious interrupts */
     uint pollrate;  /* Ticks between device polls */
     uint polltick;  /* Tick counter */
@@ -499,7 +499,7 @@ struct brcmf_sdio {
 
     uint8_t* ctrl_frame_buf;
     uint16_t ctrl_frame_len;
-    atomic_bool ctrl_frame_stat;
+    std::atomic<bool> ctrl_frame_stat;
     zx_status_t ctrl_frame_err;
 
     // spinlock_t txq_lock; /* protect bus->txq */
@@ -508,13 +508,13 @@ struct brcmf_sdio {
 
     brcmf_timer_info_t timer;
     sync_completion_t watchdog_wait;
-    atomic_bool watchdog_should_stop;
+    std::atomic<bool> watchdog_should_stop;
     pthread_t watchdog_tsk;
-    atomic_bool wd_active;
+    std::atomic<bool> wd_active;
 
     struct workqueue_struct* brcmf_wq;
     struct work_struct datawork;
-    atomic_bool dpc_triggered;
+    std::atomic<bool> dpc_triggered;
     bool dpc_running;
 
     bool txoff; /* Transmit flow-controlled */
@@ -1944,9 +1944,9 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
     if (head_pad) {
         if (brcmf_netbuf_head_space(pkt) < head_pad) {
             stats = &bus->sdiodev->bus_if->stats;
-            atomic_fetch_add(&stats->pktcowed, 1);
+            stats->pktcowed.fetch_add(1);
             if (brcmf_netbuf_grow_realloc(pkt, head_pad, 0)) {
-                atomic_fetch_add(&stats->pktcow_failed, 1);
+                stats->pktcow_failed.fetch_add(1);
                 return ZX_ERR_NO_MEMORY;
             }
             head_pad = 0;
@@ -2125,7 +2125,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
                 break;
             }
             if (intstatus & bus->hostintmask) {
-                atomic_store(&bus->ipend, 1);
+                bus->ipend.store(1);
             }
         }
     }
@@ -2211,7 +2211,7 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
     brcmf_dbg(TRACE, "Enter\n");
 
     if (bus->watchdog_tsk) {
-        atomic_store(&bus->watchdog_should_stop, true);
+        bus->watchdog_should_stop.store(true);
         sync_completion_signal(&bus->watchdog_wait);
         brcmf_dbg(TEMP, "Closing and joining SDIO watchdog task");
         thread_result = pthread_join(bus->watchdog_tsk, NULL);
@@ -2290,13 +2290,13 @@ static zx_status_t brcmf_sdio_intr_rstatus(struct brcmf_sdio* bus) {
     }
 
     val &= bus->hostintmask;
-    atomic_store(&bus->fcstate, !!(val & I_HMB_FC_STATE));
+    bus->fcstate.store(!!(val & I_HMB_FC_STATE));
 
     /* Clear interrupts */
     if (val) {
         brcmf_sdiod_func1_wl(bus->sdiodev, addr, val, &ret);
         bus->sdcnt.f1regdata++;
-        atomic_fetch_or(&bus->intstatus, val);
+        bus->intstatus.fetch_or(val);
     }
 
     return ret;
@@ -2342,13 +2342,13 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     brcmf_sdio_bus_sleep(bus, false, true);
 
     /* Pending interrupt indicates new device status */
-    if (atomic_load(&bus->ipend) > 0) {
-        atomic_store(&bus->ipend, 0);
+    if (bus->ipend.load() > 0) {
+        bus->ipend.store(0);
         err = brcmf_sdio_intr_rstatus(bus);
     }
 
     /* Start with leftover status bits */
-    intstatus = atomic_exchange(&bus->intstatus, 0);
+    intstatus = bus->intstatus.exchange(0);
 
     /* Handle flow-control change: read new state in case our ack
      * crossed another change interrupt.  If change still set, assume
@@ -2361,7 +2361,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         newstatus = brcmf_sdiod_func1_rl(sdiod, intstat_addr, &err);
 
         bus->sdcnt.f1regdata += 2;
-        atomic_store(&bus->fcstate, !!(newstatus & (I_HMB_FC_STATE | I_HMB_FC_CHANGE)));
+        bus->fcstate.store(!!(newstatus & (I_HMB_FC_STATE | I_HMB_FC_CHANGE)));
         intstatus |= (newstatus & bus->hostintmask);
     }
 
@@ -2410,22 +2410,22 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 
     /* Keep still-pending events for next scheduling */
     if (intstatus) {
-        atomic_fetch_or(&bus->intstatus, intstatus);
+        bus->intstatus.fetch_or(intstatus);
     }
 
-    if (atomic_load(&bus->ctrl_frame_stat) && (bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
+    if (bus->ctrl_frame_stat.load() && (bus->clkstate == CLK_AVAIL) && data_ok(bus)) {
         sdio_claim_host(bus->sdiodev->func1);
-        if (atomic_load(&bus->ctrl_frame_stat)) {
+        if (bus->ctrl_frame_stat.load()) {
             err = brcmf_sdio_tx_ctrlframe(bus, bus->ctrl_frame_buf, bus->ctrl_frame_len);
             bus->ctrl_frame_err = err;
-            atomic_thread_fence(memory_order_seq_cst);
-            atomic_store(&bus->ctrl_frame_stat, false);
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            bus->ctrl_frame_stat.store(false);
         }
         sdio_release_host(bus->sdiodev->func1);
         brcmf_sdio_wait_event_wakeup(bus);
     }
     /* Send queued frames (limit 1 if rx may still be pending) */
-    if ((bus->clkstate == CLK_AVAIL) && !atomic_load(&bus->fcstate) &&
+    if ((bus->clkstate == CLK_AVAIL) && !bus->fcstate.load() &&
             brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) && txlimit && data_ok(bus)) {
         framecnt = bus->rxpending ? min(txlimit, bus->txminmax) : txlimit;
         brcmf_sdio_sendfromq(bus, framecnt);
@@ -2433,21 +2433,21 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 
     if ((bus->sdiodev->state != BRCMF_SDIOD_DATA) || (err != ZX_OK)) {
         brcmf_err("failed backplane access over SDIO, halting operation\n");
-        atomic_store(&bus->intstatus, 0);
-        if (atomic_load(&bus->ctrl_frame_stat)) {
+        bus->intstatus.store(0);
+        if (bus->ctrl_frame_stat.load()) {
             sdio_claim_host(bus->sdiodev->func1);
-            if (atomic_load(&bus->ctrl_frame_stat)) {
+            if (bus->ctrl_frame_stat.load()) {
                 bus->ctrl_frame_err = ZX_ERR_IO_REFUSED;
-                atomic_thread_fence(memory_order_seq_cst);
-                atomic_store(&bus->ctrl_frame_stat, false);
+                std::atomic_thread_fence(std::memory_order_seq_cst);
+                bus->ctrl_frame_stat.store(false);
                 brcmf_sdio_wait_event_wakeup(bus);
             }
             sdio_release_host(bus->sdiodev->func1);
         }
-    } else if (atomic_load(&bus->intstatus) || atomic_load(&bus->ipend) > 0 ||
-               (!atomic_load(&bus->fcstate) && brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) &&
+    } else if (bus->intstatus.load() || bus->ipend.load() > 0 ||
+               (!bus->fcstate.load() && brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) &&
                 data_ok(bus))) {
-        atomic_store(&bus->dpc_triggered, true);
+        bus->dpc_triggered.store(true);
     }
 }
 
@@ -2661,23 +2661,23 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     sync_completion_reset(&bus->ctrl_wait);
     bus->ctrl_frame_buf = msg;
     bus->ctrl_frame_len = msglen;
-    atomic_thread_fence(memory_order_seq_cst);
-    atomic_store(&bus->ctrl_frame_stat, true);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    bus->ctrl_frame_stat.store(true);
     brcmf_sdio_trigger_dpc(bus);
     sync_completion_wait(&bus->ctrl_wait, ZX_MSEC(CTL_DONE_TIMEOUT_MSEC));
     ret = ZX_OK;
-    if (atomic_load(&bus->ctrl_frame_stat)) {
+    if (bus->ctrl_frame_stat.load()) {
         sdio_claim_host(bus->sdiodev->func1);
-        if (atomic_load(&bus->ctrl_frame_stat)) {
+        if (bus->ctrl_frame_stat.load()) {
             brcmf_dbg(SDIO, "ctrl_frame timeout\n");
-            atomic_store(&bus->ctrl_frame_stat, false);
+            bus->ctrl_frame_stat.store(false);
             ret = ZX_ERR_SHOULD_WAIT;
         }
         sdio_release_host(bus->sdiodev->func1);
     }
     if (ret == ZX_OK) {
         brcmf_dbg(SDIO, "ctrl_frame complete, err=%d\n", bus->ctrl_frame_err);
-        atomic_thread_fence(memory_order_seq_cst);
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         ret = bus->ctrl_frame_err;
     }
 
@@ -3251,8 +3251,8 @@ done:
 }
 
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
-    if (!atomic_load(&bus->dpc_triggered)) {
-        atomic_store(&bus->dpc_triggered, true);
+    if (!bus->dpc_triggered.load()) {
+        bus->dpc_triggered.store(true);
         workqueue_schedule(bus->brcmf_wq, &bus->datawork);
     }
 }
@@ -3276,7 +3276,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
         brcmf_err("isr w/o interrupt configured!\n");
     }
 
-    atomic_store(&bus->dpc_triggered, true);
+    bus->dpc_triggered.store(true);
     workqueue_schedule(bus->brcmf_wq, &bus->datawork);
 }
 
@@ -3286,7 +3286,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
     brcmf_dbg(TIMER, "Enter\n");
     uint32_t intstatus;
 
-    intstatus = atomic_load(&bus->intstatus);
+    intstatus = bus->intstatus.load();
     if (intstatus == 0) {
         sdio_claim_host(bus->sdiodev->func1);
         if (brcmf_sdio_intr_rstatus(bus)) {
@@ -3294,9 +3294,9 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
         }
         sdio_release_host(bus->sdiodev->func1);
     }
-    intstatus = atomic_load(&bus->intstatus);
+    intstatus = bus->intstatus.load();
     if (intstatus != 0) {
-        atomic_store(&bus->dpc_triggered, true);
+        bus->dpc_triggered.store(true);
         brcmf_sdio_event_handler(bus);
     }
 
@@ -3309,7 +3309,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 
         /* Check device if no interrupts */
         if (!bus->intr || (bus->sdcnt.intrcount == bus->sdcnt.lastintrs)) {
-            if (!atomic_load(&bus->dpc_triggered)) {
+            if (!bus->dpc_triggered.load()) {
                 uint8_t devpend;
 
                 sdio_claim_host(bus->sdiodev->func1);
@@ -3323,9 +3323,9 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
                      schedule the DPC. */
             if (intstatus) {
                 bus->sdcnt.pollcnt++;
-                atomic_store(&bus->ipend, 1);
+                bus->ipend.store(1);
 
-                atomic_store(&bus->dpc_triggered, true);
+                bus->dpc_triggered.store(true);
                 workqueue_schedule(bus->brcmf_wq, &bus->datawork);
             }
         }
@@ -3353,8 +3353,8 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 // TODO(cphoenix): Turn "idle" back on once things are working, and see if anything breaks.
 #ifdef TEMP_DISABLE_DO_IDLE
     /* On idle timeout clear activity flag and/or turn off clock */
-    if (!atomic_load(&bus->dpc_triggered)) {
-        atomic_thread_fence(memory_order_seq_cst);
+    if (!bus->dpc_triggered.load()) {
+      std::atomic_thread_fence(std::memory_order_seq_cst);
         if ((!bus->dpc_running) && (bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
             bus->idlecount++;
             if (bus->idlecount > bus->idletime) {
@@ -3383,9 +3383,9 @@ void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
 
     mtx_lock(&lock);
     bus->dpc_running = true;
-    atomic_thread_fence(memory_order_seq_cst);
-    while (atomic_load(&bus->dpc_triggered)) {
-        atomic_store(&bus->dpc_triggered, false);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    while (bus->dpc_triggered.load()) {
+        bus->dpc_triggered.store(false);
         brcmf_sdio_dpc(bus);
         bus->idlecount = 0;
     }
@@ -3414,8 +3414,8 @@ int brcmf_sdio_oob_irqhandler(void* cookie) {
         if (brcmf_sdio_intr_rstatus(sdiodev->bus)) {
             brcmf_err("failed backplane access\n");
         }
-        intstatus = atomic_load(&sdiodev->bus->intstatus);
-        atomic_store(&sdiodev->bus->dpc_triggered, true);
+        intstatus = sdiodev->bus->intstatus.load();
+        sdiodev->bus->dpc_triggered.store(true);
         brcmf_sdio_event_handler(sdiodev->bus);
         sdio_release_host(sdiodev->func1);
         if (intstatus == 0) {
@@ -3773,7 +3773,7 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
     /* Run until signal received */
     brcmf_sdiod_freezer_count(bus->sdiodev);
     while (1) {
-        if (atomic_load(&bus->watchdog_should_stop)) {
+        if (bus->watchdog_should_stop.load()) {
             break;
         }
         // TODO(NET-744): Put back the freezer-related calls once 744 is resolved.
@@ -3788,7 +3788,7 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
 
         //brcmf_sdiod_freezer_count(bus->sdiodev);
-        if (atomic_load(&bus->wd_active)) {
+        if (bus->wd_active.load()) {
             brcmf_sdiod_try_freeze(bus->sdiodev);
             brcmf_sdio_bus_watchdog(bus);
         }
@@ -3812,7 +3812,7 @@ static void brcmf_sdio_watchdog(void* data) {
         // doesn't wait on this completion signal - but it will once NET-1495 is resolved.
         sync_completion_signal(&bus->watchdog_wait);
         /* Reschedule the watchdog */
-        if (atomic_load(&bus->wd_active)) {
+        if (bus->wd_active.load()) {
             brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
         }
     }
@@ -4045,14 +4045,14 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog, bus);
     /* Initialize watchdog thread */
     bus->watchdog_wait = {};
-    atomic_store(&bus->watchdog_should_stop, false);
+    bus->watchdog_should_stop.store(false);
     thread_result = pthread_create(&bus->watchdog_tsk, NULL, brcmf_sdio_watchdog_thread, bus);
     if (thread_result != 0) {
         brcmf_err("brcmf_watchdog thread failed to start: error %d\n", thread_result);
         bus->watchdog_tsk = 0;
     }
     /* Initialize DPC thread */
-    atomic_store(&bus->dpc_triggered, false);
+    bus->dpc_triggered.store(false);
     bus->dpc_running = false;
 
     /* Assign bus interface call back */
@@ -4176,9 +4176,9 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
     /* Totally stop the timer */
-    if (!active && atomic_load(&bus->wd_active)) {
+    if (!active && bus->wd_active.load()) {
         brcmf_timer_stop(&bus->timer);
-        atomic_store(&bus->wd_active, false);
+        bus->wd_active.store(false);
         return;
     }
 
@@ -4188,7 +4188,7 @@ void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
     }
 
     if (active) {
-        atomic_store(&bus->wd_active, true);
+        bus->wd_active.store(true);
         brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
     }
 }

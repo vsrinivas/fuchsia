@@ -16,8 +16,6 @@
 
 #include "device.h"
 
-#include <stdatomic.h>
-
 #include "debug.h"
 
 pthread_mutex_t irq_callback_lock;
@@ -98,29 +96,29 @@ void brcmf_enable_tx(struct net_device* dev) {
 // This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(WLAN-730) for
 // efficiency.
 
-bool brcmf_test_and_set_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+bool brcmf_test_and_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
     size_t index = bit_number >> 6;
     uint64_t bit = 1 << (bit_number & 0x3f);
-    return !!(atomic_fetch_or(&addr[index], bit) & bit);
+    return !!(addr[index].fetch_or(bit) & bit);
 }
 
-bool brcmf_test_and_clear_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+bool brcmf_test_and_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
     uint32_t index = bit_number >> 6;
     uint64_t bit = 1 << (bit_number & 0x3f);
-    return !!(atomic_fetch_and(&addr[index], ~bit) & bit);
+    return !!(addr[index].fetch_and(~bit) & bit);
 }
 
-bool brcmf_test_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+bool brcmf_test_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
     uint32_t index = bit_number >> 6;
     uint64_t bit = 1 << (bit_number & 0x3f);
-    return !!(atomic_load(&addr[index]) & bit);
+    return !!(addr[index].load() & bit);
 }
 
-void brcmf_clear_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+void brcmf_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
     (void)brcmf_test_and_clear_bit_in_array(bit_number, addr);
 }
 
-void brcmf_set_bit_in_array(size_t bit_number, atomic_ulong* addr) {
+void brcmf_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr) {
     (void)brcmf_test_and_set_bit_in_array(bit_number, addr);
 }
 
