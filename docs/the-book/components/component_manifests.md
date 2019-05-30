@@ -59,7 +59,8 @@ terminology](#routing-terminology)).
 ### Capability routing
 
 Component manifests provide a syntax for routing capabilities between
-components.
+components. For a detailed walkthrough about what happens during capability
+routing, see [_Life of a service open_](life_of_a_service_open.md)
 
 #### Capability types
 
