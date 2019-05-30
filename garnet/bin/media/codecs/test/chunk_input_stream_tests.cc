@@ -232,7 +232,6 @@ TEST(ChunkInputStream, TimestampsExtrapolate) {
   constexpr size_t kChunkSize = 5;
   constexpr size_t kPacketLen = 4;
   auto our_extrapolator = TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1));
-  auto stream_extrapolator = our_extrapolator;
   auto packets = Packets(2);
   auto buffers = Buffers({kPacketLen, kPacketLen});
 
@@ -281,8 +280,9 @@ TEST(ChunkInputStream, TimestampsExtrapolate) {
         }
       };
 
-  auto under_test = ChunkInputStream(kChunkSize, std::move(stream_extrapolator),
-                                     input_block_processor);
+  auto under_test =
+      ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
+                       input_block_processor);
 
   // We send a short packet in that isn't a full input block to bring our
   // stream out of alignment. This one doesn't have a timestamp.

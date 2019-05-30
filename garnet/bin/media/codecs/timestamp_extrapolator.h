@@ -25,6 +25,10 @@ class TimestampExtrapolator {
   //    `48000 * number_of_channels * bytes_per_sample`
   TimestampExtrapolator(uint64_t timebase, uint64_t bytes_per_second);
 
+  TimestampExtrapolator(TimestampExtrapolator&&) = default;
+  TimestampExtrapolator(TimestampExtrapolator&) = delete;
+  TimestampExtrapolator& operator=(TimestampExtrapolator&&) = delete;
+
   // Creates a TimestampExtrapolator that can only carry over timestamps it has
   // been informed of.
   TimestampExtrapolator();
