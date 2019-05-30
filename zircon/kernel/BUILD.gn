@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/config/product_parameters.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment.gni")
@@ -96,6 +97,10 @@ if (current_toolchain == default_toolchain) {
 
     if (!enable_user_pci) {
       defines += [ "WITH_KERNEL_PCIE" ]
+    }
+
+    if (enable_kernel_debugging_features) {
+      defines += [ "ENABLE_KERNEL_DEBUGGING_FEATURES" ]
     }
 
     cflags = [ "-fpie" ]
