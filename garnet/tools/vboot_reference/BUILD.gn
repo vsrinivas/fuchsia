@@ -233,6 +233,7 @@ config("internal_config") {
       "_GNU_SOURCE",
       "NDEBUG",
     ]
+    libs = [ "pthread" ]
   }
 }
 

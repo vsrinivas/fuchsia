@@ -18,6 +18,9 @@ library("unittest") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
   ]
+  if (current_os == "linux") {
+    libs = [ "pthread" ]
+  }
   if (is_fuchsia) {
     sources += [
       "crash-handler.cpp",
