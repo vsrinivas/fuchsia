@@ -25,6 +25,8 @@ sdk_source_set("test_harness_fixture") {
   public_configs = [ "//sdk/config" ]
 
   sources = [
+    "fake_agent.cc",
+    "fake_agent.h",
     "fake_component.cc",
     "fake_component.h",
     "fake_module.cc",
@@ -34,6 +36,7 @@ sdk_source_set("test_harness_fixture") {
   ]
 
   deps = [
+    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
