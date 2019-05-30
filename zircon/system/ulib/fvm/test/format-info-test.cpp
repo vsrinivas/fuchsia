@@ -151,17 +151,5 @@ TEST(FvmInfoTest, FromPreallocatedSizeWithGaps) {
               format_info.GetMaxPartitionSize());
 }
 
-TEST(FvmInfoTest, FromPreallocatedSizeNthEntryOOB) {
-    // This test triggers the edge case when the metadata can address the nth slice.
-    FormatInfo format_info =
-        FormatInfo::FromPreallocatedSize(kInitialDiskSize, kMaxDiskSize, kFvmSlizeSize);
-
-    // The number of usable slices in the Disk is big enough that we limit the number of slices to
-    // those that fit in the metadata. This will match the metadata size, the last
-    // allocateable slice will be OOB, which is why the MaxAddressable slice will be before it.
-    EXPECT_EQ(format_info.GetMaxAllocatableSlices() - 1,
-              format_info.GetMaxAddressableSlices(kMaxDiskSize * 10));
-}
-
 } // namespace
 } // namespace fvm

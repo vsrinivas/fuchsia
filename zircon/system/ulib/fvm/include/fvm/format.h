@@ -343,13 +343,12 @@ public:
     size_t GetMaxAddressableSlices(uint64_t disk_size) const {
         size_t slice_count =
             std::min(GetMaxAllocatableSlices(), UsableSlicesCount(disk_size, slice_size_));
-        // Because the allocation table is 1-indexed and pslices are 0 indexed on disk,
+        // Because the allocation thable is 1-indexed and pslices are 0 indexed on disk,
         // if the number of slices fit perfectly in the metadata, the allocated buffer won't be big
         // enough to address them all. This only happens when the rounded up block value happens to
         // match the disk size.
         // TODO(gevalentino): Fix underlying cause and remove workaround.
-        if ((AllocationTable::kOffset + slice_count * sizeof(SliceEntry)) ==
-            metadata_allocated_size()) {
+        if ((GetSliceStart(1) + slice_count * slice_size()) == metadata_allocated_size()) {
             slice_count--;
         }
         return slice_count;

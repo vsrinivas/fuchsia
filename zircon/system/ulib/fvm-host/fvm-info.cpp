@@ -50,9 +50,6 @@ zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
     xprintf("fvm_init: Slices start at %zu, there are %zu of them\n",
             fvm::SlicesStart(disk_size, slice_size), fvm::UsableSlicesCount(disk_size, slice_size));
 
-    // Copy the valid primary metadata to the secondary metadata.
-    memcpy(metadata_.get() + metadata_size_, metadata_.get(), metadata_size_);
-
     return ZX_OK;
 }
 
@@ -153,7 +150,6 @@ zx_status_t FvmInfo::Write(fvm::host::FileWrapper* file, size_t disk_offset, siz
     }
 
     fvm_update_hash(metadata_.get(), metadata_size_);
-    memcpy(metadata_.get() + metadata_size_, metadata_.get(), metadata_size_);
 
     if (Validate() != ZX_OK) {
         fprintf(stderr, "Metadata is invalid");
@@ -194,8 +190,7 @@ zx_status_t FvmInfo::Grow(size_t new_size) {
     fbl::unique_ptr<uint8_t[]> new_metadata(new uint8_t[new_size * 2]);
 
     memcpy(new_metadata.get(), metadata_.get(), metadata_size_);
-    memset(new_metadata.get() + metadata_size_, 0, new_size);
-    memcpy(new_metadata.get() + new_size, metadata_.get(), metadata_size_);
+    memset(new_metadata.get() + metadata_size_, 0, new_size - metadata_size_);
 
     metadata_.reset(new_metadata.release());
     metadata_size_ = new_size;
