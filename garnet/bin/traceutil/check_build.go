@@ -13,7 +13,7 @@ import (
 	"github.com/golang/glog"
 )
 
-const baseTargetListFile = "monolith_packages.list"
+const baseTargetListFile = "base_packages.list"
 const traceManagerPackageName = "trace_manager"
 
 // PT-143: If tracing isn't in the base configuration then a lot of services
