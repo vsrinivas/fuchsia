@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
 
-#include "lib/component/cpp/environment_services_helper.h"
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "src/media/audio/lib/test/audio_test_base.h"
 
 namespace media::audio::test {
 
@@ -20,38 +19,44 @@ namespace media::audio::test {
 //
 // In short, further testing of the sync interfaces (over and above any testing
 // done on the async interfaces) should not be needed.
-class AudioRendererSyncTest : public gtest::RealLoopFixture {
+class AudioRendererSyncTest : public AudioTestBase {
  protected:
   // "Regional" per-test-suite set-up. Called before first test in this suite.
   static void SetUpTestSuite() {
-    std::shared_ptr<component::Services> environment_services =
-        component::GetEnvironmentServices();
-    environment_services->ConnectToService(audio_sync_.NewRequest());
+    AudioTestBase::SetUpTestSuite();
+
+    startup_context_->svc()->Connect(audio_core_sync_.NewRequest());
   }
 
-  // Per-test-suite tear-down. Called after last test in this suite.
-  static void TearDownTestSuite() { audio_sync_.Unbind(); }
+  // Per-test-suite tear-down. Called after the last test in this suite.
+  static void TearDownTestSuite() { audio_core_sync_.Unbind(); }
 
-  void SetUp() override {
-    gtest::RealLoopFixture::SetUp();
+  void SetUp() override;
+  void TearDown() override;
 
-    ASSERT_EQ(ZX_OK, audio_sync_->CreateAudioRenderer(
-                         audio_renderer_sync_.NewRequest()));
-  }
-
-  void TearDown() override {
-    audio_renderer_sync_.Unbind();
-    gtest::RealLoopFixture::TearDown();
-  }
-
+  //
   // Declare singleton resource shared by all test cases.
-  static fuchsia::media::AudioSyncPtr audio_sync_;
+  static fuchsia::media::AudioCoreSyncPtr audio_core_sync_;
 
   // One of these is created anew, for each test case.
   fuchsia::media::AudioRendererSyncPtr audio_renderer_sync_;
 };
 
-fuchsia::media::AudioSyncPtr AudioRendererSyncTest::audio_sync_ = nullptr;
+fuchsia::media::AudioCoreSyncPtr AudioRendererSyncTest::audio_core_sync_ =
+    nullptr;
+
+void AudioRendererSyncTest::SetUp() {
+  AudioTestBase::SetUp();
+
+  ASSERT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(
+                       audio_renderer_sync_.NewRequest()));
+}
+
+void AudioRendererSyncTest::TearDown() {
+  audio_renderer_sync_.Unbind();
+
+  AudioTestBase::TearDown();
+}
 
 //
 // AudioRendererSync validation
@@ -62,7 +67,7 @@ fuchsia::media::AudioSyncPtr AudioRendererSyncTest::audio_sync_ = nullptr;
 TEST_F(AudioRendererSyncTest, GetMinLeadTime) {
   int64_t min_lead_time = -1;
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
-      << kConnectionErr;
+      << kDisconnectErr;
   EXPECT_GE(min_lead_time, 0) << "No MinLeadTime update received";
 }
 
@@ -83,7 +88,7 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
 
   int64_t min_lead_time = -1;
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
-      << kConnectionErr;
+      << kDisconnectErr;
   EXPECT_GE(min_lead_time, 0);
 
   fuchsia::media::AudioStreamType format2;
@@ -100,7 +105,8 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
 // Before setting format, PlayNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
 TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormatCausesDisconnect) {
-  int64_t min_lead_time = -1;
+  int64_t min_lead_time;
+
   // First, make sure we still have a renderer at all.
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
 
@@ -110,6 +116,7 @@ TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormatCausesDisconnect) {
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED,
             audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
+
   // Although the connection has disconnected, the proxy should still exist.
   EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }
@@ -117,7 +124,8 @@ TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormatCausesDisconnect) {
 // Before setting format, PauseNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
 TEST_F(AudioRendererSyncTest, PauseNoReplyWithoutFormatCausesDisconnect) {
-  int64_t min_lead_time = -1;
+  int64_t min_lead_time;
+
   // First, make sure we still have a renderer at all.
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
 
@@ -125,6 +133,7 @@ TEST_F(AudioRendererSyncTest, PauseNoReplyWithoutFormatCausesDisconnect) {
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED,
             audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
+
   // Although the connection has disconnected, the proxy should still exist.
   EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }

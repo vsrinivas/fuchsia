@@ -6,25 +6,19 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_GAIN_CONTROL_TEST_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 
-#include "lib/component/cpp/environment_services_helper.h"
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "src/media/audio/lib/test/audio_core_test_base.h"
 
 namespace media::audio::test {
 
 // GainControlTestBase
 //
 // This set of tests verifies asynchronous usage of GainControl.
-class GainControlTestBase : public gtest::RealLoopFixture {
+class GainControlTestBase : public AudioCoreTestBase {
  protected:
-  // Always augmented by child implementations that set up the API interface.
-  void SetUp() override;
-  virtual bool ApiIsNull() = 0;
-  bool AudioIsBound() { return audio_.is_bound(); }
-
   void TearDown() final;
 
+  void SetNegativeExpectations() override;
   void SetUpRenderer();
   void SetUpCapturer();
   void SetUpRenderer2();
@@ -37,20 +31,19 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   void SetUpGainControl2OnCapturer();
   void SetUpGainControl2OnRenderer2();
   void SetUpGainControl2OnCapturer2();
-  virtual void SetNegativeExpectations();
+
+  // Always augmented by child implementations that set up the API interface.
+  virtual bool ApiIsNull() = 0;
 
   void SetGain(float gain_db);
   void SetMute(bool mute);
 
   // Tests expect a gain callback. Absorb this; perform related error checking.
-  virtual bool ReceiveGainCallback(float gain_db, bool mute);
-
-  // Tests expect to receive neither gain callback nor error; assert this.
-  virtual bool ReceiveNoGainCallback();
+  virtual void ExpectGainCallback(float gain_db, bool mute);
 
   // Tests expect the API binding to disconnect, then the GainControl binding as
   // well. After the first disconnect, assert that GainControl is still bound.
-  virtual bool ReceiveDisconnectCallback();
+  void ExpectDisconnect() override;
 
   // Core test cases that are validated across various scenarios
   void TestSetGain();
@@ -66,31 +59,23 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
 
-  bool error_occurred_ = false;
-  bool received_gain_callback_ = false;
   float received_gain_db_ = kTooLowGainDb;
   bool received_mute_ = false;
 
   // Member variables for tests that use multiple interface bindings
+  bool error_occurred_2_ = false;
   fuchsia::media::AudioRendererPtr audio_renderer_2_;
   fuchsia::media::AudioCapturerPtr audio_capturer_2_;
   fuchsia::media::audio::GainControlPtr gain_control_2_;
 
-  bool error_occurred_2_ = false;
-  bool received_gain_callback_2_ = false;
   float received_gain_db_2_ = kTooLowGainDb;
   bool received_mute_2_ = false;
 
   // Member variables to manage our expectations
-  bool expect_null_api_ = false;
-  bool expect_null_gain_control_ = false;
-  bool expect_null_gain_control_2_ = true;
-  bool expect_error_ = false;
-  bool expect_error_2_ = false;
-
- private:
-  std::shared_ptr<component::Services> environment_services_;
-  fuchsia::media::AudioPtr audio_;
+  bool null_api_expected_ = false;
+  bool null_gain_control_expected_ = false;
+  bool null_gain_control_expected_2_ = true;
+  bool error_expected_2_ = false;
 };
 
 // RenderGainControlTest
@@ -117,11 +102,10 @@ class SiblingGainControlsTest : public GainControlTestBase {
   void SetNegativeExpectations() override;
 
   // Absorb a gain callback from the sibling GainControl as well.
-  bool ReceiveGainCallback(float gain_db, bool mute) final;
-  bool ReceiveNoGainCallback() final;
+  void ExpectGainCallback(float gain_db, bool mute) final;
 
   // Absorb the second GainControl's disconnect, once the first disconnects.
-  bool ReceiveDisconnectCallback() final;
+  void ExpectDisconnect() final;
 };
 
 // RendererTwoGainControlsTest
@@ -148,12 +132,11 @@ class CapturerTwoGainControlsTest : public SiblingGainControlsTest {
 class IndependentGainControlsTest : public GainControlTestBase {
  protected:
   // Expect nothing from the independent gain control.
-  bool ReceiveGainCallback(float gain_db, bool mute) final;
-  bool ReceiveNoGainCallback() final;
+  void ExpectGainCallback(float gain_db, bool mute) final;
 
   // Expect NO disconnect from our independent gain control -- after the first
   // gain control disconnect has already occurred.
-  bool ReceiveDisconnectCallback() final;
+  void ExpectDisconnect() final;
 };
 
 // TwoRenderersGainControlsTest

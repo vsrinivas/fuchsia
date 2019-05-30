@@ -4,98 +4,65 @@
 
 #include "src/media/audio/audio_core/test/gain_control_test.h"
 
-#include <lib/gtest/real_loop_fixture.h>
-
 #include <cmath>
 
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "gtest/gtest.h"
+#include "src/media/audio/lib/test/audio_test_base.h"
 
 namespace media::audio::test {
 
 // GainControlTestBase
 //
-void GainControlTestBase::SetUp() {
-  gtest::RealLoopFixture::SetUp();
-
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_ = true;
-    QuitLoop();
-  };
-
-  environment_services_ = component::GetEnvironmentServices();
-  environment_services_->ConnectToService(audio_.NewRequest());
-  audio_.set_error_handler(err_handler);
-}
-
 void GainControlTestBase::TearDown() {
-  // Base Audio interface should still survive even when the others are reset.
-  ASSERT_TRUE(AudioIsBound());
+  EXPECT_EQ(!gain_control_.is_bound(), null_gain_control_expected_);
+  gain_control_.Unbind();
+
+  EXPECT_EQ(error_occurred_2_, error_expected_2_);
+  EXPECT_EQ(!gain_control_2_.is_bound(), null_gain_control_expected_2_);
+  gain_control_2_.Unbind();
 
   // These expect_ vars indicate negative cases where we expect failure.
-  EXPECT_EQ(ApiIsNull(), expect_null_api_);
+  EXPECT_EQ(ApiIsNull(), null_api_expected_);
+  audio_renderer_.Unbind();
+  audio_capturer_.Unbind();
+  audio_renderer_2_.Unbind();
+  audio_capturer_2_.Unbind();
 
-  EXPECT_EQ(error_occurred_, expect_error_);
-  EXPECT_EQ(!gain_control_.is_bound(), expect_null_gain_control_);
-
-  EXPECT_EQ(error_occurred_2_, expect_error_2_);
-  EXPECT_EQ(!gain_control_2_.is_bound(), expect_null_gain_control_2_);
+  AudioCoreTestBase::TearDown();
 }
 
 void GainControlTestBase::SetUpRenderer() {
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_ = true;
-    QuitLoop();
-  };
-
-  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-  audio_renderer_.set_error_handler(err_handler);
+  audio_core_->CreateAudioRenderer(audio_renderer_.NewRequest());
+  audio_renderer_.set_error_handler(ErrorHandler());
 }
 
 void GainControlTestBase::SetUpCapturer() {
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_ = true;
-    QuitLoop();
-  };
-
-  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
-  audio_capturer_.set_error_handler(err_handler);
+  audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
+  audio_capturer_.set_error_handler(ErrorHandler());
 }
 
 void GainControlTestBase::SetUpRenderer2() {
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_2_ = true;
-    QuitLoop();
-  };
-
-  audio_->CreateAudioRenderer(audio_renderer_2_.NewRequest());
-  audio_renderer_2_.set_error_handler(err_handler);
+  audio_core_->CreateAudioRenderer(audio_renderer_2_.NewRequest());
+  audio_renderer_2_.set_error_handler(
+      ErrorHandler([this](zx_status_t) { error_occurred_2_ = true; }));
 }
 
 void GainControlTestBase::SetUpCapturer2() {
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_2_ = true;
-    QuitLoop();
-  };
-
-  audio_->CreateAudioCapturer(audio_capturer_2_.NewRequest(), false);
-  audio_capturer_2_.set_error_handler(err_handler);
+  audio_core_->CreateAudioCapturer(false, audio_capturer_2_.NewRequest());
+  audio_capturer_2_.set_error_handler(
+      ErrorHandler([this](zx_status_t) { error_occurred_2_ = true; }));
 }
 
 void GainControlTestBase::SetUpGainControl() {
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_ = true;
-    QuitLoop();
-  };
-  gain_control_.set_error_handler(err_handler);
+  gain_control_.set_error_handler(ErrorHandler());
 
-  gain_control_.events().OnGainMuteChanged = [this](float gain_db, bool muted) {
-    received_gain_callback_ = true;
-    received_gain_db_ = gain_db;
-    received_mute_ = muted;
-    QuitLoop();
-  };
+  gain_control_.events().OnGainMuteChanged =
+      CompletionCallback([this](float gain_db, bool muted) {
+        received_gain_db_ = gain_db;
+        received_mute_ = muted;
+      });
 
-  expect_null_gain_control_ = false;
+  null_gain_control_expected_ = false;
 }
 
 void GainControlTestBase::SetUpGainControlOnRenderer() {
@@ -109,22 +76,16 @@ void GainControlTestBase::SetUpGainControlOnCapturer() {
 }
 
 void GainControlTestBase::SetUpGainControl2() {
-  auto err_handler = [this](zx_status_t error) {
-    error_occurred_2_ = true;
-    QuitLoop();
-  };
-  gain_control_2_.set_error_handler(err_handler);
+  gain_control_2_.set_error_handler(
+      ErrorHandler([this](zx_status_t) { error_occurred_2_ = true; }));
 
-  gain_control_2_.events().OnGainMuteChanged = [this](float gain_db,
-                                                      bool muted) {
-    received_gain_callback_2_ = true;
+  gain_control_2_.events().OnGainMuteChanged =
+      CompletionCallback([this](float gain_db, bool muted) {
+        received_gain_db_2_ = gain_db;
+        received_mute_2_ = muted;
+      });
 
-    received_gain_db_2_ = gain_db;
-    received_mute_2_ = muted;
-    QuitLoop();
-  };
-
-  expect_null_gain_control_2_ = false;
+  null_gain_control_expected_2_ = false;
 }
 
 void GainControlTestBase::SetUpGainControl2OnRenderer() {
@@ -149,9 +110,10 @@ void GainControlTestBase::SetUpGainControl2OnCapturer2() {
 
 // For tests that cause a GainControl to disconnect, set these expectations.
 void GainControlTestBase::SetNegativeExpectations() {
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
+  AudioCoreTestBase::SetNegativeExpectations();
+
+  null_api_expected_ = true;
+  null_gain_control_expected_ = true;
 }
 
 // Set Gain, asserting that state is already reset so error can be detected.
@@ -162,120 +124,89 @@ void GainControlTestBase::SetGain(float gain_db) {
 // Set Mute, asserting that state is already reset so error can be detected.
 void GainControlTestBase::SetMute(bool mute) { gain_control_->SetMute(mute); }
 
-// Tests expect a gain callback. Absorb this; perform related error checking.
-bool GainControlTestBase::ReceiveGainCallback(float gain_db, bool mute) {
-  received_gain_callback_ = false;
+// Expect and absorb a single gain callback; perform related error checking.
+void GainControlTestBase::ExpectGainCallback(float gain_db, bool mute) {
+  received_gain_db_ = kTooLowGainDb;
 
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this, gain_db, mute]() {
-        return (error_occurred_ ||
-                ((received_gain_db_ == gain_db) && (received_mute_ == mute)));
-      },
-      kDurationResponseExpected, kDurationGranularity);
-
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
-  EXPECT_TRUE(gain_control_.is_bound());
-
-  EXPECT_FALSE(timed_out) << kTimeoutErr;
-
-  EXPECT_TRUE(received_gain_callback_);
+  ExpectCondition([this, &gain_db, &mute]() {
+    return (received_gain_db_ == gain_db) && (received_mute_ == mute);
+  });
   EXPECT_EQ(received_gain_db_, gain_db);
   EXPECT_EQ(received_mute_, mute);
-
-  return (!error_occurred_ && !timed_out);
-}
-
-// Tests expect to receive neither gain callback nor error; assert this.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool GainControlTestBase::ReceiveNoGainCallback() {
-  received_gain_callback_ = false;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() { return (error_occurred_ || received_gain_callback_); },
-      kDurationTimeoutExpected);
-
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
-  EXPECT_TRUE(gain_control_.is_bound());
-
-  EXPECT_TRUE(timed_out) << kNoTimeoutErr;
-
-  EXPECT_FALSE(received_gain_callback_);
-
-  return (!error_occurred_ && !received_gain_callback_);
+  EXPECT_FALSE(error_occurred_);
 }
 
 // Tests expect to receive a disconnect callback for API binding, then for
 // GainControl binding. Treat any regular gain callback received as error.
-bool GainControlTestBase::ReceiveDisconnectCallback() {
-  received_gain_callback_ = false;
+void GainControlTestBase::ExpectDisconnect() {
+  // Need to wait for both renderer/capturer AND gain_control to disconnect.
+  AudioCoreTestBase::ExpectDisconnect();
 
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() {
-        return (ApiIsNull() && !gain_control_.is_bound()) ||
-               received_gain_callback_;
-      },
-      kDurationResponseExpected, kDurationGranularity);
+  if (gain_control_.is_bound() || !ApiIsNull()) {
+    // Reset our error detector before listening again.
+    error_occurred_ = false;
+    AudioCoreTestBase::ExpectDisconnect();
+  }
 
-  // If GainControl causes disconnect, renderer/capturer disconnects first.
-  EXPECT_TRUE(error_occurred_);
   EXPECT_TRUE(ApiIsNull());
   EXPECT_FALSE(gain_control_.is_bound());
-
-  EXPECT_FALSE(timed_out);
-
-  EXPECT_FALSE(received_gain_callback_);
-
-  return (!timed_out && !received_gain_callback_);
 }
 
 // Test implementations, called by various objects across the class hierarchy
 void GainControlTestBase::TestSetGain() {
   constexpr float expect_gain_db = 20.0f;
+
   SetGain(expect_gain_db);
-  EXPECT_TRUE(ReceiveGainCallback(expect_gain_db, false));
+  ExpectGainCallback(expect_gain_db, false);
 
   SetGain(kUnityGainDb);
-  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, false));
+  ExpectGainCallback(kUnityGainDb, false);
 }
 
 void GainControlTestBase::TestSetMute() {
   bool expect_mute = true;
+
   SetMute(expect_mute);
-  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, expect_mute));
+  ExpectGainCallback(kUnityGainDb, expect_mute);
 
   expect_mute = false;
   SetMute(expect_mute);
-  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, expect_mute));
+  ExpectGainCallback(kUnityGainDb, expect_mute);
 }
 
 void GainControlTestBase::TestSetGainMute() {
   constexpr float expect_gain_db = -5.5f;
-  constexpr bool expect_mute = true;
 
   SetGain(expect_gain_db);
-  SetMute(expect_mute);
+  SetMute(true);
 
-  EXPECT_TRUE(ReceiveGainCallback(expect_gain_db, false));
-  EXPECT_TRUE(ReceiveGainCallback(expect_gain_db, expect_mute));
+  ExpectGainCallback(expect_gain_db, true);
 }
 
 void GainControlTestBase::TestDuplicateSetGain() {
   constexpr float expect_gain_db = 20.0f;
-  SetGain(expect_gain_db);
-  EXPECT_TRUE(ReceiveGainCallback(expect_gain_db, false));
 
   SetGain(expect_gain_db);
-  EXPECT_TRUE(ReceiveNoGainCallback());
+  ExpectGainCallback(expect_gain_db, false);
+
+  SetGain(expect_gain_db);
+  SetMute(true);
+  // Rather than waiting for "no gain callback", we set an (independent) mute
+  // value and expect only a single callback that includes the more recent mute.
+  ExpectGainCallback(expect_gain_db, true);
 }
 
 void GainControlTestBase::TestDuplicateSetMute() {
-  bool expect_mute = true;
-  SetMute(expect_mute);
-  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, expect_mute));
+  constexpr float expect_gain_db = -42.0f;
 
-  SetMute(expect_mute);
-  EXPECT_TRUE(ReceiveNoGainCallback());
+  SetMute(true);
+  ExpectGainCallback(kUnityGainDb, true);
+
+  SetMute(true);
+  SetGain(expect_gain_db);
+  // Rather than waiting for "no mute callback", we set an (independent) gain
+  // value and expect only a single callback that includes the more recent gain.
+  ExpectGainCallback(expect_gain_db, true);
 }
 
 // For negative expectations.
@@ -287,7 +218,7 @@ void GainControlTestBase::TestSetGainTooHigh() {
   constexpr float expect_gain_db = kTooHighGainDb;
   SetGain(expect_gain_db);
 
-  EXPECT_TRUE(ReceiveDisconnectCallback()) << "Bindings did not disconnect!";
+  ExpectDisconnect();
   EXPECT_FALSE(gain_control_.is_bound());
 }
 
@@ -298,7 +229,7 @@ void GainControlTestBase::TestSetGainTooLow() {
   constexpr float expect_gain_db = kTooLowGainDb;
   SetGain(expect_gain_db);
 
-  EXPECT_TRUE(ReceiveDisconnectCallback()) << "Bindings did not disconnect!";
+  ExpectDisconnect();
   EXPECT_FALSE(gain_control_.is_bound());
 }
 
@@ -310,7 +241,7 @@ void GainControlTestBase::TestSetGainNaN() {
   constexpr float expect_gain_db = NAN;
   SetGain(expect_gain_db);
 
-  EXPECT_TRUE(ReceiveDisconnectCallback()) << "Bindings did not disconnect!";
+  ExpectDisconnect();
   EXPECT_FALSE(gain_control_.is_bound());
 }
 
@@ -340,7 +271,8 @@ TEST_F(RenderGainControlTest, SetGainMute) { TestSetGainMute(); }
 
 // TODO(mpuryear): Validate GainChange notifications of gainramps.
 
-// N.B. DuplicateSetGain behavior is tested in RendererTwoGainControlsTest.
+TEST_F(RenderGainControlTest, DuplicateSetGain) { TestDuplicateSetGain(); }
+
 TEST_F(RenderGainControlTest, DuplicateSetMute) { TestDuplicateSetMute(); }
 
 TEST_F(RenderGainControlTest, SetGainTooHigh) { TestSetGainTooHigh(); }
@@ -386,97 +318,58 @@ TEST_F(CaptureGainControlTest, SetGainNaN) { TestSetGainNaN(); }
 void SiblingGainControlsTest::SetNegativeExpectations() {
   GainControlTestBase::SetNegativeExpectations();
 
-  expect_null_gain_control_2_ = true;
-  expect_error_2_ = true;
+  null_gain_control_expected_2_ = true;
+  error_expected_2_ = true;
 }
 
 // Tests expect a gain callback on both gain_controls, with the provided gain_db
 // and mute values -- and no errors.
-bool SiblingGainControlsTest::ReceiveGainCallback(float gain_db, bool mute) {
-  received_gain_callback_ = received_gain_callback_2_ = false;
-  received_gain_db_ = received_gain_db_2_ = kTooLowGainDb;
+void SiblingGainControlsTest::ExpectGainCallback(float gain_db, bool mute) {
+  received_gain_db_ = kTooLowGainDb;
+  received_gain_db_2_ = kTooLowGainDb;
 
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this, gain_db, mute]() {
-        return (error_occurred_ || error_occurred_2_ ||
-                ((received_gain_db_ == gain_db) && (received_mute_ == mute) &&
-                 (received_gain_db_2_ == gain_db) &&
-                 (received_mute_2_ == mute)));
-      },
-      kDurationResponseExpected, kDurationGranularity);
+  ExpectCondition([this, gain_db, mute]() {
+    return error_occurred_ ||
+           (received_gain_db_ == gain_db && received_gain_db_2_ == gain_db &&
+            received_mute_ == mute && received_mute_2_ == mute);
+  });
 
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_FALSE(error_occurred_2_);
+  EXPECT_FALSE(error_occurred_) << kDisconnectErr;
   EXPECT_FALSE(ApiIsNull());
   EXPECT_TRUE(gain_control_.is_bound());
   EXPECT_TRUE(gain_control_2_.is_bound());
 
-  EXPECT_FALSE(timed_out);
-
-  EXPECT_TRUE(received_gain_callback_);
-  EXPECT_TRUE(received_gain_callback_2_);
   EXPECT_EQ(received_gain_db_, gain_db);
   EXPECT_EQ(received_gain_db_2_, gain_db);
   EXPECT_EQ(received_mute_, mute);
   EXPECT_EQ(received_mute_2_, mute);
-
-  return (!timed_out && !error_occurred_ && !error_occurred_2_);
-}
-
-// Tests expect neither gain interface to receive gain callback nor error.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool SiblingGainControlsTest::ReceiveNoGainCallback() {
-  received_gain_callback_ = received_gain_callback_2_ = false;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() {
-        return (error_occurred_ || error_occurred_2_ ||
-                received_gain_callback_ || received_gain_callback_2_);
-      },
-      kDurationTimeoutExpected);
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_FALSE(error_occurred_2_);
-  EXPECT_FALSE(ApiIsNull());
-  EXPECT_TRUE(gain_control_.is_bound());
-  EXPECT_TRUE(gain_control_2_.is_bound());
-
-  EXPECT_TRUE(timed_out) << kNoTimeoutErr;
-
-  EXPECT_FALSE(received_gain_callback_);
-  EXPECT_FALSE(received_gain_callback_2_);
-
-  return (!error_occurred_ && !error_occurred_2_ && !received_gain_callback_ &&
-          !received_gain_callback_2_);
 }
 
 // Tests expect to receive a disconnect callback for the API binding, then
 // one for each of the two GainControl bindings. In our loop, we wait until all
 // three of these have occurred. Also, if any normal gain callback is received
 // during this time, it is unexpected and treated as an error.
-bool SiblingGainControlsTest::ReceiveDisconnectCallback() {
-  received_gain_callback_ = received_gain_callback_2_ = false;
+void SiblingGainControlsTest::ExpectDisconnect() {
+  SetNegativeExpectations();
+  received_gain_db_2_ = kTooLowGainDb;
 
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() {
-        return (ApiIsNull()) && (!gain_control_.is_bound()) &&
-               (!gain_control_2_.is_bound());
-      },
-      kDurationResponseExpected, kDurationGranularity);
+  // Wait Renderer/Capturer and BOTH GainControls to disconnect. Because
+  // multiple disconnect callbacks could arrive between our polling interval, we
+  // wait a maximum of three times, checking between them for completion.
+  AudioCoreTestBase::ExpectDisconnect();
+  if (!ApiIsNull() || gain_control_.is_bound() || gain_control_2_.is_bound()) {
+    // Reset our error detector before listening again.
+    error_occurred_ = false;
+    AudioCoreTestBase::ExpectDisconnect();
+  }
+  if (!ApiIsNull() || gain_control_.is_bound() || gain_control_2_.is_bound()) {
+    // Reset our error detector before listening again.
+    error_occurred_ = false;
+    AudioCoreTestBase::ExpectDisconnect();
+  }
 
-  EXPECT_TRUE(error_occurred_);
   EXPECT_TRUE(error_occurred_2_);
-  EXPECT_TRUE(ApiIsNull());
-  EXPECT_FALSE(gain_control_.is_bound());
-  EXPECT_FALSE(gain_control_2_.is_bound());
-
-  EXPECT_FALSE(timed_out);
-
-  EXPECT_FALSE(received_gain_callback_);
-  EXPECT_FALSE(received_gain_callback_2_);
-
-  return (!timed_out && !received_gain_callback_ && !received_gain_callback_2_);
+  EXPECT_EQ(received_gain_db_2_, kTooLowGainDb);
 }
 
 // RendererTwoGainControlsTest
@@ -545,94 +438,28 @@ TEST_F(CapturerTwoGainControlsTest, SetGainNaN) { TestSetGainNaN(); }
 //
 
 // Tests expect a gain callback and no error, and neither on the independent
-// API binding and gain_control (thus we wait for timeout below).
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool IndependentGainControlsTest::ReceiveGainCallback(float gain_db,
-                                                      bool mute) {
-  error_occurred_ = error_occurred_2_ = received_gain_callback_ =
-      received_gain_callback_2_ = false;
-  received_gain_db_ = kTooLowGainDb;
+// API binding and gain_control (thus we check for subsequent callback below).
+void IndependentGainControlsTest::ExpectGainCallback(float gain_db, bool mute) {
+  received_gain_db_2_ = kTooLowGainDb;
 
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() {
-        // If any of these four things happen, break out of the loop...but only
-        // the first one is success; the other three are error conditions.
-        return received_gain_callback_ || received_gain_callback_2_ ||
-               error_occurred_ || error_occurred_2_;
-      },
-      kDurationResponseExpected, kDurationGranularity);
+  GainControlTestBase::ExpectGainCallback(gain_db, mute);
 
   // Not only must we not have disconnected or received unexpected gain2
   // callback, also gain1 must have received the expected callback.
-  EXPECT_FALSE(timed_out);
-  EXPECT_FALSE(received_gain_callback_2_);
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_FALSE(error_occurred_2_);
-  bool no_error = !timed_out && !received_gain_callback_2_ &&
-                  !error_occurred_ && !error_occurred_2_;
+  EXPECT_EQ(received_gain_db_2_, kTooLowGainDb);
 
-  EXPECT_EQ(received_gain_db_, gain_db);
-  EXPECT_EQ(received_mute_, mute);
-  bool gain_correct =
-      (received_gain_db_ == gain_db) && (received_mute_ == mute);
-
-  // Even if we did get the gain callback we wanted, now we wait for other
+  // Even if we did get the gain callback we wanted, now we check for other
   // gain callbacks -- or a disconnect. If any of these occur, then we fail.
-  if (gain_correct && no_error) {
-    received_gain_callback_ = false;
+  if (!error_occurred_ && received_gain_db_ == gain_db &&
+      received_gain_db_2_ == kTooLowGainDb) {
+    received_gain_db_ = kTooLowGainDb;
 
-    timed_out = !RunLoopWithTimeoutOrUntil(
-        [this]() {
-          return (error_occurred_ || error_occurred_2_ ||
-                  received_gain_callback_ || received_gain_callback_2_);
-        },
-        kDurationTimeoutExpected);
-    EXPECT_TRUE(timed_out);
-    EXPECT_FALSE(error_occurred_);
-    EXPECT_FALSE(error_occurred_2_);
-    EXPECT_FALSE(received_gain_callback_);
-    EXPECT_FALSE(received_gain_callback_2_);
-    no_error = no_error && timed_out && !error_occurred_ &&
-               !error_occurred_2_ && !received_gain_callback_ &&
-               !received_gain_callback_2_;
+    RunLoopUntilIdle();
+
+    EXPECT_FALSE(error_occurred_) << kDisconnectErr;
+    EXPECT_EQ(received_gain_db_, kTooLowGainDb);
+    EXPECT_EQ(received_gain_db_2_, kTooLowGainDb);
   }
-
-  EXPECT_FALSE(ApiIsNull());
-  EXPECT_TRUE(gain_control_.is_bound());
-  EXPECT_TRUE(gain_control_2_.is_bound());
-  bool no_disconnects =
-      !ApiIsNull() && gain_control_.is_bound() && gain_control_2_.is_bound();
-
-  return (gain_correct && no_error && no_disconnects);
-}
-
-// Tests expect to receive neither gain callback nor error, on both gains.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool IndependentGainControlsTest::ReceiveNoGainCallback() {
-  received_gain_callback_ = received_gain_callback_2_ = false;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() {
-        return (error_occurred_ || error_occurred_2_ ||
-                received_gain_callback_ || received_gain_callback_2_);
-      },
-      kDurationTimeoutExpected);
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_FALSE(error_occurred_2_);
-  EXPECT_FALSE(ApiIsNull());
-  EXPECT_TRUE(gain_control_.is_bound());
-  EXPECT_TRUE(gain_control_2_.is_bound());
-
-  EXPECT_TRUE(timed_out);
-
-  EXPECT_FALSE(received_gain_callback_);
-  EXPECT_FALSE(received_gain_callback_2_);
-
-  return (!error_occurred_ && !error_occurred_2_ && !received_gain_callback_ &&
-          !received_gain_callback_2_);
 }
 
 // Tests expect to receive a disconnect callback for the API binding, then
@@ -640,59 +467,22 @@ bool IndependentGainControlsTest::ReceiveNoGainCallback() {
 // generates a gain callback, this is unexpected and treated as an error. We
 // still expect nothing from the independent API binding and its gain_control
 // (thus we wait for timeout).
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool IndependentGainControlsTest::ReceiveDisconnectCallback() {
-  error_occurred_ = error_occurred_2_ = received_gain_callback_ =
-      received_gain_callback_2_ = false;
+void IndependentGainControlsTest::ExpectDisconnect() {
+  received_gain_db_2_ = kTooLowGainDb;
 
-  //  We expect Renderer/Capturer AND GainControl to disconnect. Wait for both.
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() {
-        // If any of these four conditions happen, break out of the loop.
-        // Only the first is success; the other three are failures.
-        // By "first", we mean that Renderer/Capturer and Gain1 both disconnect.
-        return ((ApiIsNull() && !gain_control_.is_bound())) ||
-               error_occurred_2_ || received_gain_callback_ ||
-               received_gain_callback_2_;
-      },
-      kDurationResponseExpected, kDurationGranularity);
-
-  EXPECT_FALSE(timed_out) << "Timed out waiting for disconnect";
-
-  // After these disconnects, both Gain and API should be gone, but not Gain2.
-  EXPECT_FALSE(error_occurred_2_) << "Unexpected disconnect: independent gain";
-  EXPECT_TRUE(ApiIsNull()) << "Expected disconnect: parent API binding";
-  EXPECT_FALSE(gain_control_.is_bound()) << "Expected disconnect: gain binding";
-  bool correct_disconnect = error_occurred_ && !error_occurred_2_ &&
-                            ApiIsNull() && !gain_control_.is_bound();
-
-  EXPECT_FALSE(received_gain_callback_);
-  EXPECT_FALSE(received_gain_callback_2_);
-  bool unexpected_callback =
-      received_gain_callback_ || received_gain_callback_2_;
+  // We expect Renderer/Capturer AND GainControl to disconnect. Wait for both.
+  // We do NOT expect second renderer/capturer to disconnect nor other callback.
+  GainControlTestBase::ExpectDisconnect();
 
   // Even if we did get the disconnect callbacks we wanted, now wait for other
   // unexpected callbacks. If none occur, then we pass.
-  if (!timed_out && correct_disconnect && !unexpected_callback) {
-    timed_out = !RunLoopWithTimeoutOrUntil(
-        [this]() {
-          return (error_occurred_2_ || received_gain_callback_ ||
-                  received_gain_callback_2_);
-        },
-        kDurationTimeoutExpected);
-    EXPECT_TRUE(timed_out) << "Should have timed out after disconnects";
+  RunLoopUntilIdle();
 
-    EXPECT_FALSE(error_occurred_2_);
-    EXPECT_TRUE(gain_control_2_.is_bound());
-    correct_disconnect = !error_occurred_2_ && gain_control_2_.is_bound();
+  // After these disconnects, both Gain and API should be gone, but not Gain2.
+  EXPECT_FALSE(error_occurred_2_) << "Unexpected disconnect: independent gain";
+  EXPECT_TRUE(gain_control_2_.is_bound());
 
-    EXPECT_FALSE(received_gain_callback_);
-    EXPECT_FALSE(received_gain_callback_2_);
-    unexpected_callback = received_gain_callback_ || received_gain_callback_2_;
-  }
-
-  return (correct_disconnect && !unexpected_callback);
+  EXPECT_EQ(received_gain_db_2_, kTooLowGainDb);
 }
 
 // TwoRenderersGainControlsTest

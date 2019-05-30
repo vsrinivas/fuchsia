@@ -3,31 +3,40 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "gtest/gtest.h"
-#include "lib/component/cpp/environment_services_helper.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "src/media/audio/lib/test/audio_core_test_base.h"
 
 namespace media::audio::test {
 
 class AudioFidlEnvironment : public testing::Environment {
  public:
-  // Before any test cases in this test program, synchronously connect to Audio,
-  // to ensure that the audio and audio_core components are present and loaded.
+  // Do any binary-wide or cross-test-suite setup, before any test suite runs.
+  // Note: if --gtest_repeat is used, this is called at start of EVERY repeat.
+  //
+  // On assert-false during this SetUp method, no test cases run, and they may
+  // display as passed. However, the overall binary returns non-zero (fail).
+  //
+  // Before any test cases in this test program, synchronously connect to
+  // audio_core, to ensure that components are present and loaded.
   void SetUp() override {
-    auto environment_services = component::GetEnvironmentServices();
+    testing::Environment::SetUp();
+
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
+    auto startup_context = sys::ComponentContext::Create();
 
     // Each test case creates fresh FIDL instances. This one-time setup code
     // uses a temp local var instance to "demand-page" other components and does
     // not subsequently reference it.
-    fuchsia::media::AudioSyncPtr audio;
-    environment_services->ConnectToService(audio.NewRequest());
+    startup_context->svc()->Connect(audio_core_sync_.NewRequest());
+    audio_core_sync_->EnableDeviceSettings(false);
 
     // Note that we are using Synchronous versions of these interfaces....
-    fuchsia::media::AudioRendererSyncPtr audio_renderer;
-    audio->CreateAudioRenderer(audio_renderer.NewRequest());
+    fuchsia::media::AudioRendererSyncPtr audio_renderer_sync;
+    audio_core_sync_->CreateAudioRenderer(audio_renderer_sync.NewRequest());
 
     // This FIDL method has a callback; calling it SYNCHRONOUSLY guarantees
     // that services are loaded and running before the method itself returns.
@@ -36,16 +45,17 @@ class AudioFidlEnvironment : public testing::Environment {
     // because of the pipelining inherent in FIDL's design.
     zx_duration_t lead_time;
     bool connected_to_audio_service =
-        (audio_renderer->GetMinLeadTime(&lead_time) == ZX_OK);
+        (audio_renderer_sync->GetMinLeadTime(&lead_time) == ZX_OK);
 
     // On assert-false, no test cases run, and they may display as passed.
     // However, the overall binary returns non-zero (fail).
     ASSERT_TRUE(connected_to_audio_service);
+
+    AudioTestBase::SetStartupContext(std::move(startup_context));
   }
 
-  ///// If needed, these (overriding) functions would also need to be public.
-  // void TearDown() override {}
-  // ~AudioFidlEnvironment() override {}
+ private:
+  fuchsia::media::AudioCoreSyncPtr audio_core_sync_;
 };
 
 }  // namespace media::audio::test

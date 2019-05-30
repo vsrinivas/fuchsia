@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 
-#include "lib/component/cpp/environment_services_helper.h"
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "src/media/audio/lib/test/audio_core_test_base.h"
 
 namespace media::audio::test {
 
@@ -14,122 +12,50 @@ namespace media::audio::test {
 // AudioCapturerTest
 //
 // This set of tests verifies asynchronous usage of AudioCapturer.
-class AudioCapturerTest : public gtest::RealLoopFixture {
+class AudioCapturerTest : public AudioCoreTestBase {
  protected:
   void SetUp() override;
   void TearDown() override;
-  void SetNegativeExpectations();
-  bool ExpectCallback();
-  bool ExpectTimeout();
-  bool ExpectDisconnect();
+  void SetNegativeExpectations() override;
 
-  std::shared_ptr<component::Services> environment_services_;
-  fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
 
-  bool error_occurred_ = false;
-  bool expect_error_ = false;
-  bool expect_capturer_ = true;
-  bool received_callback_ = false;
+  bool bound_capturer_expected_ = true;
 };
 
 //
 // AudioCapturerTest implementation
 //
 void AudioCapturerTest::SetUp() {
-  gtest::RealLoopFixture::SetUp();
+  AudioCoreTestBase::SetUp();
 
-  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
-
-  environment_services_ = component::GetEnvironmentServices();
-  environment_services_->ConnectToService(audio_.NewRequest());
-  audio_.set_error_handler(err_handler);
-
-  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
-  audio_capturer_.set_error_handler(err_handler);
-}
-
-void AudioCapturerTest::SetNegativeExpectations() {
-  expect_error_ = true;
-  expect_capturer_ = false;
+  audio_core_->CreateAudioCapturer(false, audio_capturer_.NewRequest());
+  audio_capturer_.set_error_handler(ErrorHandler());
 }
 
 void AudioCapturerTest::TearDown() {
-  ASSERT_TRUE(audio_.is_bound());
-  EXPECT_EQ(expect_error_, error_occurred_);
-  EXPECT_EQ(expect_capturer_, audio_capturer_.is_bound());
+  gain_control_.Unbind();
 
-  gtest::RealLoopFixture::TearDown();
+  EXPECT_EQ(bound_capturer_expected_, audio_capturer_.is_bound());
+  audio_capturer_.Unbind();
+
+  AudioCoreTestBase::TearDown();
 }
 
-bool AudioCapturerTest::ExpectCallback() {
-  received_callback_ = false;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() { return error_occurred_ || received_callback_; },
-      kDurationResponseExpected, kDurationGranularity);
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_TRUE(audio_.is_bound());
-  EXPECT_TRUE(audio_capturer_.is_bound());
-
-  EXPECT_FALSE(timed_out);
-
-  EXPECT_TRUE(received_callback_);
-
-  bool return_val = !error_occurred_ && !timed_out;
-
-  return return_val;
+void AudioCapturerTest::SetNegativeExpectations() {
+  AudioCoreTestBase::SetNegativeExpectations();
+  bound_capturer_expected_ = false;
 }
 
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool AudioCapturerTest::ExpectTimeout() {
-  received_callback_ = false;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() { return error_occurred_ || received_callback_; },
-      kDurationTimeoutExpected);
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_TRUE(audio_.is_bound());
-  EXPECT_TRUE(audio_capturer_.is_bound());
-
-  EXPECT_TRUE(timed_out);
-
-  EXPECT_FALSE(received_callback_);
-
-  bool return_val = !error_occurred_ && !received_callback_;
-
-  return return_val;
-}
-
-bool AudioCapturerTest::ExpectDisconnect() {
-  received_callback_ = false;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() { return received_callback_ || !audio_capturer_.is_bound(); },
-      kDurationResponseExpected, kDurationGranularity);
-
-  EXPECT_TRUE(error_occurred_);
-  EXPECT_TRUE(audio_.is_bound());
-  EXPECT_FALSE(audio_capturer_.is_bound());
-
-  EXPECT_FALSE(timed_out);
-
-  EXPECT_FALSE(received_callback_);
-
-  bool return_val = !received_callback_ && !timed_out;
-
-  return return_val;
-}
-
+//
+// Test cases
 //
 // AudioCapturer implements the base classes StreamBufferSet and StreamSource.
 
-//
 // StreamBufferSet validation
 //
+
 // TODO(mpuryear): test AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
 // Also negative testing: bad id, null or bad handle
 
@@ -139,7 +65,6 @@ bool AudioCapturerTest::ExpectDisconnect() {
 // TODO(mpuryear): apply same tests to AudioRenderer and AudioCapturer
 // (although their implementations within AudioCore differ somewhat).
 
-//
 // StreamSource validation
 //
 
@@ -160,23 +85,18 @@ bool AudioCapturerTest::ExpectDisconnect() {
 // TODO(mpuryear): test sequence of pkt return, during Async capture.
 //
 TEST_F(AudioCapturerTest, DiscardAllWithNone) {
-  SetNegativeExpectations();
+  audio_capturer_->DiscardAllPackets(CompletionCallback());
 
-  audio_capturer_->DiscardAllPackets([this]() { received_callback_ = true; });
-
-  EXPECT_TRUE(ExpectDisconnect());
+  ExpectDisconnect();
 }
 
 // TODO(mpuryear): DiscardAllPacketsNoReply() when started, post-stop
 TEST_F(AudioCapturerTest, DiscardAllNoReplyWithNone) {
-  SetNegativeExpectations();
-
   audio_capturer_->DiscardAllPacketsNoReply();
 
-  EXPECT_TRUE(ExpectDisconnect());
+  ExpectDisconnect();
 }
 
-//
 // AudioCapturer validation
 //
 
@@ -194,102 +114,89 @@ TEST_F(AudioCapturerTest, DiscardAllNoReplyWithNone) {
 // Also negative testing: 0/tiny/huge num frames (bigger than packet)
 
 TEST_F(AudioCapturerTest, StopWhenStoppedCausesDisconnect) {
-  SetNegativeExpectations();
+  audio_capturer_->StopAsyncCapture(CompletionCallback());
 
-  audio_capturer_->StopAsyncCapture([this]() { received_callback_ = true; });
-
-  EXPECT_TRUE(ExpectDisconnect());
+  ExpectDisconnect();
 }
 // Also test before format set, before packets submitted
 
 TEST_F(AudioCapturerTest, StopNoReplyWhenStoppedCausesDisconnect) {
-  SetNegativeExpectations();
-
   audio_capturer_->StopAsyncCaptureNoReply();
 
-  EXPECT_TRUE(ExpectDisconnect());
+  ExpectDisconnect();
 }
 // Also before format set, before packets submitted
 
 // Test creation and interface independence of GainControl.
 // In a number of tests below, we run the message loop to give the AudioCapturer
 // or GainControl binding a chance to disconnect, if an error occurred.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioCapturerTest, BindGainControl) {
   // Validate AudioCapturers can create GainControl interfaces.
+  bool capturer_error_occurred = false;
+  bool capturer_error_occurred_2 = false;
+  bool gain_error_occurred = false;
+  bool gain_error_occurred_2 = false;
+
+  audio_capturer_.set_error_handler(
+      ErrorHandler([&capturer_error_occurred](zx_status_t) {
+        capturer_error_occurred = true;
+      }));
+
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
-  bool gc_error_occurred = false;
-  auto gc_err_handler = [&gc_error_occurred](zx_status_t error) {
-    gc_error_occurred = true;
-  };
-  gain_control_.set_error_handler(gc_err_handler);
+  gain_control_.set_error_handler(ErrorHandler(
+      [&gain_error_occurred](zx_status_t) { gain_error_occurred = true; }));
 
   fuchsia::media::AudioCapturerPtr audio_capturer_2;
-  audio_->CreateAudioCapturer(audio_capturer_2.NewRequest(), true);
-  bool ac2_error_occurred = false;
-  auto ac2_err_handler = [&ac2_error_occurred](zx_status_t error) {
-    ac2_error_occurred = true;
-  };
-  audio_capturer_2.set_error_handler(ac2_err_handler);
+  audio_core_->CreateAudioCapturer(true, audio_capturer_2.NewRequest());
+  audio_capturer_2.set_error_handler(
+      ErrorHandler([&capturer_error_occurred_2](zx_status_t) {
+        capturer_error_occurred_2 = true;
+      }));
 
   fuchsia::media::audio::GainControlPtr gain_control_2;
   audio_capturer_2->BindGainControl(gain_control_2.NewRequest());
-  bool gc2_error_occurred = false;
-  auto gc2_err_handler = [&gc2_error_occurred](zx_status_t error) {
-    gc2_error_occurred = true;
-  };
-  gain_control_2.set_error_handler(gc2_err_handler);
+  gain_control_2.set_error_handler(ErrorHandler(
+      [&gain_error_occurred_2](zx_status_t) { gain_error_occurred_2 = true; }));
 
-  // Validate GainControl does NOT persist after AudioCapturer is unbound.
-  expect_capturer_ = false;
+  // What happens to a child gain_control, when a capturer is unbound?
   audio_capturer_.Unbind();
 
-  // Validate that AudioCapturer2 persists without GainControl2.
+  // What happens to a parent capturer, when a gain_control is unbound?
   gain_control_2.Unbind();
 
-  // ...give the two interfaces a chance to completely unbind...
-  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
-      [this, &ac2_error_occurred, &gc2_error_occurred]() {
-        return (error_occurred_ || ac2_error_occurred || gc2_error_occurred);
-      },
-      kDurationTimeoutExpected * 2));
+  // Give audio_capturer_ a chance to disconnect gain_control_
+  ExpectDisconnect();
 
-  // Explicitly unbinding audio_capturer_ should not trigger its disconnect
-  // (error_occurred_), but should trigger gain_control_'s disconnect.
-  EXPECT_TRUE(gc_error_occurred);
+  // If gain_control_ disconnected as expected, reset errors for the next step.
+  if (gain_error_occurred) {
+    error_expected_ = false;
+    error_occurred_ = false;
+  }
+
+  // Give time for other Disconnects to occur, if they must.
+  audio_capturer_2->GetStreamType(
+      CompletionCallback([](fuchsia::media::StreamType) {}));
+  ExpectCallback();
+
+  // Explicitly unbinding audio_capturer_ should disconnect gain_control_.
+  EXPECT_FALSE(capturer_error_occurred);
+  EXPECT_TRUE(gain_error_occurred);
   EXPECT_FALSE(gain_control_.is_bound());
 
-  // Explicitly unbinding gain_control_2 should not trigger its disconnect, nor
-  // its parent audio_capturer_2's.
-  EXPECT_FALSE(ac2_error_occurred);
-  EXPECT_FALSE(gc2_error_occurred);
+  // gain_2's parent should NOT disconnect, nor a gain_2 disconnect callback.
+  EXPECT_FALSE(capturer_error_occurred_2);
+  EXPECT_FALSE(gain_error_occurred_2);
   EXPECT_TRUE(audio_capturer_2.is_bound());
 }
 
-// Null/malformed requests to BindGainControl should have no effect.
+// Null requests to BindGainControl should have no effect.
 TEST_F(AudioCapturerTest, BindGainControlNull) {
-  // Passing null request has no effect.
   audio_capturer_->BindGainControl(nullptr);
 
-  // Malformed request should also have no effect.
-  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
-  fuchsia::media::AudioCapturerPtr audio_capturer_2;
-  audio_->CreateAudioCapturer(audio_capturer_2.NewRequest(), false);
-  audio_capturer_2.set_error_handler(err_handler);
-
-  fidl::InterfaceRequest<fuchsia::media::audio::GainControl> bad_request;
-  auto bad_request_void_ptr = static_cast<void*>(&bad_request);
-  auto bad_request_dword_ptr = static_cast<uint32_t*>(bad_request_void_ptr);
-  *bad_request_dword_ptr = 0x0BADCAFE;
-  audio_capturer_2->BindGainControl(std::move(bad_request));
-
   // Give time for Disconnect to occur, if it must.
-  EXPECT_TRUE(ExpectTimeout());
-
-  EXPECT_TRUE(audio_.is_bound());
-  EXPECT_TRUE(audio_capturer_.is_bound());
-  EXPECT_TRUE(audio_capturer_2.is_bound());
+  audio_capturer_->GetStreamType(
+      CompletionCallback([](fuchsia::media::StreamType) {}));
+  ExpectCallback();
 }
 
 // TODO(mpuryear): test GetStreamType() -> (StreamType stream_type);

@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 
-#include "lib/component/cpp/environment_services_helper.h"
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "src/media/audio/lib/test/audio_core_test_base.h"
 
 namespace media::audio::test {
 
@@ -14,56 +12,40 @@ namespace media::audio::test {
 // AudioRendererTest
 //
 // This set of tests verifies asynchronous usage of AudioRenderer.
-class AudioRendererTest : public gtest::RealLoopFixture {
+class AudioRendererTest : public AudioCoreTestBase {
  protected:
   void SetUp() override;
   void TearDown() override;
-  void SetNegativeExpectations();
-  void ExpectDisconnect();
+  void SetNegativeExpectations() override;
 
-  std::shared_ptr<component::Services> environment_services_;
-  fuchsia::media::AudioPtr audio_;
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
 
-  bool error_occurred_ = false;
-  bool expect_error_ = false;
-  bool expect_renderer_ = true;
+  bool bound_renderer_expected_ = true;
 };
 
 //
 // AudioRendererTest implementation
 //
 void AudioRendererTest::SetUp() {
-  gtest::RealLoopFixture::SetUp();
+  AudioCoreTestBase::SetUp();
 
-  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
-
-  environment_services_ = component::GetEnvironmentServices();
-  environment_services_->ConnectToService(audio_.NewRequest());
-  audio_.set_error_handler(err_handler);
-
-  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-  audio_renderer_.set_error_handler(err_handler);
-}
-
-void AudioRendererTest::SetNegativeExpectations() {
-  expect_error_ = true;
-  expect_renderer_ = false;
+  audio_core_->CreateAudioRenderer(audio_renderer_.NewRequest());
+  audio_renderer_.set_error_handler(ErrorHandler());
 }
 
 void AudioRendererTest::TearDown() {
-  ASSERT_TRUE(audio_.is_bound());
-  EXPECT_EQ(expect_error_, error_occurred_);
-  EXPECT_EQ(expect_renderer_, audio_renderer_.is_bound());
+  gain_control_.Unbind();
 
-  gtest::RealLoopFixture::TearDown();
+  EXPECT_EQ(bound_renderer_expected_, audio_renderer_.is_bound());
+  audio_renderer_.Unbind();
+
+  AudioCoreTestBase::TearDown();
 }
 
-void AudioRendererTest::ExpectDisconnect() {
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return error_occurred_; },
-                                        kDurationResponseExpected,
-                                        kDurationGranularity));
+void AudioRendererTest::SetNegativeExpectations() {
+  AudioCoreTestBase::SetNegativeExpectations();
+  bound_renderer_expected_ = false;
 }
 
 //
@@ -130,8 +112,6 @@ void AudioRendererTest::ExpectDisconnect() {
 // Before renderers are operational, multiple SetPcmStreamTypes should succeed.
 // We test twice because of previous bug, where the first succeeded but any
 // subsequent call (before Play) would cause a FIDL channel disconnect.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioRendererTest, SetPcmStreamType) {
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
@@ -146,9 +126,8 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
   audio_renderer_->SetPcmStreamType(format2);
 
   // Allow an error Disconnect callback, but we expect a timeout instead.
-  EXPECT_FALSE(RunLoopWithTimeoutOrUntil([this]() { return error_occurred_; },
-                                         kDurationTimeoutExpected))
-      << kConnectionErr;
+  audio_renderer_->GetMinLeadTime(CompletionCallback([](int64_t x) {}));
+  ExpectCallback();
 }
 
 // TODO(mpuryear): test SetPtsUnits(uint32 tick_per_sec_num,uint32 denom);
@@ -203,26 +182,16 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
 }
 
 // Validate MinLeadTime events, when disabled.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
-  int64_t min_lead_time = -1;
   audio_renderer_.events().OnMinLeadTimeChanged =
-      [&min_lead_time](int64_t min_lead_time_nsec) {
-        min_lead_time = min_lead_time_nsec;
-      };
+      CompletionCallback([](int64_t x) { EXPECT_FALSE(true) << kCallbackErr; });
 
   audio_renderer_->EnableMinLeadTimeEvents(false);
 
-  // Callback should not be received (expect loop to timeout? TRUE).
-  // If we did, either way it is an error: MinLeadTime event or disconnect.
-  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
-      [this, &min_lead_time]() {
-        return error_occurred_ || (min_lead_time >= 0);
-      },
-      kDurationTimeoutExpected));
-
-  EXPECT_EQ(min_lead_time, -1) << "Received unexpected MinLeadTime update";
+  // We should not receive a OnMinLeadTimeChanged callback (or Disconnect)
+  // before receiving this direct GetMinLeadTime callback.
+  audio_renderer_->GetMinLeadTime(CompletionCallback([](int64_t x) {}));
+  ExpectCallback();
 }
 
 //
@@ -247,8 +216,6 @@ TEST_F(AudioRendererTest, GetMinLeadTime) {
 // Test creation and interface independence of GainControl.
 // In a number of tests below, we run the message loop to give the AudioRenderer
 // or GainControl binding a chance to disconnect, if an error occurred.
-//
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 TEST_F(AudioRendererTest, BindGainControl) {
   // Validate AudioRenderers can create GainControl interfaces.
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
@@ -259,7 +226,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
   gain_control_.set_error_handler(gc_err_handler);
 
   fuchsia::media::AudioRendererPtr audio_renderer_2;
-  audio_->CreateAudioRenderer(audio_renderer_2.NewRequest());
+  audio_core_->CreateAudioRenderer(audio_renderer_2.NewRequest());
   bool ar2_error_occurred = false;
   auto ar2_err_handler = [&ar2_error_occurred](zx_status_t error) {
     ar2_error_occurred = true;
@@ -274,38 +241,40 @@ TEST_F(AudioRendererTest, BindGainControl) {
   };
   gain_control_2.set_error_handler(gc2_err_handler);
 
-  // Validate GainControl does NOT persist after AudioRenderer is unbound.
-  expect_renderer_ = false;
-  audio_renderer_.Unbind();
+  // Validate GainControl2 does NOT persist after audio_renderer_2 is unbound
+  audio_renderer_2.Unbind();
 
-  // Validate that AudioRenderer2 persists without GainControl2.
-  gain_control_2.Unbind();
+  // Validate that audio_renderer_ persists without gain_control_
+  gain_control_.Unbind();
 
-  // ...give the two interfaces a chance to completely unbind...
-  EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
-      [this, &ar2_error_occurred, &gc2_error_occurred]() {
-        return (error_occurred_ || ar2_error_occurred || gc2_error_occurred);
+  // Give audio_renderer_2 a chance to disconnect gain_control_2
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &ar2_error_occurred, &gc_error_occurred, &gc2_error_occurred]() {
+        return (error_occurred_ || ar2_error_occurred || gc_error_occurred ||
+                gc2_error_occurred);
       },
-      kDurationTimeoutExpected * 2));
+      kDurationResponseExpected, kDurationGranularity));
 
-  // Explicitly unbinding audio_renderer_ should not trigger its disconnect
-  // (error_occurred_), but should trigger gain_control_'s disconnect.
-  EXPECT_TRUE(gc_error_occurred);
-  EXPECT_FALSE(gain_control_.is_bound());
+  // Let audio_renderer_ show it is still alive (and allow other disconnects)
+  audio_renderer_->GetMinLeadTime(CompletionCallback([](int64_t x) {}));
+  ExpectCallback();
 
-  // Explicitly unbinding gain_control_2 should not trigger its disconnect, nor
-  // its parent audio_renderer_2's.
+  // Explicitly unbinding audio_renderer_2 should not trigger its disconnect
+  // (ar2_error_occurred), but should trigger gain_control_2's disconnect.
   EXPECT_FALSE(ar2_error_occurred);
-  EXPECT_FALSE(gc2_error_occurred);
-  EXPECT_TRUE(audio_renderer_2.is_bound());
+  EXPECT_TRUE(gc2_error_occurred);
+  EXPECT_FALSE(gain_control_2.is_bound());
+
+  // Explicitly unbinding gain_control_ should not trigger its disconnect, nor
+  // its parent audio_renderer_'s.
+  EXPECT_FALSE(gc_error_occurred);
+  EXPECT_TRUE(audio_renderer_.is_bound());
 }
 
 //
 // SetStreamType is not yet implemented. We expect the AudioRenderer binding to
 // disconnect, and our AudioRenderer interface ptr to be reset.
 TEST_F(AudioRendererTest, SetStreamType) {
-  SetNegativeExpectations();
-
   fuchsia::media::AudioStreamType stream_format;
   stream_format.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   stream_format.channels = 1;
@@ -323,8 +292,6 @@ TEST_F(AudioRendererTest, SetStreamType) {
 
 // Before setting format, Play should not succeed.
 TEST_F(AudioRendererTest, PlayWithoutFormat) {
-  SetNegativeExpectations();
-
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -344,8 +311,6 @@ TEST_F(AudioRendererTest, PlayWithoutFormat) {
 
 // After setting format but before submitting buffers, Play should not succeed.
 TEST_F(AudioRendererTest, PlayWithoutBuffers) {
-  SetNegativeExpectations();
-
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -371,8 +336,6 @@ TEST_F(AudioRendererTest, PlayWithoutBuffers) {
 
 // Before setting format, PlayNoReply should cause a Disconnect.
 TEST_F(AudioRendererTest, PlayNoReplyWithoutFormat) {
-  SetNegativeExpectations();
-
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
                                fuchsia::media::NO_TIMESTAMP);
 
@@ -382,8 +345,6 @@ TEST_F(AudioRendererTest, PlayNoReplyWithoutFormat) {
 
 // Before setting format, Pause should not succeed.
 TEST_F(AudioRendererTest, PauseWithoutFormat) {
-  SetNegativeExpectations();
-
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -401,8 +362,6 @@ TEST_F(AudioRendererTest, PauseWithoutFormat) {
 
 // After setting format but before submitting buffers, Pause should not succeed.
 TEST_F(AudioRendererTest, PauseWithoutBuffers) {
-  SetNegativeExpectations();
-
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -426,8 +385,6 @@ TEST_F(AudioRendererTest, PauseWithoutBuffers) {
 
 // Before setting format, PauseNoReply should cause a Disconnect.
 TEST_F(AudioRendererTest, PauseNoReplyWithoutFormat) {
-  SetNegativeExpectations();
-
   audio_renderer_->PauseNoReply();
 
   // Disconnect callback should be received.

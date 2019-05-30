@@ -74,16 +74,14 @@ executable("audio_fidl_tests_bin") {
     "audio_renderer_test.cc",
     "audio_sync_test.cc",
     "audio_test.cc",
-    "audio_tests_shared.h",
     "gain_control_test.cc",
     "gain_control_test.h",
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
     "//src/lib/fxl/test:test_settings",
+    "//src/media/audio/lib/test",
   ]
 }
 
