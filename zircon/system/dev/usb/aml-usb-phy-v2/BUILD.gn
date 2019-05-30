@@ -2,25 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("amlogic") {
+driver("aml-usb-phy-v2") {
   sources = [
-    "a113-clocks.c",
-    "aml-pdm-audio.cpp",
-    "aml-tdm-audio.cpp",
-    "s905d2-hiu.c",
-    "s905d2-mali.c",
-    "s905d2-pll-rates.c",
+    "aml-usb-phy.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

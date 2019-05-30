@@ -444,6 +444,22 @@ zx_status_t UsbXhci::Init() {
         return InitPci();
     } else if (pdev_.is_valid()) {
         return InitPdev();
+    } else if (composite_.is_valid()) {
+        zx_device_t* pdev_device;
+        size_t actual;
+
+        // Retrieve platform device protocol from our first component.
+        composite_.GetComponents(&pdev_device, 1, &actual);
+        if (actual != 1) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        pdev_ = pdev_device;
+        if (!pdev_.is_valid()) {
+            zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol\n");
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        return InitPdev();
     } else {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -476,18 +492,30 @@ static constexpr zx_driver_ops_t driver_ops = [](){
 } // namespace usb_xhci
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 9)
+ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 18)
+    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PDEV, 0),
+    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 1),
+
     // PCI binding support
-    BI_GOTO_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI, 0),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),
     BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x03),
     BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x30),
+    BI_ABORT(),
 
-    // platform bus binding support
+    // platform bus support
     BI_LABEL(0),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI),
+    BI_ABORT(),
+
+    // composite binding support
+    BI_LABEL(1),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
 
     BI_ABORT(),
 ZIRCON_DRIVER_END(usb_xhci)

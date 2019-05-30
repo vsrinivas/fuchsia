@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <hw/reg.h>
-#include <soc/aml-common/aml-usb-phy-v2.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
@@ -25,10 +26,10 @@ static const pbus_irq_t xhci_irqs[] = {
     },
 };
 
-static const pbus_bti_t xhci_btis[] = {
+static const pbus_bti_t usb_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_USB_XHCI,
+        .bti_id = BTI_USB,
     },
 };
 
@@ -36,56 +37,86 @@ static const pbus_dev_t xhci_dev = {
     .name = "xhci",
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_USB_XHCI,
+    .did = PDEV_DID_USB_XHCI_COMPOSITE,
     .mmio_list = xhci_mmios,
     .mmio_count = countof(xhci_mmios),
     .irq_list = xhci_irqs,
     .irq_count = countof(xhci_irqs),
-    .bti_list = xhci_btis,
-    .bti_count = countof(xhci_btis),
+    .bti_list = usb_btis,
+    .bti_count = countof(usb_btis),
 };
 
-// magic numbers for USB PHY tuning
-#define PLL_SETTING_3   0xfe18
-#define PLL_SETTING_4   0xfff
-#define PLL_SETTING_5   0x78000
-#define PLL_SETTING_6   0xe0004
-#define PLL_SETTING_7   0xe000c
+static const pbus_mmio_t usb_phy_mmios[] = {
+    {
+        .base = S905D2_RESET_BASE,
+        .length = S905D2_RESET_LENGTH,
+    },
+    {
+        .base = S905D2_USBCTRL_BASE,
+        .length = S905D2_USBCTRL_LENGTH,
+    },
+    {
+        .base = S905D2_USBPHY20_BASE,
+        .length = S905D2_USBPHY20_LENGTH,
+    },
+    {
+        .base = S905D2_USBPHY21_BASE,
+        .length = S905D2_USBPHY21_LENGTH,
+    },
+};
 
-static zx_status_t astro_usb_tuning(bool host, bool default_val) {
-    mmio_buffer_t buf;
-    zx_status_t status;
+// values from mesong12b.dtsi usb2_phy_v2 pll-setting-#
+static const uint32_t pll_settings[] = {
+    0x09400414,
+    0x927E0000,
+    0xac5f49e5,
+    0xfe18,
+    0xfff,
+    0x78000,
+    0xe0004,
+    0xe000c,
+};
 
-    status = mmio_buffer_init_physical(&buf, S905D2_USBPHY21_BASE, S905D2_USBPHY21_LENGTH,
-                                       // Please do not use get_root_resource() in new code. See ZX-1467.
-                                       get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
-    if (status != ZX_OK) {
-        return status;
-    }
+static const pbus_metadata_t usb_phy_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = pll_settings,
+        .data_size = sizeof(pll_settings),
+    },
+};
 
-    mmio_buffer_release(&buf);
-    return ZX_OK;
-}
+static const pbus_dev_t usb_phy_dev = {
+    .name = "aml-usb-phy-v2",
+    .vid = PDEV_VID_AMLOGIC,
+    .did = PDEV_DID_AML_USB_PHY_V2,
+    .mmio_list = usb_phy_mmios,
+    .mmio_count = countof(usb_phy_mmios),
+    .bti_list = usb_btis,
+    .bti_count = countof(usb_btis),
+    .metadata_list = usb_phy_metadata,
+    .metadata_count = countof(usb_phy_metadata),
+};
+
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t usb_phy_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
+};
+static const device_component_part_t usb_phy_component[] = {
+    { countof(root_match), root_match },
+    { countof(usb_phy_match), usb_phy_match },
+};
+static const device_component_t components[] = {
+    { countof(usb_phy_component), usb_phy_component },
+};
 
 zx_status_t aml_usb_init(aml_bus_t* bus) {
-    zx_handle_t bti;
-
-    zx_status_t status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_usb_init: iommu_get_bti failed: %d\n", status);
-        return status;
-    }
-
-    status = aml_usb_phy_v2_init(bti);
+    zx_status_t status = pbus_device_add(&bus->pbus, &usb_phy_dev);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = astro_usb_tuning(true, false);
-    zx_handle_close(bti);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    return pbus_device_add(&bus->pbus, &xhci_dev);
+    // Add XHCI to same devhost as the aml-usb-phy driver.
+    return pbus_composite_device_add(&bus->pbus, &xhci_dev, components, countof(components), 1);
 }

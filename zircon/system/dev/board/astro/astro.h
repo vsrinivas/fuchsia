@@ -13,7 +13,7 @@
 // BTI IDs for our devices
 enum {
     BTI_BOARD,
-    BTI_USB_XHCI,
+    BTI_USB,
     BTI_DISPLAY,
     BTI_MALI,
     BTI_VIDEO,

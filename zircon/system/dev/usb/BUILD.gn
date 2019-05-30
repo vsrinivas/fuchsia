@@ -5,6 +5,7 @@
 group("usb") {
   testonly = true
   deps = [
+    "aml-usb-phy-v2",
     "dwc3",
     "hikey-usb",
     "mt-musb-host",

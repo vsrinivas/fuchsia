@@ -6,6 +6,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/pci.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/usb/hci.h>
@@ -25,7 +26,7 @@ class UsbXhci : public UsbXhciType,
                 public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
 public:
     explicit UsbXhci(zx_device_t* parent)
-        : UsbXhciType(parent), pci_(parent), pdev_(parent) {}
+        : UsbXhciType(parent), pci_(parent), pdev_(parent), composite_(parent) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -75,6 +76,7 @@ private:
 
     ddk::PciProtocolClient pci_;
     ddk::PDev pdev_;
+    ddk::CompositeProtocolClient composite_;
 };
 
 } // namespace usb_xhci

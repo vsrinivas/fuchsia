@@ -22,7 +22,7 @@ namespace sherlock {
 // BTI IDs for our devices
 enum {
     BTI_BOARD,
-    BTI_USB_XHCI,
+    BTI_USB,
     BTI_EMMC,
     BTI_SDIO,
     BTI_MALI,

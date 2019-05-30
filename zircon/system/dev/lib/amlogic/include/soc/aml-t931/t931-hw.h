@@ -126,6 +126,12 @@
 #define T931_USB0_BASE                  0xff500000
 #define T931_USB0_LENGTH                0x100000
 
+#define T931_USBCTRL_BASE               0xffe09000
+#define T931_USBCTRL_LENGTH             0x2000
+
+#define T931_USBPHY20_BASE              0xff636000
+#define T931_USBPHY20_LENGTH            0x2000
+
 #define T931_USBPHY21_BASE              0xff63a000
 #define T931_USBPHY21_LENGTH            0x2000
 

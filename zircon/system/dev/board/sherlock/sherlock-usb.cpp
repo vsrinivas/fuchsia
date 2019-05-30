@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <lib/mmio/mmio.h>
-#include <hw/reg.h>
-#include <lib/zx/handle.h>
-#include <soc/aml-common/aml-usb-phy-v2.h>
 
-#include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include <optional>
@@ -35,10 +32,29 @@ constexpr pbus_irq_t xhci_irqs[] = {
     },
 };
 
-constexpr pbus_bti_t xhci_btis[] = {
+constexpr pbus_mmio_t usb_phy_mmios[] = {
+    {
+        .base = T931_RESET_BASE,
+        .length = T931_RESET_LENGTH,
+    },
+    {
+        .base = T931_USBCTRL_BASE,
+        .length = T931_USBCTRL_LENGTH,
+    },
+    {
+        .base = T931_USBPHY20_BASE,
+        .length = T931_USBPHY20_LENGTH,
+    },
+    {
+        .base = T931_USBPHY21_BASE,
+        .length = T931_USBPHY21_LENGTH,
+    },
+};
+
+constexpr pbus_bti_t usb_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_USB_XHCI,
+        .bti_id = BTI_USB,
     },
 };
 
@@ -47,80 +63,75 @@ static pbus_dev_t xhci_dev = [](){
     dev.name = "xhci";
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;
-    dev.did = PDEV_DID_USB_XHCI;
+    dev.did = PDEV_DID_USB_XHCI_COMPOSITE;
     dev.mmio_list = xhci_mmios;
     dev.mmio_count = countof(xhci_mmios);
     dev.irq_list = xhci_irqs;
     dev.irq_count = countof(xhci_irqs);
-    dev.bti_list = xhci_btis;
-    dev.bti_count = countof(xhci_btis);
+    dev.bti_list = usb_btis;
+    dev.bti_count = countof(usb_btis);
     return dev;
 }();
 
-// magic numbers for USB PHY tuning
-constexpr uint32_t PLL_SETTING_3 = 0xfe18;
-constexpr uint32_t PLL_SETTING_4 = 0xfff;
-constexpr uint32_t PLL_SETTING_5 = 0xc8000;
-constexpr uint32_t PLL_SETTING_6 = 0xe0004;
-constexpr uint32_t PLL_SETTING_7 = 0xe000c;
+// values from mesong12b.dtsi usb2_phy_v2 pll-setting-#
+constexpr uint32_t pll_settings[] = {
+    0x09400414,
+    0x927E0000,
+    0xac5f69e5,
+    0xfe18,
+    0x8000fff,
+    0x78000,
+    0xe0004,
+    0xe000c,
+};
 
-zx_status_t PerformUsbTuning(bool host, bool default_val) {
-    std::optional<ddk::MmioBuffer> buf;
-    zx_status_t status;
+static const pbus_metadata_t usb_phy_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = pll_settings,
+        .data_size = sizeof(pll_settings),
+    },
+};
 
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    zx::unowned_resource resource(get_root_resource());
-    status = ddk::MmioBuffer::Create(T931_USBPHY21_BASE, T931_USBPHY21_LENGTH, *resource,
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
-    if (status != ZX_OK) {
-        return status;
-    }
+static const pbus_dev_t usb_phy_dev = [](){
+    pbus_dev_t dev;
+    dev.name = "aml-usb-phy-v2";
+    dev.vid = PDEV_VID_AMLOGIC;
+    dev.did = PDEV_DID_AML_USB_PHY_V2;
+    dev.mmio_list = usb_phy_mmios;
+    dev.mmio_count = countof(usb_phy_mmios);
+    dev.bti_list = usb_btis;
+    dev.bti_count = countof(usb_btis);
+    dev.metadata_list = usb_phy_metadata;
+    dev.metadata_count = countof(usb_phy_metadata);
+    return dev;
+}();
 
-    if (default_val) {
-        buf->Write32(0, 0x38);
-        buf->Write32(PLL_SETTING_5, 0x34);
-    } else {
-        buf->Write32(PLL_SETTING_3, 0x50);
-        buf->Write32(PLL_SETTING_4, 0x10);
-        if (host) {
-            buf->Write32(PLL_SETTING_6, 0x38);
-        } else {
-            buf->Write32(PLL_SETTING_7, 0x38);
-        }
-        buf->Write32(PLL_SETTING_5, 0x34);
-    }
-
-    return ZX_OK;
-}
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t usb_phy_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
+};
+static const device_component_part_t usb_phy_component[] = {
+    { countof(root_match), root_match },
+    { countof(usb_phy_match), usb_phy_match },
+};
+static const device_component_t components[] = {
+    { countof(usb_phy_component), usb_phy_component },
+};
 
 } // namespace
 
 zx_status_t Sherlock::UsbInit() {
-    zx::bti bti;
-    auto status = iommu_.GetBti(BTI_BOARD, 0, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
-        return status;
-    }
-
-    status = aml_usb_phy_v2_init(bti.get());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: aml_usb_phy_v2_init failed %d\n", __func__, status);
-        return status;
-    }
-
-    status = PerformUsbTuning(true, false);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = pbus_.DeviceAdd(&xhci_dev);
+    auto status = pbus_.DeviceAdd(&usb_phy_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
         return status;
     }
 
-    return ZX_OK;
+    // Add XHCI to same devhost as the aml-usb-phy driver.
+    return pbus_.CompositeDeviceAdd(&xhci_dev, components, countof(components), 1);
 }
 
 } // namespace sherlock
