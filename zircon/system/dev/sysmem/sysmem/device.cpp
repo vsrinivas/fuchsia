@@ -44,10 +44,22 @@ public:
         zx_status_t status =
             zx::vmo::create_contiguous(parent_device_->bti(), size, 0, vmo);
         if (status != ZX_OK) {
+
             DRIVER_ERROR(
                 "zx::vmo::create_contiguous() failed - size_bytes: %lu "
                 "status: %d",
                 size, status);
+            zx_info_kmem_stats_t kmem_stats;
+            status = zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &kmem_stats, sizeof(kmem_stats),
+                                        nullptr, nullptr);
+            if (status == ZX_OK) {
+                DRIVER_ERROR(
+                    "kmem stats: total_bytes: 0x%lx free_bytes 0x%lx: wired_bytes: 0x%lx vmo_bytes: 0x%lx\n"
+                    "mmu_overhead_bytes: 0x%lx other_bytes: 0x%lx",
+                    kmem_stats.total_bytes, kmem_stats.free_bytes,
+                    kmem_stats.wired_bytes, kmem_stats.vmo_bytes, kmem_stats.mmu_overhead_bytes,
+                    kmem_stats.other_bytes);
+            }
             // sanitize to ZX_ERR_NO_MEMORY regardless of why.
             status = ZX_ERR_NO_MEMORY;
             return status;
