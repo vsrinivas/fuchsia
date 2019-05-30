@@ -22,8 +22,7 @@ class Logger {
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
-  // TODO(MAC-255): Disable this again once the flakiness has been resolved.
-  static constexpr bool kGuestOutput = true;
+  static constexpr bool kGuestOutput = false;
   std::string buffer_;
 };
 
