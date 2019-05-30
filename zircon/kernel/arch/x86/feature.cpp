@@ -6,6 +6,7 @@
 
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/platform_access.h>
 
 #include <assert.h>
 #include <bits.h>
@@ -149,8 +150,9 @@ void x86_feature_init(void) {
 
     if (x86_vendor == X86_VENDOR_INTEL) {
         cpu_id::CpuId cpuid;
-        g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid);
-        g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid);
+        MsrAccess msr;
+        g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
+        g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
     }
 }
 

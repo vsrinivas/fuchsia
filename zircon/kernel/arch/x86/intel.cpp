@@ -7,6 +7,7 @@
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/platform_access.h>
 #include <bits.h>
 
 uint32_t x86_intel_get_patch_level(void) {
@@ -33,11 +34,11 @@ uint32_t x86_intel_get_patch_level(void) {
     return patch_level;
 }
 
-bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid) {
+bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     // IA32_ARCH_CAPABILITIES MSR enumerates fixes for Meltdown and other speculation-related side
     // channels, where available.
     if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-      uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+      uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
       if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
         return false;
       }
@@ -46,7 +47,7 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid) {
     return true;
 }
 
-bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid) {
+bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     // Silvermont/Airmont/Goldmont are not affected by L1TF.
     auto info = cpuid->ReadProcessorId();
     if (info.family() == 6 && info.model() == 0x4C) {
@@ -54,7 +55,7 @@ bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid) {
     }
 
     if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-        uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+        uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
         if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
             return false;
         }
