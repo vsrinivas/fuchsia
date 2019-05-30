@@ -220,6 +220,36 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
   EXPECT_FALSE(running);
 }
 
+// Tests that FakeComponent receives lifecycle events when it is killed
+// using fuchsia.modular.Lifecycle that is published in its outgoing directory.
+TEST_F(TestHarnessFixtureTest,
+       FakeComponentLifecycle_KilledByLifecycleService) {
+  modular::testing::TestHarnessBuilder builder;
+
+  bool running = false;
+  TestComponent base_shell([&] { running = true; }, [&] { running = false; });
+  builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
+                             {.url = builder.GenerateFakeUrl()});
+
+  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
+  test_harness()->Run(builder.BuildSpec());
+  RunLoopUntil([&] { return base_shell.is_running(); });
+  EXPECT_TRUE(running);
+
+  // Serve the outgoing() directory from FakeComponent.
+  zx::channel svc_request, svc_dir;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &svc_request, &svc_dir));
+  base_shell.component_context()->outgoing()->Serve(std::move(svc_request));
+  sys::ServiceDirectory svc(std::move(svc_dir));
+
+  fuchsia::modular::LifecyclePtr lifecycle;
+  ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(),
+                               "public/fuchsia.modular.Lifecycle"));
+  lifecycle->Terminate();
+  RunLoopUntil([&] { return !base_shell.is_running(); });
+  EXPECT_FALSE(running);
+}
+
 class TestFixtureForTestingCleanup
     : public modular::testing::TestHarnessFixture {
  public:

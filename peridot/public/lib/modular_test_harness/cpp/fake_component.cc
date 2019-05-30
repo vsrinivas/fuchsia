@@ -46,6 +46,9 @@ TestHarnessBuilder::OnNewComponentHandler FakeComponent::GetOnCreateHandler() {
         };
 
         component_context_ = CreateComponentContext(&startup_info);
+        component_context_->outgoing()->AddPublicService(
+            lifecycle_bindings_.GetHandler(this));
+
         OnCreate(std::move(startup_info));
       };
 }
@@ -61,6 +64,10 @@ void FakeComponent::Exit(int64_t exit_code,
                          fuchsia::sys::TerminationReason reason) {
   ZX_ASSERT(is_running());
   intercepted_component_ptr_->Exit(exit_code, reason);
+}
+
+void FakeComponent::Terminate() {
+  Exit(0);
 }
 
 }  // namespace testing

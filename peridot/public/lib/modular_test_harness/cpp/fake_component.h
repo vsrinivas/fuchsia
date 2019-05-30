@@ -20,7 +20,7 @@ namespace testing {
 //
 // Usage: pass ComponentBase.GetOnCreateHandler() to TestHarnessBuilder's
 // Intercept*() methods.
-class FakeComponent {
+class FakeComponent : public fuchsia::modular::Lifecycle {
  public:
   virtual ~FakeComponent();
 
@@ -60,8 +60,13 @@ class FakeComponent {
   virtual void OnDestroy() {}
 
  private:
+  // |fuchsia::modular::Lifecycle|
+  void Terminate() override;
+
   fuchsia::modular::testing::InterceptedComponentPtr intercepted_component_ptr_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+
+  fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
 };
 
 }  // namespace testing
