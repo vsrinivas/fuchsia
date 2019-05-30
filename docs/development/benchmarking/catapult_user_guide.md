@@ -34,7 +34,7 @@ Fuchsia infrastructure, we map our own data into these fields with the following
 Type the name of your benchmark suite in the first box to begin searching.   As an
 example, we can see the zircon_benchmarks suite if we type "zircon"
 
-![test_suite_example](/images/benchmarking/test_suite_example.png "test_suite_example")
+![test_suite_example](/docs/images/benchmarking/test_suite_example.png "test_suite_example")
 
 Select a builder and a subtest.  Note that if your subtest is named "foo", there will be
 multiple "foo_<metric_name>" subtests to choose from.  Each of these represents a metric
@@ -45,7 +45,7 @@ averages of these N samples.
 When you're finished filling out each field, click "Add" to add your graph to the UI.
 You should see something like this:
 
-![graph_example](/images/benchmarking/graph_example.png "graph_exmaple")
+![graph_example](/docs/images/benchmarking/graph_example.png "graph_example")
 
 
 ## Viewing sample metadata
@@ -54,7 +54,7 @@ If you hover over a point in a graph, you can see some extra information such as
 point's value, the date it was recorded, and a link to the log page of the build that
 generated it.
 
-![tooltip_example](/images/benchmarking/tooltip_example.png "tooltip_example")
+![tooltip_example](/docs/images/benchmarking/tooltip_example.png "tooltip_example")
 
 
 ## Saving the View
@@ -74,7 +74,7 @@ To enable regression detection, you must enable "monitoring" for a test by click
 "Request Monitoring for Tests" button under the "Report issue" dropdown at the top of the
 page.
 
-![monitoring_button_example](/images/benchmarking/monitoring_button_example.png "monitoring_button_example")
+![monitoring_button_example](/docs/images/benchmarking/monitoring_button_example.png "monitoring_button_example")
 
 This will open a bug form you can fill out to enable monitoring for a benchmark.  The
 Chrome team has a Sheriff rotation (oncall rotation) to triage regression alerts.  The
