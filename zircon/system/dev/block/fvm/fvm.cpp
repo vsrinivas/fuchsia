@@ -238,12 +238,8 @@ zx_status_t VPartitionManager::Load() {
         return ZX_ERR_BAD_STATE;
     }
 
-    // Whether the metadata should grow or not.
-    bool metadata_should_grow =
-        sb.fvm_partition_size < DiskSize() &&
-        AllocTableLength(sb.fvm_partition_size, sb.slice_size) < sb.allocation_table_size;
-    size_t metadata_vmo_size = metadata_should_grow ? format_info_.metadata_allocated_size()
-                                                    : format_info_.metadata_size();
+    // Allocate a buffer big enough for the allocated metadata.
+    size_t metadata_vmo_size = format_info_.metadata_allocated_size();
 
     // Now that the slice size is known, read the rest of the metadata
     auto make_metadata_vmo = [&](size_t offset, fzl::OwnedVmoMapper* out_mapping) {
@@ -276,10 +272,11 @@ zx_status_t VPartitionManager::Load() {
         return status;
     }
 
-    // Validate metadata headers before growing.
+    // Validate metadata headers before growing and pick the correct one.
     const void* metadata;
     if ((status = fvm_validate_header(mapper.start(), mapper_backup.start(),
-                                      format_info_.metadata_size(), &metadata)) != ZX_OK) {
+                                      format_info_.metadata_allocated_size(), &metadata)) !=
+        ZX_OK) {
         fprintf(stderr, "fvm: Header validation failure: %d\n", status);
         return status;
     }
@@ -292,13 +289,27 @@ zx_status_t VPartitionManager::Load() {
         metadata_ = std::move(mapper_backup);
     }
 
+    // Whether the metadata should grow or not.
+    bool metadata_should_grow =
+        GetFvmLocked()->fvm_partition_size < DiskSize() &&
+        AllocTableLength(GetFvmLocked()->fvm_partition_size, GetFvmLocked()->slice_size) <
+            GetFvmLocked()->allocation_table_size;
+
+    // Recalculate format info for the valid metadata header.
+    format_info_ = FormatInfo::FromSuperBlock(*GetFvmLocked());
     if (metadata_should_grow) {
-        // Now grow the fvm_partition to disk_size.
-        format_info_ = FormatInfo::FromDiskSize(DiskSize(), format_info_.slice_size());
-        GetFvmLocked()->fvm_partition_size = DiskSize();
-        GetFvmLocked()->pslice_count = format_info_.slice_count();
+        size_t new_slice_count = format_info_.GetMaxAddressableSlices(DiskSize());
+        size_t target_partition_size =
+            format_info_.GetSliceStart(1) + new_slice_count * format_info_.slice_size();
+        GetFvmLocked()->fvm_partition_size = target_partition_size;
+        GetFvmLocked()->pslice_count = new_slice_count;
+        format_info_ = FormatInfo::FromSuperBlock(*GetFvmLocked());
+
         // Persist the growth.
-        WriteFvmLocked();
+        if ((status = WriteFvmLocked()) != ZX_OK) {
+            fprintf(stderr, "fvm: Persisting updated header failed.");
+            return status;
+        }
     }
 
     // Begin initializing the underlying partitions
@@ -589,7 +600,7 @@ slice_entry_t* VPartitionManager::GetSliceEntryLocked(size_t index) const {
     uintptr_t metadata_start = reinterpret_cast<uintptr_t>(GetFvmLocked());
     uintptr_t offset = static_cast<uintptr_t>(kAllocTableOffset + index * sizeof(slice_entry_t));
     ZX_DEBUG_ASSERT(kAllocTableOffset <= offset);
-    ZX_DEBUG_ASSERT(offset < kAllocTableOffset + AllocTableLength(DiskSize(), SliceSize()));
+    ZX_DEBUG_ASSERT(offset < format_info_.metadata_size());
     return reinterpret_cast<slice_entry_t*>(metadata_start + offset);
 }
 
