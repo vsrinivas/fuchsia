@@ -83,7 +83,7 @@ fi
 launch_debug_agent
 
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
-"${FUCHSIA_BUILD_DIR}/host_x64/fidlcat" \
+"${FUCHSIA_BUILD_DIR}/tools/fidlcat" \
   "--connect" "[${target}]:${port}" \
   "--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt \
   "-s" "${FUCHSIA_BUILD_DIR}" \
