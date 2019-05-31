@@ -616,12 +616,7 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fidl::endpoints::create_proxy,
-        futures::task::Poll,
-        pin_utils::pin_mut,
-    };
+    use {super::*, fidl::endpoints::create_proxy, futures::task::Poll, pin_utils::pin_mut};
 
     #[test]
     fn format_bssid() {

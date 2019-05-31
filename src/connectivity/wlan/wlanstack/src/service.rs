@@ -110,7 +110,11 @@ pub async fn serve_device_requests(
                     Err(status) => responder.send(status.into_raw(), None),
                 }
             }
-            DeviceServiceRequest::DestroyIface { req: _, responder: _ } => unimplemented!(),
+            DeviceServiceRequest::DestroyIface { req, responder } => {
+                let result = await!(destroy_iface(&phys, &ifaces, req.iface_id));
+                let status = into_status_and_opt(result).0;
+                responder.send(status.into_raw())
+            }
             DeviceServiceRequest::GetClientSme { iface_id, sme, responder } => {
                 let status = get_client_sme(&ifaces, iface_id, sme);
                 responder.send(status.into_raw())
@@ -198,6 +202,30 @@ fn list_ifaces(ifaces: &IfaceMap) -> fidl_svc::ListIfacesResponse {
         })
         .collect();
     fidl_svc::ListIfacesResponse { ifaces: list }
+}
+
+async fn destroy_iface<'a>(
+    phys: &'a PhyMap,
+    ifaces: &'a IfaceMap,
+    id: u16,
+) -> Result<(), zx::Status> {
+    info!("destroy_iface(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let phy_ownership = match &iface.phy_ownership {
+        device::DirectMlmeChannel::NotSupported => return Err(zx::Status::NOT_SUPPORTED),
+        device::DirectMlmeChannel::Supported(phy) => phy,
+    };
+
+    let phy = phys.get(&phy_ownership.phy_id).ok_or(zx::Status::NOT_FOUND)?;
+    let mut phy_req = fidl_wlan_dev::DestroyIfaceRequest { id: phy_ownership.phy_assigned_id };
+    let r = await!(phy.proxy.destroy_iface(&mut phy_req)).map_err(move |e| {
+        error!("Error sending 'DestroyIface' request to phy {:?}: {}", phy_ownership, e);
+        zx::Status::INTERNAL
+    })?;
+    let () = zx::Status::ok(r.status)?;
+
+    ifaces.remove(&id);
+    Ok(())
 }
 
 fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceResponse, zx::Status> {
@@ -496,6 +524,93 @@ mod tests {
     }
 
     #[test]
+    fn destroy_iface_success() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (mut phy_map, _phy_map_events) = PhyMap::new();
+        let (mut iface_map, _iface_map_events) = IfaceMap::new();
+        let mut phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
+
+        let destroy_fut = super::destroy_iface(&phy_map, &iface_map, 42);
+        pin_mut!(destroy_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
+
+        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
+            Poll::Ready(Some(Ok(PhyRequest::DestroyIface { req, responder }))) => (req, responder),
+            _ => panic!("phy_stream returned unexpected result"),
+        };
+
+        // Verify the destroy iface request to the corresponding PHY is correct.
+        assert_eq!(13, req.id);
+
+        responder
+            .send(&mut fidl_wlan_dev::DestroyIfaceResponse { status: zx::sys::ZX_OK })
+            .expect("failed to send DestroyIfaceResponse");
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut destroy_fut));
+
+        // Verify iface was removed from available ifaces.
+        if let Some(_) = iface_map.get(&42u16) {
+            panic!("iface expected to be deleted")
+        }
+    }
+
+    #[test]
+    fn destroy_iface_failure() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (mut phy_map, _phy_map_events) = PhyMap::new();
+        let (mut iface_map, _iface_map_events) = IfaceMap::new();
+        let mut phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
+
+        let destroy_fut = super::destroy_iface(&phy_map, &iface_map, 42);
+        pin_mut!(destroy_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
+
+        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
+            Poll::Ready(Some(Ok(PhyRequest::DestroyIface { req, responder }))) => (req, responder),
+            _ => panic!("phy_stream returned unexpected result"),
+        };
+
+        // Verify the destroy iface request to the corresponding PHY is correct.
+        assert_eq!(13, req.id);
+
+        responder
+            .send(&mut fidl_wlan_dev::DestroyIfaceResponse { status: zx::sys::ZX_ERR_INTERNAL })
+            .expect("failed to send DestroyIfaceResponse");
+        assert_eq!(
+            Poll::Ready(Err(zx::Status::INTERNAL)),
+            exec.run_until_stalled(&mut destroy_fut)
+        );
+
+        // Verify iface was not removed from available ifaces.
+        if let None = iface_map.get(&42u16) {
+            panic!("iface expected to not be deleted")
+        }
+    }
+
+    #[test]
+    fn destroy_iface_not_supported() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (mut phy_map, _phy_map_events) = PhyMap::new();
+        let (mut iface_map, _iface_map_events) = IfaceMap::new();
+        let _phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
+
+        let fut = super::destroy_iface(&phy_map, &iface_map, 10);
+        pin_mut!(fut);
+        assert_eq!(Poll::Ready(Err(zx::Status::NOT_SUPPORTED)), exec.run_until_stalled(&mut fut));
+    }
+
+    #[test]
+    fn destroy_iface_not_found() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (mut phy_map, _phy_map_events) = PhyMap::new();
+        let (mut iface_map, _iface_map_events) = IfaceMap::new();
+        let _phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
+
+        let fut = super::destroy_iface(&phy_map, &iface_map, 43);
+        pin_mut!(fut);
+        assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)), exec.run_until_stalled(&mut fut));
+    }
+
+    #[test]
     fn query_iface_not_found() {
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
@@ -779,6 +894,31 @@ mod tests {
 
         let (_proxy, server) = create_proxy().expect("failed to create a pair of SME endpoints");
         assert_eq!(zx::Status::NOT_SUPPORTED, super::get_ap_sme(&iface_map, 10, server));
+    }
+
+    fn fake_destroy_iface_env(phy_map: &mut PhyMap, iface_map: &mut IfaceMap) -> PhyRequestStream {
+        let (phy, phy_stream) = fake_phy("/dev/null");
+        phy_map.insert(10, phy);
+
+        // Insert device which does not support destruction.
+        let iface = fake_client_iface("/dev/null");
+        iface_map.insert(10, iface.iface);
+
+        // Insert device which does support destruction.
+        let iface = fake_client_iface("/dev/null");
+        let iface = FakeClientIface {
+            iface: IfaceDevice {
+                phy_ownership: device::DirectMlmeChannel::Supported(device::PhyOwnership {
+                    phy_id: 10,
+                    phy_assigned_id: 13,
+                }),
+                ..iface.iface
+            },
+            ..iface
+        };
+        iface_map.insert(42, iface.iface);
+
+        phy_stream
     }
 
     fn fake_phy(path: &str) -> (PhyDevice, PhyRequestStream) {
