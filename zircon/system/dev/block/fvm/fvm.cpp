@@ -427,6 +427,8 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
             size_t pslice;
             auto vslice = vslice_start + i;
             if (vp->SliceGetLocked(vslice, &pslice)) {
+                fprintf(stderr, "FVM: VPartitionManager::AllocateSlicesLocked: "
+                        "SliceGetLocked found no physical slice for vslice %zu\n", vslice);
                 status = ZX_ERR_INVALID_ARGS;
             }
 
