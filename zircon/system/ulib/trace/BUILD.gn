@@ -15,6 +15,7 @@ source_set("common") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
@@ -26,6 +27,9 @@ header_deps = [
 
   # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
   "$zx/system/ulib/fbl:headers",
+
+  # <trace/observer.h> has #include <fit/function.h>
+  "$zx/system/ulib/fit",
 ]
 
 # The default version for the normal case.

@@ -4,17 +4,23 @@
 
 #pragma once
 
-#include <trace-provider/handler.h>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
+#include <lib/zircon-internal/fnv1hash.h>
+#include <trace-provider/handler.h>
+
+// clang-format off
+// TODO(DX-1043): These are for the is-category-enabled lookup.
+// Replace with std::foo.
 #include <fbl/intrusive_hash_table.h>
-#include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
-#include <lib/zircon-internal/fnv1hash.h>
+// clang-format on
 
 namespace trace {
 namespace internal {
@@ -24,12 +30,12 @@ public:
     static void StartEngine(async_dispatcher_t* dispatcher,
                             trace_buffering_mode_t buffering_mode,
                             zx::vmo buffer, zx::fifo fifo,
-                            fbl::Vector<fbl::String> enabled_categories);
+                            std::vector<std::string> enabled_categories);
     static void StopEngine();
 
 private:
     Session(void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
-                     fbl::Vector<fbl::String> enabled_categories);
+            std::vector<std::string> enabled_categories);
     ~Session() override;
 
     // |trace::TraceHandler|
@@ -56,7 +62,7 @@ private:
     size_t buffer_num_bytes_;
     zx::fifo fifo_;
     async::WaitMethod<Session, &Session::HandleFifo> fifo_wait_;
-    fbl::Vector<fbl::String> const enabled_categories_;
+    std::vector<std::string> const enabled_categories_;
 
     using CString = const char*;
 
@@ -93,7 +99,10 @@ private:
         CategoryStringKeyTraits>;
     StringSet enabled_category_set_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Session);
+    Session(const Session&) = delete;
+    Session(Session&&) = delete;
+    Session& operator=(const Session&) = delete;
+    Session& operator=(Session&&) = delete;
 };
 
 } // namespace internal

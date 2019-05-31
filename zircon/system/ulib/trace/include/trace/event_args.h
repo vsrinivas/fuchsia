@@ -61,7 +61,6 @@
 //     char* chars = ...;
 //     size_t length = ...;
 //     const char* c_string = ...;
-//     fbl::String fbl_string = ...;
 //     std::string std_string = ...;
 //     void* ptr = ...;
 //     zx_koid_t koid = ...;

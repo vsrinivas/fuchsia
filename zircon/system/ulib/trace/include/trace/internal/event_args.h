@@ -95,6 +95,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+// TODO(DX-1043): Remove use of fbl.
 #include <fbl/string_traits.h>
 #include <type_traits>
 

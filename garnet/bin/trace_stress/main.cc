@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
@@ -150,7 +152,7 @@ int main(int argc, char** argv) {
   // This is in anticipation of double-buffering support.
   async::Loop provider_loop(&kAsyncLoopConfigNoAttachToThread);
   provider_loop.StartThread("TraceProvider");
-  fbl::unique_ptr<trace::TraceProvider> provider;
+  std::unique_ptr<trace::TraceProvider> provider;
   bool already_started;
   if (!trace::TraceProvider::CreateSynchronously(
       provider_loop.dispatcher(), "trace_stress", &provider,

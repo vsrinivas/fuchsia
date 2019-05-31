@@ -8,7 +8,6 @@
 
 #include <stdio.h>
 
-#include <fbl/algorithm.h>
 #include <fuchsia/tracelink/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fidl/coding.h>
@@ -36,7 +35,7 @@ TraceProviderImpl::~TraceProviderImpl() = default;
 
 void TraceProviderImpl::Start(trace_buffering_mode_t buffering_mode,
                               zx::vmo buffer, zx::fifo fifo,
-                              fbl::Vector<fbl::String> enabled_categories) {
+                              std::vector<std::string> enabled_categories) {
     Session::StartEngine(
         dispatcher_, buffering_mode, std::move(buffer), std::move(fifo),
         std::move(enabled_categories));
@@ -92,10 +91,11 @@ void TraceProviderImpl::Connection::Handle(
 bool TraceProviderImpl::Connection::ReadMessage() {
     FIDL_ALIGNDECL uint8_t buffer[16 * 1024];
     uint32_t num_bytes = 0u;
-    zx_handle_t handles[2];
+    constexpr uint32_t kNumHandles = 2;
+    zx_handle_t handles[kNumHandles];
     uint32_t num_handles = 0u;
     zx_status_t status = channel_.read(
-        0u, buffer, handles, sizeof(buffer), static_cast<uint32_t>(fbl::count_of(handles)),
+        0u, buffer, handles, sizeof(buffer), kNumHandles,
         &num_bytes, &num_handles);
     if (status != ZX_OK) {
         fprintf(stderr, "TraceProvider: channel read failed: status=%d(%s)\n",
@@ -133,10 +133,10 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
         auto buffering_mode = request->buffering_mode;
         auto buffer = zx::vmo(request->buffer);
         auto fifo = zx::fifo(request->fifo);
-        fbl::Vector<fbl::String> categories;
+        std::vector<std::string> categories;
         auto strings = reinterpret_cast<fidl_string_t*>(request->categories.data);
         for (size_t i = 0; i < request->categories.count; i++) {
-            categories.push_back(fbl::String(strings[i].data, strings[i].size));
+            categories.push_back(std::string(strings[i].data, strings[i].size));
         }
         trace_buffering_mode_t trace_buffering_mode;
         switch (buffering_mode) {

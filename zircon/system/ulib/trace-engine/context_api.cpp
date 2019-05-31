@@ -4,13 +4,13 @@
 
 #include <string.h>
 
+#include <algorithm>
 #include <atomic>
+#include <memory>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/algorithm.h>
 #include <fbl/intrusive_hash_table.h>
-#include <fbl/unique_ptr.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <trace-engine/fields.h>
@@ -148,7 +148,7 @@ struct ContextCache {
     // Storage for the external thread entries.
     ThreadEntry thread_entries[kMaxThreadEntries];
 };
-thread_local fbl::unique_ptr<ContextCache> tls_cache{};
+thread_local std::unique_ptr<ContextCache> tls_cache{};
 
 ContextCache* GetCurrentContextCache(uint32_t generation) {
     ContextCache* cache = tls_cache.get();
@@ -891,7 +891,7 @@ EXPORT_NO_DDK void trace_context_write_log_record(
         return;
 
     log_message_length =
-        fbl::min(log_message_length, size_t(trace::LogRecordFields::kMaxMessageLength));
+        std::min(log_message_length, size_t(trace::LogRecordFields::kMaxMessageLength));
     const size_t record_size = sizeof(trace::RecordHeader) +
                                trace::SizeOfEncodedThreadRef(thread_ref) +
                                trace::WordsToBytes(1) +

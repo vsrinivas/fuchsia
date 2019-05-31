@@ -17,7 +17,7 @@ TraceObserver::~TraceObserver() {
     Stop();
 }
 
-void TraceObserver::Start(async_dispatcher_t* dispatcher, fbl::Closure callback) {
+void TraceObserver::Start(async_dispatcher_t* dispatcher, fit::closure callback) {
     ZX_DEBUG_ASSERT(dispatcher);
     ZX_DEBUG_ASSERT(callback);
 

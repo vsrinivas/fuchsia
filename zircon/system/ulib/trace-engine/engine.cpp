@@ -8,12 +8,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <utility>
+#include <vector>
 
 #include <zircon/assert.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/vector.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
@@ -67,7 +67,7 @@ struct Observer {
     // it has started. When it does call us back this is set back to false.
     bool awaiting_update_after_start;
 };
-fbl::Vector<Observer> g_observers __TA_GUARDED(g_engine_mutex);
+std::vector<Observer> g_observers __TA_GUARDED(g_engine_mutex);
 
 // Trace context reference count.
 // This functions as a non-exclusive lock for the engine's trace context.
@@ -399,7 +399,7 @@ EXPORT_NO_DDK zx_status_t trace_engine_start(
     flush_site_cache();
 
     // Notify observers that the state changed.
-    if (g_observers.is_empty()) {
+    if (g_observers.empty()) {
         g_event.signal(0u, SIGNAL_ALL_OBSERVERS_STARTED);
     } else {
         for (auto& observer : g_observers)
@@ -823,10 +823,10 @@ EXPORT zx_status_t trace_register_observer(zx_handle_t event) {
 EXPORT zx_status_t trace_unregister_observer(zx_handle_t event) {
     fbl::AutoLock lock(&g_engine_mutex);
 
-    for (size_t i = 0; i < g_observers.size(); i++) {
-        if (g_observers[i].event == event) {
-            bool awaited = g_observers[i].awaiting_update_after_start;
-            g_observers.erase(i);
+    for (auto it = g_observers.begin(); it != g_observers.end(); ++it) {
+        if (it->event == event) {
+            bool awaited = it->awaiting_update_after_start;
+            g_observers.erase(it);
             if (awaited) {
                 notify_engine_all_observers_started_if_needed_locked();
             }

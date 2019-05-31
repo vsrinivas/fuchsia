@@ -23,7 +23,7 @@ namespace internal {
 
 Session::Session(void* buffer, size_t buffer_num_bytes,
                  zx::fifo fifo,
-                 fbl::Vector<fbl::String> enabled_categories)
+                 std::vector<std::string> enabled_categories)
     : buffer_(buffer),
       buffer_num_bytes_(buffer_num_bytes),
       fifo_(std::move(fifo)),
@@ -48,7 +48,7 @@ Session::~Session() {
 void Session::StartEngine(async_dispatcher_t* dispatcher,
                           trace_buffering_mode_t buffering_mode,
                           zx::vmo buffer, zx::fifo fifo,
-                          fbl::Vector<fbl::String> enabled_categories) {
+                          std::vector<std::string> enabled_categories) {
     ZX_DEBUG_ASSERT(buffer);
     ZX_DEBUG_ASSERT(fifo);
 

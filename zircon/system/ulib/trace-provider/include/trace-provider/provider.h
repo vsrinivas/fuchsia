@@ -138,8 +138,12 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+// TODO(PT-63): Remove fbl/unique_ptr.h when all clients have migrated to
+// explicit fdio version. They may still be using fbl::unique_ptr and only
+// get it through us. Fortunately, fbl::unique_ptr == std::unique_ptr.
 #include <fbl/unique_ptr.h>
 #include <lib/zx/channel.h>
+#include <memory>
 
 namespace trace {
 
@@ -156,13 +160,13 @@ public:
             zx::channel to_service,
             async_dispatcher_t* dispatcher,
             const char* name,
-            fbl::unique_ptr<TraceProviderEtc>* out_provider,
+            std::unique_ptr<TraceProviderEtc>* out_provider,
             bool* out_already_started) {
         auto provider = trace_provider_create_synchronously_etc(
             to_service.release(), dispatcher, name, out_already_started);
         if (!provider)
             return false;
-        *out_provider = fbl::unique_ptr<TraceProviderEtc>(
+        *out_provider = std::unique_ptr<TraceProviderEtc>(
             new TraceProviderEtc(provider));
         return true;
     }
@@ -202,13 +206,13 @@ public:
     static bool CreateSynchronously(
             async_dispatcher_t* dispatcher,
             const char* name,
-            fbl::unique_ptr<TraceProviderWithFdio>* out_provider,
+            std::unique_ptr<TraceProviderWithFdio>* out_provider,
             bool* out_already_started) {
         auto provider = trace_provider_create_synchronously_with_fdio(
             dispatcher, name, out_already_started);
         if (!provider)
             return false;
-        *out_provider = fbl::unique_ptr<TraceProviderWithFdio>(
+        *out_provider = std::unique_ptr<TraceProviderWithFdio>(
             new TraceProviderWithFdio(provider));
         return true;
     }

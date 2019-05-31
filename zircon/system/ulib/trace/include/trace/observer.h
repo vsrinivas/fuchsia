@@ -17,7 +17,7 @@
 
 #ifdef __cplusplus
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 
@@ -36,7 +36,7 @@ public:
     //
     // |async| the asynchronous dispatcher, must not be null.
     // |callback| the callback which is invoked whenever a state change is observed.
-    void Start(async_dispatcher_t* dispatcher, fbl::Closure callback);
+    void Start(async_dispatcher_t* dispatcher, fit::closure callback);
 
     // Stops watching for state changes.
     void Stop();
@@ -46,7 +46,7 @@ private:
                 const zx_packet_signal_t* signal);
     void BeginWait(async_dispatcher_t* dispatcher);
 
-    fbl::Closure callback_;
+    fit::closure callback_;
     zx::event event_;
     async::WaitMethod<TraceObserver, &TraceObserver::Handle> wait_{this};
 };

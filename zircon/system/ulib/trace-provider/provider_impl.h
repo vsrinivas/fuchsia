@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <fbl/macros.h>
-#include <fbl/string.h>
-#include <fbl/vector.h>
+#include <string>
+#include <vector>
+
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
@@ -49,14 +49,17 @@ private:
     };
 
     void Start(trace_buffering_mode_t buffering_mode, zx::vmo buffer,
-               zx::fifo fifo, fbl::Vector<fbl::String> enabled_categories);
+               zx::fifo fifo, std::vector<std::string> enabled_categories);
     void Stop();
     void OnClose();
 
     async_dispatcher_t* const dispatcher_;
     Connection connection_;
 
-    DISALLOW_COPY_ASSIGN_AND_MOVE(TraceProviderImpl);
+    TraceProviderImpl(const TraceProviderImpl&) = delete;
+    TraceProviderImpl(TraceProviderImpl&&) = delete;
+    TraceProviderImpl& operator=(const TraceProviderImpl&) = delete;
+    TraceProviderImpl& operator=(TraceProviderImpl&&) = delete;
 };
 
 } // namespace internal
