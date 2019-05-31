@@ -18,7 +18,7 @@ class LogListenerOStreamImplTest : public gtest::RealLoopFixture {
     prefix = env_name;
 
     log_listener.reset(new internal::LogListenerOStreamImpl(
-        proxy.NewRequest(dispatcher()), std::move(env_name), false, &stream,
+        proxy.NewRequest(dispatcher()), std::move(env_name), &stream,
         dispatcher()));
   }
 

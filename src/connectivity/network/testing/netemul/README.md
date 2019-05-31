@@ -150,10 +150,10 @@ allows for clients to expose specific *Endpoints* on the `vfs` under the created
 This feature is used to test components that perform `vfs` scanning to retrieve devices with minimal
 intrusion. This is used to go around the limitation that `/dev` is never hermetic to sandboxed environments.
 
-The ManagedEnvironment also provides hermetic fuchsia.logger.LogSink and fuchsia.logger.Log services so
+The ManagedEnvironment also provides hermetic `fuchsia.logger.LogSink` and `fuchsia.logger.Log` services so
 that environments can run components that use syslog. Users have the ability to enable and customize log
 printing from syslog -- they can also completely disable syslog outputs. See [LoggerOptions](#loggeroptions)
-for more information. If enabled, log prints will be tagged with the environment name and printed to stdout.
+for configuration information.
 
 ### SyncManager
 
@@ -244,9 +244,15 @@ In that case, it's as if only the *url* field had been specified.
 
 | Field         | Type                                        | Description                                      |
 |---------------|---------------------------------------------|--------------------------------------------------|
-| enabled       | Boolean                                     | Enable the logger (default: true)                |
-| klogs_enabled | Boolean                                     | Enable printing kernel logs (default: false)     |
+| enabled       | Boolean                                     | Enable log output (default: true)                |
+| klogs_enabled | Boolean                                     | Enable capturing kernel logs (default: false)    |
 | filters       | [LoggerFilterOptions](#loggerfilteroptions) | Options for log filterering                      |
+
+> Note that the `enabled` option in `LoggerOptions` does not affect the availability of the logger
+> service on the environment, but rather just controls that the logs be printed to stdout.
+>
+> The `klogs_enabled` flag controls, in turn, the logger process that is launched in each
+> environment making it listen or not to the kernel logs.
 
 
 ### LoggerFilterOptions

@@ -22,7 +22,7 @@ class LogListenerLogSinkImpl : public LogListenerImpl {
  public:
   LogListenerLogSinkImpl(
       fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-      std::string prefix, bool klogs_enabled, zx::socket log_sink,
+      std::string prefix, zx::socket log_sink,
       async_dispatcher_t* dispatcher = nullptr);
 
  protected:

@@ -21,11 +21,10 @@ namespace internal {
 
 LogListenerImpl::LogListenerImpl(
     fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-    std::string prefix, bool klogs_enabled, async_dispatcher_t* dispatcher)
+    std::string prefix, async_dispatcher_t* dispatcher)
     : binding_(this, std::move(request), dispatcher),
       prefix_(std::move(prefix)),
-      dropped_logs_(0),
-      klogs_enabled_(klogs_enabled) {
+      dropped_logs_(0) {
   binding_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "LogListenerImpl error: " << zx_status_get_string(status)
                    << std::endl;
@@ -33,13 +32,6 @@ LogListenerImpl::LogListenerImpl(
 }
 
 void LogListenerImpl::Log(fuchsia::logger::LogMessage m) {
-  // TODO(ghanan): Filter out kernel logs before reaching here.
-  // Ignore kernel logs
-  if (!klogs_enabled_ &&
-      std::find(m.tags.begin(), m.tags.end(), "klog") != m.tags.end()) {
-    return;
-  }
-
   // Actually process the log
   LogImpl(std::move(m));
 }
@@ -99,9 +91,6 @@ std::unique_ptr<LogListener> LogListener::Create(
     return nullptr;
   }
 
-  bool klogs_enabled =
-      logger_options.has_klogs_enabled() && logger_options.klogs_enabled();
-
   // Create an instance of the LogListener implementation
   // and start listening for logs
   fidl::InterfaceHandle<fuchsia::logger::LogListener> loglistener_h;
@@ -109,14 +98,12 @@ std::unique_ptr<LogListener> LogListener::Create(
 
   if (logger_options.has_syslog_output() && logger_options.syslog_output()) {
     // Create a LogListenerImpl that forwards logs to another LogSink
-    impl.reset(new internal::LogListenerLogSinkImpl(loglistener_h.NewRequest(),
-                                                    prefix, klogs_enabled,
-                                                    zx::socket(), dispatcher));
+    impl.reset(new internal::LogListenerLogSinkImpl(
+        loglistener_h.NewRequest(), prefix, zx::socket(), dispatcher));
   } else {
     // Create a LogListenerImpl that writes logs to stdout.
-    impl.reset(new internal::LogListenerOStreamImpl(loglistener_h.NewRequest(),
-                                                    prefix, klogs_enabled,
-                                                    &std::cout, dispatcher));
+    impl.reset(new internal::LogListenerOStreamImpl(
+        loglistener_h.NewRequest(), prefix, &std::cout, dispatcher));
   }
 
   if (!impl) {

@@ -4,14 +4,17 @@
 
 #include "sandbox.h"
 
+#include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <src/lib/fxl/strings/join_strings.h>
 
 #include <iostream>
 #include <unordered_set>
 
 #include "lib/gtest/real_loop_fixture.h"
+#include "log_listener_test_helpers.h"
 
 // A fairly large timeout is used to prevent flakiness in CQ, but we don't want
 // to have a test that just blocks forever.
@@ -38,6 +41,21 @@ class SandboxTest : public ::gtest::RealLoopFixture {
     Sandbox sandbox(std::move(sandbox_args_));
     bool done = false;
     SandboxResult o_result;
+
+    sandbox.SetRootEnvironmentCreatedCallback([this](ManagedEnvironment* env) {
+      if (log_event_) {
+        fidl::InterfaceHandle<fuchsia::logger::LogListener> listener;
+        log_listener_ = std::make_unique<TestListener>(listener.NewRequest());
+        log_listener_->SetObserver(
+            [this](const fuchsia::logger::LogMessage& msg) {
+              log_event_(msg);
+            });
+        fidl::InterfacePtr<fuchsia::logger::Log> log;
+        env->ConnectToService(fuchsia::logger::Log::Name_,
+                              log.NewRequest().TakeChannel());
+        log->Listen(std::move(listener), nullptr);
+      }
+    });
 
     sandbox.SetServicesCreatedCallback([this, &sandbox]() {
       if (connect_to_network_) {
@@ -79,14 +97,20 @@ class SandboxTest : public ::gtest::RealLoopFixture {
 
   void RunSandboxFailure() { RunSandbox(SandboxResult::TEST_FAILED); }
 
-  void SetCmx(const std::string& cmx) {
+  void SetCmx(const std::string& cmx, bool disable_logging = true) {
     ASSERT_TRUE(sandbox_args_.ParseFromString(cmx));
-    // disable all syslog logging for unit tests.
-    sandbox_args_.config.environment().DisableLogging(true);
+    if (disable_logging) {
+      // disable all syslog logging for unit tests.
+      sandbox_args_.config.environment().DisableLogging(true);
+    }
   }
 
   void EnableEventCollection() { collect_events_ = true; }
   void EnableNetworkService() { connect_to_network_ = true; }
+  void EnableLogCapture(
+      fit::function<void(const fuchsia::logger::LogMessage&)> callback) {
+    log_event_ = std::move(callback);
+  }
 
   void CheckEvents(const std::vector<int32_t>& check) {
     for (const auto& v : check) {
@@ -181,10 +205,12 @@ class SandboxTest : public ::gtest::RealLoopFixture {
   fit::function<void(EventType)> on_event_;
   bool collect_events_ = false;
   bool connect_to_network_ = false;
+  fit::function<void(const fuchsia::logger::LogMessage&)> log_event_;
   SandboxArgs sandbox_args_;
   std::unordered_set<int32_t> collected_codes_;
   std::unordered_set<std::string> observed_clients_;
   std::unordered_set<std::string> detached_clients_;
+  std::unique_ptr<TestListener> log_listener_;
   sync::BusPtr bus_;
   network::NetworkContextPtr net_ctx_;
   network::NetworkManagerPtr net_manager_;
@@ -793,6 +819,71 @@ TEST_F(SandboxTest, EnvironmentsWithSameNameFail) {
   // test flakiness we just check that it'll fail cleanly,
   // and not expect a specific return code.
   RunSandbox(SandboxResult::Status::UNSPECIFIED);
+}
+
+TEST_F(SandboxTest, SyslogWithNoKlog) {
+  SetCmx(R"(
+{
+   "environment" : {
+      "test" : [{
+         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+         "arguments" : ["-l", "hello", "-e", "100"]
+      }],
+      "logger_options": {
+         "enabled": false,
+         "klogs_enabled": false
+      }
+   }
+})",
+         false);
+  EnableEventCollection();
+  EnableLogCapture([this](const fuchsia::logger::LogMessage& msg) {
+    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") !=
+        msg.tags.end()) {
+      sync::Event evt;
+      evt.set_code(100);
+      bus()->Publish(std::move(evt));
+    } else {
+      FAIL() << "Got log unexpected log message tags:"
+             << fxl::JoinStrings(msg.tags);
+    }
+  });
+  RunSandboxSuccess();
+}
+
+TEST_F(SandboxTest, SyslogWithKlog) {
+  SetCmx(R"(
+{
+   "environment" : {
+      "test" : [{
+         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
+         "arguments" : ["-l", "hello", "-e", "100"]
+      }],
+      "logger_options": {
+         "enabled": false,
+         "klogs_enabled": true
+      }
+   }
+})",
+         false);
+  EnableEventCollection();
+  int klog_count = 0;
+  EnableLogCapture([this, &klog_count](const fuchsia::logger::LogMessage& msg) {
+    if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") !=
+        msg.tags.end()) {
+      sync::Event evt;
+      evt.set_code(100);
+      bus()->Publish(std::move(evt));
+    } else if (std::find(msg.tags.begin(), msg.tags.end(), "klog") !=
+               msg.tags.end()) {
+      klog_count++;
+    } else {
+      FAIL() << "Got log unexpected log message tags:"
+             << fxl::JoinStrings(msg.tags);
+    }
+  });
+  RunSandboxSuccess();
+  ASSERT_NE(klog_count, 0);
 }
 
 }  // namespace testing

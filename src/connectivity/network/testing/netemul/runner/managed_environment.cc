@@ -18,6 +18,7 @@ static const char* kLogSinkServiceURL =
     "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
 static const char* kLogServiceURL =
     "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+static const char* kLogServiceNoKLogOption = "--disable-klog";
 
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
@@ -100,12 +101,17 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   // add managed environment itself as a handler
   services->AddService(bindings_.GetHandler(this));
 
+  bool disable_klog = !LogListener::IsKlogsEnabled(options);
+
   // Inject LogSink service
   services->AddServiceWithLaunchInfo(
       kLogSinkServiceURL,
-      [this]() {
+      [this, disable_klog]() {
         fuchsia::sys::LaunchInfo linfo;
         linfo.url = kLogSinkServiceURL;
+        if (disable_klog) {
+          linfo.arguments.push_back(kLogServiceNoKLogOption);
+        }
         linfo.out = loggers_->CreateLogger(kLogSinkServiceURL, false);
         linfo.err = loggers_->CreateLogger(kLogSinkServiceURL, true);
         loggers_->IncrementCounter();
@@ -116,9 +122,12 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   // Inject Log service
   services->AddServiceWithLaunchInfo(
       kLogServiceURL,
-      [this]() {
+      [this, disable_klog]() {
         fuchsia::sys::LaunchInfo linfo;
         linfo.url = kLogServiceURL;
+        if (disable_klog) {
+          linfo.arguments.push_back(kLogServiceNoKLogOption);
+        }
         linfo.out = loggers_->CreateLogger(kLogServiceURL, false);
         linfo.err = loggers_->CreateLogger(kLogServiceURL, true);
         loggers_->IncrementCounter();

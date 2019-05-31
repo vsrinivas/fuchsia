@@ -17,7 +17,7 @@ class LogListenerOStreamImpl : public LogListenerImpl {
  public:
   LogListenerOStreamImpl(
       fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-      std::string prefix, bool klogs_enabled, std::ostream* stream,
+      std::string prefix, std::ostream* stream,
       async_dispatcher_t* dispatcher = nullptr);
 
  protected:

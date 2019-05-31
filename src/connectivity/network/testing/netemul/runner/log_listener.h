@@ -26,8 +26,7 @@ namespace internal {
 class LogListenerImpl : public fuchsia::logger::LogListener {
  public:
   LogListenerImpl(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
-                  std::string prefix, bool klogs_enabled,
-                  async_dispatcher_t* dispatcher = nullptr);
+                  std::string prefix, async_dispatcher_t* dispatcher = nullptr);
 
   /* Actual implementation (overrides) of fuchsia::logger::LogListener stubs */
 
@@ -57,11 +56,6 @@ class LogListenerImpl : public fuchsia::logger::LogListener {
   // counter for number of dropped logs when logging to
   // log_sock_.
   uint32_t dropped_logs_;
-
-  // klogs_enabled_
-  //
-  // Klog log visibility.
-  bool klogs_enabled_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogListenerImpl);
 };
@@ -99,6 +93,15 @@ class LogListener final {
   static std::unique_ptr<LogListener> Create(
       fuchsia::netemul::environment::LoggerOptions logger_options,
       const std::string& prefix, async_dispatcher_t* dispatcher = nullptr);
+
+  /// Checks whether klogs is enabled based on environment options in
+  /// |env_options|
+  static bool IsKlogsEnabled(
+      const fuchsia::netemul::environment::EnvironmentOptions& env_options) {
+    return env_options.has_logger_options() &&
+           env_options.logger_options().has_klogs_enabled() &&
+           env_options.logger_options().klogs_enabled();
+  }
 
  private:
   // Log filter options for when we bind.
