@@ -9,6 +9,10 @@ group("tests") {
   testonly = true
   deps = [
     ":modular_integration_tests",
+
+    # modular_test_harness is a dep for any test that uses test_harness_fixture
+    # (all of the tests below). Add it here so that an fx set --with
+    # //src/modular/tests includes it.
     "//peridot/packages/tests:modular_test_harness",
   ]
 }
@@ -142,6 +146,29 @@ executable("story_shell_factory_test") {
   ]
 }
 
+executable("story_shell_test") {
+  testonly = true
+
+  output_name = "story_shell_test"
+
+  sources = [
+    "story_shell_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 test_package("modular_integration_tests") {
   tests = [
     {
@@ -168,6 +195,10 @@ test_package("modular_integration_tests") {
       name = "story_shell_factory_test"
       environments = basic_envs
     },
+    {
+      name = "story_shell_test"
+      environments = basic_envs
+    },
   ]
 
   deps = [
@@ -177,6 +208,7 @@ test_package("modular_integration_tests") {
     ":queue_persistence_test",
     ":session_shell_test",
     ":story_shell_factory_test",
+    ":story_shell_test",
     "//garnet/public/lib/callback",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",

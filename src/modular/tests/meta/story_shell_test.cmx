@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/story_shell_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
