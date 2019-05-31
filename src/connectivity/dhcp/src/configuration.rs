@@ -96,8 +96,6 @@ pub struct ClientConfig {
 
 impl ClientConfig {
     pub fn new(lease_time_s: u32) -> Self {
-        ClientConfig {
-            lease_time_s: lease_time_s,
-        }
+        ClientConfig { lease_time_s: lease_time_s }
     }
 }

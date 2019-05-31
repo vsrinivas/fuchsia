@@ -406,10 +406,7 @@ impl<'a> Iterator for OptionBuffer<'a> {
                         None
                     } else {
                         Some(unsafe {
-                            (
-                                self.buf.get_unchecked(..opt_len),
-                                self.buf.get_unchecked(opt_len..),
-                            )
+                            (self.buf.get_unchecked(..opt_len), self.buf.get_unchecked(opt_len..))
                         })
                     }?;
                     self.buf = buf;
@@ -433,12 +430,7 @@ pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Option<Ipv4Addr> {
     if buf.len() < start + 4 {
         return None;
     }
-    Some(Ipv4Addr::new(
-        buf[start],
-        buf[start + 1],
-        buf[start + 2],
-        buf[start + 3],
-    ))
+    Some(Ipv4Addr::new(buf[start], buf[start + 1], buf[start + 2], buf[start + 3]))
 }
 
 fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
@@ -495,10 +487,8 @@ mod tests {
     #[test]
     fn test_serialize_returns_correct_bytes() {
         let mut msg = new_test_msg();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: vec![255, 255, 255, 0],
-        });
+        msg.options
+            .push(ConfigOption { code: OptionCode::SubnetMask, value: vec![255, 255, 255, 0] });
 
         let bytes = msg.serialize();
 
@@ -519,10 +509,7 @@ mod tests {
         assert_eq!(bytes[108], 'b' as u8);
         assert_eq!(bytes[115], 'g' as u8);
         assert_eq!(bytes[116], 0u8);
-        assert_eq!(
-            bytes[OPTIONS_START_IDX..OPTIONS_START_IDX + MAGIC_COOKIE.len()],
-            MAGIC_COOKIE
-        );
+        assert_eq!(bytes[OPTIONS_START_IDX..OPTIONS_START_IDX + MAGIC_COOKIE.len()], MAGIC_COOKIE);
         assert_eq!(bytes[bytes.len() - 1], 255u8);
     }
 
@@ -561,14 +548,10 @@ mod tests {
 
         let got = Message::from_buffer(&buf).unwrap();
 
-        let opt_want1 = ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: vec![255, 255, 255, 0],
-        };
-        let opt_want2 = ConfigOption {
-            code: OptionCode::ServerId,
-            value: vec![0xAA, 0xBB, 0xCC, 0xDD],
-        };
+        let opt_want1 =
+            ConfigOption { code: OptionCode::SubnetMask, value: vec![255, 255, 255, 0] };
+        let opt_want2 =
+            ConfigOption { code: OptionCode::ServerId, value: vec![0xAA, 0xBB, 0xCC, 0xDD] };
         let want = Message {
             op: OpCode::BOOTREQUEST,
             xid: 42,
@@ -578,9 +561,7 @@ mod tests {
             yiaddr: Ipv4Addr::new(192, 168, 1, 1),
             siaddr: Ipv4Addr::new(0, 0, 0, 0),
             giaddr: Ipv4Addr::new(0, 0, 0, 0),
-            chaddr: MacAddr {
-                octets: [0, 0, 0, 0, 0, 0],
-            },
+            chaddr: MacAddr { octets: [0, 0, 0, 0, 0, 0] },
             sname: "relay.example.com".to_string(),
             file: "boot.img".to_string(),
             options: vec![opt_want1, opt_want2],
@@ -592,10 +573,8 @@ mod tests {
     #[test]
     fn test_serialize_then_deserialize_with_single_option_is_equal_to_starting_value() {
         let mut msg = new_test_msg();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: vec![255, 255, 255, 0],
-        });
+        msg.options
+            .push(ConfigOption { code: OptionCode::SubnetMask, value: vec![255, 255, 255, 0] });
 
         assert_eq!(Message::from_buffer(&msg.serialize()).unwrap(), msg);
     }
@@ -610,14 +589,9 @@ mod tests {
     #[test]
     fn test_serialize_then_deserialize_with_many_options_is_equal_to_starting_value() {
         let mut msg = new_test_msg();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: vec![255, 255, 255, 0],
-        });
-        msg.options.push(ConfigOption {
-            code: OptionCode::NameServer,
-            value: vec![8, 8, 8, 8],
-        });
+        msg.options
+            .push(ConfigOption { code: OptionCode::SubnetMask, value: vec![255, 255, 255, 0] });
+        msg.options.push(ConfigOption { code: OptionCode::NameServer, value: vec![8, 8, 8, 8] });
         msg.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPDISCOVER.into()],
@@ -637,10 +611,7 @@ mod tests {
 
     #[test]
     fn test_serialize_with_valid_option_returns_correct_bytes() {
-        let opt = ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: vec![255, 255, 255, 0],
-        };
+        let opt = ConfigOption { code: OptionCode::SubnetMask, value: vec![255, 255, 255, 0] };
         let mut bytes = Vec::new();
         opt.serialize_to(&mut bytes);
         assert_eq!(bytes.len(), 6);
@@ -654,10 +625,7 @@ mod tests {
 
     #[test]
     fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
-        let opt = ConfigOption {
-            code: OptionCode::End,
-            value: vec![],
-        };
+        let opt = ConfigOption { code: OptionCode::End, value: vec![] };
         let mut bytes = Vec::new();
         opt.serialize_to(&mut bytes);
         assert_eq!(bytes.len(), 1);
@@ -729,10 +697,7 @@ mod tests {
     #[test]
     fn test_get_dhcp_type_without_dhcp_type_option_returns_none() {
         let mut msg = Message::new();
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![],
-        });
+        msg.options.push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![] });
 
         let got = msg.get_dhcp_type();
 
@@ -742,10 +707,8 @@ mod tests {
     #[test]
     fn test_get_dhcp_type_with_invalid_dhcp_type_value_returns_none() {
         let mut msg = Message::new();
-        msg.options.push(ConfigOption {
-            code: OptionCode::DhcpMessageType,
-            value: vec![224, 223, 222],
-        });
+        msg.options
+            .push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![224, 223, 222] });
 
         let got = msg.get_dhcp_type();
 
@@ -755,14 +718,9 @@ mod tests {
     #[test]
     fn test_buf_into_options_with_invalid_option_parses_other_valid_options() {
         let mut msg = Message::new();
-        msg.options.push(ConfigOption {
-            code: OptionCode::SubnetMask,
-            value: vec![255, 255, 255, 0],
-        });
-        msg.options.push(ConfigOption {
-            code: OptionCode::Router,
-            value: vec![192, 168, 1, 1],
-        });
+        msg.options
+            .push(ConfigOption { code: OptionCode::SubnetMask, value: vec![255, 255, 255, 0] });
+        msg.options.push(ConfigOption { code: OptionCode::Router, value: vec![192, 168, 1, 1] });
         msg.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPDISCOVER.into()],
