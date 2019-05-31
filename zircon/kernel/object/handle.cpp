@@ -38,10 +38,6 @@ constexpr uint32_t kHandleIndexMask = kMaxHandleCount - 1;
 static_assert((kHandleIndexMask & kMaxHandleCount) == 0,
               "kMaxHandleCount must be a power of 2");
 
-// TODO(johngro): remove this and use the one in handle.h once we have updated
-// externals to no longer depend on the MSB of the handle being 0.  See WEB-33
-constexpr uint32_t kHandleReservedBits = 3;
-// END TODO
 constexpr uint32_t kHandleReservedBitsMask = ((1 << kHandleReservedBits) - 1)
                                            << (32 - kHandleReservedBits);
 constexpr uint32_t kHandleGenerationMask = ~kHandleIndexMask & ~kHandleReservedBitsMask;

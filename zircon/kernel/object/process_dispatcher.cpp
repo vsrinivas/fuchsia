@@ -42,9 +42,6 @@
 KCOUNTER(dispatcher_process_create_count, "dispatcher.process.create")
 KCOUNTER(dispatcher_process_destroy_count, "dispatcher.process.destroy")
 
-// TODO(johngro): move this into handle.h one we have updated externals to no
-// longer depend on the MSB of the handle being 0.  See WEB-33
-constexpr uint32_t kHandleReservedBits = 2;
 constexpr uint32_t kHandleMustBeOneMask = ((0x1u << kHandleReservedBits) - 1);
 static_assert(kHandleMustBeOneMask == ZX_HANDLE_FIXED_BITS_MASK,
               "kHandleMustBeOneMask must match ZX_HANDLE_FIXED_BITS_MASK!");
@@ -60,14 +57,7 @@ static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
 
     auto handle_id = (handle->base_value() << kHandleReservedBits) | kHandleMustBeOneMask;
 
-    // TODO(johngro): remove this when we can, See WEB-33
-#if 0
     return static_cast<zx_handle_t>(mixer ^ handle_id);
-#else
-    zx_handle_t ret = static_cast<zx_handle_t>(mixer ^ handle_id);
-    DEBUG_ASSERT((ret & 0x80000000) == 0);
-    return ret;
-#endif
 }
 
 static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
@@ -133,10 +123,6 @@ ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
     // Handle values must always have the low kHandleReservedBits set.  Do not
     // ever attempt to toggle these bits using the handle_rand_ xor mask.
     handle_rand_ = secret << kHandleReservedBits;
-
-    // TODO(johngro): remove this once we have updated externals to no longer
-    // depend on the MSB of the handle being 0.  See WEB-33
-    handle_rand_ &= ~0x80000000U;
 }
 
 ProcessDispatcher::~ProcessDispatcher() {

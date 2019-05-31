@@ -21,6 +21,8 @@
 class Dispatcher;
 class Handle;
 
+constexpr uint32_t kHandleReservedBits = 2;
+
 template <typename T>
 class KernelHandle;
 
