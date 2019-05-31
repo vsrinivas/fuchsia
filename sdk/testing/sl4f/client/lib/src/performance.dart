@@ -111,13 +111,9 @@ class Performance {
   ///
   /// Returns [true] if the process ran successufly, [false] otherwise.
   Future<bool> runTraceProcessor(String processor, List<String> args) async {
-    await Process.run(processor, args).then((ProcessResult results) {
-      _log..info(results.stdout)..info(results.stderr);
-      if (results.exitCode != 0) {
-        return false;
-      }
-    });
-    return true;
+    final ProcessResult results = await Process.run(processor, args);
+    _log..info(results.stdout)..info(results.stderr);
+    return results.exitCode == 0;
   }
 
   /// Runs the provided processor ([processorPath]) on the given [trace].
