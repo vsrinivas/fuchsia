@@ -425,7 +425,7 @@ func newTLSClientConfig(cfg *amber.TlsClientConfig) (*tls.Config, error) {
 func (f *Source) initLocalStoreLocked() error {
 	if needsInit(f.localStore) {
 		log.Print("initializing local TUF store")
-		err := f.tufClient.Init(f.keys, len(f.keys))
+		err := f.tufClient.Init(f.keys, 1)
 		if err != nil {
 			return fmt.Errorf("TUF init failed: %s", err)
 		}
