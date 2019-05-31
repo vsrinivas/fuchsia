@@ -32,7 +32,8 @@ if jiri_manifest != ""
 
   let &runtimepath .= "," .
         \ g:fuchsia_dir . "/scripts/vim/," .
-        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/"
+        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/" .
+        \ g:fuchsia_dir . "/third_party/json5.vim/"
 
   " The "filetype plugin" line must come AFTER the changes to runtimepath
   " above (so the proper directories are searched), but must come BEFORE the
@@ -93,8 +94,10 @@ if jiri_manifest != ""
     autocmd BufRead,BufNewFile * call FuchsiaBuffer()
     autocmd Filetype cpp call FuchsiaCppBuffer()
 
-    " .cmx files are JSON files
+    " .cmx files are JSON
     autocmd BufRead,BufNewFile *.cmx set syntax=json
+    " .cml files are JSON5
+    autocmd BufRead,BufNewFile *.cml set syntax=json5
 
     " If this is a golden file, strip the .golden and run autocommands
     " This will allow syntax highlighting of FIDL goldens.
