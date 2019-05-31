@@ -6,16 +6,11 @@
 
 #include <string>
 
-#include "guest_test.h"
+#include "src/virtualization/tests/enclosed_guest.h"
+#include "src/virtualization/tests/fake_scenic.h"
+#include "src/virtualization/tests/guest_test.h"
 
 namespace {
-
-using ::fuchsia::ui::input::KeyboardEventPhase;
-
-void PressAndReleaseKey(FakeScenic* scenic, KeyboardEventHidUsage usage) {
-  scenic->SendKeyEvent(usage, KeyboardEventPhase::PRESSED);
-  scenic->SendKeyEvent(usage, KeyboardEventPhase::RELEASED);
-}
 
 // Create an alias, as "TEST_F" requires the fixture name to be a valid C token.
 using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
@@ -37,7 +32,7 @@ TEST_F(VirtioInputDebianGuestTest, Input) {
            KeyboardEventHidUsage::KEY_C,
            KeyboardEventHidUsage::KEY_LSHIFT,
        }) {
-    PressAndReleaseKey(this->GetEnclosedGuest()->GetScenic(), key);
+    this->GetEnclosedGuest()->GetScenic()->SendKeyPress(key);
   }
 
   // Ensure we passed.

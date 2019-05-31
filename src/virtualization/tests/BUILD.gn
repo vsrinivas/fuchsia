@@ -72,6 +72,7 @@ executable("bin") {
     "mock_netstack.cc",
     "mock_netstack.h",
     "virtio_block_tests.cc",
+    "virtio_gpu_tests.cc",
     "virtio_input_tests.cc",
     "virtio_net_tests.cc",
     "virtio_vsock_tests.cc",
@@ -80,6 +81,9 @@ executable("bin") {
   deps = [
     ":guest_console",
     "//garnet/lib/inet",
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",
