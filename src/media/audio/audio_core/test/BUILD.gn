@@ -10,7 +10,6 @@ group("test") {
   deps = [
     ":audio_device_tests_bin",
     ":audio_fidl_tests",
-    ":audio_loopback_tests_bin",
   ]
 }
 
@@ -82,23 +81,5 @@ executable("audio_fidl_tests_bin") {
     "//sdk/fidl/fuchsia.media",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/lib/test",
-  ]
-}
-
-executable("audio_loopback_tests_bin") {
-  testonly = true
-  output_name = "audio_loopback_tests"
-
-  sources = [
-    "audio_loopback_test.cc",
-    "audio_tests_shared.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//src/lib/fxl",
   ]
 }

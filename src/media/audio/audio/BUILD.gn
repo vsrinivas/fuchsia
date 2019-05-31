@@ -52,3 +52,11 @@ executable("audio_bin") {
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    "test",
+  ]
+}

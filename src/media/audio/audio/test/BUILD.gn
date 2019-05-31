@@ -1,0 +1,46 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    # For now, build the binary, not the package, so it isn't included in CQ.
+    ":audio_loopback_tests_bin",
+  ]
+}
+
+# test_package("audio_loopback_tests") {
+#   deps = [
+#     ":audio_loopback_tests_bin",
+#   ]
+
+#   tests = [
+#     {
+#       name = "audio_loopback_tests"
+#       environments = basic_envs
+#     },
+#   ]
+# }
+
+executable("audio_loopback_tests_bin") {
+  testonly = true
+  output_name = "audio_loopback_tests"
+
+  sources = [
+    "audio_loopback_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/media/audio/lib/test",
+    "//zircon/public/lib/fzl",
+  ]
+}
