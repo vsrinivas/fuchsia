@@ -55,7 +55,7 @@
 
 void
 spn_allocator_device_perm_create(struct spn_allocator_device_perm * const device_perm,
-                                 struct spn_device_vk * const             vk,
+                                 struct spn_vk_environment * const        vk,
                                  VkMemoryPropertyFlags const              mpf,
                                  VkBufferUsageFlags const                 buf,
                                  uint32_t const                           queue_family_count,
@@ -74,14 +74,14 @@ spn_allocator_device_perm_create(struct spn_allocator_device_perm * const device
 
 void
 spn_allocator_device_perm_dispose(struct spn_allocator_device_perm * const device_perm,
-                                  struct spn_device_vk * const             vk)
+                                  struct spn_vk_environment * const        vk)
 {
   ;
 }
 
 void
 spn_allocator_device_perm_alloc(struct spn_allocator_device_perm * const device_perm,
-                                struct spn_device_vk * const             vk,
+                                struct spn_vk_environment * const        vk,
                                 VkDeviceSize const                       size,
                                 VkDeviceSize * const                     alignment,
                                 VkDescriptorBufferInfo * const           dbi,
@@ -139,7 +139,7 @@ spn_allocator_device_perm_alloc(struct spn_allocator_device_perm * const device_
 
 void
 spn_allocator_device_perm_free(struct spn_allocator_device_perm * const device_perm,
-                               struct spn_device_vk * const             vk,
+                               struct spn_vk_environment * const        vk,
                                VkDescriptorBufferInfo * const           dbi,
                                VkDeviceMemory                           devmem)
 {
@@ -156,7 +156,7 @@ void
 spn_allocator_device_temp_create(struct spn_allocator_device_temp * const device_temp,
                                  struct spn_allocator_host_perm * const   host_perm,
                                  struct spn_allocator_device_perm * const device_perm,
-                                 struct spn_device_vk * const             vk,
+                                 struct spn_vk_environment * const        vk,
                                  uint32_t const                           subbufs,
                                  VkDeviceSize const                       size)
 {
@@ -182,7 +182,7 @@ spn_allocator_device_temp_create(struct spn_allocator_device_temp * const device
 
 void
 spn_allocator_device_temp_dispose(struct spn_allocator_device_temp * const device_temp,
-                                  struct spn_device_vk * const             vk)
+                                  struct spn_vk_environment * const        vk)
 {
   spn_suballocator_dispose(&device_temp->suballocator, device_temp->host_perm);
 

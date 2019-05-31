@@ -16,8 +16,8 @@
 //
 //
 
-#include "config.h"
-#include "target_layouts.h"
+#include "spn_config.h"
+#include "spn_vk_layouts.h"
 
 //
 //
@@ -34,7 +34,7 @@ layout(local_size_x = SPN_KERNEL_RASTERS_RECLAIM_WORKGROUP_SIZE) in;
 //      uniform uint path_ids[])
 //
 
-SPN_TARGET_GLSL_DECL_KERNEL_RASTERS_RECLAIM();
+SPN_VK_TARGET_GLSL_DECL_KERNEL_RASTERS_RECLAIM();
 
 //
 //

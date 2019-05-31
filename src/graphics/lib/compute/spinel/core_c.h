@@ -23,24 +23,14 @@ struct spn_uvec4  { uint32_t x; uint32_t y; uint32_t z; uint32_t w; };
 struct spn_ivec4  { int32_t  x; int32_t  y; int32_t  z; int32_t  w; };
 struct spn_mat2x2 { float    a; float    b; float    c; float    d; };
 
-#define SPN_TYPE_UINT                         uint32_t
-#define SPN_TYPE_INT                          int32_t
-#define SPN_TYPE_VEC2                         struct spn_vec2
-#define SPN_TYPE_VEC4                         struct spn_vec4
-#define SPN_TYPE_UVEC2                        struct spn_uvec2
-#define SPN_TYPE_UVEC4                        struct spn_uvec4
-#define SPN_TYPE_IVEC4                        struct spn_ivec4
-#define SPN_TYPE_MAT2X2                       struct spn_mat2x2
-
-#define SPN_MEMBER_UINT(name)                 SPN_TYPE_UINT  name
-#define SPN_MEMBER_STRUCT(type,name)          struct type    name
-#define SPN_MEMBER_FARRAY_UINT(name,len)      SPN_TYPE_UINT  name[len]
-#define SPN_MEMBER_VARRAY_UINT(name)          SPN_TYPE_UINT  name[0]
-#define SPN_MEMBER_VARRAY_VEC4(name)          SPN_TYPE_VEC4  name[0]
-#define SPN_MEMBER_VARRAY_UVEC2(name)         SPN_TYPE_UVEC2 name[0]
-#define SPN_MEMBER_VARRAY_UVEC4(name)         SPN_TYPE_UVEC4 name[0]
-#define SPN_MEMBER_VARRAY_STRUCT(type,name)   struct type    name[0]
-#define SPN_MEMBER_VARRAY_UNKNOWN(type,name)  uint8_t        name[0]
+#define SPN_TYPE_UINT    uint32_t
+#define SPN_TYPE_INT     int32_t
+#define SPN_TYPE_VEC2    struct spn_vec2
+#define SPN_TYPE_VEC4    struct spn_vec4
+#define SPN_TYPE_UVEC2   struct spn_uvec2
+#define SPN_TYPE_UVEC4   struct spn_uvec4
+#define SPN_TYPE_IVEC4   struct spn_ivec4
+#define SPN_TYPE_MAT2X2  struct spn_mat2x2
 
 //
 //
@@ -48,18 +38,6 @@ struct spn_mat2x2 { float    a; float    b; float    c; float    d; };
 
 #include "core.h"
 #include "common/macros.h"
-
-//
-//
-//
-
-#define SPN_TARGET_GLSL_ALIGN()               ALIGN_MACRO(SPN_SUBGROUP_ALIGN_LIMIT)
-
-#define SPN_TARGET_PUSH_UINT(name)            SPN_TYPE_UINT  name;
-#define SPN_TARGET_PUSH_UVEC4(name)           SPN_TYPE_UVEC4 name;
-#define SPN_TARGET_PUSH_IVEC4(name)           SPN_TYPE_IVEC4 name;
-#define SPN_TARGET_PUSH_UINT_FARRAY(name,len) SPN_TYPE_UINT  name[len];
-#define SPN_TARGET_PUSH_UINT_VARRAY(name,len) SPN_TYPE_UINT  name[];
 
 //
 //

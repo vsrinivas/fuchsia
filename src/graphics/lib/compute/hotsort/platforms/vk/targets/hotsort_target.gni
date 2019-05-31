@@ -25,8 +25,10 @@ _hotsort_dir = "//src/graphics/lib/compute/hotsort"
 #      - a source set
 #      - a binary image produced by the host toolchain
 #
-# Upon completion, the root of $target_gen_dir contains the HotSort
-# target.
+# If $hotsort_target_name is provided, the generated HotSort target
+# and its artifacts are output to the root of $target_gen_dir.
+#
+# Otherwise, the outputs are found in $target_gen_dir/$target_name.
 #
 # The subdirectories contain the compute shaders and successive stages
 # of processed SPIR-V modules.
@@ -42,7 +44,8 @@ template("hotsort_target") {
   #   $hotsort_target_name:
   #
   #   A name that conveys the configuration of the generated HotSort
-  #   algorithm. If not provided, defaults to the short name of ${target_name}.
+  #   algorithm. If not provided, defaults to the short name of
+  #   ${target_name}.
   #
   #   $hotsort_target_args:
   #
@@ -70,9 +73,18 @@ template("hotsort_target") {
          "config file list must be defined for hotsort_target")
 
   if (defined(invoker.hotsort_target_name)) {
+
     _hs_target_name = invoker.hotsort_target_name
+
+    # Location of all generated files.
+    _hs_output_dir = "${target_gen_dir}"
+
   } else {
+
     _hs_target_name = get_label_info(target_name, "name")
+
+    # Location of all generated files.
+    _hs_output_dir = "${target_gen_dir}/${_hs_target_name}"
   }
 
   assert(defined(invoker.hotsort_target_args),
@@ -83,11 +95,6 @@ template("hotsort_target") {
   #
   _hs_target_dump =
       defined(invoker.hotsort_target_dump) && invoker.hotsort_target_dump
-
-  #
-  # Location of all generated files.
-  #
-  _hs_output_dir = "${target_gen_dir}/${_hs_target_name}"
 
   #
   # prefix target args with implicit args

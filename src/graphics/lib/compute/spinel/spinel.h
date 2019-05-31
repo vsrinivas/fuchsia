@@ -167,8 +167,8 @@ spn_raster_release(spn_context_t context, spn_raster_t const * rasters, uint32_t
 //   { sx shx shy sy tx ty w0 w1 }
 //
 
-float const spn_transform_identity[8];
-float const spn_clip_default[4];
+extern float const spn_transform_identity[8];
+extern float const spn_clip_default[4];
 
 // clang-format off
 spn_result

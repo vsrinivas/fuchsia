@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "styling.h"
+
 #include <assert.h>
 
-#include "spinel.h"
-#include "styling.h"
 #include "core_c.h"
+#include "spinel.h"
 
 //
 //
@@ -60,25 +61,24 @@ spn_styling_reset(spn_styling_t styling)
 //
 
 spn_result
-spn_styling_group_alloc(spn_styling_t        styling,
-                        spn_group_id * const group_id)
+spn_styling_group_alloc(spn_styling_t styling, spn_group_id * const group_id)
 {
   spn_result const res = styling->unseal(styling->impl);
 
   if (res)
     return res;
 
-  *group_id             = styling->dwords.next;
+  *group_id = styling->dwords.next;
   styling->dwords.next += SPN_STYLING_GROUP_COUNT_DWORDS;
 
   return SPN_SUCCESS;
 }
 
 spn_result
-spn_styling_group_enter(spn_styling_t       styling,
-                        spn_group_id  const group_id,
-                        uint32_t      const n,
-                        uint32_t  * * const cmds)
+spn_styling_group_enter(spn_styling_t      styling,
+                        spn_group_id const group_id,
+                        uint32_t const     n,
+                        uint32_t ** const  cmds)
 {
   assert(styling->dwords.next + n <= styling->dwords.count);
 
@@ -97,10 +97,10 @@ spn_styling_group_enter(spn_styling_t       styling,
 }
 
 spn_result
-spn_styling_group_leave(spn_styling_t       styling,
-                        spn_group_id  const group_id,
-                        uint32_t      const n,
-                        uint32_t  * * const cmds)
+spn_styling_group_leave(spn_styling_t      styling,
+                        spn_group_id const group_id,
+                        uint32_t const     n,
+                        uint32_t ** const  cmds)
 {
   assert(styling->dwords.next + n <= styling->dwords.count);
 
@@ -119,10 +119,10 @@ spn_styling_group_leave(spn_styling_t       styling,
 }
 
 spn_result
-spn_styling_group_parents(spn_styling_t styling,
-                          spn_group_id  const group_id,
-                          uint32_t      const n,
-                          uint32_t  * * const parents)
+spn_styling_group_parents(spn_styling_t      styling,
+                          spn_group_id const group_id,
+                          uint32_t const     n,
+                          uint32_t ** const  parents)
 {
   assert(styling->dwords.next + n <= styling->dwords.count);
 
@@ -132,7 +132,7 @@ spn_styling_group_parents(spn_styling_t styling,
     return res;
 
   styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_DEPTH] = n;
-  styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_BASE ] = styling->dwords.next;
+  styling->extent[group_id + SPN_STYLING_GROUP_OFFSET_PARENTS_BASE]  = styling->dwords.next;
 
   *parents = styling->extent + styling->dwords.next;
 
@@ -142,9 +142,9 @@ spn_styling_group_parents(spn_styling_t styling,
 }
 
 spn_result
-spn_styling_group_range_lo(spn_styling_t styling,
-                           spn_group_id  const group_id,
-                           spn_layer_id  const layer_lo)
+spn_styling_group_range_lo(spn_styling_t      styling,
+                           spn_group_id const group_id,
+                           spn_layer_id const layer_lo)
 {
   assert(layer_lo < styling->layers.count);
 
@@ -159,9 +159,9 @@ spn_styling_group_range_lo(spn_styling_t styling,
 }
 
 spn_result
-spn_styling_group_range_hi(spn_styling_t styling,
-                           spn_group_id  const group_id,
-                           spn_layer_id  const layer_hi)
+spn_styling_group_range_hi(spn_styling_t      styling,
+                           spn_group_id const group_id,
+                           spn_layer_id const layer_hi)
 {
   assert(layer_hi < styling->layers.count);
 
@@ -176,11 +176,11 @@ spn_styling_group_range_hi(spn_styling_t styling,
 }
 
 spn_result
-spn_styling_group_layer(spn_styling_t               styling,
-                        spn_group_id          const group_id,
-                        spn_layer_id          const layer_id,
-                        uint32_t              const n,
-                        spn_styling_cmd_t * * const cmds)
+spn_styling_group_layer(spn_styling_t              styling,
+                        spn_group_id const         group_id,
+                        spn_layer_id const         layer_id,
+                        uint32_t const             n,
+                        spn_styling_cmd_t ** const cmds)
 {
   assert(layer_id < styling->layers.count);
   assert(styling->dwords.next + n <= styling->dwords.count);
@@ -190,8 +190,10 @@ spn_styling_group_layer(spn_styling_t               styling,
   if (res)
     return res;
 
-  styling->extent[layer_id * SPN_STYLING_LAYER_COUNT_DWORDS + SPN_STYLING_LAYER_OFFSET_CMDS]   = styling->dwords.next;
-  styling->extent[layer_id * SPN_STYLING_LAYER_COUNT_DWORDS + SPN_STYLING_LAYER_OFFSET_PARENT] = group_id;
+  styling->extent[layer_id * SPN_STYLING_LAYER_COUNT_DWORDS + SPN_STYLING_LAYER_OFFSET_CMDS] =
+    styling->dwords.next;
+  styling->extent[layer_id * SPN_STYLING_LAYER_COUNT_DWORDS + SPN_STYLING_LAYER_OFFSET_PARENT] =
+    group_id;
 
   *cmds = styling->extent + styling->dwords.next;
 

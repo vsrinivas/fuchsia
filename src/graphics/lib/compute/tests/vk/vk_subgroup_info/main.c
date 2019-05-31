@@ -97,7 +97,6 @@ main(int argc, char const * argv[])
   //
   // select the first device if *both* ids aren't provided
   //
-  //
   // acquire these properties for each device
   //
   VkPhysicalDeviceSubgroupProperties pdsp = {
@@ -139,7 +138,7 @@ main(int argc, char const * argv[])
 
   if (pd == VK_NULL_HANDLE)
     {
-      fprintf(stderr, "Device %X : %X not found.\n", vendor_id & 0xFFFF, device_id & 0xFFFF);
+      fprintf(stderr, "Device %X : %X not found.\n", vendor_id, device_id);
 
       return EXIT_FAILURE;
     }

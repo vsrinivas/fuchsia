@@ -42,3 +42,10 @@ source_set("spinel") {
     "//src/graphics/lib/compute/common",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "platforms/vk/tests",
+  ]
+}

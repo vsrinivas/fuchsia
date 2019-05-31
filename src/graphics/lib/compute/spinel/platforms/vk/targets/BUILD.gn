@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#
+# post-process SPIR-V modules and convert to C literals
+#
+
+if (current_toolchain == host_toolchain) {
+  executable("spinel_modules_to_literals") {
+    sources = [
+      "spinel_modules_to_literals.c",
+    ]
+  }
+}

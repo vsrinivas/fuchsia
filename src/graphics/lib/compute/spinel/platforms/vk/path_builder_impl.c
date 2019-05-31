@@ -19,7 +19,7 @@
 #include "handle_pool.h"
 #include "queue_pool.h"
 #include "ring.h"
-#include "target.h"
+#include "spn_vk_target.h"
 
 //
 // The path builder moves bulk path data, nodes and a single header
@@ -389,9 +389,9 @@ spn_pbi_is_wip_dispatch_empty(struct spn_pbi_dispatch const * const dispatch)
 
 struct spn_pbi_complete_payload
 {
-  struct spn_path_builder_impl *    impl;
-  struct spn_target_ds_paths_copy_t ds;
-  uint32_t                          dispatch_idx;
+  struct spn_path_builder_impl * impl;
+  struct spn_vk_ds_paths_copy_t  ds;
+  uint32_t                       dispatch_idx;
 };
 
 static void
@@ -403,13 +403,13 @@ spn_pbi_complete(void * pfn_payload)
   // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
   // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
   //
-  struct spn_pbi_complete_payload const * const payload = pfn_payload;
-  struct spn_path_builder_impl * const          impl    = payload->impl;
-  struct spn_device * const                     device  = impl->device;
-  struct spn_target * const                     target  = device->target;
+  struct spn_pbi_complete_payload const * const payload  = pfn_payload;
+  struct spn_path_builder_impl * const          impl     = payload->impl;
+  struct spn_device * const                     device   = impl->device;
+  struct spn_vk * const                         instance = device->target;
 
   // release descriptor set -- simple increment
-  spn_target_ds_release_paths_copy(target, payload->ds);
+  spn_vk_ds_release_paths_copy(instance, payload->ds);
 
   //
   // release paths -- may invoke wait()
@@ -464,29 +464,29 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   //
   // We're go for launch...
   //
-  struct spn_device * const device = impl->device;
-  struct spn_target * const target = device->target;
+  struct spn_device * const device   = impl->device;
+  struct spn_vk * const     instance = device->target;
 
   // get a cb
   VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
 
   // bind global BLOCK_POOL descriptor set
-  spn_target_ds_bind_paths_copy_block_pool(target, cb, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_paths_copy_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
 
   // acquire PATHS_COPY descriptor set
-  struct spn_target_ds_paths_copy_t ds_pc;
+  struct spn_vk_ds_paths_copy_t ds_pc;
 
-  spn_target_ds_acquire_paths_copy(target, device, &ds_pc);
+  spn_vk_ds_acquire_paths_copy(instance, device, &ds_pc);
 
   // copy the dbi structs
-  *spn_target_ds_get_paths_copy_pc_alloc(target, ds_pc) = impl->vk.alloc.dbi;
-  *spn_target_ds_get_paths_copy_pc_ring(target, ds_pc)  = impl->vk.ring.dbi;
+  *spn_vk_ds_get_paths_copy_pc_alloc(instance, ds_pc) = impl->vk.alloc.dbi;
+  *spn_vk_ds_get_paths_copy_pc_ring(instance, ds_pc)  = impl->vk.ring.dbi;
 
   // update PATHS_COPY descriptor set
-  spn_target_ds_update_paths_copy(target, device->vk, ds_pc);
+  spn_vk_ds_update_paths_copy(instance, device->environment, ds_pc);
 
   // bind PATHS_COPY descriptor set
-  spn_target_ds_bind_paths_copy_paths_copy(target, cb, ds_pc);
+  spn_vk_ds_bind_paths_copy_paths_copy(instance, cb, ds_pc);
 
   //
   // Set up push constants -- note that for now the paths_copy push
@@ -494,19 +494,19 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   //
   // This means we can push the constants once.
   //
-  struct spn_target_push_paths_copy const push = {// paths_alloc and paths_copy
-                                                  .bp_mask = spn_device_block_pool_get_mask(device),
-                                                  .pc_alloc_idx = impl->dispatches.ring.head,
-                                                  .pc_span      = dispatch->blocks.span,
-                                                  // only paths_copy
-                                                  .pc_head    = dispatch->blocks.head,
-                                                  .pc_rolling = dispatch->blocks.rolling,
-                                                  .pc_size    = impl->mapped.ring.size};
+  struct spn_vk_push_paths_copy const push = {// paths_alloc and paths_copy
+                                              .bp_mask = spn_device_block_pool_get_mask(device),
+                                              .pc_alloc_idx = impl->dispatches.ring.head,
+                                              .pc_span      = dispatch->blocks.span,
+                                              // only paths_copy
+                                              .pc_head    = dispatch->blocks.head,
+                                              .pc_rolling = dispatch->blocks.rolling,
+                                              .pc_size    = impl->mapped.ring.size};
 
-  spn_target_p_push_paths_copy(target, cb, &push);
+  spn_vk_p_push_paths_copy(instance, cb, &push);
 
   // bind the PATHS_ALLOC pipeline
-  spn_target_p_bind_paths_alloc(target, cb);
+  spn_vk_p_bind_paths_alloc(instance, cb);
 
   // dispatch the pipeline
   vkCmdDispatch(cb, 1, 1, 1);
@@ -515,7 +515,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   vk_barrier_compute_w_to_compute_r(cb);
 
   // bind the PATHS_COPY pipeline
-  spn_target_p_bind_paths_copy(target, cb);
+  spn_vk_p_bind_paths_copy(instance, cb);
 
   // dispatch the pipeline
   vkCmdDispatch(cb, dispatch->blocks.span, 1, 1);
@@ -1007,12 +1007,12 @@ spn_pbi_release(struct spn_path_builder_impl * const impl)
   // free device allocations
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.ring.dbi,
                                  impl->vk.ring.dm);
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.alloc.dbi,
                                  impl->vk.alloc.dm);
 
@@ -1061,7 +1061,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   impl->device = device;
 
   // get target config
-  struct spn_target_config const * const config = spn_target_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
 
   // stash device-specific params
   uint32_t const block_dwords    = 1u << config->block_pool.block_dwords_log2;
@@ -1078,7 +1078,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   uint32_t const max_in_flight = config->fence_pool.size;
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->vk,
+                                  device->environment,
                                   sizeof(uint32_t) * max_in_flight,
                                   NULL,
                                   &impl->vk.alloc.dbi,
@@ -1094,14 +1094,14 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   size_t const   extent_size   = extent_dwords * sizeof(uint32_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->vk,
+                                  device->environment,
                                   extent_size,
                                   NULL,
                                   &impl->vk.ring.dbi,
                                   &impl->vk.ring.dm);
 
   // map and initialize blocks and cmds
-  vk(MapMemory(device->vk->d,
+  vk(MapMemory(device->environment->d,
                impl->vk.ring.dm,
                0,
                VK_WHOLE_SIZE,

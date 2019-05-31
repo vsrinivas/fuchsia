@@ -15,8 +15,8 @@
 // RENDER KERNEL
 //
 
-#include "config.h"
-#include "target_layouts.h"
+#include "spn_config.h"
+#include "spn_vk_layouts.h"
 
 //
 // COLOR/COVER CHANNELS ARE DETERMINED BY TARGET HARDWARE
@@ -47,7 +47,7 @@
 //
 #elif defined( SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FP16 )
 
-#ifdef AMD_GCN3
+#ifdef SPN_DEVICE_AMD_GCN3
 #extension GL_AMD_gpu_shader_half_float                    : require // temporary
 #else
 #extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
@@ -73,7 +73,7 @@
 //
 #elif defined( SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FP16X2 )
 
-#ifdef AMD_GCN3
+#ifdef SPN_DEVICE_AMD_GCN3
 #extension GL_AMD_gpu_shader_half_float                    : require // temporary
 #else
 #extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
@@ -93,6 +93,10 @@
 #define SPN_KERNEL_RENDER_COLOR_PAIR                 f16vec2
 
 #define SPN_KERNEL_RENDER_COLOR_ACC_RGBA             f16vec4
+
+#else
+
+#error "SPN_KERNEL_RENDER_TILE_CHANNEL_IS_XXX is not defined!"
 
 #endif
 
@@ -222,7 +226,7 @@ layout(local_size_x = SPN_KERNEL_RENDER_WORKGROUP_SIZE) in;
 //      uniform image2D surface);
 //
 
-SPN_TARGET_GLSL_DECL_KERNEL_RENDER();
+SPN_VK_TARGET_GLSL_DECL_KERNEL_RENDER();
 
 //
 // SUBTILE HEIGHT EXPANSION
@@ -267,7 +271,12 @@ SPN_TARGET_GLSL_DECL_KERNEL_RENDER();
 //
 // Globally declare tile cover and color registers
 //
-// Total color and cover "channels" is 11.
+// Total number of color and cover "channels" is 11.
+//
+// A channel is represented with either a float16 or float32.
+//
+// If the target hardware supports float16 and the driver isn't
+// broken, then use float16.
 //
 // This occupies '11 * SPN_KERNEL_RENDER_SUBTILE_HEIGHT' channels per
 // subgroup lane.

@@ -15,8 +15,8 @@
 #include "queue_pool.h"
 #include "spinel.h"
 #include "spinel_vk_types.h"
+#include "spn_vk_target.h"
 #include "styling_impl.h"
-#include "target.h"
 
 //
 //
@@ -50,13 +50,13 @@ struct spn_render_submit_ext_base
 
 struct spn_ri_buffer_complete_payload
 {
-  struct spn_target * target;
+  struct spn_vk * instance;
 
   struct
   {
-    struct spn_target_ds_ttcks_t   ttcks;
-    struct spn_target_ds_styling_t styling;
-    struct spn_target_ds_surface_t surface;
+    struct spn_vk_ds_ttcks_t   ttcks;
+    struct spn_vk_ds_styling_t styling;
+    struct spn_vk_ds_surface_t surface;
   } ds;
 };
 
@@ -69,13 +69,13 @@ spn_ri_buffer_complete(void * pfn_payload)
   // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
   // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
   //
-  struct spn_ri_buffer_complete_payload const * const payload = pfn_payload;
-  struct spn_target * const                           target  = payload->target;
+  struct spn_ri_buffer_complete_payload const * const payload  = pfn_payload;
+  struct spn_vk * const                               instance = payload->instance;
 
   // release descriptor sets
-  spn_target_ds_release_ttcks(target, payload->ds.ttcks);
-  spn_target_ds_release_styling(target, payload->ds.styling);
-  spn_target_ds_release_surface(target, payload->ds.surface);
+  spn_vk_ds_release_ttcks(instance, payload->ds.ttcks);
+  spn_vk_ds_release_styling(instance, payload->ds.styling);
+  spn_vk_ds_release_surface(instance, payload->ds.surface);
 }
 
 //
@@ -105,24 +105,24 @@ spn_ri_buffer(struct spn_device * const device, spn_render_submit_t const * cons
   //
   // bind block_pool/composition/styling/surface
   //
-  struct spn_target * const target = device->target;
+  struct spn_vk * const instance = device->target;
 
   //
   // DS: BLOCK POOL
   //
-  spn_target_ds_bind_render_block_pool(target, cb, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_render_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
 
   //
   // DS: TTCKS
   //
-  struct spn_target_ds_ttcks_t ds_ttcks;
+  struct spn_vk_ds_ttcks_t ds_ttcks;
 
   spn_composition_impl_pre_render_ds(submit->composition, &ds_ttcks, cb);
 
   //
   // DS: STYLING
   //
-  struct spn_target_ds_styling_t ds_styling;
+  struct spn_vk_ds_styling_t ds_styling;
 
   spn_styling_impl_pre_render_ds(submit->styling, &ds_styling, cb);
 
@@ -131,37 +131,37 @@ spn_ri_buffer(struct spn_device * const device, spn_render_submit_t const * cons
   //
 
   // acquire surface descriptor set
-  struct spn_target_ds_surface_t ds_surface;
+  struct spn_vk_ds_surface_t ds_surface;
 
-  spn_target_ds_acquire_surface(target, device, &ds_surface);
+  spn_vk_ds_acquire_surface(instance, device, &ds_surface);
 
   // copy the dbi structs
-  *spn_target_ds_get_surface_surface(target, ds_surface) = ext->surface;
+  *spn_vk_ds_get_surface_surface(instance, ds_surface) = ext->surface;
 
   // update ds
-  spn_target_ds_update_surface(target, device->vk, ds_surface);
+  spn_vk_ds_update_surface(instance, device->environment, ds_surface);
 
   // bind ds
-  spn_target_ds_bind_render_surface(target, cb, ds_surface);
+  spn_vk_ds_bind_render_surface(instance, cb, ds_surface);
 
   //
   // append push constants
   //
-  struct spn_target_push_render const push = {.tile_clip =
-                                                {
-                                                  submit->tile_clip[0],
-                                                  submit->tile_clip[1],
-                                                  submit->tile_clip[2],
-                                                  submit->tile_clip[3],
-                                                },
-                                              .surface_pitch = ext->surface_pitch};
+  struct spn_vk_push_render const push = {.tile_clip =
+                                            {
+                                              submit->tile_clip[0],
+                                              submit->tile_clip[1],
+                                              submit->tile_clip[2],
+                                              submit->tile_clip[3],
+                                            },
+                                          .surface_pitch = ext->surface_pitch};
 
-  spn_target_p_push_render(target, cb, &push);
+  spn_vk_p_push_render(instance, cb, &push);
 
   //
   // bind pipeline
   //
-  spn_target_p_bind_render(target, cb);
+  spn_vk_p_bind_render(instance, cb);
 
   //
   // indirect dispatch the pipeline
@@ -172,8 +172,8 @@ spn_ri_buffer(struct spn_device * const device, spn_render_submit_t const * cons
   // end the cb and acquire a fence
   //
   struct spn_ri_buffer_complete_payload payload = {
-    .target = target,
-    .ds     = {.ttcks = ds_ttcks, .styling = ds_styling, .surface = ds_surface}};
+    .instance = instance,
+    .ds       = {.ttcks = ds_ttcks, .styling = ds_styling, .surface = ds_surface}};
 
   VkFence const fence =
     spn_device_cb_end_fence_acquire(device, cb, spn_ri_buffer_complete, &payload, sizeof(payload));

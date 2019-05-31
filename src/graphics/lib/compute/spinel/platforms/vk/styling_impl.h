@@ -18,7 +18,7 @@
 //
 
 struct spn_device;
-struct spn_target_ds_styling_t;
+struct spn_vk_ds_styling_t;
 
 //
 //
@@ -35,9 +35,9 @@ spn_styling_impl_create(struct spn_device * const   device,
 //
 
 void
-spn_styling_impl_pre_render_ds(struct spn_styling * const             styling,
-                               struct spn_target_ds_styling_t * const ds,
-                               VkCommandBuffer                        cb);
+spn_styling_impl_pre_render_ds(struct spn_styling * const         styling,
+                               struct spn_vk_ds_styling_t * const ds,
+                               VkCommandBuffer                    cb);
 
 void
 spn_styling_impl_pre_render_wait(struct spn_styling * const   styling,

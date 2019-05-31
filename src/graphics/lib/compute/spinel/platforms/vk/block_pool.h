@@ -11,6 +11,8 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include "spn_vk.h"
+
 //
 //
 //
@@ -40,7 +42,7 @@ spn_device_block_pool_get_mask(struct spn_device * const device);
 //
 //
 
-struct spn_target_ds_block_pool_t
+struct spn_vk_ds_block_pool_t
 spn_device_block_pool_get_ds(struct spn_device * const device);
 
 //

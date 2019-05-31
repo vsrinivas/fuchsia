@@ -27,6 +27,7 @@ BreakBeforeBraces:                               Custom
 BreakStringLiterals:                             false
 ColumnLimit:                                     100
 ContinuationIndentWidth:                         2
+# Cpp11BracedListStyle:                          false # TODO(allanmac): set to true
 DerivePointerAlignment:                          false
 ForEachMacros:
   - UNIMPLEMENTED_FOREACH

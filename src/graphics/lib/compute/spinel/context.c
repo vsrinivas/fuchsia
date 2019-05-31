@@ -6,10 +6,11 @@
 //
 //
 
-#include <stdlib.h>
-#include <assert.h> // FIXME -- replace with an SPN assert for non-debug builds
-
 #include "context.h"
+
+#include <assert.h>  // FIXME -- replace with an SPN assert for non-debug builds
+#include <stdlib.h>
+
 #include "spinel.h"
 
 //
@@ -53,7 +54,6 @@ spn_context_retain(spn_context_t context)
   return SPN_SUCCESS;
 }
 
-
 spn_result
 spn_context_release(spn_context_t context)
 {
@@ -85,19 +85,19 @@ spn_context_wait(spn_context_t context)
 spn_result
 spn_path_builder_create(spn_context_t context, spn_path_builder_t * path_builder)
 {
-  return context->path_builder(context->device,path_builder);
+  return context->path_builder(context->device, path_builder);
 }
 
 spn_result
 spn_path_retain(spn_context_t context, spn_path_t const * paths, uint32_t count)
 {
-  return context->path_retain(context->device,paths,count);
+  return context->path_retain(context->device, paths, count);
 }
 
 spn_result
 spn_path_release(spn_context_t context, spn_path_t const * paths, uint32_t count)
 {
-  return context->path_release(context->device,paths,count);
+  return context->path_release(context->device, paths, count);
 }
 
 //
@@ -107,19 +107,19 @@ spn_path_release(spn_context_t context, spn_path_t const * paths, uint32_t count
 spn_result
 spn_raster_builder_create(spn_context_t context, spn_raster_builder_t * raster_builder)
 {
-  return context->raster_builder(context->device,raster_builder);
+  return context->raster_builder(context->device, raster_builder);
 }
 
 spn_result
 spn_raster_retain(spn_context_t context, spn_raster_t const * rasters, uint32_t count)
 {
-  return context->raster_retain(context->device,rasters,count);
+  return context->raster_retain(context->device, rasters, count);
 }
 
 spn_result
 spn_raster_release(spn_context_t context, spn_raster_t const * rasters, uint32_t count)
 {
-  return context->raster_release(context->device,rasters,count);
+  return context->raster_release(context->device, rasters, count);
 }
 
 //
@@ -132,10 +132,7 @@ spn_styling_create(spn_context_t   context,
                    uint32_t        layers_count,
                    uint32_t        dwords_count)
 {
-  return context->styling(context->device,
-                          styling,
-                          layers_count,
-                          dwords_count);
+  return context->styling(context->device, styling, layers_count, dwords_count);
 }
 
 //
@@ -145,7 +142,7 @@ spn_styling_create(spn_context_t   context,
 spn_result
 spn_composition_create(spn_context_t context, spn_composition_t * composition)
 {
-  return context->composition(context->device,composition);
+  return context->composition(context->device, composition);
 }
 
 //
@@ -155,7 +152,7 @@ spn_composition_create(spn_context_t context, spn_composition_t * composition)
 spn_result
 spn_render(spn_context_t context, spn_render_submit_t const * const submit)
 {
-  return context->render(context->device,submit);
+  return context->render(context->device, submit);
 }
 
 //

@@ -25,8 +25,8 @@
 // RASTERIZE KERNEL
 //
 
-#include "config.h"
-#include "target_layouts.h"
+#include "spn_config.h"
+#include "spn_vk_layouts.h"
 
 //
 // LOCAL DEFINITIONS
@@ -58,7 +58,7 @@ layout(local_size_x = SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE) in;
 //           uniform uint  count);
 //
 
-SPN_TARGET_GLSL_DECL_KERNEL_RASTERIZE_QUAD();
+SPN_VK_TARGET_GLSL_DECL_KERNEL_RASTERIZE_QUAD();
 
 //
 //

@@ -18,7 +18,7 @@
 //
 
 struct spn_device;
-struct spn_target_ds_ttcks_t;
+struct spn_vk_ds_ttcks_t;
 
 //
 //
@@ -33,9 +33,9 @@ spn_composition_impl_create(struct spn_device * const       device,
 //
 
 void
-spn_composition_impl_pre_render_ds(struct spn_composition * const       composition,
-                                   struct spn_target_ds_ttcks_t * const ds,
-                                   VkCommandBuffer                      cb);
+spn_composition_impl_pre_render_ds(struct spn_composition * const   composition,
+                                   struct spn_vk_ds_ttcks_t * const ds,
+                                   VkCommandBuffer                  cb);
 
 void
 spn_composition_impl_pre_render_dispatch(struct spn_composition * const composition,

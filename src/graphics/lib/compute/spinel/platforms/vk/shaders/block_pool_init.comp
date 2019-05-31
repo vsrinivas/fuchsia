@@ -19,8 +19,8 @@
 //
 //
 
-#include "config.h"
-#include "target_layouts.h"
+#include "spn_config.h"
+#include "spn_vk_layouts.h"
 
 //
 // BLOCK POOL INIT
@@ -35,7 +35,7 @@ layout(local_size_x = SPN_KERNEL_BLOCK_POOL_INIT_WORKGROUP_SIZE) in;
 //   0: uint bp_size -- size of the bp_ids pool
 //
 
-SPN_TARGET_GLSL_DECL_KERNEL_BLOCK_POOL_INIT();
+SPN_VK_TARGET_GLSL_DECL_KERNEL_BLOCK_POOL_INIT();
 
 //
 //

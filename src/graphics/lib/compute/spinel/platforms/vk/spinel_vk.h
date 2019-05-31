@@ -12,6 +12,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "spinel.h"
+#include "spinel_vk_types.h"
 
 //
 //
@@ -25,29 +26,27 @@ extern "C" {
 // CONTEXT CREATION: VULKAN
 //
 
-spn_result
-spn_context_create_vk(spn_context_t * const                 context_p,
-                      struct spn_device_vk * const          device_vk,
-                      struct spn_target_image const * const target_image,
-                      uint64_t const                        block_pool_size,
-                      uint32_t const                        handle_count);
-
-//
-// RENDER EXTENSION: VULKAN BUFFER
-//
-
-struct spn_render_submit_ext_vk_buffer
+struct spn_vk_environment
 {
-  void *                         ext;
-  spn_render_submit_ext_type_e   type;  // .type = SPN_RENDER_SUBMIT_EXT_TYPE_VK_BUFFER,
-  uint32_t                       pitch;
-  VkDescriptorBufferInfo const * buffer;
-  uint32_t                       waitSemaphoreCount;
-  VkSemaphore const *            pWaitSemaphores;
-  VkPipelineStageFlags const *   pWaitDstStageMask;
-  uint32_t                       signalSemaphoreCount;
-  VkSemaphore const *            pSignalSemaphores;
+  VkDevice                         d;
+  VkAllocationCallbacks const *    ac;
+  VkPipelineCache                  pc;
+  VkPhysicalDevice                 pd;
+  VkPhysicalDeviceMemoryProperties pdmp;
+  uint32_t                         qfi;  // queue family index
 };
+
+struct spn_vk_context_create_info
+{
+  struct spn_vk_target const * target;
+  uint64_t                     block_pool_size;
+  uint32_t                     handle_count;
+};
+
+spn_result
+spn_vk_context_create(struct spn_vk_environment * const               environment,
+                      struct spn_vk_context_create_info const * const create_info,
+                      spn_context_t * const                           context);
 
 //
 //

@@ -1,0 +1,269 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+#
+# Generates a Spinel target by performing the following steps:
+#
+#   1. Load the list of all compute shaders found in
+#      spinel/platforms/vk/shaders.
+#
+#   2. Compile compute shaders to SPIR-V modules.
+#
+#   3. Optimize SPIR-V modules.
+#
+#   4. Remap SPIR-V modules.
+#
+#   5. Return the target as either:
+#      - a source set
+#      - a binary image produced by the host toolchain
+#
+# Upon completion, the root of $target_gen_dir contains the Spinel
+# target.
+#
+# The subdirectories contain the compute shaders and successive stages
+# of processed SPIR-V modules.
+#
+# Note: at this point a Spinel target has a 64-bit key sorting
+# implementation of HotSort as a dependency.
+#
+template("spinel_target") {
+  #
+  # Expects:
+  #
+  #   $spinel_target_config:
+  #
+  #   The path of the C99 file containing the target configuration.
+  #
+  #   $spinel_target_dump:
+  #
+  #   If defined the target is group that references a target binary
+  #   produced by the host toolchain.  Otherwise, a source set is
+  #   produced on the current toolchain.
+  #
+  assert(defined(invoker.spinel_target_config),
+         "file must be defined for spinel_target")
+
+  #
+  # Either dump a binary or produce a source set
+  #
+  _spn_target_dump = false
+
+  if (defined(invoker.spinel_target_dump)) {
+    _spn_target_dump = invoker.spinel_target_dump
+  }
+
+  #
+  # define sources and includes
+  #
+  _spn_target_dir = get_path_info(invoker.spinel_target_config, "dir")
+
+  _spn_target_includes_public = [ _spn_target_dir + "/spn_target.h" ]
+
+  _spn_target_gen_includes = [ "$target_gen_dir/spn_modules.inl" ]
+
+  _spn_target_includes = [
+                           "//src/graphics/lib/compute/common/macros.h",
+                           "//src/graphics/lib/compute/spinel/core.h",
+                           "//src/graphics/lib/compute/spinel/core_c.h",
+                           "//src/graphics/lib/compute/spinel/platforms/vk/core_vk.h",
+                           "//src/graphics/lib/compute/spinel/platforms/vk/spn_vk_target.h",
+                           "//src/graphics/lib/compute/spinel/platforms/vk/spn_vk_layouts.h",
+                           "//src/graphics/lib/compute/spinel/platforms/vk/targets/spn_target_push.inl",
+                         ] + _spn_target_gen_includes
+
+  _spn_target_sources = _spn_target_includes_public + _spn_target_includes +
+                        [ invoker.spinel_target_config ]
+
+  #
+  # define source set include dirs
+  #
+  _spn_target_include_dirs = [
+    target_gen_dir,
+    _spn_target_dir,
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets",
+    "//src/graphics/lib/compute/spinel/platforms/vk",
+    "//src/graphics/lib/compute/spinel",
+    "//src/graphics/lib/compute",
+  ]
+
+  #
+  # predefined list of compute shaders that matches spn_layouts.h
+  #
+  # note: a better way of doing this would involve a creating an
+  # executable that printed the pipeline list... but GN doesn't
+  # support this kind of build-time action
+  #
+  _spn_comp_names = read_file(
+          "//src/graphics/lib/compute/spinel/platforms/vk/targets/spinel_comp_names.txt",
+          "list lines")
+
+  _spn_comp_sources = process_file_template(
+          _spn_comp_names,
+          "//src/graphics/lib/compute/spinel/platforms/vk/shaders/{{source_name_part}}.comp")
+
+  _spn_comp_includes = [
+    _spn_target_dir + "/spn_config.h",
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets/hs_glsl_macros.h",
+    "//src/graphics/lib/compute/spinel/platforms/vk/spn_vk_layouts.h",
+  ]
+
+  #
+  # compile the .comp shaders to SPIR-V modules
+  #
+  compiled_action_foreach("gen_spv") {
+    tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
+    sources = _spn_comp_sources
+    inputs = _spn_comp_includes
+    outputs = [
+      "$target_gen_dir/spv/{{source_name_part}}.spv",
+    ]
+    args = [
+      "-s",  # Note: '-s' silences glslangValidator printing filename
+             # but detailed error messages are also silenced
+
+      "--target-env",
+      "vulkan1.1",
+      "-I" +  # <hotsort src> -- hs_glsl_macros.h
+          rebase_path("//src/graphics/lib/compute/hotsort/platforms/vk/targets",
+                      root_build_dir),
+      "-I" +  # <hotsort gen> -- hs_config.h, hs_glsl_macros_config.h
+          rebase_path("$target_gen_dir/hotsort", root_build_dir),
+      "-I" + rebase_path(_spn_target_dir, root_build_dir),  # <spinel target> -- spn_config.h
+      "-I" +  # <spinel shaders>
+          rebase_path("//src/graphics/lib/compute/spinel/platforms/vk/shaders",
+                      root_build_dir),
+      "-I" +  # <spinel/platforms/vk> -- spn_vk_layouts.h
+          rebase_path("//src/graphics/lib/compute/spinel/platforms/vk",
+                      root_build_dir),
+      "-I" +  # <spinel> -- core.h
+          rebase_path("//src/graphics/lib/compute/spinel", root_build_dir),
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+      "{{source}}",
+    ]
+
+    if (defined(invoker.public_deps)) {
+      public_deps = invoker.public_deps
+    }
+  }
+
+  #
+  # optimize the modules
+  #
+  compiled_action_foreach("gen_opt") {
+    tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
+    sources = get_target_outputs(":gen_spv")
+    outputs = [
+      "$target_gen_dir/opt/{{source_name_part}}.spv",
+    ]
+    args = [
+      "-O",
+      "{{source}}",
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+    public_deps = [
+      ":gen_spv",
+    ]
+  }
+
+  #
+  # remap the optimized modules
+  #
+  compiled_action_foreach("gen_remap") {
+    tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
+    sources = get_target_outputs(":gen_opt")
+    outputs = [
+      "$target_gen_dir/remap/{{source_name_part}}.spv",
+    ]
+    args = [
+      "--do-everything",
+      "--input",
+      "{{source}}",
+      "--output",
+      rebase_path(target_gen_dir, root_build_dir) + "/remap",
+    ]
+    public_deps = [
+      ":gen_opt",
+    ]
+  }
+
+  #
+  # dump the modules as uint32_t literals
+  #
+  compiled_action("gen_modules") {
+    tool = "//src/graphics/lib/compute/spinel/platforms/vk/targets:spinel_modules_to_literals"
+    sources = get_target_outputs(":gen_remap")
+    outputs = _spn_target_gen_includes
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+    public_deps = [
+      ":gen_remap",
+    ]
+  }
+
+  #
+  # either dump a binary or return a source set
+  #
+  if (_spn_target_dump) {
+    #
+    # executable for dumping a binary image of target
+    #
+    _spn_target_dump_name = "spinel_dump_" + invoker.spinel_target_name
+
+    executable(_spn_target_dump_name) {
+      defines = [ "SPN_DUMP" ]
+      sources = _spn_target_gen_sources
+      include_dirs = _spn_target_include_dirs
+      deps = [
+        "//third_party/vulkan_loader_and_validation_layers:vulkan",
+      ]
+      public_deps = [
+        ":gen_modules",
+      ]
+    }
+
+    #
+    # dump a binary image of target
+    #
+    compiled_action("gen_bin") {
+      tool = ":$_spn_target_dump_name"
+      sources = _spn_target_sources
+      outputs = [
+        "$target_gen_dir/spn_target.bin",
+      ]
+      args = rebase_path(outputs, root_build_dir)
+      public_deps = [
+        ":$_spn_target_dump_name",
+      ]
+    }
+
+    #
+    # dummy group invokes $host_toolchain
+    #
+    group(target_name) {
+      public_deps += [ ":gen_bin($host_toolchain)" ]
+    }
+  } else {
+    #
+    # target is a source set
+    #
+    source_set(target_name) {
+      public = _spn_target_includes_public
+      sources = _spn_target_sources
+      include_dirs = _spn_target_include_dirs
+      deps = [
+        "//third_party/vulkan_loader_and_validation_layers:vulkan",
+      ]
+      public_deps = [
+        ":gen_modules",
+      ]
+      if (defined(invoker.public_deps)) {
+        public_deps += invoker.public_deps
+      }
+    }
+  }
+}

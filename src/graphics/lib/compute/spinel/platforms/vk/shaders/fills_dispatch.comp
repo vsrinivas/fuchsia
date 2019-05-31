@@ -16,8 +16,8 @@
 //
 //
 
-#include "config.h"
-#include "target_layouts.h"
+#include "spn_config.h"
+#include "spn_vk_layouts.h"
 
 //
 //
@@ -46,13 +46,13 @@ layout(local_size_x = SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) in;
 // main(buffer uint prim_counts[sizeof(uvec4) * 5]);
 //
 
-SPN_TARGET_GLSL_DECL_KERNEL_FILLS_DISPATCH();
+SPN_VK_TARGET_GLSL_DECL_KERNEL_FILLS_DISPATCH();
 
 //
 // FIXME -- aliasing hack!
 //
 
-layout(set = 1, binding = SPN_TARGET_BINDING_FILL_SCAN, std430) buffer _fill_scan_counts_uvec4 {
+layout(set = 1, binding = SPN_VK_TARGET_BINDING_FILL_SCAN, std430) buffer _fill_scan_counts_uvec4 {
   uvec4 fill_scan_counts_uvec4[5];
 };
 

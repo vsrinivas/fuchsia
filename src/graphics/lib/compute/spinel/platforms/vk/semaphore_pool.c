@@ -52,11 +52,11 @@ spn_device_semaphore_pool_acquire(struct spn_device * const device)
                                      .pNext = NULL,
                                      .flags = 0};
 
-  struct spn_device_vk * const device_vk = device->vk;
+  struct spn_vk_environment * const environment = device->environment;
 
   VkSemaphore semaphore;
 
-  vk(CreateSemaphore(device_vk->d, &sci, device_vk->ac, &semaphore));
+  vk(CreateSemaphore(environment->d, &sci, environment->ac, &semaphore));
 
   return semaphore;
 }
@@ -64,9 +64,9 @@ spn_device_semaphore_pool_acquire(struct spn_device * const device)
 void
 spn_device_semaphore_pool_release(struct spn_device * const device, VkSemaphore const semaphore)
 {
-  struct spn_device_vk * const device_vk = device->vk;
+  struct spn_vk_environment * const environment = device->environment;
 
-  vkDestroySemaphore(device_vk->d, semaphore, device_vk->ac);
+  vkDestroySemaphore(environment->d, semaphore, environment->ac);
 }
 
 //

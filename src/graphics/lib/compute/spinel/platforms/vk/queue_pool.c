@@ -33,8 +33,8 @@ spn_device_queue_pool_create(struct spn_device * const device, uint32_t const qu
   device->queue_pool = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
                                                      SPN_MEM_FLAGS_READ_WRITE,
                                                      sizeof(*device->queue_pool));
-  vkGetDeviceQueue(device->vk->d,
-                   device->vk->qfi,
+  vkGetDeviceQueue(device->environment->d,
+                   device->environment->qfi,
                    0,  // for now just return queue 0
                    &device->queue_pool->q);
 }

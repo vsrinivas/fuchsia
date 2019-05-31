@@ -20,7 +20,7 @@
 #include "queue_pool.h"
 #include "ring.h"
 #include "semaphore_pool.h"
-#include "target.h"
+#include "spn_vk_target.h"
 #include "weakref.h"
 
 //
@@ -187,13 +187,10 @@ struct spn_rbi_vk
 
 struct spn_raster_builder_impl
 {
-  struct spn_raster_builder * raster_builder;
-
-  struct spn_device * device;
-
-  struct spn_target_config const * config;
-
-  struct spn_rbi_vk vk;
+  struct spn_raster_builder *         raster_builder;
+  struct spn_device *                 device;
+  struct spn_vk_target_config const * config;
+  struct spn_rbi_vk                   vk;
 
   //
   // As noted above, the remaining slots in the fills ring is always
@@ -458,7 +455,7 @@ struct spn_rbi_complete_payload_2
 
   struct
   {
-    struct spn_target_ds_rasterize_post_t rp;
+    struct spn_vk_ds_rasterize_post_t rp;
   } ds;
 
   struct
@@ -488,7 +485,7 @@ struct spn_rbi_complete_payload_1
 
   struct
   {
-    struct spn_target_ds_rasterize_t r;
+    struct spn_vk_ds_rasterize_t r;
   } ds;
 
   struct
@@ -517,16 +514,16 @@ spn_rbi_complete_p_2(void * pfn_payload)
   // The safest approach is to create a copy of payload struct on the
   // stack if you don't understand where the wait()'s might occur.
   //
-  struct spn_rbi_complete_payload_2 const * const p_2    = pfn_payload;
-  struct spn_raster_builder_impl * const          impl   = p_2->impl;
-  struct spn_device * const                       device = impl->device;
-  struct spn_target * const                       target = device->target;
+  struct spn_rbi_complete_payload_2 const * const p_2      = pfn_payload;
+  struct spn_raster_builder_impl * const          impl     = p_2->impl;
+  struct spn_device * const                       device   = impl->device;
+  struct spn_vk * const                           instance = device->target;
 
   // release the copy semaphore
   spn_device_semaphore_pool_release(device, p_2->semaphore.sort);
 
   // release the rasterize ds -- will never wait()
-  spn_target_ds_release_rasterize_post(target, p_2->ds.rp);
+  spn_vk_ds_release_rasterize_post(instance, p_2->ds.rp);
 
   // release the rasterize post temp buffer -- will never wait()
   spn_allocator_device_temp_free(&device->allocator.device.temp.local, p_2->temp.rp.ttrks);
@@ -584,10 +581,10 @@ spn_rbi_complete_p_1(void * pfn_payload)
   // The safest approach is to create a copy of payload struct on the
   // stack if you don't understand where the wait()'s might occur.
   //
-  struct spn_rbi_complete_payload_1 const * const p_1    = pfn_payload;
-  struct spn_raster_builder_impl * const          impl   = p_1->p_2.impl;
-  struct spn_device * const                       device = impl->device;
-  struct spn_target * const                       target = device->target;
+  struct spn_rbi_complete_payload_1 const * const p_1      = pfn_payload;
+  struct spn_raster_builder_impl * const          impl     = p_1->p_2.impl;
+  struct spn_device * const                       device   = impl->device;
+  struct spn_vk * const                           instance = device->target;
 
   //
   // Release resources
@@ -597,7 +594,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   spn_device_semaphore_pool_release(device, p_1->semaphore.copy);
 
   // release the rasterize ds -- will never wait()
-  spn_target_ds_release_rasterize(target, p_1->ds.r);
+  spn_vk_ds_release_rasterize(instance, p_1->ds.r);
 
   // release the rasterize temp buffers -- will never wait()
   spn_allocator_device_temp_free(&device->allocator.device.temp.local, p_1->temp.r.fill_scan);
@@ -630,12 +627,12 @@ spn_rbi_complete_p_1(void * pfn_payload)
   // DS: BLOCK_POOL
   //
   // bind the global BLOCK_POOL descriptor set
-  spn_target_ds_bind_segment_ttrk_block_pool(target, cb_3, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_segment_ttrk_block_pool(instance, cb_3, spn_device_block_pool_get_ds(device));
 
   //
   // DS: RASTERIZE_POST
   //
-  spn_target_ds_bind_segment_ttrk_rasterize_post(target, cb_3, p_2.ds.rp);
+  spn_vk_ds_bind_segment_ttrk_rasterize_post(instance, cb_3, p_2.ds.rp);
 
   //
   // 2.1) MERGE TTRK KEYS
@@ -645,7 +642,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   //
 #if 0
   hs_vk_merge(cb_3,
-              p_2.temp.rp.offset + SPN_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
+              p_2.temp.rp.offset + SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
               impl->mapped.cb[p2.dispatch_idx], // copyback key count
               1,
               &p_2.semaphore.sort,
@@ -671,7 +668,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   ////////////////////////////////////////////////////////////////
 
   // bind the pipeline
-  spn_target_p_bind_segment_ttrk(target, cb_3);
+  spn_vk_p_bind_segment_ttrk(instance, cb_3);
 
   // dispatch one workgroup per fill command
   vkCmdDispatch(cb_3, 99999, 1, 1);  // FIXME -- calculate slab count
@@ -685,15 +682,15 @@ spn_rbi_complete_p_1(void * pfn_payload)
   //
   ////////////////////////////////////////////////////////////////
 
-  struct spn_target_push_rasters_alloc const push_rasters_alloc = {
+  struct spn_vk_push_rasters_alloc const push_rasters_alloc = {
     .bp_mask   = spn_device_block_pool_get_mask(device),
     .cmd_count = dispatch->rc.span};
 
   // bind the push constants
-  spn_target_p_push_rasters_alloc(target, cb_3, &push_rasters_alloc);
+  spn_vk_p_push_rasters_alloc(instance, cb_3, &push_rasters_alloc);
 
   // bind the pipeline
-  spn_target_p_bind_rasters_alloc(target, cb_3);
+  spn_vk_p_bind_rasters_alloc(instance, cb_3);
 
   // dispatch one subgroup (workgroup) per raster
   vkCmdDispatch(cb_3, dispatch->rc.span, 1, 1);
@@ -710,7 +707,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   // push constants remain the same
 
   // bind the pipeline
-  spn_target_p_bind_rasters_prefix(target, cb_3);
+  spn_vk_p_bind_rasters_prefix(instance, cb_3);
 
   // dispatch one subgroup (workgroup) per raster
   vkCmdDispatch(cb_3, dispatch->rc.span, 1, 1);
@@ -813,9 +810,9 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   //   2.4) RASTERS_PREFIX
   //
-  struct spn_device * const              device = impl->device;
-  struct spn_target * const              target = device->target;
-  struct spn_target_config const * const config = spn_target_get_config(device->target);
+  struct spn_device * const                 device   = impl->device;
+  struct spn_vk * const                     instance = device->target;
+  struct spn_vk_target_config const * const config   = spn_vk_get_config(device->target);
 
   //
   // COMMAND BUFFER 1
@@ -834,28 +831,28 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   // DS: BLOCK_POOL
   //
   // bind the global BLOCK_POOL descriptor set
-  spn_target_ds_bind_fills_scan_block_pool(target, cb_1, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_fills_scan_block_pool(instance, cb_1, spn_device_block_pool_get_ds(device));
 
   //
   // DS: RASTERIZE
   //
-  spn_target_ds_acquire_rasterize(target, device, &p_1.ds.r);
+  spn_vk_ds_acquire_rasterize(instance, device, &p_1.ds.r);
 
   // dbi: fill_cmds
-  *spn_target_ds_get_rasterize_fill_cmds(target, p_1.ds.r) = impl->vk.rings.cf;
+  *spn_vk_ds_get_rasterize_fill_cmds(instance, p_1.ds.r) = impl->vk.rings.cf;
 
   // dbi: fill_quads
-  *spn_target_ds_get_rasterize_fill_quads(target, p_1.ds.r) = impl->vk.rings.tc;
+  *spn_vk_ds_get_rasterize_fill_quads(instance, p_1.ds.r) = impl->vk.rings.tc;
 
   // dbi: fill_scan -- allocate a temporary buffer
   VkDescriptorBufferInfo * const dbi_fill_scan =
-    spn_target_ds_get_rasterize_fill_scan(target, p_1.ds.r);
+    spn_vk_ds_get_rasterize_fill_scan(instance, p_1.ds.r);
 
   spn_allocator_device_temp_alloc(
     &device->allocator.device.temp.local,
     device,
     spn_device_wait,
-    SPN_TARGET_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_prefix) +
+    SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_prefix) +
       dispatch->cf.span * sizeof(SPN_TYPE_UVEC4),
     &p_1.temp.r.fill_scan,
     dbi_fill_scan);
@@ -864,30 +861,30 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
                                   device,
                                   spn_device_wait,
-                                  SPN_TARGET_BUFFER_OFFSETOF(rasterize, rast_cmds, rast_cmds) +
+                                  SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize, rast_cmds, rast_cmds) +
                                     config->raster_builder.size.cmds * sizeof(SPN_TYPE_UVEC4),
                                   &p_1.temp.r.rast_cmds,
-                                  spn_target_ds_get_rasterize_rast_cmds(target, p_1.ds.r));
+                                  spn_vk_ds_get_rasterize_rast_cmds(instance, p_1.ds.r));
 
   // update rasterize ds
-  spn_target_ds_update_rasterize(target, device->vk, p_1.ds.r);
+  spn_vk_ds_update_rasterize(instance, device->environment, p_1.ds.r);
 
   // bind rasterize ds
-  spn_target_ds_bind_fills_scan_rasterize(target, cb_1, p_1.ds.r);
+  spn_vk_ds_bind_fills_scan_rasterize(instance, cb_1, p_1.ds.r);
 
   //
   // DS: RASTERIZE_POST
   //
-  spn_target_ds_acquire_rasterize_post(target, device, &p_1.p_2.ds.rp);
+  spn_vk_ds_acquire_rasterize_post(instance, device, &p_1.p_2.ds.rp);
 
   // dbi: ttrks -- allocate a temporary buffer
   VkDescriptorBufferInfo * const dbi_ttrks =
-    spn_target_ds_get_rasterize_post_ttrks(target, p_1.p_2.ds.rp);
+    spn_vk_ds_get_rasterize_post_ttrks(instance, p_1.p_2.ds.rp);
 
   spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
                                   device,
                                   spn_device_wait,
-                                  SPN_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_keys) +
+                                  SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_keys) +
                                     config->raster_builder.size.ttrks * sizeof(SPN_TYPE_UVEC2),
                                   &p_1.p_2.temp.rp.ttrks,
                                   dbi_ttrks);
@@ -895,10 +892,10 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   p_1.p_2.temp.rp.offset = dbi_ttrks->offset;
 
   // update rasterize_post ds
-  spn_target_ds_update_rasterize_post(target, device->vk, p_1.p_2.ds.rp);
+  spn_vk_ds_update_rasterize_post(instance, device->environment, p_1.p_2.ds.rp);
 
   // bind rasterize_post ds
-  spn_target_ds_bind_rasterize_line_rasterize_post(target, cb_1, p_1.p_2.ds.rp);
+  spn_vk_ds_bind_rasterize_line_rasterize_post(instance, cb_1, p_1.p_2.ds.rp);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -906,15 +903,15 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
-  struct spn_target_push_fills_scan const push_fills_scan = {
+  struct spn_vk_push_fills_scan const push_fills_scan = {
     .bp_mask   = spn_device_block_pool_get_mask(device),
     .cmd_count = dispatch->cf.span};
 
   // bind the push constants
-  spn_target_p_push_fills_scan(target, cb_1, &push_fills_scan);
+  spn_vk_p_push_fills_scan(instance, cb_1, &push_fills_scan);
 
   // bind the pipeline
-  spn_target_p_bind_fills_scan(target, cb_1);
+  spn_vk_p_bind_fills_scan(instance, cb_1);
 
   // dispatch one workgroup per fill command
   vkCmdDispatch(cb_1, dispatch->cf.span, 1, 1);
@@ -931,7 +928,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   // no need to set up push constants since they're identical to FILLS_SCAN
 
   // bind the pipeline
-  spn_target_p_bind_fills_expand(target, cb_1);
+  spn_vk_p_bind_fills_expand(instance, cb_1);
 
   // dispatch one workgroup per fill command
   vkCmdDispatch(cb_1, dispatch->cf.span, 1, 1);
@@ -948,7 +945,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   // no push constants
 
   // bind the pipeline
-  spn_target_p_bind_fills_dispatch(target, cb_1);
+  spn_vk_p_bind_fills_dispatch(instance, cb_1);
 
   // dispatch one workgroup per fill command
   vkCmdDispatch(cb_1, 1, 1, 1);
@@ -962,11 +959,11 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
-#define SPN_TARGET_P_BIND_RASTERIZE_NAME(_p) spn_target_p_bind_rasterize_##_p
+#define SPN_VK_TARGET_P_BIND_RASTERIZE_NAME(_p) spn_vk_p_bind_rasterize_##_p
 
 #undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n)                                            \
-  SPN_TARGET_P_BIND_RASTERIZE_NAME(_p)(target, cb_1);                                              \
+  SPN_VK_TARGET_P_BIND_RASTERIZE_NAME(_p)(instance, cb_1);                                         \
   vkCmdDispatchIndirect(cb_1, dbi_fill_scan->buffer, sizeof(SPN_TYPE_UVEC4) * _i);
 
   SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
@@ -984,7 +981,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   VkBufferCopy const bc = {
     .srcOffset =
-      p_1.p_2.temp.rp.offset + SPN_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_count),
+      p_1.p_2.temp.rp.offset + SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_count),
     .dstOffset = sizeof(*impl->mapped.cb.extent) * p_1.p_2.dispatch_idx,
     .size      = sizeof(*impl->mapped.cb.extent)};
 
@@ -1026,7 +1023,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
 
     hs_vk_sort_indirect(cb_2,
                         dbi_ttrks->buffer,
-                        p_1.p_2.temp.rp.offset + SPN_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
+                        p_1.p_2.temp.rp.offset + SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
                         ttrks_count_offset);
 
     VkFence const fence = spn_device_cb_end_fence_acquire(device,
@@ -1274,24 +1271,24 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   // free copyback
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
   //
   // free ring
   //
-  struct spn_target_config const * const config = spn_target_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
 
   if (config->raster_builder.vk.rings.d != 0)
     {
       spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                     device->vk,
+                                     device->environment,
                                      &impl->vk.rings.d.dbi,
                                      impl->vk.rings.d.dm);
     }
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
   //
@@ -1339,7 +1336,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   impl->device = device;
 
   // save config
-  struct spn_target_config const * const config = spn_target_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
 
   impl->config = config;
 
@@ -1393,13 +1390,13 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   // allocate and map rings
   //
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->vk,
+                                  device->environment,
                                   vk_extent_size,
                                   NULL,
                                   &impl->vk.rings.h.dbi,
                                   &impl->vk.rings.h.dm);
 
-  vk(MapMemory(device->vk->d,
+  vk(MapMemory(device->environment->d,
                impl->vk.rings.h.dm,
                0,
                VK_WHOLE_SIZE,
@@ -1412,7 +1409,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   if (config->raster_builder.vk.rings.d != 0)  // FIXME -- this will be improved later
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                      device->vk,
+                                      device->environment,
                                       vk_extent_size,
                                       NULL,
                                       &impl->vk.rings.d.dbi,
@@ -1437,13 +1434,13 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   size_t const   copyback_size = max_in_flight * sizeof(*impl->mapped.cb.extent);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
-                                  device->vk,
+                                  device->environment,
                                   copyback_size,
                                   NULL,
                                   &impl->vk.copyback.dbi,
                                   &impl->vk.copyback.dm);
 
-  vk(MapMemory(device->vk->d,
+  vk(MapMemory(device->environment->d,
                impl->vk.copyback.dm,
                0,
                VK_WHOLE_SIZE,

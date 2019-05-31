@@ -138,11 +138,11 @@
 
 // FIXME -- SPN_BITFIELD_EXTRACT() is GLSL -- replace with macro
 
-#define SPN_PATH_PRIMS_GET_LINES(p)             (SPN_BITFIELD_EXTRACT(p[0], 0,26))                                       // 26
+#define SPN_PATH_PRIMS_GET_LINES(p)             (SPN_BITFIELD_EXTRACT(p[0], 0,26))                                            // 26
 #define SPN_PATH_PRIMS_GET_QUADS(p)             (SPN_BITFIELD_EXTRACT(p[0],26, 6) | (SPN_BITFIELD_EXTRACT(p[1],0,20) <<  6))  // 26
 #define SPN_PATH_PRIMS_GET_CUBICS(p)            (SPN_BITFIELD_EXTRACT(p[1],20,12) | (SPN_BITFIELD_EXTRACT(p[2],0,14) << 12))  // 26
 #define SPN_PATH_PRIMS_GET_RAT_QUADS(p)         (SPN_BITFIELD_EXTRACT(p[2],14,18) | (SPN_BITFIELD_EXTRACT(p[3],0, 7) << 18))  // 25
-#define SPN_PATH_PRIMS_GET_RAT_CUBICS(p)        (SPN_BITFIELD_EXTRACT(p[3], 7,25))                                       // 25
+#define SPN_PATH_PRIMS_GET_RAT_CUBICS(p)        (SPN_BITFIELD_EXTRACT(p[3], 7,25))                                            // 25
 
 #define SPN_PATH_PRIMS_INIT_UNSAFE(ll,qq,cc,rq,rc)      \
   {                                                     \

@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/hotsort/platforms/vk/targets/hotsort_target.gni")
+
+#
+# configuration
+#
+# $HS_GEN -v -a "glsl" -D HS_INTEL_GEN8 -t 2 -w 8 -r 16 -s 21504 -S 65536 -b 16 -B 48 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+
+hotsort_target("hotsort") {
+  hotsort_target_name = "hs_intel_gen8_u64"
+  hotsort_target_config_files = [
+    "//src/graphics/lib/compute/hotsort/platforms/vk/targets/configs/intel/hs_glsl_macros_config.h"
+  ]
+  hotsort_target_args = [
+    # "-v",
+    "-a", "glsl",
+    "-t", "2",
+    "-w", "8",
+    "-r", "16",
+    "-s", "21504",
+    "-S", "65536",
+    "-b", "16",
+    "-B", "48",
+    "-m", "1",
+    "-M", "1",
+    "-f", "1",
+    "-F", "1",
+    "-c", "1",
+    "-C", "1",
+    "-L", "1,0,1,0",
+    "-z",
+  ]
+}

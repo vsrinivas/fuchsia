@@ -89,7 +89,7 @@ spn_device_fence_pool_create(struct spn_device * const device, uint32_t const si
 
   while (true)
     {
-      vk(CreateFence(device->vk->d, &fci, device->vk->ac, &curr->fence));
+      vk(CreateFence(device->environment->d, &fci, device->environment->ac, &curr->fence));
 
       if (--rem == 0)
         break;
@@ -118,8 +118,8 @@ spn_device_fence_pool_dispose(struct spn_device * const device)
   struct spn_fence_pool * const fence_pool = device->fence_pool;
   struct spn_fence_cb *         curr       = fence_pool->available;
 
-  VkAllocationCallbacks const * const vk_ac = device->vk->ac;
-  VkDevice                            vk_d  = device->vk->d;
+  VkAllocationCallbacks const * const vk_ac = device->environment->ac;
+  VkDevice                            vk_d  = device->environment->d;
 
   do
     {
@@ -174,7 +174,7 @@ spn_device_fence_pool_drain(struct spn_device * const     device,
       spn_device_cb_pool_release(device, signaled->cb);
 
       // reset the fence
-      vk(ResetFences(device->vk->d, 1, &signaled->fence));
+      vk(ResetFences(device->environment->d, 1, &signaled->fence));
 
       struct spn_fence_cb * const curr = signaled;
 
@@ -237,7 +237,7 @@ spn_device_fence_pool_wait(struct spn_device * const     device,
   //
   // wait for signaled or timeout
   //
-  VkDevice vk_d = device->vk->d;
+  VkDevice vk_d = device->environment->d;
 
   {
     VkResult const res =

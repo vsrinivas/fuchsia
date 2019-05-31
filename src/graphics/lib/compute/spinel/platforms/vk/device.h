@@ -15,26 +15,7 @@
 #include "allocator_host.h"
 #include "fence_pool.h"
 #include "spinel_types.h"
-
-//
-//
-//
-
-struct spn_target_image;
-
-//
-// Vulkan primitive objects for Spinel
-//
-
-struct spn_device_vk
-{
-  VkAllocationCallbacks const *    ac;
-  VkPhysicalDevice                 pd;
-  uint32_t                         qfi;  // queue family index
-  VkPhysicalDeviceMemoryProperties pdmp;
-  VkDevice                         d;
-  VkPipelineCache                  pc;
-};
+#include "spinel_vk.h"
 
 //
 //
@@ -42,11 +23,9 @@ struct spn_device_vk
 
 struct spn_device
 {
-  struct spn_context * context;
-
-  struct spn_device_vk * vk;
-
-  struct spn_target * target;
+  struct spn_vk_environment * environment;
+  struct spn_context *        context;
+  struct spn_vk *             target;
 
   struct
   {
@@ -74,17 +53,14 @@ struct spn_device
   struct spn_cb_pool *     cb_pool;
   struct spn_fence_pool *  fence_pool;
   struct spn_handle_pool * handle_pool;
-
-  struct spn_block_pool * block_pool;
+  struct spn_block_pool *  block_pool;
 
   //
   //
   //
 #if 0
   struct spn_scheduler         * scheduler;
-
   struct spn_grid_deps         * deps;
-
   struct hs_cl      const      * hs;     // opaque hotsort
 #endif
 };

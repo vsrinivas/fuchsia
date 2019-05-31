@@ -11,14 +11,14 @@
 #include "block_pool.h"
 #include "common/vk/vk_assert.h"
 #include "common/vk/vk_barrier.h"
-#include "core_c.h"
+#include "core_vk.h"
 #include "device.h"
 #include "handle_pool.h"
 #include "queue_pool.h"
 #include "ring.h"
 #include "semaphore_pool.h"
+#include "spn_vk_target.h"
 #include "state_assert.h"
-#include "target.h"
 
 //
 // composition states
@@ -114,13 +114,10 @@ struct spn_ci_copyback
 
 struct spn_composition_impl
 {
-  struct spn_composition * composition;
-
-  struct spn_device * device;
-
-  struct spn_target_config const * config;
-
-  struct spn_ci_vk vk;
+  struct spn_composition *            composition;
+  struct spn_device *                 device;
+  struct spn_vk_target_config const * config;  // WHY IS THIS HERE?
+  struct spn_ci_vk                    vk;
 
   //
   // mapped command ring and copyback counts
@@ -303,8 +300,8 @@ struct spn_ci_complete_payload_1
 
   struct
   {
-    struct spn_target_ds_ttcks_t ttcks;
-    struct spn_target_ds_place_t place;
+    struct spn_vk_ds_ttcks_t ttcks;
+    struct spn_vk_ds_place_t place;
   } ds;
 
   uint32_t dispatch_idx;  // dispatch idx
@@ -320,7 +317,7 @@ struct spn_ci_complete_payload_2
 
   struct
   {
-    struct spn_target_ds_ttcks_t ttcks;
+    struct spn_vk_ds_ttcks_t ttcks;
   } ds;
 
   struct
@@ -339,7 +336,7 @@ struct spn_ci_complete_payload_3
 
   struct
   {
-    struct spn_target_ds_ttcks_t ttcks;
+    struct spn_vk_ds_ttcks_t ttcks;
   } ds;
 };
 
@@ -356,14 +353,14 @@ spn_ci_complete_p_1(void * pfn_payload)
   // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
   // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
   //
-  struct spn_ci_complete_payload_1 const * const payload = pfn_payload;
-  struct spn_composition_impl * const            impl    = payload->impl;
-  struct spn_device * const                      device  = impl->device;
-  struct spn_target * const                      target  = device->target;
+  struct spn_ci_complete_payload_1 const * const payload  = pfn_payload;
+  struct spn_composition_impl * const            impl     = payload->impl;
+  struct spn_device * const                      device   = impl->device;
+  struct spn_vk * const                          instance = device->target;
 
   // release descriptor sets
-  spn_target_ds_release_ttcks(target, payload->ds.ttcks);
-  spn_target_ds_release_place(target, payload->ds.place);
+  spn_vk_ds_release_ttcks(instance, payload->ds.ttcks);
+  spn_vk_ds_release_place(instance, payload->ds.place);
 
   //
   // If the dispatch is the tail of the ring then try to release as
@@ -417,8 +414,8 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   //
   // We're go for launch...
   //
-  struct spn_device * const device = impl->device;
-  struct spn_target * const target = device->target;
+  struct spn_device * const device   = impl->device;
+  struct spn_vk * const     instance = device->target;
 
   // get a cb
   VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
@@ -427,41 +424,41 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   // BLOCK POOL
   //
   // bind global BLOCK_POOL descriptor set
-  spn_target_ds_bind_place_block_pool(target, cb, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_place_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
 
   //
   // TTCKS
   //
   // acquire TTCKS descriptor set
-  struct spn_target_ds_ttcks_t ds_ttcks;
+  struct spn_vk_ds_ttcks_t ds_ttcks;
 
-  spn_target_ds_acquire_ttcks(target, device, &ds_ttcks);
+  spn_vk_ds_acquire_ttcks(instance, device, &ds_ttcks);
 
   // copy the dbi structs
-  *spn_target_ds_get_ttcks_ttcks(target, ds_ttcks) = impl->vk.ttcks.dbi;
+  *spn_vk_ds_get_ttcks_ttcks(instance, ds_ttcks) = impl->vk.ttcks.dbi;
 
   // update TTCKS descriptor set
-  spn_target_ds_update_ttcks(target, device->vk, ds_ttcks);
+  spn_vk_ds_update_ttcks(instance, device->environment, ds_ttcks);
 
   // bind the TTCKS descriptor set
-  spn_target_ds_bind_place_ttcks(target, cb, ds_ttcks);
+  spn_vk_ds_bind_place_ttcks(instance, cb, ds_ttcks);
 
   //
   // PLACE
   //
   // acquire PLACE descriptor set
-  struct spn_target_ds_place_t ds_place;
+  struct spn_vk_ds_place_t ds_place;
 
-  spn_target_ds_acquire_place(target, device, &ds_place);
+  spn_vk_ds_acquire_place(instance, device, &ds_place);
 
   // copy the dbi struct
-  *spn_target_ds_get_place_place(target, ds_place) = impl->vk.rings.d.dbi;
+  *spn_vk_ds_get_place_place(instance, ds_place) = impl->vk.rings.d.dbi;
 
   // update PLACE descriptor set
-  spn_target_ds_update_place(target, device->vk, ds_place);
+  spn_vk_ds_update_place(instance, device->environment, ds_place);
 
   // bind PLACE descriptor set
-  spn_target_ds_bind_place_place(target, cb, ds_place);
+  spn_vk_ds_bind_place_place(instance, cb, ds_place);
 
   //
   // Set up push constants -- note that for now the paths_copy push
@@ -469,12 +466,12 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   //
   // This means we can push the constants once.
   //
-  struct spn_target_push_place const push = {.place_clip = {0, 0, INT32_MAX, INT32_MAX}};
+  struct spn_vk_push_place const push = {.place_clip = {0, 0, INT32_MAX, INT32_MAX}};
 
-  spn_target_p_push_place(target, cb, &push);
+  spn_vk_p_push_place(instance, cb, &push);
 
   // bind PLACE pipeline
-  spn_target_p_bind_place(target, cb);
+  spn_vk_p_bind_place(instance, cb);
 
   // dispatch the pipeline
   vkCmdDispatch(cb, dispatch->cp.span, 1, 1);
@@ -619,13 +616,13 @@ spn_ci_complete_p_3(void * pfn_payload)
   // The safest approach is to create a copy of payload struct on the
   // stack if you don't understand where the wait()'s might occur.
   //
-  struct spn_ci_complete_payload_3 const * const p_3    = pfn_payload;
-  struct spn_composition_impl * const            impl   = p_3->impl;
-  struct spn_device * const                      device = impl->device;
-  struct spn_target * const                      target = device->target;
+  struct spn_ci_complete_payload_3 const * const p_3      = pfn_payload;
+  struct spn_composition_impl * const            impl     = p_3->impl;
+  struct spn_device * const                      device   = impl->device;
+  struct spn_vk * const                          instance = device->target;
 
   // release the ttcks ds -- will never wait()
-  spn_target_ds_release_ttcks(target, p_3->ds.ttcks);  // FIXME -- reuse
+  spn_vk_ds_release_ttcks(instance, p_3->ds.ttcks);  // FIXME -- reuse
 
   // release the sealing semaphore
   spn_device_semaphore_pool_release(device, impl->vk.semaphore.sealing);
@@ -652,10 +649,10 @@ spn_ci_complete_p_2(void * pfn_payload)
   // The safest approach is to create a copy of payload struct on the
   // stack if you don't understand where the wait()'s might occur.
   //
-  struct spn_ci_complete_payload_2 const * const p_2    = pfn_payload;
-  struct spn_composition_impl * const            impl   = p_2->impl;
-  struct spn_device * const                      device = impl->device;
-  struct spn_target * const                      target = device->target;
+  struct spn_ci_complete_payload_2 const * const p_2      = pfn_payload;
+  struct spn_composition_impl * const            impl     = p_2->impl;
+  struct spn_device * const                      device   = impl->device;
+  struct spn_vk * const                          instance = device->target;
 
   // release the copy semaphore
   spn_device_semaphore_pool_release(device, p_2->semaphore.sort);
@@ -670,7 +667,7 @@ spn_ci_complete_p_2(void * pfn_payload)
   //
   // DS: TTCKS
   //
-  spn_target_ds_bind_segment_ttck_ttcks(target, cb, p_2->ds.ttcks);
+  spn_vk_ds_bind_segment_ttck_ttcks(instance, cb, p_2->ds.ttcks);
 
 #if 0
   hs_vk_merge();
@@ -685,7 +682,7 @@ spn_ci_complete_p_2(void * pfn_payload)
   ////////////////////////////////////////////////////////////////
 
   // bind the pipeline
-  spn_target_p_bind_segment_ttck(target, cb);
+  spn_vk_p_bind_segment_ttck(instance, cb);
 
 #if 0
   // dispatch one workgroup per fill command
@@ -703,8 +700,8 @@ static void
 spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
 {
   //
-  struct spn_device * const device = impl->device;
-  struct spn_target * const target = device->target;
+  struct spn_device * const device   = impl->device;
+  struct spn_vk * const     instance = device->target;
 
   // semaphore will be signaled once segmenting is complete
   impl->vk.semaphore.sealing = spn_device_semaphore_pool_acquire(device);
@@ -718,7 +715,7 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   //
   // COPYBACK
   //
-  VkBufferCopy const bc = {.srcOffset = SPN_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
+  VkBufferCopy const bc = {.srcOffset = SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
                            .dstOffset = OFFSET_OF_MACRO(struct spn_ci_copyback, ttcks),
                            .size      = sizeof(impl->mapped.cb.extent->ttcks)};
 
@@ -731,18 +728,18 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   //
 
   // acquire TTCKS descriptor set
-  struct spn_target_ds_ttcks_t ds_ttcks;
+  struct spn_vk_ds_ttcks_t ds_ttcks;
 
-  spn_target_ds_acquire_ttcks(target, device, &ds_ttcks);
+  spn_vk_ds_acquire_ttcks(instance, device, &ds_ttcks);
 
   // copy the dbi structs
-  *spn_target_ds_get_ttcks_ttcks(target, ds_ttcks) = impl->vk.ttcks.dbi;
+  *spn_vk_ds_get_ttcks_ttcks(instance, ds_ttcks) = impl->vk.ttcks.dbi;
 
   // update TTCKS descriptor set
-  spn_target_ds_update_ttcks(target, device->vk, ds_ttcks);
+  spn_vk_ds_update_ttcks(instance, device->environment, ds_ttcks);
 
   // bind the TTCKS descriptor set
-  spn_target_ds_bind_segment_ttck_ttcks(target, cb, ds_ttcks);
+  spn_vk_ds_bind_segment_ttck_ttcks(instance, cb, ds_ttcks);
 
   //
   // SORT
@@ -750,8 +747,8 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
 #if 0
   hs_vk_sort_indirect(cb,
                       ttcks,
-                      SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks),
-                      SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks_count));
+                      SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks),
+                      SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks_count));
 #endif
 
   //
@@ -1121,14 +1118,14 @@ spn_ci_release(struct spn_composition_impl * const impl)
   // free copyback
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
   //
   // free ttcks
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.ttcks.dbi,
                                  impl->vk.ttcks.dm);
   //
@@ -1137,13 +1134,13 @@ spn_ci_release(struct spn_composition_impl * const impl)
   if (impl->config->composition.vk.rings.d != 0)
     {
       spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                     device->vk,
+                                     device->environment,
                                      &impl->vk.rings.d.dbi,
                                      impl->vk.rings.d.dm);
     }
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->vk,
+                                 device->environment,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
   //
@@ -1215,7 +1212,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   // save device
   impl->device = device;
 
-  struct spn_target_config const * const config = spn_target_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
 
   impl->config = config;
 
@@ -1243,13 +1240,13 @@ spn_composition_impl_create(struct spn_device * const       device,
   size_t const ring_size = config->composition.size.ring * sizeof(*impl->mapped.cp.extent);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->vk,
+                                  device->environment,
                                   ring_size,
                                   NULL,
                                   &impl->vk.rings.h.dbi,
                                   &impl->vk.rings.h.dm);
 
-  vk(MapMemory(device->vk->d,
+  vk(MapMemory(device->environment->d,
                impl->vk.rings.h.dm,
                0,
                VK_WHOLE_SIZE,
@@ -1259,7 +1256,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   if (config->composition.vk.rings.d != 0)
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                      device->vk,
+                                      device->environment,
                                       ring_size,
                                       NULL,
                                       &impl->vk.rings.d.dbi,
@@ -1275,11 +1272,11 @@ spn_composition_impl_create(struct spn_device * const       device,
   //
   // allocate ttck descriptor
   //
-  size_t const ttcks_size = SPN_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks) +
+  size_t const ttcks_size = SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks) +
                             config->composition.size.ttcks * sizeof(SPN_TYPE_UVEC2);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->vk,
+                                  device->environment,
                                   ttcks_size,
                                   NULL,
                                   &impl->vk.ttcks.dbi,
@@ -1291,13 +1288,13 @@ spn_composition_impl_create(struct spn_device * const       device,
   size_t const copyback_size = sizeof(*impl->mapped.cb.extent);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
-                                  device->vk,
+                                  device->environment,
                                   copyback_size,
                                   NULL,
                                   &impl->vk.copyback.dbi,
                                   &impl->vk.copyback.dm);
 
-  vk(MapMemory(device->vk->d,
+  vk(MapMemory(device->environment->d,
                impl->vk.copyback.dm,
                0,
                VK_WHOLE_SIZE,
@@ -1340,29 +1337,29 @@ spn_composition_impl_create(struct spn_device * const       device,
 //
 
 void
-spn_composition_impl_pre_render_ds(struct spn_composition * const       composition,
-                                   struct spn_target_ds_ttcks_t * const ds,
-                                   VkCommandBuffer                      cb)
+spn_composition_impl_pre_render_ds(struct spn_composition * const   composition,
+                                   struct spn_vk_ds_ttcks_t * const ds,
+                                   VkCommandBuffer                  cb)
 {
-  struct spn_composition_impl * const impl   = composition->impl;
-  struct spn_device * const           device = impl->device;
-  struct spn_target * const           target = device->target;
+  struct spn_composition_impl * const impl     = composition->impl;
+  struct spn_device * const           device   = impl->device;
+  struct spn_vk * const               instance = device->target;
 
   assert(impl->state >= SPN_CI_STATE_SEALING);
 
   //
   // acquire TTCKS descriptor set
   //
-  spn_target_ds_acquire_ttcks(target, device, ds);
+  spn_vk_ds_acquire_ttcks(instance, device, ds);
 
   // copy the dbi structs
-  *spn_target_ds_get_ttcks_ttcks(target, *ds) = impl->vk.ttcks.dbi;
+  *spn_vk_ds_get_ttcks_ttcks(instance, *ds) = impl->vk.ttcks.dbi;
 
   // update ds
-  spn_target_ds_update_ttcks(target, device->vk, *ds);
+  spn_vk_ds_update_ttcks(instance, device->environment, *ds);
 
   // bind
-  spn_target_ds_bind_render_ttcks(target, cb, *ds);
+  spn_vk_ds_bind_render_ttcks(instance, cb, *ds);
 }
 
 //
@@ -1377,7 +1374,7 @@ spn_composition_impl_pre_render_dispatch(struct spn_composition * const composit
 
   vkCmdDispatchIndirect(cb,
                         impl->vk.ttcks.dbi.buffer,
-                        SPN_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count));
+                        SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count));
 }
 
 //

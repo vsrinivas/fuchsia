@@ -17,8 +17,8 @@
 //
 //
 
-#include "config.h"
-#include "target_layouts.h"
+#include "spn_config.h"
+#include "spn_vk_layouts.h"
 
 //
 //
@@ -36,7 +36,7 @@ layout(local_size_x = SPN_KERNEL_FILLS_SCAN_WORKGROUP_SIZE) in;
 //      buffer uint  prim_prefix[])  // the raster command "base" for each primitive type
 //
 
-SPN_TARGET_GLSL_DECL_KERNEL_FILLS_SCAN();
+SPN_VK_TARGET_GLSL_DECL_KERNEL_FILLS_SCAN();
 
 //
 // COMPILE-TIME CONSTANTS

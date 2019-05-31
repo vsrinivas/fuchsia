@@ -13,13 +13,13 @@
 #include "block_pool.h"
 #include "common/macros.h"
 #include "common/vk/vk_assert.h"
-#include "core_c.h"
+#include "core_vk.h"
 #include "device.h"
 #include "extent.h"
 #include "fence_pool.h"
 #include "queue_pool.h"
-#include "target.h"
-#include "target_config.h"
+#include "spn_vk.h"
+#include "spn_vk_target.h"
 
 //
 // FIXME -- THIS DOCUMENTATION IS STALE NOW THAT A REFERENCE COUNT REP
@@ -179,16 +179,20 @@ struct spn_handle_pool
   ((SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE / sizeof(spn_handle_t)) - 1)
 
 static uint32_t
-spn_device_handle_pool_reclaim_size(struct spn_target_config const * const config)
+spn_device_handle_pool_reclaim_size(struct spn_vk_target_config const * const config)
 {
-  uint32_t const paths   = config->p.push_sizes.named.paths_reclaim;
+  uint32_t const paths = config->p.push_sizes.named.paths_reclaim;
+
+#ifndef NDEBUG
+  // make sure these remain the same
   uint32_t const rasters = config->p.push_sizes.named.rasters_reclaim;
 
   // double-check these two sizes match
   assert(paths == rasters);
+#endif
 
   // reclaim size matches the push constant size
-  return (paths - OFFSET_OF_MACRO(struct spn_target_push_paths_reclaim, path_ids)) /
+  return (paths - OFFSET_OF_MACRO(struct spn_vk_push_paths_reclaim, path_ids)) /
          sizeof(spn_handle_t);
 }
 
@@ -207,7 +211,7 @@ spn_device_handle_pool_create(struct spn_device * const device, uint32_t const h
   device->handle_pool = handle_pool;
 
   uint32_t const reclaim_size =
-    spn_device_handle_pool_reclaim_size(spn_target_get_config(device->target));
+    spn_device_handle_pool_reclaim_size(spn_vk_get_config(device->target));
 
   uint32_t const blocks = (handle_count + reclaim_size - 1) / reclaim_size;
   uint32_t const blocks_padded =
@@ -217,7 +221,7 @@ spn_device_handle_pool_create(struct spn_device * const device, uint32_t const h
 
   spn_extent_pdrw_alloc(&handle_pool->map,
                         &device->allocator.device.perm.local,
-                        device->vk,
+                        device->environment,
                         handles * sizeof(spn_block_id_t));
   //
   // allocate handles
@@ -279,7 +283,9 @@ spn_device_handle_pool_dispose(struct spn_device * const device)
   spn_allocator_host_perm_free(perm, handle_pool->handle.refcnts);
   spn_allocator_host_perm_free(perm, handle_pool->handle.extent);
 
-  spn_extent_pdrw_free(&handle_pool->map, &device->allocator.device.perm.local, device->vk);
+  spn_extent_pdrw_free(&handle_pool->map,
+                       &device->allocator.device.perm.local,
+                       device->environment);
 
   spn_allocator_host_perm_free(perm, device->handle_pool);
 }
@@ -388,15 +394,15 @@ spn_device_bind_paths_reclaim(struct spn_device * const device,
                               spn_handle_t * const      handles,
                               VkCommandBuffer           cb)
 {
-  struct spn_target * const               target = device->target;
-  struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
+  struct spn_vk * const               instance = device->target;
+  struct spn_vk_ds_block_pool_t const ds       = spn_device_block_pool_get_ds(device);
 
-  spn_target_ds_bind_paths_reclaim_block_pool(target, cb, ds);
+  spn_vk_ds_bind_paths_reclaim_block_pool(instance, cb, ds);
 
   union
   {
-    uint8_t                              bytes[SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE];
-    struct spn_target_push_paths_reclaim reclaim;
+    uint8_t                          bytes[SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE];
+    struct spn_vk_push_paths_reclaim reclaim;
   } push;
 
   push.reclaim.bp_mask = spn_device_block_pool_get_mask(device);
@@ -408,10 +414,10 @@ spn_device_bind_paths_reclaim(struct spn_device * const device,
   memcpy(
     push.reclaim.path_ids,
     handles,
-    spn_target_get_config(target)->p.push_sizes.named.paths_reclaim - sizeof(push.reclaim.bp_mask));
+    spn_vk_get_config(instance)->p.push_sizes.named.paths_reclaim - sizeof(push.reclaim.bp_mask));
 
-  spn_target_p_push_paths_reclaim(target, cb, &push.reclaim);
-  spn_target_p_bind_paths_reclaim(target, cb);
+  spn_vk_p_push_paths_reclaim(instance, cb, &push.reclaim);
+  spn_vk_p_bind_paths_reclaim(instance, cb);
 }
 
 static void
@@ -419,26 +425,26 @@ spn_device_bind_rasters_reclaim(struct spn_device * const device,
                                 spn_handle_t * const      handles,
                                 VkCommandBuffer           cb)
 {
-  struct spn_target * const               target = device->target;
-  struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
+  struct spn_vk * const               instance = device->target;
+  struct spn_vk_ds_block_pool_t const ds       = spn_device_block_pool_get_ds(device);
 
-  spn_target_ds_bind_rasters_reclaim_block_pool(target, cb, ds);
+  spn_vk_ds_bind_rasters_reclaim_block_pool(instance, cb, ds);
 
   union
   {
-    uint8_t                                bytes[SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE];
-    struct spn_target_push_rasters_reclaim reclaim;
+    uint8_t                            bytes[SPN_HANDLE_POOL_MAX_PUSH_CONSTANTS_SIZE];
+    struct spn_vk_push_rasters_reclaim reclaim;
   } push;
 
   push.reclaim.bp_mask = spn_device_block_pool_get_mask(device);
 
-  memcpy(push.reclaim.raster_ids,
-         handles,
-         spn_target_get_config(target)->p.push_sizes.named.rasters_reclaim -
-           sizeof(push.reclaim.bp_mask));
+  memcpy(
+    push.reclaim.raster_ids,
+    handles,
+    spn_vk_get_config(instance)->p.push_sizes.named.rasters_reclaim - sizeof(push.reclaim.bp_mask));
 
-  spn_target_p_push_rasters_reclaim(target, cb, &push.reclaim);
-  spn_target_p_bind_rasters_reclaim(target, cb);
+  spn_vk_p_push_rasters_reclaim(instance, cb, &push.reclaim);
+  spn_vk_p_bind_rasters_reclaim(instance, cb);
 }
 
 //

@@ -14,6 +14,14 @@
 #include "spinel_types.h"
 
 //
+//
+//
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
 // VK RENDER EXTENSIONS
 //
 
@@ -24,10 +32,10 @@ typedef enum spn_render_submit_ext_type_e
 } spn_render_submit_ext_type_e;
 
 //
-// Render to a Vulkan buffer
+// RENDER TO A VULKAN BUFFER
 //
 
-struct spn_render_submit_ext_vk_buffer
+typedef struct spn_render_submit_ext_vk_buffer
 {
   void *                       ext;
   spn_render_submit_ext_type_e type;
@@ -37,10 +45,10 @@ struct spn_render_submit_ext_vk_buffer
 } spn_render_submit_ext_vk_buffer_t;
 
 //
-// Render to a Vulkan image
+// RENDER TO A VULKAN IMAGE
 //
 
-struct spn_render_submit_ext_vk_image
+typedef struct spn_render_submit_ext_vk_image
 {
   void *                       ext;
   spn_render_submit_ext_type_e type;
