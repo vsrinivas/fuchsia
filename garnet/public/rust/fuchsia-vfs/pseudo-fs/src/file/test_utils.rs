@@ -4,8 +4,6 @@
 
 //! common utilities for pseudo-file-related tests.
 
-#![cfg(test)]
-
 use {
     crate::directory::entry::DirectoryEntry,
     fidl::endpoints::{create_proxy, ServerEnd},

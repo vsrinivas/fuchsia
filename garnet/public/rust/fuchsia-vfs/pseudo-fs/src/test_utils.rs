@@ -4,8 +4,6 @@
 
 //! Utilities used by tests in both file and directory modules.
 
-#![cfg(test)]
-
 #[doc(hidden)]
 pub mod reexport {
     pub use {

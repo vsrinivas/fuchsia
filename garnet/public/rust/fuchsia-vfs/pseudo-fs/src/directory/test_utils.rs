@@ -8,8 +8,6 @@
 //! will have multiple assertions, it save a bit of typing to write `assert_something!(arg)`
 //! instead of `await!(assert_something(arg))`.
 
-#![cfg(test)]
-
 #[doc(hidden)]
 pub mod reexport {
     pub use {

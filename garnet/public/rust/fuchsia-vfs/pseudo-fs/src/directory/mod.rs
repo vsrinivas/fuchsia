@@ -4,7 +4,6 @@
 
 //! Module hodling different kinds of pseudo directories and thier buidling blocks.
 
-#[cfg(test)]
 #[macro_use]
 pub mod test_utils;
 
