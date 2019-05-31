@@ -31,6 +31,8 @@ trace_provider_t* trace_provider_create_with_name_fdio(
 
 trace_provider_t* trace_provider_create_with_fdio(
         async_dispatcher_t* dispatcher) {
+    ZX_DEBUG_ASSERT(dispatcher);
+
     auto self = zx::process::self();
     char name[ZX_MAX_NAME_LEN];
     auto status = self->get_property(ZX_PROP_NAME, name, sizeof(name));
@@ -39,7 +41,8 @@ trace_provider_t* trace_provider_create_with_fdio(
                 status, zx_status_get_string(status));
         name[0] = '\0';
     }
-    return trace_provider_create_with_name(dispatcher, name);
+
+    return trace_provider_create_with_name_fdio(dispatcher, name);
 }
 
 trace_provider_t* trace_provider_create_synchronously_with_fdio(
