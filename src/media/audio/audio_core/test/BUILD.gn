@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
-    ":audio_device_tests_bin",
+    ":audio_device_tests",
     ":audio_fidl_tests",
   ]
 }
@@ -41,11 +41,12 @@ executable("audio_device_tests_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:test_settings",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 

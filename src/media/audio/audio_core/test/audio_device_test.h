@@ -8,11 +8,11 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <cmath>
 
 #include "gtest/gtest.h"
-#include "lib/component/cpp/environment_services_helper.h"
 
 namespace media::audio::test {
 
@@ -39,8 +39,8 @@ const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
 
 class AudioDeviceTest : public gtest::RealLoopFixture {
  public:
-  static void SetEnvironmentServices(
-      std::shared_ptr<const component::Services> environment_services);
+  static void SetStartupContext(
+      std::unique_ptr<sys::ComponentContext> startup_context);
 
   // Set up once when binary loaded; this is used at start/end of each suite.
   static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);
@@ -56,8 +56,7 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
 
   void SetUp() override;
   void TearDown() override;
-  virtual bool ExpectCallback();
-  bool ExpectTimeout();
+  virtual void ExpectCallback();
 
   void SetOnDeviceAddedEvent();
   void SetOnDeviceRemovedEvent();
@@ -69,7 +68,7 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
   uint32_t SetFlagsFromBools(bool set_gain, bool set_mute, bool set_agc);
 
   void RetrieveDefaultDevInfoUsingGetDevices(bool get_input);
-  bool RetrieveGainInfoUsingGetDevices(uint64_t token);
+  void RetrieveGainInfoUsingGetDevices(uint64_t token);
   void RetrieveGainInfoUsingGetDeviceGain(uint64_t token,
                                           bool valid_token = true);
   void RetrieveTokenUsingGetDefault(bool is_input);
@@ -86,7 +85,7 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
   static uint32_t initial_input_gain_flags_;
   static uint32_t initial_output_gain_flags_;
 
-  static std::shared_ptr<const component::Services> environment_services_;
+  static std::unique_ptr<sys::ComponentContext> startup_context_;
   static fuchsia::virtualaudio::ControlSyncPtr control_sync_;
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
@@ -94,7 +93,7 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
   // Set by any FIDL error handler (upon disconnect); never reset.
   bool error_occurred_ = false;
 
-  // The following are all reset by ExpectCallback and ExpectTimeout.
+  // The following are all reset by ExpectCallback.
   //
   // Set when any callback is received.
   bool received_callback_ = false;

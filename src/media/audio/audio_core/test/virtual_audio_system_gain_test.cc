@@ -4,12 +4,12 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <cmath>
 #include <cstring>
 
 #include "gtest/gtest.h"
-#include "lib/component/cpp/environment_services_helper.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/test/virtual_audio_device_test.h"
 
@@ -24,7 +24,7 @@ class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
   void SetUp() override;
   void TearDown() override;
 
-  bool ExpectCallback() override;
+  void ExpectCallback() override;
 
   void AddDeviceForSystemGainTesting(bool is_input);
   void ChangeAndVerifySystemGain();
@@ -49,7 +49,7 @@ class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
 void VirtualAudioSystemGainTest::SetUp() {
   VirtualAudioDeviceTest::SetUp();
 
-  environment_services_->ConnectToService(audio_core_.NewRequest());
+  startup_context_->svc()->Connect(audio_core_.NewRequest());
   audio_core_.set_error_handler(
       [this](zx_status_t error) { error_occurred_ = true; });
 
@@ -60,16 +60,16 @@ void VirtualAudioSystemGainTest::SetUp() {
     received_system_gain_db_ = gain_db;
     received_system_mute_ = muted;
   };
-  ASSERT_TRUE(ExpectCallback());
+  ExpectCallback();
 
   if (received_system_gain_db_ != kInitialSystemGainDb) {
     audio_core_->SetSystemGain(kInitialSystemGainDb);
-    ASSERT_TRUE(ExpectCallback());
+    ExpectCallback();
   }
 
   if (received_system_mute_) {
     audio_core_->SetSystemMute(false);
-    ASSERT_TRUE(ExpectCallback());
+    ExpectCallback();
   }
   // received_system_gain_db_/received_system_mute_ now contain initial state.
 }
@@ -77,15 +77,16 @@ void VirtualAudioSystemGainTest::SetUp() {
 void VirtualAudioSystemGainTest::TearDown() {
   audio_core_->SetSystemGain(kInitialSystemGainDb);
   audio_core_->SetSystemMute(false);
-  audio_core_.set_error_handler(nullptr);
+
+  audio_core_.Unbind();
 
   VirtualAudioDeviceTest::TearDown();
 }
 
-bool VirtualAudioSystemGainTest::ExpectCallback() {
+void VirtualAudioSystemGainTest::ExpectCallback() {
   received_system_gain_db_ = NAN;
 
-  return VirtualAudioDeviceTest::ExpectCallback();
+  VirtualAudioDeviceTest::ExpectCallback();
 }
 
 void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
@@ -108,7 +109,7 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
     output_->Add();
   }
 
-  ASSERT_TRUE(ExpectCallback());
+  ExpectCallback();
   uint64_t added_token = received_device_.token_id;
   ASSERT_NE(added_token, ZX_KOID_INVALID);
 
@@ -125,16 +126,16 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
                          fuchsia::media::SetAudioGainFlag_AgcValid;
     SetOnDeviceGainChangedEvent();
     audio_dev_enum_->SetDeviceGain(added_token, gain_info, set_flags);
-    ASSERT_TRUE(ExpectCallback());
+    ExpectCallback();
   }
 
   if (system_gain_db != kInitialSystemGainDb) {
     audio_core_->SetSystemGain(kInitialSystemGainDb);
-    ASSERT_TRUE(ExpectCallback());
+    ExpectCallback();
   }
   if (system_mute) {
     audio_core_->SetSystemMute(false);
-    ASSERT_TRUE(ExpectCallback());
+    ExpectCallback();
   }
   received_device_.token_id = added_token;
 }
@@ -145,7 +146,7 @@ void VirtualAudioSystemGainTest::ChangeAndVerifySystemGain() {
 
   audio_core_->SetSystemGain(expect_gain_db);
 
-  ASSERT_TRUE(ExpectCallback());
+  ExpectCallback();
   ASSERT_EQ(received_system_gain_db_, expect_gain_db);
   ASSERT_EQ(received_system_mute_, expect_mute);
 }
@@ -156,7 +157,7 @@ void VirtualAudioSystemGainTest::ChangeAndVerifySystemMute() {
 
   audio_core_->SetSystemMute(expect_mute);
 
-  ASSERT_TRUE(ExpectCallback());
+  ExpectCallback();
   ASSERT_EQ(received_system_gain_db_, expect_gain_db);
   ASSERT_EQ(received_system_mute_, expect_mute);
 }
@@ -231,7 +232,8 @@ void VirtualAudioSystemGainTest::
   bool need_system_event = true;
 
   while (need_device_event || need_system_event) {
-    if (!ExpectCallback()) {
+    ExpectCallback();
+    if (!received_callback_) {
       break;
     }
     if (received_gain_token_ != kInvalidDeviceToken) {

@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "lib/component/cpp/environment_services_helper.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/test/audio_tests_shared.h"
 
@@ -21,8 +20,7 @@ namespace media::audio::test {
 //
 // AudioDeviceTest static variables
 //
-std::shared_ptr<const component::Services>
-    AudioDeviceTest::environment_services_;
+std::unique_ptr<sys::ComponentContext> AudioDeviceTest::startup_context_;
 fuchsia::virtualaudio::ControlSyncPtr AudioDeviceTest::control_sync_;
 
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;
@@ -39,9 +37,9 @@ uint32_t AudioDeviceTest::initial_output_gain_flags_ = 0;
 //
 
 // static
-void AudioDeviceTest::SetEnvironmentServices(
-    std::shared_ptr<const component::Services> environment_services) {
-  environment_services_ = environment_services;
+void AudioDeviceTest::SetStartupContext(
+    std::unique_ptr<sys::ComponentContext> startup_context) {
+  startup_context_ = std::move(startup_context);
 }
 
 // static
@@ -81,18 +79,19 @@ void AudioDeviceTest::SetUp() {
 
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
-  environment_services_->ConnectToService(audio_dev_enum_.NewRequest());
+  startup_context_->svc()->Connect(audio_dev_enum_.NewRequest());
   audio_dev_enum_.set_error_handler(err_handler);
 }
 
 void AudioDeviceTest::TearDown() {
-  EXPECT_FALSE(error_occurred_);
+  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_TRUE(audio_dev_enum_.is_bound());
+  audio_dev_enum_.Unbind();
 
   gtest::RealLoopFixture::TearDown();
 }
 
-bool AudioDeviceTest::ExpectCallback() {
+void AudioDeviceTest::ExpectCallback() {
   received_callback_ = false;
   received_device_ = kInvalidDeviceInfo;
   received_removed_token_ = kInvalidDeviceToken;
@@ -104,53 +103,11 @@ bool AudioDeviceTest::ExpectCallback() {
       [this]() { return error_occurred_ || received_callback_; },
       kDurationResponseExpected, kDurationGranularity);
 
-  EXPECT_FALSE(error_occurred_);
+  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_TRUE(audio_dev_enum_.is_bound());
 
-  EXPECT_FALSE(timed_out);
-
+  EXPECT_FALSE(timed_out) << kTimeoutErr;
   EXPECT_TRUE(received_callback_);
-
-  bool return_val = !error_occurred_ && !timed_out;
-
-  return return_val;
-}
-
-// TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
-bool AudioDeviceTest::ExpectTimeout() {
-  received_callback_ = false;
-  received_device_ = kInvalidDeviceInfo;
-  received_removed_token_ = kInvalidDeviceToken;
-  received_default_token_ = received_old_token_ = kInvalidDeviceToken;
-  received_gain_token_ = kInvalidDeviceToken;
-  received_gain_info_ = kInvalidGainInfo;
-
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() { return error_occurred_ || received_callback_; },
-      kDurationTimeoutExpected);
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_TRUE(audio_dev_enum_.is_bound());
-
-  EXPECT_TRUE(timed_out);
-
-  EXPECT_FALSE(received_callback_);
-  if (received_callback_) {
-    EXPECT_EQ(received_device_.token_id, kInvalidDeviceToken)
-        << "Received Add event";
-    EXPECT_EQ(received_removed_token_, kInvalidDeviceToken)
-        << "Received Remove event";
-    EXPECT_EQ(received_default_token_, kInvalidDeviceToken)
-        << "Received Default event";
-    EXPECT_EQ(received_old_token_, kInvalidDeviceToken)
-        << "Received Default event";
-    EXPECT_EQ(received_gain_token_, kInvalidDeviceToken)
-        << "Received Gain event";
-  }
-
-  bool return_val = !error_occurred_ && !received_callback_;
-
-  return return_val;
 }
 
 void AudioDeviceTest::SetOnDeviceAddedEvent() {
@@ -215,10 +172,10 @@ void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
         }
       });
 
-  EXPECT_TRUE(ExpectCallback());
+  ExpectCallback();
 }
 
-bool AudioDeviceTest::RetrieveGainInfoUsingGetDevices(uint64_t token) {
+void AudioDeviceTest::RetrieveGainInfoUsingGetDevices(uint64_t token) {
   audio_dev_enum_->GetDevices(
       [this,
        token](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
@@ -231,7 +188,7 @@ bool AudioDeviceTest::RetrieveGainInfoUsingGetDevices(uint64_t token) {
         }
       });
 
-  return ExpectCallback();
+  ExpectCallback();
 }
 
 void AudioDeviceTest::RetrieveGainInfoUsingGetDeviceGain(uint64_t token,
@@ -244,7 +201,7 @@ void AudioDeviceTest::RetrieveGainInfoUsingGetDeviceGain(uint64_t token,
         received_gain_info_ = dev_gain_info;
       });
 
-  EXPECT_TRUE(ExpectCallback());
+  ExpectCallback();
   EXPECT_EQ(received_gain_token_, (valid_token ? token : ZX_KOID_INVALID));
 }
 
@@ -260,7 +217,7 @@ void AudioDeviceTest::RetrieveTokenUsingGetDefault(bool is_input) {
     audio_dev_enum_->GetDefaultOutputDevice(get_default_handler);
   }
 
-  EXPECT_TRUE(ExpectCallback());
+  ExpectCallback();
 }
 
 void AudioDeviceTest::RetrievePreExistingDevices() {
@@ -269,14 +226,10 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
     return;
   }
 
-  // Wait until all completion (not disconnect) callbacks drain out, then go on.
-  while (!error_occurred_) {
-    if (ExpectTimeout()) {
-      break;
-    }
-  }
+  // Wait for any completion (not disconnect) callbacks to drain, then go on.
+  RunLoopUntilIdle();
 
-  EXPECT_FALSE(error_occurred_);
+  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_TRUE(audio_dev_enum_.is_bound());
 
   audio_dev_enum_->GetDevices(
@@ -304,7 +257,7 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
         }
       });
 
-  EXPECT_TRUE(ExpectCallback());
+  ExpectCallback();
 }
 
 bool AudioDeviceTest::HasPreExistingDevices() {
@@ -330,7 +283,7 @@ TEST_F(AudioDeviceTest, ReceivesGetDevicesCallback) {
         received_callback_ = true;
       });
 
-  EXPECT_TRUE(ExpectCallback());
+  ExpectCallback();
 }
 
 TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
@@ -347,7 +300,7 @@ TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
         num_devs = devices.size();
       });
 
-  EXPECT_TRUE(ExpectCallback());
+  ExpectCallback();
   EXPECT_EQ(num_devs, 0u);
 }
 
@@ -386,7 +339,7 @@ TEST_F(AudioDeviceTest, SetDeviceGainHandlesNullToken) {
   audio_dev_enum_->SetDeviceGain(ZX_KOID_INVALID,
                                  {.gain_db = 0.0f, .flags = 0u},
                                  fuchsia::media::SetAudioGainFlag_GainValid);
-  EXPECT_TRUE(ExpectTimeout());
+  RunLoopUntilIdle();
 }
 
 // Given invalid token to SetDeviceGain, FIDL interface should not disconnect.
@@ -394,7 +347,7 @@ TEST_F(AudioDeviceTest, SetDeviceGainHandlesBadToken) {
   audio_dev_enum_->SetDeviceGain(kInvalidDeviceToken,
                                  {.gain_db = 0.0f, .flags = 0u},
                                  fuchsia::media::SetAudioGainFlag_GainValid);
-  EXPECT_TRUE(ExpectTimeout());
+  RunLoopUntilIdle();
 }
 
 // Given invalid token to GetDeviceGain, callback should be received with
@@ -405,7 +358,7 @@ TEST_F(AudioDeviceTest, OnDeviceGainChangedIgnoresSetDeviceGainNullToken) {
   audio_dev_enum_->SetDeviceGain(ZX_KOID_INVALID,
                                  {.gain_db = 0.0f, .flags = 0u},
                                  fuchsia::media::SetAudioGainFlag_GainValid);
-  EXPECT_TRUE(ExpectTimeout());
+  RunLoopUntilIdle();
 }
 
 TEST_F(AudioDeviceTest, OnDeviceGainChangedIgnoresSetDeviceGainBadToken) {
@@ -414,7 +367,7 @@ TEST_F(AudioDeviceTest, OnDeviceGainChangedIgnoresSetDeviceGainBadToken) {
   audio_dev_enum_->SetDeviceGain(kInvalidDeviceToken,
                                  {.gain_db = 0.0f, .flags = 0u},
                                  fuchsia::media::SetAudioGainFlag_GainValid);
-  EXPECT_TRUE(ExpectTimeout());
+  RunLoopUntilIdle();
 }
 
 }  // namespace media::audio::test
