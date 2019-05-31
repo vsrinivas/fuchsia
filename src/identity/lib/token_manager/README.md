@@ -50,7 +50,6 @@ directly access each other's tokens. However, additional design work is required
 to retain sharing in certain cases (e.g. between components from the same vendor
 or between different vendors given explicit user consent).
 
-Potentially the protocol between Token Manager and Auth Providers will be
-redesigned to better enable additional types of authentication token in the
-future.
+The protocol between Token Manager and Auth Providers will be redesigned to
+better enable additional authentication token types in the future.
 
