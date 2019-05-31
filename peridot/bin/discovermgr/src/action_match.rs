@@ -57,7 +57,7 @@ fn query_text_match(query: &str, text: &str) -> bool {
 // TODO: match against keywords rather than display_info.title
 //
 fn query_action_match(action: &Action, query: &str) -> bool {
-    match &action.display_info {
+    match &action.display_info.display_info {
         Some(display_info) => match &display_info.title {
             Some(title) => query_text_match(query, title),
             None => false,

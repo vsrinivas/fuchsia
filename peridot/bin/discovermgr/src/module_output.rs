@@ -91,7 +91,7 @@ impl ModuleOutputWriterService {
             None => self.story_context_store.lock().withdraw(
                 &self.story_id,
                 &self.module_id,
-                vec![&output_name],
+                &output_name,
             ),
         }
     }
@@ -102,6 +102,7 @@ mod tests {
     use super::*;
     use crate::story_context_store::{ContextEntity, Contributor};
     use fidl_fuchsia_app_discover::ModuleOutputWriterMarker;
+    use maplit::hashset;
 
     #[fasync::run_until_stalled(test)]
     async fn test_write() {
@@ -123,12 +124,10 @@ mod tests {
         {
             let context_store = state.lock();
             let result = context_store.current().collect::<Vec<&ContextEntity>>();
-            let mut expected_entity = ContextEntity::new("foo");
-            expected_entity.add_contributor(Contributor::module_new(
-                "story1",
-                "mod-a",
-                "param-foo",
-            ));
+            let expected_entity = ContextEntity::new(
+                "foo",
+                hashset!(Contributor::module_new("story1", "mod-a", "param-foo",)),
+            );
             assert_eq!(result.len(), 1);
             assert_eq!(result[0], &expected_entity);
         }

@@ -1,14 +1,16 @@
 [
    {
       "display_info" : {
-         "title" : "Listen to $artist",
-         "icon" : "https://www.shareicon.net/download/128x128//2016/08/01/639870_internet_512x512.png",
-         "parameter_mapping" : [
-            {
-               "parameter_property" : "artist.name",
-               "name" : "artist"
-            }
-         ]
+        "display_info" : {
+           "title" : "Listen to $artist",
+           "icon" : "https://www.shareicon.net/download/128x128//2016/08/01/639870_internet_512x512.png"
+        },
+        "parameter_mapping" : [
+           {
+              "parameter_property" : "artist.name",
+              "name" : "artist"
+           }
+        ]
       },
       "web_fulfillment" : {
          "url_template" : "https://example.com/music",
@@ -38,14 +40,16 @@
          ]
       },
       "display_info" : {
-         "title" : "Weather in $place",
-         "parameter_mapping" : [
-            {
-               "parameter_property" : "Location.name",
-               "name" : "place"
-            }
-         ],
-         "icon" : "https://www.google.com/s2/favicons?domain=https://openweathermap.org/&sz=128"
+        "display_info" : {
+           "title" : "Weather in $place",
+           "icon" : "https://www.google.com/s2/favicons?domain=https://openweathermap.org/&sz=128"
+        },
+        "parameter_mapping" : [
+           {
+              "parameter_property" : "Location.name",
+              "name" : "place"
+           }
+        ]
       },
       "name" : "SHOW_WEATHER",
       "parameters" : [

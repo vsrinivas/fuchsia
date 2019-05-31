@@ -23,6 +23,10 @@ pub enum Contributor {
     // TODO(miguelfrde): Add group scoped contributors
 }
 
+pub trait ContextSubscriber {
+    fn on_context_update(&self, context_entities: HashSet<ContextEntity>);
+}
+
 impl Contributor {
     pub fn module_new(story_id: &str, module_id: &str, parameter_name: &str) -> Self {
         Contributor::ModuleContributor {
@@ -34,8 +38,8 @@ impl Contributor {
 }
 
 impl ContextEntity {
-    pub fn new(reference: &str) -> Self {
-        ContextEntity { reference: reference.to_string(), contributors: HashSet::new() }
+    pub fn new(reference: &str, contributors: HashSet<Contributor>) -> Self {
+        ContextEntity { reference: reference.to_string(), contributors: contributors }
     }
 
     pub fn add_contributor(&mut self, contributor: Contributor) {
@@ -63,7 +67,7 @@ impl StoryContextStore {
         self.clear_contributor(&contributor);
         self.context_entities
             .entry(reference.to_string())
-            .or_insert(ContextEntity::new(reference))
+            .or_insert(ContextEntity::new(reference, HashSet::new()))
             .add_contributor(contributor.clone());
         // Keep track of contributor => references removal.
         self.contributor_to_refs
@@ -72,15 +76,13 @@ impl StoryContextStore {
             .insert(reference.to_string());
     }
 
-    pub fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_names: Vec<&str>) {
-        parameter_names
-            .iter()
-            .map(|param| Contributor::ModuleContributor {
-                story_id: story_id.to_string(),
-                module_id: module_id.to_string(),
-                parameter_name: param.to_string(),
-            })
-            .for_each(|c| self.clear_contributor(&c));
+    pub fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str) {
+        let contributor = Contributor::ModuleContributor {
+            story_id: story_id.to_string(),
+            module_id: module_id.to_string(),
+            parameter_name: parameter_name.to_string(),
+        };
+        self.clear_contributor(&contributor);
     }
 
     #[allow(dead_code)] // Will be used through the ContextManager
@@ -126,6 +128,7 @@ impl StoryContextStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use maplit::{hashmap, hashset};
 
     #[test]
     fn contribute() {
@@ -137,16 +140,15 @@ mod tests {
         story_context_store.contribute("story1", "mod-a", "param-bar", "bar");
 
         // Verify context store state
-        let mut context_entity_foo = ContextEntity::new("foo");
-        context_entity_foo.add_contributor(Contributor::module_new("story1", "mod-a", "param-foo"));
-        context_entity_foo.add_contributor(Contributor::module_new("story2", "mod-b", "param-baz"));
-        let mut context_entity_bar = ContextEntity::new("bar");
-        context_entity_bar.add_contributor(Contributor::module_new("story1", "mod-a", "param-bar"));
-        let expected_context_entities: HashMap<String, ContextEntity> =
-            [("foo".to_string(), context_entity_foo), ("bar".to_string(), context_entity_bar)]
-                .iter()
-                .cloned()
-                .collect();
+        let expected_context_entities = hashmap! {
+            "foo".to_string() => ContextEntity::new("foo", hashset!(
+                    Contributor::module_new("story1", "mod-a", "param-foo"),
+                    Contributor::module_new("story2", "mod-b", "param-baz")
+            )),
+            "bar".to_string() => ContextEntity::new("bar", hashset!(
+                    Contributor::module_new("story1", "mod-a", "param-bar")
+            )),
+        };
         assert_eq!(story_context_store.context_entities, expected_context_entities);
 
         // Contributing the same entity shouldn't have an effect.
@@ -164,14 +166,15 @@ mod tests {
         story_context_store.contribute("story1", "mod-a", "param-bar", "bar");
 
         // Remove a few of them
-        story_context_store.withdraw("story2", "mod-b", vec!["param-baz"]);
-        story_context_store.withdraw("story1", "mod-a", vec!["param-bar"]);
+        story_context_store.withdraw("story2", "mod-b", "param-baz");
+        story_context_store.withdraw("story1", "mod-a", "param-bar");
 
         // Verify context store state
-        let mut context_entity = ContextEntity::new("foo");
-        context_entity.add_contributor(Contributor::module_new("story1", "mod-a", "param-foo"));
-        let mut expected_context_entities = HashMap::<String, ContextEntity>::new();
-        expected_context_entities.insert("foo".to_string(), context_entity);
+        let expected_context_entities = hashmap! {
+            "foo".to_string() => ContextEntity::new("foo", hashset!(
+            Contributor::module_new("story1", "mod-a", "param-foo"),
+                )),
+        };
         assert_eq!(story_context_store.context_entities, expected_context_entities);
     }
 
@@ -188,10 +191,12 @@ mod tests {
         story_context_store.withdraw_all("story1", "mod-a");
 
         // Verify context store state
-        let mut context_entity = ContextEntity::new("foo");
-        context_entity.add_contributor(Contributor::module_new("story2", "mod-b", "param-baz"));
-        let mut expected_context_entities = HashMap::<String, ContextEntity>::new();
-        expected_context_entities.insert("foo".to_string(), context_entity);
+        let expected_context_entities = hashmap! {
+            "foo".to_string() =>
+            ContextEntity::new("foo", hashset!(
+            Contributor::module_new("story2", "mod-b", "param-baz"))
+                ),
+        };
         assert_eq!(story_context_store.context_entities, expected_context_entities);
     }
 }
