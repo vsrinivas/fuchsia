@@ -5,10 +5,12 @@
 source_set("platform") {
   sources = [
     "debug.cpp",
+    "halt_helper.cpp",
     "init.cpp",
     "power.cpp",
   ]
   deps = [
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/debuglog",
   ]
 }

@@ -19,6 +19,7 @@
 #include <object/resource.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform.h>
+#include <platform/halt_helper.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/physmap.h>
@@ -316,18 +317,6 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo, zx_ha
     return ZX_OK;
 }
 
-// Gracefully halt and perform |action|.
-static void platform_graceful_halt(platform_halt_action action) {
-    thread_migrate_to_cpu(BOOT_CPU_ID);
-    platform_halt_secondary_cpus();
-
-    // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
-    dlog_shutdown();
-
-    platform_halt(action, HALT_REASON_SW_RESET);
-    panic("ERROR: failed to halt the platform\n");
-}
-
 // zx_status_t zx_system_powerctl
 zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
                                 user_in_ptr<const zx_system_powerctl_arg_t> raw_arg) {
@@ -357,16 +346,16 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
         return arch_system_powerctl(cmd, &arg);
     }
     case ZX_SYSTEM_POWERCTL_REBOOT:
-        platform_graceful_halt(HALT_ACTION_REBOOT);
+        platform_graceful_halt_helper(HALT_ACTION_REBOOT);
         break;
     case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
-        platform_graceful_halt(HALT_ACTION_REBOOT_BOOTLOADER);
+        platform_graceful_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER);
         break;
     case ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY:
-        platform_graceful_halt(HALT_ACTION_REBOOT_RECOVERY);
+        platform_graceful_halt_helper(HALT_ACTION_REBOOT_RECOVERY);
         break;
     case ZX_SYSTEM_POWERCTL_SHUTDOWN:
-        platform_graceful_halt(HALT_ACTION_SHUTDOWN);
+        platform_graceful_halt_helper(HALT_ACTION_SHUTDOWN);
         break;
     default:
         return ZX_ERR_INVALID_ARGS;

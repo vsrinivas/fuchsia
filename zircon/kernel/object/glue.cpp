@@ -23,6 +23,8 @@
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 
+#include <platform/halt_helper.h>
+
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
@@ -35,6 +37,10 @@ fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
 
 static void oom_lowmem(size_t shortfall_bytes) {
     printf("OOM: oom_lowmem(shortfall_bytes=%zu) called\n", shortfall_bytes);
+
+#if defined(ENABLE_KERNEL_DEBUGGING_FEATURES)
+    // See ZX-3637 for why this is currently disabled outside of the bringup
+    // product configuration.
 
     bool found = false;
     JobDispatcher::ForEachJob([&found](JobDispatcher* job) {
@@ -55,6 +61,10 @@ static void oom_lowmem(size_t shortfall_bytes) {
     if (!found) {
         printf("OOM: no alive job has a kill bit\n");
     }
+#else
+    printf("OOM: rebooting\n");
+    platform_graceful_halt_helper(HALT_ACTION_REBOOT);
+#endif
 }
 
 static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
