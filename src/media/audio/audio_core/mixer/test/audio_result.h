@@ -407,7 +407,8 @@ class AudioResult {
   // If a current tolerance EXCEEDS this value, then the test case fails.
   static constexpr double kPrevDynRangeTolerance = 4.6729294e-07;
 
-  // Level and unwanted artifacts, applying the smallest-detectable gain change.
+  // Level, and unwanted artifacts -- as well as previously-cached threshold
+  // limits for the same -- when applying the smallest-detectable gain change.
   static double LevelEpsilonDown;
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevLevelEpsilonDown = -2.5886558e-07;
@@ -417,8 +418,8 @@ class AudioResult {
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevSinadEpsilonDown = 152.25480;
 
-  // Level and unwanted artifacts -- as well as previously-cached threshold
-  // limits for the same -- when applying -30dB gain (measures dynamic range).
+  // Level + unwanted artifacts -- and the previously-cached threshold limits
+  // for the same -- when applying -30/-60/-90dB gain (measures dynamic range).
   static double Level30Down;
   static double Level60Down;
   static double Level90Down;

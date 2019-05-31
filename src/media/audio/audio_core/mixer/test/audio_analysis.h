@@ -61,6 +61,24 @@ void OverwriteCosine(T* buffer, uint32_t buf_size, double freq,
 // in frequency domain, but generally used only through buf_size/2 (per Nyquist)
 void FFT(double* real, double* imag, uint32_t buf_size);
 
+// Calculate phase in radians for the complex pair. Correctly handles negative
+// or zero values: range of return value is [-PI,PI], not just [-PI/2,PI/2].
+double GetPhase(double real, double imag);
+
+// Convert provided real-imag (cartesian) data into magn-phase (polar) format.
+// This is done with 2 in-buffers 2 two out-buffers -- NOT 2 in-out-buffers.
+// TODO(mpuryear): will clients (tests) want this transformed in-place?
+void RectangularToPolar(const double* real, const double* imag,
+                        uint32_t buf_size, double* magn,
+                        double* phase = nullptr);
+
+void RealDFT(const double* reals, uint32_t len, double* r_freq, double* i_freq);
+
+void InverseDFT(double* real, double* imag, uint32_t buf_size,
+                double* real_out);
+
+void InverseFFT(double* real, double* imag, uint32_t buf_size);
+
 // For specified audio buffer & length, analyze contents and return the
 // magnitude (and phase) at given frequency (as above, that sinusoid for which
 // 'freq' periods fit perfectly within buffer length). Also return magnitude of
@@ -68,7 +86,8 @@ void FFT(double* real, double* imag, uint32_t buf_size);
 // Internally uses an FFT, so buf_size must be a power-of-two.
 template <typename T>
 void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
-                      double* magn_signal, double* magn_other = nullptr);
+                      double* magn_signal, double* magn_other = nullptr,
+                      double* phase_signal = nullptr);
 
 }  // namespace media::audio::test
 

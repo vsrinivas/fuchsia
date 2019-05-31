@@ -304,6 +304,111 @@ void FFT(double* reals, double* imags, uint32_t buf_size) {
   }
 }
 
+// Calculate phase for a given complex number, spanning [-PI, PI].
+double GetPhase(double real, double imag) {
+  if (real == 0.0f) {
+    real = 1e-20;
+  }
+  if (imag < 1e-19 && imag > -1e-19) {
+    imag = 0.0;
+  }
+  double phase = std::atan(imag / real);
+
+  if (real < 0.0) {
+    if (imag < 0.0) {
+      phase -= M_PI;
+    } else {
+      phase += M_PI;
+    }
+  }
+  return phase;
+}
+
+// Convert 2 incoming arrs (reals & imags == x & y) into magnitude and phase
+// arrs. Magnitude is absolute value, phase is in radians with range (-PI, PI].
+void RectangularToPolar(const double* reals, const double* imags,
+                        uint32_t buf_size, double* magn, double* phase) {
+  for (uint32_t freq = 0; freq < buf_size; ++freq) {
+    double sum_sq = (reals[freq] * reals[freq]) + (imags[freq] * imags[freq]);
+    magn[freq] = std::sqrt(sum_sq);
+  }
+  if (phase) {
+    for (uint32_t freq = 0; freq < buf_size; ++freq) {
+      phase[freq] = GetPhase(reals[freq], imags[freq]);
+    }
+  }
+}
+
+// Perform the Discrete Fourier Transform, converting time-domain reals[] (len
+// buf_size) into freq-domain real_freq[] & imag_freq[], both (buf_size/2 + 1).
+// This is a simple, unoptimized (N^2)/2 implementation.
+void RealDFT(const double* reals, uint32_t buf_size, double* real_freq,
+             double* imag_freq) {
+  FXL_DCHECK((buf_size & 1u) == 0) << "DFT buffer size must be even";
+
+  const double multiplier = M_PI * 2.0 / static_cast<double>(buf_size);
+  const uint32_t buf_sz_2 = buf_size >> 1;
+
+  for (uint32_t freq = 0; freq <= buf_sz_2; ++freq) {
+    const double freq_mult = multiplier * static_cast<double>(freq);
+    double real = 0.0;
+    double imag = 0.0;
+    for (uint32_t idx = 0; idx < buf_size; ++idx) {
+      const double idx_mult = freq_mult * static_cast<double>(idx);
+
+      real += (std::cos(idx_mult) * reals[idx]);
+      imag -= (std::sin(idx_mult) * reals[idx]);
+    }
+    real_freq[freq] = real;
+    imag_freq[freq] = imag;
+  }
+}
+
+// Converts frequency-domain arrays real_freq & imag_freq (len buf_size/2 + 1)
+// into time-domain array reals (len buf_size). This is a simple, unoptimized
+// (N^2)/2 implementation.
+
+void InverseDFT(double* real_freq, double* imag_freq, uint32_t buf_size,
+                double* reals) {
+  uint32_t buf_sz_2 = buf_size >> 1;
+
+  for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
+    real_freq[idx] = real_freq[idx] / static_cast<double>(buf_sz_2);
+    imag_freq[idx] = -imag_freq[idx] / static_cast<double>(buf_sz_2);
+  }
+  real_freq[0] /= 2.0;
+  real_freq[buf_sz_2] /= 2.0;
+
+  double mult = M_PI * 2.0 / static_cast<double>(buf_size);
+  for (uint32_t idx = 0; idx < buf_size; ++idx) {
+    double idx_mult = mult * idx;
+    double val = 0.0;
+    for (uint32_t freq = 0; freq <= buf_sz_2; ++freq) {
+      double freq_mult = idx_mult * freq;
+      val += (real_freq[freq] * std::cos(freq_mult));
+      val += (imag_freq[freq] * std::sin(freq_mult));
+    }
+    reals[idx] = val;
+  }
+}
+
+// Converts frequency-domain arrays reals & imags (len buf_size) in-place
+// into time-domain arrays (also len buf_size)
+void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
+  FXL_DCHECK(fbl::is_pow2(buf_size));
+
+  for (uint32_t idx = 0; idx < buf_size; ++idx) {
+    imags[idx] = -imags[idx];
+  }
+
+  FFT(reals, imags, buf_size);
+
+  for (uint32_t idx = 0; idx < buf_size; ++idx) {
+    reals[idx] = reals[idx] / static_cast<double>(buf_size);
+    imags[idx] = -imags[idx] / static_cast<double>(buf_size);
+  }
+}
+
 // For specified audio buffer & length, analyze the contents and return the
 // magnitude (and phase) of signal at given frequency (i.e. frequency at which
 // 'freq' periods fit perfectly within buffer length). Also return the magnitude
@@ -311,7 +416,8 @@ void FFT(double* reals, double* imags, uint32_t buf_size) {
 // Internally uses an FFT, so buf_size must be a power-of-two.
 template <typename T>
 void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
-                      double* magn_signal, double* magn_other) {
+                      double* magn_signal, double* magn_other,
+                      double* phase_signal) {
   FXL_DCHECK(fbl::is_pow2(buf_size));
 
   uint32_t buf_sz_2 = buf_size >> 1;
@@ -374,6 +480,11 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
     }
     *magn_other = std::sqrt(sum_sq_magn_other);
   }
+
+  // Calculate phase of primary signal
+  if (phase_signal) {
+    *phase_signal = GetPhase(reals[freq], imags[freq]);
+  }
 }
 
 template bool CompareBuffers<uint8_t>(const uint8_t*, const uint8_t*, uint32_t,
@@ -395,6 +506,8 @@ template bool CompareBufferToVal<int32_t>(const int32_t*, int32_t, uint32_t,
                                           bool, bool);
 template bool CompareBufferToVal<float>(const float*, float, uint32_t, bool,
                                         bool);
+template bool CompareBufferToVal<double>(const double*, double, uint32_t, bool,
+                                         bool);
 
 template void GenerateCosine<uint8_t>(uint8_t*, uint32_t, double, bool, double,
                                       double);
@@ -409,15 +522,20 @@ template void GenerateCosine<double>(double*, uint32_t, double, bool, double,
 
 template void MeasureAudioFreq<uint8_t>(uint8_t* audio, uint32_t buf_size,
                                         uint32_t freq, double* magn_signal,
-                                        double* magn_other = nullptr);
+                                        double* magn_other = nullptr,
+                                        double* phase_signal = nullptr);
 template void MeasureAudioFreq<int16_t>(int16_t* audio, uint32_t buf_size,
                                         uint32_t freq, double* magn_signal,
-                                        double* magn_other = nullptr);
+                                        double* magn_other = nullptr,
+                                        double* phase_signal = nullptr);
 template void MeasureAudioFreq<int32_t>(int32_t* audio, uint32_t buf_size,
                                         uint32_t freq, double* magn_signal,
-                                        double* magn_other = nullptr);
+                                        double* magn_other = nullptr,
+                                        double* phase_signal = nullptr);
+
 template void MeasureAudioFreq<float>(float* audio, uint32_t buf_size,
                                       uint32_t freq, double* magn_signal,
-                                      double* magn_other = nullptr);
+                                      double* magn_other = nullptr,
+                                      double* phase_signal = nullptr);
 
 }  // namespace media::audio::test
