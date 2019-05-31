@@ -49,6 +49,7 @@ group("ulib") {
     "dispatcher-pool",
     "driver",
     "driver-info",
+    "driver-unit-test",
     "edid",
     "elf-search",
     "elfload",

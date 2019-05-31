@@ -84,6 +84,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/digest/test",
       "$zx/system/ulib/disk-inspector/test",
       "$zx/system/ulib/driver-integration-test/test",
+      "$zx/system/ulib/driver-unit-test/test",
       "$zx/system/ulib/elf-search/test",
       "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fs/metrics/test:metrics",

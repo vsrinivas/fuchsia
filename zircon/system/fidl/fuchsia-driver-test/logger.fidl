@@ -1,0 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.driver.test;
+
+const uint32 LOG_MESSAGE_MAX = 1024;
+const uint32 TEST_CASE_NAME_MAX = 256;
+
+/// Contains the counts of test results within the test case.
+struct TestCaseResult {
+    /// Number of tests that passed.
+    uint64 passed;
+    /// Number of tests that failed.
+    uint64 failed;
+    /// Number of tests that were skipped.
+    uint64 skipped;
+};
+
+[Layout = "Simple"]
+protocol Logger {
+    /// Logs a message from the driver unit test.
+    LogMessage(string:LOG_MESSAGE_MAX msg);
+
+    /// Logs the results of a test case.
+    LogTestCase(string:TEST_CASE_NAME_MAX name, TestCaseResult result);
+};

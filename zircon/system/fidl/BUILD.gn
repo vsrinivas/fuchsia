@@ -18,6 +18,7 @@ group("fidl") {
     "fuchsia-device-manager-test",
     "fuchsia-device-test",
     "fuchsia-device-vsock",
+    "fuchsia-driver-test",
     "fuchsia-fshost",
     "fuchsia-hardware-audio",
     "fuchsia-hardware-backlight",

@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":logger-unit",
+  ]
+}
+
+test("logger-unit") {
+  sources = [
+    "logger-test.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-driver-test:c",
+    "$zx/system/ulib/driver-unit-test",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/zxtest",
+  ]
+}
