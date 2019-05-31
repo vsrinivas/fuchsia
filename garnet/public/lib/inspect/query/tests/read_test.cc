@@ -85,7 +85,8 @@ class ReadTest : public TestFixture {
   vfs::PseudoDir root_dir_;
 };
 
-TEST_F(ReadTest, ReadLocations) {
+//TODO: Fix FLK-304 and re-enable
+TEST_F(ReadTest, DISABLED_ReadLocations) {
   const std::vector<std::string> paths = {"/test/root.inspect", "/test"};
 
   for (const auto& path : paths) {
