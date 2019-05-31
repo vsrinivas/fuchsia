@@ -7,6 +7,8 @@
 namespace modular {
 namespace testing {
 
+FakeModule::FakeModule() = default;
+
 FakeModule::FakeModule(
     fit::function<void(fuchsia::modular::Intent)> on_intent_handled)
     : on_intent_handled_(std::move(on_intent_handled)) {}
@@ -38,7 +40,9 @@ std::vector<std::string> FakeModule::GetSandboxServices() {
 
 // |IntentHandler|
 void FakeModule::HandleIntent(fuchsia::modular::Intent intent) {
-  on_intent_handled_(std::move(intent));
+  if (on_intent_handled_) {
+    on_intent_handled_(std::move(intent));
+  }
 };
 
 }  // namespace testing

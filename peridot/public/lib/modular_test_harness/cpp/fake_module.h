@@ -30,8 +30,11 @@ namespace testing {
 class FakeModule : public modular::testing::FakeComponent,
                    fuchsia::modular::IntentHandler {
  public:
+  FakeModule();
+
   // |on_intent_handled| will be invoked whenever HandleIntent() is called.
   FakeModule(fit::function<void(fuchsia::modular::Intent)> on_intent_handled);
+
   ~FakeModule();
 
   fuchsia::modular::ComponentContext* modular_component_context() {

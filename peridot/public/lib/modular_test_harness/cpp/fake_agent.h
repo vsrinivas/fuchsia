@@ -19,11 +19,19 @@ namespace testing {
 // services, and exposes task running callback registration.
 class FakeAgent : public modular::testing::FakeComponent,
                   fuchsia::modular::Agent {
+ public:
   // Returns a vector of services names which are expected to be provided to the
   // agent.
   static std::vector<std::string> GetSandboxServices();
 
   FakeAgent();
+
+  // Constructs a FakeAgent which calls |connect_callback| whenever a connection
+  // is initiated by the modular framework. |client_url| is the url of the
+  // connecting component.
+  explicit FakeAgent(
+      fit::function<void(std::string client_url)> connect_callback);
+
   ~FakeAgent();
 
   // Returns the agent's |fuchsia::modular::ComponentContext|.
@@ -62,8 +70,14 @@ class FakeAgent : public modular::testing::FakeComponent,
   // |fuchsia::modular::Agent|
   void RunTask(std::string task_id, RunTaskCallback callback) override;
 
+  // The callback which is called when the modular framework tells the agent to
+  // trigger a task.
   fit::function<void(std::string task_id, RunTaskCallback callback)>
       on_run_task_;
+
+  // The callback which is called when the modular framework connects to the
+  // agent.
+  fit::function<void(std::string client_url)> on_connect_;
 
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::AgentContextPtr agent_context_;

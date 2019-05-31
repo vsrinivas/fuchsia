@@ -8,6 +8,11 @@ namespace modular {
 namespace testing {
 
 FakeAgent::FakeAgent() = default;
+
+FakeAgent::FakeAgent(
+    fit::function<void(std::string client_url)> connect_callback)
+    : on_connect_(std::move(connect_callback)) {}
+
 FakeAgent::~FakeAgent() = default;
 
 // |modular::testing::FakeComponent|
@@ -30,6 +35,9 @@ void FakeAgent::Connect(
     std::string requestor_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) {
   services_.AddBinding(std::move(services_request));
+  if (on_connect_) {
+    on_connect_(requestor_url);
+  }
 }
 
 // |fuchsia::modular::Agent|
