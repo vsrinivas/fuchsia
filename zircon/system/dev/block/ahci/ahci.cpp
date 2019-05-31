@@ -40,14 +40,6 @@ static inline uint32_t lo32(uint64_t val) { return static_cast<uint32_t>(val); }
 
 #define PAGE_MASK (PAGE_SIZE - 1ull)
 
-// port is implemented by the controller
-#define AHCI_PORT_FLAG_IMPLEMENTED (1u << 0)
-// a device is present on port
-#define AHCI_PORT_FLAG_PRESENT     (1u << 1)
-// port is paused (no queued transactions will be processed)
-// until pending transactions are done
-#define AHCI_PORT_FLAG_SYNC_PAUSED (1u << 2)
-
 //clang-format on
 
 // Calculate the physical base of a virtual address.
@@ -85,9 +77,7 @@ bool AhciController::PortValid(uint32_t portnr) {
     if (portnr >= AHCI_MAX_PORTS) {
         return false;
     }
-    ahci_port_t* port = &ports_[portnr];
-    uint32_t flags = AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT;
-    return (port->flags & flags) == flags;
+    return ports_[portnr].is_valid();
 }
 
 static void ahci_port_disable(ahci_port_t* port) {
@@ -474,99 +464,109 @@ void AhciController::Release(void* ctx) {
 
 // worker thread
 
+void AhciController::PortComplete(ahci_port_t* port) {
+    mtx_lock(&port->lock);
+    if (!port->is_valid()) {
+        mtx_unlock(&port->lock);
+        return;
+    }
+
+    while (port->completed) {
+        uint32_t slot = 32 - __builtin_clz(port->completed) - 1;
+        sata_txn_t* txn = port->commands[slot];
+        if (txn == NULL) {
+            // Transaction was completed by watchdog.
+        } else {
+            mtx_unlock(&port->lock);
+            if (txn->pmt != ZX_HANDLE_INVALID) {
+                zx_pmt_unpin(txn->pmt);
+            }
+            zxlogf(SPEW, "ahci.%u: complete txn %p\n", port->nr, txn);
+            block_complete(txn, ZX_OK);
+            mtx_lock(&port->lock);
+        }
+        port->completed &= ~(1u << slot);
+        port->running &= ~(1u << slot);
+        port->commands[slot] = NULL;
+        // resume the port if paused for sync and no outstanding transactions
+        if ((port->is_paused()) && !port->running) {
+            port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
+            if (port->sync) {
+                sata_txn_t* sop = port->sync;
+                port->sync = NULL;
+                mtx_unlock(&port->lock);
+                block_complete(sop, ZX_OK);
+                mtx_lock(&port->lock);
+            }
+        }
+    }
+    mtx_unlock(&port->lock);
+}
+
+void AhciController::PortProcessQueued(ahci_port_t* port) {
+    mtx_lock(&port->lock);
+    if ((!port->is_valid()) || port->is_paused()) {
+        mtx_unlock(&port->lock);
+        return;
+    }
+
+    for (;;) {
+        sata_txn_t* txn = list_peek_head_type(&port->txn_list, sata_txn_t, node);
+        if (!txn) {
+            break;
+        }
+
+        // find a free command tag
+        uint32_t max = MIN(port->devinfo.max_cmd,
+                           static_cast<uint32_t>((cap_ >> 8) & 0x1f));
+        uint32_t i = 0;
+        for (i = 0; i <= max; i++) {
+            if (!ahci_port_cmd_busy(port, i)) break;
+        }
+        if (i > max) {
+            break;
+        }
+
+        list_delete(&txn->node);
+
+        if (BLOCK_OP(txn->bop.command) == BLOCK_OP_FLUSH) {
+            if (port->running) {
+                ZX_DEBUG_ASSERT(port->sync == NULL);
+                // pause the port if FLUSH command
+                port->flags |= AHCI_PORT_FLAG_SYNC_PAUSED;
+                port->sync = txn;
+            } else {
+                // complete immediately if nothing in flight
+                mtx_unlock(&port->lock);
+                block_complete(txn, ZX_OK);
+                mtx_lock(&port->lock);
+            }
+        } else {
+            // run the transaction
+            zx_status_t st = TxnBegin(port, i, txn);
+            // complete the transaction with if it failed during processing
+            if (st != ZX_OK) {
+                mtx_unlock(&port->lock);
+                block_complete(txn, st);
+                mtx_lock(&port->lock);
+                continue;
+            }
+        }
+    }
+    mtx_unlock(&port->lock);
+}
+
 int AhciController::WorkerLoop() {
     ahci_port_t* port;
-    sata_txn_t* txn;
     for (;;) {
         // iterate all the ports and run or complete commands
         for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
             port = &ports_[i];
-            mtx_lock(&port->lock);
-            if (!PortValid(i)) {
-                goto next;
-            }
 
-            // complete commands first
-            while (port->completed) {
-                uint32_t slot = 32 - __builtin_clz(port->completed) - 1;
-                txn = port->commands[slot];
-                if (txn == NULL) {
-                    // Transaction was completed by watchdog.
-                } else {
-                    mtx_unlock(&port->lock);
-                    if (txn->pmt != ZX_HANDLE_INVALID) {
-                        zx_pmt_unpin(txn->pmt);
-                    }
-                    zxlogf(SPEW, "ahci.%u: complete txn %p\n", port->nr, txn);
-                    block_complete(txn, ZX_OK);
-                    mtx_lock(&port->lock);
-                }
-                port->completed &= ~(1u << slot);
-                port->running &= ~(1u << slot);
-                port->commands[slot] = NULL;
-                // resume the port if paused for sync and no outstanding transactions
-                if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
-                    port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
-                    if (port->sync) {
-                        sata_txn_t* sop = port->sync;
-                        port->sync = NULL;
-                        mtx_unlock(&port->lock);
-                        block_complete(sop, ZX_OK);
-                        mtx_lock(&port->lock);
-                    }
-                }
-            }
-
-            if (port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) {
-                goto next;
-            }
-
-            // process queued txns
-            for (;;) {
-                txn = list_peek_head_type(&port->txn_list, sata_txn_t, node);
-                if (!txn) {
-                    break;
-                }
-
-                // find a free command tag
-                uint32_t max = MIN(port->devinfo.max_cmd,
-                                   static_cast<uint32_t>((cap_ >> 8) & 0x1f));
-                uint32_t i = 0;
-                for (i = 0; i <= max; i++) {
-                    if (!ahci_port_cmd_busy(port, i)) break;
-                }
-                if (i > max) {
-                    break;
-                }
-
-                list_delete(&txn->node);
-
-                if (BLOCK_OP(txn->bop.command) == BLOCK_OP_FLUSH) {
-                    if (port->running) {
-                        ZX_DEBUG_ASSERT(port->sync == NULL);
-                        // pause the port if FLUSH command
-                        port->flags |= AHCI_PORT_FLAG_SYNC_PAUSED;
-                        port->sync = txn;
-                    } else {
-                        // complete immediately if nothing in flight
-                        mtx_unlock(&port->lock);
-                        block_complete(txn, ZX_OK);
-                        mtx_lock(&port->lock);
-                    }
-                } else {
-                    // run the transaction
-                    zx_status_t st = TxnBegin(port, i, txn);
-                    // complete the transaction with if it failed during processing
-                    if (st != ZX_OK) {
-                        mtx_unlock(&port->lock);
-                        block_complete(txn, st);
-                        mtx_lock(&port->lock);
-                        continue;
-                    }
-                }
-            }
-next:
-            mtx_unlock(&port->lock);
+            // Complete commands first.
+            PortComplete(port);
+            // Process queued txns.
+            PortProcessQueued(port);
         }
         // wait here until more commands are queued, or a port becomes idle
         sync_completion_wait(&worker_completion_, ZX_TIME_INFINITE);

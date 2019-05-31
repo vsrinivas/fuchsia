@@ -9,6 +9,15 @@
 #include "ahci.h"
 #include "sata.h"
 
+// port is implemented by the controller
+#define AHCI_PORT_FLAG_IMPLEMENTED (1u << 0)
+// a device is present on port
+#define AHCI_PORT_FLAG_PRESENT     (1u << 1)
+// port is paused (no queued transactions will be processed)
+// until pending transactions are done
+#define AHCI_PORT_FLAG_SYNC_PAUSED (1u << 2)
+
+
 // Command table for a port.
 struct ahci_command_tab_t {
     ahci_ct_t ct;
@@ -42,6 +51,15 @@ struct ahci_port_t {
     uint32_t completed = 0; // bitmask of completed commands
     sata_txn_t* commands[AHCI_MAX_COMMANDS] = {}; // commands in flight
     sata_txn_t* sync = nullptr;   // FLUSH command in flight
+
+    bool is_valid() {
+        uint32_t valid_flags = AHCI_PORT_FLAG_IMPLEMENTED | AHCI_PORT_FLAG_PRESENT;
+        return (flags & valid_flags) == valid_flags;
+    }
+
+    bool is_paused() {
+        return (flags & AHCI_PORT_FLAG_SYNC_PAUSED) != 0;
+    }
 };
 
 class AhciController {
@@ -88,6 +106,9 @@ public:
 
 private:
     int WorkerLoop();
+    void PortComplete(ahci_port_t* port);
+    void PortProcessQueued(ahci_port_t* port);
+
     int WatchdogLoop();
     int IrqLoop();
     int InitScan();
