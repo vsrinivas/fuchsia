@@ -36,7 +36,7 @@ struct IntentFilter {
     vector<ParameterConstraint> parameter_constraints;
 
     /// Defines presentation properties for suggestions of this action.
-    ActionDisplayInfo display_info;
+    ActionDisplay action_display;
 };
 
 struct ParameterConstraint {
@@ -46,7 +46,7 @@ struct ParameterConstraint {
 };
 
 /// Defines how a suggestion of an action will be presented.
-table ActionDisplayInfo {
+table ActionDisplay {
     /// Defines presentation fields for a suggestion. The string fields might be
     /// templated and will be filled from data in |parameter_mapping|.
     /// For example: "Listen to $artistName"
