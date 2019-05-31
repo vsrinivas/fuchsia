@@ -50,6 +50,7 @@ public:
 
 protected:
     virtual zx_status_t GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios);
+    virtual void Reset(uint32_t id);
 
     uint32_t bus_count_;
 
@@ -65,7 +66,6 @@ private:
     int TestThread();
     zx_status_t Transact(bool is_read, uint32_t id, uint8_t addr, void* buf, size_t len, bool stop);
     void DataMove(bool is_read, uint32_t id, void* buf, size_t len);
-    void Reset(uint32_t id);
     void ShutDown();
 
     std::optional<XoRegs> xo_regs_;

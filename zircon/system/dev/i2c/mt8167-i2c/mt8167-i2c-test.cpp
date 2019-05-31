@@ -30,6 +30,9 @@ public:
             gpios_[i] = ddk::GpioProtocolClient(gpios[i].GetProto());
         }
     }
+    void Reset(uint32_t id) override {
+        reset_called_ = true;
+    }
 
     zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) override {
         return mock_i2c_impl_transact_.Call(bus_id, count);
@@ -41,9 +44,14 @@ public:
         return ZX_OK;
     }
 
+    bool Ok() {
+        return reset_called_;
+    }
+
 private:
     fbl::Array<ddk::GpioProtocolClient> gpios_;
     mock_function::MockFunction<zx_status_t, uint32_t, size_t> mock_i2c_impl_transact_;
+    bool reset_called_ = false;
 };
 
 TEST(Mt8167I2cTest, DummyTransactions) {
@@ -65,6 +73,7 @@ TEST(Mt8167I2cTest, DummyTransactions) {
         .ExpectCall(ZX_OK, 2, 1);
 
     EXPECT_OK(dut.DoDummyTransactions());
+    EXPECT_TRUE(dut.Ok());
 
     dut.VerifyAll();
     gpios[0].VerifyAndClear();

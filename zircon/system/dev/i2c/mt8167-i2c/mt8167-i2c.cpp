@@ -254,6 +254,7 @@ zx_status_t Mt8167I2c::DoDummyTransactions() {
         };
 
         I2cImplTransact(id, &ops, 1);
+        Reset(id);
     }
 
     for (const ddk::GpioProtocolClient& gpio : gpios) {
