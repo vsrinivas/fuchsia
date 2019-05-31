@@ -168,11 +168,13 @@ source_set("syscall") {
 source_set("tests") {
   sources = [
     "mmu_tests.cpp",
+    "platform_tests.cpp",
     "system_topology_test.cpp",
   ]
   deps = [
     ":headers",
     "$zx/kernel/lib/acpi_tables:headers",
+    "$zx/kernel/lib/console:headers",
     "$zx/kernel/lib/topology:headers",
     "$zx/kernel/lib/unittest",
   ]

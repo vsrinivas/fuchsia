@@ -4,19 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "tests.h"
-
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
-#if defined(__x86_64__)
 #include <arch/x86.h>
-#endif
+#include <lib/console.h>
 #include <lib/unittest/unittest.h>
 
 static bool test_x64_msrs() {
     BEGIN_TEST;
-
-#if defined(__x86_64__)
 
     arch_disable_ints();
     // Test read_msr for an MSR that is known to always exist on x64.
@@ -55,7 +50,6 @@ static bool test_x64_msrs() {
         }
         write_msr_on_cpu(/*cpu=*/i, X86_MSR_IA32_FMASK, /*val=*/initial_fmask);
     }
-#endif
 
     END_TEST;
 }
@@ -63,9 +57,7 @@ static bool test_x64_msrs() {
 static bool test_x64_msrs_k_commands() {
     BEGIN_TEST;
 
-#if defined(__x86_64__)
     console_run_script_locked("cpu rdmsr 0 0x10");
-#endif
 
     END_TEST;
 }
