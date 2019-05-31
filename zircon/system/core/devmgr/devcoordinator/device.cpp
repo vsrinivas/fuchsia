@@ -468,6 +468,11 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc, const uint64_t
                                                         props_count, name, protocol_id, driver_path,
                                                         args, false, std::move(client_remote),
                                                         &device);
+    if (parent->name() == "misc") {
+        // TODO(FLK-299): Remove this once the root cause is found.
+        printf("[%ld ms] (misc) AddDevice: %s\n", zx::clock::get_monotonic().get() / ZX_MSEC(1),
+            name.data());
+    }
     uint64_t local_id = device != nullptr ? device->local_id() : 0;
     return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status, local_id);
 }

@@ -1318,7 +1318,11 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
     }
     async::PostTask(dispatcher(), [this, drv = driver.release()] {
         drivers_.push_back(drv);
-        BindDriver(drv);
+        zx_status_t status = BindDriver(drv);
+        if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
+            log(ERROR, "devcoordinator: failed to bind driver '%s': %s\n", drv->name.data(),
+                zx_status_get_string(status));
+        }
     });
 }
 
@@ -1411,6 +1415,11 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
     }
     status = BindDriverToDevice(misc_device_, drv, true /* autobind */, attempt_bind);
     if (status != ZX_ERR_NEXT) {
+        if (status == ZX_OK) {
+            // TODO(FLK-299): Remove this once the root cause is found.
+            printf("[%ld ms] (misc) BindDriver: %s\n",
+                zx::clock::get_monotonic().get() / ZX_MSEC(1), drv->name.data());
+        }
         return status;
     }
     status = BindDriverToDevice(test_device_, drv, true /* autobind */, attempt_bind);
@@ -1524,19 +1533,31 @@ void Coordinator::BindSystemDrivers() {
     // Bind system drivers.
     while ((drv = system_drivers_.pop_front()) != nullptr) {
         drivers_.push_back(drv);
-        BindDriver(drv);
+        zx_status_t status = BindDriver(drv);
+        if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
+            log(ERROR, "devcoordinator: failed to bind driver '%s': %s\n", drv->name.data(),
+                zx_status_get_string(status));
+        }
     }
     // Bind remaining fallback drivers.
     while ((drv = fallback_drivers_.pop_front()) != nullptr) {
         printf("devcoordinator: fallback driver '%s' is available\n", drv->name.data());
         drivers_.push_back(drv);
-        BindDriver(drv);
+        zx_status_t status = BindDriver(drv);
+        if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
+            log(ERROR, "devcoordinator: failed to bind driver '%s': %s\n", drv->name.data(),
+                zx_status_get_string(status));
+        }
     }
 }
 
 void Coordinator::BindDrivers() {
     for (Driver& drv : drivers_) {
-        BindDriver(&drv);
+        zx_status_t status = BindDriver(&drv);
+        if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
+            log(ERROR, "devcoordinator: failed to bind driver '%s': %s\n", drv.name.data(),
+                zx_status_get_string(status));
+        }
     }
 }
 
