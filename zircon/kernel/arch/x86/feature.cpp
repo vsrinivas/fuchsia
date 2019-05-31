@@ -37,6 +37,7 @@ bool g_x86_feature_fsgsbase;
 bool g_x86_feature_pcid_good;
 bool g_has_meltdown;
 bool g_has_l1tf;
+bool g_has_mds;
 
 enum x86_hypervisor_list x86_hypervisor;
 
@@ -153,6 +154,7 @@ void x86_feature_init(void) {
         MsrAccess msr;
         g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
         g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
+        g_has_mds = x86_intel_cpu_has_mds(&cpuid, &msr);
     }
 }
 
@@ -401,6 +403,8 @@ void x86_feature_debug(void) {
         printf("meltdown ");
     if (g_has_l1tf)
         printf("l1tf ");
+    if (g_has_mds)
+        printf("mds ");
     if (g_x86_feature_pcid_good)
         printf("pcid_good ");
     printf("\n");

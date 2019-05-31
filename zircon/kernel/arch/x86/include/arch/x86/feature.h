@@ -171,8 +171,10 @@ void x86_feature_debug(void);
 #define X86_FEATURE_PT                  X86_CPUID_BIT(0x7, 1, 25)
 #define X86_FEATURE_UMIP                X86_CPUID_BIT(0x7, 2, 2)
 #define X86_FEATURE_PKU                 X86_CPUID_BIT(0x7, 2, 3)
+#define X86_FEATURE_MD_CLEAR            X86_CPUID_BIT(0x7, 3, 10)
 #define X86_FEATURE_IBRS_IBPB           X86_CPUID_BIT(0x7, 3, 26)
 #define X86_FEATURE_STIBP               X86_CPUID_BIT(0x7, 3, 27)
+#define X86_FEATURE_L1D_FLUSH           X86_CPUID_BIT(0x7, 3, 28)
 #define X86_FEATURE_ARCH_CAPABILITIES   X86_CPUID_BIT(0x7, 3, 29)
 #define X86_FEATURE_SSBD                X86_CPUID_BIT(0x7, 3, 31)
 
@@ -329,6 +331,7 @@ void x86_intel_init_percpu(void);
 #ifdef __cplusplus
 bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
