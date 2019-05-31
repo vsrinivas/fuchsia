@@ -50,9 +50,7 @@ using digest::MerkleTree;
 constexpr char kBlobVmoNamePrefix[] = "blob";
 constexpr char kCompressedBlobVmoNamePrefix[] = "compressedBlob";
 
-void FormatVmoName(const char* prefix,
-                   fbl::StringBuffer<ZX_MAX_NAME_LEN>* vmo_name,
-                   size_t index) {
+void FormatVmoName(const char* prefix, fbl::StringBuffer<ZX_MAX_NAME_LEN>* vmo_name, size_t index) {
     vmo_name->Clear();
     vmo_name->AppendPrintf("%s-%lx", prefix, index);
 }
@@ -357,8 +355,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
     fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
     if (inode_.blob_size >= kCompressionMinBytesSaved) {
-        write_info->compressor = BlobCompressor::Create(CompressionAlgorithm::ZSTD,
-                                                        inode_.blob_size);
+        write_info->compressor =
+            BlobCompressor::Create(CompressionAlgorithm::ZSTD, inode_.blob_size);
         if (!write_info->compressor) {
             FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
             return status;
@@ -368,8 +366,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     // Open VMOs, so we can begin writing after allocate succeeds.
     fzl::OwnedVmoMapper mapping;
     FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
-    if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize,
-                                       vmo_name.c_str())) != ZX_OK) {
+    if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize, vmo_name.c_str())) !=
+        ZX_OK) {
         return status;
     }
     if ((status = blobfs_->AttachVmo(mapping.vmo(), &vmoid_)) != ZX_OK) {
@@ -691,9 +689,8 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
     // was requested.
     const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
     zx::vmo clone;
-    if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
-                                              merkle_bytes, inode_.blob_size,
-                                              &clone)) != ZX_OK) {
+    if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
+                                              inode_.blob_size, &clone)) != ZX_OK) {
         return status;
     }
 
@@ -724,8 +721,8 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
     return ZX_OK;
 }
 
-void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                               zx_status_t status, const zx_packet_signal_t* signal) {
+void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
     ZX_DEBUG_ASSERT(clone_watcher_.object() != ZX_HANDLE_INVALID);
