@@ -74,6 +74,14 @@ library("driver") {
   libs = [ "$zx/system/ulib/trace-engine/ddk-exports.ld" ]
 
   assert_no_deps = [ "$zx/system/ulib/trace-engine:trace-engine.shared" ]
+
+  metadata = {
+    # This library is on the allowlist for driver() shared library deps.
+    # It doesn't cause driver-denylist-check.sh to fail, and it prunes the
+    # metadata walk here so our own deps are not subject to the check.
+    driver_shlib_denylist = []
+    driver_shlib_denylist_barrier = []
+  }
 }
 
 test("devhost-test") {

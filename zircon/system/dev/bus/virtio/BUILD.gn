@@ -28,6 +28,9 @@ driver("virtio") {
     "$zx/system/fidl/fuchsia-hardware-vsock:c",
     "$zx/system/ulib/hid",
   ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 source_set("common") {

@@ -182,6 +182,12 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
           libs = [ rebase_path(link_file, root_build_dir) ]
         },
       ]
+
+      # This library is on the allowlist for driver() shared library deps.
+      # It doesn't cause driver-denylist-check.sh to fail, and it prunes the
+      # metadata walk here so our own deps are not subject to the check.
+      driver_shlib_denylist = []
+      driver_shlib_denylist_barrier = []
     }
   }
 

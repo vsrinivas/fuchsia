@@ -22,6 +22,9 @@ driver("bma253") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 test("bma253-test") {

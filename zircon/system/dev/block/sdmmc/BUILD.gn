@@ -33,6 +33,9 @@ driver("sdmmc") {
     # legacy complications.
     "$zx/system/ulib/trace:headers",
   ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 test("sdmmc-test") {

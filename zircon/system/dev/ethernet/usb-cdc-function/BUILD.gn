@@ -18,4 +18,7 @@ driver("usb-cdc-function") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
+
+  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
