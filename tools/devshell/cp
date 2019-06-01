@@ -5,7 +5,7 @@
 
 ### copy a file to/from a target device
 
-## usage: fx cp [--to-target|--to-host] SRC DST
+## usage: fx cp [--to-target|--to-host] SRC... DST
 ##
 ## Copies a file from the host to the target device, or vice versa.
 ##
@@ -18,38 +18,43 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 to_target=true
-if [[ $# -eq 3 ]]; then
+if [[ $# -gt 2 ]]; then
   case "$1" in
   --to-target)
     to_target=true
+    shift
     ;;
   --to-host)
     to_target=false
+    shift
     ;;
-  *)
+  --help)
     fx-command-help
     exit 1
   esac
-  shift
 fi
 
-if [[ $# -ne 2 ]]; then
+if [[ $# -lt 2 ]]; then
   fx-command-help
   exit 1
 fi
 
-src="$1"
-dst="$2"
+args=( "$@" )
+nargs=${#args[@]}
+dst=${args[$nargs-1]}
+srcs=( "${args[@]:0:$nargs-1}" )
 host="$(get-fuchsia-device-addr)"
 
 if [[ "${to_target}" = "true" ]]; then
-  fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF
-- rm "${dst}"
-put "${src}" "${dst}"
-EOF
+  (
+  for src in "${srcs[@]}"; do
+    echo "put \"${src}\" \"${dst}\""
+  done
+  ) | fx-command-run sftp -q -b - "[${host}]" > /dev/null
 else
-  rm -f -- "${dst}"
-  fx-command-run sftp -q -b - "[${host}]" > /dev/null << EOF
-get "${src}" "${dst}"
-EOF
+  (
+  for src in "${srcs[@]}"; do
+    echo "get \"${src}\" \"${dst}\""
+  done
+  ) | fx-command-run sftp -q -b - "[${host}]" > /dev/null
 fi
