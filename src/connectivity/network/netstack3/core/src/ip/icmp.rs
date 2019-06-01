@@ -16,11 +16,11 @@ use crate::ip::{
     IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
-    peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpIpTypes, IcmpMessageType,
-    IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode,
-    Icmpv4MessageType, Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode,
-    Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet,
-    Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
+    peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpMessageType, IcmpPacketBuilder,
+    IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType,
+    Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode, Icmpv4TimeExceededCode,
+    Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet, Icmpv6PacketTooBig,
+    Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
 };
 use crate::{Context, EventDispatcher};
 
@@ -112,66 +112,6 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
             ),
         }
     }
-}
-
-/// Send an ICMP message in response to receiving a packet with a parameter
-/// problem.
-///
-/// `send_icmp_parameter_problem` sends the appropriate ICMP or ICMPv6
-/// message in response to receiving an IP packet from `src_ip` to `dst_ip`
-/// with a parameter problem.
-///
-/// `original_packet` contains the contents of the entire original packet -
-/// including all IP headers. `header_len` is the length of either the IPv4
-/// header or all IPv6 headers (including extension headers) *before* the
-/// payload with the problematic Next Header type. In other words, in an IPv6
-/// packet with a single header with a Next Header type of TCP, its `header_len`
-/// would be the length of the single header (40 bytes). `code` is the
-/// parameter problem code as defined by ICMPv4 (for IPv4 packets), or ICMPv6
-/// (for IPv6 packets). `pointer` is the index to the problematic location in
-/// the original IP packet.
-#[specialize_ip_address]
-pub(crate) fn send_icmp_parameter_problem<D: EventDispatcher, A: IpAddress, B: BufferMut>(
-    ctx: &mut Context<D>,
-    device: DeviceId,
-    frame_dst: FrameDestination,
-    src_ip: A,
-    dst_ip: A,
-    code: <A::Version as IcmpIpTypes>::ParameterProblemCode,
-    pointer: <A::Version as IcmpIpTypes>::ParameterProblemPointer,
-    original_packet: B,
-    header_len: usize,
-) {
-    increment_counter!(ctx, "send_icmp_parameter_problem");
-
-    // Check whether we MUST NOT send an ICMP error message.
-    if !should_send_icmp_error(frame_dst, src_ip, dst_ip) {
-        return;
-    }
-
-    #[ipv4addr]
-    send_icmpv4_parameter_problem(
-        ctx,
-        device,
-        src_ip,
-        dst_ip,
-        code,
-        Icmpv4ParameterProblem::new(pointer),
-        original_packet,
-        header_len,
-    );
-
-    #[ipv6addr]
-    send_icmpv6_parameter_problem(
-        ctx,
-        device,
-        src_ip,
-        dst_ip,
-        code,
-        Icmpv6ParameterProblem::new(pointer),
-        original_packet,
-        header_len,
-    );
 }
 
 /// Send an ICMP message in response to receiving a packet destined for an
@@ -487,7 +427,7 @@ pub(crate) fn send_icmpv6_packet_too_big<D: EventDispatcher, B: BufferMut>(
     });
 }
 
-fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
+pub(crate) fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv4Addr,
@@ -511,7 +451,7 @@ fn send_icmpv4_parameter_problem<D: EventDispatcher, B: BufferMut>(
     });
 }
 
-fn send_icmpv6_parameter_problem<D: EventDispatcher, B: BufferMut>(
+pub(crate) fn send_icmpv6_parameter_problem<D: EventDispatcher, B: BufferMut>(
     ctx: &mut Context<D>,
     device: DeviceId,
     src_ip: Ipv6Addr,
@@ -588,7 +528,11 @@ fn send_icmpv6_dest_unreachable<D: EventDispatcher, B: BufferMut>(
 
 /// Should we send an ICMP response?
 #[specialize_ip_address]
-fn should_send_icmp_error<A: IpAddress>(frame_dst: FrameDestination, src_ip: A, dst_ip: A) -> bool {
+pub(crate) fn should_send_icmp_error<A: IpAddress>(
+    frame_dst: FrameDestination,
+    src_ip: A,
+    dst_ip: A,
+) -> bool {
     #[ipv4addr]
     let ret = should_send_icmpv4_error(frame_dst, src_ip, dst_ip);
 
@@ -622,7 +566,7 @@ fn should_send_icmp_error<A: IpAddress>(frame_dst: FrameDestination, src_ip: A, 
 /// packet contained an ICMP error message. This is because that check is
 /// unnecessary for some ICMP error conditions. The ICMP error message check can
 /// be performed separately with `is_icmp_error_message`.
-fn should_send_icmpv4_error(
+pub(crate) fn should_send_icmpv4_error(
     frame_dst: FrameDestination,
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,
@@ -667,7 +611,7 @@ fn should_send_icmpv4_error(
 /// packet contained an ICMP error message. This is because that check is
 /// unnecessary for some ICMP error conditions. The ICMP error message check can
 /// be performed separately with `is_icmp_error_message`.
-fn should_send_icmpv6_error(
+pub(crate) fn should_send_icmpv6_error(
     frame_dst: FrameDestination,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,

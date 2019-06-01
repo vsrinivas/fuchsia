@@ -6,7 +6,7 @@
 
 use failure::Fail;
 
-use crate::ip::Ip;
+use crate::ip::{Ip, IpAddress};
 use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.
@@ -48,6 +48,47 @@ pub enum ParseError {
     Format,
 }
 
+/// Action to take when an error is encountered while parsing an IP packet.
+#[derive(Debug, PartialEq)]
+pub enum IpParseErrorAction {
+    /// Discard the packet and do nothing further.
+    DiscardPacket,
+
+    /// Discard the packet and send an ICMP response.
+    DiscardPacketSendICMP,
+
+    /// Discard the packet and send an ICMP response if the packet's
+    /// destination address was not a multicast address.
+    DiscardPacketSendICMPNoMulticast,
+}
+
+impl IpParseErrorAction {
+    /// Determines whether or not an ICMP message should be sent.
+    ///
+    /// Returns `true` if we should send an ICMP response. We should send
+    /// an ICMP response if an action is set to `DiscardPacketSendICMP`, or
+    /// if an action is set to `DiscardPacketSendICMPNoMulticast` and `dst_addr`
+    /// (the destination address of the original packet that lead to a parsing
+    /// error) is not a multicast address.
+    pub(crate) fn should_send_icmp<A: IpAddress>(&self, dst_addr: &A) -> bool {
+        match *self {
+            IpParseErrorAction::DiscardPacket => false,
+            IpParseErrorAction::DiscardPacketSendICMP => true,
+            IpParseErrorAction::DiscardPacketSendICMPNoMulticast => !dst_addr.is_multicast(),
+        }
+    }
+
+    /// Determines whether or not an ICMP message should be sent even if
+    /// the original packet's destination address is a multicast.
+    pub(crate) fn should_send_icmp_to_multicast(&self) -> bool {
+        match *self {
+            IpParseErrorAction::DiscardPacketSendICMP => true,
+            IpParseErrorAction::DiscardPacket
+            | IpParseErrorAction::DiscardPacketSendICMPNoMulticast => false,
+        }
+    }
+}
+
 /// Error type for IP packet parsing.
 #[derive(Fail, Debug, PartialEq)]
 pub(crate) enum IpParseError<I: Ip> {
@@ -57,14 +98,15 @@ pub(crate) enum IpParseError<I: Ip> {
     /// sent to the source of a packet.
     ///
     /// `src_ip` and `dst_ip` are the source and destination IP addresses of the
-    /// original packet. If `must_send_icmp` is `true`, the RFC for either IPv4 or
-    /// IPv6 specifies that an ICMP Parameter Problem MUST be sent back to the
-    /// source; otherwise, we can choose to not send the response. `header_len`
-    /// is the length of the header that we know about up to the point of the
-    /// parameter problem error. `code` is the ICMP (ICMPv4 or ICMPv6) specific
-    /// parameter problem code that provides more granular information about the
-    /// parameter problem encountered. `pointer` is the offset of the erroneous
-    /// value within an IP packet, calculated from the beginning of the IP packet.
+    /// original packet. `header_len` is the length of the header that we know
+    /// about up to the point of the parameter problem error. `action` is the
+    /// action we should take after encountering the error. If `must_send_icmp`
+    /// is `true` we MUST send an ICMP response if `action` specifies it;
+    /// otherwise, we MAY choose to just discard the packet and do nothing
+    /// further. `code` is the ICMP (ICMPv4 or ICMPv6) specific parameter
+    /// problem code that provides more granular information about the parameter
+    /// problem encountered. `pointer` is the offset of the erroneous value within
+    /// the IP packet, calculated from the beginning of the IP packet.
     #[fail(display = "Parameter Problem")]
     ParameterProblem {
         src_ip: I::Addr,
@@ -73,6 +115,7 @@ pub(crate) enum IpParseError<I: Ip> {
         pointer: <I as IcmpIpTypes>::ParameterProblemPointer,
         must_send_icmp: bool,
         header_len: usize,
+        action: IpParseErrorAction,
     },
 }
 

@@ -1004,11 +1004,8 @@ pub(crate) mod options {
         type Record = O::Option;
 
         fn record_length(record: &Self::Record) -> usize {
-            let base = if O::HEADER_INCLUDED_IN_LENGTH {
-                2 + O::get_option_length(record)
-            } else {
-                O::get_option_length(record)
-            };
+            let base = 2 + O::get_option_length(record);
+
             // Pad up to option_len_multiplier:
             (base + O::OPTION_LEN_MULTIPLIER - 1) / O::OPTION_LEN_MULTIPLIER
                 * O::OPTION_LEN_MULTIPLIER
@@ -1075,10 +1072,6 @@ pub(crate) mod options {
 
         /// The No-op type (if one exists).
         const NOP: Option<u8> = Some(NOP);
-
-        /// Whether or not the header (option type, option len) is
-        /// part of the length value.
-        const HEADER_INCLUDED_IN_LENGTH: bool = true;
     }
 
     /// An implementation of an options parser.
@@ -1172,22 +1165,12 @@ pub(crate) mod options {
                 Some(len) => (len as usize) * O::OPTION_LEN_MULTIPLIER,
             };
 
-            let expected_len = if O::HEADER_INCLUDED_IN_LENGTH {
-                // If header is included in the length, we expect at least
-                // (`len` - 2) bytes to remain in `bytes`.
-                len.checked_sub(2)
-            } else {
-                // If header is not included in the length, we expect atleast
-                // `len` bytes to remain in `bytes.
-                Some(len)
-            };
-
-            if expected_len.is_none() || expected_len.unwrap() > bytes.len() {
+            if len < 2 || (len - 2) > bytes.len() {
                 return debug_err!(Err(OptionParseErr::Internal), "option length {} is either too short or longer than the total buffer length of {}", len, bytes.len());
             }
 
             // we can safely unwrap here since we verified the correct length above
-            let option_data = bytes.take_front(expected_len.unwrap()).unwrap();
+            let option_data = bytes.take_front(len - 2).unwrap();
             match O::parse(kind, option_data) {
                 Ok(Some(o)) => return Ok(Some(Some(o))),
                 Ok(None) => {}

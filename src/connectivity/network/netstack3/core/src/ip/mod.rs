@@ -21,13 +21,18 @@ use packet::{
     BufferMut, BufferSerializer, MtuError, ParsablePacket, ParseBufferMut, ParseMetadata,
     Serializer,
 };
-use specialize_ip_macro::specialize_ip_address;
+use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
 use crate::error::{IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
+use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::{Context, EventDispatcher};
+use icmp::{
+    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
+    should_send_icmpv6_error,
+};
 
 // default IPv4 TTL or IPv6 hops
 const DEFAULT_TTL: u8 = 64;
@@ -228,29 +233,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
             buffer.grow_back(s_len - n_s_len);
         }
 
-        match err {
-            // Conditionally send an ICMP response if we encountered a parameter
-            // problem error when parsing an IP packet. Note, we do not always send
-            // back an ICMP response as it can be used as an attack vector for DDoS
-            // attacks. We only send back an ICMP response if the RFC requires
-            // that we MUST send one, as noted by `must_send_icmp`.
-            IpParseError::ParameterProblem {
-                src_ip,
-                dst_ip,
-                code,
-                pointer,
-                must_send_icmp,
-                header_len,
-            } => {
-                if must_send_icmp {
-                    icmp::send_icmp_parameter_problem(
-                        ctx, device, frame_dst, src_ip, dst_ip, code, pointer, buffer, header_len,
-                    );
-                }
-            }
-            // TODO(joshlf): Do something with ICMP here?
-            _ => {}
-        }
+        handle_parse_error(ctx, device, frame_dst, buffer, err);
 
         return;
     }
@@ -395,6 +378,82 @@ pub(crate) fn local_address_for_remote<D: EventDispatcher, A: IpAddress>(
 ) -> Option<A> {
     let route = lookup_route(&ctx.state().ip, remote)?;
     crate::device::get_ip_addr_subnet(ctx, route.device).map(AddrSubnet::into_addr)
+}
+
+/// Handle an IP parsing error, `err`.
+#[specialize_ip]
+fn handle_parse_error<D: EventDispatcher, I: Ip, B: BufferMut>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    frame_dst: FrameDestination,
+    original_packet: B,
+    err: IpParseError<I>,
+) {
+    match err {
+        // Conditionally send an ICMP response if we encountered a parameter
+        // problem error when parsing an IP packet. Note, we do not always send
+        // back an ICMP response as it can be used as an attack vector for DDoS
+        // attacks. We only send back an ICMP response if the RFC requires
+        // that we MUST send one, as noted by `must_send_icmp` and `action`.
+        IpParseError::ParameterProblem {
+            src_ip,
+            dst_ip,
+            code,
+            pointer,
+            must_send_icmp,
+            header_len,
+            action,
+        } => {
+            if action.should_send_icmp(&dst_ip) && must_send_icmp {
+                #[ipv4]
+                {
+                    // This should never return `true` for IPv4.
+                    assert!(!action.should_send_icmp_to_multicast());
+
+                    if should_send_icmpv4_error(frame_dst, src_ip, dst_ip) {
+                        send_icmpv4_parameter_problem(
+                            ctx,
+                            device,
+                            src_ip,
+                            dst_ip,
+                            code,
+                            Icmpv4ParameterProblem::new(pointer),
+                            original_packet,
+                            header_len,
+                        );
+                    }
+                }
+
+                #[ipv6]
+                {
+                    // Some IPv6 parsing errors may require us to send an
+                    // ICMP response even if the original packet's destination
+                    // was a multicast (as defined by RFC 4443 section 2.4.e).
+                    // `action.should_send_icmp_to_multicast()` should return
+                    // `true` if such an exception applies.
+                    if should_send_icmpv6_error(
+                        frame_dst,
+                        src_ip,
+                        dst_ip,
+                        action.should_send_icmp_to_multicast(),
+                    ) {
+                        send_icmpv6_parameter_problem(
+                            ctx,
+                            device,
+                            src_ip,
+                            dst_ip,
+                            code,
+                            Icmpv6ParameterProblem::new(pointer),
+                            original_packet,
+                            header_len,
+                        );
+                    }
+                }
+            }
+        }
+        // TODO(joshlf): Do something with ICMP here?
+        _ => {}
+    }
 }
 
 // Should we deliver this packet locally?
@@ -752,6 +811,7 @@ mod tests {
     use crate::testutil::*;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::icmp::{IcmpIpExt, IcmpParseArgs, Icmpv6Packet, Icmpv6ParameterProblemCode};
+    use crate::wire::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
     use crate::DeviceId;
 
     //
@@ -763,15 +823,99 @@ mod tests {
         *ctx.state.test_counters.get(key)
     }
 
+    /// Verify that an ICMP Parameter Problem packet was actually sent in response to
+    /// a packet with an unrecognized IPv6 extension header option.
+    ///
+    /// `verify_icmp_for_unrecognized_ext_hdr_option` verifies that the next frame
+    /// in `net` is an ICMP packet with code set to `code`, and pointer set to `pointer`.
+    fn verify_icmp_for_unrecognized_ext_hdr_option(
+        ctx: &mut Context<DummyEventDispatcher>,
+        code: Icmpv6ParameterProblemCode,
+        pointer: u32,
+    ) {
+        // Check the ICMP that bob attempted to send to alice
+        let device_frames = ctx.dispatcher.frames_sent().clone();
+        assert!(!device_frames.is_empty());
+        let mut buffer = Buf::new(device_frames[0].1.as_slice(), ..);
+        let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
+        let packet = buffer.parse::<<Ipv6 as IpExt<&[u8]>>::Packet>().unwrap();
+        let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
+        assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip);
+        assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip);
+        assert_eq!(proto, IpProto::Icmpv6);
+        let icmp = buffer
+            .parse_with::<_, <Ipv6 as IcmpIpExt<&[u8]>>::Packet>(IcmpParseArgs::new(src_ip, dst_ip))
+            .unwrap();
+        if let Icmpv6Packet::ParameterProblem(icmp) = icmp {
+            assert_eq!(icmp.code(), code);
+            assert_eq!(icmp.message().pointer(), pointer);
+        } else {
+            panic!("Expected ICMPv6 Parameter Problem: {:?}", icmp);
+        }
+    }
+
+    /// Populate a buffer `bytes` with data required to test unrecognized options.
+    ///
+    /// The unrecognized option type will be located at index 48. `bytes` must be
+    /// at least 64 bytes long. If `to_multicast` is `true`, the destination address
+    /// of the packet will be a multicast address.
+    fn buf_for_unrecognized_ext_hdr_option_test(
+        bytes: &mut [u8],
+        action: ExtensionHeaderOptionAction,
+        to_multicast: bool,
+    ) -> Buf<&mut [u8]> {
+        assert!(bytes.len() >= 64);
+
+        let action: u8 = action.into();
+
+        // Unrecognized Option type.
+        let oty = 63 | (action << 6);
+
+        #[rustfmt::skip]
+        bytes[40..64].copy_from_slice(&[
+            // Destination Options Extension Header
+            IpProto::Tcp.into(),      // Next Header
+            1,                        // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                        // Pad1
+            1,   0,                   // Pad2
+            1,   1, 0,                // Pad3
+            oty, 6, 0, 0, 0, 0, 0, 0, // Unrecognized type w/ action = discard
+
+            // Body
+            1, 2, 3, 4, 5, 6, 7, 8
+        ][..]);
+        bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
+
+        let payload_len = (bytes.len() - 40) as u16;
+        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+
+        bytes[6] = Ipv6ExtHdrType::DestinationOptions.into();
+        bytes[7] = 64;
+        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
+
+        if to_multicast {
+            bytes[24..40].copy_from_slice(
+                &[255, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32][..],
+            );
+        } else {
+            bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        }
+
+        Buf::new(bytes, ..)
+    }
+
     #[test]
     fn test_ipv6_icmp_parameter_problem_non_must() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
 
+        //
         // Test parsing an IPv6 packet with invalid next header value which
         // we SHOULD send an ICMP response for (but we don't since its not a
         // MUST).
+        //
+
         #[rustfmt::skip]
         let bytes: &mut [u8] = &mut [
             // FixedHeader (will be replaced later)
@@ -792,22 +936,22 @@ mod tests {
 
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
 
-        assert_eq!(get_counter_val(&mut ctx, "send_icmp_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), 0);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
     }
 
-    // Disabling for now, but re-enable once NET-2245 is merged since it
-    // includes a change that support what this test is trying make sure
-    // works.
+    #[test]
     fn test_ipv6_icmp_parameter_problem_must() {
         let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
 
+        //
         // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
         // response (invalid routing type for a routing extension header).
+        //
+
         #[rustfmt::skip]
         let bytes: &mut [u8] = &mut [
             // FixedHeader (will be replaced later)
@@ -835,28 +979,121 @@ mod tests {
         bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let mut buf = Buf::new(bytes, ..);
-
         receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, FrameDestination::Unicast, buf);
+        verify_icmp_for_unrecognized_ext_hdr_option(
+            &mut ctx,
+            Icmpv6ParameterProblemCode::ErroneousHeaderField,
+            42,
+        );
+    }
 
-        // Check the ICMP that bob attempted to send to alice
-        let device_frames = ctx.dispatcher.frames_sent().clone();
-        assert_eq!(device_frames.len(), 1);
-        assert_eq!(device_frames[0].0, device);
-        let mut buffer = Buf::new(device_frames[0].1.as_slice(), ..);
-        let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
-        let packet = buffer.parse::<<Ipv6 as IpExt<&[u8]>>::Packet>().unwrap();
-        let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
-        assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip);
-        assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip);
-        assert_eq!(proto, IpProto::Icmpv6);
-        let icmp = buffer
-            .parse_with::<_, <Ipv6 as IcmpIpExt<&[u8]>>::Packet>(IcmpParseArgs::new(src_ip, dst_ip))
-            .unwrap();
-        if let Icmpv6Packet::ParameterProblem(icmp) = icmp {
-            assert_eq!(icmp.code(), Icmpv6ParameterProblemCode::ErroneousHeaderField);
-            assert_eq!(icmp.message().pointer(), 42);
-        } else {
-            panic!("Expected ICMPv6 Parameter Problem: {:?}", icmp);
-        }
+    #[test]
+    fn test_ipv6_unrecognized_ext_hdr_option() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
+            .build::<DummyEventDispatcher>();
+        let device = DeviceId::new_ethernet(1);
+        let mut expected_icmps = 0;
+        let mut bytes = [0; 64];
+        let frame_dst = FrameDestination::Unicast;
+
+        //
+        // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
+        // due to an unrecognized extension header option.
+        //
+
+        //
+        // Test with unrecognized option type set with
+        // action = discard.
+        //
+
+        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+            &mut bytes,
+            ExtensionHeaderOptionAction::DiscardPacket,
+            false,
+        );
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+
+        //
+        // Test with unrecognized option type set with
+        // action = discard & send icmp
+        // where dest addr is a unicast addr.
+        //
+
+        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+            &mut bytes,
+            ExtensionHeaderOptionAction::DiscardPacketSendICMP,
+            false,
+        );
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        expected_icmps += 1;
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        verify_icmp_for_unrecognized_ext_hdr_option(
+            &mut ctx,
+            Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
+            48,
+        );
+
+        //
+        // Test with unrecognized option type set with
+        // action = discard & send icmp
+        // where dest addr is a multicast addr.
+        //
+
+        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+            &mut bytes,
+            ExtensionHeaderOptionAction::DiscardPacketSendICMP,
+            true,
+        );
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        expected_icmps += 1;
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        verify_icmp_for_unrecognized_ext_hdr_option(
+            &mut ctx,
+            Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
+            48,
+        );
+
+        //
+        // Test with unrecognized option type set with
+        // action = discard & send icmp if not multicast addr
+        // where dest addr is a unicast addr.
+        //
+
+        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+            &mut bytes,
+            ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
+            false,
+        );
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        expected_icmps += 1;
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        verify_icmp_for_unrecognized_ext_hdr_option(
+            &mut ctx,
+            Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
+            48,
+        );
+
+        //
+        // Test with unrecognized option type set with
+        // action = discard & send icmp if not multicast addr
+        // but dest addr is a multicast addr.
+        //
+
+        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+            &mut bytes,
+            ExtensionHeaderOptionAction::DiscardPacketSendICMPNoMulticast,
+            true,
+        );
+        // Do not expect an ICMP response for this packet
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+
+        //
+        // None of our tests should have sent an icmpv4 packet or dispatched an ip packet.
+        //
+
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
     }
 }
