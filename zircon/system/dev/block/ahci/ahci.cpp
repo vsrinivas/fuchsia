@@ -471,36 +471,45 @@ void AhciController::PortComplete(ahci_port_t* port) {
         return;
     }
 
+    sata_txn_t* txn_complete[AHCI_MAX_COMMANDS];
+    size_t complete_count = 0;
     while (port->completed) {
         uint32_t slot = 32 - __builtin_clz(port->completed) - 1;
         sata_txn_t* txn = port->commands[slot];
-        if (txn == NULL) {
-            // Transaction was completed by watchdog.
-        } else {
-            mtx_unlock(&port->lock);
-            if (txn->pmt != ZX_HANDLE_INVALID) {
-                zx_pmt_unpin(txn->pmt);
-            }
-            zxlogf(SPEW, "ahci.%u: complete txn %p\n", port->nr, txn);
-            block_complete(txn, ZX_OK);
-            mtx_lock(&port->lock);
-        }
+        port->commands[slot] = nullptr;
         port->completed &= ~(1u << slot);
         port->running &= ~(1u << slot);
-        port->commands[slot] = NULL;
-        // resume the port if paused for sync and no outstanding transactions
-        if ((port->is_paused()) && !port->running) {
-            port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
-            if (port->sync) {
-                sata_txn_t* sop = port->sync;
-                port->sync = NULL;
-                mtx_unlock(&port->lock);
-                block_complete(sop, ZX_OK);
-                mtx_lock(&port->lock);
-            }
+        if (txn == nullptr) {
+            // Transaction was completed by watchdog.
+        } else {
+            txn_complete[complete_count] = txn;
+            complete_count++;
+        }
+    }
+
+    sata_txn_t* sync_op = nullptr;
+    // resume the port if paused for sync and no outstanding transactions
+    if ((port->is_paused()) && !port->running) {
+        port->flags &= ~AHCI_PORT_FLAG_SYNC_PAUSED;
+        if (port->sync) {
+            sync_op = port->sync;
+            port->sync = NULL;
         }
     }
     mtx_unlock(&port->lock);
+
+    for (size_t i = 0; i < complete_count; i++) {
+        sata_txn_t* txn = txn_complete[i];
+        if (txn->pmt != ZX_HANDLE_INVALID) {
+            zx_pmt_unpin(txn->pmt);
+        }
+        zxlogf(SPEW, "ahci.%u: complete txn %p\n", port->nr, txn);
+        block_complete(txn, ZX_OK);
+    }
+
+    if (sync_op != nullptr) {
+        block_complete(sync_op, ZX_OK);
+    }
 }
 
 void AhciController::PortProcessQueued(ahci_port_t* port) {
