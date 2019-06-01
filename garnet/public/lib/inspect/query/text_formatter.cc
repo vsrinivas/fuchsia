@@ -200,7 +200,6 @@ std::string TextFormatter::FormatHealth(
     const std::vector<inspect::Source>& sources) const {
   std::ostringstream ss;
   for (const auto& entry_point : sources) {
-    Path last_health_node = {};
     entry_point.VisitObjectsInHierarchy(
         [&](const Path path_to_node, const ObjectHierarchy& hierarchy) {
           // GetByPath returns nullptr if not found.

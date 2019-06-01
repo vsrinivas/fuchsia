@@ -189,15 +189,37 @@ TEST(Formatter, PrintFind) {
 }
 
 TEST(Formatter, Health) {
-  // TODO(donosoc): Test json formatter.
-  inspect::TextFormatter text_formatter({.indent = 2},
-                                        inspect::Formatter::PathFormat::FULL);
   std::vector<inspect::Source> sources;
   sources.emplace_back(MakeTestSource());
+
+  // Text.
+  inspect::TextFormatter text_formatter({.indent = 2},
+                                        inspect::Formatter::PathFormat::FULL);
   EXPECT_EQ(text_formatter.FormatHealth(sources),
             R"(./hub/root.inspect#child/node = OK
 ./hub/root.inspect#child/node/node_child = UNHEALTHY (Some health error)
 )");
+
+  // Indented json.
+  inspect::JsonFormatter json_formatter({.indent = 2},
+                                        inspect::Formatter::PathFormat::FULL);
+  EXPECT_EQ(json_formatter.FormatHealth(sources),
+            R"({
+  "./hub/root.inspect#child/node": {
+    "status": "OK"
+  },
+  "./hub/root.inspect#child/node/node_child": {
+    "status": "UNHEALTHY",
+    "message": "Some health error"
+  }
+})");
+
+  // Non-indented json.
+  inspect::JsonFormatter json_formatter_no_indent(
+      {.indent = 0}, inspect::Formatter::PathFormat::FULL);
+  EXPECT_EQ(
+      json_formatter_no_indent.FormatHealth(sources),
+      R"({"./hub/root.inspect#child/node":{"status":"OK"},"./hub/root.inspect#child/node/node_child":{"status":"UNHEALTHY","message":"Some health error"}})");
 }
 
 }  // namespace

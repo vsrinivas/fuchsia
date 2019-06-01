@@ -45,6 +45,10 @@ class JsonFormatter : public Formatter {
   void InternalFormatSourcesRecursive(
       WriterType& writer, const std::vector<inspect::Source>& sources) const;
 
+  template <typename WriterType>
+  void InternalFormatHealth(
+      WriterType& writer, const std::vector<inspect::Source>& sources) const;
+
   Options options_;
 };
 

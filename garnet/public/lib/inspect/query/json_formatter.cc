@@ -4,13 +4,16 @@
 
 #include "json_formatter.h"
 
+#include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #include <third_party/cobalt/util/crypto_util/base64.h>
 
 #include <locale>
 
+#include "lib/inspect/health/health.h"
 #include "lib/inspect/hierarchy.h"
 #include "rapidjson/stringbuffer.h"
+#include "src/lib/fxl/logging.h"
 
 using cobalt::crypto::Base64Encode;
 
@@ -164,6 +167,32 @@ void InternalFormatSource(WriterType& writer, const inspect::Source& source,
   writer->EndObject();
 }
 
+template <typename WriterType>
+void WriteJsonForHealthNode(const std::string& node_name,
+                            const inspect::ObjectHierarchy& node,
+                            WriterType& writer) {
+  std::string status;
+  std::string message;
+  for (auto& property : node.node().properties()) {
+    if (property.name() == "status")
+      status = property.Get<inspect::hierarchy::StringProperty>().value();
+    if (property.name() == "message")
+      message = property.Get<inspect::hierarchy::StringProperty>().value();
+  }
+
+  FXL_DCHECK(!status.empty());
+
+  writer.String(node_name);
+  writer.StartObject();
+  writer.String("status");
+  writer.String(status);
+  if (!message.empty()) {
+    writer.String("message");
+    writer.String(message);
+  }
+  writer.EndObject();
+}
+
 }  // namespace
 
 template <typename WriterType>
@@ -254,7 +283,41 @@ std::string JsonFormatter::FormatSourcesRecursive(
 
 std::string JsonFormatter::FormatHealth(
     const std::vector<inspect::Source>& sources) const {
-  return "NOT IMPLEMENTED";
+
+  // Write to a pretty string.
+  rapidjson::StringBuffer buffer;
+  if (options_.indent == 0) {
+    auto writer = GetJsonWriter(buffer, options_);
+    InternalFormatHealth(*writer, sources);
+  } else {
+    auto writer = GetPrettyJsonWriter(buffer, options_);
+    InternalFormatHealth(*writer, sources);
+  }
+
+  auto output = buffer.GetString();
+  return output;
+}
+
+template <typename WriterType>
+void JsonFormatter::InternalFormatHealth(
+      WriterType& writer, const std::vector<inspect::Source>& sources) const {
+  writer.StartObject();
+  for (const auto& entry_point : sources) {
+    entry_point.VisitObjectsInHierarchy([&](const auto& path_to_node,
+                                            const ObjectHierarchy& hierarchy) {
+      // GetByPath returns nullptr if not found.
+      const ObjectHierarchy* health_node =
+          hierarchy.GetByPath({inspect::kHealthNodeName});
+      if (!health_node)
+        return;
+
+      std::string node_name = FormatPathOrName(
+          entry_point.GetLocation(), path_to_node, hierarchy.node().name());
+
+      WriteJsonForHealthNode(node_name, *health_node, writer);
+    });
+  }
+  writer.EndObject();
 }
 
 }  // namespace inspect
