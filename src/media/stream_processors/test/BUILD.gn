@@ -76,13 +76,6 @@ test_package("h264_decoder_test") {
     ":h264_decoder_test_lib",
   ]
 
-  meta = [
-    {
-      path = rebase_path("meta/h264_decoder_test.cmx")
-      dest = "h264_decoder_test.cmx"
-    },
-  ]
-
   tests = [
     {
       name = "h264_decoder_test_lib_test"
