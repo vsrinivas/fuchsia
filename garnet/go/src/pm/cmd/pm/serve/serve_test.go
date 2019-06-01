@@ -4,7 +4,6 @@
 package serve
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -177,12 +176,16 @@ func TestServer(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 
-		s := bufio.NewScanner(res.Body)
-		s.Scan()
-		// TODO: add some additional coverage for contents of the config file
-		if got, want := s.Text(), "{"; got[0:1] != want {
-			t.Errorf("got %q, want %q", got, want)
+		var config pmhttp.Config
+		if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+			t.Fatalf("failed to decode config: %s", err)
 		}
+
+		if len(config.RootKeys) != 1 {
+			t.Errorf("got %q, wanted 1", config.RootKeys)
+		}
+
+		// TODO: add some additional coverage for contents of the config file
 	})
 
 	t.Run("serves TUF jsons", func(t *testing.T) {

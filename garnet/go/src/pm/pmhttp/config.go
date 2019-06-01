@@ -21,6 +21,24 @@ func NewConfigServer(rootKeyFetcher func() []byte, encryptionKey string) *Config
 	return &ConfigServer{rootKeyFetcher: rootKeyFetcher, encryptionKey: encryptionKey}
 }
 
+type Config struct {
+	ID          string
+	RepoURL     string
+	BlobRepoURL string
+	RatePeriod  int
+	RootKeys    []struct {
+		Type  string
+		Value string
+	}
+	StatusConfig struct {
+		Enabled bool
+	}
+	Auto    bool
+	BlobKey *struct {
+		Data [32]uint8
+	}
+}
+
 func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var scheme = "http://"
 	if r.TLS != nil {
@@ -29,23 +47,7 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	repoUrl := fmt.Sprintf("%s%s", scheme, r.Host)
 
-	cfg := struct {
-		ID          string
-		RepoURL     string
-		BlobRepoURL string
-		RatePeriod  int
-		RootKeys    []struct {
-			Type  string
-			Value string
-		}
-		StatusConfig struct {
-			Enabled bool
-		}
-		Auto    bool
-		BlobKey *struct {
-			Data [32]uint8
-		}
-	}{
+	cfg := Config{
 		ID:          repoUrl,
 		RepoURL:     repoUrl,
 		BlobRepoURL: repoUrl + "/blobs",
@@ -77,8 +79,16 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	seen := make(map[string]struct{})
 	for _, id := range keys.Signed.Roles.Root.Keyids {
+		// It's possible for a key to have multiple keyids. Make sure
+		// we only add one actual key to the config.
 		k := keys.Signed.Keys[id]
+		if _, ok := seen[k.Keyval.Public]; ok {
+			continue
+		}
+		seen[k.Keyval.Public] = struct{}{}
+
 		cfg.RootKeys = append(cfg.RootKeys, struct{ Type, Value string }{
 			Type:  k.Keytype,
 			Value: k.Keyval.Public,
