@@ -135,8 +135,8 @@ static const char* const g12b_clk_table[] = {
     "1'b0",                      // 88
     "HDMI_CLK_TODIG",            // 89
     "cts_hdmitx_sys_clk",        // 90
-    "1'b0",                      // 91
-    "1'b0",                      // 92
+    "sys_cpuB_clk_div16",        // 91
+    "sys_pllB_div16",            // 92
     "1'b0",                      // 93
     "eth_phy_rxclk",             // 94
     "eth_phy_plltxclk",          // 95
