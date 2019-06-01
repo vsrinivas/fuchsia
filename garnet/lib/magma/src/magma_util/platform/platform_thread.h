@@ -5,8 +5,10 @@
 #ifndef PLATFORM_THREAD_H
 #define PLATFORM_THREAD_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
+
+#include "platform_handle.h"
 
 namespace magma {
 
@@ -31,6 +33,8 @@ class PlatformThreadHelper {
 public:
     static void SetCurrentThreadName(const std::string& name);
     static std::string GetCurrentThreadName();
+
+    static bool SetProfile(PlatformHandle* profile);
 };
 
 class PlatformProcessHelper {

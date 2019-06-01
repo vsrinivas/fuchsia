@@ -128,6 +128,7 @@ source_set("magma_platform_hardware_tests") {
     "$magma_build_root/src/magma_util/platform:bus_mapper",
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:firmware_loader",
+    "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/googletest:gtest",

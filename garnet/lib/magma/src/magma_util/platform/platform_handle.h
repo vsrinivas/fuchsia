@@ -5,7 +5,6 @@
 #ifndef PLATFORM_HANDLE_H
 #define PLATFORM_HANDLE_H
 
-#include "magma_util/macros.h"
 #include <memory>
 
 namespace magma {
@@ -23,7 +22,8 @@ public:
     static std::unique_ptr<PlatformHandle> Create(uint32_t handle);
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(PlatformHandle);
+    PlatformHandle(const PlatformHandle&) = delete;
+    PlatformHandle& operator=(const PlatformHandle&) = delete;
 };
 
 } // namespace magma

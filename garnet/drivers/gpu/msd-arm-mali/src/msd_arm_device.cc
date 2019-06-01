@@ -264,6 +264,15 @@ int MsdArmDevice::DeviceThreadLoop()
 
     DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
+    std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
+        magma::PlatformDevice::kPriorityHigher, "msd-arm-mali/device-thread");
+    if (!profile) {
+        return DRETF(0, "Failed to get higher priority");
+    }
+    if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+        return DRETF(0, "Failed to set priority");
+    }
+
     std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
     device_request_semaphore_->WaitAsync(device_port_.get());
 
@@ -312,6 +321,15 @@ int MsdArmDevice::GpuInterruptThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("Gpu InterruptThread");
     DLOG("GPU Interrupt thread started");
+
+    std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
+        magma::PlatformDevice::kPriorityHigher, "msd-arm-mali/gpu-interrupt-thread");
+    if (!profile) {
+        return DRETF(0, "Failed to get higher priority");
+    }
+    if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+        return DRETF(0, "Failed to set priority");
+    }
 
     while (!interrupt_thread_quit_flag_) {
         DLOG("GPU waiting for interrupt");
@@ -409,6 +427,14 @@ int MsdArmDevice::JobInterruptThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("Job InterruptThread");
     DLOG("Job Interrupt thread started");
+    std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
+        magma::PlatformDevice::kPriorityHigher, "msd-arm-mali/job-interrupt-thread");
+    if (!profile) {
+        return DRETF(0, "Failed to get higher priority");
+    }
+    if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+        return DRETF(0, "Failed to set priority");
+    }
 
     while (!interrupt_thread_quit_flag_) {
         DLOG("Job waiting for interrupt");
@@ -567,6 +593,14 @@ int MsdArmDevice::MmuInterruptThreadLoop()
 {
     magma::PlatformThreadHelper::SetCurrentThreadName("MMU InterruptThread");
     DLOG("MMU Interrupt thread started");
+    std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
+        magma::PlatformDevice::kPriorityHigher, "msd-arm-mali/mmu-interrupt-thread");
+    if (!profile) {
+        return DRETF(0, "Failed to get higher priority");
+    }
+    if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+        return DRETF(0, "Failed to set priority");
+    }
 
     while (!interrupt_thread_quit_flag_) {
         DLOG("MMU waiting for interrupt");
@@ -878,9 +912,11 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
 
     // Begin the virtual duration trace event to measure GPU work.
     uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
-    TRACE_VTHREAD_DURATION_BEGIN("magma", MsdArmAtom::AtomRunningString(atom->slot()), MsdArmAtom::AtomRunningString(atom->slot()), atom->slot_id(), current_ticks);
+    TRACE_VTHREAD_DURATION_BEGIN("magma", MsdArmAtom::AtomRunningString(atom->slot()),
+                                 MsdArmAtom::AtomRunningString(atom->slot()), atom->slot_id(),
+                                 current_ticks);
     TRACE_VTHREAD_FLOW_STEP("magma", "atom", MsdArmAtom::AtomRunningString(atom->slot()),
-                             atom->slot_id(), atom->trace_nonce(), current_ticks);
+                            atom->slot_id(), atom->trace_nonce(), current_ticks);
 }
 
 void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, register_io_.get()); }

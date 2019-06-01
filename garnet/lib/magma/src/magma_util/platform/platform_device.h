@@ -17,14 +17,27 @@ namespace magma {
 
 class PlatformDevice {
 public:
+    // See zircon/syscalls/profile.h
+    enum Priority {
+        kPriorityLowest = 0,
+        kPriorityLow = 8,
+        kPriorityDefault = 16,
+        kPriorityHigher = 20,
+        kPriorityHigh = 24,
+        kPriorityHighest = 31
+    };
+
     virtual ~PlatformDevice() { DLOG("PlatformDevice dtor"); }
 
     virtual void* GetDeviceHandle() = 0;
 
-    virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() = 0;
+    virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const = 0;
+
+    virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
+                                                                const char* name) const = 0;
 
     virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                                uint64_t* size_out) = 0;
+                                uint64_t* size_out) const = 0;
 
     // Map an MMIO listed at |index| in the MDI for this device.
     virtual std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,

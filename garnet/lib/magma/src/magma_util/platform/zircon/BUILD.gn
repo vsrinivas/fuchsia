@@ -198,6 +198,7 @@ source_set("thread") {
   ]
 
   deps = [
+    ":handle",
     "..:object",
     "..:thread_header",
   ]

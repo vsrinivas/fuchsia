@@ -4,6 +4,7 @@
 
 #include "platform_object.h"
 #include "platform_thread.h"
+#include "zircon_platform_handle.h"
 
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -33,6 +34,15 @@ std::string PlatformThreadHelper::GetCurrentThreadName()
     return (status == ZX_OK) ? std::string(name) : std::string();
 }
 
+bool PlatformThreadHelper::SetProfile(PlatformHandle* profile)
+{
+    zx_status_t status = zx_object_set_profile(
+        zx_thread_self(), static_cast<ZirconPlatformHandle*>(profile)->get(), 0u);
+    if (status != ZX_OK)
+        return DRETF(false, "Failed to set profile: %d", status);
+    return true;
+}
+
 std::string PlatformProcessHelper::GetCurrentProcessName()
 {
     char name[ZX_MAX_NAME_LEN];
@@ -41,7 +51,8 @@ std::string PlatformProcessHelper::GetCurrentProcessName()
     return (status == ZX_OK) ? std::string(name) : std::string();
 }
 
-uint64_t PlatformProcessHelper::GetCurrentProcessId() {
+uint64_t PlatformProcessHelper::GetCurrentProcessId()
+{
     uint64_t koid;
     PlatformObject::IdFromHandle(zx_process_self(), &koid);
     return koid;

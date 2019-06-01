@@ -5,8 +5,10 @@
 #ifndef ZIRCON_PLATFORM_HANDLE_H
 #define ZIRCON_PLATFORM_HANDLE_H
 
-#include "platform_handle.h"
 #include <lib/zx/handle.h>
+
+#include "magma_util/macros.h"
+#include "platform_handle.h"
 
 namespace magma {
 

@@ -21,10 +21,13 @@ public:
 
     void* GetDeviceHandle() override { return zx_device(); }
 
-    std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() override;
+    std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
+
+    std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
+                                                        const char* name) const override;
 
     Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
-                        uint64_t* size_out) override;
+                        uint64_t* size_out) const override;
 
     std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
                                              PlatformMmio::CachePolicy cache_policy) override;

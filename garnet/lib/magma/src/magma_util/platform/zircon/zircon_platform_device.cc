@@ -21,7 +21,7 @@ namespace magma {
 
 Status ZirconPlatformDevice::LoadFirmware(const char* filename,
                                           std::unique_ptr<PlatformBuffer>* firmware_out,
-                                          uint64_t* size_out)
+                                          uint64_t* size_out) const
 {
     zx::vmo vmo;
     size_t size;
@@ -32,6 +32,16 @@ Status ZirconPlatformDevice::LoadFirmware(const char* filename,
     *firmware_out = PlatformBuffer::Import(vmo.release());
     *size_out = size;
     return MAGMA_STATUS_OK;
+}
+
+std::unique_ptr<PlatformHandle> ZirconPlatformDevice::GetSchedulerProfile(Priority priority,
+                                                                          const char* name) const
+{
+    zx_handle_t handle;
+    zx_status_t status = device_get_profile(zx_device_, priority, name, &handle);
+    if (status != ZX_OK)
+        return DRETP(nullptr, "Failed to get profile: %d", status);
+    return PlatformHandle::Create(handle);
 }
 
 std::unique_ptr<PlatformMmio>
@@ -74,7 +84,7 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformDevice::RegisterInterrupt(unsig
     return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
 }
 
-std::unique_ptr<PlatformHandle> ZirconPlatformDevice::GetBusTransactionInitiator()
+std::unique_ptr<PlatformHandle> ZirconPlatformDevice::GetBusTransactionInitiator() const
 {
     zx_handle_t bti_handle;
     zx_status_t status = pdev_get_bti(&pdev_, 0, &bti_handle);
