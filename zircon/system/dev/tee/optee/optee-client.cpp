@@ -6,10 +6,10 @@
 #include <libgen.h>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <ddk/debug.h>
 #include <fbl/string_buffer.h>
-#include <fbl/vector.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/tee/manager/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -372,11 +372,8 @@ void OpteeClient::DdkRelease() {
     // devmgr has given up ownership, so we must clean ourself up.
     //
     // Try and cleanly close all sessions
-    fbl::Vector<uint32_t> session_ids;
-    session_ids.reserve(open_sessions_.size());
-    for (const OpteeSession& session : open_sessions_) {
-        session_ids.push_back(session.id);
-    }
+    std::vector<uint32_t> session_ids(open_sessions_.size());
+    session_ids.assign(open_sessions_.begin(), open_sessions_.end());
 
     for (uint32_t id : session_ids) {
         // Regardless of CloseSession response, continue closing all other sessions
@@ -449,7 +446,7 @@ zx_status_t OpteeClient::OpenSession(const fuchsia_tee_Uuid* trusted_app,
         return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
-    open_sessions_.insert(std::make_unique<OpteeSession>(message.session_id()));
+    open_sessions_.insert(message.session_id());
 
     return fuchsia_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
 }
@@ -461,7 +458,7 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
 
     fuchsia_tee_OpResult result = {};
 
-    if (!open_sessions_.find(session_id).IsValid()) {
+    if (open_sessions_.find(session_id) == open_sessions_.end()) {
         result.return_code = TEEC_ERROR_BAD_STATE;
         result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
         return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
@@ -658,9 +655,7 @@ zx_status_t OpteeClient::GetStorageDirectory(std::filesystem::path path,
 
 uint64_t OpteeClient::TrackFileSystemObject(zx::channel io_node_channel) {
     uint64_t object_id = next_file_system_object_id_.fetch_add(1, std::memory_order_relaxed);
-    // TODO(godtamit): Move to `std::unordered_map` when BLD-413 is complete
-    open_file_system_objects_.insert(
-        std::make_unique<FileSystemObject>(object_id, std::move(io_node_channel)));
+    open_file_system_objects_.insert({object_id, std::move(io_node_channel)});
 
     return object_id;
 }
@@ -671,12 +666,12 @@ OpteeClient::GetFileSystemObjectChannel(uint64_t identifier) {
     if (iter == open_file_system_objects_.end()) {
         return std::nullopt;
     }
-    return zx::unowned_channel(iter->channel);
+    return zx::unowned_channel(iter->second);
 }
 
 bool OpteeClient::UntrackFileSystemObject(uint64_t identifier) {
-    std::unique_ptr<FileSystemObject> erased_object = open_file_system_objects_.erase(identifier);
-    return erased_object != nullptr;
+    size_t erase_count = open_file_system_objects_.erase(identifier);
+    return erase_count > 0;
 }
 
 zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResult* out_result) {

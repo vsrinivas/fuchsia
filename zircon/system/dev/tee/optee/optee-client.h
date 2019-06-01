@@ -8,6 +8,8 @@
 #include <filesystem>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -62,26 +64,6 @@ public:
 
 private:
     using SharedMemoryList = fbl::DoublyLinkedList<fbl::unique_ptr<SharedMemory>>;
-
-    struct OpteeSession : fbl::SinglyLinkedListable<fbl::unique_ptr<OpteeSession>> {
-        OpteeSession(uint32_t id)
-            : id(id) {}
-        uint32_t GetKey() const { return id; }
-        static size_t GetHash(uint32_t key) { return static_cast<size_t>(key); }
-        uint32_t id;
-    };
-    using OpenSessionsTable = fbl::HashTable<uint32_t, fbl::unique_ptr<OpteeSession>>;
-
-    // TODO(godtamit): Move to `std::unordered_map` when BLD-413 is complete
-    struct FileSystemObject : fbl::SinglyLinkedListable<std::unique_ptr<FileSystemObject>> {
-        FileSystemObject(uint64_t id, zx::channel&& channel)
-            : id(id), channel(std::move(channel)) {}
-        uint64_t GetKey() const { return id; }
-        static size_t GetHash(uint64_t key) { return static_cast<size_t>(key); }
-        uint64_t id;
-        zx::channel channel;
-    };
-    using FileSystemObjectTable = fbl::HashTable<uint64_t, std::unique_ptr<FileSystemObject>>;
 
     zx_status_t CloseSession(uint32_t session_id);
 
@@ -243,11 +225,10 @@ private:
     OpteeController* controller_;
     bool needs_to_close_ = false;
     SharedMemoryList allocated_shared_memory_;
-    OpenSessionsTable open_sessions_;
     std::atomic<uint64_t> next_file_system_object_id_{1};
 
-    // TODO(godtamit): Move to `std::unordered_map` when BLD-413 is complete
-    FileSystemObjectTable open_file_system_objects_;
+    std::unordered_map<uint64_t, zx::channel> open_file_system_objects_;
+    std::unordered_set<uint32_t> open_sessions_;
 
     // The client end of a channel to the `fuchsia.tee.manager.ServiceProvider` protocol.
     // This may be an invalid channel, which indicates the client has no service provider support.
