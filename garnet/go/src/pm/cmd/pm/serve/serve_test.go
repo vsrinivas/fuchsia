@@ -314,13 +314,8 @@ func hasTarget(baseURL, target string) bool {
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
 		panic(err)
 	}
-	// FIXME(PKG-753) G1 -> G2 migration of TUF metadata.
-	for _, target := range []string{"/" + target, target} {
-		if _, found := m.Signed.Targets[target]; found {
-			return true
-		}
-	}
-	return false
+	_, found := m.Signed.Targets[target]
+	return found
 }
 
 // get a free port, with a very small chance of race

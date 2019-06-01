@@ -84,12 +84,8 @@ func NewRepositoryFromTar(dst string, src string) (*Repository, error) {
 
 // Open a package from the p
 func (r *Repository) OpenPackage(path string) (Package, error) {
-	// FIXME(PKG-753) remove this after go-tuf G2 lands.
-	for _, p := range []string{path, "/" + path} {
-		target, ok := r.targets.Targets[p]
-		if ok {
-			return newPackage(r, target.Custom.Merkle)
-		}
+	if target, ok := r.targets.Targets[path]; ok {
+		return newPackage(r, target.Custom.Merkle)
 	}
 	return Package{}, fmt.Errorf("could not find package: %q", path)
 
