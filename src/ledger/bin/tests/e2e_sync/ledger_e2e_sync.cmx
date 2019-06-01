@@ -18,7 +18,6 @@
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.net.oldhttp.HttpService",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ]
     }

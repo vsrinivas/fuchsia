@@ -8,7 +8,6 @@
             "fuchsia.modular.ComponentContext",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ]
     }

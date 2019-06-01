@@ -7,7 +7,6 @@
         "services": [
            "fuchsia.logger.LogSink",
            "fuchsia.sys.Launcher",
-           "fuchsia.tracelink.Registry",
            "fuchsia.tracing.provider.Registry"
        ]
     }

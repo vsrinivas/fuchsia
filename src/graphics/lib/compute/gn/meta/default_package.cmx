@@ -5,7 +5,6 @@
     "sandbox": {
         "services": [
             "fuchsia.sysmem.Allocator",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ]
     }

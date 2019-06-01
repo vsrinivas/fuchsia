@@ -19,7 +19,6 @@
             "shell-commands"
         ],
         "services": [
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",

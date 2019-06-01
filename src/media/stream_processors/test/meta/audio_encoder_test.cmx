@@ -18,7 +18,6 @@
         "features": [],
         "services": [
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.sysmem.Allocator",
             "fuchsia.logger.LogSink"

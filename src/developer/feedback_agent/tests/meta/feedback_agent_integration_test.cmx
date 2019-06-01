@@ -21,7 +21,6 @@
         "services": [
             "fuchsia.feedback.DataProvider",
             "fuchsia.logger.Log",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]

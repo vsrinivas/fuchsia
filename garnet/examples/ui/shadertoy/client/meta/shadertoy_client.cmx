@@ -5,7 +5,6 @@
     "sandbox": {
         "services": [
             "fuchsia.examples.shadertoy.ShadertoyFactory",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic"
         ]

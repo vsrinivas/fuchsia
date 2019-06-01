@@ -4,7 +4,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ],
         "dev": [ "misc/sysinfo" ]

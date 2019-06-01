@@ -8,7 +8,6 @@
             "class/input"
         ],
         "services": [
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ]
     }

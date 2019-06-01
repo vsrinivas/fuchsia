@@ -12,7 +12,6 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.ui.input.ImeService",
