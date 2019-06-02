@@ -9,7 +9,6 @@
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
 
@@ -30,7 +29,10 @@ class TraceManagerApp {
   fidl::BindingSet<fuchsia::tracing::controller::Controller>
       trace_controller_bindings_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);
+  TraceManagerApp(const TraceManagerApp&) = delete;
+  TraceManagerApp(TraceManagerApp&&) = delete;
+  TraceManagerApp& operator=(const TraceManagerApp&) = delete;
+  TraceManagerApp& operator=(TraceManagerApp&&) = delete;
 };
 
 }  // namespace tracing

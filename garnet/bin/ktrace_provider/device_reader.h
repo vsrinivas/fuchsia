@@ -6,7 +6,6 @@
 #define GARNET_BIN_KTRACE_PROVIDER_DEVICE_READER_H_
 
 #include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/macros.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 
@@ -25,7 +24,10 @@ class DeviceReader : public Reader {
 
   char buffer_[kChunkSize];
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeviceReader);
+  DeviceReader(const DeviceReader&) = delete;
+  DeviceReader(DeviceReader&&) = delete;
+  DeviceReader& operator=(const DeviceReader&) = delete;
+  DeviceReader& operator=(DeviceReader&&) = delete;
 };
 
 }  // namespace ktrace_provider

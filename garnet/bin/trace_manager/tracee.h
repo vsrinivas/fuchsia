@@ -12,7 +12,6 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
-#include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace-reader/reader_internal.h>
 
@@ -145,7 +144,11 @@ class Tracee {
   mutable bool provider_info_record_written_ = false;
 
   fxl::WeakPtrFactory<Tracee> weak_ptr_factory_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(Tracee);
+
+  Tracee(const Tracee&) = delete;
+  Tracee(Tracee&&) = delete;
+  Tracee& operator=(const Tracee&) = delete;
+  Tracee& operator=(Tracee&&) = delete;
 };
 
 std::ostream& operator<<(std::ostream& out, Tracee::State state);

@@ -5,8 +5,6 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_TEST_READER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_TEST_READER_H_
 
-#include <src/lib/fxl/macros.h>
-
 #include "garnet/bin/ktrace_provider/reader.h"
 
 namespace ktrace_provider {
@@ -18,7 +16,10 @@ class TestReader : public Reader {
  private:
   void ReadMoreData() override;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestReader);
+  TestReader(const TestReader&) = delete;
+  TestReader(TestReader&&) = delete;
+  TestReader& operator=(const TestReader&) = delete;
+  TestReader& operator=(TestReader&&) = delete;
 };
 
 }  // namespace ktrace_provider

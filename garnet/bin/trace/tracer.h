@@ -12,7 +12,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
-#include <src/lib/fxl/macros.h>
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
@@ -73,7 +72,10 @@ class Tracer {
   // The amount of space in use in |buffer_|.
   size_t buffer_end_ = 0u;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Tracer);
+  Tracer(const Tracer&) = delete;
+  Tracer(Tracer&&) = delete;
+  Tracer& operator=(const Tracer&) = delete;
+  Tracer& operator=(Tracer&&) = delete;
 };
 
 }  // namespace tracing

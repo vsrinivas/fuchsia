@@ -9,7 +9,6 @@
 
 #include <lib/zircon-internal/ktrace.h>
 #include <src/lib/files/unique_fd.h>
-#include <src/lib/fxl/macros.h>
 
 namespace ktrace_provider {
 
@@ -36,7 +35,10 @@ class Reader {
   size_t number_bytes_read_ = 0;
   size_t number_records_read_ = 0;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
+  Reader(const Reader&) = delete;
+  Reader(Reader&&) = delete;
+  Reader& operator=(const Reader&) = delete;
+  Reader& operator=(Reader&&) = delete;
 };
 
 }  // namespace ktrace_provider

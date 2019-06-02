@@ -15,7 +15,6 @@
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <src/lib/fxl/macros.h>
 #include <trace-engine/context.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
@@ -289,7 +288,10 @@ class Importer {
         message_counters_;
   } channels_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Importer);
+  Importer(const Importer&) = delete;
+  Importer(Importer&&) = delete;
+  Importer& operator=(const Importer&) = delete;
+  Importer& operator=(Importer&&) = delete;
 };
 
 }  // namespace ktrace_provider

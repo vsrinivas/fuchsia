@@ -9,7 +9,6 @@
 #include <string>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
 
 namespace tracing {
 
@@ -17,6 +16,11 @@ class Config {
  public:
   Config();
   ~Config();
+
+  Config(Config&& other) = default;
+  Config& operator=(Config&& other) = default;
+  Config(const Config&) = delete;
+  Config& operator=(const Config&) = delete;
 
   // Tries to parse configuration from |command_line|.
   // Returns false if an error occurs.

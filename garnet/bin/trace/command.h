@@ -9,7 +9,6 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
 
 #include <iosfwd>
 #include <map>
@@ -56,7 +55,10 @@ class Command {
   OnDoneCallback on_done_;
   int32_t return_code_ = -1;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Command);
+  Command(const Command&) = delete;
+  Command(Command&&) = delete;
+  Command& operator=(const Command&) = delete;
+  Command& operator=(Command&&) = delete;
 };
 
 class CommandWithController : public Command {
@@ -70,7 +72,10 @@ class CommandWithController : public Command {
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::tracing::controller::ControllerPtr trace_controller_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithController);
+  CommandWithController(const CommandWithController&) = delete;
+  CommandWithController(CommandWithController&&) = delete;
+  CommandWithController& operator=(const CommandWithController&) = delete;
+  CommandWithController& operator=(CommandWithController&&) = delete;
 };
 
 }  // namespace tracing

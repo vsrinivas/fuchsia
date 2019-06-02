@@ -12,7 +12,6 @@
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 #include <trace-engine/context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
@@ -165,7 +164,10 @@ class Importer {
   // Add one for events that are system-wide (e.g., memory controller events).
   trace_string_ref_t cpu_name_refs_[kMaxNumCpus + 1];
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Importer);
+  Importer(const Importer&) = delete;
+  Importer(Importer&&) = delete;
+  Importer& operator=(const Importer&) = delete;
+  Importer& operator=(Importer&&) = delete;
 };
 
 }  // namespace cpuperf_provider

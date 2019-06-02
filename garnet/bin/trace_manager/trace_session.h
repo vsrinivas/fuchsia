@@ -17,7 +17,6 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_counted.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
@@ -106,7 +105,11 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   fit::closure abort_handler_;
 
   fxl::WeakPtrFactory<TraceSession> weak_ptr_factory_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(TraceSession);
+
+  TraceSession(const TraceSession&) = delete;
+  TraceSession(TraceSession&&) = delete;
+  TraceSession& operator=(const TraceSession&) = delete;
+  TraceSession& operator=(TraceSession&&) = delete;
 };
 
 std::ostream& operator<<(std::ostream& out, TraceSession::State state);

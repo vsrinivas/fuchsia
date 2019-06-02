@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
-#include <src/lib/fxl/macros.h>
 
 #include <list>
 
@@ -58,7 +57,10 @@ class TraceManager : public fuchsia::tracing::controller::Controller,
   // True if tracing has been started, and is not (yet) being stopped.
   bool trace_running_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
+  TraceManager(const TraceManager&) = delete;
+  TraceManager(TraceManager&&) = delete;
+  TraceManager& operator=(const TraceManager&) = delete;
+  TraceManager& operator=(TraceManager&&) = delete;
 };
 
 }  // namespace tracing

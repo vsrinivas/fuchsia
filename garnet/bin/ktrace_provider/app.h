@@ -8,7 +8,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/files/unique_fd.h>
 #include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/macros.h>
 #include <trace/observer.h>
 
 #include "garnet/bin/ktrace_provider/log_importer.h"
@@ -34,7 +33,10 @@ class App {
   // records, which doesn't happen until after tracing has stopped.
   trace_prolonged_context_t* context_ = nullptr;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(App);
+  App(const App&) = delete;
+  App(App&&) = delete;
+  App& operator=(const App&) = delete;
+  App& operator=(App&&) = delete;
 };
 
 }  // namespace ktrace_provider
