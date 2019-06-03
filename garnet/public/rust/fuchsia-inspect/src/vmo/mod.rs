@@ -20,6 +20,8 @@ mod block_type;
 mod constants;
 mod heap;
 pub mod reader;
+#[macro_use]
+pub mod testing;
 mod state;
 mod utils;
 

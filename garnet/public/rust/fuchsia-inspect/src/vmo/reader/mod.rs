@@ -19,16 +19,16 @@ pub mod snapshot;
 /// A hierarchy of Inspect Nodes.
 ///
 /// Each hierarchy consists of properties, and a map of named child hierarchies.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NodeHierarchy {
     /// The name of this node.
-    name: String,
+    pub name: String,
 
     /// The properties for the node.
-    properties: Vec<Property>,
+    pub properties: Vec<Property>,
 
     /// The children of this node.
-    children: Vec<NodeHierarchy>,
+    pub children: Vec<NodeHierarchy>,
 }
 
 impl NodeHierarchy {
@@ -38,7 +38,7 @@ impl NodeHierarchy {
 }
 
 /// A named property. Each of the fields consists of (name, value).
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Property {
     /// The value is a string.
     String(String, String),
@@ -55,6 +55,18 @@ pub enum Property {
     /// The value is a double.
     Double(String, f64),
     // TODO(CF-798): add array types
+}
+
+impl Property {
+    pub fn name(&self) -> &str {
+        match self {
+            Property::String(name, _)
+            | Property::Bytes(name, _)
+            | Property::Int(name, _)
+            | Property::UInt(name, _)
+            | Property::Double(name, _) => &name,
+        }
+    }
 }
 
 impl TryFrom<Snapshot> for NodeHierarchy {
