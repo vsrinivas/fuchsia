@@ -29,7 +29,6 @@
 #
 #    - _module -- Module
 #    - _agent -- Agent
-#    - _session_shell -- SessionShell
 #    - _base_shell -- BaseShell
 #    - _story_shell -- StoryShell
 #    - _service -- FIDL interfaces
@@ -64,7 +63,6 @@ group("tests") {
     "module_context",
     "parent_child",
     "queue_persistence",
-    "session_shell",
     "sessionctl",
     "story_shell",
     "trigger",

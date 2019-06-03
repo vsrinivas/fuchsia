@@ -454,7 +454,4 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
                                    StoryState::STOPPING, StoryState::STOPPED));
 }
-
-// TODO(MF-399): Add a test that ensures DetachView() is not called on logout.
-// This will likely require mocking the base shell as well.
 }  // namespace
