@@ -23,6 +23,7 @@ group("core") {
     "//garnet/packages:all",
     "//peridot/packages:all",
     "//src:tests",
+    "//tools:tests",
   ]
 }
 

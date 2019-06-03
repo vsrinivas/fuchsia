@@ -19,6 +19,7 @@ group("tests") {
     "//garnet/packages/tests:all",
     "//peridot/packages/tests:all",
     "//src:tests",
+    "//tools:tests",
     "//topaz/packages/tests:all",
   ]
 }

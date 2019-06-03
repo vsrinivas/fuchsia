@@ -355,7 +355,6 @@ group("all") {
     ":fidl_compatibility_test_server_rust",
     ":fidl_llcpp_conformance_test",
     ":fidl_llcpp_types_test",
-    ":fidlcat",
     ":fidlext_tests",
     ":fonts",
     ":fostr",
@@ -474,14 +473,6 @@ group("fidl_llcpp_types_test") {
   testonly = true
   public_deps = [
     "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test",
-  ]
-}
-
-group("fidlcat") {
-  testonly = true
-  public_deps = [
-    "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
-    "//tools/fidlcat:fidlcat_tests",
   ]
 }
 
