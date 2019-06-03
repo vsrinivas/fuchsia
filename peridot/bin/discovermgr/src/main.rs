@@ -25,6 +25,7 @@ use {
 #[macro_use]
 mod testing;
 mod action_match;
+mod cloud_action_provider;
 mod discover_registry;
 mod models;
 mod module_output;

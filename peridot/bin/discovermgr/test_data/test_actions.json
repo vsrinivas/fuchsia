@@ -58,5 +58,24 @@
             "name" : "Location"
          }
       ]
-   }
+   },
+
+  {
+    "fuchsia_fulfillment": {
+      "component_url": "fuchsia-pkg://fuchsia.com/collections#meta/collections.cmx"
+    },
+    "name": "VIEW_COLLECTION",
+    "display_info" : {
+    },
+    "parameters": [
+      {
+        "name": "query",
+        "type": "string"
+      },
+      {
+        "name": "selected",
+        "type": "https://schema.org/Thing"
+      }
+    ]
+  }
 ]

@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.app.discover:fuchsia.app.discover-rustc",
     "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
     "//src/sys/component_index/fidl:index-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

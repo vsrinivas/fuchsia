@@ -17,9 +17,11 @@ use {
 #[derive(Deserialize, Debug)]
 pub struct Action {
     name: String,
+    #[serde(default)]
     pub parameters: Vec<Parameter>,
     pub display_info: ActionDisplayInfo,
     web_fulfillment: Option<WebFulfillment>,
+    fuchsia_fulfillment: Option<FuchsiaFulfillment>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -51,6 +53,7 @@ pub struct ParameterMapping {
 #[derive(Deserialize, Debug)]
 pub struct WebFulfillment {
     url_template: Option<String>,
+    #[serde(default)]
     parameter_mapping: Vec<ParameterMapping>,
 }
 
@@ -172,6 +175,11 @@ impl Intent {
     }
 }
 
+#[derive(Deserialize, Debug)]
+pub struct FuchsiaFulfillment {
+    component_url: String,
+}
+
 impl Into<FidlDisplayInfo> for DisplayInfo {
     fn into(self) -> FidlDisplayInfo {
         FidlDisplayInfo { title: self.title, subtitle: self.subtitle, icon: self.icon }
@@ -229,9 +237,16 @@ mod tests {
     fn test_from_assets() {
         let data: Vec<Action> =
             serde_json::from_str(include_str!("../test_data/test_actions.json")).unwrap();
-        assert_eq!(data.len(), 2);
+        assert_eq!(data.len(), 3);
         assert_eq!(data[0].name, "PLAY_MUSIC");
         assert_eq!(data[1].name, "SHOW_WEATHER");
+        assert_eq!(data[2].name, "VIEW_COLLECTION");
+
+        let fulfillment = data[2].fuchsia_fulfillment.as_ref().unwrap();
+        assert_eq!(
+            fulfillment.component_url,
+            "fuchsia-pkg://fuchsia.com/collections#meta/collections.cmx"
+        );
     }
 
     #[test]
