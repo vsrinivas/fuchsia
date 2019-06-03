@@ -97,9 +97,6 @@ class TestAgent : public modular::testing::FakeComponent,
 // A module that can connect to a TestAgent to send messages.
 class TestModule : public modular::testing::FakeModule {
  public:
-  TestModule()
-      : FakeModule(/* on_intent_handled= */ [](fuchsia::modular::Intent) {}) {}
-
   test::modular::queuepersistence::QueuePersistenceTestService*
   agent_service() {
     return agent_service_.get();
@@ -155,7 +152,6 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   fuchsia::modular::Intent intent;
   intent.handler = test_module_url;
   AddModToStory(std::move(intent), kModuleName, kStoryName);
-
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return test_module.is_running(); }, kTimeout));
 
@@ -186,6 +182,7 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
 
   // The agent should receive the message upon restarting.
   test_module.ConnectToAgent(test_agent_url);
+  RunLoopUntil([&] { return test_agent.is_running(); });
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return test_agent.GetLastReceivedMessage() == kMessage; },
       kTimeout));
