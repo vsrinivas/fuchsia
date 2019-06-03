@@ -8,7 +8,7 @@ mod state;
 #[cfg(test)]
 mod tests;
 
-pub use handler::Ime;
+pub use handler::LegacyIme;
 pub use state::ImeState;
 
 pub const HID_USAGE_KEY_BACKSPACE: u32 = 0x2a;

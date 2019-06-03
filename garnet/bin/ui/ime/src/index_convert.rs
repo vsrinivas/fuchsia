@@ -2,9 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! There are several ways to index into a String: UTF-8 `byte` indices (Rust uses these) or Unicode
+//! code points, which are encoding-independent. The `TextField` protocol uses the latter, and so
+//! this module has some helper functions to convert indices between these two representations. The
+//! legacy `TextInputState` uses UTF-16 code units as indices, so there are also functions that
+//! convert one of these `TextInputState`s into one that uses UTF-8 byte indices instead, or
+//! vice-versa.
+
 use fidl_fuchsia_ui_input as uii;
 
-/// Converts a char index in the current state's text to a byte index
+/// Converts a char index in a text to a byte index
 pub fn char_to_byte(text: &str, chars: i64) -> Option<usize> {
     if text.chars().count() == chars as usize {
         return Some(text.len());
@@ -12,7 +19,7 @@ pub fn char_to_byte(text: &str, chars: i64) -> Option<usize> {
     text.char_indices().map(|(i, _)| i).nth(chars as usize)
 }
 
-/// Converts a byte index in the current state's text to a char index
+/// Converts a byte index in a text to a char index
 pub fn byte_to_char(text: &str, bytes: usize) -> Option<i64> {
     if text.len() == bytes {
         return Some(text.chars().count() as i64);
@@ -20,7 +27,7 @@ pub fn byte_to_char(text: &str, bytes: usize) -> Option<i64> {
     text.char_indices().map(|(i, _)| i).position(|v| v == bytes).map(|v| v as i64)
 }
 
-/// Converts a UTF-16 code unit index in the current state's text to a byte index
+/// Converts a UTF-16 code unit index in a text to a byte index
 fn codeunit_to_byte(text: &str, codeunits: i64) -> Option<usize> {
     if codeunits == 0 {
         return Some(0);
@@ -37,7 +44,7 @@ fn codeunit_to_byte(text: &str, codeunits: i64) -> Option<usize> {
     None
 }
 
-/// Converts a byte index in the current state's text to a UTF-16 code unit index
+/// Converts a byte index in a text to a UTF-16 code unit index
 fn byte_to_codeunit(text: &str, bytes: usize) -> Option<i64> {
     text.get(0..bytes).map(|substr| Iterator::sum(substr.chars().map(|c| c.len_utf16() as i64)))
 }

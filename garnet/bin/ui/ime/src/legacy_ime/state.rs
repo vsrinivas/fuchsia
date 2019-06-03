@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use text_common::text_field_state::TextFieldState;
+//! This module contains an implementation of `ImeState`, the internal state object of `LegacyIme`.
+
 use super::position;
 use crate::fidl_helpers::clone_state;
 use crate::ime_service::ImeService;
@@ -14,9 +15,12 @@ use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use std::char;
 use std::collections::HashMap;
 use std::ops::Range;
+use text_common::text_field_state::TextFieldState;
 
-/// The internal state of the IME, usually held within the IME behind an Arc<Mutex>
-/// so it can be accessed from multiple places.
+/// The internal state of the IME, held within `LegacyIme` inside `Arc<Mutex<ImeState>>`, so it can
+/// be accessed from multiple message handler async tasks. Methods that aren't message handlers
+/// don't usually need to access `Arc<Mutex<LegacyIme>>` itself, and so can be put in here instead
+/// of on `LegacyIme` itself.
 pub struct ImeState {
     pub text_state: uii::TextInputState,
 

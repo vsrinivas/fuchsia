@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! This module contains an implementation of `LegacyIme` itself.
+
 use super::state::{get_point, get_range, ImeState};
 use super::{
     HID_USAGE_KEY_BACKSPACE, HID_USAGE_KEY_DELETE, HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT,
@@ -20,19 +22,27 @@ use futures::prelude::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
-/// A service that talks to a text field, providing it edits and cursor state updates
-/// in response to user input.
+/// An input method provides edits and cursor updates to a text field. This Legacy Input Method
+/// provides edits to a text field over the legacy pair of interfaces `InputMethodEditor` and
+/// `InputMethodEditorClient`. It can provide these edits one of two ways:
+///
+/// 1. If `inject_input()` is called with a `KeyboardEvent`, `LegacyIme` contains an implementation
+/// of a QWERTY latin keyboard input method, and will send the appropriate edits to the text field.
+/// This can also handle arrow keys with modifiers to perform selection/caret movement.
+/// 2. If `bind_text_field()` is called with a `TextFieldRequestStream`, `LegacyIme` can serve the
+/// new `TextField` interface, translating edits or content requests from that into requests for the
+/// `InputMethodEditorClient`.
 #[derive(Clone)]
-pub struct Ime(Arc<Mutex<ImeState>>);
+pub struct LegacyIme(Arc<Mutex<ImeState>>);
 
-impl Ime {
+impl LegacyIme {
     pub fn new<I: 'static + uii::InputMethodEditorClientProxyInterface>(
         keyboard_type: uii::KeyboardType,
         action: uii::InputMethodAction,
         initial_state: uii::TextInputState,
         client: I,
         ime_service: ImeService,
-    ) -> Ime {
+    ) -> LegacyIme {
         let state = ImeState {
             text_state: initial_state,
             client: Box::new(client),
@@ -46,17 +56,20 @@ impl Ime {
             transaction_changes: Vec::new(),
             transaction_revision: None,
         };
-        Ime(Arc::new(Mutex::new(state)))
+        LegacyIme(Arc::new(Mutex::new(state)))
     }
 
     pub fn downgrade(&self) -> Weak<Mutex<ImeState>> {
         Arc::downgrade(&self.0)
     }
 
-    pub fn upgrade(weak: &Weak<Mutex<ImeState>>) -> Option<Ime> {
-        weak.upgrade().map(|arc| Ime(arc))
+    pub fn upgrade(weak: &Weak<Mutex<ImeState>>) -> Option<LegacyIme> {
+        weak.upgrade().map(|arc| LegacyIme(arc))
     }
 
+    /// Binds a `TextField` to this `LegacyIme`, replacing and unbinding any previous `TextField`.
+    /// All requests from the request stream will be translated into requests for
+    /// `InputMethodEditorClient`, and for events, vice-versa.
     pub fn bind_text_field(&self, mut stream: txt::TextFieldRequestStream) {
         let mut self_clone = self.clone();
         fuchsia_async::spawn(
@@ -84,12 +97,12 @@ impl Ime {
         );
     }
 
-    pub fn bind_ime(&self, chan: fuchsia_async::Channel) {
+    /// Handles all state updates passed down the `InputMethodEditorRequestStream`.
+    pub fn bind_ime(&self, mut stream: uii::InputMethodEditorRequestStream) {
         let self_clone = self.clone();
         let self_clone_2 = self.clone();
         fuchsia_async::spawn(
             async move {
-                let mut stream = uii::InputMethodEditorRequestStream::from_channel(chan);
                 while let Some(msg) = await!(stream.try_next())
                     .context("error reading value from IME request stream")?
                 {
@@ -268,11 +281,19 @@ impl Ime {
         state.increment_revision(false);
     }
 
+    /// Forwards an event to the `InputMethodEditorClient`, by sending a state update that makes no
+    /// changes alongside a `KeyboardEvent`. Note that this state update will always have no changes
+    /// — if you'd like to send a change, use `inject_input()`.
     pub async fn forward_event(&self, keyboard_event: uii::KeyboardEvent) {
         let mut state = await!(self.0.lock());
         state.forward_event(keyboard_event);
     }
 
+    /// Uses `ImeState`'s internal latin input method implementation to determine the edit
+    /// corresponding to `keyboard_event`, and sends this as a state update to
+    /// `InputMethodEditorClient`. This method can handle arrow keys to move selections, even with
+    /// modifier keys implemented correctly. However, it does *not* send the actual key event to the
+    /// client; for that, you should simultaneously call `forward_event()`.
     pub async fn inject_input(&self, keyboard_event: uii::KeyboardEvent) {
         let mut state = await!(self.0.lock());
 

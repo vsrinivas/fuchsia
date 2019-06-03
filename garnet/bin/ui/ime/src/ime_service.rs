@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use crate::fidl_helpers::clone_keyboard_event;
-use crate::legacy_ime::Ime;
 use crate::legacy_ime::ImeState;
+use crate::legacy_ime::LegacyIme;
+use crate::multiplex::TextFieldMultiplexer;
 use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
@@ -18,6 +19,7 @@ pub struct ImeServiceState {
     pub keyboard_visible: bool,
     pub active_ime: Option<Weak<Mutex<ImeState>>>,
     pub visibility_listeners: Vec<uii::ImeVisibilityServiceControlHandle>,
+    pub multiplexer: Option<TextFieldMultiplexer>,
 
     /// `TextInputContext` is a service provided to input methods that want to edit text. Whenever
     /// a new text field is focused, we provide a TextField interface to any connected `TextInputContext`s,
@@ -38,10 +40,8 @@ impl ImeServiceState {
     }
 }
 
-/// The ImeService is a central, discoverable service responsible for creating new IMEs when a new
-/// text field receives focus. It also advertises the ImeVisibilityService, which allows a client
-/// (usually a soft keyboard container) to receive updates when the keyboard has been requested to
-/// be shown or hidden.
+/// Serves several public FIDL services: `ImeService`, `ImeVisibilityService`, and
+/// `TextInputContext`.
 #[derive(Clone)]
 pub struct ImeService(Arc<Mutex<ImeServiceState>>);
 
@@ -50,6 +50,7 @@ impl ImeService {
         ImeService(Arc::new(Mutex::new(ImeServiceState {
             keyboard_visible: false,
             active_ime: None,
+            multiplexer: None,
             visibility_listeners: Vec::new(),
             text_input_context_clients: Vec::new(),
         })))
@@ -87,16 +88,32 @@ impl ImeService {
             Ok(v) => v,
             Err(_) => return,
         };
-        let ime = Ime::new(keyboard_type, action, initial_state, client_proxy, self.clone());
+        let ime = LegacyIme::new(keyboard_type, action, initial_state, client_proxy, self.clone());
         let mut state = await!(self.0.lock());
+        let editor_stream = match editor.into_stream() {
+            Ok(v) => v,
+            Err(e) => {
+                fx_log_err!("Failed to create stream: {}", e);
+                return;
+            }
+        };
+        let (txt_proxy, txt_request_stream) =
+            match fidl::endpoints::create_proxy_and_stream::<txt::TextFieldMarker>() {
+                Ok(v) => v,
+                Err(e) => {
+                    fx_log_err!("Failed to create TextField proxy and stream: {}", e);
+                    return;
+                }
+            };
         state.active_ime = Some(ime.downgrade());
-        if let Ok(chan) = fuchsia_async::Channel::from_channel(editor.into_channel()) {
-            ime.bind_ime(chan);
-        }
+        ime.bind_ime(editor_stream);
+        ime.bind_text_field(txt_request_stream);
+        let multiplexer = TextFieldMultiplexer::new(txt_proxy);
         state.text_input_context_clients.retain(|listener| {
             // drop listeners if they error on send
-            bind_new_text_field(&ime, &listener).is_ok()
+            bind_new_text_field(&multiplexer, &listener).is_ok()
         });
+        state.multiplexer = Some(multiplexer);
     }
 
     pub async fn show_keyboard(&self) {
@@ -120,21 +137,28 @@ impl ImeService {
                 Some(ref v) => v,
                 None => return, // no currently active IME
             };
-            match Ime::upgrade(active_ime_weak) {
+            match LegacyIme::upgrade(active_ime_weak) {
                 Some(active_ime) => active_ime,
                 None => return, // IME no longer exists
             }
         };
 
-        // send the legacy ime a keystroke event to forward
+        // Send the legacy ime a keystroke event to forward to connected clients. Even if a v2 input
+        // method is connected, this ensures legacy text fields are able to still see key events;
+        // something not yet provided by the new `TextField` API.
         await!(ime.forward_event(clone_keyboard_event(&keyboard_event)));
 
+        // Send the key event to any listening `TextInputContext` clients. If at least one still
+        // exists, we assume it handled it and converted it into an edit sent via its handle to the
+        // `TextField` protocol.
         state.text_input_context_clients.retain(|listener| {
             // drop listeners if they error on send
             listener.send_on_input_event(&mut event).is_ok()
         });
-        // only use the default text input handler in ime.rs if there are no text_input_context_clients
-        // attached to handle it
+
+        // If no `TextInputContext` clients handled the input event, or if there are none connected,
+        // we allow the internal input method inside of `LegacyIme` to convert this key event into
+        // an edit.
         if state.text_input_context_clients.len() == 0 {
             await!(ime.inject_input(keyboard_event));
         }
@@ -207,13 +231,8 @@ impl ImeService {
                 {
                     let mut state = await!(self_clone.0.lock());
 
-                    let active_ime_opt = match state.active_ime {
-                        Some(ref weak) => Ime::upgrade(weak),
-                        None => None, // no currently active IME
-                    };
-
-                    if let Some(active_ime) = active_ime_opt {
-                        if let Err(e) = bind_new_text_field(&active_ime, &control_handle) {
+                    if let Some(multiplexer) = &state.multiplexer {
+                        if let Err(e) = bind_new_text_field(multiplexer, &control_handle) {
                             fx_log_err!("Error when binding text field for newly connected TextInputContext: {}", e);
                         }
                     }
@@ -236,16 +255,13 @@ impl ImeService {
 }
 
 pub fn bind_new_text_field(
-    active_ime: &Ime,
+    multiplexer: &TextFieldMultiplexer,
     control_handle: &txt::TextInputContextControlHandle,
 ) -> Result<(), fidl::Error> {
     let (client_end, request_stream) =
         fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
             .expect("Failed to create text field request stream");
-    // TODO(lard): this currently overwrites active_ime's TextField, since it only supports
-    // one at a time. In the future, ImeService should multiplex multiple TextField
-    // implementations into Ime.
-    active_ime.bind_text_field(request_stream);
+    multiplexer.add_request_stream(request_stream);
     control_handle.send_on_focus(client_end)
 }
 
@@ -259,14 +275,13 @@ mod test {
     use fuchsia_async as fasync;
     use pin_utils::pin_mut;
 
-    async fn get_state_update(editor_stream: &mut uii::InputMethodEditorClientRequestStream) -> (uii::TextInputState, Option<uii::KeyboardEvent>) {
+    async fn get_state_update(
+        editor_stream: &mut uii::InputMethodEditorClientRequestStream,
+    ) -> (uii::TextInputState, Option<uii::KeyboardEvent>) {
         let msg = await!(editor_stream.try_next())
             .expect("expected working event stream")
             .expect("ime should have sent message");
-        if let uii::InputMethodEditorClientRequest::DidUpdateState {
-            state, event, ..
-        } = msg
-        {
+        if let uii::InputMethodEditorClientRequest::DidUpdateState { state, event, .. } = msg {
             let keyboard_event = event.map(|e| {
                 if let uii::InputEvent::Keyboard(keyboard_event) = *e {
                     keyboard_event

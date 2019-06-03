@@ -4,6 +4,7 @@
 
 use fidl_fuchsia_ui_input as uii;
 
+/// Generates a default `TextInputState`, suitable for tests.
 #[cfg(test)]
 pub fn default_state() -> uii::TextInputState {
     uii::TextInputState {
@@ -14,6 +15,7 @@ pub fn default_state() -> uii::TextInputState {
     }
 }
 
+/// Clones a `TextInputState`.
 pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
     uii::TextInputState {
         revision: state.revision,
@@ -27,6 +29,7 @@ pub fn clone_state(state: &uii::TextInputState) -> uii::TextInputState {
     }
 }
 
+/// Clones a `KeyboardEvent`.
 pub fn clone_keyboard_event(ev: &uii::KeyboardEvent) -> uii::KeyboardEvent {
     uii::KeyboardEvent {
         event_time: ev.event_time,

@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(lard): remove once multiplexer is integrated with rest of codebase
-#![allow(dead_code)]
-
-use failure::{Error, ResultExt};
+use failure::{bail, Error, ResultExt};
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async as fasync;
@@ -28,12 +25,16 @@ pub struct TextFieldMultiplexer {
 struct TextFieldMultiplexerState {
     proxy: txt::TextFieldProxy,
     control_handles: Vec<txt::TextFieldControlHandle>,
+    last_state: Option<TextFieldState>,
 }
 
 impl TextFieldMultiplexer {
+    // TODO(TEXT-63): need way to close out a multiplexer's connections, right now Arc<Mutex<>> will
+    // cause it to persist even if a new text field is focused.
     pub fn new(proxy: txt::TextFieldProxy) -> TextFieldMultiplexer {
         let mut event_stream = proxy.take_event_stream();
-        let state = TextFieldMultiplexerState { proxy, control_handles: Vec::new() };
+        let state =
+            TextFieldMultiplexerState { proxy, control_handles: Vec::new(), last_state: None };
         let multiplexer = TextFieldMultiplexer { inner: Arc::new(Mutex::new(state)) };
         let multiplexer2 = multiplexer.clone();
         fasync::spawn(
@@ -49,6 +50,7 @@ impl TextFieldMultiplexer {
                             multiplex_state.control_handles.retain(|handle| {
                                 handle.send_on_update(textfield_state.clone().into()).is_ok()
                             });
+                            multiplex_state.last_state = Some(textfield_state);
                         }
                         Err(e) => {
                             fx_log_err!("failed to convert: {:?}", e);
@@ -63,12 +65,24 @@ impl TextFieldMultiplexer {
         multiplexer
     }
 
-    pub async fn add_request_stream(&self, mut stream: txt::TextFieldRequestStream) {
-        await!(self.inner.lock()).control_handles.push(stream.control_handle());
-
+    pub fn add_request_stream(&self, mut stream: txt::TextFieldRequestStream) {
         let this = self.clone();
         fasync::spawn(
             async move {
+                {
+                    let mut multiplex_state = await!(this.inner.lock());
+                    let handle = stream.control_handle();
+                    if let Some(textfield_state) = &multiplex_state.last_state {
+                        // We already got at least one update, so send initial OnUpdate with current
+                        // state to new TextField
+                        let ok = handle.send_on_update(textfield_state.clone().into()).is_ok();
+                        if !ok {
+                            bail!("Channel was closed")
+                        }
+                    }
+                    multiplex_state.control_handles.push(handle);
+                }
+
                 let mut edit_queue = Vec::new();
                 let mut transaction_revision: Option<u64> = None;
 
@@ -195,7 +209,7 @@ mod tests {
             let (client_end, request_stream) =
                 fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
                     .expect("failed to create TextFieldRequestStream");
-            await!(multiplex.add_request_stream(request_stream));
+            multiplex.add_request_stream(request_stream);
             client_end.into_proxy().expect("failed to create TextFieldProxy")
         };
 
@@ -203,7 +217,7 @@ mod tests {
             let (client_end, request_stream) =
                 fidl::endpoints::create_request_stream::<txt::TextFieldMarker>()
                     .expect("failed to create TextFieldRequestStream");
-            await!(multiplex.add_request_stream(request_stream));
+            multiplex.add_request_stream(request_stream);
             client_end.into_proxy().expect("failed to create TextFieldProxy")
         };
 
@@ -261,13 +275,11 @@ mod tests {
     async fn forwards_content_requests_correctly() {
         let (mut stream, proxy_a, proxy_b) = await!(setup());
 
-        fasync::spawn(
-            async move {
-                loop {
-                    await!(expect_position_offset(&mut stream));
-                }
-            },
-        );
+        fasync::spawn(async move {
+            loop {
+                await!(expect_position_offset(&mut stream));
+            }
+        });
 
         let position_a = async move {
             let (position, _err) =
@@ -288,21 +300,19 @@ mod tests {
     async fn queues_interleaving_edits_correctly() {
         let (mut stream, proxy_a, proxy_b) = await!(setup());
 
-        fasync::spawn(
-            async move {
-                await!(expect_position_offset(&mut stream));
+        fasync::spawn(async move {
+            await!(expect_position_offset(&mut stream));
 
-                await!(expect_begin_edit(&mut stream, 0));
-                await!(expect_replace(&mut stream, 1));
-                await!(expect_replace(&mut stream, 3));
-                await!(expect_commit_edit(&mut stream));
+            await!(expect_begin_edit(&mut stream, 0));
+            await!(expect_replace(&mut stream, 1));
+            await!(expect_replace(&mut stream, 3));
+            await!(expect_commit_edit(&mut stream));
 
-                await!(expect_begin_edit(&mut stream, 1));
-                await!(expect_replace(&mut stream, 2));
-                await!(expect_replace(&mut stream, 4));
-                await!(expect_commit_edit(&mut stream));
-            },
-        );
+            await!(expect_begin_edit(&mut stream, 1));
+            await!(expect_replace(&mut stream, 2));
+            await!(expect_replace(&mut stream, 4));
+            await!(expect_commit_edit(&mut stream));
+        });
 
         fn make_range(i: u64) -> txt::Range {
             txt::Range { start: txt::Position { id: i }, end: txt::Position { id: i } }

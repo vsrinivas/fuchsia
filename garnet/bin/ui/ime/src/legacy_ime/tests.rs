@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! This module contains tests for `LegacyIme`.
+
 use super::handler::*;
 use super::*;
 use crate::fidl_helpers::clone_state;
@@ -18,9 +20,9 @@ async fn set_up(
     text: &str,
     base: i64,
     extent: i64,
-) -> (Ime, Receiver<uii::TextInputState>, Receiver<uii::InputMethodAction>) {
+) -> (LegacyIme, Receiver<uii::TextInputState>, Receiver<uii::InputMethodAction>) {
     let (client, statechan, actionchan) = MockImeClient::new();
-    let ime = Ime::new(
+    let ime = LegacyIme::new(
         uii::KeyboardType::Text,
         uii::InputMethodAction::Search,
         default_state(),
@@ -41,7 +43,7 @@ fn measure_utf16(s: &str) -> usize {
 }
 
 async fn simulate_keypress<K: Into<u32> + Copy + 'static>(
-    ime: &mut Ime,
+    ime: &mut LegacyIme,
     key: K,
     hid_key: bool,
     modifiers: u32,
@@ -102,7 +104,7 @@ impl uii::InputMethodEditorClientProxyInterface for MockImeClient {
 #[run_until_stalled(test)]
 async fn test_mock_ime_channels() {
     let (client, statechan, actionchan) = MockImeClient::new();
-    let mut ime = Ime::new(
+    let mut ime = LegacyIme::new(
         uii::KeyboardType::Text,
         uii::InputMethodAction::Search,
         default_state(),
