@@ -1,0 +1,15 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+host_tool("mtd-redundant-storage") {
+  if (current_os == "linux") {
+    sources = [
+      "mtd-rs-tool.cpp",
+    ]
+  }
+  deps = [
+    "$zx/system/ulib/nand-redundant-storage",
+    "$zx/third_party/ulib/cksum",
+  ]
+}

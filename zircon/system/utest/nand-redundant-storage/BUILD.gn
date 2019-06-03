@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+test("nand-redundant-storage") {
+  sources = [
+    "nand-rs-tests.cpp",
+  ]
+
+  deps = [
+    "$zx/system/ulib/zxtest",
+  ]
+
+  if (current_os == "linux") {
+    # This library requires an environment with mtd/mtd-user.h and MTD support.
+    # Currently, Linux is the only OS with that support.
+    deps += [ "$zx/system/ulib/nand-redundant-storage" ]
+  }
+
+  # Used by the test to point to the correct simulated MTD storage.
+  if (current_cpu == "arm64") {
+    defines = [ "ASTRO" ]
+  }
+}

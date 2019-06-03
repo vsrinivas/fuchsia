@@ -24,4 +24,8 @@ group("tools") {
     "xdc-server",
     "zbi",
   ]
+
+  if (current_os == "linux") {
+    deps += [ "mtd-redundant-storage" ]
+  }
 }
