@@ -6,6 +6,7 @@ use {
     crate::vmo::{block::PropertyFormat, heap::Heap, state::State},
     failure::{format_err, Error},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
+    fuchsia_syslog::macros::*,
     fuchsia_zircon::{self as zx, HandleBased},
     mapped_vmo::Mapping,
     parking_lot::Mutex,
@@ -36,7 +37,7 @@ pub trait Property<'t> {
     type Type;
 
     /// Set the property value to |value|.
-    fn set(&'t self, value: Self::Type) -> Result<(), Error>;
+    fn set(&'t self, value: Self::Type);
 }
 
 /// Trait implemented by metrics.
@@ -45,13 +46,13 @@ pub trait Metric {
     type Type;
 
     /// Set the metric current value to |value|.
-    fn set(&self, value: Self::Type) -> Result<(), Error>;
+    fn set(&self, value: Self::Type);
 
     /// Add the given |value| to the metric current value.
-    fn add(&self, value: Self::Type) -> Result<(), Error>;
+    fn add(&self, value: Self::Type);
 
     /// Subtract the given |value| from the metric current value.
-    fn subtract(&self, value: Self::Type) -> Result<(), Error>;
+    fn subtract(&self, value: Self::Type);
 
     /// Return the current value of the metric for testing.
     /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
@@ -65,10 +66,10 @@ pub trait Metric {
 #[derive(Debug)]
 pub struct Node {
     /// Index of the block in the VMO.
-    block_index: u32,
+    block_index: Option<u32>,
 
     /// Reference to the VMO heap.
-    state: Arc<Mutex<State>>,
+    state: Option<Arc<Mutex<State>>>,
 }
 
 /// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
@@ -122,7 +123,7 @@ impl Inspector {
             Arc::new(Mutex::new(state)),
             constants::ROOT_NAME,
             constants::ROOT_PARENT_INDEX,
-        )?;
+        );
         Ok((vmo, root_node))
     }
 }
@@ -134,10 +135,19 @@ macro_rules! create_metric_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
             pub fn [<create_ $name _metric>](&self, name: &str, value: $type)
-                -> Result<[<$name_cap Metric>], Error> {
-                let block = self.state.lock().[<create_ $name _metric>](
-                    name, value, self.block_index)?;
-                Ok([<$name_cap Metric>] {state: self.state.clone(), block_index: block.index() })
+                -> [<$name_cap Metric>] {
+                self.state
+                    .as_ref()
+                    .ok_or(format_err!("No-Op node"))
+                    .and_then(|state| {
+                        state
+                            .lock()
+                            .[<create_ $name _metric>](name, value, self.block_index.unwrap())
+                    })
+                    .map(|block| {
+                        [<$name_cap Metric>] {state: self.state.clone(), block_index: Some(block.index()) }
+                    })
+                    .unwrap_or([<$name_cap Metric>] { state: None, block_index: None })
             }
         }
     };
@@ -149,15 +159,22 @@ impl Node {
         state: Arc<Mutex<State>>,
         name: &str,
         parent_index: u32,
-    ) -> Result<Self, Error> {
-        let block = state.lock().create_node(name, parent_index)?;
-        Ok(Node { state: state.clone(), block_index: block.index() })
+    ) -> Node {
+        state
+            .lock()
+            .create_node(name, parent_index)
+            .map(|block| Node { state: Some(state.clone()), block_index: Some(block.index()) })
+            .unwrap_or(Node { state: None, block_index: None })
     }
 
     /// Add a child to this node.
-    pub fn create_child(&self, name: &str) -> Result<Node, Error> {
-        let block = self.state.lock().create_node(name, self.block_index)?;
-        Ok(Node { state: self.state.clone(), block_index: block.index() })
+    pub fn create_child(&self, name: &str) -> Node {
+        self.state
+            .as_ref()
+            .ok_or(format_err!("No-Op node"))
+            .and_then(|state| state.lock().create_node(name, self.block_index.unwrap()))
+            .map(|block| Node { state: self.state.clone(), block_index: Some(block.index()) })
+            .unwrap_or(Node { state: None, block_index: None })
     }
 
     /// Add a metric to this node: create_int_metric, create_double_metric,
@@ -167,34 +184,54 @@ impl Node {
     create_metric_fn!(double, Double, f64);
 
     /// Add a string property to this node.
-    pub fn create_string_property(&self, name: &str, value: &str) -> Result<StringProperty, Error> {
-        let block = self.state.lock().create_property(
-            name,
-            value.as_bytes(),
-            PropertyFormat::String,
-            self.block_index,
-        )?;
-        Ok(StringProperty { state: self.state.clone(), block_index: block.index() })
+    pub fn create_string_property(&self, name: &str, value: &str) -> StringProperty {
+        self.state
+            .as_ref()
+            .ok_or(format_err!("No-Op node"))
+            .and_then(|state| {
+                state.lock().create_property(
+                    name,
+                    value.as_bytes(),
+                    PropertyFormat::String,
+                    self.block_index.unwrap(),
+                )
+            })
+            .map(|block| StringProperty {
+                state: self.state.clone(),
+                block_index: Some(block.index()),
+            })
+            .unwrap_or(StringProperty { state: None, block_index: None })
     }
 
     /// Add a byte vector property to this node.
-    pub fn create_bytes_property(&self, name: &str, value: &[u8]) -> Result<BytesProperty, Error> {
-        let block = self.state.lock().create_property(
-            name,
-            value,
-            PropertyFormat::Bytes,
-            self.block_index,
-        )?;
-        Ok(BytesProperty { state: self.state.clone(), block_index: block.index() })
+    pub fn create_bytes_property(&self, name: &str, value: &[u8]) -> BytesProperty {
+        self.state
+            .as_ref()
+            .ok_or(format_err!("No-Op node"))
+            .and_then(|state| {
+                state.lock().create_property(
+                    name,
+                    value,
+                    PropertyFormat::Bytes,
+                    self.block_index.unwrap(),
+                )
+            })
+            .map(|block| BytesProperty {
+                state: self.state.clone(),
+                block_index: Some(block.index()),
+            })
+            .unwrap_or(BytesProperty { state: None, block_index: None })
     }
 }
 
 impl Drop for Node {
     fn drop(&mut self) {
-        self.state
-            .lock()
-            .free_value(self.block_index)
-            .expect(&format!("Failed to free node index={}", self.block_index));
+        self.state.as_ref().map(|state| {
+            state
+                .lock()
+                .free_value(self.block_index.unwrap())
+                .expect(&format!("Failed to free node index={}", self.block_index.unwrap()));
+        });
     }
 }
 
@@ -223,8 +260,13 @@ dummy_trait_impls!(Node);
 macro_rules! metric_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::item! {
-            fn $fn_name(&self, value: $type) -> Result<(), Error> {
-                self.state.lock().[<$fn_name _ $name _metric>](self.block_index, value)
+            fn $fn_name(&self, value: $type) {
+                if let Some(ref state) = self.state {
+                    state.lock().[<$fn_name _ $name _metric>](self.block_index.unwrap(), value)
+                        .unwrap_or_else(|e| {
+                            fx_log_err!("Failed to {} metric. Error: {:?}", stringify!($fn_name), e);
+                        });
+                }
             }
         }
     };
@@ -242,10 +284,10 @@ macro_rules! metric {
             #[derive(Debug)]
             pub struct [<$name_cap Metric>] {
                 /// Index of the block in the VMO.
-                block_index: u32,
+                block_index: Option<u32>,
 
                 /// Reference to the VMO heap.
-                state: Arc<Mutex<State>>,
+                state: Option<Arc<Mutex<State>>>,
             }
 
             impl Metric for [<$name_cap Metric>] {
@@ -255,7 +297,11 @@ macro_rules! metric {
                 metric_fn!(subtract, $type, $name);
 
                 fn get(&self) -> Result<$type, Error> {
-                    self.state.lock().[<get_ $name _metric>](self.block_index)
+                    if let Some(ref state) = self.state {
+                        state.lock().[<get_ $name _metric>](self.block_index.unwrap())
+                    } else {
+                        Err(format_err!("Metric is No-Op"))
+                    }
                 }
             }
 
@@ -263,10 +309,12 @@ macro_rules! metric {
 
             impl Drop for [<$name_cap Metric>] {
                 fn drop(&mut self) {
-                    self.state
-                        .lock()
-                        .free_value(self.block_index)
-                        .expect(&format!("Failed to free metric index={}", self.block_index));
+                    self.state.as_ref().map(|state| {
+                        state
+                            .lock()
+                            .free_value(self.block_index.unwrap())
+                            .expect(&format!("Failed to free metric index={}", self.block_index.unwrap()));
+                    });
                 }
             }
         }
@@ -282,17 +330,20 @@ macro_rules! property {
             #[derive(Debug)]
             pub struct [<$name Property>] {
                 /// Index of the block in the VMO.
-                block_index: u32,
+                block_index: Option<u32>,
 
                 /// Reference to the VMO heap.
-                state: Arc<Mutex<State>>,
+                state: Option<Arc<Mutex<State>>>,
             }
 
             impl<'t> Property<'t> for [<$name Property>] {
                 type Type = &'t $type;
 
-                fn set(&'t self, value: &'t $type) -> Result<(), Error> {
-                    self.state.lock().set_property(self.block_index, $bytes)
+                fn set(&'t self, value: &'t $type) {
+                    if let Some(ref state) = self.state {
+                        state.lock().set_property(self.block_index.unwrap(), $bytes)
+                            .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
+                    }
                 }
             }
 
@@ -300,10 +351,12 @@ macro_rules! property {
 
             impl Drop for [<$name Property>] {
                 fn drop(&mut self) {
-                    self.state
-                        .lock()
-                        .free_property(self.block_index)
-                        .expect(&format!("Failed to free property index={}", self.block_index));
+                    self.state.as_ref().map(|state| {
+                        state
+                            .lock()
+                            .free_property(self.block_index.unwrap())
+                            .expect(&format!("Failed to free property index={}", self.block_index.unwrap()));
+                    });
                 }
             }
         }
@@ -329,7 +382,8 @@ mod tests {
     fn inspector_new() {
         let test_object = Inspector::new().unwrap();
         assert_eq!(test_object.vmo.get_size().unwrap(), constants::DEFAULT_VMO_SIZE_BYTES as u64);
-        let root_name_block = test_object.root().state.lock().heap.get_block(2).unwrap();
+        let root_name_block =
+            test_object.root().state.as_ref().unwrap().lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
@@ -337,7 +391,8 @@ mod tests {
     fn inspector_new_with_size() {
         let test_object = Inspector::new_with_size(8192).unwrap();
         assert_eq!(test_object.vmo.get_size().unwrap(), 8192);
-        let root_name_block = test_object.root().state.lock().heap.get_block(2).unwrap();
+        let root_name_block =
+            test_object.root().state.as_ref().unwrap().lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
 
         // If size is not a multiple of 4096, it'll be rounded up.
@@ -354,7 +409,7 @@ mod tests {
         // Note, the small size we request should be rounded up to a full 4kB page.
         let (vmo, root_node) = Inspector::new_root(100).unwrap();
         assert_eq!(vmo.get_size().unwrap(), 4096);
-        let root_name_block = root_node.state.lock().heap.get_block(2).unwrap();
+        let root_name_block = root_node.state.as_ref().unwrap().lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
@@ -362,13 +417,21 @@ mod tests {
     fn node() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
-        let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         assert_eq!(node_block.block_type(), BlockType::NodeValue);
         assert_eq!(node_block.child_count().unwrap(), 0);
         {
-            let child = node.create_child("child").unwrap();
-            let child_block = node.state.lock().heap.get_block(child.block_index).unwrap();
+            let child = node.create_child("child");
+            let child_block = node
+                .state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .heap
+                .get_block(child.block_index.unwrap())
+                .unwrap();
             assert_eq!(child_block.block_type(), BlockType::NodeValue);
             assert_eq!(child_block.child_count().unwrap(), 0);
             assert_eq!(node_block.child_count().unwrap(), 1);
@@ -380,23 +443,31 @@ mod tests {
     fn double_metric() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
-        let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let metric = node.create_double_metric("metric", 1.0).unwrap();
-            let metric_block = node.state.lock().heap.get_block(metric.block_index).unwrap();
+            let metric = node.create_double_metric("metric", 1.0);
+            let metric_block = node
+                .state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .heap
+                .get_block(metric.block_index.unwrap())
+                .unwrap();
             assert_eq!(metric_block.block_type(), BlockType::DoubleValue);
             assert_eq!(metric_block.double_value().unwrap(), 1.0);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            assert!(metric.set(2.0).is_ok());
+            metric.set(2.0);
             assert_eq!(metric_block.double_value().unwrap(), 2.0);
             assert_eq!(metric.get().unwrap(), 2.0);
 
-            assert!(metric.subtract(5.5).is_ok());
+            metric.subtract(5.5);
             assert_eq!(metric_block.double_value().unwrap(), -3.5);
 
-            assert!(metric.add(8.1).is_ok());
+            metric.add(8.1);
             assert_eq!(metric_block.double_value().unwrap(), 4.6);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -406,23 +477,31 @@ mod tests {
     fn int_metric() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
-        let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let metric = node.create_int_metric("metric", 1).unwrap();
-            let metric_block = node.state.lock().heap.get_block(metric.block_index).unwrap();
+            let metric = node.create_int_metric("metric", 1);
+            let metric_block = node
+                .state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .heap
+                .get_block(metric.block_index.unwrap())
+                .unwrap();
             assert_eq!(metric_block.block_type(), BlockType::IntValue);
             assert_eq!(metric_block.int_value().unwrap(), 1);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            assert!(metric.set(2).is_ok());
+            metric.set(2);
             assert_eq!(metric_block.int_value().unwrap(), 2);
             assert_eq!(metric.get().unwrap(), 2);
 
-            assert!(metric.subtract(5).is_ok());
+            metric.subtract(5);
             assert_eq!(metric_block.int_value().unwrap(), -3);
 
-            assert!(metric.add(8).is_ok());
+            metric.add(8);
             assert_eq!(metric_block.int_value().unwrap(), 5);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -432,23 +511,31 @@ mod tests {
     fn uint_metric() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
-        let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let metric = node.create_uint_metric("metric", 1).unwrap();
-            let metric_block = node.state.lock().heap.get_block(metric.block_index).unwrap();
+            let metric = node.create_uint_metric("metric", 1);
+            let metric_block = node
+                .state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .heap
+                .get_block(metric.block_index.unwrap())
+                .unwrap();
             assert_eq!(metric_block.block_type(), BlockType::UintValue);
             assert_eq!(metric_block.uint_value().unwrap(), 1);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            assert!(metric.set(5).is_ok());
+            metric.set(5);
             assert_eq!(metric_block.uint_value().unwrap(), 5);
             assert_eq!(metric.get().unwrap(), 5);
 
-            assert!(metric.subtract(3).is_ok());
+            metric.subtract(3);
             assert_eq!(metric_block.uint_value().unwrap(), 2);
 
-            assert!(metric.add(8).is_ok());
+            metric.add(8);
             assert_eq!(metric_block.uint_value().unwrap(), 10);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -458,17 +545,25 @@ mod tests {
     fn string_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
-        let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let property = node.create_string_property("property", "test").unwrap();
-            let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
+            let property = node.create_string_property("property", "test");
+            let property_block = node
+                .state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .heap
+                .get_block(property.block_index.unwrap())
+                .unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
             assert_eq!(property_block.property_format().unwrap(), PropertyFormat::String);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            assert!(property.set("test-set").is_ok());
+            property.set("test-set");
             assert_eq!(property_block.property_total_length().unwrap(), 8);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -478,17 +573,25 @@ mod tests {
     fn bytes_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX).unwrap();
-        let node_block = node.state.lock().heap.get_block(node.block_index).unwrap();
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let property = node.create_bytes_property("property", b"test").unwrap();
-            let property_block = node.state.lock().heap.get_block(property.block_index).unwrap();
+            let property = node.create_bytes_property("property", b"test");
+            let property_block = node
+                .state
+                .as_ref()
+                .unwrap()
+                .lock()
+                .heap
+                .get_block(property.block_index.unwrap())
+                .unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
             assert_eq!(property_block.property_format().unwrap(), PropertyFormat::Bytes);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            assert!(property.set(b"test-set").is_ok());
+            property.set(b"test-set");
             assert_eq!(property_block.property_total_length().unwrap(), 8);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -502,20 +605,20 @@ mod tests {
         // Types should all be equal to another type. This is to enable clients
         // with inspect types in their structs be able to derive PartialEq and
         // Eq smoothly.
-        assert_eq!(root, &root.create_child("child1")?);
-        assert_eq!(root.create_int_metric("metric1", 1)?, root.create_int_metric("metric2", 2)?);
+        assert_eq!(root, &root.create_child("child1"));
+        assert_eq!(root.create_int_metric("metric1", 1), root.create_int_metric("metric2", 2));
         assert_eq!(
-            root.create_double_metric("metric1", 1.0)?,
-            root.create_double_metric("metric2", 2.0)?
+            root.create_double_metric("metric1", 1.0),
+            root.create_double_metric("metric2", 2.0)
         );
-        assert_eq!(root.create_uint_metric("metric1", 1)?, root.create_uint_metric("metric2", 2)?);
+        assert_eq!(root.create_uint_metric("metric1", 1), root.create_uint_metric("metric2", 2));
         assert_eq!(
-            root.create_string_property("metric1", "value1")?,
-            root.create_string_property("metric2", "value2")?
+            root.create_string_property("metric1", "value1"),
+            root.create_string_property("metric2", "value2")
         );
         assert_eq!(
-            root.create_bytes_property("metric1", b"value1")?,
-            root.create_bytes_property("metric2", b"value2")?
+            root.create_bytes_property("metric1", b"value1"),
+            root.create_bytes_property("metric2", b"value2")
         );
 
         Ok(())

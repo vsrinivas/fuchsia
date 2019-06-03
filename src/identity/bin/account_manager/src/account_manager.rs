@@ -99,13 +99,13 @@ impl AccountManager {
         }
 
         // Initialize the structs used to output state through the inspect system.
-        let auth_providers_inspect = inspect::AuthProviders::new(inspector.root())?;
+        let auth_providers_inspect = inspect::AuthProviders::new(inspector.root());
         let auth_provider_types: Vec<String> =
             auth_provider_config.iter().map(|apc| apc.auth_provider_type.clone()).collect();
         let _ = auth_providers_inspect.types.set(&auth_provider_types.join(","));
-        let accounts_inspect = inspect::Accounts::new(inspector.root())?;
+        let accounts_inspect = inspect::Accounts::new(inspector.root());
         let _ = accounts_inspect.total.set(ids_to_handlers.len() as u64);
-        let event_emitter = AccountEventEmitter::new(inspector.root())?;
+        let event_emitter = AccountEventEmitter::new(inspector.root());
 
         Ok(Self {
             ids_to_handlers: Mutex::new(ids_to_handlers),
@@ -507,10 +507,10 @@ mod tests {
                 existing_ids.into_iter().map(|id| (LocalAccountId::new(id), None)).collect(),
             ),
             context: Arc::new(AccountHandlerContext::new(&vec![])),
-            event_emitter: AccountEventEmitter::new(inspector.root()).unwrap(),
+            event_emitter: AccountEventEmitter::new(inspector.root()),
             data_dir: data_dir.to_path_buf(),
-            accounts_inspect: inspect::Accounts::new(inspector.root()).unwrap(),
-            _auth_providers_inspect: inspect::AuthProviders::new(inspector.root()).unwrap(),
+            accounts_inspect: inspect::Accounts::new(inspector.root()),
+            _auth_providers_inspect: inspect::AuthProviders::new(inspector.root()),
         }
     }
 

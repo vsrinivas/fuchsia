@@ -7,7 +7,6 @@
 //! This module defines the format and meaning of all the inspect information published by
 //! account_manager.
 
-use failure::Error;
 use fuchsia_inspect::vmo::{Node, StringProperty, UintMetric};
 
 /// An abstraction over the properties of the account set that we expose via fuchsia-inspect.
@@ -25,11 +24,11 @@ pub struct Accounts {
 impl Accounts {
     /// Creates a new Accounts as a child of the supplied node, or returns an Error if that
     /// was not possible.
-    pub fn new(parent: &Node) -> Result<Self, Error> {
-        let node = parent.create_child("accounts")?;
-        let total = (&node).create_uint_metric("total", 0)?;
-        let active = (&node).create_uint_metric("active", 0)?;
-        Ok(Accounts { _node: node, total, active })
+    pub fn new(parent: &Node) -> Self {
+        let node = parent.create_child("accounts");
+        let total = (&node).create_uint_metric("total", 0);
+        let active = (&node).create_uint_metric("active", 0);
+        Accounts { _node: node, total, active }
     }
 }
 
@@ -48,11 +47,11 @@ pub struct Listeners {
 impl Listeners {
     /// Creates a new Listeners as a child of the supplied node, or returns an Error if that
     /// was not possible.
-    pub fn new(parent: &Node) -> Result<Self, Error> {
-        let node = parent.create_child("listeners")?;
-        let active = (&node).create_uint_metric("active", 0)?;
-        let events = (&node).create_uint_metric("events", 0)?;
-        Ok(Listeners { _node: node, active, events })
+    pub fn new(parent: &Node) -> Self {
+        let node = parent.create_child("listeners");
+        let active = (&node).create_uint_metric("active", 0);
+        let events = (&node).create_uint_metric("events", 0);
+        Listeners { _node: node, active, events }
     }
 }
 
@@ -69,9 +68,9 @@ pub struct AuthProviders {
 impl AuthProviders {
     /// Creates a new AuthProviders as a child of the supplied node, or returns an Error if that
     /// was not possible.
-    pub fn new(parent: &Node) -> Result<Self, Error> {
-        let node = parent.create_child("auth_providers")?;
-        let types = (&node).create_string_property("types", "")?;
-        Ok(AuthProviders { _node: node, types })
+    pub fn new(parent: &Node) -> Self {
+        let node = parent.create_child("auth_providers");
+        let types = (&node).create_string_property("types", "");
+        AuthProviders { _node: node, types }
     }
 }

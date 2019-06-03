@@ -7,7 +7,6 @@
 //! presence and states during their lifetime.
 
 use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
-use failure::Error;
 use fidl_fuchsia_auth_account::{AccountListenerOptions, AccountListenerProxy};
 use fuchsia_inspect::vmo::{Metric, Node};
 use futures::future::*;
@@ -91,9 +90,9 @@ pub struct AccountEventEmitter {
 
 impl AccountEventEmitter {
     /// Create a new emitter with no clients.
-    pub fn new(parent: &Node) -> Result<AccountEventEmitter, Error> {
-        let inspect = inspect::Listeners::new(parent)?;
-        Ok(Self { clients: Mutex::new(Vec::new()), inspect })
+    pub fn new(parent: &Node) -> Self {
+        let inspect = inspect::Listeners::new(parent);
+        Self { clients: Mutex::new(Vec::new()), inspect }
     }
 
     /// Send an event to all active listeners filtered by their respective options. Awaits until
@@ -161,7 +160,7 @@ mod tests {
     /// Creates a new AccountEventEmitter whose inspect interface is not exported
     fn create_account_event_emitter() -> AccountEventEmitter {
         let inspector = Inspector::new().unwrap();
-        AccountEventEmitter::new(inspector.root()).unwrap()
+        AccountEventEmitter::new(inspector.root())
     }
 
     #[fuchsia_async::run_until_stalled(test)]
