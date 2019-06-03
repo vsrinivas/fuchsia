@@ -92,12 +92,6 @@ zx_status_t split_syscall_flags(
     // Figure out alignment.
     uint8_t alignment = static_cast<uint8_t>(flags >> ZX_VM_ALIGN_BASE);
 
-    if ((alignment > 0) && (vmar & VMAR_FLAG_COMPACT)) {
-        // TODO(ZX-3978): the semi-compact allocator does not support
-        // larger than 4KB alignments.
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     if (((alignment < 10) && (alignment != 0)) || (alignment > 32)) {
         return ZX_ERR_INVALID_ARGS;
     }

@@ -615,13 +615,8 @@ bool alignment_vmar_map_test() {
     zx_handle_t vmar;
     ASSERT_EQ(MakeManualAlignedVmar(vmar_size, &vmar), ZX_OK);
 
-    // Alignment cannot be used with "compact allocations". This is ZX-3978.
-    zx_vaddr_t dummy;
-    EXPECT_EQ(zx_vmar_map(vmar,
-        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_COMPACT,
-        0, vmo, 0, size, &dummy), ZX_ERR_INVALID_ARGS);
-
     // Specific base + offset does not meet the alignment, so it fails.
+    zx_vaddr_t dummy;
     EXPECT_EQ(zx_vmar_map(vmar,
         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_SPECIFIC,
         4096, vmo, 0, size, &dummy), ZX_ERR_INVALID_ARGS);
@@ -658,6 +653,18 @@ bool alignment_vmar_map_test() {
         ASSERT_EQ(zx_vmar_unmap(vmar, mapping_addr, size), ZX_OK);
     }
 
+    // Alignment cannot be used with compact vmars. This is ZX-3978.
+    zx_handle_t child_vmar;
+    uintptr_t mapping_addr = 0u;
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_COMPACT,
+        0, size, &child_vmar, &mapping_addr), ZX_OK);
+    EXPECT_EQ(zx_vmar_map(child_vmar,
+        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALIGN_8KB,
+        0, vmo, 0, PAGE_SIZE, &dummy), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_vmar_destroy(child_vmar), ZX_OK);
+    ASSERT_EQ(zx_handle_close(child_vmar), ZX_OK);
+
     ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
     ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
     ASSERT_EQ(zx_handle_close(vmo), ZX_OK);
@@ -673,14 +680,9 @@ bool alignment_vmar_allocate_test() {
     zx_handle_t vmar;
     ASSERT_EQ(MakeManualAlignedVmar(vmar_size, &vmar), ZX_OK);
 
-    // Alignment cannot be used with "compact allocations". This is ZX-3978.
+    // Specific base + offset does not meet the alignment, so it fails.
     zx_vaddr_t dummy_a;
     zx_handle_t dummy_h;
-    EXPECT_EQ(zx_vmar_allocate(vmar,
-        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_COMPACT,
-        0, size, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
-
-    // Specific base + offset does not meet the alignment, so it fails.
     EXPECT_EQ(zx_vmar_allocate(vmar,
         ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_SPECIFIC,
         4096, size, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
@@ -717,6 +719,19 @@ bool alignment_vmar_allocate_test() {
         ASSERT_EQ(zx_vmar_destroy(child_vmar), ZX_OK);
         ASSERT_EQ(zx_handle_close(child_vmar), ZX_OK);
     }
+
+    // Compact aligned vmars can be allocated, but alignment can't
+    // be used with compact vmars. This is ZX-3978.
+    zx_handle_t child_vmar;
+    uintptr_t mapping_addr = 0u;
+    EXPECT_EQ(zx_vmar_allocate(vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB | ZX_VM_COMPACT,
+        0, size, &child_vmar, &mapping_addr), ZX_OK);
+    EXPECT_EQ(zx_vmar_allocate(child_vmar,
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_8KB,
+        0, PAGE_SIZE, &dummy_h, &dummy_a), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(zx_vmar_destroy(child_vmar), ZX_OK);
+    ASSERT_EQ(zx_handle_close(child_vmar), ZX_OK);
 
     ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
     ASSERT_EQ(zx_handle_close(vmar), ZX_OK);

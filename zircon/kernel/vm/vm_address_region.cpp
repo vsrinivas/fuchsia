@@ -998,6 +998,12 @@ zx_status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size,
     align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;
 
+    if (align > PAGE_SIZE) {
+        // TODO(ZX-3978): the semi-compact allocator does not support
+        // larger than 4KB alignments.
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     if (unlikely(subregions_.size() == 0)) {
         return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
     }

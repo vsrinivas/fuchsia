@@ -45,14 +45,16 @@ Creates a new VMAR within the one specified by *parent_vmar*.
 
 *offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** set.
 
-In addition, when not using **ZX_VM_COMPACT** one of the following
-power-of-two alignment flags can added:
+In addition, the following power-of-two alignment flags can added:
 - **ZX_VM_ALIGN_1KB** aligns *child_addr* to a power-of-2 at least 1K bytes.
 - **ZX_VM_ALIGN_2KB** aligns *child_addr* to a power-of-2 at least 2K bytes.
 - **ZX_VM_ALIGN_4KB** aligns *child_addr* to a power-of-2 at least 4K bytes.
 - **ZX_VM_ALIGN_8KB** aligns *child_addr* to a power-of-2 at least 8K bytes.
 and continues up to
 - **ZX_VM_ALIGN_4GB** aligns *child_addr* to a power-of-2 at least 4G bytes.
+
+TODO(ZX-3978): Currently, alignment flags greater than 4KB cannot be used when
+allocating a new VMAR within a compact VMAR.
 
 Using **ZX_VM_ALIGN** flags with **ZX_VM_SPECIFIC** will fail if the
 *partent_vmar* base address + *offset* are not aligned to the requested
