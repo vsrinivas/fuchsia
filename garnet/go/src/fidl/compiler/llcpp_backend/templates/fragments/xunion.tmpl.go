@@ -16,7 +16,7 @@ extern "C" const fidl_type_t {{ .TableType }};
 //{{ . }}
 {{- end}}
 struct {{ .Name }} {
-  {{ .Name }}() : ordinal_(Tag::kUnknown), padding_{}, envelope_{} {}
+  {{ .Name }}() : ordinal_(Tag::kUnknown), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
     kUnknown = 0,
@@ -59,8 +59,7 @@ struct {{ .Name }} {
 
   {{- /* All fields are private to maintain standard layout */}}
   Tag ordinal_;
-  [[maybe_unused]]
-  uint32_t padding_;
+  FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
 };
 {{- end }}
@@ -82,7 +81,6 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   {{ $union := . -}}
   static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_t));
   static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
-  static_assert(offsetof({{ .Name }}, padding_) == offsetof(fidl_xunion_t, padding));
   static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 {{- end }}
