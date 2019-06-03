@@ -103,6 +103,10 @@ zx_status_t SerialDevice::WorkerThread() {
             break;
         }
 
+        if (items[WAIT_ITEM_EVENT].pending & kEventCancelSignal) {
+            break;
+        }
+
         if (items[WAIT_ITEM_EVENT].pending & kEventReadableSignal) {
             size_t length;
             status = serial_.Read(in_buffer + in_buffer_count,
@@ -252,8 +256,8 @@ zx_status_t SerialDevice::DdkClose(uint32_t flags) {
     fbl::AutoLock al(&lock_);
 
     if (open_) {
-        serial_.SetNotifyCallback(&kNoCallback);
         serial_.Enable(false);
+        serial_.SetNotifyCallback(&kNoCallback);
         open_ = false;
         return ZX_OK;
     } else {
@@ -329,6 +333,13 @@ zx_status_t SerialDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 void SerialDevice::DdkRelease() {
     serial_.Enable(false);
     serial_.SetNotifyCallback(&kNoCallback);
+
+    // Clear all read/write signals, cancel the thread.
+    if (socket_ != ZX_HANDLE_INVALID) {
+        event_.signal(kEventReadableSignal | kEventWritableSignal, kEventCancelSignal);
+        thrd_join(thread_, nullptr);
+    }
+
     event_.reset();
     socket_.reset();
     delete this;
