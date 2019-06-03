@@ -4,6 +4,7 @@
 
 #include "zx_channel_params.h"
 
+#include <string>
 #include <vector>
 
 #include "src/developer/debug/ipc/register_desc.h"
@@ -14,6 +15,27 @@
 #include "src/lib/fxl/logging.h"
 
 namespace fidlcat {
+
+const std::vector<zxdb::Register>* ZxChannelParamsBuilder::GetGeneralRegisters(
+    fxl::WeakPtr<zxdb::Thread> thread, const zxdb::Err& err,
+    const zxdb::RegisterSet& in_regs) {
+  if (!thread) {
+    Cancel(zxdb::Err(zxdb::ErrType::kGeneral,
+                     "Error reading registers: thread went away"));
+    return nullptr;
+  }
+  if (!err.ok()) {
+    Cancel(zxdb::Err(err.type(), "Error reading registers" + err.msg()));
+    return nullptr;
+  }
+  auto regs_it =
+      in_regs.category_map().find(debug_ipc::RegisterCategory::Type::kGeneral);
+  if (regs_it == in_regs.category_map().end()) {
+    Cancel(zxdb::Err(zxdb::ErrType::kGeneral, "Can't read registers"));
+    return nullptr;
+  }
+  return &regs_it->second;
+}
 
 // This is called when we want to abort the current build.  Callers should not
 // continue to try to build after it is called.
@@ -143,26 +165,15 @@ void ZxChannelParamsBuilder::BuildZxChannelParamsAndContinue(
   thread->ReadRegisters(register_types, [this, thread, &registerer](
                                             const zxdb::Err& err,
                                             const zxdb::RegisterSet& in_regs) {
-    if (!thread) {
-      Cancel(zxdb::Err(zxdb::ErrType::kGeneral,
-                       "Error reading registers: thread went away"));
-    }
-    if (!err.ok()) {
-      Cancel(zxdb::Err(err.type(), "Error reading registers" + err.msg()));
-    }
-
-    auto regs_it = in_regs.category_map().find(
-        debug_ipc::RegisterCategory::Type::kGeneral);
-    if (regs_it == in_regs.category_map().end()) {
-      Cancel(zxdb::Err(zxdb::ErrType::kInput,
-                       "zx_channel function params not found?"));
+    auto general_registers = GetGeneralRegisters(thread, err, in_regs);
+    if (general_registers == nullptr) {
       return;
     }
 
     if (in_regs.arch() == debug_ipc::Arch::kX64) {
-      BuildX86AndContinue(thread, regs_it->second, registerer);
+      BuildX86AndContinue(thread, *general_registers, registerer);
     } else if (in_regs.arch() == debug_ipc::Arch::kArm64) {
-      BuildArmAndContinue(thread, regs_it->second, registerer);
+      BuildArmAndContinue(thread, *general_registers, registerer);
     } else {
       Cancel(zxdb::Err(zxdb::ErrType::kCanceled, "Unknown arch"));
     }
@@ -313,25 +324,28 @@ void ZxChannelReadParamsBuilder::FinishChannelReadX86(
     thread->ReadRegisters(
         register_types,
         [this, thread](const zxdb::Err& err, const zxdb::RegisterSet& in_regs) {
-          if (!thread || !err.ok()) {
-            Cancel(err);
+          auto general_registers = GetGeneralRegisters(thread, err, in_regs);
+          if (general_registers == nullptr) {
             return;
           }
-          auto regs_it = in_regs.category_map().find(
-              debug_ipc::RegisterCategory::Type::kGeneral);
-          if (regs_it == in_regs.category_map().end()) {
-            // TODO: coherent error message
-            Cancel(err);
-            return;
-          }
-          auto& regs = regs_it->second;
+
           // See if the stack pointer has regressed, if not, step some more.
-          uint64_t stack_pointer =
-              GetRegisterValue<uint64_t>(regs, debug_ipc::RegisterID::kX64_rsp);
+          uint64_t stack_pointer = GetRegisterValue<uint64_t>(
+              *general_registers, debug_ipc::RegisterID::kX64_rsp);
           if (stack_pointer > first_sp_) {
-            GetPerThreadState()[thread->GetKoid()] =
-                PerThreadState::READING_ACTUAL_BYTES;
-            GetResultAndContinue(thread);
+            int64_t result = GetRegisterValue<int64_t>(
+                *general_registers, debug_ipc::RegisterID::kX64_rax);
+            if (result < 0) {
+              std::string message =
+                  "aborted zx_channel_read (errno=" + std::to_string(result) +
+                  ")";
+              err_ = zxdb::Err(zxdb::ErrType::kGeneral, message);
+              Finalize();
+            } else {
+              GetPerThreadState()[thread->GetKoid()] =
+                  PerThreadState::READING_ACTUAL_BYTES;
+              GetResultAndContinue(thread);
+            }
           } else {
             GetPerThreadState()[thread->GetKoid()] = PerThreadState::STEPPING;
             FinishChannelReadX86(thread);
@@ -358,8 +372,30 @@ void ZxChannelReadParamsBuilder::FinishChannelReadArm(
     settings.one_shot = true;
     registerer_->CreateNewBreakpoint(settings);
     registerer_->Register(thread->GetKoid(), [this, thread](zxdb::Thread* t) {
-      GetPerThreadState()[thread_koid_] = PerThreadState::READING_ACTUAL_BYTES;
-      GetResultAndContinue(thread);
+      std::vector<debug_ipc::RegisterCategory::Type> register_types = {
+          debug_ipc::RegisterCategory::Type::kGeneral};
+      thread->ReadRegisters(
+          register_types, [this, thread](const zxdb::Err& err,
+                                         const zxdb::RegisterSet& in_regs) {
+            auto general_registers = GetGeneralRegisters(thread, err, in_regs);
+            if (general_registers == nullptr) {
+              return;
+            }
+
+            int64_t result = GetRegisterValue<int64_t>(
+                *general_registers, debug_ipc::RegisterID::kARMv8_x0);
+            if (result < 0) {
+              std::string message =
+                  "aborted zx_channel_read (errno=" + std::to_string(result) +
+                  ")";
+              err_ = zxdb::Err(zxdb::ErrType::kGeneral, message);
+              Finalize();
+            } else {
+              GetPerThreadState()[thread_koid_] =
+                  PerThreadState::READING_ACTUAL_BYTES;
+              GetResultAndContinue(thread);
+            }
+          });
     });
     thread->Continue();
   }
@@ -384,9 +420,8 @@ void ZxChannelReadParamsBuilder::GetResultAndContinue(
             GetPerThreadState()[thread_koid_] =
                 PerThreadState::READING_ACTUAL_HANDLES;
           } else {
-            zxdb::Err e = zxdb::Err(zxdb::ErrType::kGeneral,
-                                    "Malformed zx_channel_read call");
-            Cancel(err);
+            Cancel(zxdb::Err(zxdb::ErrType::kGeneral,
+                             "Malformed zx_channel_read call"));
             return;
           }
           GetResultAndContinue(thread);

@@ -54,6 +54,11 @@ class DataForZxChannelTest {
     current_symbol_address_ = address;
   }
 
+  int64_t zx_channel_read_result() const { return zx_channel_read_result_; }
+  void set_zx_channel_read_result(int64_t zx_channel_read_result) {
+    zx_channel_read_result_ = zx_channel_read_result;
+  }
+
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> GetModuleRef(
       zxdb::Session* session) {
     // Create a module with zx_channel_write and zx_channel_read
@@ -128,150 +133,132 @@ class DataForZxChannelTest {
         << " and actual size: " << block.data.size();
   }
 
+  void Populate32BitRegister(debug_ipc::RegisterID register_id, uint32_t value,
+                             std::vector<debug_ipc::Register>* registers) {
+    Populate64BitRegister(register_id, value, registers);
+  }
+
+  void Populate64BitRegister(debug_ipc::RegisterID register_id, uint64_t value,
+                             std::vector<debug_ipc::Register>* registers) {
+    debug_ipc::Register& reg = registers->emplace_back();
+    reg.id = register_id;
+    for (int i = 0; i < 64; i += 8) {
+      reg.data.push_back((value >> i) & 0xff);
+    }
+  }
+
   void PopulateRegisters(debug_ipc::RegisterCategory& category) {
     category.type = debug_ipc::RegisterCategory::Type::kGeneral;
-    // Assumes Little Endian
-    const uint8_t* address_as_bytes =
-        reinterpret_cast<const uint8_t*>(&kBytesAddress);
-
-    const uint8_t* handles_address_as_bytes =
-        reinterpret_cast<const uint8_t*>(&kHandlesAddress);
-
-    const uint8_t* stack_pointer_as_bytes =
-        reinterpret_cast<const uint8_t*>(&current_stack_ptr_);
-
-    const uint8_t* actual_bytes_ptr_as_bytes =
-        reinterpret_cast<const uint8_t*>(&kActualBytesPtr);
-
-    const uint8_t* actual_handles_ptr_as_bytes =
-        reinterpret_cast<const uint8_t*>(&kActualHandlesPtr);
-
-    std::map<debug_ipc::RegisterID, std::vector<uint8_t>> values;
+    std::vector<debug_ipc::Register>& registers = category.registers;
     if (current_symbol_address_ == kWriteElfSymbolAddress) {
       if (arch_ == debug_ipc::Arch::kArm64) {
-        values = {
-            // zx_handle_t handle
-            {debug_ipc::RegisterID::kARMv8_x0, {0xb0, 0x1d, 0xfa, 0xce}},
-            // uint32_t options
-            {debug_ipc::RegisterID::kARMv8_x1, {0x00, 0x00, 0x00, 0x00}},
-            // bytes_address
-            {debug_ipc::RegisterID::kARMv8_x2,
-             std::vector<uint8_t>(address_as_bytes,
-                                  address_as_bytes + num_bytes())},
-            // num_bytes
-            {debug_ipc::RegisterID::kARMv8_x3,
-             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
-            // handles_address
-            {debug_ipc::RegisterID::kARMv8_x4,
-             std::vector<uint8_t>(handles_address_as_bytes,
-                                  handles_address_as_bytes +
-                                      (sizeof(zx_handle_t) * num_handles()))},
-            // num_handles
-            {debug_ipc::RegisterID::kARMv8_x5,
-             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
-            // stack pointer
-            {debug_ipc::RegisterID::kARMv8_sp,
-             std::vector<uint8_t>(
-                 stack_pointer_as_bytes,
-                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+        // zx_handle_t handle
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x0, 0xcefa1db0,
+                              &registers);
+        // uint32_t options
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x1, 0, &registers);
+        // bytes_address
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x2, kBytesAddress,
+                              &registers);
+        // num_bytes
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x3, num_bytes(),
+                              &registers);
+        // handles_address
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x4, kHandlesAddress,
+                              &registers);
+        // num_handles
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x5, num_handles(),
+                              &registers);
+        // stack pointer
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
+                              current_stack_ptr_, &registers);
       } else if (arch_ == debug_ipc::Arch::kX64) {
-        values = {
-            // zx_handle_t handle
-            {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
-            // uint32_t options
-            {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
-            // bytes_address
-            {debug_ipc::RegisterID::kX64_rdx,
-             std::vector<uint8_t>(address_as_bytes,
-                                  address_as_bytes + num_bytes())},
-            // num_bytes
-            {debug_ipc::RegisterID::kX64_rcx,
-             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
-            // handles_address
-            {debug_ipc::RegisterID::kX64_r8,
-             std::vector<uint8_t>(handles_address_as_bytes,
-                                  handles_address_as_bytes +
-                                      (sizeof(zx_handle_t) * num_handles()))},
-            // num_handles
-            {debug_ipc::RegisterID::kX64_r9,
-             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
-            // stack pointer
-            {debug_ipc::RegisterID::kX64_rsp,
-             std::vector<uint8_t>(
-                 stack_pointer_as_bytes,
-                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+        // zx_handle_t handle
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_rdi, 0xcefa1db0,
+                              &registers);
+        // uint32_t options
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_rsi, 0, &registers);
+        // bytes_address
+        Populate64BitRegister(debug_ipc::RegisterID::kX64_rdx, kBytesAddress,
+                              &registers);
+        // num_bytes
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_rcx, num_bytes(),
+                              &registers);
+        // handles_address
+        Populate64BitRegister(debug_ipc::RegisterID::kX64_r8, kHandlesAddress,
+                              &registers);
+        // num_handles
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_r9, num_handles(),
+                              &registers);
+        // stack pointer
+        Populate64BitRegister(debug_ipc::RegisterID::kX64_rsp,
+                              current_stack_ptr_, &registers);
       }
     } else if (current_symbol_address_ == kReadElfSymbolAddress) {
       if (arch_ == debug_ipc::Arch::kArm64) {
-        values = {
-            // zx_handle_t handle
-            {debug_ipc::RegisterID::kARMv8_x0, {0xb0, 0x1d, 0xfa, 0xce}},
-            // uint32_t options
-            {debug_ipc::RegisterID::kARMv8_x1, {0x00, 0x00, 0x00, 0x00}},
-            // bytes_address
-            {debug_ipc::RegisterID::kARMv8_x2,
-             std::vector<uint8_t>(address_as_bytes,
-                                  address_as_bytes + num_bytes())},
-            // handles_address
-            {debug_ipc::RegisterID::kARMv8_x3,
-             std::vector<uint8_t>(handles_address_as_bytes,
-                                  handles_address_as_bytes +
-                                      (sizeof(zx_handle_t) * num_handles()))},
-            // num_bytes
-            {debug_ipc::RegisterID::kARMv8_x4,
-             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
-            // num_handles
-            {debug_ipc::RegisterID::kARMv8_x5,
-             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
-            {debug_ipc::RegisterID::kARMv8_x6,
-             std::vector<uint8_t>(
-                 actual_bytes_ptr_as_bytes,
-                 actual_bytes_ptr_as_bytes + sizeof(kActualBytesPtr))},
-            {debug_ipc::RegisterID::kARMv8_x7,
-             std::vector<uint8_t>(
-                 actual_handles_ptr_as_bytes,
-                 actual_handles_ptr_as_bytes + sizeof(kActualHandlesPtr))},
-            // stack pointer
-            {debug_ipc::RegisterID::kARMv8_sp,
-             std::vector<uint8_t>(
-                 stack_pointer_as_bytes,
-                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+        if (first_register_read_) {
+          // zx_handle_t handle
+          Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x0, 0xcefa1db0,
+                                &registers);
+        } else {
+          // return value for zx_channel_read
+          Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x0,
+                                zx_channel_read_result_, &registers);
+        }
+        first_register_read_ = false;
+        // uint32_t options
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x1, 0, &registers);
+        // bytes_address
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x2, kBytesAddress,
+                              &registers);
+        // handles_address
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x3, kHandlesAddress,
+                              &registers);
+        // num_bytes
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x4, num_bytes(),
+                              &registers);
+        // num_handles
+        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x5, num_handles(),
+                              &registers);
+        // output num_bytes address
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x6, kActualBytesPtr,
+                              &registers);
+        // output num_handles address
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x7,
+                              kActualHandlesPtr, &registers);
+        // stack pointer
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
+                              current_stack_ptr_, &registers);
       } else if (arch_ == debug_ipc::Arch::kX64) {
-        values = {
-            // zx_handle_t handle
-            {debug_ipc::RegisterID::kX64_rdi, {0xb0, 0x1d, 0xfa, 0xce}},
-            // uint32_t options
-            {debug_ipc::RegisterID::kX64_rsi, {0x00, 0x00, 0x00, 0x00}},
-            // bytes_address
-            {debug_ipc::RegisterID::kX64_rdx,
-             std::vector<uint8_t>(address_as_bytes,
-                                  address_as_bytes + num_bytes())},
-            // handles_address
-            {debug_ipc::RegisterID::kX64_rcx,
-             std::vector<uint8_t>(handles_address_as_bytes,
-                                  handles_address_as_bytes +
-                                      (sizeof(zx_handle_t) * num_handles()))},
-            // num_bytes
-            {debug_ipc::RegisterID::kX64_r8,
-             {static_cast<unsigned char>(num_bytes()), 0x00, 0x00, 0x00}},
-            // num_handles
-            {debug_ipc::RegisterID::kX64_r9,
-             {static_cast<unsigned char>(num_handles()), 0x00, 0x00, 0x00}},
-            // stack pointer
-            {debug_ipc::RegisterID::kX64_rsp,
-             std::vector<uint8_t>(
-                 stack_pointer_as_bytes,
-                 stack_pointer_as_bytes + sizeof(current_stack_ptr_))}};
+        if (!first_register_read_) {
+          // return value for zx_channel_read
+          Populate64BitRegister(debug_ipc::RegisterID::kX64_rax,
+                                zx_channel_read_result_, &registers);
+        }
+        first_register_read_ = false;
+        // zx_handle_t handle
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_rdi, 0xcefa1db0,
+                              &registers);
+        // uint32_t options
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_rsi, 0, &registers);
+        // bytes_address
+        Populate64BitRegister(debug_ipc::RegisterID::kX64_rdx, kBytesAddress,
+                              &registers);
+        // handles_address
+        Populate64BitRegister(debug_ipc::RegisterID::kX64_rcx, kHandlesAddress,
+                              &registers);
+        // num_bytes
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_r8, num_bytes(),
+                              &registers);
+        // num_handles
+        Populate32BitRegister(debug_ipc::RegisterID::kX64_r9, num_handles(),
+                              &registers);
+        // stack pointer
+        Populate64BitRegister(debug_ipc::RegisterID::kX64_rsp,
+                              current_stack_ptr_, &registers);
       }
     } else {
       FXL_NOTREACHED() << "do not know what the registers should be at this IP";
-    }
-
-    std::vector<debug_ipc::Register>& registers = category.registers;
-    for (auto value : values) {
-      debug_ipc::Register& reg = registers.emplace_back();
-      reg.id = value.first;
-      reg.data = value.second;
     }
   }
 
@@ -304,6 +291,8 @@ class DataForZxChannelTest {
   zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
   uint8_t stack_[3 * sizeof(uint64_t)];
   debug_ipc::Arch arch_;
+  bool first_register_read_ = true;
+  int64_t zx_channel_read_result_ = ZX_OK;
 };
 
 const char* DataForZxChannelTest::zx_channel_write_name_ =
@@ -619,10 +608,14 @@ TEST_F(InterceptionWorkflowTestArm, ZxChannelWrite) { WriteTest(); }
 void InterceptionWorkflowTest::ReadTest() {
   ProcessController controller(this, session(), loop());
   bool hit_breakpoint = false;
-  // This will be executed when the zx_channel_write breakpoint is triggered.
+  // This will be executed when the zx_channel_read breakpoint is triggered.
   controller.workflow().SetZxChannelReadCallback(
       [this, &controller, &hit_breakpoint](const zxdb::Err& err,
                                            const ZxChannelParams& params) {
+        if (data().zx_channel_read_result() != ZX_OK) {
+          ASSERT_EQ(zxdb::ErrType::kGeneral, err.type()) << "error expected";
+          return;
+        }
         AlwaysQuit aq(&controller);
         hit_breakpoint = true;
         ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
@@ -681,15 +674,27 @@ void InterceptionWorkflowTest::ReadTest() {
 
   debug_ipc::MessageLoop::Current()->Run();
 
-  // At this point, the ZxChannelWrite callback should have been executed.
-  ASSERT_TRUE(hit_breakpoint);
+  if (data().zx_channel_read_result() == ZX_OK) {
+    // At this point, the ZxChannelRead callback should have been executed.
+    ASSERT_TRUE(hit_breakpoint);
 
-  // Making sure shutdown works.
-  debug_ipc::MessageLoop::Current()->Run();
+    // Making sure shutdown works.
+    debug_ipc::MessageLoop::Current()->Run();
+  }
 }
 
 TEST_F(InterceptionWorkflowTestX64, ZxChannelRead) { ReadTest(); }
 
 TEST_F(InterceptionWorkflowTestArm, ZxChannelRead) { ReadTest(); }
+
+TEST_F(InterceptionWorkflowTestX64, ZxChannelReadFailed) {
+  data().set_zx_channel_read_result(ZX_ERR_SHOULD_WAIT);
+  ReadTest();
+}
+
+TEST_F(InterceptionWorkflowTestArm, ZxChannelReadFailed) {
+  data().set_zx_channel_read_result(ZX_ERR_SHOULD_WAIT);
+  ReadTest();
+}
 
 }  // namespace fidlcat

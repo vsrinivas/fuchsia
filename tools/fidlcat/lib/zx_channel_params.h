@@ -140,6 +140,10 @@ class ZxChannelParamsBuilder {
                                    const std::vector<zxdb::Register>& regs,
                                    BreakpointRegisterer& registerer) = 0;
 
+  const std::vector<zxdb::Register>* GetGeneralRegisters(
+      fxl::WeakPtr<zxdb::Thread> thread, const zxdb::Err& err,
+      const zxdb::RegisterSet& in_regs);
+
   void Cancel(const zxdb::Err& e);
   void Finalize();
 
