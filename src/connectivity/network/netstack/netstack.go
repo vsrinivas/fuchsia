@@ -315,6 +315,9 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 
 func toSubnet(address tcpip.Address, prefixLen uint8) (tcpip.Subnet, error) {
 	m := util.CIDRMask(int(prefixLen), int(len(address)*8))
+	if len(m) == 0 {
+		return tcpip.Subnet{}, fmt.Errorf("net.CIDRMask(%d, %d) = nil", prefixLen, len(address)*8)
+	}
 	return tcpip.NewSubnet(util.ApplyMask(address, m), m)
 }
 

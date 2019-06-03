@@ -254,8 +254,8 @@ async fn add_del_interface_address() -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn add_interface_address_not_found() -> Result {
-    let name = stringify!(add_interface_address_not_found);
+async fn add_interface_address_errors() -> Result {
+    let name = stringify!(add_interface_address_errors);
 
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
@@ -273,6 +273,8 @@ async fn add_interface_address_not_found() -> Result {
         }),
         prefix_len: 0,
     };
+
+    // NET-2234 (crash on interface not found).
     let error = await!(stack.add_interface_address(max_id + 1, &mut interface_address))
         .context("failed to call add interface address")?
         .ok_or(failure::err_msg("failed to get add interface address error"))?;
@@ -280,6 +282,17 @@ async fn add_interface_address_not_found() -> Result {
         error.as_ref(),
         &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::NotFound }
     );
+
+    // NET-2334 (crash on invalid prefix length).
+    interface_address.prefix_len = 43;
+    let error = await!(stack.add_interface_address(max_id, &mut interface_address))
+        .context("failed to call add interface address")?
+        .ok_or(failure::err_msg("failed to get add interface address error"))?;
+    assert_eq!(
+        error.as_ref(),
+        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::BadState }
+    );
+
     Ok(())
 }
 
