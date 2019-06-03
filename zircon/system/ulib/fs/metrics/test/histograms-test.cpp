@@ -27,9 +27,14 @@ protected:
 constexpr zx::duration kDuration = zx::nsec(5);
 
 const std::vector<EventOptions>& GetOptionsSets() {
-    constexpr uint64_t kBlockCounts[] = {1, 5, 31, 32};
-    constexpr uint64_t kNodeDepths[] = {1, 2, 4, 8, 16, 32, 64, 128};
-    constexpr uint64_t kNodeDegrees[] = {1, 2, 4, 8, 16, 32, 64, 128, 1024, 1024 * 1024};
+    constexpr int64_t kBlockCounts[] = {std::numeric_limits<int64_t>::min(), 1, 5, 31, 32,
+                                        std::numeric_limits<int64_t>::max()};
+    constexpr int64_t kNodeDepths[] = {
+        std::numeric_limits<int64_t>::min(), 1, 2, 4, 8, 16, 32, 64, 128,
+        std::numeric_limits<int64_t>::max()};
+    constexpr int64_t kNodeDegrees[] = {
+        std::numeric_limits<int64_t>::min(), 1, 2, 4, 8, 16, 32, 64, 128, 1024, 1024 * 1024,
+        std::numeric_limits<int64_t>::max()};
     constexpr bool kBuffered[] = {true, false};
     constexpr bool kSuccess[] = {true, false};
 
@@ -59,15 +64,16 @@ const std::vector<EventOptions>& GetOptionsSets() {
     return option_set;
 }
 
+constexpr OperationType kOperations[] = {
+    OperationType::kClose,   OperationType::kRead,     OperationType::kWrite,
+    OperationType::kAppend,  OperationType::kTruncate, OperationType::kSetAttr,
+    OperationType::kGetAttr, OperationType::kReadDir,  OperationType::kSync,
+    OperationType::kLookUp,  OperationType::kCreate,   OperationType::kLink,
+    OperationType::kUnlink,
+};
+static_assert(fbl::count_of(kOperations) == kOperationCount, "Untested operation.");
+
 TEST_F(HistogramsTest, AllOptionsAreValid) {
-    static constexpr OperationType kOperations[] = {
-        OperationType::kClose,   OperationType::kRead,     OperationType::kWrite,
-        OperationType::kAppend,  OperationType::kTruncate, OperationType::kSetAttr,
-        OperationType::kGetAttr, OperationType::kReadDir,  OperationType::kSync,
-        OperationType::kLookUp,  OperationType::kCreate,   OperationType::kLink,
-        OperationType::kUnlink,
-    };
-    static_assert(fbl::count_of(kOperations) == kOperationCount, "Untested operation.");
 
     Histograms histograms = Histograms(&root_);
     std::set<uint64_t> histogram_ids;
@@ -87,6 +93,17 @@ TEST_F(HistogramsTest, AllOptionsAreValid) {
 
     ASSERT_EQ(histogram_ids.size(), histograms.GetHistogramCount(),
               "Failed to cover all histograms with all options set.");
+}
+
+TEST_F(HistogramsTest, DefaultLatencyEventSmokeTest) {
+    Histograms histograms = Histograms(&root_);
+    std::set<uint64_t> histogram_ids;
+
+    // This is will log an event with default options for every operation, which would crash with
+    // unitialized memory.
+    for (auto operation : kOperations) {
+        histograms.NewLatencyEvent(operation);
+    }
 }
 
 TEST_F(HistogramsTest, InvalidOptionsReturnsHistogramCount) {

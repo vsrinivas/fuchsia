@@ -17,15 +17,15 @@ namespace fs_metrics {
 // Properties of logged events, which are used internally to find the correct histogram.
 struct EventOptions {
     // Matches the block range of an operation.
-    int64_t block_count;
+    int64_t block_count = 0;
     // Used match the depth range of an operation.
-    int64_t node_depth;
+    int64_t node_depth = 0;
     // Used to match the node degree range of an operation.
-    int64_t node_degree;
+    int64_t node_degree = 0;
     // Used to mark an operation as buffered or cache-hit depending on the context.
-    bool buffered;
+    bool buffered = false;
     // Used to mark an operation as successfully completed.
-    bool success;
+    bool success = false;
 };
 
 // List of operations being recorded. Increase |kOperationCount| accordingly when editing this enum.
@@ -91,12 +91,12 @@ public:
     EventOptions* mutable_options() { return &options_; }
 
 private:
-    EventOptions options_;
+    EventOptions options_ = {};
     // Records an observation in histograms when LatencyEvent is destroyed or explictly
     // requested to record.
     OperationType operation_;
-    HistogramCollection* histograms_;
-    zx::ticks start_;
+    HistogramCollection* histograms_ = nullptr;
+    zx::ticks start_ = zx::ticks(0);
 };
 } // namespace internal
 
