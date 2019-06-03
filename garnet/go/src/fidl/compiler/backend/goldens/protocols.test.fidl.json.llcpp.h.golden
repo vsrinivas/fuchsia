@@ -60,9 +60,6 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
     tag_ = Tag::Invalid;
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, response_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1376,9 +1373,6 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) {
     tag_ = Tag::Invalid;
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof(WithErrorSyntax_ErrorAsEnum_Result, response_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }

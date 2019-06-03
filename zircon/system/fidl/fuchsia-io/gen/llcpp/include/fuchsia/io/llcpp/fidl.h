@@ -547,9 +547,6 @@ struct NodeInfo {
 
   NodeInfo(NodeInfo&& other) {
     tag_ = Tag::Invalid;
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof(NodeInfo, service_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }

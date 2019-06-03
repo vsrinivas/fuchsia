@@ -1078,9 +1078,6 @@ bool Allocator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 ::fuchsia::sysmem::BufferSpec::BufferSpec() {
   tag_ = Tag::Invalid;
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof(BufferSpec, image_) - sizeof(tag_));
 }
 
 ::fuchsia::sysmem::BufferSpec::~BufferSpec() {
@@ -1119,9 +1116,6 @@ ImageSpec& ::fuchsia::sysmem::BufferSpec::mutable_image() {
   if (which() != Tag::kImage) {
     Destroy();
     new (&image_) ImageSpec;
-    memset(reinterpret_cast<uint8_t*>(&image_) + sizeof(ImageSpec),
-           0,
-           sizeof(BufferSpec) - offsetof(BufferSpec, image_) - sizeof(ImageSpec));
   }
   tag_ = Tag::kImage;
   return image_;
@@ -1130,9 +1124,6 @@ ImageSpec& ::fuchsia::sysmem::BufferSpec::mutable_image() {
 
 ::fuchsia::sysmem::BufferFormat::BufferFormat() {
   tag_ = Tag::Invalid;
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof(BufferFormat, image_) - sizeof(tag_));
 }
 
 ::fuchsia::sysmem::BufferFormat::~BufferFormat() {
@@ -1171,9 +1162,6 @@ ImageFormat& ::fuchsia::sysmem::BufferFormat::mutable_image() {
   if (which() != Tag::kImage) {
     Destroy();
     new (&image_) ImageFormat;
-    memset(reinterpret_cast<uint8_t*>(&image_) + sizeof(ImageFormat),
-           0,
-           sizeof(BufferFormat) - offsetof(BufferFormat, image_) - sizeof(ImageFormat));
   }
   tag_ = Tag::kImage;
   return image_;

@@ -29,12 +29,6 @@ struct {{ .Name }} {
 
   {{ .Name }}({{ .Name }}&& other) {
     tag_ = Tag::Invalid;
-  {{- range $index, $member := .Members }}
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof({{ $union.Name }}, {{ .StorageName }}) - sizeof(tag_));
-    {{- break }}
-  {{- end }}
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -110,12 +104,6 @@ struct {{ .Name }} {
 
 {{ .Namespace }}::{{ .Name }}::{{ .Name }}() {
   tag_ = Tag::Invalid;
-{{- range $index, $member := .Members }}
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof({{ $union.Name }}, {{ .StorageName }}) - sizeof(tag_));
-  {{- break }}
-{{- end }}
 }
 
 {{ .Namespace }}::{{ .Name }}::~{{ .Name }}() {
@@ -162,9 +150,6 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   if (which() != Tag::{{ .TagName }}) {
     Destroy();
     new (&{{ .StorageName }}) {{ .Type.LLDecl }};
-    memset(reinterpret_cast<uint8_t*>(&{{ .StorageName }}) + sizeof({{ .Type.LLDecl }}),
-           0,
-           sizeof({{ $union.Name }}) - offsetof({{ $union.Name }}, {{ .StorageName }}) - sizeof({{ .Type.LLDecl }}));
   }
   tag_ = Tag::{{ .TagName }};
   return {{ .StorageName }};

@@ -1111,9 +1111,6 @@ struct BufferSpec {
 
   BufferSpec(BufferSpec&& other) {
     tag_ = Tag::Invalid;
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof(BufferSpec, image_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1364,9 +1361,6 @@ struct BufferFormat {
 
   BufferFormat(BufferFormat&& other) {
     tag_ = Tag::Invalid;
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof(BufferFormat, image_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }

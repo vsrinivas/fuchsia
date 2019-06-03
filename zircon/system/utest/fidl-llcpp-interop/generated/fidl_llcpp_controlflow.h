@@ -20,6 +20,7 @@ namespace controlflow {
 
 class ControlFlow;
 
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
 
 // Interface for testing shutdown/epitaphs etc.
 class ControlFlow final {
@@ -34,7 +35,7 @@ class ControlFlow final {
     fidl_message_header_t _hdr;
     int32_t reply;
 
-    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

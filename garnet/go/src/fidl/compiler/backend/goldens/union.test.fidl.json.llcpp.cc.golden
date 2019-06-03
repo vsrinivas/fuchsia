@@ -8,9 +8,6 @@ namespace name {
 
 ::test::name::Union::Union() {
   tag_ = Tag::Invalid;
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof(Union, Primitive_) - sizeof(tag_));
 }
 
 ::test::name::Union::~Union() {
@@ -54,9 +51,6 @@ int32_t& ::test::name::Union::mutable_Primitive() {
   if (which() != Tag::kPrimitive) {
     Destroy();
     new (&Primitive_) int32_t;
-    memset(reinterpret_cast<uint8_t*>(&Primitive_) + sizeof(int32_t),
-           0,
-           sizeof(Union) - offsetof(Union, Primitive_) - sizeof(int32_t));
   }
   tag_ = Tag::kPrimitive;
   return Primitive_;
@@ -66,9 +60,6 @@ int32_t& ::test::name::Union::mutable_Primitive() {
   if (which() != Tag::kStringNeedsConstructor) {
     Destroy();
     new (&StringNeedsConstructor_) ::fidl::StringView;
-    memset(reinterpret_cast<uint8_t*>(&StringNeedsConstructor_) + sizeof(::fidl::StringView),
-           0,
-           sizeof(Union) - offsetof(Union, StringNeedsConstructor_) - sizeof(::fidl::StringView));
   }
   tag_ = Tag::kStringNeedsConstructor;
   return StringNeedsConstructor_;
@@ -78,9 +69,6 @@ int32_t& ::test::name::Union::mutable_Primitive() {
   if (which() != Tag::kVectorStringAlsoNeedsConstructor) {
     Destroy();
     new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorView<::fidl::StringView>;
-    memset(reinterpret_cast<uint8_t*>(&VectorStringAlsoNeedsConstructor_) + sizeof(::fidl::VectorView<::fidl::StringView>),
-           0,
-           sizeof(Union) - offsetof(Union, VectorStringAlsoNeedsConstructor_) - sizeof(::fidl::VectorView<::fidl::StringView>));
   }
   tag_ = Tag::kVectorStringAlsoNeedsConstructor;
   return VectorStringAlsoNeedsConstructor_;

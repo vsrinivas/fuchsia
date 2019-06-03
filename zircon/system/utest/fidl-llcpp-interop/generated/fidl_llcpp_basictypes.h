@@ -37,9 +37,6 @@ struct SimpleUnion {
 
   SimpleUnion(SimpleUnion&& other) {
     tag_ = Tag::Invalid;
-    memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-           0,
-           offsetof(SimpleUnion, field_a_) - sizeof(tag_));
     if (this != &other) {
       MoveImpl_(std::move(other));
     }

@@ -8,9 +8,6 @@ namespace name {
 
 ::test::name::Union::Union() {
   tag_ = Tag::Invalid;
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof(Union, Field_) - sizeof(tag_));
 }
 
 ::test::name::Union::~Union() {
@@ -46,9 +43,6 @@ int32_t& ::test::name::Union::mutable_Field() {
   if (which() != Tag::kField) {
     Destroy();
     new (&Field_) int32_t;
-    memset(reinterpret_cast<uint8_t*>(&Field_) + sizeof(int32_t),
-           0,
-           sizeof(Union) - offsetof(Union, Field_) - sizeof(int32_t));
   }
   tag_ = Tag::kField;
   return Field_;

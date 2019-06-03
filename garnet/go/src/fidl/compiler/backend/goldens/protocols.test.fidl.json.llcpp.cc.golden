@@ -8,9 +8,6 @@ namespace name {
 
 ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result() {
   tag_ = Tag::Invalid;
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, response_) - sizeof(tag_));
 }
 
 ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Result() {
@@ -53,9 +50,6 @@ WithErrorSyntax_ErrorAsPrimitive_Response& ::test::name::WithErrorSyntax_ErrorAs
   if (which() != Tag::kResponse) {
     Destroy();
     new (&response_) WithErrorSyntax_ErrorAsPrimitive_Response;
-    memset(reinterpret_cast<uint8_t*>(&response_) + sizeof(WithErrorSyntax_ErrorAsPrimitive_Response),
-           0,
-           sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) - offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, response_) - sizeof(WithErrorSyntax_ErrorAsPrimitive_Response));
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -65,9 +59,6 @@ uint32_t& ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_err() {
   if (which() != Tag::kErr) {
     Destroy();
     new (&err_) uint32_t;
-    memset(reinterpret_cast<uint8_t*>(&err_) + sizeof(uint32_t),
-           0,
-           sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) - offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, err_) - sizeof(uint32_t));
   }
   tag_ = Tag::kErr;
   return err_;
@@ -2632,9 +2623,6 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
 
 ::test::name::WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {
   tag_ = Tag::Invalid;
-  memset(reinterpret_cast<uint8_t*>(&tag_) + sizeof(tag_),
-         0,
-         offsetof(WithErrorSyntax_ErrorAsEnum_Result, response_) - sizeof(tag_));
 }
 
 ::test::name::WithErrorSyntax_ErrorAsEnum_Result::~WithErrorSyntax_ErrorAsEnum_Result() {
@@ -2680,9 +2668,6 @@ WithErrorSyntax_ErrorAsEnum_Response& ::test::name::WithErrorSyntax_ErrorAsEnum_
   if (which() != Tag::kResponse) {
     Destroy();
     new (&response_) WithErrorSyntax_ErrorAsEnum_Response;
-    memset(reinterpret_cast<uint8_t*>(&response_) + sizeof(WithErrorSyntax_ErrorAsEnum_Response),
-           0,
-           sizeof(WithErrorSyntax_ErrorAsEnum_Result) - offsetof(WithErrorSyntax_ErrorAsEnum_Result, response_) - sizeof(WithErrorSyntax_ErrorAsEnum_Response));
   }
   tag_ = Tag::kResponse;
   return response_;
@@ -2692,9 +2677,6 @@ ErrorEnun& ::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_err() {
   if (which() != Tag::kErr) {
     Destroy();
     new (&err_) ErrorEnun;
-    memset(reinterpret_cast<uint8_t*>(&err_) + sizeof(ErrorEnun),
-           0,
-           sizeof(WithErrorSyntax_ErrorAsEnum_Result) - offsetof(WithErrorSyntax_ErrorAsEnum_Result, err_) - sizeof(ErrorEnun));
   }
   tag_ = Tag::kErr;
   return err_;

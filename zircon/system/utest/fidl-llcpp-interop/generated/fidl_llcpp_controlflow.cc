@@ -16,6 +16,7 @@ constexpr uint32_t kControlFlow_Shutdown_Ordinal = 2097819959u;
 constexpr uint32_t kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal = 557953488u;
 [[maybe_unused]]
 constexpr uint32_t kControlFlow_MustSendAccessDeniedEpitaph_Ordinal = 1394461447u;
+extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
 
 }  // namespace
 
