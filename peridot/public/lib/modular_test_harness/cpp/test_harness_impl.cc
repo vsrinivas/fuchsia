@@ -122,30 +122,6 @@ TestHarnessImpl::TestHarnessImpl(
 
 TestHarnessImpl::~TestHarnessImpl() = default;
 
-void TestHarnessImpl::GetService(
-    fuchsia::modular::testing::TestHarnessService service) {
-  switch (service.Which()) {
-    case fuchsia::modular::testing::TestHarnessService::Tag::kPuppetMaster: {
-      BufferSessionAgentService(std::move(service.puppet_master()));
-    } break;
-
-    case fuchsia::modular::testing::TestHarnessService::Tag::
-        kComponentContext: {
-      BufferSessionAgentService(std::move(service.component_context()));
-    } break;
-
-    case fuchsia::modular::testing::TestHarnessService::Tag::kAgentContext: {
-      BufferSessionAgentService(std::move(service.agent_context()));
-    } break;
-
-    case fuchsia::modular::testing::TestHarnessService::Tag::Empty: {
-      FXL_LOG(ERROR) << "The given TestHarnessService is empty.";
-      CloseBindingIfError(ZX_ERR_INVALID_ARGS);
-      return;
-    } break;
-  }
-}
-
 void TestHarnessImpl::ConnectToModularService(
     fuchsia::modular::testing::ModularService service) {
   switch (service.Which()) {
