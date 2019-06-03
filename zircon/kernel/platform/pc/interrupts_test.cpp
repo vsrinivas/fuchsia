@@ -100,6 +100,47 @@ bool TestRegisterInterruptHandler() {
     END_TEST;
 }
 
+bool TestRegisterInterruptHandlerTwice() {
+    BEGIN_TEST;
+
+    FakeIoApic::Reset();
+    fbl::AllocChecker ac;
+    auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
+    ASSERT_TRUE(ac.check(), "");
+    ASSERT_EQ(im->Init(), ZX_OK, "");
+
+    unsigned int kIrq = 1;
+
+    uint8_t handler1_arg = 4;
+    uintptr_t handler1 = 2;
+    uint8_t handler2_arg = 5;
+    uintptr_t handler2 = 3;
+
+    ASSERT_EQ(im->RegisterInterruptHandler(kIrq, reinterpret_cast<int_handler>(handler1),
+                                          &handler1_arg), ZX_OK, "");
+    uint8_t irq_x86_vector = FakeIoApic::entries[kIrq].x86_vector;
+    ASSERT_EQ(im->RegisterInterruptHandler(kIrq, reinterpret_cast<int_handler>(handler2),
+                                          &handler2_arg), ZX_ERR_ALREADY_BOUND, "");
+    ASSERT_EQ(irq_x86_vector, FakeIoApic::entries[kIrq].x86_vector, "");
+
+    // Make sure the entry matches the first installed
+    int_handler handler;
+    void* arg;
+    im->GetEntryByX86Vector(irq_x86_vector, &handler, &arg);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(handler), handler1, "");
+    EXPECT_EQ(arg, &handler1_arg, "");
+
+    // Unregister it
+    ASSERT_EQ(im->RegisterInterruptHandler(kIrq, nullptr, nullptr), ZX_OK, "");
+    EXPECT_EQ(FakeIoApic::entries[kIrq].x86_vector, 0, "");
+    // Make sure the entry matches
+    im->GetEntryByX86Vector(irq_x86_vector, &handler, &arg);
+    EXPECT_EQ(handler, nullptr, "");
+    EXPECT_EQ(arg, nullptr, "");
+
+    END_TEST;
+}
+
 bool TestUnregisterInterruptHandlerNotRegistered() {
     BEGIN_TEST;
 
@@ -165,6 +206,7 @@ bool TestRegisterInterruptHandlerTooMany() {
 
 UNITTEST_START_TESTCASE(pc_interrupt_tests)
 UNITTEST("RegisterInterruptHandler", TestRegisterInterruptHandler)
+UNITTEST("RegisterInterruptHandlerTwice", TestRegisterInterruptHandlerTwice)
 UNITTEST("UnregisterInterruptHandlerNotRegistered", TestUnregisterInterruptHandlerNotRegistered)
 UNITTEST("RegisterInterruptHandlerTooMany", TestRegisterInterruptHandlerTooMany)
 UNITTEST_END_TESTCASE(pc_interrupt_tests, "pc_interrupt", "Tests for external interrupts");

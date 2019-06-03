@@ -87,6 +87,21 @@ public:
         return handler_table_[x86_vector].InvokeIfPresent();
     }
 
+    // Register a handler for an external interrupt.
+    // |vector| is a "global IRQ" number used by the IOAPIC module.
+    //
+    // If |handler| is nullptr, |arg| is ignored and the specified |vector| has
+    // its current handler removed.
+    //
+    // If |handler| is not nullptr and no handler is currently installed for
+    // |vector|, |handler| will be installed and will be invoked with argument
+    // |arg| whenever that interrupt fires.
+    //
+    // If |handler| is not nullptr and a handler is already installed, this will
+    // return ZX_ERR_ALREADY_BOUND.
+    //
+    // If no more CPU interrupt vectors are available, returns
+    // ZX_ERR_NO_RESOURCES.
     zx_status_t RegisterInterruptHandler(unsigned int vector, int_handler handler, void* arg) {
         if (!IoApic::IsValidInterrupt(vector, 0 /* flags */)) {
             return ZX_ERR_INVALID_ARGS;
@@ -138,9 +153,9 @@ public:
         // Update the handler table and register the x86 vector with the io_apic.
         bool set = handler_table_[x86_vector].SetHandler(handler, arg);
         if (!set) {
-            // TODO(teisenbe): This seems like we should assert if we hit here.
-            // I believe this implies we allocated an already allocator vector.
-            p2ra_free_range(&x86_irq_vector_allocator_, x86_vector, 1);
+            // If we're here, then RegisterInterruptHandler() was called on the
+            // same vector twice to set the handler without clearing the handler
+            // in-between.
             return ZX_ERR_ALREADY_BOUND;
         }
 
