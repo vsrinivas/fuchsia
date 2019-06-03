@@ -299,10 +299,11 @@ bool ExtendFvm(off_t length) {
     BEGIN_HELPER;
     off_t current_length;
     ASSERT_TRUE(StatFile(fvm_path, &current_length));
-    fbl::unique_ptr<FvmContainer> fvmContainer;
-    ASSERT_EQ(FvmContainer::Create(fvm_path, DEFAULT_SLICE_SIZE, 0, current_length, &fvmContainer),
-              ZX_OK, "Failed to initialize fvm container");
-    ASSERT_EQ(fvmContainer->Extend(length), ZX_OK, "Failed to write to fvm file");
+    fbl::unique_ptr<Container> container;
+    ASSERT_EQ(ZX_OK, Container::Create(fvm_path, 0, current_length, 0, &container),
+              "Failed to initialize fvm container");
+    ASSERT_EQ(static_cast<FvmContainer*>(container.get())->Extend(length),
+              ZX_OK, "Failed to write to fvm file");
     ASSERT_TRUE(StatFile(fvm_path, &current_length));
     ASSERT_EQ(current_length, length);
     END_HELPER;
@@ -809,6 +810,33 @@ bool TestPaveZxcryptFail() {
     END_TEST;
 }
 
+constexpr size_t CalculateExtendedContainerSize(const size_t initial_container_size,
+                                                const size_t extended_container_size) {
+    const size_t initial_metadata_size = fvm::MetadataSize(initial_container_size,
+                                                           DEFAULT_SLICE_SIZE);
+    const size_t extended_metadata_size = fvm::MetadataSize(extended_container_size,
+                                                            DEFAULT_SLICE_SIZE);
+
+    if (extended_metadata_size == initial_metadata_size) {
+        return CalculateExtendedContainerSize(initial_container_size, extended_container_size * 2);
+    }
+
+    return extended_container_size;
+}
+
+// Test extend with values that ensure the FVM metadata size will increase.
+bool TestExtendChangesMetadataSize() {
+    BEGIN_TEST;
+    ASSERT_TRUE(CreateFvm(true, 0, DEFAULT_SLICE_SIZE, true /* should_pass */ ));
+    size_t extended_container_size = CalculateExtendedContainerSize(CONTAINER_SIZE, CONTAINER_SIZE);
+    ASSERT_GT(fvm::MetadataSize(extended_container_size, DEFAULT_SLICE_SIZE),
+              fvm::MetadataSize(CONTAINER_SIZE, DEFAULT_SLICE_SIZE));
+    ASSERT_TRUE(ExtendFvm(extended_container_size));
+    ASSERT_TRUE(ReportFvm());
+    ASSERT_TRUE(DestroyFvm());
+    END_TEST;
+}
+
 bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
     BEGIN_HELPER;
     ASSERT_LT(partition_count, MAX_PARTITIONS);
@@ -925,6 +953,8 @@ RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
 RUN_ALL_PAVE(8192)
 RUN_ALL_PAVE(DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)
+RUN_TEST_MEDIUM(TestExtendChangesMetadataSize)
+
 // Too small total limit for inodes. Expect failure
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 1, 0, 10)
 

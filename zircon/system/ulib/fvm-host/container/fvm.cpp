@@ -226,7 +226,8 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     // Then, we update the on-disk metadata to reflect the new size of the disk.
     // To avoid collision between relocated slices, this is done on a temporary file.
     uint64_t pslice_count = info_.SuperBlock()->pslice_count;
-    fvm::FormatInfo format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
+    fvm::FormatInfo source_format_info = fvm::FormatInfo::FromDiskSize(disk_size_, slice_size_);
+    fvm::FormatInfo target_format_info = fvm::FormatInfo::FromDiskSize(disk_size, slice_size_);
     for (uint32_t index = 1; index <= pslice_count; index++) {
         zx_status_t status;
         fvm::slice_entry_t* slice = nullptr;
@@ -241,7 +242,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
 
         fbl::Array<uint8_t> data(new uint8_t[slice_size_], slice_size_);
 
-        if (lseek(fd_.get(), format_info.GetSliceStart(index), SEEK_SET) < 0) {
+        if (lseek(fd_.get(), source_format_info.GetSliceStart(index), SEEK_SET) < 0) {
             fprintf(stderr, "Cannot seek to slice %u in current FVM\n", index);
             return ZX_ERR_BAD_STATE;
         }
@@ -252,7 +253,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
             return ZX_ERR_BAD_STATE;
         }
 
-        if (lseek(fd.get(), format_info.GetSliceStart(index), SEEK_SET) < 0) {
+        if (lseek(fd.get(), target_format_info.GetSliceStart(index), SEEK_SET) < 0) {
             fprintf(stderr, "Cannot seek to slice %u in new FVM\n", index);
             return ZX_ERR_BAD_STATE;
         }
@@ -354,7 +355,6 @@ size_t FvmContainer::SliceSize() const {
 zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
                                        FvmReservation* reserve) {
     info_.CheckValid();
-
     fbl::unique_ptr<Format> format;
     zx_status_t status;
     if ((status = Format::Create(path, type_name, &format)) != ZX_OK) {
