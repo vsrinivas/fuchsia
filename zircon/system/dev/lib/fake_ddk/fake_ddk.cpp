@@ -220,6 +220,10 @@ zx_status_t device_get_metadata_size(zx_device_t* device, uint32_t type, size_t*
     return fake_ddk::Bind::Instance()->DeviceGetMetadataSize(device, type, out_size);
 }
 
+void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
+    // This is currently a no-op.
+}
+
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}
 
 __WEAK zx_driver_rec __zircon_driver_rec__ = {};
