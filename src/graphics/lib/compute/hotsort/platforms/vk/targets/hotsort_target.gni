@@ -174,8 +174,9 @@ template("hotsort_target") {
   compiled_action_foreach(_gen_spv_target_name) {
     tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
     sources = _hs_comp_sources
-    inputs = _hs_target_gen_includes +
-             get_target_outputs(":${_gen_copy_target_name}")
+    inputs =  [
+      "${_hotsort_dir}/platforms/vk/targets/hs_glsl_macros.h"
+    ] + _hs_target_gen_includes + get_target_outputs(":${_gen_copy_target_name}")
     outputs = [
       "${_hs_output_dir}/spv/{{source_name_part}}.spv",
     ]

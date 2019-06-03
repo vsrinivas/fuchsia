@@ -416,7 +416,7 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_TRANSPOSE_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE();\n");
+          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
 
           fprintf(target->state->source, "HS_SLAB_GLOBAL_IDX_OUT();\n");
         }
@@ -457,7 +457,7 @@ hsg_target_glsl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_BS_KERNEL_PREAMBLE: {
-          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE();\n");
+          fprintf(target->state->source, "HS_SUBGROUP_PREAMBLE()\n");
 
           fprintf(target->state->source, "HS_SLAB_GLOBAL_IDX_IN_OUT();\n");
         }

@@ -204,17 +204,15 @@
 //
 
 //
-// Note that subgroup sizes in Vulkan 1.1 aren't necessarily known in
-// advance -- at least on Intel GEN.  When we have control over which
-// subgroup size is selected at shader compile time then some of the
-// address calculation macros will be written in a less subtle manner.
+// In early versions of Vulkan 1.1, subgroup sizes weren't necessarily
+// known in advance -- at least on Intel GEN.
 //
-
+// Assume that a Vulkan API fix is forthcoming.
+//
 #define HS_SLAB_GLOBAL_BASE()                                                                      \
   const uint gmem_base = (gl_GlobalInvocationID.x & ~(HS_SLAB_THREADS - 1)) * HS_SLAB_HEIGHT
 
-#define HS_SLAB_GLOBAL_OFFSET()                                                                    \
-  const uint gmem_offset = (gl_LocalInvocationID.x & (HS_SLAB_THREADS - 1))
+#define HS_SLAB_GLOBAL_OFFSET() const uint gmem_offset = HS_SUBGROUP_LANE_ID()
 
 //
 //
@@ -465,42 +463,52 @@
 #define HS_FM_GLOBAL_STORE_R(stride_idx, reg) HS_KV_OUT_STORE(HS_FM_GLOBAL_R(stride_idx), reg)
 
 //
+// TODO/OPTIMIZATION:
 //
+// Use of signed indices and signed constant offsets may positively
+// impact load/store instruction selection.
 //
 
 #define HS_FILL_IN_BODY()                                                                          \
+  HS_SUBGROUP_PREAMBLE()                                                                           \
   HS_SLAB_GLOBAL_BASE();                                                                           \
   HS_SLAB_GLOBAL_OFFSET();                                                                         \
-  uint kv_count_base = kv_count & ~(HS_SLAB_THREADS - 1);                                          \
-  uint gmem_in_idx   = kv_offset_in + gmem_offset;                                                 \
-  if (gmem_base >= kv_count_base)                                                                  \
+  if (gmem_base >= kv_count)                                                                       \
     {                                                                                              \
-      gmem_in_idx += gmem_base;                                                                    \
+      const uint gmem_in_idx = kv_offset_in + gmem_base + gmem_offset;                             \
+                                                                                                   \
+      for (uint ii = 0; ii < HS_SLAB_HEIGHT; ii++)                                                 \
+        {                                                                                          \
+          HS_KV_IN_STORE(gmem_in_idx + ii * HS_SLAB_WIDTH, HS_KEY_VAL_MAX);                        \
+        }                                                                                          \
     }                                                                                              \
   else                                                                                             \
     {                                                                                              \
-      gmem_in_idx += kv_count_base;                                                                \
-      if (gmem_in_idx >= (kv_offset_in + kv_count))                                                \
+      const uint kv_count_base = kv_count & ~(HS_SLAB_THREADS - 1);                                \
+      uint       gmem_in_idx   = kv_offset_in + kv_count_base + gmem_offset;                       \
+                                                                                                   \
+      if (gmem_offset >= (kv_count & (HS_SLAB_THREADS - 1)))                                       \
         {                                                                                          \
           HS_KV_IN_STORE(gmem_in_idx, HS_KEY_VAL_MAX);                                             \
-          gmem_in_idx += HS_SLAB_THREADS;                                                          \
         }                                                                                          \
-    }                                                                                              \
-  const uint gmem_in_max = gmem_base + kv_offset_in + HS_SLAB_KEYS;                                \
-  while (gmem_in_idx < gmem_in_max)                                                                \
-    {                                                                                              \
-      HS_KV_IN_STORE(gmem_in_idx, HS_KEY_VAL_MAX);                                                 \
+                                                                                                   \
       gmem_in_idx += HS_SLAB_THREADS;                                                              \
+                                                                                                   \
+      const uint gmem_in_max = kv_offset_in + gmem_base + (HS_SLAB_THREADS * HS_SLAB_HEIGHT);      \
+                                                                                                   \
+      for (; gmem_in_idx < gmem_in_max; gmem_in_idx += HS_SLAB_THREADS)                            \
+        {                                                                                          \
+          HS_KV_IN_STORE(gmem_in_idx, HS_KEY_VAL_MAX);                                             \
+        }                                                                                          \
     }
 
 #define HS_FILL_OUT_BODY()                                                                         \
+  HS_SUBGROUP_PREAMBLE()                                                                           \
   HS_SLAB_GLOBAL_IDX();                                                                            \
-  uint       gmem_out_idx = kv_offset_out + gmem_idx;                                              \
-  const uint gmem_out_max = gmem_base + kv_offset_out + HS_SLAB_KEYS;                              \
-  while (gmem_out_idx < gmem_out_max)                                                              \
+  const uint gmem_out_idx = kv_offset_out + gmem_idx;                                              \
+  for (uint ii = 0; ii < HS_SLAB_HEIGHT; ii++)                                                     \
     {                                                                                              \
-      HS_KV_OUT_STORE(gmem_out_idx, HS_KEY_VAL_MAX);                                               \
-      gmem_out_idx += HS_SLAB_THREADS;                                                             \
+      HS_KV_OUT_STORE(gmem_out_idx + ii * HS_SLAB_THREADS, HS_KEY_VAL_MAX);                        \
     }
 
 //

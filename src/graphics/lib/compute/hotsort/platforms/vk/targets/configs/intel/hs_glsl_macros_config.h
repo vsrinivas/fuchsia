@@ -19,11 +19,11 @@
 #define HS_GLSL_SUBGROUP_SIZE()
 
 //
-// OVERRIDE SUBGROUP IDENTIFIERS BECAUSE INTEL ISN'T GUARANTEEING A
-// FIXED SUBGROUP SIZE AT THIS POINT IN TIME
+// Optionally override subgroup identifiers because intel isn't
+// guaranteeing a fixed subgroup size with its public driver.
 //
 
-#if 1
+#if 0
 
 #define HS_SUBGROUP_PREAMBLE()                                                                     \
   const uint hs_subgroup_id      = gl_LocalInvocationID.x / HS_SLAB_THREADS;                       \
