@@ -69,13 +69,13 @@ struct spn_extent_pdrw
 void
 spn_extent_pdrw_alloc(struct spn_extent_pdrw * const           extent,
                       struct spn_allocator_device_perm * const perm,
-                      struct spn_vk_environment * const        vk,
+                      struct spn_vk_environment * const        environment,
                       uint64_t const                           size);
 
 void
 spn_extent_pdrw_free(struct spn_extent_pdrw * const           extent,
                      struct spn_allocator_device_perm * const perm,
-                     struct spn_vk_environment * const        vk);
+                     struct spn_vk_environment * const        environment);
 
 //
 // EPHEMERAL DEVICE R/W EXTENT -- ALLOCATED QUICKLY FROM A MANAGED RING

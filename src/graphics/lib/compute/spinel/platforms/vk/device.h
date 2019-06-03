@@ -59,9 +59,9 @@ struct spn_device
   //
   //
 #if 0
-  struct spn_scheduler         * scheduler;
-  struct spn_grid_deps         * deps;
-  struct hs_cl      const      * hs;     // opaque hotsort
+  struct spn_scheduler * scheduler;
+  struct spn_grid_deps * deps;
+  struct hs_cl const *   hs;  // opaque hotsort
 #endif
 };
 

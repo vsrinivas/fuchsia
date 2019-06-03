@@ -79,7 +79,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
 //
 
 void
-spn_vk_dispose(struct spn_vk * const instance, struct spn_vk_environment * const vk);
+spn_vk_dispose(struct spn_vk * const instance, struct spn_vk_environment * const environment);
 
 //
 // Get the target configuration structure
