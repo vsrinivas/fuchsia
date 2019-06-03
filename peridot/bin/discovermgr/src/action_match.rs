@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 /// Matching Actions
 ///
-//// Matches parameters types to a list of input types (with duplicates)
-//// and matches a text query against the text in the Action.
+/// Matches parameters types to a list of input types (with duplicates)
+/// and matches a text query against the text in the Action.
+
+#[cfg(test)]
 use crate::models::Action;
 use std::cmp::min;
 
@@ -20,7 +20,8 @@ use std::cmp::min;
 /// [1, 3] is covered by [1, 2, 3]
 /// [1, 1] is covered by [1, 1, 2, 3]
 /// [1, 1] is not covered by [1, 2, 3]
-//
+///
+#[cfg(test)]
 fn covers(a: &Vec<&str>, b: &Vec<&str>) -> bool {
     // return false when any element in a is not in b
     let mut it = b.into_iter();
@@ -42,7 +43,7 @@ fn covers(a: &Vec<&str>, b: &Vec<&str>) -> bool {
 ///  - query is a case insensitive prefix of any word in text
 ///  - query or text is empty.
 ///
-fn query_text_match(query: &str, text: &str) -> bool {
+pub fn query_text_match(query: &str, text: &str) -> bool {
     query.is_empty()
         || text.is_empty()
         || text
@@ -55,7 +56,7 @@ fn query_text_match(query: &str, text: &str) -> bool {
 /// returns true if query string matches action keywords
 ///
 // TODO: match against keywords rather than display_info.title
-//
+#[cfg(test)]
 fn query_action_match(action: &Action, query: &str) -> bool {
     match &action.display_info.display_info {
         Some(display_info) => match &display_info.title {
@@ -72,6 +73,7 @@ fn query_action_match(action: &Action, query: &str) -> bool {
 ///
 /// returns a vector of the indices of all matching actions
 ///
+#[cfg(test)]
 pub fn action_match(query: &str, actions: &Vec<Action>, types: &Vec<&str>) -> Vec<usize> {
     // from_iter(types) results in double borrow &&str error, so add dereference
     let mut output = vec![];

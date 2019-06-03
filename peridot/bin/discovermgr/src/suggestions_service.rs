@@ -44,12 +44,15 @@ impl SuggestionsService {
             match request {
                 SuggestionsRequest::GetSuggestions { query, iterator, .. } => {
                     let stream = iterator.into_stream()?;
-                    self.serve_suggestions(query, stream);
+                    await!(self.serve_suggestions(query, stream));
                 }
                 SuggestionsRequest::NotifyInteraction { suggestion_id, interaction, .. } => {
                     match interaction {
                         InteractionType::Selected => {
-                            self.suggestions_manager.lock().execute(suggestion_id)
+                            let mut manager = self.suggestions_manager.lock();
+                            if let Err(e) = await!(manager.execute(&suggestion_id)) {
+                                fx_log_err!("Error executing suggestion {}: {}", suggestion_id, e);
+                            }
                         }
                     }
                 }
@@ -58,12 +61,14 @@ impl SuggestionsService {
         Ok(())
     }
 
-    pub fn serve_suggestions(&self, query: String, mut stream: SuggestionsIteratorRequestStream) {
+    pub async fn serve_suggestions(
+        &mut self,
+        query: String,
+        mut stream: SuggestionsIteratorRequestStream,
+    ) {
         let context = self.context_store.lock().current().cloned().collect::<Vec<ContextEntity>>();
-        let suggestions = self
-            .suggestions_manager
-            .lock()
-            .get_suggestions(query, context)
+        let mut manager = self.suggestions_manager.lock();
+        let suggestions = await!(manager.get_suggestions(&query, context))
             .map(|s| s.clone().into())
             .collect::<Vec<Suggestion>>();
         fasync::spawn(
@@ -101,7 +106,7 @@ mod tests {
         // Initialize service client and server.
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<SuggestionsMarker>()?;
-        fasync::spawn(
+        fasync::spawn_local(
             async move {
                 let mut service = SuggestionsService::new(context_store, suggestions_manager);
                 await!(service.handle_client(request_stream))

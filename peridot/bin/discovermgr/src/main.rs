@@ -6,6 +6,7 @@
 
 use {
     crate::story_context_store::StoryContextStore,
+    crate::suggestion_providers::PackageSuggestionsProvider,
     crate::suggestions_manager::SuggestionsManager,
     crate::suggestions_service::SuggestionsService,
     failure::{Error, ResultExt},
@@ -21,11 +22,14 @@ use {
     std::sync::Arc,
 };
 
+#[macro_use]
+mod testing;
 mod action_match;
 mod discover_registry;
 mod models;
 mod module_output;
 mod story_context_store;
+mod suggestion_providers;
 mod suggestions_manager;
 mod suggestions_service;
 mod utils;
@@ -61,7 +65,12 @@ async fn main() -> Result<(), Error> {
 
     let puppet_master =
         connect_to_service::<PuppetMasterMarker>().context("failed to connect to puppet master")?;
-    let suggestions_manager = Arc::new(Mutex::new(SuggestionsManager::new(puppet_master)));
+
+    let package_suggestions_provider = PackageSuggestionsProvider::new();
+    let mut suggestions_manager = SuggestionsManager::new(puppet_master);
+    suggestions_manager.register_suggestions_provider(Box::new(package_suggestions_provider));
+
+    let suggestions_manager_ref = Arc::new(Mutex::new(suggestions_manager));
     let story_context_store = Arc::new(Mutex::new(StoryContextStore::new()));
 
     let mut fs = ServiceFs::new_local();
@@ -75,7 +84,7 @@ async fn main() -> Result<(), Error> {
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |incoming_service_stream| {
         run_fidl_service(
             story_context_store.clone(),
-            suggestions_manager.clone(),
+            suggestions_manager_ref.clone(),
             incoming_service_stream,
         )
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))

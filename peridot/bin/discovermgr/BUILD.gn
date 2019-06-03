@@ -20,14 +20,17 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.app.discover:fuchsia.app.discover-rustc",
     "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//src/sys/component_index/fidl:index-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:uuid",
   ]
 }
 

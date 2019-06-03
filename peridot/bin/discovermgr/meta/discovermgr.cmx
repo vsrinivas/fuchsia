@@ -5,7 +5,9 @@
     "sandbox": {
         "features": [],
         "services": [
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.modular.PuppetMaster",
+            "fuchsia.sys.Launcher"
         ]
     }
 }

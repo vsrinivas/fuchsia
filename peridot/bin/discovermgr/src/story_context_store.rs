@@ -23,10 +23,6 @@ pub enum Contributor {
     // TODO(miguelfrde): Add group scoped contributors
 }
 
-pub trait ContextSubscriber {
-    fn on_context_update(&self, context_entities: HashSet<ContextEntity>);
-}
-
 impl Contributor {
     pub fn module_new(story_id: &str, module_id: &str, parameter_name: &str) -> Self {
         Contributor::ModuleContributor {
