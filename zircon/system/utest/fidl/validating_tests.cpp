@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stddef.h>
+#include <memory>
 
 #include <lib/fidl/coding.h>
 
@@ -143,6 +144,31 @@ bool validate_single_present_handle() {
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error, error);
     EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
+
+    END_TEST;
+}
+
+bool validate_single_present_handle_check_trailing_padding() {
+    BEGIN_TEST;
+
+    // There are four padding bytes; any of them not being zero should lead to an error.
+    for (size_t i = 0; i < 4; i++) {
+        constexpr size_t kBufferSize = sizeof(nonnullable_handle_message_layout);
+        nonnullable_handle_message_layout message;
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(&message);
+        memset(buffer, 0, kBufferSize);
+        message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+        constexpr uint32_t kNumHandles = 1;
+
+        buffer[kBufferSize - 4 + i] = 0xAA;
+
+        const char* error = nullptr;
+        auto status = fidl_validate(&nonnullable_handle_message_type, &message, kBufferSize,
+                                    kNumHandles, &error);
+
+        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+        EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    }
 
     END_TEST;
 }
@@ -1185,6 +1211,50 @@ bool validate_many_membered_present_nonnullable_union() {
     END_TEST;
 }
 
+bool validate_many_membered_present_nonnullable_union_check_padding() {
+    BEGIN_TEST;
+
+    // 4 bytes tag + 16 bytes largest variant + 4 bytes padding = 24
+    constexpr size_t kUnionSize = 24;
+    static_assert(
+        sizeof(array_of_nonnullable_handles_union_message_layout::inline_struct.data)
+            == kUnionSize);
+    // The union comes after the 16 byte message header.
+    constexpr size_t kUnionOffset = 16;
+    // 4 bytes tag
+    constexpr size_t kHandleOffset = 4;
+
+    // Any single padding byte being non-zero should result in an error.
+    for (size_t i = kHandleOffset + sizeof(zx_handle_t); i < kUnionSize; i++) {
+        constexpr size_t kBufferSize = sizeof(array_of_nonnullable_handles_union_message_layout);
+        array_of_nonnullable_handles_union_message_layout message;
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(&message);
+        memset(buffer, 0, kBufferSize);
+
+        ASSERT_EQ(reinterpret_cast<uint8_t*>(&message.inline_struct.data)
+                      - reinterpret_cast<uint8_t*>(&message),
+                  kUnionOffset);
+        ASSERT_EQ(reinterpret_cast<uint8_t*>(&message.inline_struct.data.handle)
+                      - reinterpret_cast<uint8_t*>(&message.inline_struct.data),
+                  kHandleOffset);
+
+        message.inline_struct.data.tag = array_of_nonnullable_handles_union_kHandle;
+        message.inline_struct.data.handle = FIDL_HANDLE_PRESENT;
+        constexpr uint32_t kNumHandles = 1;
+
+        buffer[kUnionOffset + i] = 0xAA;
+
+        const char* error = nullptr;
+        auto status = fidl_validate(&array_of_nonnullable_handles_union_message_type, &message,
+                                    kBufferSize, kNumHandles, &error);
+
+        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+        EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    }
+
+    END_TEST;
+}
+
 bool validate_single_membered_present_nullable_union() {
     BEGIN_TEST;
 
@@ -1298,6 +1368,60 @@ bool validate_nested_nonnullable_structs() {
     EXPECT_EQ(message.inline_struct.l0.l1.l2.l3.handle_3, FIDL_HANDLE_PRESENT);
     EXPECT_EQ(message.inline_struct.l0.l1.l2.handle_2, FIDL_HANDLE_PRESENT);
     EXPECT_EQ(message.inline_struct.l0.handle_0, FIDL_HANDLE_PRESENT);
+
+    END_TEST;
+}
+
+bool validate_nested_nonnullable_structs_check_padding() {
+    BEGIN_TEST;
+
+    // Wire-format:
+    // message
+    // - 16 bytes header
+    // + struct_level_0  -------------  offset 16 = 4 * 4
+    //   - uint64_t
+    //   + struct_level_1  -----------  offset 24 = 4 * 6
+    //     - zx_handle_t
+    //     - (4 bytes padding)  ------  offset 28 = 4 * 7
+    //     + struct_level_2  ---------  offset 32 = 4 * 8
+    //       - uint64_t
+    //       + struct_level_3  -------  offset 40 = 4 * 10
+    //         - uint32_t
+    //         - zx_handle_t
+    //       - zx_handle_t
+    //       - (4 bytes padding)  ----  offset 52 = 4 * 13
+    //     - uint64_t
+    //   - zx_handle_t
+    //   - (4 bytes padding)  --------  offset 68 = 4 * 17
+    static_assert(sizeof(nested_structs_message_layout) == 68 + 4);
+    // Hence the padding bytes are located at:
+    size_t padding_offsets[] = {
+        28, 29, 30, 31,
+        52, 53, 54, 55,
+        68, 69, 70, 71,
+    };
+
+    for (const auto padding_offset : padding_offsets) {
+        constexpr size_t kBufferSize = sizeof(nested_structs_message_layout);
+        nested_structs_message_layout message;
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(&message);
+        memset(buffer, 0, kBufferSize);
+
+        message.inline_struct.l0.handle_0 = FIDL_HANDLE_PRESENT;
+        message.inline_struct.l0.l1.handle_1 = FIDL_HANDLE_PRESENT;
+        message.inline_struct.l0.l1.l2.handle_2 = FIDL_HANDLE_PRESENT;
+        message.inline_struct.l0.l1.l2.l3.handle_3 = FIDL_HANDLE_PRESENT;
+        constexpr uint32_t kNumHandles = 4;
+
+        buffer[padding_offset] = 0xAA;
+
+        const char* error = nullptr;
+        auto status = fidl_validate(&nested_structs_message_type, &message, kBufferSize,
+                                    kNumHandles, &error);
+
+        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+        EXPECT_STR_EQ(error, "non-zero padding bytes detected");
+    }
 
     END_TEST;
 }
@@ -1646,6 +1770,7 @@ END_TEST_CASE(null_parameters)
 
 BEGIN_TEST_CASE(handles)
 RUN_TEST(validate_single_present_handle)
+RUN_TEST(validate_single_present_handle_check_trailing_padding)
 RUN_TEST(validate_too_many_handles_specified_error)
 RUN_TEST(validate_single_present_handle_unaligned_error)
 RUN_TEST(validate_multiple_present_handles)
@@ -1704,6 +1829,7 @@ BEGIN_TEST_CASE(unions)
 RUN_TEST(validate_bad_tagged_union_error)
 RUN_TEST(validate_single_membered_present_nonnullable_union)
 RUN_TEST(validate_many_membered_present_nonnullable_union)
+RUN_TEST(validate_many_membered_present_nonnullable_union_check_padding)
 RUN_TEST(validate_single_membered_present_nullable_union)
 RUN_TEST(validate_many_membered_present_nullable_union)
 RUN_TEST(validate_single_membered_absent_nullable_union)
@@ -1712,6 +1838,7 @@ END_TEST_CASE(unions)
 
 BEGIN_TEST_CASE(structs)
 RUN_TEST(validate_nested_nonnullable_structs)
+RUN_TEST(validate_nested_nonnullable_structs_check_padding)
 RUN_TEST(validate_nested_nullable_structs)
 RUN_TEST(validate_nested_struct_recursion_too_deep_error)
 END_TEST_CASE(structs)

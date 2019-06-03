@@ -53,9 +53,10 @@ using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 class FidlValidator final : public fidl::Visitor<
                                 fidl::NonMutatingVisitorTrait, StartingPoint, Position> {
 public:
-    FidlValidator(uint32_t num_bytes, uint32_t num_handles, uint32_t next_out_of_line,
-                  const char** out_error_msg)
-        : num_bytes_(num_bytes), num_handles_(num_handles), next_out_of_line_(next_out_of_line),
+    FidlValidator(const void* bytes, uint32_t num_bytes, uint32_t num_handles,
+                  uint32_t next_out_of_line, const char** out_error_msg)
+        : bytes_(static_cast<const uint8_t*>(bytes)), num_bytes_(num_bytes),
+          num_handles_(num_handles), next_out_of_line_(next_out_of_line),
           out_error_msg_(out_error_msg) {}
 
     using StartingPoint = StartingPoint;
@@ -81,7 +82,11 @@ public:
             SetError("message tried to access more than provided number of bytes");
             return Status::kMemoryError;
         }
-        // TODO(FIDL-237): Check the padding gaps are zero.
+        auto status = ValidatePadding(&bytes_[next_out_of_line_ + inline_size],
+                                      new_offset - next_out_of_line_ - inline_size);
+        if (status != Status::kSuccess) {
+            return status;
+        }
         *out_position = Position{next_out_of_line_};
         next_out_of_line_ = new_offset;
         return Status::kSuccess;
@@ -101,15 +106,8 @@ public:
     }
 
     Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-        // TODO(FIDL-237): Turn this on after prebuilts have picked up new encoder.
-        // auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
-        // for (uint32_t i = 0; i < padding_length; i++) {
-        //     if (padding_ptr[i] != 0) {
-        //         SetError("non-zero padding bytes detected");
-        //         return Status::kConstraintViolationError;
-        //     }
-        // }
-        return Status::kSuccess;
+        auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
+        return ValidatePadding(padding_ptr, padding_length);
     }
 
     Status EnterEnvelope(Position envelope_position,
@@ -180,7 +178,18 @@ private:
         }
     }
 
+    Status ValidatePadding(const uint8_t* padding_ptr, uint32_t padding_length) {
+        for (uint32_t i = 0; i < padding_length; i++) {
+            if (padding_ptr[i] != 0) {
+                SetError("non-zero padding bytes detected");
+                return Status::kConstraintViolationError;
+            }
+        }
+        return Status::kSuccess;
+    }
+
     // Message state passed in to the constructor.
+    const uint8_t* bytes_;
     const uint32_t num_bytes_;
     const uint32_t num_handles_;
     uint32_t next_out_of_line_;
@@ -214,7 +223,7 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
         return status;
     }
 
-    FidlValidator validator(num_bytes, num_handles, next_out_of_line, out_error_msg);
+    FidlValidator validator(bytes, num_bytes, num_handles, next_out_of_line, out_error_msg);
     fidl::Walk(validator,
                type,
                StartingPoint{reinterpret_cast<const uint8_t*>(bytes)});

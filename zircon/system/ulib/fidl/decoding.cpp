@@ -87,7 +87,11 @@ public:
             SetError("message tried to decode more than provided number of bytes");
             return Status::kMemoryError;
         }
-        // TODO(FIDL-237): Check the padding gaps are zero.
+        auto status = ValidatePadding(&bytes_[next_out_of_line_ + inline_size],
+                                      new_offset - next_out_of_line_ - inline_size);
+        if (status != Status::kSuccess) {
+            return status;
+        }
         *out_position = Position{next_out_of_line_};
         *object_ptr_ptr = reinterpret_cast<void*>(&bytes_[next_out_of_line_]);
 
@@ -119,15 +123,8 @@ public:
     }
 
     Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-        // TODO(FIDL-237): Turn this on after prebuilts have picked up new encoder.
-        // auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
-        // for (uint32_t i = 0; i < padding_length; i++) {
-        //     if (padding_ptr[i] != 0) {
-        //         SetError("non-zero padding bytes detected");
-        //         return Status::kConstraintViolationError;
-        //     }
-        // }
-        return Status::kSuccess;
+        auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
+        return ValidatePadding(padding_ptr, padding_length);
     }
 
     Status EnterEnvelope(Position envelope_position,
@@ -207,6 +204,16 @@ private:
             return;
         }
         *out_error_msg_ = error;
+    }
+
+    Status ValidatePadding(const uint8_t* padding_ptr, uint32_t padding_length) {
+        for (uint32_t i = 0; i < padding_length; i++) {
+            if (padding_ptr[i] != 0) {
+                SetError("non-zero padding bytes detected");
+                return Status::kConstraintViolationError;
+            }
+        }
+        return Status::kSuccess;
     }
 
     // Message state passed in to the constructor.
