@@ -23,7 +23,7 @@ if [ ! -d "$unpack_dir" ]
 then mkdir "$unpack_dir"
 fi
 
-if [ ! -z "$array" ]
+if [ ! -z "$archives" ]
 then echo "$archives" | xargs --max-procs 10 -n1 tar -xC "$unpack_dir" -jf
 fi
 
