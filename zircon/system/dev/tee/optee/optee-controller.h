@@ -14,6 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/tee/c/fidl.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/resource.h>
 #include <zircon/thread_annotations.h>
 
 #include "optee-message.h"
@@ -84,7 +85,7 @@ private:
     static fuchsia_hardware_tee_DeviceConnector_ops_t kFidlOps;
 
     pdev_protocol_t pdev_proto_ = {};
-    zx_handle_t secure_monitor_ = ZX_HANDLE_INVALID;
+    zx::resource secure_monitor_;
     uint32_t secure_world_capabilities_ = 0;
     fuchsia_tee_OsRevision os_revision_ = {};
     fbl::Mutex clients_lock_;

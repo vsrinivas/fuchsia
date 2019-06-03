@@ -51,7 +51,7 @@ zx_status_t OpteeController::ValidateApiUid() const {
         zx_smc_result_t raw;
         tee_smc::TrustedOsCallUidResult uid;
     } result;
-    zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiFuncCall, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_.get(), &kGetApiFuncCall, &result.raw);
 
     return status == ZX_OK
                ? IsOpteeApi(result.uid) ? ZX_OK : ZX_ERR_NOT_FOUND
@@ -65,7 +65,7 @@ zx_status_t OpteeController::ValidateApiRevision() const {
         zx_smc_result_t raw;
         tee_smc::TrustedOsCallRevisionResult revision;
     } result;
-    zx_status_t status = zx_smc_call(secure_monitor_, &kGetApiRevisionFuncCall, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_.get(), &kGetApiRevisionFuncCall, &result.raw);
 
     return status == ZX_OK
                ? IsOpteeApiRevisionSupported(result.revision) ? ZX_OK : ZX_ERR_NOT_SUPPORTED
@@ -79,7 +79,7 @@ zx_status_t OpteeController::GetOsRevision() {
         zx_smc_result_t raw;
         GetOsRevisionResult revision;
     } result;
-    zx_status_t status = zx_smc_call(secure_monitor_, &kGetOsRevisionFuncCall, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_.get(), &kGetOsRevisionFuncCall, &result.raw);
 
     if (status != ZX_OK) {
         return status;
@@ -104,7 +104,7 @@ zx_status_t OpteeController::ExchangeCapabilities() {
         ExchangeCapabilitiesResult response;
     } result;
 
-    zx_status_t status = zx_smc_call(secure_monitor_, &func_call, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_.get(), &func_call, &result.raw);
 
     if (status != ZX_OK) {
         return status;
@@ -176,7 +176,7 @@ zx_status_t OpteeController::DiscoverSharedMemoryConfig(zx_paddr_t* out_start_ad
         GetSharedMemConfigResult response;
     } result;
 
-    zx_status_t status = zx_smc_call(secure_monitor_, &func_call, &result.raw);
+    zx_status_t status = zx_smc_call(secure_monitor_.get(), &func_call, &result.raw);
 
     if (status != ZX_OK) {
         return status;
@@ -202,7 +202,8 @@ zx_status_t OpteeController::Bind() {
     }
 
     static constexpr uint32_t kTrustedOsSmcIndex = 0;
-    status = pdev_get_smc(&pdev_proto_, kTrustedOsSmcIndex, &secure_monitor_);
+    status = pdev_get_smc(&pdev_proto_, kTrustedOsSmcIndex,
+                          secure_monitor_.reset_and_get_address());
     if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Unable to get secure monitor handle\n");
         return status;
@@ -355,7 +356,7 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message,
             RpcFunctionArgs rpc_args;
         } result;
 
-        zx_status_t status = zx_smc_call(secure_monitor_, &func_call.params, &result.raw);
+        zx_status_t status = zx_smc_call(secure_monitor_.get(), &func_call.params, &result.raw);
         if (status != ZX_OK) {
             zxlogf(ERROR, "optee: unable to invoke SMC\n");
             return return_value;
