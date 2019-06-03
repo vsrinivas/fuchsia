@@ -28,7 +28,7 @@ public:
 
 private:
     async::Loop loop_;
-    trace::TraceProvider trace_provider_;
+    trace::TraceProviderWithFdio trace_provider_;
 };
 
 class ZirconPlatformTraceObserver : public PlatformTraceObserver {

@@ -12,7 +12,7 @@
 static bool RunFillBufferTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
-  fbl::unique_ptr<trace::TraceProvider> provider;
+  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
   if (!CreateProviderSynchronously(loop, "fill-buffer", &provider)) {
     return false;
   }

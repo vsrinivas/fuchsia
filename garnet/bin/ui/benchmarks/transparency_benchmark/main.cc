@@ -522,7 +522,7 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();

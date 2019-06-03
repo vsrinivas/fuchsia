@@ -43,12 +43,12 @@ constexpr size_t kRecordSize = 64;
 
 bool CreateProviderSynchronously(
     async::Loop& loop, const char* name,
-    fbl::unique_ptr<trace::TraceProvider>* out_provider) {
+    fbl::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
-  fbl::unique_ptr<trace::TraceProvider> provider;
+  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
-  if (!trace::TraceProvider::CreateSynchronously(dispatcher, name, &provider,
+  if (!trace::TraceProviderWithFdio::CreateSynchronously(dispatcher, name, &provider,
                                                  &already_started)) {
     FXL_LOG(ERROR) << "Failed to create provider " << name;
     return false;

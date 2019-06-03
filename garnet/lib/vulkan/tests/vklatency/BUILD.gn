@@ -45,7 +45,7 @@ source_set("vklatency") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/trace-provider",
+    "$zircon_build_root/public/lib/trace-provider-with-fdio",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/vulkan",

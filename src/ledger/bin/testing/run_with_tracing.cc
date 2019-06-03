@@ -15,7 +15,7 @@
 namespace ledger {
 
 int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
-  trace::TraceProvider trace_provider(loop->dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop->dispatcher());
   trace::TraceObserver trace_observer;
 
   bool started = false;

@@ -22,6 +22,6 @@ executable("gltf_export") {
     "//third_party/libpng",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }

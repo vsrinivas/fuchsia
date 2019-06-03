@@ -620,7 +620,7 @@ int main(int argc, char** argv) {
   input::InputApp app(&loop);
   async::PostTask(loop.dispatcher(),
                   [&app, command_line] { app.Run(command_line); });
-  trace::TraceProvider trace_provider(loop.dispatcher(), "input");
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "input");
   loop.Run();
   return 0;
 }

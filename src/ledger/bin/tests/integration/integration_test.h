@@ -65,7 +65,7 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
   std::unique_ptr<LedgerAppInstanceFactory> factory_;
   // Loop used to run network service and token provider tasks.
   std::unique_ptr<SubLoop> services_loop_;
-  std::unique_ptr<trace::TraceProvider> trace_provider_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
 };
 
 class IntegrationTest : public BaseIntegrationTest,

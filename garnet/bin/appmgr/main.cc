@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
 
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   component::AppmgrArgs args{
       .pa_directory_request = std::move(request),

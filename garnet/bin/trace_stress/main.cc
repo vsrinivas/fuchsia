@@ -152,9 +152,9 @@ int main(int argc, char** argv) {
   // This is in anticipation of double-buffering support.
   async::Loop provider_loop(&kAsyncLoopConfigNoAttachToThread);
   provider_loop.StartThread("TraceProvider");
-  std::unique_ptr<trace::TraceProvider> provider;
+  std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
-  if (!trace::TraceProvider::CreateSynchronously(
+  if (!trace::TraceProviderWithFdio::CreateSynchronously(
       provider_loop.dispatcher(), "trace_stress", &provider,
       &already_started)) {
     FXL_LOG(ERROR) << "Trace provider registration failed";

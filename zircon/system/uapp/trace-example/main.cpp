@@ -14,7 +14,7 @@
 
 int main(int argc, char** argv) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    trace::TraceProvider provider(loop.dispatcher());
+    trace::TraceProviderWithFdio provider(loop.dispatcher());
 
     puts("Doing work for 30 seconds...");
 

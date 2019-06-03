@@ -16,7 +16,7 @@
 static bool RunSimpleTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
-  fbl::unique_ptr<trace::TraceProvider> provider;
+  fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
   if (!CreateProviderSynchronously(loop, "simple", &provider)) {
     return false;
   }

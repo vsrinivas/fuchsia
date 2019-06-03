@@ -450,7 +450,7 @@ int main(int argc, const char **argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   SnapshotTaker taker(&loop);
   taker.TakeSnapshot();

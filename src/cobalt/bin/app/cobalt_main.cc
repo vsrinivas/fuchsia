@@ -222,7 +222,7 @@ int main(int argc, const char** argv) {
                 << start_event_aggregator_worker << ".";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher(),
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher(),
                                       "cobalt_fidl_provider");
   cobalt::CobaltApp app(
       loop.dispatcher(), schedule_interval, min_interval, initial_interval,

@@ -26,7 +26,7 @@ executable("minfs") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/trace-provider",
+    "$zx/system/ulib/trace-provider:trace-provider-with-fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

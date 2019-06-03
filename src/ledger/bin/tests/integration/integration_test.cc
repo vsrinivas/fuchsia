@@ -25,7 +25,7 @@ BaseIntegrationTest::~BaseIntegrationTest() = default;
 void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
   factory_ = factory_builder_->NewFactory();
-  trace_provider_ = std::make_unique<trace::TraceProvider>(dispatcher());
+  trace_provider_ = std::make_unique<trace::TraceProviderWithFdio>(dispatcher());
   services_loop_ = GetLoopController()->StartNewLoop();
 }
 

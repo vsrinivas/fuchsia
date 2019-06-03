@@ -14,7 +14,7 @@
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  trace::TraceProvider provider(loop.dispatcher());
+  trace::TraceProviderWithFdio provider(loop.dispatcher());
 
   // Wait for tracing to get set up.  This works around a race condition in
   // the tracing system (see TO-650).  Without this, the tracing system can

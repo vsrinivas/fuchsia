@@ -98,7 +98,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
   std::unique_ptr<sys::ComponentContext> component_context(

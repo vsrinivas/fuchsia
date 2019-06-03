@@ -57,7 +57,7 @@ class App : public fuchsia::modular::Lifecycle {
   async::Loop loop_;
   rng::SystemRandom random_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  trace::TraceProvider trace_provider_;
+  trace::TraceProviderWithFdio trace_provider_;
 
   FactoryImpl factory_impl_;
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;

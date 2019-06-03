@@ -83,6 +83,38 @@ library("trace-provider") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
 }
 
+# Same as trace-provider, but includes fdio.
+library("trace-provider-with-fdio") {
+  sdk = "static"
+  sdk_headers = [
+    "trace-provider/fdio_connect.h",
+    "trace-provider/handler.h",
+    "trace-provider/provider.h",
+  ]
+  sources = []
+  deps = [
+    ":common",
+    ":common.fdio-connect",
+    "$zx/system/fidl/fuchsia-tracelink:c",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/fdio",
+  ]
+  public_deps = [
+    # <trace-provider/provider.h> has #include <fbl/unique_ptr.h>.
+    "$zx/system/ulib/fbl:headers",
+
+    # <trace-provider/provider.h> has #include <lib/async/dispatcher.h>.
+    "$zx/system/ulib/async:headers",
+
+    # <trace-provider/provider.h> has #include <lib/zx/channel.h>.
+    "$zx/system/ulib/zx:headers",
+
+    # <trace-provider/handler.h> has #include <trace-engine/handler.h>.
+    "$zx/system/ulib/trace-engine:headers",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+}
+
 # Same as the default version with the fdio dependency removed.
 # TODO(PT-63): This will be removed (the default case will become this)
 # when all clients are updated.

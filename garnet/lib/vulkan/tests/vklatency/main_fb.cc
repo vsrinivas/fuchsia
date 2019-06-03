@@ -11,7 +11,7 @@
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))

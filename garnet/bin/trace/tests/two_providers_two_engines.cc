@@ -22,7 +22,7 @@
 static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
-  fbl::unique_ptr<trace::TraceProvider> provider1;
+  fbl::unique_ptr<trace::TraceProviderWithFdio> provider1;
   if (!CreateProviderSynchronously(loop, "provider1", &provider1)) {
     return false;
   }

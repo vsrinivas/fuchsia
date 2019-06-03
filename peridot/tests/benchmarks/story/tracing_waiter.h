@@ -28,7 +28,7 @@ class TracingWaiter {
 
  private:
   bool started_{};
-  std::unique_ptr<trace::TraceProvider> trace_provider_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
   std::unique_ptr<trace::TraceObserver> trace_observer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TracingWaiter);

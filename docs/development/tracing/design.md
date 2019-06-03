@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) exit(1);
 
   // Create the trace provider.
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   // Do something...
 

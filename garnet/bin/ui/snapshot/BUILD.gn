@@ -20,6 +20,6 @@ executable("snapshot") {
     "//sdk/fidl/fuchsia.scenic.snapshot",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }

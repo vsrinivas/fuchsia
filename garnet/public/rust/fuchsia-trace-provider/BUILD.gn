@@ -8,7 +8,7 @@ shared_library("rust-trace-provider") {
   visibility = [ ":*" ]
   deps = [
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
   ]
   sources = [
     "trace_provider.cc",

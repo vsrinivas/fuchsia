@@ -70,7 +70,7 @@ source_set("integration_test_utils") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -147,7 +147,7 @@ executable("basic_integration_test_app") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -165,7 +165,7 @@ executable("two_providers_one_engine") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
   ]
 }
@@ -205,7 +205,7 @@ executable("two_providers_two_engines_test_app") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
   ]
 }

@@ -12,7 +12,7 @@ int main(int argc, const char** argv) {
   // component::Outgoing() which can currently only construct using
   // async_get_default_dispatcher().
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   App app;
   loop.Run();
   return 0;

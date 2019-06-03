@@ -11,7 +11,7 @@
 int main(int argc, const char** argv) {
   syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   a11y_manager::App app;
   loop.Run();
   return 0;

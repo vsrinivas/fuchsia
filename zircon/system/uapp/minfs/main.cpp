@@ -42,7 +42,7 @@ int Mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options)
     }
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    trace::TraceProvider trace_provider(loop.dispatcher());
+    trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
     auto loop_quit = [&loop]() {
         loop.Quit();

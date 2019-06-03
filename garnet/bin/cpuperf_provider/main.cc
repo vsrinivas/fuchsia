@@ -24,7 +24,7 @@ int main(int argc, const char** argv) {
   FXL_VLOG(2) << argv[0] << ": starting";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher(), "cpuperf_provider");
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cpuperf_provider");
 
   cpuperf_provider::App app(command_line);
   loop.Run();

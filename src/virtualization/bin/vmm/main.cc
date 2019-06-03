@@ -95,7 +95,7 @@ static zx_gpaddr_t alloc_device_addr(size_t device_size) {
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   async::Loop device_loop(&kAsyncLoopConfigNoAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
 

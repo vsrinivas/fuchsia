@@ -63,7 +63,7 @@ int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
     }
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    trace::TraceProvider provider(loop.dispatcher());
+    trace::TraceProviderWithFdio provider(loop.dispatcher());
     auto loop_quit = [&loop]() {
         loop.Quit();
         FS_TRACE_WARN("blobfs: Unmounted\n");

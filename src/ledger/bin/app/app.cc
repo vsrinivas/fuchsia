@@ -149,7 +149,7 @@ class App : public ledger_internal::LedgerController {
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
   async::Loop loop_;
   async::Loop io_loop_;
-  trace::TraceProvider trace_provider_;
+  trace::TraceProviderWithFdio trace_provider_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;

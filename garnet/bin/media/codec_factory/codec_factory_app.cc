@@ -25,7 +25,7 @@ constexpr char kDeviceClass[] = "/dev/class/media-codec";
 CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   // TODO(dustingreen): Determine if this is useful and if we're holding it
   // right.
-  trace::TraceProvider trace_provider(loop_->dispatcher());
+  trace::TraceProviderWithFdio trace_provider(loop_->dispatcher());
 
   // We pump |loop| in here, so it's important that
   // component::StartupContext::CreateFromStartupInfo() happen after

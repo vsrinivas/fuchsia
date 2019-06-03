@@ -54,7 +54,7 @@ class GoogleAuthProviderApp {
  private:
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  trace::TraceProvider trace_provider_;
+  trace::TraceProviderWithFdio trace_provider_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   google_auth_provider::FactoryImpl factory_impl_;
 

@@ -122,6 +122,7 @@ group("ulib") {
     "trace-provider",
     "trace-provider:trace-handler",
     "trace-provider:trace-provider-fdio-connect",
+    "trace-provider:trace-provider-with-fdio",
     "trace-provider:trace-provider-with-static-engine",
     "trace-reader",
     "trace-test-utils",

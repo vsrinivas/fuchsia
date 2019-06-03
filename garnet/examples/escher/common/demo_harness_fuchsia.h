@@ -56,7 +56,7 @@ class DemoHarnessFuchsia : public DemoHarness,
   // create its own if necessary.
   async::Loop* loop_;
   std::unique_ptr<async::Loop> owned_loop_;
-  trace::TraceProvider trace_provider_;
+  trace::TraceProviderWithFdio trace_provider_;
 
   std::unique_ptr<sys::ComponentContext> component_context_;
   ui_input::InputReader input_reader_;

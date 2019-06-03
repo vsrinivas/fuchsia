@@ -27,7 +27,7 @@ zx_status_t devhost_start_trace_provider() {
     }
 
     async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
-    trace_provider_t* trace_provider = trace_provider_create(dispatcher);
+    trace_provider_t* trace_provider = trace_provider_create_with_fdio(dispatcher);
     if (!trace_provider) {
         async_loop_destroy(loop);
         log(ERROR, "devhost: error registering provider\n");

@@ -760,7 +760,7 @@ class BufferArray {
 
 int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  trace::TraceProvider provider(loop.dispatcher());
+  trace::TraceProviderWithFdio provider(loop.dispatcher());
 
   VSync vsync = VSync::ADAPTIVE;
   zx_time_t vsync_offset = ZX_MSEC(15);
