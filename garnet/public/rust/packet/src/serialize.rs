@@ -186,9 +186,16 @@ impl<B: AsRef<[u8]>> Buf<B> {
         Buf { buf, range: canonicalize_range(len, &range) }
     }
 
-    // in a separate method so it can be used in testing
-    pub(crate) fn buffer_view(&mut self) -> BufView {
+    /// Constructs a [`BufView`] which will be a [`BufferView`] into this `Buf`.
+    pub fn buffer_view(&mut self) -> BufView {
         BufView { buf: &self.buf.as_ref()[self.range.clone()], range: &mut self.range }
+    }
+}
+
+impl<B: AsRef<[u8]> + AsMut<[u8]>> Buf<B> {
+    /// Constructs a [`BufViewMut`] which will be a [`BufferViewMut`] into this `Buf`.
+    pub fn buffer_view_mut(&mut self) -> BufViewMut {
+        BufViewMut { buf: &mut self.buf.as_mut()[self.range.clone()], range: &mut self.range }
     }
 }
 
@@ -229,10 +236,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> ParseBufferMut for Buf<B> {
         &'a mut self,
         args: ParseArgs,
     ) -> Result<P, P::Error> {
-        P::parse(
-            BufViewMut { buf: &mut self.buf.as_mut()[self.range.clone()], range: &mut self.range },
-            args,
-        )
+        P::parse(self.buffer_view_mut(), args)
     }
     fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
         Buf::new(self.buf.as_mut(), self.range.clone())
@@ -273,8 +277,11 @@ impl<B: AsMut<[u8]>> AsMut<[u8]> for Buf<B> {
     }
 }
 
-// used in testing in a different module
-pub(crate) struct BufView<'a> {
+/// A [`BufferView`] into a [`Buf`].
+///
+/// A `BufView` is constructed by [`Buf::buffer_view`], and implements
+/// `BufferView`, providing a view into the `Buf` from which it was constructed.
+pub struct BufView<'a> {
     buf: &'a [u8],
     range: &'a mut Range<usize>,
 }
@@ -307,7 +314,12 @@ impl<'a> AsRef<[u8]> for BufView<'a> {
     }
 }
 
-struct BufViewMut<'a> {
+/// A [`BufferViewMut`] into a [`Buf`].
+///
+/// A `BufViewMut` is constructed by [`Buf::buffer_view_mut`], and implements
+/// `BufferViewMut`, providing a mutable view into the `Buf` from which it was
+/// constructed.
+pub struct BufViewMut<'a> {
     buf: &'a mut [u8],
     range: &'a mut Range<usize>,
 }
@@ -846,7 +858,7 @@ where
 {
     type Buffer = O;
     type Error = Never;
-    type InnerError  = Never;
+    type InnerError = Never;
 
     fn serialize_mtu(
         self,

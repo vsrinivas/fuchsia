@@ -1488,6 +1488,8 @@ mod tests {
                 test_buffer::<Either<Buf<Vec<u8>>, Buf<Vec<u8>>>, _>(|len| {
                     Either::$variant(Buf::new(ascending(len), ..))
                 });
+                // Test call to `Buf::buffer_view` which returns a
+                // `BufferView`.
                 let mut buf: Either<Buf<Vec<u8>>, Buf<Vec<u8>>> =
                     Either::$variant(Buf::new(ascending(10), ..));
                 test_buffer_view(match &mut buf {
@@ -1495,6 +1497,15 @@ mod tests {
                     _ => unreachable!(),
                 });
                 test_buffer_view_post(&buf, true);
+                // Test call to `Buf::buffer_view_mut` which returns a
+                // `BufferViewMut`.
+                let mut buf: Either<Buf<Vec<u8>>, Buf<Vec<u8>>> =
+                    Either::$variant(Buf::new(ascending(10), ..));
+                test_buffer_view_mut(match &mut buf {
+                    Either::$variant(buf) => buf.buffer_view_mut(),
+                    _ => unreachable!(),
+                });
+                test_buffer_view_mut_post(&buf, true);
             };
         }
 
@@ -1646,12 +1657,50 @@ mod tests {
         assert_eq!(view.into_rest().as_ref(), &[3, 4, 5, 6][..]);
     }
 
+    // Test a BufferViewMut implementation. Call with a mutable view into a buffer
+    // with no extra capacity whose body contains [0, 1, ..., 9]. After the call
+    // returns, call test_buffer_view_post on the buffer.
+    fn test_buffer_view_mut<B: ByteSliceMut, BV: BufferViewMut<B>>(mut view: BV) {
+        assert_eq!(view.len(), 10);
+        assert_eq!(view.as_mut()[0], 0);
+        assert_eq!(view.take_front_zero(1).unwrap().as_ref(), &[0][..]);
+        assert_eq!(view.len(), 9);
+        assert_eq!(view.as_mut()[0], 1);
+        assert_eq!(view.take_front_zero(1).unwrap().as_ref(), &[0][..]);
+        assert_eq!(view.len(), 8);
+        assert_eq!(view.as_mut()[7], 9);
+        assert_eq!(view.take_back_zero(1).unwrap().as_ref(), &[0][..]);
+        assert_eq!(view.len(), 7);
+        assert_eq!(&view.as_mut()[0..2], &[2, 3][..]);
+        assert_eq!(view.take_obj_front_zero::<[u8; 2]>().unwrap().as_ref(), &[0, 0][..]);
+        assert_eq!(view.len(), 5);
+        assert_eq!(&view.as_mut()[3..5], &[7, 8][..]);
+        assert_eq!(view.take_obj_back_zero::<[u8; 2]>().unwrap().as_ref(), &[0, 0][..]);
+        assert_eq!(view.len(), 3);
+        assert!(view.take_front_zero(5).is_none());
+        assert_eq!(view.len(), 3);
+        assert!(view.take_back_zero(5).is_none());
+        assert_eq!(view.len(), 3);
+        assert_eq!(view.as_mut(), &[4, 5, 6][..]);
+        assert_eq!(view.into_rest_zero().as_ref(), &[0, 0, 0][..]);
+    }
+
     // Post-verification to test a BufferView implementation. Call after
     // test_buffer_view.
     fn test_buffer_view_post<B: Buffer>(buffer: &B, preserves_cap: bool) {
         assert_eq!(buffer.as_ref(), &[3, 4, 5, 6][..]);
         if preserves_cap {
             assert_eq!(buffer.prefix_len(), 3);
+            assert_eq!(buffer.suffix_len(), 3);
+        }
+    }
+
+    // Post-verification to test a BufferViewMut implementation. Call after
+    // test_buffer_view_mut.
+    fn test_buffer_view_mut_post<B: Buffer>(buffer: &B, preserves_cap: bool) {
+        assert_eq!(buffer.as_ref(), &[0, 0, 0][..]);
+        if preserves_cap {
+            assert_eq!(buffer.prefix_len(), 4);
             assert_eq!(buffer.suffix_len(), 3);
         }
     }
