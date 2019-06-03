@@ -1,0 +1,18 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Board name used for paving and amber updates.
+  board_name = ""
+
+  # A list of package labels to include in the 'base' package set. Used by the
+  # board definition rather than the product definition.
+  board_package_labels = []
+
+  # Does nothing.
+  #
+  # Will be removed after 30 April 2019.
+  allow_layer_guesswork = false
+  board_packages = []
+}

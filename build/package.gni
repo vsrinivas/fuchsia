@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
 import("//build/disabled_for_asan.gni")
@@ -17,9 +18,6 @@ declare_args() {
   # doesn't exist yet when it's needed, it will be generated.  New
   # keys can be generated with the `pm -k FILE genkey` host command.
   system_package_key = "//build/development.key"
-
-  # Board name used for paving and amber updates.
-  board_name = ""
 }
 
 # Generate a list of package metadata exported from all packages in the

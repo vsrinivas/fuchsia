@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/testing/platforms.gni")
 
@@ -28,16 +29,6 @@ declare_args() {
   # the base and cache package sets, which means you do not need to redundantly
   # include those labels in this variable.
   universe_package_labels = []
-
-  # A list of package labels to include in the 'base' package set. Used by the
-  # board definition rather than the product definition.
-  board_package_labels = []
-
-  # Does nothing.
-  #
-  # Will be removed after 30 April 2019.
-  allow_layer_guesswork = false
-  board_packages = []
 }
 
 # Write a file that can be sourced by `fx`.  This file is produced
