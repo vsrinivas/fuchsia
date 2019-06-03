@@ -411,17 +411,20 @@ EXPORT_NO_DDK zx_status_t trace_engine_start(
 }
 
 // thread-safe
-EXPORT_NO_DDK zx_status_t trace_engine_stop(zx_status_t disposition) {
+EXPORT_NO_DDK void trace_engine_stop(zx_status_t disposition) {
     fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have have an active trace in order to stop it.
     int state = g_state.load(std::memory_order_relaxed);
-    if (state == TRACE_STOPPED)
-        return ZX_ERR_BAD_STATE;
+    if (state == TRACE_STOPPED) {
+        return;
+    }
 
     update_disposition_locked(disposition);
-    if (state == TRACE_STOPPING)
-        return ZX_OK; // already stopping
+    if (state == TRACE_STOPPING) {
+        // already stopping
+        return;
+    }
 
     ZX_DEBUG_ASSERT(state == TRACE_STARTED);
     ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) != 0u);
@@ -449,8 +452,6 @@ EXPORT_NO_DDK zx_status_t trace_engine_stop(zx_status_t disposition) {
     // |handle_context_released()| will be called asynchronously when the last
     // reference is released.
     trace_release_prolonged_context(reinterpret_cast<trace_prolonged_context_t*>(g_context));
-
-    return ZX_OK;
 }
 
 // This is an internal function, only called from context.cpp.

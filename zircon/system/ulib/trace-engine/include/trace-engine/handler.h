@@ -116,15 +116,13 @@ zx_status_t trace_engine_start(async_dispatcher_t* dispatcher,
 //
 // The trace handler's |trace_stopped()| method will be invoked asynchronously
 // when the trace engine transitions to the |TRACE_STOPPED| states.
+// Does nothing if tracing has already stopped.
 //
 // |disposition| is |ZX_OK| if tracing is being stopped normally, otherwise indicates
 // that tracing is being aborted due to an error.
 //
-// Returns |ZX_OK| if the current state is |TRACE_STARTED| or |TRACE_STOPPING|.
-// Returns |ZX_ERR_BAD_STATE| if current state is |TRACE_STOPPED|.
-//
 // This function is thread-safe.
-zx_status_t trace_engine_stop(zx_status_t disposition);
+void trace_engine_stop(zx_status_t disposition);
 
 // Asynchronously notifies the engine that buffers up to |wrapped_count|
 // have been saved.

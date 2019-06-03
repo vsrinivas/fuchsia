@@ -82,8 +82,7 @@ public:
 
     void StopEngine() {
         ZX_DEBUG_ASSERT(trace_running_);
-        zx_status_t status = trace_engine_stop(ZX_OK);
-        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+        trace_engine_stop(ZX_OK);
     }
 
     void WaitEngineStopped() {

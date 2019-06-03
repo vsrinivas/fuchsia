@@ -61,10 +61,7 @@ public:
         trace::internal::trace_buffer_header header;
         {
             auto context = trace::TraceProlongedContext::Acquire();
-            auto status = trace_engine_stop(ZX_OK);
-            ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
-                                "trace_stop_engine returned %s\n",
-                                zx_status_get_string(status));
+            trace_engine_stop(ZX_OK);
             trace_context_snapshot_buffer_header(context.get(), &header);
         }
 

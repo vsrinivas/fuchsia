@@ -118,20 +118,7 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
 }
 
 void Session::StopEngine() {
-    auto status = trace_engine_stop(ZX_OK);
-    if (status != ZX_OK) {
-        // During shutdown this can happen twice: once for the Stop() request
-        // and once when the channel is closed. Don't print anything for this
-        // case, it suggests an error that isn't there. We could keep track of
-        // this ourselves, but that has its own problems: Best just have one
-        // place that records engine state: in the engine.
-        if (status == ZX_ERR_BAD_STATE && trace_state() == TRACE_STOPPED) {
-            // this is ok
-        } else {
-            fprintf(stderr, "Session: Failed to stop engine, status=%d(%s)\n",
-                    status, zx_status_get_string(status));
-        }
-    }
+    trace_engine_stop(ZX_OK);
 }
 
 void Session::HandleFifo(async_dispatcher_t* dispatcher,
