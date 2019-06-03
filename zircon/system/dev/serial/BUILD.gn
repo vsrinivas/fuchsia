@@ -10,5 +10,6 @@ group("serial") {
   ]
   if (current_cpu == "x64") {
     deps += [ "intel-serialio" ]
+    deps += [ "uart16550" ]
   }
 }

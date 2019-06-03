@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("uart16550") {
+  sources = [
+    "uart16550.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.serialimpl",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("uart16550-test") {
+  output_name = "uart16550-test"
+  sources = [
+    "uart16550-test.cpp",
+    "uart16550.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.serialimpl",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
