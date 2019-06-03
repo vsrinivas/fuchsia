@@ -1,0 +1,167 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### start fuchsia in aemu
+
+## usage: fx aemu [-k] [-N] [-u <path>] [-e <directory>]
+##   -k use KVM
+##   -N run with emulated nic via tun/tap
+##   -u <path> execute aemu if-up script, default is no script
+##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
+source "${FUCHSIA_DIR}/buildtools/vars.sh"
+
+KVM=""
+NET=""
+AEMU_DIR=""
+UPSCRIPT=no
+
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+  -h|--help)
+    fx-command-help
+    exit 0
+    ;;
+  -k)
+    KVM=1
+    ;;
+  -N)
+    NET=1
+    ;;
+  -u)
+    shift
+    UPSCRIPT="$1"
+    ;;
+  -e)
+    shift
+    AEMU_DIR="$1"
+    ;;
+  *)
+    break
+  esac
+  shift
+done
+
+# aemu is limited to x64 for now
+if [[ "$FUCHSIA_ARCH" != "x64" ]]; then
+  fx-error Unsupported arch
+  exit 1
+fi
+
+if [[ -z "$AEMU_DIR" && -d "${FUCHSIA_DIR}/zircon/prebuilt/downloads/aemu" ]]; then
+  AEMU_DIR="${FUCHSIA_DIR}/zircon/prebuilt/downloads/aemu/"
+fi
+
+# construct the args for aemu
+ARGS=()
+ARGS+=("-m" "2048")
+ARGS+=("-serial" "stdio")
+ARGS+=("-smp" "4,threads=2")
+ARGS+=("-vga" "none")
+ARGS+=("-machine" "q35")
+ARGS+=("-device" "isa-debug-exit,iobase=0xf4,iosize=0x04")
+ARGS+=("-device" "virtio-keyboard-pci")
+ARGS+=("-device" "virtio_input_multi_touch_pci_1")
+if (( $KVM )); then
+  ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
+else
+  ARGS+=("-cpu" "Haswell,+smap,-check,-fsgsbase")
+fi
+
+if (( $NET )); then
+  IFNAME=""
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    IFNAME="tap0"
+    if [[ ! -c "/dev/$IFNAME" ]]; then
+      echo "To use aemu with networking on macOS, install the tun/tap driver:"
+      echo "http://tuntaposx.sourceforge.net/download.xhtml"
+      exit 1
+    fi
+    if [[ ! -w "/dev/$IFNAME" ]]; then
+      echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
+      echo "  sudo chown $USER /dev/$IFNAME"
+      exit 1
+    fi
+  else
+    IFNAME="qemu"
+    TAP_IFS=$(ip tuntap show 2>/dev/null)
+    if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
+      echo "To use aemu with networking on Linux, configure tun/tap:"
+      echo
+      echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
+      echo "sudo ip link set $IFNAME up"
+      exit 1
+    fi
+  fi
+  ARGS+=("-netdev" "type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0")
+  HASH=$(echo $IFNAME | shasum)
+  SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+  MAC=",mac=52:54:00$SUFFIX"
+  ARGS+=("-device" "e1000,netdev=net0${MAC}")
+else
+  ARGS+=("-net" "none")
+fi
+
+# Construction of a qcow image prevents aemu from writing back to the
+# build-produced image file, which could cause timestamp issues with that file.
+# Construction of the new ZBI adds //.ssh/authorized_keys for SSH access.
+img_dir="$(mktemp -d)"
+if [[ ! -d "${img_dir}" ]]; then
+  fx-error "Failed to create temporary directory"
+  exit 1
+fi
+trap 'rm -rf "$img_dir"' EXIT
+
+# TODO: move image creation logic into a lib file that both `run` and `aeemu` will use.
+KERNEL="${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
+kernelzbi="${img_dir}/fuchsia-ssh.zbi"
+"${ZIRCON_TOOLS_DIR}/zbi" -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
+  --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
+
+if [ -n "$IMAGE_FVM_RAW" ]; then
+  fvmimg="${img_dir}/fvm.blk"
+  ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=mydisk")
+  ARGS+=("-device" "ich9-ahci,id=ahci" "-device" "ide-drive,drive=mydisk,bus=ahci.0")
+  stat_flags=()
+  if [[ $(uname) == "Darwin" ]]; then
+    stat_flags+=("-x")
+  fi
+  stat_output=$(stat "${stat_flags[@]}" "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}")
+  if [[ "$stat_output" =~ Size:\ ([0-9]+) ]]; then
+    size="${BASH_REMATCH[1]}"
+    newsize=$(($size * 2))
+    # We must take a copy of the build artifact, rather than re-use it, as we
+    # need to modify it in order to extend it.
+    echo -n "Creating disk image..."
+    cp "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" "${fvmimg}"
+    "${ZIRCON_TOOLS_DIR}/fvm" "${fvmimg}" extend --length "${newsize}"
+    echo "done"
+  else
+    fx-error "Could not extend fvm, unable to stat fvm image"
+  fi
+fi
+
+# construct the kernel cmd line for aemu
+CMDLINE="kernel.serial=legacy "
+# Propagate our TERM environment variable as a kernel command line
+# argument.  This is first so that an explicit -c TERM=foo argument
+# goes into CMDLINE later and overrides this.
+if [[ -n $TERM ]]; then
+    CMDLINE+="TERM=$TERM "
+fi
+
+# Add entropy to the kernel
+CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
+
+# Don't 'reboot' the emulator if the kernel crashes
+CMDLINE+="kernel.halt-on-panic=true "
+
+# run aemu
+set -x
+exec "${AEMU_DIR}"emulator -fuchsia -kernel "$KERNEL" -initrd "$kernelzbi" "${ARGS[@]}" \
+     -append "$CMDLINE" "$@"
