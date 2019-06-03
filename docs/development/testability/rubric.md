@@ -49,6 +49,12 @@ The exact contents of the doc may change over time.
 
 *   **Changes to functionality should have a test that would have failed without
     said change.**
+*   **Tests must be local to the code being changed: dependencies with test
+    coverage do not count as test coverage.** For example, if "A" is used by a
+    "B", and the "B" contains tests, this does not provide coverage for "A".
+    If bugs are caught with "B"'s tests, they will manifest indirectly, making
+    them harder to pinpoint to "A". Similarly, if "B" is deprecated (or just
+    changes its dependencies) all coverage for "A" would be lost.
 *   **Tests must be automated (CI/CQ when supported)**. A manual test is not
     sufficient, because there is no guarantee that a future change to the code
     (especially when authored by another engineer) will exercise the same manual
