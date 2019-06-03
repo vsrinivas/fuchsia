@@ -42,10 +42,9 @@ compatibility.
 
 ### Naming
 
-Public FIDL definitions are located in the source tree at a path with the
-following pattern: `$LAYER/public/lib/$NAME/fidl`. The target name should be
-`fidl`. Related FIDL libraries can be grouped in a directory. For example,
-`$LAYER/public/lib/$GROUP/$NAME/fidl`.
+Public FIDL definitions are located in the source tree under
+`//sdk/fidl/$LIBRARY_NAME`.
+The target name should be the name of the library.
 
 ### Style
 
@@ -98,13 +97,10 @@ transitively include headers from these dependencies.
 ### Naming
 
 Client libraries should be named according to the language they expect their
-clients to use. For example, the C++ variant of the `$NAME` library should be
-located in the source tree at a path with the following pattern:
-`$LAYER/public/lib/$NAME/cpp`.
-
-In some cases, a library only makes sense for one language. In that case, the
-language suffix may be omitted unless the client library has an associated
-FIDL protocol.
+clients to use.
+For example, the C++ variant of the `$NAME` library should be located in the
+source tree under `//sdk/lib/$NAME/cpp`.
+The C variant should simply be under `//sdk/lib/$NAME`.
 
 ### Style
 
