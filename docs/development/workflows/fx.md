@@ -61,6 +61,8 @@ with this:
 * `fx shell` [connect to a target shell](#connect-to-a-target-shell)
 * [and many other small tasks](#performing-other-common-tasks)
 
+## Configure a build
+
 First let's configure the build. To do this we need to make a few choices:
 
 * What [Product configuration](#key-product-configurations) do you want?
@@ -68,11 +70,6 @@ First let's configure the build. To do this we need to make a few choices:
 * What board are you building for? (unsure: try `x64`)
 * What extra [Bundles](#key-bundles) do you want? (unsure: try `tools`, and if
   you're working on features, you probably want `tests`)
-
-## Configure a build
-
-*We are working on a new command for configuring a build. This section describes
-the new command, which is currently being beta-tested.*
 
 Armed with our above choices (if you didn't read above, do so now), you are
 ready to configure your build:
