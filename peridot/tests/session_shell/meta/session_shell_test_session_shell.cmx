@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.app.discover.SuggestionsService",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",

@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <set>
-#include <utility>
-
+#include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -19,6 +16,10 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/time/time_delta.h>
+
+#include <memory>
+#include <set>
+#include <utility>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_main.h"
@@ -147,6 +148,16 @@ class TestApp : public modular::testing::SessionShellBase {
       : SessionShellBase(startup_context) {
     TestInit(__FILE__);
 
+    // Just a health check for suggestion service connection.
+    // TODO: exercise this service.
+    startup_context->ConnectToEnvironmentService(
+        suggestions_service_.NewRequest());
+    if (suggestions_service_.is_bound()) {
+      suggestions_service_connected_.Pass();
+    } else {
+      modular::testing::Fail("Failed to connect to suggestion service");
+    }
+
     startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
     startup_context->ConnectToEnvironmentService(
         component_context_.NewRequest());
@@ -159,6 +170,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
  private:
   TestPoint create_view_{"CreateView()"};
+  TestPoint suggestions_service_connected_{"Suggestions service connected"};
 
   // |SingleServiceApp|
   void CreateView(
@@ -747,6 +759,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
 
+  fuchsia::app::discover::SuggestionsPtr suggestions_service_;
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;

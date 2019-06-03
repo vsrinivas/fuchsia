@@ -42,6 +42,7 @@ executable_package("session_shell_test_session_shell") {
     "//peridot/lib/testing:session_shell_base",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
+    "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
