@@ -13,7 +13,7 @@ use {
     },
     failure::{Error, Fail, ResultExt},
     fuchsia_async::{net::UdpSocket, Executor, Interval},
-    fuchsia_syslog::{self as fx_log, fx_log_info, fx_vlog},
+    fuchsia_syslog::{self as fx_syslog, fx_log_info},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{future::try_join, Future, StreamExt, TryStreamExt},
     getopts::Options,
@@ -34,8 +34,7 @@ const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
 const EXPIRATION_INTERVAL_SECS: i64 = 5;
 
 fn main() -> Result<(), Error> {
-    fx_log::init()?;
-    fx_log::set_severity(fx_log::levels::INFO);
+    fx_syslog::init_with_tags(&["dhcpd"])?;
 
     let mut exec = Executor::new().context("error creating executor")?;
     let path = get_server_config_file_path()?;
@@ -82,17 +81,17 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
     loop {
         let (received, mut sender) = await!(sock.recv_from(&mut *buf))
             .map_err(|_e| failure::err_msg("unable to receive buffer"))?;
-        fx_log_info!(tag: "dhcpd", "received {} bytes", received);
+        fx_log_info!("received message from: {:?}", sender);
         let msg = Message::from_buffer(&buf[0..received])
             .ok_or_else(|| failure::err_msg("unable to parse buffer"))?;
-        fx_vlog!(tag: "dhcpd", 1, "msg parsed {:?}", msg);
+        fx_log_info!("parsed message: {:?}", msg);
         // This call should not block because the server is single-threaded.
         let response = server
             .lock()
             .unwrap()
             .dispatch(msg)
             .ok_or_else(|| failure::err_msg("invalid message"))?;
-        fx_vlog!(tag: "dhcpd", 1, "msg dispatched to server {:?}", response);
+        fx_log_info!("generated response: {:?}", response);
         let response_buffer = response.serialize();
         // A new DHCP client sending a DHCPDISCOVER message will send
         // it from 0.0.0.0. In order to respond with a DHCPOFFER, the server
@@ -102,7 +101,7 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
             sender.set_ip(IpAddr::V4(Ipv4Addr::BROADCAST));
         }
         await!(sock.send_to(&response_buffer, sender)).context("unable to send response")?;
-        fx_log_info!(tag: "dhcpd", "response sent");
+        fx_log_info!("response sent to: {:?}", sender);
     }
 }
 
