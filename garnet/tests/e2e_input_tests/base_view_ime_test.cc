@@ -69,13 +69,6 @@ class ImeClientView : public scenic::BaseView {
     root_node().AddChild(background);
   }
 
-  void Update(uint64_t present_time) {
-    session()->Present(
-        present_time, [this](fuchsia::images::PresentationInfo info) {
-          Update(info.presentation_time + info.presentation_interval);
-        });
-  }
-
   // |scenic::BaseView|
   void OnInputEvent(InputEvent event) override {
     if (on_input_) {
@@ -146,11 +139,12 @@ class ImeInputTest : public gtest::RealLoopFixture {
           << ", " << display_height_ << ").";
 
       view_->CreateScene(display_width_, display_height_);
-      view_->Update(zx_clock_get_monotonic());
-
-      inject_input_();  // Display up, content ready. Send in input.
-
-      test_was_run_ = true;  // Actually did work for this test.
+      view_->session()->Present(
+          zx_clock_get_monotonic(),
+          [this](fuchsia::images::PresentationInfo info) {
+            this->inject_input_();  // Display up, content ready. Send in input.
+            this->test_was_run_ = true;  // Actually did work for this test.
+          });
     });
 
     // Post a "just in case" quit task, if the test hangs.
@@ -217,7 +211,7 @@ class ImeInputTest : public gtest::RealLoopFixture {
   bool test_was_run_ = false;
 };
 
-TEST_F(ImeInputTest, DISABLED_Keyboard) {
+TEST_F(ImeInputTest, Keyboard) {
   // Handle input. Fires for every input event received.
   view_->SetOnInputCallback([this](InputEvent event) {
     // Store inputs for checking later.
