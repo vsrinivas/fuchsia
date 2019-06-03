@@ -111,7 +111,7 @@ public:
 
     zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
         TRACE_DURATION("blobfs", "Blobfs::Transaction", "count", count);
-        return fifo_client_.Transaction(requests, count);
+        return block_device_->FifoTransaction(requests, count);
     }
 
     ////////////////
@@ -284,7 +284,6 @@ private:
     std::unique_ptr<BlockDevice> block_device_;
     fuchsia_hardware_block_BlockInfo block_info_ = {};
     std::atomic<groupid_t> next_group_ = {};
-    block_client::Client fifo_client_;
 
     fbl::unique_ptr<Allocator> allocator_;
 

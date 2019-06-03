@@ -21,6 +21,7 @@ test("blobfs-unit") {
     "journal-test.cpp",
     "node-populator-test.cpp",
     "node-reserver-test.cpp",
+    "remote-block-device-test.cpp",
     "ring-buffer-test.cpp",
     "unbuffered-operations-builder-test.cpp",
     "utils.cpp",
@@ -29,7 +30,10 @@ test("blobfs-unit") {
     "writeback-test.cpp",
   ]
   deps = [
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/zxtest",
   ]
 }

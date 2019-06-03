@@ -30,6 +30,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/fdio.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/event.h>
 #include <zircon/compiler.h>
@@ -488,7 +489,6 @@ Blobfs::~Blobfs() {
     writeback_.reset();
 
     Cache().Reset();
-    Device()->BlockCloseFifo();
 }
 
 void Blobfs::ScheduleMetricFlush() {
@@ -527,18 +527,6 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, const MountOptio
 
     if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
         return ZX_ERR_IO;
-    }
-
-    zx::fifo fifo;
-    status = fs->Device()->BlockGetFifo(&fifo);
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("Failed to mount blobfs (%d). Is someone else using the block device?\n",
-                       status);
-        return status;
-    }
-
-    if ((status = block_client::Client::Create(std::move(fifo), &fs->fifo_client_)) != ZX_OK) {
-        return status;
     }
 
     RawBitmap block_map;
@@ -640,7 +628,7 @@ zx_status_t Blobfs::Reload() {
 
     // Re-read the info block from disk.
     char block[kBlobfsBlockSize];
-    zx_status_t status = Device()->ReadBlock(0, block);
+    zx_status_t status = Device()->ReadBlock(0, kBlobfsBlockSize, block);
     if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: could not read info block\n");
         return status;
@@ -705,7 +693,19 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
         return status;
     }
 
-    auto device = std::make_unique<RemoteBlockDevice>(std::move(blockfd));
+    zx::channel block_connection;
+    status = fdio_get_service_handle(blockfd.release(), block_connection.reset_and_get_address());
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Could not acquire service handle of block device\n");
+        return status;
+    }
+
+    std::unique_ptr<RemoteBlockDevice> device;
+    status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Could not initialize block device\n");
+        return status;
+    }
 
     if ((status = Blobfs::Create(std::move(device), options, info, out)) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: mount failed; could not create blobfs\n");
