@@ -12,17 +12,11 @@ use {
     futures::future::FutureObj,
     futures::lock::Mutex,
     futures::prelude::*,
-    lazy_static::lazy_static,
-    regex::Regex,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
 };
 
 pub struct MockResolver {
     components: HashMap<String, ComponentDecl>,
-}
-
-lazy_static! {
-    static ref NAME_RE: Regex = Regex::new(r"test:///([0-9a-z\-\._]+)$").unwrap();
 }
 
 impl MockResolver {
@@ -31,10 +25,14 @@ impl MockResolver {
     }
 
     async fn resolve_async(&self, component_url: String) -> Result<fsys::Component, ResolverError> {
-        let caps = NAME_RE.captures(&component_url).unwrap();
-        let name = &caps[1];
-        let decl = self.components.get(name.clone()).ok_or(
-            ResolverError::component_not_available(name, format_err!("not in the hashmap")),
+        const NAME_PREFIX: &str = "test:///";
+        debug_assert!(component_url.starts_with(NAME_PREFIX), "invalid component url");
+        let (_, name) = component_url.split_at(NAME_PREFIX.len());
+        let decl = self.components.get(name).ok_or(
+            ResolverError::component_not_available(
+                name.to_string(),
+                format_err!("not in the hashmap"),
+            ),
         )?;
         let fsys_decl =
             fsys::ComponentDecl::try_from(decl.clone()).expect("decl failed conversion");

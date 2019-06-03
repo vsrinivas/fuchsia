@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Fail, lazy_static::lazy_static, regex::Regex, std::fmt};
-
-lazy_static! {
-    pub static ref CHILD_MONIKER_RE: Regex = Regex::new(r"([^:]+)(:([^:]+))?").unwrap();
-}
+use {failure::Fail, std::fmt};
 
 /// A child moniker locally identifies a child component instance using the name assigned by
 /// its parent and its collection (if present). It is a building block for more complex monikers.
@@ -33,14 +29,22 @@ impl ChildMoniker {
         ChildMoniker { name, collection, rep }
     }
 
+    /// Parses a `ChildMoniker` from a string.
+    ///
+    /// Input strings should be of the format `<name>(:<collection>)?`, e.g. `foo` or `biz:foo`.
     fn parse(rep: &str) -> Result<Self, MonikerError> {
-        let caps =
-            CHILD_MONIKER_RE.captures(rep).ok_or_else(|| MonikerError::invalid_moniker(rep))?;
-        let (name, coll) = match caps.get(3) {
-            Some(s) => (s.as_str().to_string(), Some(caps[1].to_string())),
-            None => (caps[1].to_string(), None),
+        let mut parts = rep.split(":").fuse();
+        let invalid = || MonikerError::invalid_moniker(rep);
+        let first = parts.next().ok_or_else(invalid)?;
+        let second = parts.next();
+        if parts.next().is_some() || first.len() == 0 || second.map_or(false, |s| s.len() == 0) {
+            return Err(invalid());
+        }
+        let (name, coll) = match second {
+            Some(s) => (s, Some(first.to_string())),
+            None => (first, None),
         };
-        Ok(ChildMoniker::new(name, coll))
+        Ok(ChildMoniker::new(name.to_string(), coll))
     }
 
     pub fn name(&self) -> &str {
@@ -236,6 +240,12 @@ mod tests {
         assert_eq!("coll:test", m.as_str());
         assert_eq!("coll:test", format!("{}", m));
         assert_eq!(m, ChildMoniker::from("coll:test"));
+
+        assert!(ChildMoniker::parse("").is_err(), "cannot be empty");
+        assert!(ChildMoniker::parse(":").is_err(), "cannot be empty with colon");
+        assert!(ChildMoniker::parse("f:").is_err(), "second part cannot be empty with colon");
+        assert!(ChildMoniker::parse(":f").is_err(), "first part cannot be empty with colon");
+        assert!(ChildMoniker::parse("f:f:f").is_err(), "multiple colons not allowed");
     }
 
     #[test]

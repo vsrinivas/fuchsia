@@ -40,7 +40,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
