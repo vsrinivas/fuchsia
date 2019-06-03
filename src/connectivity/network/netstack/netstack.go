@@ -290,17 +290,6 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 			}
 		}
 
-		newAddr := zeroIpAddr
-		newNetmask := zeroIpMask
-		// Check if the NIC still has other primary IPs and use that one.
-		if mainAddr, subnet, err := ns.mu.stack.GetMainNICAddress(nic, protocol); err == nil {
-			newAddr = mainAddr
-			newNetmask = subnet.Mask()
-			if newNetmask == "" {
-				addressSize := len(newAddr) * 8
-				newNetmask = util.CIDRMask(addressSize, addressSize)
-			}
-		}
 		return nil
 	}(); err != nil {
 		ns.mu.Unlock()
