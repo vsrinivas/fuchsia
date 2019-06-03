@@ -21,7 +21,7 @@ use fidl_fuchsia_auth_account::{
     AccountManagerRequestStream, AccountMarker, Status,
 };
 use fuchsia_component::fuchsia_single_component_package_url;
-use fuchsia_inspect::vmo::{Inspector, Metric, Property};
+use fuchsia_inspect::vmo::{Inspector, Property};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
@@ -455,6 +455,7 @@ mod tests {
         AccountListenerRequest, AccountManagerProxy, AccountManagerRequestStream,
     };
     use fuchsia_async as fasync;
+    use fuchsia_inspect::vmo::NumericProperty;
     use fuchsia_zircon as zx;
     use futures::future::join;
     use lazy_static::lazy_static;

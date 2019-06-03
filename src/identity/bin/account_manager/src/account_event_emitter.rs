@@ -8,7 +8,7 @@
 
 use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
 use fidl_fuchsia_auth_account::{AccountListenerOptions, AccountListenerProxy};
-use fuchsia_inspect::vmo::{Metric, Node};
+use fuchsia_inspect::vmo::{Node, NumericProperty, Property};
 use futures::future::*;
 use futures::lock::Mutex;
 use std::pin::Pin;

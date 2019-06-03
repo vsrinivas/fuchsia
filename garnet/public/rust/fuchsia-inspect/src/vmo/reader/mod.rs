@@ -288,23 +288,23 @@ mod tests {
     fn read_vmo() {
         let inspector = Inspector::new().unwrap();
         let root = inspector.root();
-        let _root_int = root.create_int_metric("int-root", 3);
+        let _root_int = root.create_int("int-root", 3);
 
         let child1 = root.create_child("child-1");
-        let _child1_uint = child1.create_uint_metric("property-uint", 10);
-        let _child1_double = child1.create_double_metric("property-double", -3.4);
+        let _child1_uint = child1.create_uint("property-uint", 10);
+        let _child1_double = child1.create_double("property-double", -3.4);
 
         let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
         let string_data = chars.iter().cycle().take(6000).collect::<String>();
-        let _string_prop = child1.create_string_property("property-string", &string_data);
+        let _string_prop = child1.create_string("property-string", &string_data);
 
         let child2 = root.create_child("child-2");
-        let _child2_double = child2.create_double_metric("property-double", 5.8);
+        let _child2_double = child2.create_double("property-double", 5.8);
 
         let child3 = child1.create_child("child-1-1");
-        let _child3_int = child3.create_int_metric("property-int", -9);
+        let _child3_int = child3.create_int("property-int", -9);
         let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
-        let _bytes_prop = child3.create_bytes_property("property-bytes", &bytes_data);
+        let _bytes_prop = child3.create_bytes("property-bytes", &bytes_data);
 
         let result = NodeHierarchy::try_from(&inspector).unwrap();
 

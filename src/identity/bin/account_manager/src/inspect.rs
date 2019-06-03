@@ -7,16 +7,16 @@
 //! This module defines the format and meaning of all the inspect information published by
 //! account_manager.
 
-use fuchsia_inspect::vmo::{Node, StringProperty, UintMetric};
+use fuchsia_inspect::vmo::{Node, StringProperty, UintProperty};
 
 /// An abstraction over the properties of the account set that we expose via fuchsia-inspect.
 pub struct Accounts {
     /// The underlying inspect node.
     _node: Node,
     /// The total number of accounts on the device.
-    pub total: UintMetric,
+    pub total: UintProperty,
     /// The number of active accounts on the device, i.e. the number with a running AccountHandler.
-    pub active: UintMetric,
+    pub active: UintProperty,
 }
 
 // TODO(jsankey): Write a procedural macro and trait to auto generate this implementation once it's
@@ -26,8 +26,8 @@ impl Accounts {
     /// was not possible.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("accounts");
-        let total = (&node).create_uint_metric("total", 0);
-        let active = (&node).create_uint_metric("active", 0);
+        let total = (&node).create_uint("total", 0);
+        let active = (&node).create_uint("active", 0);
         Accounts { _node: node, total, active }
     }
 }
@@ -37,9 +37,9 @@ pub struct Listeners {
     /// The underlying inspect node.
     _node: Node,
     /// The number of listeners currently registered to receive events.
-    pub active: UintMetric,
+    pub active: UintProperty,
     /// The total number of listen-able events that have occurred.
-    pub events: UintMetric,
+    pub events: UintProperty,
 }
 
 // TODO(jsankey): Write a procedural macro and trait to auto generate this implementation once it's
@@ -49,8 +49,8 @@ impl Listeners {
     /// was not possible.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("listeners");
-        let active = (&node).create_uint_metric("active", 0);
-        let events = (&node).create_uint_metric("events", 0);
+        let active = (&node).create_uint("active", 0);
+        let events = (&node).create_uint("events", 0);
         Listeners { _node: node, active, events }
     }
 }
@@ -70,7 +70,7 @@ impl AuthProviders {
     /// was not possible.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("auth_providers");
-        let types = (&node).create_string_property("types", "");
+        let types = (&node).create_string("types", "");
         AuthProviders { _node: node, types }
     }
 }

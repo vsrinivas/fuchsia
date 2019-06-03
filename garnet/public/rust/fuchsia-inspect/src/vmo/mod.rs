@@ -40,21 +40,18 @@ pub trait Property<'t> {
     fn set(&'t self, value: Self::Type);
 }
 
-/// Trait implemented by metrics.
-pub trait Metric {
-    /// The type the metric is handling.
+/// Trait implemented by numeric properties.
+pub trait NumericProperty {
+    /// The type the property is handling.
     type Type;
 
-    /// Set the metric current value to |value|.
-    fn set(&self, value: Self::Type);
-
-    /// Add the given |value| to the metric current value.
+    /// Add the given |value| to the property current value.
     fn add(&self, value: Self::Type);
 
-    /// Subtract the given |value| from the metric current value.
+    /// Subtract the given |value| from the property current value.
     fn subtract(&self, value: Self::Type);
 
-    /// Return the current value of the metric for testing.
+    /// Return the current value of the property for testing.
     /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
     /// It will be replaced by a more comprehensive Read API implementation.
     fn get(&self) -> Result<Self::Type, Error>;
@@ -128,14 +125,14 @@ impl Inspector {
     }
 }
 
-/// Utility for generating functions to create a metric.
+/// Utility for generating functions to create a numeric property.
 ///   `name`: identifier for the name (example: double)
-///   `type`: the type of the metric (example: f64)
-macro_rules! create_metric_fn {
+///   `type`: the type of the numeric property (example: f64)
+macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
-            pub fn [<create_ $name _metric>](&self, name: &str, value: $type)
-                -> [<$name_cap Metric>] {
+            pub fn [<create_ $name >](&self, name: &str, value: $type)
+                -> [<$name_cap Property>] {
                 self.state
                     .as_ref()
                     .ok_or(format_err!("No-Op node"))
@@ -145,9 +142,9 @@ macro_rules! create_metric_fn {
                             .[<create_ $name _metric>](name, value, self.block_index.unwrap())
                     })
                     .map(|block| {
-                        [<$name_cap Metric>] {state: self.state.clone(), block_index: Some(block.index()) }
+                        [<$name_cap Property>] {state: self.state.clone(), block_index: Some(block.index()) }
                     })
-                    .unwrap_or([<$name_cap Metric>] { state: None, block_index: None })
+                    .unwrap_or([<$name_cap Property>] { state: None, block_index: None })
             }
         }
     };
@@ -177,14 +174,14 @@ impl Node {
             .unwrap_or(Node { state: None, block_index: None })
     }
 
-    /// Add a metric to this node: create_int_metric, create_double_metric,
-    /// create_uint_metric.
-    create_metric_fn!(int, Int, i64);
-    create_metric_fn!(uint, Uint, u64);
-    create_metric_fn!(double, Double, f64);
+    /// Add a numeric property to this node: create_int, create_double,
+    /// create_uint.
+    create_numeric_property_fn!(int, Int, i64);
+    create_numeric_property_fn!(uint, Uint, u64);
+    create_numeric_property_fn!(double, Double, f64);
 
     /// Add a string property to this node.
-    pub fn create_string_property(&self, name: &str, value: &str) -> StringProperty {
+    pub fn create_string(&self, name: &str, value: &str) -> StringProperty {
         self.state
             .as_ref()
             .ok_or(format_err!("No-Op node"))
@@ -204,7 +201,7 @@ impl Node {
     }
 
     /// Add a byte vector property to this node.
-    pub fn create_bytes_property(&self, name: &str, value: &[u8]) -> BytesProperty {
+    pub fn create_bytes(&self, name: &str, value: &[u8]) -> BytesProperty {
         self.state
             .as_ref()
             .ok_or(format_err!("No-Op node"))
@@ -253,18 +250,18 @@ macro_rules! dummy_trait_impls {
 
 dummy_trait_impls!(Node);
 
-/// Utility for generating metric functions (example: set, add, subtract)
+/// Utility for generating numeric property functions (example: set, add, subtract)
 ///   `fn_name`: the name of the function to generate (example: set)
 ///   `type`: the type of the argument of the function to generate (example: f64)
 ///   `name`: the readble name of the type of the function (example: double)
-macro_rules! metric_fn {
+macro_rules! numeric_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::item! {
             fn $fn_name(&self, value: $type) {
                 if let Some(ref state) = self.state {
                     state.lock().[<$fn_name _ $name _metric>](self.block_index.unwrap(), value)
                         .unwrap_or_else(|e| {
-                            fx_log_err!("Failed to {} metric. Error: {:?}", stringify!($fn_name), e);
+                            fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
                 }
             }
@@ -272,17 +269,17 @@ macro_rules! metric_fn {
     };
 }
 
-/// Utility for generating a metric datatype impl
+/// Utility for generating a numeric property datatype impl
 ///   `name`: the readble name of the type of the function (example: double)
 ///   `type`: the type of the argument of the function to generate (example: f64)
-macro_rules! metric {
+macro_rules! numeric_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
-            /// Inspect API Metric data type.
+            /// Inspect API Numeric Property data type.
             /// NOTE: do not rely on PartialEq implementation for true comparison.
             /// Instead leverage the reader.
             #[derive(Debug)]
-            pub struct [<$name_cap Metric>] {
+            pub struct [<$name_cap Property>] {
                 /// Index of the block in the VMO.
                 block_index: Option<u32>,
 
@@ -290,30 +287,35 @@ macro_rules! metric {
                 state: Option<Arc<Mutex<State>>>,
             }
 
-            impl Metric for [<$name_cap Metric>] {
+            impl<'t> Property<'t> for [<$name_cap Property>] {
                 type Type = $type;
-                metric_fn!(set, $type, $name);
-                metric_fn!(add, $type, $name);
-                metric_fn!(subtract, $type, $name);
+
+                numeric_property_fn!(set, $type, $name);
+            }
+
+            impl NumericProperty for [<$name_cap Property>] {
+                type Type = $type;
+                numeric_property_fn!(add, $type, $name);
+                numeric_property_fn!(subtract, $type, $name);
 
                 fn get(&self) -> Result<$type, Error> {
                     if let Some(ref state) = self.state {
                         state.lock().[<get_ $name _metric>](self.block_index.unwrap())
                     } else {
-                        Err(format_err!("Metric is No-Op"))
+                        Err(format_err!("Property is No-Op"))
                     }
                 }
             }
 
-            dummy_trait_impls!([<$name_cap Metric>]);
+            dummy_trait_impls!([<$name_cap Property>]);
 
-            impl Drop for [<$name_cap Metric>] {
+            impl Drop for [<$name_cap Property>] {
                 fn drop(&mut self) {
                     self.state.as_ref().map(|state| {
                         state
                             .lock()
                             .free_value(self.block_index.unwrap())
-                            .expect(&format!("Failed to free metric index={}", self.block_index.unwrap()));
+                            .expect(&format!("Failed to free property index={}", self.block_index.unwrap()));
                     });
                 }
             }
@@ -363,9 +365,9 @@ macro_rules! property {
     };
 }
 
-metric!(int, Int, i64);
-metric!(uint, Uint, u64);
-metric!(double, Double, f64);
+numeric_property!(int, Int, i64);
+numeric_property!(uint, Uint, u64);
+numeric_property!(double, Double, f64);
 
 property!(String, str, value.as_bytes());
 property!(Bytes, [u8], value);
@@ -440,103 +442,103 @@ mod tests {
     }
 
     #[test]
-    fn double_metric() {
+    fn double_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
         let node_block =
             node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let metric = node.create_double_metric("metric", 1.0);
-            let metric_block = node
+            let property = node.create_double("property", 1.0);
+            let property_block = node
                 .state
                 .as_ref()
                 .unwrap()
                 .lock()
                 .heap
-                .get_block(metric.block_index.unwrap())
+                .get_block(property.block_index.unwrap())
                 .unwrap();
-            assert_eq!(metric_block.block_type(), BlockType::DoubleValue);
-            assert_eq!(metric_block.double_value().unwrap(), 1.0);
+            assert_eq!(property_block.block_type(), BlockType::DoubleValue);
+            assert_eq!(property_block.double_value().unwrap(), 1.0);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            metric.set(2.0);
-            assert_eq!(metric_block.double_value().unwrap(), 2.0);
-            assert_eq!(metric.get().unwrap(), 2.0);
+            property.set(2.0);
+            assert_eq!(property_block.double_value().unwrap(), 2.0);
+            assert_eq!(property.get().unwrap(), 2.0);
 
-            metric.subtract(5.5);
-            assert_eq!(metric_block.double_value().unwrap(), -3.5);
+            property.subtract(5.5);
+            assert_eq!(property_block.double_value().unwrap(), -3.5);
 
-            metric.add(8.1);
-            assert_eq!(metric_block.double_value().unwrap(), 4.6);
+            property.add(8.1);
+            assert_eq!(property_block.double_value().unwrap(), 4.6);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
     #[test]
-    fn int_metric() {
+    fn int_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
         let node_block =
             node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let metric = node.create_int_metric("metric", 1);
-            let metric_block = node
+            let property = node.create_int("property", 1);
+            let property_block = node
                 .state
                 .as_ref()
                 .unwrap()
                 .lock()
                 .heap
-                .get_block(metric.block_index.unwrap())
+                .get_block(property.block_index.unwrap())
                 .unwrap();
-            assert_eq!(metric_block.block_type(), BlockType::IntValue);
-            assert_eq!(metric_block.int_value().unwrap(), 1);
+            assert_eq!(property_block.block_type(), BlockType::IntValue);
+            assert_eq!(property_block.int_value().unwrap(), 1);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            metric.set(2);
-            assert_eq!(metric_block.int_value().unwrap(), 2);
-            assert_eq!(metric.get().unwrap(), 2);
+            property.set(2);
+            assert_eq!(property_block.int_value().unwrap(), 2);
+            assert_eq!(property.get().unwrap(), 2);
 
-            metric.subtract(5);
-            assert_eq!(metric_block.int_value().unwrap(), -3);
+            property.subtract(5);
+            assert_eq!(property_block.int_value().unwrap(), -3);
 
-            metric.add(8);
-            assert_eq!(metric_block.int_value().unwrap(), 5);
+            property.add(8);
+            assert_eq!(property_block.int_value().unwrap(), 5);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
     #[test]
-    fn uint_metric() {
+    fn uint_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
         let node_block =
             node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let metric = node.create_uint_metric("metric", 1);
-            let metric_block = node
+            let property = node.create_uint("property", 1);
+            let property_block = node
                 .state
                 .as_ref()
                 .unwrap()
                 .lock()
                 .heap
-                .get_block(metric.block_index.unwrap())
+                .get_block(property.block_index.unwrap())
                 .unwrap();
-            assert_eq!(metric_block.block_type(), BlockType::UintValue);
-            assert_eq!(metric_block.uint_value().unwrap(), 1);
+            assert_eq!(property_block.block_type(), BlockType::UintValue);
+            assert_eq!(property_block.uint_value().unwrap(), 1);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
-            metric.set(5);
-            assert_eq!(metric_block.uint_value().unwrap(), 5);
-            assert_eq!(metric.get().unwrap(), 5);
+            property.set(5);
+            assert_eq!(property_block.uint_value().unwrap(), 5);
+            assert_eq!(property.get().unwrap(), 5);
 
-            metric.subtract(3);
-            assert_eq!(metric_block.uint_value().unwrap(), 2);
+            property.subtract(3);
+            assert_eq!(property_block.uint_value().unwrap(), 2);
 
-            metric.add(8);
-            assert_eq!(metric_block.uint_value().unwrap(), 10);
+            property.add(8);
+            assert_eq!(property_block.uint_value().unwrap(), 10);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
@@ -549,7 +551,7 @@ mod tests {
         let node_block =
             node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let property = node.create_string_property("property", "test");
+            let property = node.create_string("property", "test");
             let property_block = node
                 .state
                 .as_ref()
@@ -577,7 +579,7 @@ mod tests {
         let node_block =
             node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
         {
-            let property = node.create_bytes_property("property", b"test");
+            let property = node.create_bytes("property", b"test");
             let property_block = node
                 .state
                 .as_ref()
@@ -606,19 +608,16 @@ mod tests {
         // with inspect types in their structs be able to derive PartialEq and
         // Eq smoothly.
         assert_eq!(root, &root.create_child("child1"));
-        assert_eq!(root.create_int_metric("metric1", 1), root.create_int_metric("metric2", 2));
+        assert_eq!(root.create_int("property1", 1), root.create_int("property2", 2));
+        assert_eq!(root.create_double("property1", 1.0), root.create_double("property2", 2.0));
+        assert_eq!(root.create_uint("property1", 1), root.create_uint("property2", 2));
         assert_eq!(
-            root.create_double_metric("metric1", 1.0),
-            root.create_double_metric("metric2", 2.0)
-        );
-        assert_eq!(root.create_uint_metric("metric1", 1), root.create_uint_metric("metric2", 2));
-        assert_eq!(
-            root.create_string_property("metric1", "value1"),
-            root.create_string_property("metric2", "value2")
+            root.create_string("property1", "value1"),
+            root.create_string("property2", "value2")
         );
         assert_eq!(
-            root.create_bytes_property("metric1", b"value1"),
-            root.create_bytes_property("metric2", b"value2")
+            root.create_bytes("property1", b"value1"),
+            root.create_bytes("property2", b"value2")
         );
 
         Ok(())
