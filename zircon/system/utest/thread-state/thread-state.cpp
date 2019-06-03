@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
-#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
@@ -74,37 +73,6 @@ struct Message {
     uint32_t num_handles;
     zx_handle_t handles[MAX_NUM_MSG_HANDLES];
 };
-
-static zx_status_t get_root_resource(zx_handle_t* root_resource) {
-    int fd = open("/dev/misc/sysinfo", O_RDWR);
-    if (fd < 0) {
-        unittest_printf("ERROR: Cannot open sysinfo: %d/%s\n",
-                        errno, strerror(errno));
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    zx::channel channel;
-    zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-    if (status != ZX_OK) {
-        fprintf(stderr, "ERROR: Cannot obtain sysinfo channel: %s (%d)\n",
-                zx_status_get_string(status), status);
-        return status;
-    }
-
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(channel.get(), &status,
-                                                                   root_resource);
-    if (fidl_status != ZX_OK) {
-        fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
-                zx_status_get_string(fidl_status), fidl_status);
-        return fidl_status;
-    } else if (status != ZX_OK) {
-        fprintf(stderr, "ERROR: Cannot obtain root resource: %s (%d)\n",
-                zx_status_get_string(status), status);
-        return status;
-    }
-
-    return ZX_OK;
-}
 
 static void send_msg_with_handles(zx_handle_t channel, MessageType type,
                                   zx_handle_t* optional_handles, uint32_t num_handles) {
@@ -681,11 +649,9 @@ static bool interrupt_test() {
     zx_handle_t thread;
     ASSERT_TRUE(get_child_thread(channel, &thread));
 
-    zx_handle_t resource;
-    ASSERT_EQ(get_root_resource(&resource), ZX_OK);
-
     zx_handle_t interrupt;
-    ASSERT_EQ(zx_interrupt_create(resource, 0, ZX_INTERRUPT_VIRTUAL, &interrupt),
+    // Creating a virtual interrupt does not require a valid handle.
+    ASSERT_EQ(zx_interrupt_create(ZX_HANDLE_INVALID, 0, ZX_INTERRUPT_VIRTUAL, &interrupt),
               ZX_OK);
     zx_handle_t interrupt_dupe = tu_handle_duplicate(interrupt);
 
