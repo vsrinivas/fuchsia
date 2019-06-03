@@ -89,17 +89,23 @@
 #define BRCMF_C_SET_VAR 263
 #define BRCMF_C_SET_WSEC_PMK 268
 
-zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len);
-zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len);
-zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data);
-zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data);
+zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
+                                   int32_t* fwerr_ptr);
+zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* data, uint32_t len,
+                                   int32_t* fwerr_ptr);
+zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t data,
+                                  int32_t* fwerr_ptr);
+zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* data,
+                                  int32_t* fwerr_ptr);
 
 zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, const void* data,
-                                     uint32_t len);
+                                     uint32_t len, int32_t* fwerr_ptr);
 zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, void* data,
-                                     uint32_t len);
-zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, const char* name, uint32_t data);
-zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data);
+                                     uint32_t len, int32_t* fwerr_ptr);
+zx_status_t brcmf_fil_iovar_int_set(struct brcmf_if* ifp, const char* name, uint32_t data,
+                                    int32_t* fwerr_ptr);
+zx_status_t brcmf_fil_iovar_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data,
+                                    int32_t* fwerr_ptr);
 
 zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, const void* data,
                                       uint32_t len);
@@ -107,5 +113,6 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, vo
                                       uint32_t len);
 zx_status_t brcmf_fil_bsscfg_int_set(struct brcmf_if* ifp, const char* name, uint32_t data);
 zx_status_t brcmf_fil_bsscfg_int_get(struct brcmf_if* ifp, const char* name, uint32_t* data);
+const char* brcmf_fil_get_errstr(int32_t err);
 
 #endif /* _fwil_h_ */

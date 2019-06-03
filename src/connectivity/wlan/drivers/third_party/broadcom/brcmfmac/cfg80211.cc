@@ -460,7 +460,7 @@ void brcmf_set_mpc(struct brcmf_if* ifp, int mpc) {
     zx_status_t err = 0;
 
     if (check_vif_up(ifp->vif)) {
-        err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc);
+        err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc, nullptr);
         if (err != ZX_OK) {
             brcmf_err("fail to set mpc\n");
             return;
@@ -515,7 +515,7 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
         /* Scan is aborted by setting channel_list[0] to -1 */
         params_le.channel_list[0] = -1;
         /* E-Scan (or anyother type) can be aborted by SCAN */
-        err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCAN, &params_le, sizeof(params_le));
+        err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCAN, &params_le, sizeof(params_le), nullptr);
         if (err != ZX_OK) {
             brcmf_err("Scan abort failed\n");
         }
@@ -583,7 +583,7 @@ static zx_status_t brcmf_cfg80211_change_iface(struct wiphy* wiphy, struct net_d
     if (ap) {
         brcmf_dbg(INFO, "IF Type = AP\n");
     } else {
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra);
+        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra, nullptr);
         if (err != ZX_OK) {
             brcmf_err("WLC_SET_INFRA error (%d)\n", err);
             err = ZX_ERR_UNAVAILABLE;
@@ -709,7 +709,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     params->action = WL_ESCAN_ACTION_START;
     params->sync_id = 0x1234;
 
-    err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size);
+    err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size, nullptr);
     if (err != ZX_OK) {
         if (err == ZX_ERR_UNAVAILABLE) {
             brcmf_dbg(INFO, "system busy : escan canceled\n");
@@ -844,7 +844,7 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
     }
 
     /* store psk in firmware */
-    err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_WSEC_PMK, &pmk, sizeof(pmk));
+    err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_WSEC_PMK, &pmk, sizeof(pmk), nullptr);
     if (err != ZX_OK) {
         brcmf_err("failed to change PSK in firmware (len=%u)\n", pmk_len);
     }
@@ -869,7 +869,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason) {
 
     if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state)) {
         brcmf_dbg(INFO, "Call WLC_DISASSOC to stop excess roaming\n ");
-        err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, NULL, 0);
+        err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, NULL, 0, nullptr);
         if (err != ZX_OK) {
             brcmf_err("WLC_DISASSOC failed (%d)\n", err);
         }
@@ -967,9 +967,11 @@ static zx_status_t brcmf_cfg80211_get_station(struct net_device* ndev, const uin
     memcpy(sta_info_le, mac, ETH_ALEN);
 
     // First, see if we have a TDLS peer
-    err = brcmf_fil_iovar_data_get(ifp, "tdls_sta_info", sta_info_le, sizeof(*sta_info_le));
+    err = brcmf_fil_iovar_data_get(ifp, "tdls_sta_info", sta_info_le, sizeof(*sta_info_le),
+                                   nullptr);
     if (err != ZX_OK) {
-        err = brcmf_fil_iovar_data_get(ifp, "sta_info", sta_info_le, sizeof(*sta_info_le));
+        err = brcmf_fil_iovar_data_get(ifp, "sta_info", sta_info_le, sizeof(*sta_info_le),
+                                       nullptr);
         if (err != ZX_OK) {
             brcmf_err("GET STA INFO failed, %d\n", err);
         }
@@ -1007,7 +1009,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, wlanif_assoc_req_t* 
     // Pass RSNE to firmware
     ie_len = req->rsne_len;
     ie = (req->rsne_len > 0) ? req->rsne : NULL;
-    brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len);
+    brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, nullptr);
 
     // TODO(WLAN-733): We should be getting the IEs from SME. Passing a null entry seems
     // to work for now, presumably because the firmware uses its defaults.
@@ -1166,7 +1168,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
     scbval.val = reason_code;
     cfg->disconnect_mode = deauthenticate ? BRCMF_DISCONNECT_DEAUTH : BRCMF_DISCONNECT_DISASSOC;
     brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
-    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval));
+    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval), nullptr);
     if (status != ZX_OK) {
         brcmf_err("Failed to disassociate: %s\n", zx_status_get_string(status));
         goto done;
@@ -2418,35 +2420,35 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
         brcmf_configure_opensecurity(ifp);
     }
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, req->beacon_period);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, req->beacon_period, nullptr);
     if (status != ZX_OK) {
         brcmf_err("Beacon Interval Set Error, %s\n", zx_status_get_string(status));
         goto fail;
     }
     ifp->vif->profile.beacon_period = req->beacon_period;
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_DTIMPRD, req->dtim_period);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_DTIMPRD, req->dtim_period, nullptr);
     if (status != ZX_OK) {
         brcmf_err("DTIM Interval Set Error, %s\n", zx_status_get_string(status));
         goto fail;
     }
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, nullptr);
     if (status != ZX_OK) {
         brcmf_err("BRCMF_C_DOWN error %s\n", zx_status_get_string(status));
         goto fail;
     }
 
     // Disable simultaneous STA/AP operation, aka Real Simultaneous Dual Band (RSDB)
-    brcmf_fil_iovar_int_set(ifp, "apsta", 0);
+    brcmf_fil_iovar_int_set(ifp, "apsta", 0, nullptr);
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1, nullptr);
     if (status != ZX_OK) {
         brcmf_err("SET INFRA error %s\n", zx_status_get_string(status));
         goto fail;
     }
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 1, nullptr);
     if (status != ZX_OK) {
         brcmf_err("setting AP mode failed %s\n", zx_status_get_string(status));
         goto fail;
@@ -2454,14 +2456,14 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
 
     channel = {.primary = req->channel, .cbw = CBW20, .secondary80 = 0};
     chanspec = channel_to_chanspec(&cfg->d11inf, &channel);
-    status = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
+    status = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec, nullptr);
     if (status != ZX_OK) {
         brcmf_err("Set Channel failed: chspec=%d, status=%s\n", chanspec,
                   zx_status_get_string(status));
         goto fail;
     }
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, nullptr);
     if (status != ZX_OK) {
         brcmf_err("BRCMF_C_UP error (%s)\n", zx_status_get_string(status));
         goto fail;
@@ -2472,7 +2474,8 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
     // join parameters starts with ssid
     memcpy(&join_params.ssid_le, &ssid_le, sizeof(ssid_le));
     // create softap
-    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
+    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params),
+                                    nullptr);
     if (status != ZX_OK) {
         brcmf_err("SET SSID error (%s)\n", zx_status_get_string(status));
         goto fail;
@@ -2504,26 +2507,27 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, wlanif_stop_req_t
     }
 
     memset(&join_params, 0, sizeof(join_params));
-    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
+    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params),
+                                    nullptr);
     if (status != ZX_OK) {
         brcmf_err("SET SSID error (%s)\n", zx_status_get_string(status));
         result = WLAN_STOP_RESULT_INTERNAL_ERROR;
     }
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, nullptr);
     if (status != ZX_OK) {
         brcmf_err("BRCMF_C_DOWN error (%s)\n", zx_status_get_string(status));
         result = WLAN_STOP_RESULT_INTERNAL_ERROR;
     }
 
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, nullptr);
     if (status != ZX_OK) {
         brcmf_err("setting AP mode failed (%s)\n", zx_status_get_string(status));
         result = WLAN_STOP_RESULT_INTERNAL_ERROR;
     }
 
     /* Bring device back up so it can be used again */
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, nullptr);
     if (status != ZX_OK) {
         brcmf_err("BRCMF_C_UP error (%s)\n", zx_status_get_string(status));
         result = WLAN_STOP_RESULT_INTERNAL_ERROR;
@@ -2549,7 +2553,7 @@ static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, uint8_t* 
     memcpy(&scbval.ea, mac, ETH_ALEN);
     scbval.val = reason;
     zx_status_t status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_DEAUTHENTICATE_FOR_REASON,
-                                                &scbval, sizeof(scbval));
+                                                &scbval, sizeof(scbval), nullptr);
     if (status != ZX_OK) {
         brcmf_err("SCB_DEAUTHENTICATE_FOR_REASON failed %s\n", zx_status_get_string(status));
     }
@@ -2590,7 +2594,7 @@ static zx_status_t brcmf_cfg80211_set_rekey_data(struct wiphy* wiphy, struct net
     memcpy(gtk_le.kek, gtk->kek, sizeof(gtk_le.kek));
     memcpy(gtk_le.replay_counter, gtk->replay_ctr, sizeof(gtk_le.replay_counter));
 
-    ret = brcmf_fil_iovar_data_set(ifp, "gtk_key_info", &gtk_le, sizeof(gtk_le));
+    ret = brcmf_fil_iovar_data_set(ifp, "gtk_key_info", &gtk_le, sizeof(gtk_le), nullptr);
     if (ret != ZX_OK) {
         brcmf_err("gtk_key_info iovar failed: ret=%d\n", ret);
     }
@@ -2607,7 +2611,7 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) 
 
     brcmf_dbg(TRACE, "Enter: code=%c%c\n", code[0], code[1]);
 
-    err = brcmf_fil_iovar_data_get(ifp, "country", &ccreq, sizeof(ccreq));
+    err = brcmf_fil_iovar_data_get(ifp, "country", &ccreq, sizeof(ccreq), nullptr);
     if (err != ZX_OK) {
         brcmf_err("Country code iovar returned err = %d\n", err);
         return;
@@ -2624,7 +2628,7 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) 
     ccreq.country_abbrev[1] = code[1];
     ccreq.country_abbrev[2] = 0;
 
-    err = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq));
+    err = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), nullptr);
     if (err != ZX_OK) {
         brcmf_err("Firmware rejected country setting\n");
         return;
@@ -2921,13 +2925,13 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
 static void brcmf_get_bwcap(struct brcmf_if *ifp, uint32_t bw_cap[]) {
     // 2.4 GHz
     uint32_t val = WLC_BAND_2G;
-    zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
+    zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
     if (status == ZX_OK) {
         bw_cap[WLAN_INFO_BAND_2GHZ] = val;
 
         // 5 GHz
         val = WLC_BAND_5G;
-        status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
+        status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
         if (status == ZX_OK) {
             bw_cap[WLAN_INFO_BAND_5GHZ] = val;
             return;
@@ -2939,7 +2943,7 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, uint32_t bw_cap[]) {
     // bw_cap not supported in this version of fw
     brcmf_dbg(INFO, "fallback to mimo_bw_cap info\n");
     uint32_t mimo_bwcap = 0;
-    status = brcmf_fil_iovar_int_get(ifp, "mimo_bw_cap", &mimo_bwcap);
+    status = brcmf_fil_iovar_int_get(ifp, "mimo_bw_cap", &mimo_bwcap, nullptr);
     if (status != ZX_OK) {
         /* assume 20MHz if firmware does not give a clue */
         mimo_bwcap = WLC_N_BW_20ALL;
@@ -2996,7 +3000,7 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t
 
     // Rx STBC
     uint32_t rx_stbc = 0;
-    (void)brcmf_fil_iovar_int_get(ifp, "stbc_rx", &rx_stbc);
+    (void)brcmf_fil_iovar_int_get(ifp, "stbc_rx", &rx_stbc, nullptr);
     band->ht_caps.ht_capability_info |= ((rx_stbc & 0x3) << IEEE80211_HT_CAPS_RX_STBC_SHIFT);
 
     // Tx STBC
@@ -3008,7 +3012,7 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t
 
     // AMPDU Parameters
     uint32_t ampdu_rx_density = 0;
-    status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_density", &ampdu_rx_density);
+    status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_density", &ampdu_rx_density, nullptr);
     if (status != ZX_OK) {
         brcmf_err("Unable to retrieve value for AMPDU Rx density from firmware, using 16 us\n");
         ampdu_rx_density = 7;
@@ -3067,13 +3071,13 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
     // Use the *_cap_hw value when possible, since the reflects the capabilities of the device
     // regardless of current operating mode.
     zx_status_t status;
-    status = brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap_hw", &txbf_bfe_cap);
+    status = brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap_hw", &txbf_bfe_cap, nullptr);
     if (status != ZX_OK) {
-        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap", &txbf_bfe_cap);
+        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap", &txbf_bfe_cap, nullptr);
     }
-    status = brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap_hw", &txbf_bfr_cap);
+    status = brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap_hw", &txbf_bfr_cap, nullptr);
     if (status != ZX_OK) {
-        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap);
+        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap, nullptr);
     }
 
     if (txbf_bfe_cap & BRCMF_TXBF_SU_BFE_CAP) {
@@ -3092,9 +3096,9 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
     uint32_t txstreams = 0;
     // txstreams_cap is not supported in all firmware versions, but when it is supported it
     // provides capability info regardless of current operating state.
-    status = brcmf_fil_iovar_int_get(ifp, "txstreams_cap", &txstreams);
+    status = brcmf_fil_iovar_int_get(ifp, "txstreams_cap", &txstreams, nullptr);
     if (status != ZX_OK) {
-        (void)brcmf_fil_iovar_int_get(ifp, "txstreams", &txstreams);
+        (void)brcmf_fil_iovar_int_get(ifp, "txstreams", &txstreams, nullptr);
     }
 
     if ((txbf_bfe_cap || txbf_bfr_cap) && (txstreams > 1)) {
@@ -3225,7 +3229,8 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
 
     // bands
     uint32_t bandlist[3];
-    status = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BANDLIST, &bandlist, sizeof(bandlist));
+    status = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BANDLIST, &bandlist, sizeof(bandlist),
+                                    nullptr);
     if (status != ZX_OK) {
         brcmf_err("could not obtain band info: %s\n", zx_status_get_string(status));
         return;
@@ -3264,7 +3269,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
         return;
     }
 
-    status = brcmf_fil_iovar_data_get(ifp, "chanspecs", pbuf, BRCMF_DCMD_MEDLEN);
+    status = brcmf_fil_iovar_data_get(ifp, "chanspecs", pbuf, BRCMF_DCMD_MEDLEN, nullptr);
     if (status != ZX_OK) {
         brcmf_err("get chanspecs error (%s)\n", zx_status_get_string(status));
         goto fail_pbuf;
@@ -3314,8 +3319,8 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     vhtmode = 0;
     rxchain = 0;
     nchain = 0;
-    (void) brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode);
-    status = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode);
+    (void) brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode, nullptr);
+    status = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode, nullptr);
     if (status != ZX_OK) {
         brcmf_err("nmode error (%s)\n", zx_status_get_string(status));
         // VHT requires HT support
@@ -3329,11 +3334,11 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
 
     // LDPC support, applies to both HT and VHT
     ldpc_cap = 0;
-    (void)brcmf_fil_iovar_int_get(ifp, "ldpc_cap", &ldpc_cap);
+    (void)brcmf_fil_iovar_int_get(ifp, "ldpc_cap", &ldpc_cap, nullptr);
 
     // Max AMPDU length
     max_ampdu_len_exp = 0;
-    status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_factor", &max_ampdu_len_exp);
+    status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_factor", &max_ampdu_len_exp, nullptr);
     if (status != ZX_OK) {
         brcmf_err("Unable to retrieve value for AMPDU maximum Rx length, using 8191 bytes\n");
     }
@@ -3348,7 +3353,7 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     } else {
         // According to Broadcom, rxstreams_cap, when available, is an accurate representation of
         // the number of rx chains.
-        status = brcmf_fil_iovar_int_get(ifp, "rxstreams_cap", &rxchain);
+        status = brcmf_fil_iovar_int_get(ifp, "rxstreams_cap", &rxchain, nullptr);
         if (status != ZX_OK) {
             // TODO (WLAN-485): The rxstreams_cap iovar isn't yet supported in the BCM4356
             // firmware. For now we use a hard-coded value (another option would be to parse the
@@ -3655,7 +3660,7 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
 
     brcmf_clear_assoc_ies(cfg);
 
-    err = brcmf_fil_iovar_data_get(ifp, "assoc_info", cfg->extra_buf, WL_ASSOC_INFO_MAX);
+    err = brcmf_fil_iovar_data_get(ifp, "assoc_info", cfg->extra_buf, WL_ASSOC_INFO_MAX, nullptr);
     if (err != ZX_OK) {
         brcmf_err("could not get assoc info (%d)\n", err);
         return err;
@@ -3664,7 +3669,8 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
     req_len = assoc_info->req_len;
     resp_len = assoc_info->resp_len;
     if (req_len) {
-        err = brcmf_fil_iovar_data_get(ifp, "assoc_req_ies", cfg->extra_buf, WL_ASSOC_INFO_MAX);
+        err = brcmf_fil_iovar_data_get(ifp, "assoc_req_ies", cfg->extra_buf, WL_ASSOC_INFO_MAX,
+                                       nullptr);
         if (err != ZX_OK) {
             brcmf_err("could not get assoc req (%d)\n", err);
             return err;
@@ -3677,7 +3683,8 @@ static zx_status_t brcmf_get_assoc_ies(struct brcmf_cfg80211_info* cfg, struct b
         conn_info->req_ie = NULL;
     }
     if (resp_len) {
-        err = brcmf_fil_iovar_data_get(ifp, "assoc_resp_ies", cfg->extra_buf, WL_ASSOC_INFO_MAX);
+        err = brcmf_fil_iovar_data_get(ifp, "assoc_resp_ies", cfg->extra_buf, WL_ASSOC_INFO_MAX,
+                                       nullptr);
         if (err != ZX_OK) {
             brcmf_err("could not get assoc resp (%d)\n", err);
             return err;
@@ -4057,7 +4064,7 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
     } else {
         bcn_timeout = BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ON;
     }
-    err = brcmf_fil_iovar_int_set(ifp, "bcn_timeout", bcn_timeout);
+    err = brcmf_fil_iovar_int_set(ifp, "bcn_timeout", bcn_timeout, nullptr);
     if (err != ZX_OK) {
         brcmf_err("bcn_timeout error (%d)\n", err);
         goto roam_setup_done;
@@ -4067,7 +4074,7 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
      * roaming.
      */
     brcmf_dbg(INFO, "Internal Roaming = %s\n", ifp->drvr->settings->roamoff ? "Off" : "On");
-    err = brcmf_fil_iovar_int_set(ifp, "roam_off", ifp->drvr->settings->roamoff);
+    err = brcmf_fil_iovar_int_set(ifp, "roam_off", ifp->drvr->settings->roamoff, nullptr);
     if (err != ZX_OK) {
         brcmf_err("roam_off error (%d)\n", err);
         goto roam_setup_done;
@@ -4076,7 +4083,7 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
     roamtrigger[0] = WL_ROAM_TRIGGER_LEVEL;
     roamtrigger[1] = BRCM_BAND_ALL;
     err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_ROAM_TRIGGER, (void*)roamtrigger,
-                                 sizeof(roamtrigger));
+                                 sizeof(roamtrigger), nullptr);
     if (err != ZX_OK) {
         brcmf_err("WLC_SET_ROAM_TRIGGER error (%d)\n", err);
         goto roam_setup_done;
@@ -4085,7 +4092,8 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
     roam_delta[0] = WL_ROAM_DELTA;
     roam_delta[1] = BRCM_BAND_ALL;
     err =
-        brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_ROAM_DELTA, (void*)roam_delta, sizeof(roam_delta));
+        brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_ROAM_DELTA, (void*)roam_delta, sizeof(roam_delta),
+                               nullptr);
     if (err != ZX_OK) {
         brcmf_err("WLC_SET_ROAM_DELTA error (%d)\n", err);
         goto roam_setup_done;
@@ -4098,18 +4106,21 @@ roam_setup_done:
 static zx_status_t brcmf_dongle_scantime(struct brcmf_if* ifp) {
     zx_status_t err = ZX_OK;
 
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME, BRCMF_SCAN_CHANNEL_TIME);
+    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME, BRCMF_SCAN_CHANNEL_TIME,
+                                nullptr);
     if (err != ZX_OK) {
         brcmf_err("Scan assoc time error (%d)\n", err);
         goto dongle_scantime_out;
     }
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_UNASSOC_TIME, BRCMF_SCAN_UNASSOC_TIME);
+    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_UNASSOC_TIME, BRCMF_SCAN_UNASSOC_TIME,
+                                nullptr);
     if (err != ZX_OK) {
         brcmf_err("Scan unassoc time error (%d)\n", err);
         goto dongle_scantime_out;
     }
 
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_PASSIVE_TIME, BRCMF_SCAN_PASSIVE_TIME);
+    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_PASSIVE_TIME, BRCMF_SCAN_PASSIVE_TIME,
+                                nullptr);
     if (err != ZX_OK) {
         brcmf_err("Scan passive time error (%d)\n", err);
         goto dongle_scantime_out;
@@ -4127,17 +4138,17 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
 
     /* verify support for bw_cap command */
     val = WLC_BAND_5G;
-    err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
+    err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
 
     if (err == ZX_OK) {
         /* only set 2G bandwidth using bw_cap command */
         band_bwcap.band = WLC_BAND_2G;
         band_bwcap.bw_cap = WLC_BW_CAP_40MHZ;
-        err = brcmf_fil_iovar_data_set(ifp, "bw_cap", &band_bwcap, sizeof(band_bwcap));
+        err = brcmf_fil_iovar_data_set(ifp, "bw_cap", &band_bwcap, sizeof(band_bwcap), nullptr);
     } else {
         brcmf_dbg(INFO, "fallback to mimo_bw_cap\n");
         val = WLC_N_BW_40ALL;
-        err = brcmf_fil_iovar_int_set(ifp, "mimo_bw_cap", val);
+        err = brcmf_fil_iovar_int_set(ifp, "mimo_bw_cap", val, nullptr);
     }
 
     return err;
@@ -4161,12 +4172,12 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
     ifp = ndev_to_if(ndev);
 
     /* make sure RF is ready for work */
-    brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 0);
+    brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 0, nullptr);
 
     brcmf_dongle_scantime(ifp);
 
     power_mode = cfg->pwr_save ? PM_FAST : PM_OFF;
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, power_mode);
+    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, power_mode, nullptr);
     if (err != ZX_OK) {
         goto default_conf_out;
     }
@@ -4412,7 +4423,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     ifp->vif = vif;
 
     /* determine d11 io type before wiphy setup */
-    err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_VERSION, (uint32_t*)&io_type);
+    err = brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_VERSION, (uint32_t*)&io_type, nullptr);
     if (err != ZX_OK) {
         brcmf_err("Failed to get D11 version (%d)\n", err);
         goto priv_out;
@@ -4423,7 +4434,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     // NOTE: linux first verifies that 40 MHz operation is enabled in 2.4 GHz channels.
     err = brcmf_enable_bw40_2g(cfg);
     if (err == ZX_OK) {
-        err = brcmf_fil_iovar_int_set(ifp, "obss_coex", BRCMF_OBSS_COEX_AUTO);
+        err = brcmf_fil_iovar_int_set(ifp, "obss_coex", BRCMF_OBSS_COEX_AUTO, nullptr);
     }
 
     /* p2p might require that "if-events" get processed by fweh. So
@@ -4451,7 +4462,7 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     }
 
     if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS)) {
-        err = brcmf_fil_iovar_int_set(ifp, "tdls_enable", 1);
+        err = brcmf_fil_iovar_int_set(ifp, "tdls_enable", 1, nullptr);
         if (err != ZX_OK) {
             brcmf_dbg(INFO, "TDLS not enabled (%d)\n", err);
             wiphy->flags &= ~WIPHY_FLAG_SUPPORTS_TDLS;

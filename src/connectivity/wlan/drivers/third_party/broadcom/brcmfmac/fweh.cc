@@ -307,7 +307,8 @@ void brcmf_fweh_detach(struct brcmf_pub* drvr) {
     if (ifp) {
         /* clear all events */
         memset(eventmask, 0, BRCMF_EVENTING_MASK_LEN);
-        (void)brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
+        (void)brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN,
+                                       nullptr);
     }
     /* cancel the worker */
     workqueue_cancel_work(&fweh->event_work);
@@ -367,7 +368,7 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     brcmf_dbg(EVENT, "enable event IF\n");
     setbit(eventmask, BRCMF_E_IF);
 
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
     if (err != ZX_OK) {
         brcmf_err("Set event_msgs error (%d)\n", err);
     }

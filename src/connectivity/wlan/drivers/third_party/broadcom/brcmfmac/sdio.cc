@@ -3187,13 +3187,13 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
     if (core->rev < 12) {
         /* for sdio core rev < 12, disable txgloming */
         value = 0;
-        err = brcmf_iovar_data_set(dev, "bus:txglom", &value, sizeof(uint32_t));
+        err = brcmf_iovar_data_set(dev, "bus:txglom", &value, sizeof(uint32_t), nullptr);
     } else {
         /* otherwise, set txglomalign */
         value = sdiodev->settings->bus.sdio.sd_sgentry_align;
         /* SDIO ADMA requires at least 32 bit alignment */
         value = max(value, ALIGNMENT);
-        err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t));
+        err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
     }
 
     // No support for txglomming, requires SDIO scatter/gather support (see WLAN-882)

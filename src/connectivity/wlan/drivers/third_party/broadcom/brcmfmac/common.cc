@@ -88,7 +88,8 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     join_pref_params[1].len = 2;
     join_pref_params[1].rssi_gain = 0;
     join_pref_params[1].band = 0;
-    err = brcmf_fil_iovar_data_set(ifp, "join_pref", join_pref_params, sizeof(join_pref_params));
+    err = brcmf_fil_iovar_data_set(ifp, "join_pref", join_pref_params, sizeof(join_pref_params),
+                                   nullptr);
     if (err != ZX_OK) {
         brcmf_err("Set join_pref error (%d)\n", err);
     }
@@ -105,7 +106,7 @@ static zx_status_t brcmf_c_download(struct brcmf_if* ifp, uint16_t flag,
     dload_buf->crc = 0;
     len = sizeof(*dload_buf) + len - 1;
 
-    err = brcmf_fil_iovar_data_set(ifp, "clmload", dload_buf, len);
+    err = brcmf_fil_iovar_data_set(ifp, "clmload", dload_buf, len, nullptr);
 
     return err;
 }
@@ -202,7 +203,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     if (err != ZX_OK) {
         brcmf_err("clmload (%zu byte file) failed (%d); ", clm->size, err);
         /* Retrieve clmload_status and print */
-        err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status);
+        err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status, nullptr);
         if (err != ZX_OK) {
             brcmf_err("get clmload_status failed (%d)\n", err);
         } else {
@@ -229,7 +230,7 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
     // eg. "macaddr" field of brcmfmac43455-sdio.txt
     uint8_t mac_addr[ETH_ALEN];
 
-    zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN);
+    zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, nullptr);
     if (err != ZX_OK) {
         brcmf_err("Retrieving mac address from firmware failed, %s\n",
                   zx_status_get_string(err));
@@ -256,7 +257,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
                   mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     }
 
-    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN);
+    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, nullptr);
     if (err != ZX_OK) {
         brcmf_err("Setting mac address failed, %s\n", zx_status_get_string(err));
         return err;
@@ -281,7 +282,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
         goto done;
     }
 
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo));
+    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo), nullptr);
     ri = &ifp->drvr->revinfo;
     if (err != ZX_OK) {
         brcmf_err("retrieving revision info failed, %d\n", err);
@@ -316,7 +317,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     /* query for 'ver' to get version info from firmware */
     memset(buf, 0, sizeof(buf));
     strcpy((char*)buf, "ver");
-    err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf));
+    err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf), nullptr);
     if (err != ZX_OK) {
         brcmf_err("Retrieving version information failed, %d\n", err);
         goto done;
@@ -333,7 +334,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* Query for 'clmver' to get CLM version info from firmware */
     memset(buf, 0, sizeof(buf));
-    err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf));
+    err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf), nullptr);
     if (err != ZX_OK) {
         brcmf_dbg(TRACE, "retrieving clmver failed, %d\n", err);
     } else {
@@ -354,7 +355,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     }
 
     /* set mpc */
-    err = brcmf_fil_iovar_int_set(ifp, "mpc", 1);
+    err = brcmf_fil_iovar_int_set(ifp, "mpc", 1, nullptr);
     if (err != ZX_OK) {
         brcmf_err("failed setting mpc\n");
         goto done;
@@ -363,13 +364,13 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     brcmf_c_set_joinpref_default(ifp);
 
     /* Setup event_msgs, enable E_IF */
-    err = brcmf_fil_iovar_data_get(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
+    err = brcmf_fil_iovar_data_get(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
     if (err != ZX_OK) {
         brcmf_err("Get event_msgs error (%d)\n", err);
         goto done;
     }
     setbit(eventmask, BRCMF_E_IF);
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
     if (err != ZX_OK) {
         brcmf_err("Set event_msgs error (%d)\n", err);
         goto done;
@@ -377,7 +378,8 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* Setup default scan channel time */
     err =
-        brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME, BRCMF_DEFAULT_SCAN_CHANNEL_TIME);
+        brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME, BRCMF_DEFAULT_SCAN_CHANNEL_TIME,
+                              nullptr);
     if (err != ZX_OK) {
         brcmf_err("BRCMF_C_SET_SCAN_CHANNEL_TIME error (%d)\n", err);
         goto done;
@@ -385,14 +387,15 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* Setup default scan unassoc time */
     err =
-        brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_UNASSOC_TIME, BRCMF_DEFAULT_SCAN_UNASSOC_TIME);
+        brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_UNASSOC_TIME, BRCMF_DEFAULT_SCAN_UNASSOC_TIME,
+                              nullptr);
     if (err != ZX_OK) {
         brcmf_err("BRCMF_C_SET_SCAN_UNASSOC_TIME error (%d)\n", err);
         goto done;
     }
 
     /* Enable tx beamforming, errors can be ignored (not supported) */
-    (void)brcmf_fil_iovar_int_set(ifp, "txbf", 1);
+    (void)brcmf_fil_iovar_int_set(ifp, "txbf", 1, nullptr);
 
     /* do bus specific preinit here */
     err = brcmf_bus_preinit(ifp->drvr->bus_if);

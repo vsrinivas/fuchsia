@@ -103,7 +103,7 @@ static zx_status_t brcmf_pno_channel_config(struct brcmf_if* ifp, struct brcmf_p
     cfg->reporttype = 0;
     cfg->flags = 0;
 
-    return brcmf_fil_iovar_data_set(ifp, "pfn_cfg", cfg, sizeof(*cfg));
+    return brcmf_fil_iovar_data_set(ifp, "pfn_cfg", cfg, sizeof(*cfg), nullptr);
 }
 
 static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, uint32_t mscan,
@@ -128,13 +128,13 @@ static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, ui
         pfnmem = bestn;
 
         /* set bestn in firmware */
-        err = brcmf_fil_iovar_int_set(ifp, "pfnmem", pfnmem);
+        err = brcmf_fil_iovar_int_set(ifp, "pfnmem", pfnmem, nullptr);
         if (err != ZX_OK) {
             brcmf_err("failed to set pfnmem\n");
             goto exit;
         }
         /* get max mscan which the firmware supports */
-        err = brcmf_fil_iovar_int_get(ifp, "pfnmem", &pfnmem);
+        err = brcmf_fil_iovar_int_get(ifp, "pfnmem", &pfnmem, nullptr);
         if (err != ZX_OK) {
             brcmf_err("failed to get pfnmem\n");
             goto exit;
@@ -147,7 +147,7 @@ static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, ui
     }
 
     pfn_param.flags = flags;
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_set", &pfn_param, sizeof(pfn_param));
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_set", &pfn_param, sizeof(pfn_param), nullptr);
     if (err != ZX_OK) {
         brcmf_err("pfn_set failed, err=%d\n", err);
     }
@@ -189,7 +189,7 @@ static zx_status_t brcmf_pno_set_random(struct brcmf_if* ifp, struct brcmf_pno_i
     pfn_mac.mac[0] |= 0x02;
 
     brcmf_dbg(SCAN, "enabling random mac: reqid=%lu mac=%pM\n", pi->reqs[i]->reqid, pfn_mac.mac);
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac));
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac), nullptr);
     if (err != ZX_OK) {
         brcmf_err("pfn_macaddr failed, err=%d\n", err);
     }
@@ -214,7 +214,7 @@ static zx_status_t brcmf_pno_add_ssid(struct brcmf_if* ifp, struct cfg80211_ssid
     memcpy(pfn.ssid.SSID, ssid->ssid, ssid->ssid_len);
 
     brcmf_dbg(SCAN, "adding ssid=%.32s (active=%d)\n", ssid->ssid, active);
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_add", &pfn, sizeof(pfn));
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_add", &pfn, sizeof(pfn), nullptr);
     if (err != ZX_OK) {
         brcmf_err("adding failed: err=%d\n", err);
     }
@@ -229,7 +229,7 @@ static zx_status_t brcmf_pno_add_bssid(struct brcmf_if* ifp, const uint8_t* bssi
     bssid_cfg.flags = 0;
 
     brcmf_dbg(SCAN, "adding bssid=%pM\n", bssid);
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_add_bssid", &bssid_cfg, sizeof(bssid_cfg));
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_add_bssid", &bssid_cfg, sizeof(bssid_cfg), nullptr);
     if (err != ZX_OK) {
         brcmf_err("adding failed: err=%d\n", err);
     }
@@ -258,10 +258,10 @@ static zx_status_t brcmf_pno_clean(struct brcmf_if* ifp) {
     zx_status_t ret;
 
     /* Disable pfn */
-    ret = brcmf_fil_iovar_int_set(ifp, "pfn", 0);
+    ret = brcmf_fil_iovar_int_set(ifp, "pfn", 0, nullptr);
     if (ret == ZX_OK) {
         /* clear pfn */
-        ret = brcmf_fil_iovar_data_set(ifp, "pfnclear", NULL, 0);
+        ret = brcmf_fil_iovar_data_set(ifp, "pfnclear", NULL, 0, nullptr);
     }
     if (ret != ZX_OK) {
         brcmf_err("failed code %d\n", ret);
@@ -444,7 +444,7 @@ static zx_status_t brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
     gscan_cfg->count_of_channel_buckets = n_buckets;
     memcpy(&gscan_cfg->bucket[0], buckets, n_buckets * sizeof(*buckets));
 
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_gscan_cfg", gscan_cfg, gsz);
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_gscan_cfg", gscan_cfg, gsz, nullptr);
 
     if (err != ZX_OK) {
         goto clean;
@@ -462,7 +462,7 @@ static zx_status_t brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
     }
 
     /* Enable the PNO */
-    err = brcmf_fil_iovar_int_set(ifp, "pfn", 1);
+    err = brcmf_fil_iovar_int_set(ifp, "pfn", 1, nullptr);
 
 clean:
     if (err != ZX_OK) {

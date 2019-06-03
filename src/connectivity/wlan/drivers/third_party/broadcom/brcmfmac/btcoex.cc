@@ -119,7 +119,7 @@ static zx_status_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr
 
     reg_write.addr = addr;
     reg_write.data = data;
-    return brcmf_fil_iovar_data_set(ifp, "btc_params", &reg_write, sizeof(reg_write));
+    return brcmf_fil_iovar_data_set(ifp, "btc_params", &reg_write, sizeof(reg_write), nullptr);
 }
 
 /**
@@ -131,7 +131,7 @@ static zx_status_t brcmf_btcoex_params_write(struct brcmf_if* ifp, uint32_t addr
 static zx_status_t brcmf_btcoex_params_read(struct brcmf_if* ifp, uint32_t addr, uint32_t* data) {
     *data = addr;
 
-    return brcmf_fil_iovar_int_get(ifp, "btc_params", data);
+    return brcmf_fil_iovar_int_get(ifp, "btc_params", data, nullptr);
 }
 
 /**

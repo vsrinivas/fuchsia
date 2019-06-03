@@ -257,7 +257,7 @@ static zx_status_t brcmf_p2p_enable_discovery(struct brcmf_p2p_info* p2p) {
 
     /* Re-initialize P2P Discovery in the firmware */
     vif = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif;
-    ret = brcmf_fil_iovar_int_set(vif->ifp, "p2p_disc", 1);
+    ret = brcmf_fil_iovar_int_set(vif->ifp, "p2p_disc", 1, nullptr);
     if (ret != ZX_OK) {
         brcmf_err("set p2p_disc error\n");
         goto exit;
@@ -456,11 +456,12 @@ static void brcmf_p2p_get_current_chanspec(struct brcmf_p2p_info* p2p, uint16_t*
 
     ifp = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
 
-    if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSSID, mac_addr, ETH_ALEN) == ZX_OK) {
+    if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSSID, mac_addr, ETH_ALEN, nullptr) == ZX_OK) {
         buf = static_cast<decltype(buf)>(calloc(1, WL_BSS_INFO_MAX));
         if (buf != NULL) {
             *(uint32_t*)buf = WL_BSS_INFO_MAX;
-            if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX) == ZX_OK) {
+            if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX, nullptr)
+                == ZX_OK) {
                 bi = (struct brcmf_bss_info_le*)(buf + 4);
                 *chanspec = bi->chanspec;
                 free(buf);
@@ -526,7 +527,7 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     }
 
     brcmf_cfg80211_arm_vif_event(cfg, vif, BRCMF_E_IF_CHANGE);
-    err = brcmf_fil_iovar_data_set(vif->ifp, "p2p_ifupd", &if_request, sizeof(if_request));
+    err = brcmf_fil_iovar_data_set(vif->ifp, "p2p_ifupd", &if_request, sizeof(if_request), nullptr);
     if (err != ZX_OK) {
         brcmf_err("p2p_ifupd FAILED, err=%d\n", err);
         brcmf_cfg80211_disarm_vif_event(cfg);
@@ -539,7 +540,8 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
         return ZX_ERR_IO;
     }
 
-    err = brcmf_fil_cmd_int_set(vif->ifp, BRCMF_C_SET_SCB_TIMEOUT, BRCMF_SCB_TIMEOUT_VALUE);
+    err = brcmf_fil_cmd_int_set(vif->ifp, BRCMF_C_SET_SCB_TIMEOUT, BRCMF_SCB_TIMEOUT_VALUE,
+                                nullptr);
 
     return err;
 }

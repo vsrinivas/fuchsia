@@ -270,7 +270,7 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state);
 
 zx_status_t brcmf_bus_started(struct brcmf_device* dev);
 zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, const char* name, void* data,
-                                 uint32_t len);
+                                 uint32_t len, int32_t* fwerr_ptr);
 void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
 #if CONFIG_BRCMFMAC_SDIO
