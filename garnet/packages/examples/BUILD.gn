@@ -84,7 +84,6 @@ group("all") {
     "//garnet/packages/examples:intl",
     "//garnet/packages/examples:media",
     "//garnet/packages/examples:mediaplayer",
-    "//garnet/packages/examples:mediasession",
     "//garnet/packages/examples:netstack",
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
@@ -168,6 +167,7 @@ group("mediaplayer") {
 group("media") {
   testonly = true
   public_deps = [
+    "//src/media:examples",
     "//examples/media/audio/fx",
     "//examples/media/audio/simple_sine",
     "//examples/media/audio/sync_sine",
@@ -250,13 +250,6 @@ group("rust") {
   testonly = true
   public_deps = [
     "//garnet/examples/rust:garnet-rust-examples",
-  ]
-}
-
-group("mediasession") {
-  testonly = true
-  public_deps = [
-    "//garnet/examples/mediasession:sine_player",
   ]
 }
 

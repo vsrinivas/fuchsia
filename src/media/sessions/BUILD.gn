@@ -33,6 +33,13 @@ group("configs") {
   ]
 }
 
+group("examples") {
+  testonly = true
+  deps = [
+    "examples"
+  ]
+}
+
 rustc_binary("bin") {
   name = "mediasession"
   edition = "2018"

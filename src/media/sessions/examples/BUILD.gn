@@ -5,6 +5,13 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("examples") {
+  testonly = true
+  deps = [
+    ":sine_player"
+  ]
+}
+
 rustc_binary("sine_player_bin") {
   name = "sine_player"
   edition = "2018"

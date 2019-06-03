@@ -23,3 +23,10 @@ group("tests") {
     "stream_processors:tests",
   ]
 }
+
+group("examples") {
+  testonly = true
+  deps = [
+    "sessions:examples"
+  ]
+}
