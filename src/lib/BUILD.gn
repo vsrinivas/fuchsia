@@ -11,6 +11,7 @@ group("lib") {
     "fidl_table_validation",
     "files",
     "icu_data",
+    "isolated_devmgr",
     "pkg_url",
     "url",
     "uuid",
@@ -24,5 +25,6 @@ group("tests") {
     "cobalt:tests",
     "containers/cpp:tests",
     "fidl_table_validation:tests",
+    "isolated_devmgr:tests",
   ]
 }

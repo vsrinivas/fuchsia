@@ -1,0 +1,121 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+source_set("src") {
+  sources = [
+    "isolated_devmgr.cc",
+    "isolated_devmgr.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/devmgr-integration-test",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+executable("isolated_devmgr") {
+  testonly = true
+  output_name = "isolated_devmgr"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//garnet/public/lib/async_promise",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+executable("test_bin") {
+  testonly = true
+
+  output_name = "isolated_devmgr_tests"
+
+  sources = [
+    "isolated_devmgr_tests.cc",
+  ]
+
+  deps = [
+    ":src",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/fidl/fuchsia-hardware-ethertap",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+devmgr_manifest("devmgr-manifest") {
+}
+
+package("isolated_devmgr_tests") {
+  testonly = true
+  deps = [
+    ":devmgr-manifest",
+    ":isolated_devmgr",
+    ":test_bin",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  binaries = [
+    {
+      name = "isolated_devmgr"
+    },
+  ]
+
+  meta = [
+    {
+      dest = "isolated_devmgr_tests.cmx"
+      path = dest
+    },
+    {
+      dest = "isolated_devmgr.cmx"
+      path = dest
+    },
+  ]
+
+  tests = [
+    {
+      name = "isolated_devmgr_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  data_deps = [
+    ":isolated_devmgr_tests",
+  ]
+}

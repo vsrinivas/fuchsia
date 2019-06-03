@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/manifest.gni")
+
+# Creates a devmgr_manifest to be used by isolated devmgr components.
+# TODO(brunodalbo) expand this template in the future to allow specifying which drivers specifically
+#  we want to include in the component, which will allow us to not need "shell" feature in the
+#  componentized version.
+template("devmgr_manifest") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    sources = zircon_boot_manifests
+    outputs = [
+      "$target_gen_dir/devmgr.manifest",
+    ]
+    script = "//build/images/manifest.py"
+    args = [
+      "--include=bin/devcoordinator",
+      "--include=bin/fshost",
+      "--output=" + rebase_path(outputs[0], root_build_dir),
+    ]
+    foreach(manifest, sources) {
+      args += [
+        "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
+        "--manifest=" + rebase_path(manifest, root_build_dir),
+      ]
+    }
+  }
+}

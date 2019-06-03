@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/isolated_devmgr_tests"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
