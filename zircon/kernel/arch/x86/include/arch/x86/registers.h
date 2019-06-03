@@ -35,6 +35,7 @@
 #define X86_MSR_IA32_PLATFORM_ID        0x00000017 /* platform id */
 #define X86_MSR_IA32_APIC_BASE          0x0000001b /* APIC base physical address */
 #define X86_MSR_IA32_TSC_ADJUST         0x0000003b /* TSC adjust */
+#define X86_MSR_IA32_BIOS_UPDT_TRIG     0x00000079u /* Microcode Patch Loader */
 #define X86_MSR_IA32_BIOS_SIGN_ID       0x0000008b /* BIOS update signature */
 #define X86_MSR_IA32_MTRRCAP            0x000000fe /* MTRR capability */
 #define X86_MSR_IA32_ARCH_CAPABILITIES  0x0000010a

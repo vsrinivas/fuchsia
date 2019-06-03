@@ -14,6 +14,9 @@
 #include <ktl/array.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
+#include <iovec.h>
+
+namespace {
 
 static bool test_x64_msrs() {
     BEGIN_TEST;
@@ -140,8 +143,107 @@ static bool test_x64_mds_enumeration() {
     END_TEST;
 }
 
+static uint32_t intel_make_microcode_checksum(uint32_t* patch, size_t bytes) {
+    size_t dwords = bytes / sizeof(uint32_t);
+    uint32_t sum = 0;
+    for (size_t i = 0; i < dwords; i++) {
+        sum += patch[i];
+    }
+    return -sum;
+}
+
+static bool test_x64_intel_ucode_loader() {
+    BEGIN_TEST;
+
+    // x86_intel_check_microcode_patch checks if a microcode patch is suitable for a particular
+    // CPU. Test that its match logic works for various CPUs and conditions we commonly use.
+
+    {
+        uint32_t fake_patch[512] = {};
+        // Intel(R) Celeron(R) CPU J3455 (Goldmont), NUC6CAYH
+        cpu_id::TestDataSet data = {};
+        data.leaf0 = { .reg = { 0x15, 0x756e6547, 0x6c65746e, 0x49656e69 } };
+        data.leaf1 = { .reg = { 0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff } };
+        data.leaf4 = { .reg = { 0x3c000121, 0x140003f, 0x3f, 0x1 } };
+        data.leaf7 = { .reg = { 0x0, 0x2294e283, 0x0, 0x2c000000 } };
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_PLATFORM_ID, 0x1ull << 50 };  // Apollo Lake
+
+        // Reject an all-zero patch.
+        EXPECT_FALSE(x86_intel_check_microcode_patch(&cpu, &fake_msrs,
+                                                     {fake_patch, sizeof(fake_patch)}), "");
+
+        // Reject patch with non-matching processor signature.
+        fake_patch[0] = 0x1;
+        fake_patch[4] = intel_make_microcode_checksum(fake_patch, sizeof(fake_patch));
+        EXPECT_FALSE(x86_intel_check_microcode_patch(&cpu, &fake_msrs,
+                                                     {fake_patch, sizeof(fake_patch)}), "");
+
+        // Expect matching patch to pass
+        fake_patch[0] = 0x1;
+        fake_patch[3] = data.leaf1.reg[0];  // Signature match
+        fake_patch[6] = 0x3;  // Processor flags match PLATFORM_ID
+        fake_patch[4] = 0;
+        fake_patch[4] = intel_make_microcode_checksum(fake_patch, sizeof(fake_patch));
+        EXPECT_TRUE(x86_intel_check_microcode_patch(&cpu, &fake_msrs,
+                                                    {fake_patch, sizeof(fake_patch)}), "");
+        // Real header from 2019-01-15, rev 38
+        fake_patch[0] = 0x1;
+        fake_patch[1] = 0x38;
+        fake_patch[2] = 0x01152019;
+        fake_patch[3] = 0x506c9;
+        fake_patch[6] = 0x3;  // Processor flags match PLATFORM_ID
+        fake_patch[4] = 0;
+        fake_patch[4] = intel_make_microcode_checksum(fake_patch, sizeof(fake_patch));
+        EXPECT_TRUE(x86_intel_check_microcode_patch(&cpu, &fake_msrs,
+                                                    {fake_patch, sizeof(fake_patch)}), "");
+    }
+
+    END_TEST;
+}
+
+class FakeWriteMsr : public MsrAccess {
+  public:
+    void write_msr(uint32_t msr_index, uint64_t value) override {
+        DEBUG_ASSERT(written_ == false);
+        written_ = true;
+        msr_index_ = msr_index;
+    }
+
+    bool written_ = false;
+    uint32_t msr_index_;
+};
+
+static bool test_x64_intel_ucode_patch_loader() {
+    BEGIN_TEST;
+
+    cpu_id::TestDataSet data = {};
+    cpu_id::FakeCpuId cpu(data);
+    FakeWriteMsr msrs;
+    uint32_t fake_patch[512] = {};
+
+    // Expect that a patch == current patch is not loaded.
+    uint32_t current_patch_level = x86_intel_get_patch_level();
+    fake_patch[1] = current_patch_level;
+    x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
+    EXPECT_FALSE(msrs.written_, "");
+
+    // Expect that a newer patch is loaded.
+    fake_patch[1] = current_patch_level + 1;
+    x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
+    EXPECT_TRUE(msrs.written_, "");
+    EXPECT_EQ(msrs.msr_index_, X86_MSR_IA32_BIOS_UPDT_TRIG, "");
+
+    END_TEST;
+}
+
+}  // anonymous namespace
+
 UNITTEST_START_TESTCASE(x64_platform_tests)
 UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
 UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
+UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
+UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "");

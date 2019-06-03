@@ -337,3 +337,10 @@ uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
 
 __END_CDECLS
+
+#ifdef __cplusplus
+
+bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch);
+void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch);
+
+#endif  // __cplusplus
