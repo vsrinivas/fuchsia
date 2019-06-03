@@ -68,7 +68,7 @@ enum RepoCommand {
         file: PathBuf,
     },
 
-    #[structopt(name = "add", about = "add a repository")]
+    #[structopt(name = "remove", about = "remove a repository")]
     Remove {
         #[structopt(long = "repo-url", help = "the repository url to remove")]
         repo_url: String,
