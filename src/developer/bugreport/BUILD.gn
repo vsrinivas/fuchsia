@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/package.gni")
 
 package("bugreport") {
@@ -78,7 +79,7 @@ if (current_toolchain == host_toolchain) {
   }
 
   executable("client") {
-    output_name = "bugreport_client"
+    output_name = "bugreport"
 
     sources = [
       "bug_report_client_main.cc",
@@ -88,4 +89,14 @@ if (current_toolchain == host_toolchain) {
       ":client_lib",
     ]
   }
+}
+
+install_host_tools("host_tool") {
+  deps = [
+    ":client",
+  ]
+
+  outputs = [
+    "bugreport",
+  ]
 }

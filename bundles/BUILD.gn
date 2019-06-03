@@ -8,7 +8,7 @@ group("tools") {
     "//garnet/packages/products:devtools",
     "//garnet/packages/tools:all",
     "//src/developer/bugreport",
-    "//src/developer/bugreport:client($host_toolchain)",
+    "//src/developer/bugreport:host_tool",
   ]
 }
 

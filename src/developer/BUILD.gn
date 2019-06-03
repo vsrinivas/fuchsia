@@ -7,7 +7,7 @@ group("developer") {
   deps = [
     ":tests",
     "bugreport",
-    "bugreport:client($host_toolchain)",
+    "bugreport:host_tool",
     "crashpad_agent",
     "debug",
     "feedback_agent",
