@@ -13,6 +13,7 @@ rustc_library("driver") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_amber_ext",
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/fuchsia_uri",
     "//garnet/lib/rust/fuchsia_uri_rewrite",

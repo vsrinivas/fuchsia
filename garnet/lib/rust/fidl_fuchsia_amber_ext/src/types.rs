@@ -296,3 +296,153 @@ mod hex_serde {
             .map_err(|e| serde::de::Error::custom(format!("bad hex value: {:?}: {}", value, e)))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        proptest::{prelude::*, prop_compose, proptest, proptest_helper},
+    };
+
+    prop_compose! {
+        fn arb_url()(
+            scheme in "https?",
+            host in prop::collection::vec("[[:word:]]+", 1..5),
+            port: Option<u16>,
+            path in prop::collection::vec("[[:word:]]+", 0..5)
+        ) -> String {
+            let mut res = format!("{}://{}", scheme, host.join("."));
+            if let Some(port) = port {
+                res.push_str(&format!(":{}", port));
+            }
+            if !path.is_empty() {
+                res.push_str(&format!("/{}", path.join("/")));
+            }
+            res
+        }
+    }
+
+    prop_compose! {
+        fn arb_key_config()(
+            bytes in prop::collection::vec(any::<u8>(), 32),
+        ) -> KeyConfig {
+            KeyConfig::Ed25519(bytes)
+        }
+    }
+
+    prop_compose! {
+        fn arb_encryption_key()(
+            data in [any::<u8>(); 32],
+        ) -> BlobEncryptionKey {
+            BlobEncryptionKey { data }
+        }
+    }
+
+    prop_compose! {
+        fn arb_transport_config()(
+            disable_keep_alives: bool,
+            fields in [any::<i32>(); 9],
+        ) -> TransportConfig {
+            TransportConfig {
+                disable_keep_alives,
+                keep_alive:              fields[0],
+                max_idle_conns:          fields[1],
+                max_idle_conns_per_host: fields[2],
+                connect_timeout:         fields[3],
+                request_timeout:         fields[4],
+                idle_conn_timeout:       fields[5],
+                response_header_timeout: fields[6],
+                expect_continue_timeout: fields[7],
+                tls_handshake_timeout:   fields[8],
+            }
+        }
+    }
+
+    prop_compose! {
+        fn arb_status_config()(
+            enabled: bool,
+        ) -> StatusConfig {
+            StatusConfig { enabled }
+        }
+    }
+
+    prop_compose! {
+        fn arb_source_builder()(
+            id in "[[:alnum:]]+",
+            repo_url in prop::option::of(arb_url()),
+            rate_period in prop::option::of(any::<i32>()),
+            auto in prop::option::of(any::<bool>()),
+            root_keys in prop::collection::vec("[[:xdigit:]]{64}", 0..5),
+            enabled in prop::option::of(any::<bool>()),
+        ) -> SourceConfigBuilder {
+            let mut builder = SourceConfigBuilder::new(id);
+            if let Some(repo_url) = repo_url {
+                builder = builder.repo_url(repo_url);
+            }
+            if let Some(rate_period) = rate_period {
+                builder = builder.rate_period(rate_period);
+            }
+            if let Some(auto) = auto {
+                builder = builder.auto(auto);
+            }
+            for root_key in root_keys.into_iter() {
+                builder = builder.add_root_key(root_key.as_str());
+            }
+            if let Some(enabled) = enabled {
+                builder = builder.enabled(enabled);
+            }
+            builder
+        }
+    }
+
+    prop_compose! {
+        fn arb_source_config()(
+            id in "[[:alnum:]]+",
+            repo_url in arb_url(),
+            blob_repo_url in arb_url(),
+            rate_limit in any::<u64>(),
+            rate_period in any::<i32>(),
+            root_keys in prop::collection::vec(arb_key_config(), 0..5),
+            transport_config in prop::option::of(arb_transport_config()),
+            status_config in prop::option::of(arb_status_config()),
+            auto: bool,
+            blob_key in prop::option::of(arb_encryption_key()),
+        ) -> SourceConfig {
+            SourceConfig{
+                id,
+                repo_url,
+                blob_repo_url,
+                rate_limit,
+                rate_period,
+                root_keys,
+                transport_config,
+                status_config,
+                auto,
+                blob_key,
+            }
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(64))]
+
+        #[test]
+        fn test_builder_builds(builder in arb_source_builder()) {
+            builder.build()
+        }
+
+        #[test]
+        fn test_fidl_roundtrips(config in arb_source_config()) {
+            let there: fidl::SourceConfig = config.clone().into();
+            let back_again: SourceConfig = there.try_into().unwrap();
+            assert_eq!(back_again, dbg!(config));
+        }
+
+        #[test]
+        fn test_json_roundtrips(config in arb_source_config()) {
+            let as_json = &serde_json::to_string(&config).unwrap();
+            let same: SourceConfig = serde_json::from_str(as_json).unwrap();
+            assert_eq!(same, config);
+        }
+    }
+}

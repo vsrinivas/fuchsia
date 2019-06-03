@@ -1156,6 +1156,7 @@ group("rust_crates") {
     "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
     "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
     "//garnet/lib/rust/ethernet:ethernet-tests",
+    "//garnet/lib/rust/fidl_fuchsia_amber_ext:fidl_fuchsia_amber_ext_tests",
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext:fidl_fuchsia_pkg_ext_tests",
     "//garnet/lib/rust/fuchsia_pkg:fuchsia_pkg_tests",
     "//garnet/lib/rust/fuchsia_pkg_testing:tests",

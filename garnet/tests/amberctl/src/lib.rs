@@ -8,6 +8,7 @@
 use {
     failure::Error,
     fidl_fuchsia_amber::{ControlMarker as AmberMarker, ControlProxy as AmberProxy},
+    fidl_fuchsia_amber_ext::{self as types, SourceConfigBuilder},
     fidl_fuchsia_pkg::{RepositoryManagerMarker, RepositoryManagerProxy},
     fidl_fuchsia_pkg_ext::{
         MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
@@ -25,9 +26,6 @@ use {
     futures::prelude::*,
     std::{convert::TryInto, fs::File},
 };
-
-mod types;
-use types::SourceConfigBuilder;
 
 const ROOT_KEY_1: &str = "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307";
 const ROOT_KEY_2: &str = "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
