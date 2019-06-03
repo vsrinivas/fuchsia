@@ -523,28 +523,28 @@ bool decl_member_repeats_enclosing_type_name() {
 library fidl.repeater;
 
 struct DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
         {"table", R"FIDL(
 library fidl.repeater;
 
 table DeclName {
-    1: string ${TEST};
+    1: string:64 ${TEST};
 };
 )FIDL"},
         {"union", R"FIDL(
 library fidl.repeater;
 
 union DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
         {"xunion", R"FIDL(
 library fidl.repeater;
 
 xunion DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
     };
@@ -577,9 +577,9 @@ bool decl_member_repeats_enclosing_type_name_but_may_disambiguate() {
 library fidl.repeater;
 
 struct SeasonToShirtAndPantMapEntry {
-  string season;
-  string shirt_type;
-  string pant_type;
+  string:64 season;
+  string:64 shirt_type;
+  string:64 pant_type;
 };
 )FIDL");
 
@@ -589,8 +589,8 @@ struct SeasonToShirtAndPantMapEntry {
 library fidl.repeater;
 
 struct SeasonToShirtAndPantMapEntry {
-  string season;
-  string shirt_and_pant_type;
+  string:64 season;
+  string:64 shirt_and_pant_type;
   bool clashes;
 };
 )FIDL");
@@ -601,9 +601,9 @@ struct SeasonToShirtAndPantMapEntry {
 library fidl.repeater;
 
 struct SeasonToShirtAndPantMapEntry {
-  string season;
-  string shirt;
-  string shirt_for_season;
+  string:64 season;
+  string:64 shirt;
+  string:64 shirt_for_season;
   bool clashes;
 };
 )FIDL");
@@ -614,8 +614,8 @@ struct SeasonToShirtAndPantMapEntry {
 library fidl.repeater;
 
 struct SeasonToShirtAndPantMapEntry {
-  string shirt_color;
-  string pant_color;
+  string:64 shirt_color;
+  string:64 pant_color;
   bool clashes;
 };
 )FIDL");
@@ -626,8 +626,8 @@ struct SeasonToShirtAndPantMapEntry {
 library fidl.repeater;
 
 struct ShirtAndPantColor {
-  string shirt_color;
-  string pant_color;
+  string:64 shirt_color;
+  string:64 pant_color;
   bool clashes;
 };
 )FIDL");
@@ -637,12 +637,12 @@ struct ShirtAndPantColor {
     test.source_template(R"FIDL(
 library fidl.repeater;
 
-    struct NestedKeyValue {
-        string key_key;
-        string key_value;
-        string value_key;
-        string value_value;
-    };
+struct NestedKeyValue {
+    string:64 key_key;
+    string:64 key_value;
+    string:64 value_key;
+    string:64 value_value;
+};
 )FIDL");
 
     ASSERT_NO_FINDINGS(test);
@@ -651,9 +651,9 @@ library fidl.repeater;
 library fidl.repeater;
 
 struct ShirtAndPantSupplies {
-  string shirt_color;
-  string material;
-  string tag;
+  string:64 shirt_color;
+  string:64 material;
+  string:64 tag;
 };
 )FIDL")
         .AddFinding(
@@ -664,14 +664,14 @@ struct ShirtAndPantSupplies {
     ASSERT_FINDINGS(test);
 
     test.source_template(R"FIDL(
-    library fidl.repeater;
+library fidl.repeater;
 
-    struct ShirtAndPantSupplies {
-      string shirt_color;
-      string shirt_material;
-      string tag;
-    };
-    )FIDL")
+struct ShirtAndPantSupplies {
+  string:64 shirt_color;
+  string:64 shirt_material;
+  string:64 tag;
+};
+)FIDL")
         .AddFinding(
             "name-repeats-enclosing-type-name",
             "struct member names (shirt) must not repeat names from the enclosing struct 'ShirtAndPantSupplies'",
@@ -684,14 +684,14 @@ struct ShirtAndPantSupplies {
     ASSERT_FINDINGS(test);
 
     test.source_template(R"FIDL(
-    library fidl.repeater;
+library fidl.repeater;
 
-    struct ShirtAndPantSupplies {
-      string shirt_and_pant_color;
-      string material;
-      string shirt_and_pant_tag;
-    };
-    )FIDL")
+struct ShirtAndPantSupplies {
+  string:64 shirt_and_pant_color;
+  string:64 material;
+  string:64 shirt_and_pant_tag;
+};
+)FIDL")
         .AddFinding(
             "name-repeats-enclosing-type-name",
             // repeated words are in lexicographical order; "and" is removed (a stop word)
@@ -709,9 +709,9 @@ struct ShirtAndPantSupplies {
 library fidl.repeater;
 
 struct ShirtAndPantSupplies {
-  string shirt_and_pant_color;
-  string material;
-  string tag;
+  string:64 shirt_and_pant_color;
+  string:64 material;
+  string:64 tag;
 };
 )FIDL")
         .AddFinding(
@@ -733,28 +733,28 @@ bool decl_member_repeats_library_name() {
 library fidl.repeater;
 
 struct DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
         {"table", R"FIDL(
 library fidl.repeater;
 
 table DeclName {
-    1: string ${TEST};
+    1: string:64 ${TEST};
 };
 )FIDL"},
         {"union", R"FIDL(
 library fidl.repeater;
 
 union DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
         {"xunion", R"FIDL(
 library fidl.repeater;
 
 xunion DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
     };
@@ -811,28 +811,28 @@ bits ${TEST} : uint32 {
 library fidl.repeater;
 
 struct ${TEST} {
-    string decl_member;
+    string:64 decl_member;
 };
 )FIDL"},
         {"table", R"FIDL(
 library fidl.repeater;
 
 table ${TEST} {
-    1: string decl_member;
+    1: string:64 decl_member;
 };
 )FIDL"},
         {"union", R"FIDL(
 library fidl.repeater;
 
 union ${TEST} {
-    string decl_member;
+    string:64 decl_member;
 };
 )FIDL"},
         {"xunion", R"FIDL(
 library fidl.repeater;
 
 xunion ${TEST} {
-    string decl_member;
+    string:64 decl_member;
 };
 )FIDL"},
     };
@@ -885,39 +885,7 @@ library fidl.${TEST};
     END_TEST;
 }
 
-bool protocol_name_ends_in_service_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
-    BEGIN_TEST;
-
-    // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
-    // ("Service" is only part of a word) is OK.
-
-    LintTest test;
-    test.check_id("protocol-name-ends-in-service")
-        .message("Protocols must not include the name 'service.'")
-        .source_template(R"FIDL(
-library fidl.a;
-
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
-)FIDL");
-
-    test.substitute("TEST", "!GOOD_VALUE!");
-    ASSERT_NO_FINDINGS(test);
-
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
-    ASSERT_FINDINGS(test);
-
-    END_TEST;
-}
-
-bool protocol_name_includes_service_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool protocol_name_includes_service() {
     BEGIN_TEST;
 
     // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
@@ -929,17 +897,31 @@ bool protocol_name_includes_service_please_implement_me() {
         .source_template(R"FIDL(
 library fidl.a;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+protocol ${TEST} {};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "TestProtocol");
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "ServiceabilityProtocol");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "TestServiceabilityProtocol");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "ProtocolForServiceability");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "Service");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "ServiceProtocol");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "TestServiceProtocol");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "ProtocolForService");
     ASSERT_FINDINGS(test);
 
     END_TEST;
@@ -1155,35 +1137,35 @@ bool invalid_case_for_decl_member() {
 library fidl.a;
 
 protocol TestProtocol {
-    SomeMethod(string ${TEST});
+    SomeMethod(string:64 ${TEST});
 };
 )FIDL"},
         {"struct members", R"FIDL(
 library fidl.a;
 
 struct DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
         {"table members", R"FIDL(
 library fidl.a;
 
 table DeclName {
-    1: string ${TEST};
+    1: string:64 ${TEST};
 };
 )FIDL"},
         {"union members", R"FIDL(
 library fidl.a;
 
 union DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
         {"xunion members", R"FIDL(
 library fidl.a;
 
 xunion DeclName {
-    string ${TEST};
+    string:64 ${TEST};
 };
 )FIDL"},
     };
@@ -1240,28 +1222,28 @@ bits ${TEST} : uint32 {
 library fidl.a;
 
 struct ${TEST} {
-    string decl_member;
+    string:64 decl_member;
 };
 )FIDL"},
         {"tables", R"FIDL(
 library fidl.a;
 
 table ${TEST} {
-    1: string decl_member;
+    1: string:64 decl_member;
 };
 )FIDL"},
         {"unions", R"FIDL(
 library fidl.a;
 
 union ${TEST} {
-    string decl_member;
+    string:64 decl_member;
 };
 )FIDL"},
         {"xunions", R"FIDL(
 library fidl.a;
 
 xunion ${TEST} {
-    string decl_member;
+    string:64 decl_member;
 };
 )FIDL"},
     };
@@ -1350,28 +1332,28 @@ bool invalid_copyright_for_platform_source_library() {
 
     test.source_template(copyright_2019 + R"FIDL(
 
-    library fidl.a;
-    )FIDL");
+library fidl.a;
+)FIDL");
     ASSERT_NO_FINDINGS(test);
 
     test.that("the rubric does not mandate a blank line before the library name")
         .source_template(copyright_2019 + R"FIDL(
-    library fidl.a;
-    )FIDL");
+library fidl.a;
+)FIDL");
     ASSERT_NO_FINDINGS(test);
 
     test.that("the the date doesn't have to match")
         .source_template(copyright_2020 + R"FIDL(
 
-    library fidl.a;
-    )FIDL");
+library fidl.a;
+)FIDL");
     ASSERT_NO_FINDINGS(test);
 
     test.that("the copyright must start on the first line")
         .source_template("\n" + copyright_2019 + R"FIDL(
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Insert missing header:\n\n" + copyright_2019)
         .AddFinding("Copyright");
     ASSERT_FINDINGS(test);
@@ -1381,8 +1363,8 @@ bool invalid_copyright_for_platform_source_library() {
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Insert missing header:\n\n" + copyright_template.str())
         .AddFinding("20019");
     ASSERT_FINDINGS(test);
@@ -1392,8 +1374,8 @@ bool invalid_copyright_for_platform_source_library() {
     // USE OF THIS SOURCE CODE IS GOVERNED BY A BSD-STYLE LICENSE THAT CAN BE
     // FOUND IN THE LICENSE FILE.
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Insert missing header:\n\n" + copyright_2019)
         .AddFinding("OPYRIGHT");
     ASSERT_FINDINGS(test);
@@ -1402,8 +1384,8 @@ bool invalid_copyright_for_platform_source_library() {
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Insert missing header:\n\n" + copyright_2019)
         .AddFinding("Sloppyright");
     ASSERT_FINDINGS(test);
@@ -1412,8 +1394,8 @@ bool invalid_copyright_for_platform_source_library() {
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Insert missing header:\n\n" + copyright_2019)
         .AddFinding("Authors");
     ASSERT_FINDINGS(test);
@@ -1422,8 +1404,8 @@ bool invalid_copyright_for_platform_source_library() {
 // Use of this source code is governed by an anarchy license that can be
 // found in the LICENSE file.
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Update your header with:\n\n" + copyright_2019)
         .AddFinding("n anarchy");
     ASSERT_FINDINGS(test);
@@ -1432,8 +1414,8 @@ bool invalid_copyright_for_platform_source_library() {
 // Use of this source code is governed by a BSD-style license that can be
     // found in the README.md file.
 
-    library fidl.a;
-    )FIDL")
+library fidl.a;
+)FIDL")
         .suggestion("Update your header with:\n\n" + copyright_2019)
         .AddFinding("README.md");
     ASSERT_FINDINGS(test);
@@ -1875,10 +1857,10 @@ library fidl.a;
 struct SeasonToShirtAndPantMapEntry {
 
   // winter, spring, summer, or fall
-  string season;
+  string:64 season;
 
   // all you gotta do is call
-  string shirt_and_pant_type;
+  string:64 shirt_and_pant_type;
 
   bool clashes;
 };
@@ -1891,10 +1873,10 @@ library fidl.a;
 
 struct SeasonToShirtAndPantMapEntry {
 
-  string season; // winter, spring, summer, or fall
+  string:64 season; // winter, spring, summer, or fall
 
   // all you gotta do is call
-  string shirt_and_pant_type;
+  string:64 shirt_and_pant_type;
 
   bool clashes;
 };
@@ -1957,9 +1939,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool string_bounds_not_specified_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool string_bounds_not_specified() {
     BEGIN_TEST;
 
     LintTest test;
@@ -1968,18 +1948,50 @@ bool string_bounds_not_specified_please_implement_me() {
         .source_template(R"FIDL(
 library fidl.a;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+struct SomeStruct {
+  ${TEST} test_string;
+};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "string:64");
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "vector<string:64>:64");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "string");
     ASSERT_FINDINGS(test);
+
+    test.source_template(R"FIDL(
+library fidl.a;
+
+struct SomeStruct {
+  vector<${TEST}>:64 test_string;
+};
+)FIDL");
+
+    test.substitute("TEST", "string:64");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "string");
+    ASSERT_FINDINGS(test);
+
+    test.that("developer cannot work around the check by indirect typing, via 'using'")
+        .source_template(R"FIDL(
+library fidl.a;
+
+using unbounded_string = ${TEST};
+
+struct SomeStruct {
+  unbounded_string test_string;
+};
+)FIDL");
+
+    test.substitute("TEST", "string");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "string:64");
+    ASSERT_NO_FINDINGS(test);
 
     END_TEST;
 }
@@ -1996,7 +2008,7 @@ ${TEST1} TODO: Finish the TestStruct declaration
 struct TestStruct {
 
   ${TEST2}TODO: Replace the placeholder
-  string placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxb/FIDL-0000): Add some more fields
+  string:64 placeholder;${DOC_NOT_ALLOWED_HERE1} TODO(fxb/FIDL-0000): Add some more fields
 };
 ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
 )FIDL";
@@ -2085,9 +2097,7 @@ ${DOC_NOT_ALLOWED_HERE2} TODO(someldap): Submit this for review once finished
     END_TEST;
 }
 
-bool too_many_nested_libraries_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool too_many_nested_libraries() {
     BEGIN_TEST;
 
     LintTest test;
@@ -2228,9 +2238,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
     END_TEST;
 }
 
-bool vector_bounds_not_specified_please_implement_me() {
-    if (true)
-        return true; // disabled pending feature implementation
+bool vector_bounds_not_specified() {
     BEGIN_TEST;
 
     LintTest test;
@@ -2239,18 +2247,51 @@ bool vector_bounds_not_specified_please_implement_me() {
         .source_template(R"FIDL(
 library fidl.a;
 
-PUT FIDL CONTENT HERE WITH PLACEHOLDERS LIKE:
-    ${TEST}
-TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
+struct SomeStruct {
+  ${TEST} test_vector;
+};
 )FIDL");
 
-    test.substitute("TEST", "!GOOD_VALUE!");
+    test.substitute("TEST", "vector<uint8>:64");
     ASSERT_NO_FINDINGS(test);
 
-    test.substitute("TEST", "!BAD_VALUE!")
-        .suggestion("change '!BAD_VALUE!' to '!GOOD_VALUE!'")
-        .replacement("!GOOD_VALUE!");
+    test.substitute("TEST", "vector<uint8>");
     ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "vector<vector<uint8>:64>");
+    ASSERT_FINDINGS(test);
+
+    // Test nested vectors
+    test.source_template(R"FIDL(
+library fidl.a;
+
+struct SomeStruct {
+  vector<${TEST}>:64 test_vector;
+};
+)FIDL");
+
+    test.substitute("TEST", "vector<uint8>:64");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "vector<uint8>");
+    ASSERT_FINDINGS(test);
+
+    test.that("developer cannot work around the check by indirect typing, via 'using'")
+        .source_template(R"FIDL(
+library fidl.a;
+
+// explanation for why we want this
+using unbounded_vector = ${TEST};
+
+struct SomeStruct {
+  unbounded_vector test_vector;
+};
+)FIDL")
+        .substitute("TEST", "vector");
+    ASSERT_FINDINGS(test);
+
+    test.substitute("TEST", "vector:64");
+    ASSERT_NO_FINDINGS(test);
 
     END_TEST;
 }
@@ -2311,21 +2352,20 @@ RUN_TEST(method_return_status_missing_ok_please_implement_me)
 RUN_TEST(method_returns_status_with_non_optional_result_please_implement_me)
 RUN_TEST(method_should_pipeline_protocols_please_implement_me)
 RUN_TEST(no_commonly_reserved_words_please_implement_me)
-// TODO(fxb/FIDL-656): Remove this check after issues are resolved with
-// trailing comments in existing source and tools
-RUN_TEST(no_trailing_comment)
+RUN_TEST(no_trailing_comment) // TODO(fxb/FIDL-656): Remove this check after
+                              // issues are resolved with trailing comments
+                              // in existing source and tools
 RUN_TEST(primitive_alias_repeats_library_name)
-RUN_TEST(protocol_name_ends_in_service_please_implement_me)
-RUN_TEST(protocol_name_includes_service_please_implement_me)
+RUN_TEST(protocol_name_includes_service)
 RUN_TEST(service_hub_pattern_is_discouraged_please_implement_me)
-RUN_TEST(string_bounds_not_specified_please_implement_me)
+RUN_TEST(string_bounds_not_specified)
 RUN_TEST(todo_should_not_be_doc_comment)
-RUN_TEST(too_many_nested_libraries_please_implement_me)
+RUN_TEST(too_many_nested_libraries)
 RUN_TEST(unexpected_type_for_well_known_buffer_concept_please_implement_me)
 RUN_TEST(unexpected_type_for_well_known_bytes_concept_please_implement_me)
 RUN_TEST(unexpected_type_for_well_known_socket_handle_concept_please_implement_me)
 RUN_TEST(unexpected_type_for_well_known_string_concept_please_implement_me)
-RUN_TEST(vector_bounds_not_specified_please_implement_me)
+RUN_TEST(vector_bounds_not_specified)
 RUN_TEST(wrong_prefix_for_platform_source_library)
 
 END_TEST_CASE(lint_findings_tests)

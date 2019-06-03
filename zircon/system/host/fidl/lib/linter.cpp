@@ -224,6 +224,9 @@ void Linter::NewFile(const raw::File& element) {
             "${REPLACEMENT}");
     }
 
+    if (element.library_name->components.size() > 3) {
+        AddFinding(element.library_name, kLibraryNameDepthCheck);
+    }
     for (const auto& component : element.library_name->components) {
         if (std::regex_match(to_string(component),
                              kDisallowedLibraryComponentRegex)) {
@@ -382,7 +385,10 @@ void Linter::ExitContext() {
 }
 
 Linter::Linter()
-    : kLibraryNameComponentCheck(DefineCheck(
+    : kLibraryNameDepthCheck(DefineCheck(
+          "too-many-nested-libraries",
+          "Avoid library names with more than two dots")),
+      kLibraryNameComponentCheck(DefineCheck(
           "disallowed-library-name-component",
           "Library names must not contain the following components: common, service, util, base, f<letter>l, zx<word>")),
       kRepeatsLibraryNameCheck(DefineCheck(
@@ -670,12 +676,22 @@ Linter::Linter()
         [& linter = *this,
          case_check = invalid_case_for_decl_name,
          &case_type = upper_camel_,
-         context_check = name_repeats_enclosing_type_name]
+         context_check = name_repeats_enclosing_type_name,
+         name_contains_service_check = DefineCheck(
+             "protocol-name-includes-service",
+             "Protocols must not include the name 'service.'")]
         //
         (const raw::InterfaceDeclaration& element) {
             linter.CheckCase("protocols", element.identifier,
                              case_check, case_type);
             linter.CheckRepeatedName("protocol", element.identifier);
+            for (auto word : utils::id_to_words(to_string(element.identifier))) {
+                if (word == "service") {
+                    linter.AddFinding(
+                        element.identifier, name_contains_service_check);
+                    break;
+                }
+            }
             linter.EnterContext("protocol", to_string(element.identifier), context_check);
         });
 
@@ -903,7 +919,30 @@ Linter::Linter()
                              case_check, case_type);
             linter.CheckRepeatedName("xunion member", element.identifier);
         });
-} // namespace linter
+    callbacks_.OnTypeConstructor(
+        [& linter = *this,
+         string_bounds_check = DefineCheck(
+             "string-bounds-not-specified",
+             "Specify bounds for string"),
+         vector_bounds_check = DefineCheck(
+             "vector-bounds-not-specified",
+             "Specify bounds for vector")]
+        //
+        (const raw::TypeConstructor& element) {
+            if (element.identifier->components.size() != 1) {
+                return;
+            }
+            auto type = to_string(element.identifier->components[0]);
+            if (type == "string" && element.maybe_size == nullptr) {
+                linter.AddFinding(
+                    element.identifier, string_bounds_check);
+            }
+            if (type == "vector" && element.maybe_size == nullptr) {
+                linter.AddFinding(
+                    element.identifier, vector_bounds_check);
+            }
+        });
+}
 
 } // namespace linter
 } // namespace fidl

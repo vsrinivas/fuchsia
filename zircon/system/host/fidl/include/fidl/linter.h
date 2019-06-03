@@ -198,7 +198,7 @@ private:
 
     // const variables not trivially destructible (static storage is forbidden)
     // (https://google.github.io/styleguide/cppguide.html#Static_and_Global_Variables)
-
+    const CheckDef kLibraryNameDepthCheck;
     const CheckDef kLibraryNameComponentCheck;
     const CheckDef kRepeatsLibraryNameCheck;
     const CheckDef kLibraryPrefixCheck;
