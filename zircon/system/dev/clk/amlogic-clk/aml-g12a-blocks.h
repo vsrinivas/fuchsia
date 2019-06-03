@@ -33,7 +33,7 @@ static constexpr meson_clk_gate_t g12a_clk_gates[] = {
 static_assert(CLK_G12A_COUNT == countof(g12a_clk_gates),
               "g12a_clk_gates[] and g12a_clk_gate_idx_t count mismatch");
 
-static meson_clk_msr_t g12a_clk_msr = {
+static constexpr meson_clk_msr_t g12a_clk_msr = {
     .reg0_offset = (0x1 << 2),
     .reg2_offset = (0x3 << 2),
 };

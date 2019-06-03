@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 typedef enum g12a_clk_gate_idx {
     // SYS CPU CLK
     CLK_SYS_PLL_DIV16 = 0,
