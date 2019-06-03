@@ -154,13 +154,15 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
         {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
     builder.InterceptStoryShell(story_shell_.GetOnCreateHandler());
 
-    fake_module_url_ = builder.GenerateFakeUrl();
+    fake_module_url_ = builder.GenerateFakeUrl("module");
     builder.InterceptComponent(
         [this](fuchsia::sys::StartupInfo startup_info,
                fidl::InterfaceHandle<
                    fuchsia::modular::testing::InterceptedComponent>
                    intercepted_component) {
-          intercepted_modules_.push_back(std::move(intercepted_component));
+          intercepted_modules_.push_back(std::make_unique<modular::testing::FakeComponent>());
+          intercepted_modules_.back()->GetOnCreateHandler()(
+              std::move(startup_info), std::move(intercepted_component));
         },
         {.url = fake_module_url_});
 
@@ -221,9 +223,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
   // Stories must have modules in them so the stories created above
   // contain fake intercepted modules. This list holds onto them so that
   // they can be successfully launched and don't die immediately.
-  std::vector<
-      fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>>
-      intercepted_modules_;
+  std::vector<std::unique_ptr<modular::testing::FakeComponent>> intercepted_modules_;
 
   std::string fake_module_url_;
 };
