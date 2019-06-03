@@ -3,10 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Print links to 25 random CLs from the past week
+# Print links to 30 random CLs from the past week
 
-for commit in $(git log --since="one week ago" --format=%H | shuf | head -n 25)
+for commit in $(git log --since="one week ago" --format=%H | shuf | head -n 30)
 do
-    id=$(git show -s "$commit" | grep 'Change-Id:' | cut -d ' ' -f 6)
+    id=$(git show -s "$commit" | grep '  Change-Id:' | cut -d ' ' -f 6)
     echo "http://fuchsia-review.googlesource.com/q/$id"
 done
