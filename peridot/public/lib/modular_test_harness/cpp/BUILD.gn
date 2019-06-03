@@ -31,12 +31,15 @@ sdk_source_set("test_harness_fixture") {
     "fake_component.h",
     "fake_module.cc",
     "fake_module.h",
+    "fake_session_shell.cc",
+    "fake_session_shell.h",
     "test_harness_fixture.cc",
     "test_harness_fixture.h",
   ]
 
   deps = [
     "//garnet/public/lib/svc/cpp",
+    "//peridot/lib/testing:session_shell_impl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
