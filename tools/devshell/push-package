@@ -10,17 +10,13 @@
 ## Push packages to a device. One or more package names may be supplied. If no
 ## package name is suppled all packages in the build output will be pushed. The
 ## target must be reachable from the host and must already know how to reach
-## the host package server (e.g. fx serve must be running).
+## the host package server (i.e. fx serve must be running).
 ##
 ## See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/package_update.md
 ## for more information about using this workflow.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
-
-function usage {
-  fx-command-help push-package
-}
 
 function main {
   fx-standard-switches "$@"
@@ -31,12 +27,13 @@ function main {
     exit 0
   fi
 
-  local all_pkgs=($("${FUCHSIA_DIR}/tools/devshell/lib/list-universe-packages.py" --build-dir "${FUCHSIA_BUILD_DIR}"))
+  local all_pkgs=($(fx-command-run list-packages))
 
   # pkgs is the last argument
   local pkgs=()
 
   if [[ $# -eq 0 ]]; then
+    fx-warn "Pushing ${#all_pkgs[@]} packages, this may take some time..."
     pkgs=("${all_pkgs[@]}")
   else
     for pkg in "$@"; do
@@ -46,27 +43,20 @@ function main {
           continue 2
         fi
       done
-      # TODO(BLD-338): Remove "package_name" from error message
-      echo >&2 "Package $pkg will not be pushed. It is not part of the current build, is not a package, overrides 'package_name=\"...\"' or has 'deprecated_system_image=true'."
+      fx-error "Package $pkg is not known to the current build configuration."
+      fx-error "Check \`fx list-packages\` for the correct name,"
+      fx-error "or adjust the build configuration with \`fx set\`."
       exit 1
     done
   fi
 
-  # The target doesn't support expansions, and a local expansion makes a command
-  # too long to spawn, so sending a loop makes things work ok.
-  local cmd="
-    code=0;
-    for c in ${pkgs[@]}; do
-      amberctl get_up -n \"\${c}\" -v 0 || code=\$((\$code + \$?));
-      manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
-      if [ -s \"\$manifest_path\" ]; then
-        run fuchsia-pkg://fuchsia.com/module_package_indexer#meta/module_package_indexer.cmx \"\${c}\" 0;
-      fi
-    done;
-    exit \$code
-  "
-
-  fx-command-run shell "${cmd}"
+  for pkg in "${pkgs[@]}"; do
+    if ! fx-command-run shell amberctl get_up -n "$pkg" -v 0; then
+      r=$?
+      fx-error "Push of $pkg failed"
+      return $r
+    fi
+  done
 }
 
 main "$@"

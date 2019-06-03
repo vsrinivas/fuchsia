@@ -354,7 +354,8 @@ particular package name to execute. A package may contain one or more tests.
 Arguments after `fx run-test package-name` are passed to the program
 `runtests`. One particularly common use case is to execute:
 `fx run-test <package-of-many-tests> -t <name-of-one-test>` to execute only a
-single test.
+single test. To list the packages that are members of the current build
+configuration, run `fx list-packages`.
 
 Some users find that an effective high focus workflow is to have the system
 build, push and execute tests whenever they save their source code. This can

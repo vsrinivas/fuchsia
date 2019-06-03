@@ -1,0 +1,40 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### list packages are built
+
+## usage: fx list-packages [--base|--cache|--universe]
+##
+## list-packages lists the packages that the build is aware of. These are
+## packages that can be rebuilt, and/or pushed to a device.
+## Note: list-packages DOES NOT list all packages that could be built, only
+## those which are included in the current build configuration.
+##
+##   --base      - list only packages in base
+##   --cache     - list only packages in cache
+##   --universe  - list all packages
+##
+## See https://fuchsia.googlesource.com/fuchsia/+/master/docs/build/boards_and_products.md
+## for more information about using these package sets.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  case "$1" in
+  --base) cat "${FUCHSIA_BUILD_DIR}/base_packages.list" ;;
+  --cache) cat "${FUCHSIA_BUILD_DIR}/cache_packages.list" ;;
+  ""|--universe) cat "${FUCHSIA_BUILD_DIR}/universe_packages.list" ;;
+  *)
+    fx-error "Unknown argument: $1"
+    return 1
+    ;;
+  esac
+}
+
+main "$@"
