@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/ramdevice_client_lib_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ]
+    }
+}
