@@ -110,3 +110,6 @@ change that.
     have an exemption from testability in the near term. We would like to test
     these scripts in the long term, but we’ve decided not to block engineering
     productivity improvements on creating such tests.
+*   **GN templates** are not easily testable. We are working on a test framework
+    for GN templates. Until then, it's permitted for build template changes to
+    be manually tested only.
