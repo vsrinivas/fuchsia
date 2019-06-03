@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/wlanstack_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/wlanphy",
+            "null",
+            "test/wlantapctl",
+            "zero"
+        ]
+    }
+}

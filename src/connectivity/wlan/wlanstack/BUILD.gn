@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
@@ -77,9 +78,7 @@ package("wlanstack") {
   ]
 }
 
-package("wlanstack-tests") {
-  testonly = true
-
+test_package("wlanstack-tests") {
   deps = [
     ":bin",
   ]
@@ -87,7 +86,6 @@ package("wlanstack-tests") {
   tests = [
     {
       name = "wlanstack_bin_test"
-      dest = "wlanstack_bin_test"
       environments = basic_envs
     },
   ]
