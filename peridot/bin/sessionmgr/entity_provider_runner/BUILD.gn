@@ -27,7 +27,7 @@ source_set("entity_provider_runner") {
   ]
 }
 
-tests_package("entity_provider_runner_unittests") {
+hermetic_tests_package("entity_provider_runner_unittests") {
   deps = [
     ":entity_provider_runner_unittest",
   ]

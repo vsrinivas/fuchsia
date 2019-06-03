@@ -13,6 +13,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("test") {
@@ -49,9 +50,7 @@ executable("utils_test") {
   deps = testing_deps
 }
 
-package("iwlwifi_test") {
-  testonly = true
-
+unittest_package("iwlwifi_test") {
   package_name = "iwlwifi_test"
 
   deps = [

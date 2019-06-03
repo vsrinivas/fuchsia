@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
@@ -39,19 +40,10 @@ package("cloud_provider_memory_diff") {
   ]
 }
 
-package("cloud_provider_memory_diff_tests") {
-  testonly = true
-
+test_package("cloud_provider_memory_diff_tests") {
   deps = [
     ":bin",
     "validation",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("validation/validation_memory_diff.cmx")
-      dest = "validation_memory_diff.cmx"
-    },
   ]
 
   tests = [
