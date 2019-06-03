@@ -86,7 +86,8 @@ static char const * const spn_vk_p_names[] = {
 #undef SPN_VK_TARGET_P_EXPAND_X
 #define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) #_p_id,
 
-  SPN_VK_TARGET_P_EXPAND()};
+  SPN_VK_TARGET_P_EXPAND()
+};
 
 #define SPN_VK_TARGET_PIPELINE_NAMES spn_vk_p_names
 
@@ -114,24 +115,24 @@ struct spn_vk_pl
 
 #undef SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER
 #define SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id)                      \
-  {.binding            = _d_idx,                                                                   \
-   .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,                                        \
-   .descriptorCount    = 1,                                                                        \
-   .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,                                              \
-   .pImmutableSamplers = NULL},
+  { .binding            = _d_idx,                                                                  \
+    .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,                                       \
+    .descriptorCount    = 1,                                                                       \
+    .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,                                             \
+    .pImmutableSamplers = NULL },
 
 #undef SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE
 #define SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                       \
-  {.binding            = _d_idx,                                                                   \
-   .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,                                         \
-   .descriptorCount    = 1,                                                                        \
-   .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,                                              \
-   .pImmutableSamplers = NULL},
+  { .binding            = _d_idx,                                                                  \
+    .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,                                        \
+    .descriptorCount    = 1,                                                                       \
+    .stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT,                                             \
+    .pImmutableSamplers = NULL },
 
 #define SPN_VK_TARGET_DSLB_NAME(_ds_id) spn_vk_dslb_##_ds_id
 
 #define SPN_VK_TARGET_DSLB_CREATE(_ds_id, ...)                                                     \
-  static const VkDescriptorSetLayoutBinding SPN_VK_TARGET_DSLB_NAME(_ds_id)[] = {__VA_ARGS__};
+  static const VkDescriptorSetLayoutBinding SPN_VK_TARGET_DSLB_NAME(_ds_id)[] = { __VA_ARGS__ };
 
 #undef SPN_VK_TARGET_DS_EXPAND_X
 #define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, ...)                                            \
@@ -152,8 +153,8 @@ SPN_VK_TARGET_DS_EXPAND();
 #define SPN_VK_TARGET_DSLCI_NAME(_ds_id) spn_vk_dslci_##_ds_id
 
 #define SPN_VK_TARGET_DSLCI_CREATE(_ds_id)                                                         \
-  static const VkDescriptorSetLayoutCreateInfo SPN_VK_TARGET_DSLCI_NAME(_ds_id)[] = {              \
-    SPN_VK_TARGET_DSLCI(SPN_VK_TARGET_DSLB_NAME(_ds_id))}
+  static const VkDescriptorSetLayoutCreateInfo SPN_VK_TARGET_DSLCI_NAME(                           \
+    _ds_id)[] = { SPN_VK_TARGET_DSLCI(SPN_VK_TARGET_DSLB_NAME(_ds_id)) }
 
 #undef SPN_VK_TARGET_DS_EXPAND_X
 #define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds) SPN_VK_TARGET_DSLCI_CREATE(_ds_id);
@@ -240,26 +241,26 @@ struct spn_vk_dutdp
 
 #undef SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER
 #define SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id)                      \
-  {.dstBinding      = _d_idx,                                                                      \
-   .dstArrayElement = 0,                                                                           \
-   .descriptorCount = 1,                                                                           \
-   .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,                                           \
-   .offset          = offsetof(struct SPN_VK_TARGET_DUTD_NAME(_ds_id), _d_id),                     \
-   .stride          = 0},
+  { .dstBinding      = _d_idx,                                                                     \
+    .dstArrayElement = 0,                                                                          \
+    .descriptorCount = 1,                                                                          \
+    .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,                                          \
+    .offset          = offsetof(struct SPN_VK_TARGET_DUTD_NAME(_ds_id), _d_id),                    \
+    .stride          = 0 },
 
 #undef SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE
 #define SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                       \
-  {.dstBinding      = _d_idx,                                                                      \
-   .dstArrayElement = 0,                                                                           \
-   .descriptorCount = 1,                                                                           \
-   .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,                                            \
-   .offset          = offsetof(struct SPN_VK_TARGET_DUTD_NAME(_ds_id), _d_id),                     \
-   .stride          = 0},
+  { .dstBinding      = _d_idx,                                                                     \
+    .dstArrayElement = 0,                                                                          \
+    .descriptorCount = 1,                                                                          \
+    .descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,                                           \
+    .offset          = offsetof(struct SPN_VK_TARGET_DUTD_NAME(_ds_id), _d_id),                    \
+    .stride          = 0 },
 
 #define SPN_VK_TARGET_DUTE_NAME(_ds_id) spn_vk_dute_##_ds_id
 
 #define SPN_VK_TARGET_DUTE_CREATE(_ds_id, ...)                                                     \
-  static const VkDescriptorUpdateTemplateEntry SPN_VK_TARGET_DUTE_NAME(_ds_id)[] = {__VA_ARGS__};
+  static const VkDescriptorUpdateTemplateEntry SPN_VK_TARGET_DUTE_NAME(_ds_id)[] = { __VA_ARGS__ };
 
 #undef SPN_VK_TARGET_DS_EXPAND_X
 #define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, ...)                                            \
@@ -301,16 +302,16 @@ struct spn_vk_dp
 
 #undef SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER
 #define SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id)                      \
-  {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = SPN_VK_TARGET_DPS_COUNT(_ds_id)},
+  { .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = SPN_VK_TARGET_DPS_COUNT(_ds_id) },
 
 #undef SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE
 #define SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                       \
-  {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = SPN_VK_TARGET_DPS_COUNT(_ds_id)},
+  { .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = SPN_VK_TARGET_DPS_COUNT(_ds_id) },
 
 #define SPN_VK_TARGET_DPS_NAME(_ds_id) spn_vk_dps_##_ds_id
 
 #define SPN_VK_TARGET_DPS_DEFINE(_ds_id, ...)                                                      \
-  VkDescriptorPoolSize const SPN_VK_TARGET_DPS_NAME(_ds_id)[] = {__VA_ARGS__};
+  VkDescriptorPoolSize const SPN_VK_TARGET_DPS_NAME(_ds_id)[] = { __VA_ARGS__ };
 
 //
 // PDUTD - pipeline descriptor update template types
@@ -509,7 +510,8 @@ spn_vk_create(struct spn_vk_environment * const  environment,
     .descriptorSetLayout        = VK_NULL_HANDLE,
     .pipelineBindPoint          = VK_PIPELINE_BIND_POINT_COMPUTE,
     .pipelineLayout             = VK_NULL_HANDLE,
-    .set                        = 0};
+    .set                        = 0
+  };
 
 #define SPN_VK_TARGET_DUT_CREATE(id)                                                               \
   dutci.descriptorUpdateEntryCount = ARRAY_LENGTH_MACRO(SPN_VK_TARGET_DUTE_NAME(id));              \
@@ -528,9 +530,9 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   //
   // DP -- create descriptor pools
   //
-  VkDescriptorPoolCreateInfo dpci = {.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                                     .pNext = NULL,
-                                     .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT};
+  VkDescriptorPoolCreateInfo dpci = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                                      .pNext = NULL,
+                                      .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT };
 
 #define SPN_VK_TARGET_DPS_COUNT(_ds_id) instance->config.ds._ds_id.sets
 
@@ -609,21 +611,23 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   //
   // PL -- create pipeline layouts
   //
-  VkPushConstantRange pcr[] = {{.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .offset = 0, .size = 0}};
+  VkPushConstantRange pcr[] = {
+    { .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT, .offset = 0, .size = 0 }
+  };
 
-  VkPipelineLayoutCreateInfo plci = {.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                                     .pNext = NULL,
-                                     .flags = 0,
-                                     .setLayoutCount         = 0,
-                                     .pSetLayouts            = NULL,
-                                     .pushConstantRangeCount = 0,
-                                     .pPushConstantRanges    = NULL};
+  VkPipelineLayoutCreateInfo plci = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                                      .pNext = NULL,
+                                      .flags = 0,
+                                      .setLayoutCount         = 0,
+                                      .pSetLayouts            = NULL,
+                                      .pushConstantRangeCount = 0,
+                                      .pPushConstantRanges    = NULL };
 
 #if defined(__Fuchsia__) && defined(__aarch64__)
   //
   // TEMPORARILY FOR FUCHSIA/ARM TARGETS -- only enable RENDER kernel
   //
-  bool const p_ok[SPN_VK_TARGET_P_COUNT] = {[16] = true};
+  bool const p_ok[SPN_VK_TARGET_P_COUNT] = { [16] = true };
 
 #else
   //
@@ -631,7 +635,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   //
 #undef SPN_VK_TARGET_P_EXPAND_X
 #define SPN_VK_TARGET_P_EXPAND_X(...) true,
-  bool const p_ok[SPN_VK_TARGET_P_COUNT] = {SPN_VK_TARGET_P_EXPAND()};
+  bool const p_ok[SPN_VK_TARGET_P_COUNT] = { SPN_VK_TARGET_P_EXPAND() };
 
 #endif
 
@@ -665,7 +669,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
         plci.pPushConstantRanges    = pcr;                                                         \
       }                                                                                            \
                                                                                                    \
-    const VkDescriptorSetLayout dsls[] = {__VA_ARGS__};                                            \
+    const VkDescriptorSetLayout dsls[] = { __VA_ARGS__ };                                          \
                                                                                                    \
     plci.setLayoutCount = ARRAY_LENGTH_MACRO(dsls);                                                \
     plci.pSetLayouts    = dsls;                                                                    \
@@ -694,26 +698,27 @@ spn_vk_create(struct spn_vk_environment * const  environment,
     .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
     .pNext = NULL,
     .flags = VK_PIPELINE_CREATE_DISPATCH_BASE,  // | VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT,
-    .stage = {.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-              .pNext               = NULL,
-              .flags               = 0,
-              .stage               = VK_SHADER_STAGE_COMPUTE_BIT,
-              .module              = VK_NULL_HANDLE,
-              .pName               = "main",
-              .pSpecializationInfo = NULL},
+    .stage = { .sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+               .pNext               = NULL,
+               .flags               = 0,
+               .stage               = VK_SHADER_STAGE_COMPUTE_BIT,
+               .module              = VK_NULL_HANDLE,
+               .pName               = "main",
+               .pSpecializationInfo = NULL },
     // .layout             = VK_NULL_HANDLE, // instance->pl.layout.vout_vin,
     .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex  = 0};
+    .basePipelineIndex  = 0
+  };
 
   //
   // Create a shader module, use it to create a pipeline... and
   // dispose of the shader module.
   //
-  VkShaderModuleCreateInfo smci = {.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-                                   .pNext    = NULL,
-                                   .flags    = 0,
-                                   .codeSize = 0,
-                                   .pCode    = NULL};
+  VkShaderModuleCreateInfo smci = { .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                                    .pNext    = NULL,
+                                    .flags    = 0,
+                                    .codeSize = 0,
+                                    .pCode    = NULL };
 
   uint32_t const * modules = target->modules;
 

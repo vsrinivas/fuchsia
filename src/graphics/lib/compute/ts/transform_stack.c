@@ -889,11 +889,11 @@ main(int argc, char * argv[])
   //
   //
   //
-  ts_transform_float_t const quad_src[8] = {0.0f, 0.0f, w, 0.0f, w, h, 0.0f, h};
+  ts_transform_float_t const quad_src[8] = { 0.0f, 0.0f, w, 0.0f, w, h, 0.0f, h };
 
-  ts_transform_float_t const quad_dst[8] = {300.0f, 0.0f, w - 300.0f, 0.0f, w, h, 0.0f, h};
+  ts_transform_float_t const quad_dst[8] = { 300.0f, 0.0f, w - 300.0f, 0.0f, w, h, 0.0f, h };
 
-  ts_transform_float_t const quad_tst[8] = {50, 50, 1550, 50, 1550, 1550, 50, 1550};
+  ts_transform_float_t const quad_tst[8] = { 50, 50, 1550, 50, 1550, 1550, 50, 1550 };
   //
   // RECT TO QUAD
   //
@@ -930,7 +930,7 @@ main(int argc, char * argv[])
 
   ts_transform_stack_concat(ts);
 
-  ts_transform_float_t const quad_foo[8] = {-10, 10, 130, 10, 130, 110, -10, 110};
+  ts_transform_float_t const quad_foo[8] = { -10, 10, 130, 10, 130, 110, -10, 110 };
 
   ts_debug(ts, quad_foo);
 

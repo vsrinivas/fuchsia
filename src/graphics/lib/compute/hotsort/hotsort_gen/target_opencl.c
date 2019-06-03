@@ -193,8 +193,8 @@ hsg_target_opencl(struct hsg_target * const       target,
           for (uint32_t ii = 1; ii <= config->warp.lanes_log2; ii++)
             fprintf(target->state->header, "  HS_TRANSPOSE_STAGE( %u )                  \\\n", ii);
 
-          struct hsg_transpose_state state[1] = {
-            {.header = target->state->header, .config = config}};
+          struct hsg_transpose_state state[1] = { { .header = target->state->header,
+                                                    .config = config } };
 
           hsg_transpose(config->warp.lanes_log2,
                         config->thread.regs,
@@ -319,7 +319,7 @@ hsg_target_opencl(struct hsg_target * const       target,
         break;
 
         case HSG_OP_TYPE_BX_REG_GLOBAL_LOAD: {
-          static char const * const vstr[] = {"vin", "vout"};
+          static char const * const vstr[] = { "vin", "vout" };
 
           fprintf(target->state->source,
                   "HS_KEY_TYPE r%-3u = HS_SLAB_GLOBAL_LOAD(%s,%u);\n",

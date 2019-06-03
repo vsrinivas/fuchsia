@@ -30,7 +30,7 @@
 #undef HSG_OP_EXPAND_X
 #define HSG_OP_EXPAND_X(t) #t,
 
-char const * const hsg_op_type_string[] = {HSG_OP_EXPAND_ALL()};
+char const * const hsg_op_type_string[] = { HSG_OP_EXPAND_ALL() };
 
 //
 // clang-format off

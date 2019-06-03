@@ -36,12 +36,12 @@ vk_pipeline_cache_create(VkDevice                      device,
                          char const * const            name,
                          VkPipelineCache *             pipeline_cache)
 {
-  VkPipelineCacheCreateInfo pipeline_cache_info = {
-    .sType           = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-    .pNext           = NULL,
-    .flags           = 0,
-    .initialDataSize = 0,
-    .pInitialData    = NULL};
+  VkPipelineCacheCreateInfo pipeline_cache_info = { .sType =
+                                                      VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+                                                    .pNext           = NULL,
+                                                    .flags           = 0,
+                                                    .initialDataSize = 0,
+                                                    .pInitialData    = NULL };
 
   FILE * f    = fopen(name, "rb");
   void * data = NULL;

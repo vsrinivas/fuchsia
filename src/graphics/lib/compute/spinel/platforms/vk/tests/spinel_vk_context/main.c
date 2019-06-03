@@ -96,17 +96,17 @@ main(int argc, char const * argv[])
   //
   // create a Vulkan instances
   //
-  VkApplicationInfo const app_info = {.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                                      .pNext              = NULL,
-                                      .pApplicationName   = "Fuchsia Spinel/VK Test",
-                                      .applicationVersion = 0,
-                                      .pEngineName        = "Fuchsia Spinel/VK",
-                                      .engineVersion      = 0,
-                                      .apiVersion         = VK_API_VERSION_1_1};
+  VkApplicationInfo const app_info = { .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                                       .pNext              = NULL,
+                                       .pApplicationName   = "Fuchsia Spinel/VK Test",
+                                       .applicationVersion = 0,
+                                       .pEngineName        = "Fuchsia Spinel/VK",
+                                       .engineVersion      = 0,
+                                       .apiVersion         = VK_API_VERSION_1_1 };
 
-  char const * const instance_enabled_layers[] = {"VK_LAYER_LUNARG_standard_validation", NULL};
+  char const * const instance_enabled_layers[] = { "VK_LAYER_LUNARG_standard_validation", NULL };
 
-  char const * const instance_enabled_extensions[] = {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, NULL};
+  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME, NULL };
 
   VkInstanceCreateInfo const instance_info = {
     .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -116,7 +116,8 @@ main(int argc, char const * argv[])
     .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_enabled_layers) - 1,
     .ppEnabledLayerNames     = instance_enabled_layers,
     .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_enabled_extensions) - 1,
-    .ppEnabledExtensionNames = instance_enabled_extensions};
+    .ppEnabledExtensionNames = instance_enabled_extensions
+  };
 
   VkInstance instance;
 
@@ -141,7 +142,8 @@ main(int argc, char const * argv[])
               VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT |
               VK_DEBUG_REPORT_DEBUG_BIT_EXT),
     .pfnCallback = vk_debug_report_cb,
-    .pUserData   = NULL};
+    .pUserData   = NULL
+  };
 
   VkDebugReportCallbackEXT drc;
 
@@ -151,11 +153,11 @@ main(int argc, char const * argv[])
   //
   // Prepare Vulkan environment for Spinel
   //
-  struct spn_vk_environment environment = {.d   = VK_NULL_HANDLE,
-                                           .ac  = NULL,
-                                           .pc  = VK_NULL_HANDLE,
-                                           .pd  = VK_NULL_HANDLE,
-                                           .qfi = 0};
+  struct spn_vk_environment environment = { .d   = VK_NULL_HANDLE,
+                                            .ac  = NULL,
+                                            .pc  = VK_NULL_HANDLE,
+                                            .pd  = VK_NULL_HANDLE,
+                                            .qfi = 0 };
 
   //
   // acquire all physical devices
@@ -242,14 +244,14 @@ main(int argc, char const * argv[])
   //
   // create device
   //
-  float const qp[] = {1.0f};
+  float const qp[] = { 1.0f };
 
-  VkDeviceQueueCreateInfo const qi = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                      .pNext = NULL,
-                                      .flags = 0,
-                                      .queueFamilyIndex = environment.qfi,
-                                      .queueCount       = 1,
-                                      .pQueuePriorities = qp};
+  VkDeviceQueueCreateInfo const qi = { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                                       .pNext = NULL,
+                                       .flags = 0,
+                                       .queueFamilyIndex = environment.qfi,
+                                       .queueCount       = 1,
+                                       .pQueuePriorities = qp };
 
   //
   // enable AMD shader info extension?
@@ -269,7 +271,7 @@ main(int argc, char const * argv[])
   //
   //
   //
-  VkPhysicalDeviceFeatures device_features = {false};
+  VkPhysicalDeviceFeatures device_features = { false };
 
   //
   // FIXME -- for now, HotSort requires 'shaderInt64'
@@ -286,16 +288,16 @@ main(int argc, char const * argv[])
       device_features.shaderFloat64 = true;
     }
 
-  VkDeviceCreateInfo const device_info = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                                          .pNext = NULL,
-                                          .flags = 0,
-                                          .queueCreateInfoCount    = 1,
-                                          .pQueueCreateInfos       = &qi,
-                                          .enabledLayerCount       = 0,
-                                          .ppEnabledLayerNames     = NULL,
-                                          .enabledExtensionCount   = device_enabled_extension_count,
-                                          .ppEnabledExtensionNames = device_enabled_extensions,
-                                          .pEnabledFeatures        = &device_features};
+  VkDeviceCreateInfo const device_info = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                                           .pNext = NULL,
+                                           .flags = 0,
+                                           .queueCreateInfoCount  = 1,
+                                           .pQueueCreateInfos     = &qi,
+                                           .enabledLayerCount     = 0,
+                                           .ppEnabledLayerNames   = NULL,
+                                           .enabledExtensionCount = device_enabled_extension_count,
+                                           .ppEnabledExtensionNames = device_enabled_extensions,
+                                           .pEnabledFeatures        = &device_features };
 
   vk(CreateDevice(environment.pd, &device_info, NULL, &environment.d));
 

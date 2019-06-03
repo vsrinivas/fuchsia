@@ -107,7 +107,7 @@ spn_weakref_get_index(spn_weakref_t const * const weakref_p,
                       spn_weakref_epoch_t const   epoch,
                       uint32_t * const            idx_p)
 {
-  union spn_weakref const weakref = {.u64 = *weakref_p};
+  union spn_weakref const weakref = { .u64 = *weakref_p };
 
   if (((weakref.u64 ^ epoch) & SPN_WEAKREF_EPOCH_MASK) != 0UL)
     {

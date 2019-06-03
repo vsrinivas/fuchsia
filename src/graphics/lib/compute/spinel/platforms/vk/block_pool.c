@@ -141,7 +141,7 @@ spn_device_block_pool_create(struct spn_device * const device,
   spn_vk_ds_bind_block_pool_init_block_pool(target, cb, block_pool->ds_block_pool);
 
   // append push constants
-  struct spn_vk_push_block_pool_init const push = {.bp_size = block_pool->bp_size};
+  struct spn_vk_push_block_pool_init const push = { .bp_size = block_pool->bp_size };
 
   spn_vk_p_push_block_pool_init(target, cb, &push);
 
@@ -155,15 +155,15 @@ spn_device_block_pool_create(struct spn_device * const device,
   VkFence const fence = spn_device_cb_end_fence_acquire(device, cb, NULL, NULL, 0UL);
 
   // boilerplate submit
-  struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                  .pNext                = NULL,
-                                  .waitSemaphoreCount   = 0,
-                                  .pWaitSemaphores      = NULL,
-                                  .pWaitDstStageMask    = NULL,
-                                  .commandBufferCount   = 1,
-                                  .pCommandBuffers      = &cb,
-                                  .signalSemaphoreCount = 0,
-                                  .pSignalSemaphores    = NULL};
+  struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .pNext                = NULL,
+                                   .waitSemaphoreCount   = 0,
+                                   .pWaitSemaphores      = NULL,
+                                   .pWaitDstStageMask    = NULL,
+                                   .commandBufferCount   = 1,
+                                   .pCommandBuffers      = &cb,
+                                   .signalSemaphoreCount = 0,
+                                   .pSignalSemaphores    = NULL };
 
   vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
 

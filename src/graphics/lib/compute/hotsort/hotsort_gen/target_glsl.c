@@ -332,8 +332,8 @@ hsg_target_glsl(struct hsg_target * const       target,
           for (uint32_t ii = 1; ii <= config->warp.lanes_log2; ii++)
             fprintf(target->state->header, "  HS_TRANSPOSE_STAGE( %u )                  \\\n", ii);
 
-          struct hsg_transpose_state state[1] = {
-            {.header = target->state->header, .config = config}};
+          struct hsg_transpose_state state[1] = { { .header = target->state->header,
+                                                    .config = config } };
 
           hsg_transpose(config->warp.lanes_log2,
                         config->thread.regs,
@@ -435,7 +435,7 @@ hsg_target_glsl(struct hsg_target * const       target,
 
           fprintf(target->state->modules, "hs_bs_%u\n", msb);
 
-          char filename[] = {"comp/hs_bs_XX.comp"};
+          char filename[] = { "comp/hs_bs_XX.comp" };
           sprintf(filename, "comp/hs_bs_%u.comp", msb);
 
           target->state->source = fopen(filename, "wb");
@@ -470,7 +470,7 @@ hsg_target_glsl(struct hsg_target * const       target,
 
           fprintf(target->state->modules, "hs_bc_%u\n", msb);
 
-          char filename[] = {"comp/hs_bc_XX.comp"};
+          char filename[] = { "comp/hs_bc_XX.comp" };
           sprintf(filename, "comp/hs_bc_%u.comp", msb);
 
           target->state->source = fopen(filename, "wb");
@@ -501,7 +501,7 @@ hsg_target_glsl(struct hsg_target * const       target,
         case HSG_OP_TYPE_FM_KERNEL_PROTO: {
           fprintf(target->state->modules, "hs_fm_%u_%u\n", ops->a, ops->b);
 
-          char filename[] = {"comp/hs_fm_X_XX.comp"};
+          char filename[] = { "comp/hs_fm_X_XX.comp" };
           sprintf(filename, "comp/hs_fm_%u_%u.comp", ops->a, ops->b);
 
           target->state->source = fopen(filename, "wb");
@@ -524,7 +524,7 @@ hsg_target_glsl(struct hsg_target * const       target,
         case HSG_OP_TYPE_HM_KERNEL_PROTO: {
           fprintf(target->state->modules, "hs_hm_%u\n", ops->a);
 
-          char filename[] = {"comp/hs_hm_X.comp"};
+          char filename[] = { "comp/hs_hm_X.comp" };
           sprintf(filename, "comp/hs_hm_%u.comp", ops->a);
 
           target->state->source = fopen(filename, "wb");

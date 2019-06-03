@@ -48,9 +48,9 @@ spn_device_semaphore_pool_dispose(struct spn_device * const device)
 VkSemaphore
 spn_device_semaphore_pool_acquire(struct spn_device * const device)
 {
-  VkSemaphoreCreateInfo const sci = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-                                     .pNext = NULL,
-                                     .flags = 0};
+  VkSemaphoreCreateInfo const sci = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+                                      .pNext = NULL,
+                                      .flags = 0 };
 
   struct spn_vk_environment * const environment = device->environment;
 

@@ -96,7 +96,8 @@ spn_allocator_device_perm_alloc(struct spn_allocator_device_perm * const device_
     .sharingMode           = ((device_perm->queue_family_count == 0) ? VK_SHARING_MODE_EXCLUSIVE
                                                            : VK_SHARING_MODE_CONCURRENT),
     .queueFamilyIndexCount = device_perm->queue_family_count,
-    .pQueueFamilyIndices   = device_perm->queue_family_indices};
+    .pQueueFamilyIndices   = device_perm->queue_family_indices
+  };
 
   vk(CreateBuffer(vk->d, &bci, vk->ac, &dbi->buffer));
 
@@ -130,7 +131,8 @@ spn_allocator_device_perm_alloc(struct spn_allocator_device_perm * const device_
     .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
     .pNext           = NULL,
     .allocationSize  = mr.size,
-    .memoryTypeIndex = vk_find_mem_type_idx(&vk->pdmp, mr.memoryTypeBits, device_perm->mpf)};
+    .memoryTypeIndex = vk_find_mem_type_idx(&vk->pdmp, mr.memoryTypeBits, device_perm->mpf)
+  };
 
   vk(AllocateMemory(vk->d, &mai, vk->ac, devmem));
 

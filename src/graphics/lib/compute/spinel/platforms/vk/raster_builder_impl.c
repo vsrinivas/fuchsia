@@ -684,7 +684,8 @@ spn_rbi_complete_p_1(void * pfn_payload)
 
   struct spn_vk_push_rasters_alloc const push_rasters_alloc = {
     .bp_mask   = spn_device_block_pool_get_mask(device),
-    .cmd_count = dispatch->rc.span};
+    .cmd_count = dispatch->rc.span
+  };
 
   // bind the push constants
   spn_vk_p_push_rasters_alloc(instance, cb_3, &push_rasters_alloc);
@@ -718,16 +719,16 @@ spn_rbi_complete_p_1(void * pfn_payload)
   VkFence const fence =
     spn_device_cb_end_fence_acquire(device, cb_3, spn_rbi_complete_p_2, &p_2, sizeof(p_2));
   // boilerplate submit
-  struct VkSubmitInfo const si = {
-    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .pNext                = NULL,
-    .waitSemaphoreCount   = 1,
-    .pWaitSemaphores      = &p_2.semaphore.sort,
-    .pWaitDstStageMask    = &(VkPipelineStageFlags){VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
-    .commandBufferCount   = 1,
-    .pCommandBuffers      = &cb_3,
-    .signalSemaphoreCount = 0,
-    .pSignalSemaphores    = NULL};
+  struct VkSubmitInfo const si = { .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .pNext              = NULL,
+                                   .waitSemaphoreCount = 1,
+                                   .pWaitSemaphores    = &p_2.semaphore.sort,
+                                   .pWaitDstStageMask  = &(
+                                     VkPipelineStageFlags){ VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT },
+                                   .commandBufferCount   = 1,
+                                   .pCommandBuffers      = &cb_3,
+                                   .signalSemaphoreCount = 0,
+                                   .pSignalSemaphores    = NULL };
 
   vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
 
@@ -821,8 +822,8 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   // callback state
   //
-  struct spn_rbi_complete_payload_1 p_1 = {
-    .p_2 = {.impl = impl, .dispatch_idx = impl->dispatches.ring.head}};
+  struct spn_rbi_complete_payload_1 p_1 = { .p_2 = { .impl         = impl,
+                                                     .dispatch_idx = impl->dispatches.ring.head } };
 
   //
   VkCommandBuffer cb_1 = spn_device_cb_acquire_begin(device);
@@ -903,9 +904,9 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
-  struct spn_vk_push_fills_scan const push_fills_scan = {
-    .bp_mask   = spn_device_block_pool_get_mask(device),
-    .cmd_count = dispatch->cf.span};
+  struct spn_vk_push_fills_scan const push_fills_scan = { .bp_mask =
+                                                            spn_device_block_pool_get_mask(device),
+                                                          .cmd_count = dispatch->cf.span };
 
   // bind the push constants
   spn_vk_p_push_fills_scan(instance, cb_1, &push_fills_scan);
@@ -979,11 +980,11 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   // COPYBACK
   //
-  VkBufferCopy const bc = {
-    .srcOffset =
-      p_1.p_2.temp.rp.offset + SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_count),
-    .dstOffset = sizeof(*impl->mapped.cb.extent) * p_1.p_2.dispatch_idx,
-    .size      = sizeof(*impl->mapped.cb.extent)};
+  VkBufferCopy const bc = { .srcOffset =
+                              p_1.p_2.temp.rp.offset +
+                              SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_count),
+                            .dstOffset = sizeof(*impl->mapped.cb.extent) * p_1.p_2.dispatch_idx,
+                            .size      = sizeof(*impl->mapped.cb.extent) };
 
   vkCmdCopyBuffer(cb_1, dbi_ttrks->buffer, impl->vk.copyback.dbi.buffer, 1, &bc);
 
@@ -1001,15 +1002,15 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
     VkFence const fence =
       spn_device_cb_end_fence_acquire(device, cb_1, spn_rbi_complete_p_1, &p_1, sizeof(p_1));
     // boilerplate submit
-    struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                    .pNext                = NULL,
-                                    .waitSemaphoreCount   = 0,
-                                    .pWaitSemaphores      = NULL,
-                                    .pWaitDstStageMask    = NULL,
-                                    .commandBufferCount   = 1,
-                                    .pCommandBuffers      = &cb_1,
-                                    .signalSemaphoreCount = 1,
-                                    .pSignalSemaphores    = &p_1.semaphore.copy};
+    struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                     .pNext                = NULL,
+                                     .waitSemaphoreCount   = 0,
+                                     .pWaitSemaphores      = NULL,
+                                     .pWaitDstStageMask    = NULL,
+                                     .commandBufferCount   = 1,
+                                     .pCommandBuffers      = &cb_1,
+                                     .signalSemaphoreCount = 1,
+                                     .pSignalSemaphores    = &p_1.semaphore.copy };
 
     vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
   }

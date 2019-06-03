@@ -145,8 +145,8 @@ hotsort_vk_create(VkDevice                               device,
   //
   uint32_t const count_bs    = bs_slabs_log2_ru + 1;
   uint32_t const count_bc    = bc_slabs_log2_max + 1;
-  uint32_t       count_fm[3] = {0};
-  uint32_t       count_hm[3] = {0};
+  uint32_t       count_fm[3] = { 0 };
+  uint32_t       count_hm[3] = { 0 };
 
   // guaranteed to be in range [0,2]
   for (uint32_t scale = target->config.merge.fm.scale_min;
@@ -199,16 +199,17 @@ hotsort_vk_create(VkDevice                               device,
     .sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
     .pNext              = NULL,
     .flags              = VK_PIPELINE_CREATE_DISPATCH_BASE,
-    .stage              = {.sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-              .pNext               = NULL,
-              .flags               = 0,
-              .stage               = VK_SHADER_STAGE_COMPUTE_BIT,
-              .module              = VK_NULL_HANDLE,
-              .pName               = "main",
-              .pSpecializationInfo = NULL},
+    .stage              = { .sType               = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+               .pNext               = NULL,
+               .flags               = 0,
+               .stage               = VK_SHADER_STAGE_COMPUTE_BIT,
+               .module              = VK_NULL_HANDLE,
+               .pName               = "main",
+               .pSpecializationInfo = NULL },
     .layout             = pipeline_layout,
     .basePipelineHandle = VK_NULL_HANDLE,
-    .basePipelineIndex  = 0};
+    .basePipelineIndex  = 0
+  };
 
   //
   // Create a shader module, use it to create a pipeline... and
@@ -219,11 +220,11 @@ hotsort_vk_create(VkDevice                               device,
   // FILL_OUT  shaders have layout: (vout)
   // otherwise shaders have layout: (vout)
   //
-  VkShaderModuleCreateInfo smci = {.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-                                   .pNext    = NULL,
-                                   .flags    = 0,
-                                   .codeSize = 0,
-                                   .pCode    = NULL};
+  VkShaderModuleCreateInfo smci = { .sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                                    .pNext    = NULL,
+                                    .flags    = 0,
+                                    .codeSize = 0,
+                                    .pCode    = NULL };
 
   uint32_t const * modules = target->modules;
 
@@ -619,9 +620,9 @@ hotsort_vk_sort(VkCommandBuffer                            cb,
   //
   size_t const kv_size = (hs->config.dwords.key + hs->config.dwords.val) * sizeof(uint32_t);
 
-  struct hotsort_vk_push const push = {.kv_offset_in  = (uint32_t)(offsets->in / kv_size),
-                                       .kv_offset_out = (uint32_t)(offsets->out / kv_size),
-                                       .kv_count      = count};
+  struct hotsort_vk_push const push = { .kv_offset_in  = (uint32_t)(offsets->in / kv_size),
+                                        .kv_offset_out = (uint32_t)(offsets->out / kv_size),
+                                        .kv_count      = count };
 
   vkCmdPushConstants(cb,
                      hs->pl,

@@ -494,14 +494,15 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   //
   // This means we can push the constants once.
   //
-  struct spn_vk_push_paths_copy const push = {// paths_alloc and paths_copy
-                                              .bp_mask = spn_device_block_pool_get_mask(device),
-                                              .pc_alloc_idx = impl->dispatches.ring.head,
-                                              .pc_span      = dispatch->blocks.span,
-                                              // only paths_copy
-                                              .pc_head    = dispatch->blocks.head,
-                                              .pc_rolling = dispatch->blocks.rolling,
-                                              .pc_size    = impl->mapped.ring.size};
+  struct spn_vk_push_paths_copy const push = { // paths_alloc and paths_copy
+                                               .bp_mask = spn_device_block_pool_get_mask(device),
+                                               .pc_alloc_idx = impl->dispatches.ring.head,
+                                               .pc_span      = dispatch->blocks.span,
+                                               // only paths_copy
+                                               .pc_head    = dispatch->blocks.head,
+                                               .pc_rolling = dispatch->blocks.rolling,
+                                               .pc_size    = impl->mapped.ring.size
+  };
 
   spn_vk_p_push_paths_copy(instance, cb, &push);
 
@@ -532,15 +533,15 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   VkFence const fence =
     spn_device_cb_end_fence_acquire(device, cb, spn_pbi_complete, &payload, sizeof(payload));
   // boilerplate submit
-  struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                  .pNext                = NULL,
-                                  .waitSemaphoreCount   = 0,
-                                  .pWaitSemaphores      = NULL,
-                                  .pWaitDstStageMask    = NULL,
-                                  .commandBufferCount   = 1,
-                                  .pCommandBuffers      = &cb,
-                                  .signalSemaphoreCount = 0,
-                                  .pSignalSemaphores    = NULL};
+  struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .pNext                = NULL,
+                                   .waitSemaphoreCount   = 0,
+                                   .pWaitSemaphores      = NULL,
+                                   .pWaitDstStageMask    = NULL,
+                                   .commandBufferCount   = 1,
+                                   .pCommandBuffers      = &cb,
+                                   .signalSemaphoreCount = 0,
+                                   .pSignalSemaphores    = NULL };
 
   vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
 
@@ -907,7 +908,7 @@ spn_pbi_begin(struct spn_path_builder_impl * const impl)
   impl->wip.header.nodes  = 0;
 
   // reset bounds
-  impl->wip.header.bounds = (struct spn_vec4){+FLT_MIN, +FLT_MIN, -FLT_MIN, -FLT_MIN};
+  impl->wip.header.bounds = (struct spn_vec4){ +FLT_MIN, +FLT_MIN, -FLT_MIN, -FLT_MIN };
   // reset prim counters
   spn_pbi_prims_zero(impl);
 

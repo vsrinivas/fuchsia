@@ -80,9 +80,9 @@ spn_device_fence_pool_create(struct spn_device * const device, uint32_t const si
   //
   // initialize links
   //
-  VkFenceCreateInfo const fci = {.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-                                 .pNext = NULL,
-                                 .flags = 0};
+  VkFenceCreateInfo const fci = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                                  .pNext = NULL,
+                                  .flags = 0 };
 
   uint32_t              rem  = size;
   struct spn_fence_cb * curr = fence_pool->cbs;

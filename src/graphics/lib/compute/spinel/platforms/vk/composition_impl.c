@@ -466,7 +466,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   //
   // This means we can push the constants once.
   //
-  struct spn_vk_push_place const push = {.place_clip = {0, 0, INT32_MAX, INT32_MAX}};
+  struct spn_vk_push_place const push = { .place_clip = { 0, 0, INT32_MAX, INT32_MAX } };
 
   spn_vk_p_push_place(instance, cb, &push);
 
@@ -481,7 +481,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   //
   struct spn_ci_complete_payload_1 p_1 = {
     .impl         = impl,
-    .ds           = {.ttcks.idx = ds_ttcks.idx, .place.idx = ds_place.idx},
+    .ds           = { .ttcks.idx = ds_ttcks.idx, .place.idx = ds_place.idx },
     .dispatch_idx = impl->dispatches.ring.head,
   };
 
@@ -490,15 +490,15 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   VkFence const fence =
     spn_device_cb_end_fence_acquire(device, cb, spn_ci_complete_p_1, &p_1, sizeof(p_1));
   // boilerplate submit
-  struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                  .pNext                = NULL,
-                                  .waitSemaphoreCount   = 0,
-                                  .pWaitSemaphores      = NULL,
-                                  .pWaitDstStageMask    = NULL,
-                                  .commandBufferCount   = 1,
-                                  .pCommandBuffers      = &cb,
-                                  .signalSemaphoreCount = 1,
-                                  .pSignalSemaphores    = &dispatch->semaphore.place};
+  struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .pNext                = NULL,
+                                   .waitSemaphoreCount   = 0,
+                                   .pWaitSemaphores      = NULL,
+                                   .pWaitDstStageMask    = NULL,
+                                   .commandBufferCount   = 1,
+                                   .pCommandBuffers      = &cb,
+                                   .signalSemaphoreCount = 1,
+                                   .pSignalSemaphores    = &dispatch->semaphore.place };
 
   vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
 
@@ -715,9 +715,9 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   //
   // COPYBACK
   //
-  VkBufferCopy const bc = {.srcOffset = SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
-                           .dstOffset = OFFSET_OF_MACRO(struct spn_ci_copyback, ttcks),
-                           .size      = sizeof(impl->mapped.cb.extent->ttcks)};
+  VkBufferCopy const bc = { .srcOffset = SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
+                            .dstOffset = OFFSET_OF_MACRO(struct spn_ci_copyback, ttcks),
+                            .size      = sizeof(impl->mapped.cb.extent->ttcks) };
 
   VkBuffer ttcks = impl->vk.ttcks.dbi.buffer;
 
@@ -770,15 +770,15 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   spn_ci_gather_place_semaphores(impl);
 
   // boilerplate submit
-  struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                  .pNext                = NULL,
-                                  .waitSemaphoreCount   = impl->place.count,
-                                  .pWaitSemaphores      = impl->place.semaphores,
-                                  .pWaitDstStageMask    = impl->place.psfs,
-                                  .commandBufferCount   = 1,
-                                  .pCommandBuffers      = &cb,
-                                  .signalSemaphoreCount = 1,
-                                  .pSignalSemaphores    = &p_2.semaphore.sort};
+  struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                   .pNext                = NULL,
+                                   .waitSemaphoreCount   = impl->place.count,
+                                   .pWaitSemaphores      = impl->place.semaphores,
+                                   .pWaitDstStageMask    = impl->place.psfs,
+                                   .commandBufferCount   = 1,
+                                   .pCommandBuffers      = &cb,
+                                   .signalSemaphoreCount = 1,
+                                   .pSignalSemaphores    = &p_2.semaphore.sort };
 
   vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
 }
@@ -1049,9 +1049,9 @@ spn_ci_place(struct spn_composition_impl * const impl,
 
       while (avail-- > 0)
         {
-          *cmds++ = (struct spn_cmd_place){.raster_h = *rasters++,
-                                           .layer_id = *layer_ids++,
-                                           .txty     = {*(*txtys++)}};
+          *cmds++ = (struct spn_cmd_place){ .raster_h = *rasters++,
+                                            .layer_id = *layer_ids++,
+                                            .txty     = { *(*txtys++) } };
         }
 
       //
@@ -1265,7 +1265,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   else
     {
       impl->vk.rings.d.dbi =
-        (VkDescriptorBufferInfo){.buffer = VK_NULL_HANDLE, .offset = 0, .range = 0};
+        (VkDescriptorBufferInfo){ .buffer = VK_NULL_HANDLE, .offset = 0, .range = 0 };
       impl->vk.rings.d.dm = VK_NULL_HANDLE;
     }
 

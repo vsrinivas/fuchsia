@@ -173,7 +173,8 @@ spn_ri_buffer(struct spn_device * const device, spn_render_submit_t const * cons
   //
   struct spn_ri_buffer_complete_payload payload = {
     .instance = instance,
-    .ds       = {.ttcks = ds_ttcks, .styling = ds_styling, .surface = ds_surface}};
+    .ds       = { .ttcks = ds_ttcks, .styling = ds_styling, .surface = ds_surface }
+  };
 
   VkFence const fence =
     spn_device_cb_end_fence_acquire(device, cb, spn_ri_buffer_complete, &payload, sizeof(payload));

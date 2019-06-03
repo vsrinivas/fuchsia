@@ -57,8 +57,8 @@ spn_assert_n(char const * const file,
                __LINE__,                                                                           \
                true,                                                                               \
                _result,                                                                            \
-               sizeof((const spn_result[]){__VA_ARGS__}) / sizeof(spn_result),                     \
-               (const spn_result[]){__VA_ARGS__})
+               sizeof((const spn_result[]){ __VA_ARGS__ }) / sizeof(spn_result),                   \
+               (const spn_result[]){ __VA_ARGS__ })
 
 //
 //

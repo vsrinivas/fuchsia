@@ -135,7 +135,7 @@ SPN_VK_TARGET_GLSL_DS_EXPAND()
 #define SPN_VK_TARGET_VK_DS(_p_id, _ds_idx, _ds_id)
 
 #undef SPN_VK_TARGET_VK_PUSH
-#define SPN_VK_TARGET_VK_PUSH(_p_id, _p_pc) SPN_VK_TARGET_PUSH_NAME(_p_id){_p_pc};
+#define SPN_VK_TARGET_VK_PUSH(_p_id, _p_pc) SPN_VK_TARGET_PUSH_NAME(_p_id){ _p_pc };
 
 #undef SPN_VK_TARGET_P_EXPAND_X
 #define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) _p_descs

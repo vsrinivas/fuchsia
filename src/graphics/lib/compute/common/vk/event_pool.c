@@ -28,9 +28,9 @@ struct vk_event_pool
 static void
 vk_event_pool_resize(struct vk_event_pool * const event_pool)
 {
-  static struct VkEventCreateInfo const eci = {.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
-                                               .pNext = NULL,
-                                               .flags = 0};
+  static struct VkEventCreateInfo const eci = { .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
+                                                .pNext = NULL,
+                                                .flags = 0 };
 
   // FIXME -- respect allocator
 

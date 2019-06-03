@@ -24,17 +24,17 @@ main(int argc, char const * argv[])
   //
   // create a Vulkan instances
   //
-  VkApplicationInfo const app_info = {.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                                      .pNext              = NULL,
-                                      .pApplicationName   = "Fuchsia Vulkan Subgroup Info",
-                                      .applicationVersion = 0,
-                                      .pEngineName        = "Fuchsia Vulkan",
-                                      .engineVersion      = 0,
-                                      .apiVersion         = VK_API_VERSION_1_1};
+  VkApplicationInfo const app_info = { .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                                       .pNext              = NULL,
+                                       .pApplicationName   = "Fuchsia Vulkan Subgroup Info",
+                                       .applicationVersion = 0,
+                                       .pEngineName        = "Fuchsia Vulkan",
+                                       .engineVersion      = 0,
+                                       .apiVersion         = VK_API_VERSION_1_1 };
 
-  char const * const instance_enabled_layers[] = {"VK_LAYER_LUNARG_standard_validation", NULL};
+  char const * const instance_enabled_layers[] = { "VK_LAYER_LUNARG_standard_validation", NULL };
 
-  char const * const instance_enabled_extensions[] = {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, NULL};
+  char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME, NULL };
 
   VkInstanceCreateInfo const instance_info = {
     .sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -44,7 +44,8 @@ main(int argc, char const * argv[])
     .enabledLayerCount       = ARRAY_LENGTH_MACRO(instance_enabled_layers) - 1,
     .ppEnabledLayerNames     = instance_enabled_layers,
     .enabledExtensionCount   = ARRAY_LENGTH_MACRO(instance_enabled_extensions) - 1,
-    .ppEnabledExtensionNames = instance_enabled_extensions};
+    .ppEnabledExtensionNames = instance_enabled_extensions
+  };
 
   VkInstance instance;
 
@@ -69,7 +70,8 @@ main(int argc, char const * argv[])
              VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT |
              VK_DEBUG_REPORT_DEBUG_BIT_EXT,
     .pfnCallback = vk_debug_report_cb,
-    .pUserData   = NULL};
+    .pUserData   = NULL
+  };
 
   VkDebugReportCallbackEXT drc;
 
@@ -101,10 +103,11 @@ main(int argc, char const * argv[])
   //
   VkPhysicalDeviceSubgroupProperties pdsp = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES,
-    .pNext = NULL};
+    .pNext = NULL
+  };
 
-  VkPhysicalDeviceProperties2 pdp2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-                                      .pNext = &pdsp};
+  VkPhysicalDeviceProperties2 pdp2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+                                       .pNext = &pdsp };
 
   vkGetPhysicalDeviceProperties2(pds[0], &pdp2);
 

@@ -37,10 +37,10 @@ spn_device_cb_pool_create(struct spn_device * const device)
 
   device->cb_pool = cb_pool;
 
-  VkCommandPoolCreateInfo const cpci = {.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-                                        .pNext = NULL,
-                                        .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                                        .queueFamilyIndex = device->environment->qfi};
+  VkCommandPoolCreateInfo const cpci = { .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                                         .pNext = NULL,
+                                         .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                                         .queueFamilyIndex = device->environment->qfi };
 
   vk(CreateCommandPool(device->environment->d, &cpci, device->environment->ac, &cb_pool->cp));
 }
@@ -60,11 +60,12 @@ spn_device_cb_pool_dispose(struct spn_device * const device)
 VkCommandBuffer
 spn_device_cb_pool_acquire(struct spn_device * const device)
 {
-  VkCommandBufferAllocateInfo const cbai = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                                            .pNext = NULL,
-                                            .commandPool        = device->cb_pool->cp,
-                                            .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                            .commandBufferCount = 1};
+  VkCommandBufferAllocateInfo const cbai = { .sType =
+                                               VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                                             .pNext              = NULL,
+                                             .commandPool        = device->cb_pool->cp,
+                                             .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                             .commandBufferCount = 1 };
 
   VkCommandBuffer cb;
 

@@ -495,8 +495,8 @@ spn_device_handle_pool_reclaim(struct spn_device * const            device,
       // - return reclamation descriptor set
       // - return block index to handle pool
       //
-      struct spn_handle_pool_reclaim_complete_payload payload = {.handle_pool = handle_pool,
-                                                                 .block       = reclaim->block};
+      struct spn_handle_pool_reclaim_complete_payload payload = { .handle_pool = handle_pool,
+                                                                  .block       = reclaim->block };
 
       //
       // submit the command buffer
@@ -507,15 +507,15 @@ spn_device_handle_pool_reclaim(struct spn_device * const            device,
                                                             &payload,
                                                             sizeof(payload));
       // boilerplate submit
-      struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                      .pNext                = NULL,
-                                      .waitSemaphoreCount   = 0,
-                                      .pWaitSemaphores      = NULL,
-                                      .pWaitDstStageMask    = NULL,
-                                      .commandBufferCount   = 1,
-                                      .pCommandBuffers      = &cb,
-                                      .signalSemaphoreCount = 0,
-                                      .pSignalSemaphores    = NULL};
+      struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                       .pNext                = NULL,
+                                       .waitSemaphoreCount   = 0,
+                                       .pWaitSemaphores      = NULL,
+                                       .pWaitDstStageMask    = NULL,
+                                       .commandBufferCount   = 1,
+                                       .pCommandBuffers      = &cb,
+                                       .signalSemaphoreCount = 0,
+                                       .pSignalSemaphores    = NULL };
 
       vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
     }
@@ -552,7 +552,7 @@ spn_device_handle_pool_acquire(struct spn_device * const device, spn_handle_t * 
 
   *handle = handle_pool->handle.extent[handle_idx];
 
-  handle_pool->handle.refcnts[*handle] = (union spn_handle_refcnt){.h = 1, .d = 1};
+  handle_pool->handle.refcnts[*handle] = (union spn_handle_refcnt){ .h = 1, .d = 1 };
 }
 
 //

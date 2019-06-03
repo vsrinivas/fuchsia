@@ -135,26 +135,26 @@ spn_si_seal(struct spn_styling_impl * const impl)
       //
       // launch a copy and record a semaphore
       //
-      VkBufferCopy const bc = {.srcOffset = impl->vk.h.dbi.offset,
-                               .dstOffset = impl->vk.d.dbi.offset,
-                               .size      = impl->styling->dwords.next * sizeof(uint32_t)};
+      VkBufferCopy const bc = { .srcOffset = impl->vk.h.dbi.offset,
+                                .dstOffset = impl->vk.d.dbi.offset,
+                                .size      = impl->styling->dwords.next * sizeof(uint32_t) };
 
       vkCmdCopyBuffer(cb, impl->vk.h.dbi.buffer, impl->vk.d.dbi.buffer, 1, &bc);
 
-      struct spn_si_complete_payload payload = {.impl = impl, .cb = cb};
+      struct spn_si_complete_payload payload = { .impl = impl, .cb = cb };
 
       VkFence const fence =
         spn_device_cb_end_fence_acquire(device, cb, spn_si_complete, &payload, sizeof(payload));
       // boilerplate submit
-      struct VkSubmitInfo const si = {.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                                      .pNext                = NULL,
-                                      .waitSemaphoreCount   = 0,
-                                      .pWaitSemaphores      = NULL,
-                                      .pWaitDstStageMask    = NULL,
-                                      .commandBufferCount   = 1,
-                                      .pCommandBuffers      = &cb,
-                                      .signalSemaphoreCount = 1,
-                                      .pSignalSemaphores    = &impl->vk.semaphore.sealing};
+      struct VkSubmitInfo const si = { .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                                       .pNext                = NULL,
+                                       .waitSemaphoreCount   = 0,
+                                       .pWaitSemaphores      = NULL,
+                                       .pWaitDstStageMask    = NULL,
+                                       .commandBufferCount   = 1,
+                                       .pCommandBuffers      = &cb,
+                                       .signalSemaphoreCount = 1,
+                                       .pSignalSemaphores    = &impl->vk.semaphore.sealing };
 
       vk(QueueSubmit(spn_device_queue_next(device), 1, &si, fence));
     }
@@ -368,8 +368,9 @@ spn_styling_impl_create(struct spn_device * const   device,
     }
   else
     {
-      impl->vk.d.dbi = (VkDescriptorBufferInfo){.buffer = VK_NULL_HANDLE, .offset = 0, .range = 0};
-      impl->vk.d.dm  = VK_NULL_HANDLE;
+      impl->vk.d.dbi =
+        (VkDescriptorBufferInfo){ .buffer = VK_NULL_HANDLE, .offset = 0, .range = 0 };
+      impl->vk.d.dm = VK_NULL_HANDLE;
     }
 
   // the styling impl starts out unsealed

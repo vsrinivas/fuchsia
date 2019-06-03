@@ -382,16 +382,16 @@ spn_grid_deps_attach(spn_grid_deps_t const deps,
     *addr = grid;
 
   // initialize elem
-  *grid = (struct spn_grid){.state   = SPN_GRID_STATE_READY,
-                            .id      = first,
-                            .deps    = deps,
-                            .addr    = addr,
-                            .data    = data,
-                            .waiting = {.pfn = waiting_pfn, .name = waiting_name},
-                            .execute = {.pfn = execute_pfn, .name = execute_name},
-                            .dispose = {.pfn = dispose_pfn, .name = dispose_name},
-                            .before  = {{0}, 0},
-                            .after   = {{0}, 0}};
+  *grid = (struct spn_grid){ .state   = SPN_GRID_STATE_READY,
+                             .id      = first,
+                             .deps    = deps,
+                             .addr    = addr,
+                             .data    = data,
+                             .waiting = { .pfn = waiting_pfn, .name = waiting_name },
+                             .execute = { .pfn = execute_pfn, .name = execute_name },
+                             .dispose = { .pfn = dispose_pfn, .name = dispose_name },
+                             .before  = { { 0 }, 0 },
+                             .after   = { { 0 }, 0 } };
 
   return grid;
 }
