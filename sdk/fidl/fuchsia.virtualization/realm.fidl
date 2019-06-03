@@ -58,8 +58,8 @@ struct WaylandDevice {
     // The amount of guest-physical address space to allocate for virtio_wl
     // buffers.
     //
-    // Default to a 1GB allocation.
-    uint64 memory = 1073741824;
+    // Default to a 16GiB allocation.
+    uint64 memory = 17179869184;
 
     // The dispatcher for new virtio_wl connections.
     WaylandDispatcher dispatcher;
