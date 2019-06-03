@@ -108,6 +108,7 @@ if (current_cpu != "") {
       # FLK-298
       #"$zx/system/ulib/paver:paver-test",
       "$zx/system/ulib/pretty:pretty-test",
+      "$zx/system/ulib/range/test",
       "$zx/system/ulib/region-alloc/test",
       "$zx/system/ulib/simplehid/test",
       "$zx/system/ulib/smbios:smbios-test",
