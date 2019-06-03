@@ -90,6 +90,122 @@ class FakeMsrAccess : public MsrAccess {
     ktl::array<FakeMsr, 1> msrs_;
 };
 
+static bool test_x64_meltdown_enumeration() {
+    BEGIN_TEST;
+
+    {
+        // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
+        FakeMsrAccess fake_msrs;
+        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu_id::kCpuIdXeon2690v4, &fake_msrs), "");
+    }
+
+    {
+        // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
+        cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
+        data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+            (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_ARCH_CAPABILITIES, 0 };
+        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+    }
+
+    {
+        // Intel(R) Core(TM) i5-5257U has Meltdown
+        cpu_id::TestDataSet data = {};
+        data.leaf0 = {.reg={0x14, 0x756e6547, 0x6c65746e, 0x49656e69}};
+        data.leaf1 = {.reg={0x306d4, 0x100800, 0x7ffafbbf, 0xbfebfbff}};
+        data.leaf4 = {.reg={0x1c004121, 0x1c0003f, 0x3f, 0x0}};
+        data.leaf7 = {.reg={0x0, 0x21c27ab, 0x0, 0x9c000000}};
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+    }
+
+    {
+        // Intel(R) Xeon(R) Gold 6xxx; does not have Meltdown, reports via RDCL_NO
+        cpu_id::TestDataSet data = {};
+        data.leaf0 = { .reg = { 0x16, 0x756e6547, 0x6c65746e, 0x49656e69 } };
+        data.leaf1 = { .reg = { 0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff } };
+        data.leaf4 = { .reg = { 0x7c004121, 0x1c0003f, 0x3f, 0x0 } };
+        data.leaf7 = { .reg = { 0x0, 0xd39ffffb, 0x808, 0xbc000400 } };
+
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b };
+        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+    }
+
+    {
+        // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have L1TF, reports via RDCL_NO
+        cpu_id::TestDataSet data = {};
+        data.leaf0 = { .reg = { 0x15, 0x756e6547, 0x6c65746e, 0x49656e69 } };
+        data.leaf1 = { .reg = { 0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff } };
+        data.leaf4 = { .reg = { 0x3c000121, 0x140003f, 0x3f, 0x1 } };
+        data.leaf7 = { .reg = { 0x0, 0x2294e283, 0x0, 0x2c000000 } };
+
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_ARCH_CAPABILITIES, 0x19 };
+        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+    }
+
+    END_TEST;
+}
+
+static bool test_x64_l1tf_enumeration() {
+    BEGIN_TEST;
+
+    {
+        // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
+        FakeMsrAccess fake_msrs;
+        EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu_id::kCpuIdXeon2690v4, &fake_msrs), "");
+    }
+
+    {
+        // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
+        cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
+        data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+            (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_ARCH_CAPABILITIES, 0 };
+        EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+    }
+
+    {
+        // Intel(R) Xeon(R) Gold 6xxx; does not have Meltdown, reports via RDCL_NO
+        cpu_id::TestDataSet data = {};
+        data.leaf0 = { .reg = { 0x16, 0x756e6547, 0x6c65746e, 0x49656e69 } };
+        data.leaf1 = { .reg = { 0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff } };
+        data.leaf4 = { .reg = { 0x7c004121, 0x1c0003f, 0x3f, 0x0 } };
+        data.leaf7 = { .reg = { 0x0, 0xd39ffffb, 0x808, 0xbc000400 } };
+
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b };
+        EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+    }
+
+    {
+        // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
+        cpu_id::TestDataSet data = {};
+        data.leaf0 = { .reg = { 0x15, 0x756e6547, 0x6c65746e, 0x49656e69 } };
+        data.leaf1 = { .reg = { 0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff } };
+        data.leaf4 = { .reg = { 0x3c000121, 0x140003f, 0x3f, 0x1 } };
+        data.leaf7 = { .reg = { 0x0, 0x2294e283, 0x0, 0x2c000000 } };
+
+        cpu_id::FakeCpuId cpu(data);
+        FakeMsrAccess fake_msrs = {};
+        // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
+        fake_msrs.msrs_[0] = { X86_MSR_IA32_ARCH_CAPABILITIES, 0x19 };
+        EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+    }
+
+    END_TEST;
+}
+
 static bool test_x64_mds_enumeration() {
     BEGIN_TEST;
 
@@ -243,6 +359,8 @@ static bool test_x64_intel_ucode_patch_loader() {
 UNITTEST_START_TESTCASE(x64_platform_tests)
 UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
 UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
+UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
+UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)

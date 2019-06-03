@@ -114,7 +114,7 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     // channels, where available.
     if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
       uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-      if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
+      if (arch_capabilities & X86_ARCH_CAPABILITIES_RDCL_NO) {
         return false;
       }
     }
@@ -131,7 +131,7 @@ bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
 
     if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
         uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-        if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
+        if (arch_capabilities & X86_ARCH_CAPABILITIES_RDCL_NO) {
             return false;
         }
     }
