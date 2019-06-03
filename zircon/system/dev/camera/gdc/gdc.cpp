@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "gdc.h"
+#include "gdc-regs.h"
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
@@ -20,13 +21,36 @@ namespace camera {
 namespace {
 
 constexpr uint32_t kHiu = 0;
-constexpr uint32_t kMemoryDomain = 1;
-constexpr uint32_t kGdc = 2;
+constexpr uint32_t kGdc = 1;
 
 } // namespace
 
 void GdcDevice::InitClocks() {
-    // TODO(braval): Init Clocks & Power Domain here.
+    // First reset the clocks.
+    GDC_CLK_CNTL::Get()
+        .ReadFrom(&clock_mmio_)
+        .reset_axi()
+        .reset_core()
+        .WriteTo(&clock_mmio_);
+
+    // Set the clocks to 8Mhz
+    // Source XTAL
+    // Clock divisor = 3
+    GDC_CLK_CNTL::Get()
+        .ReadFrom(&clock_mmio_)
+        .set_axi_clk_div(3)
+        .set_axi_clk_en(1)
+        .set_axi_clk_sel(0)
+        .set_core_clk_div(3)
+        .set_core_clk_en(1)
+        .set_core_clk_sel(0)
+        .WriteTo(&clock_mmio_);
+
+    // Enable GDC Power domain.
+    GDC_MEM_POWER_DOMAIN::Get()
+        .ReadFrom(&clock_mmio_)
+        .set_gdc_pd(0)
+        .WriteTo(&clock_mmio_);
 }
 
 zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
@@ -61,15 +85,9 @@ zx_status_t GdcDevice::Setup(void* ctx,
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
+
     std::optional<ddk::MmioBuffer> clk_mmio;
     zx_status_t status = pdev.MapMmio(kHiu, &clk_mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-        return status;
-    }
-
-    std::optional<ddk::MmioBuffer> memory_pd_mmio;
-    status = pdev.MapMmio(kMemoryDomain, &memory_pd_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
@@ -99,7 +117,6 @@ zx_status_t GdcDevice::Setup(void* ctx,
     fbl::AllocChecker ac;
     auto gdc_device = std::unique_ptr<GdcDevice>(new (&ac) GdcDevice(parent,
                                                                      std::move(*clk_mmio),
-                                                                     std::move(*memory_pd_mmio),
                                                                      std::move(*gdc_mmio),
                                                                      std::move(gdc_irq),
                                                                      std::move(bti)));

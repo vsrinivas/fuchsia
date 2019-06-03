@@ -29,11 +29,6 @@ constexpr pbus_mmio_t gdc_mmios[] = {
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
     },
-    // Memory PD
-    {
-        .base = T931_MEMORY_PD_BASE,
-        .length = T931_MEMORY_PD_LENGTH,
-    },
     // GDC Base
     {
         .base = T931_GDC_BASE,

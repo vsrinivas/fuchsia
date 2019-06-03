@@ -30,12 +30,11 @@ public:
 
     explicit GdcDevice(zx_device_t* parent,
                        ddk ::MmioBuffer clk_mmio,
-                       ddk ::MmioBuffer memory_pd_mmio,
                        ddk ::MmioBuffer gdc_mmio,
                        zx::interrupt gdc_irq,
                        zx::bti bti)
         : GdcDeviceType(parent), clock_mmio_(std::move(clk_mmio)),
-          memory_pd_mmio_(std::move(memory_pd_mmio)), gdc_mmio_(std::move(gdc_mmio)),
+          gdc_mmio_(std::move(gdc_mmio)),
           gdc_irq_(std::move(gdc_irq)), bti_(std::move(bti)) {}
 
     ~GdcDevice();
@@ -63,8 +62,8 @@ private:
     void ShutDown();
     void InitClocks();
 
+    // HHI register block has the clock registers
     ddk::MmioBuffer clock_mmio_;
-    ddk::MmioBuffer memory_pd_mmio_;
     ddk::MmioBuffer gdc_mmio_;
     zx::interrupt gdc_irq_;
     zx::bti bti_;
