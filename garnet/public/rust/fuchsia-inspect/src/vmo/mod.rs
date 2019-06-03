@@ -108,7 +108,12 @@ impl Inspector {
     }
 
     fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
-        let size = max(constants::MINIMUM_VMO_SIZE_BYTES, max_size);
+        let mut size = max(constants::MINIMUM_VMO_SIZE_BYTES, max_size);
+        // If the size is not a multiple of 4096, round up.
+        if size % constants::MINIMUM_VMO_SIZE_BYTES != 0 {
+            size =
+                (1 + size / constants::MINIMUM_VMO_SIZE_BYTES) * constants::MINIMUM_VMO_SIZE_BYTES;
+        }
         let (mapping, vmo) = Mapping::allocate(size)
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Arc::new(mapping))?;
@@ -334,6 +339,14 @@ mod tests {
         assert_eq!(test_object.vmo.get_size().unwrap(), 8192);
         let root_name_block = test_object.root().state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+
+        // If size is not a multiple of 4096, it'll be rounded up.
+        let test_object = Inspector::new_with_size(10000).unwrap();
+        assert_eq!(test_object.vmo.get_size().unwrap(), 12288);
+
+        // If size is less than the minimum size, the minimum will be set.
+        let test_object = Inspector::new_with_size(2000).unwrap();
+        assert_eq!(test_object.vmo.get_size().unwrap(), 4096);
     }
 
     #[test]
