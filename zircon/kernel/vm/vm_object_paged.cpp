@@ -921,14 +921,11 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
         }
         cur = next;
     } while (cur != page_owner);
-    cur = cur->page_stack_flag_ == StackDir::Left ?
-            &cur->left_child_locked() : &cur->right_child_locked();
-    uint64_t cur_offset = owner_offset - cur->parent_offset_;
+    uint64_t cur_offset = owner_offset;
 
-    // target_page is the page we're considering for migration.
+    // |target_page| is the page we're considering for migration. Cache it
+    // across loop iterations.
     vm_page_t* target_page = page;
-    VmObjectPaged* target_page_owner = page_owner;
-    uint64_t target_page_offset = owner_offset;
     VmObjectPaged* last_contig = nullptr;
     uint64_t last_contig_offset = 0;
 
@@ -939,7 +936,15 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
     // of the clone tree will still see |page|. As soon as we insert a new page, we'll need to
     // update all mappings at or below that level.
     bool skip_range_update = true;
-    while (cur) {
+    do {
+        // |target_page| is always located at in |cur| at |cur_offset| at the start of the loop.
+        VmObjectPaged* target_page_owner = cur;
+        uint64_t target_page_offset = cur_offset;
+
+        cur = cur->page_stack_flag_ == StackDir::Left ?
+                &cur->left_child_locked() : &cur->right_child_locked();
+        cur_offset -= cur->parent_offset_;
+
         if (target_page_owner->IsUniAccessibleLocked(target_page, target_page_offset)) {
             // If the page we're covering in the parent is uni-accessible, then we
             // can directly move the page.
@@ -965,7 +970,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
             vm_page_t* cover_page;
             alloc_failure = !AllocateCopyPage(pmm_alloc_flags_, page->paddr(),
                                               free_list, &cover_page);
-            if (alloc_failure) {
+            if (unlikely(alloc_failure)) {
                 // TODO: plumb through PageRequest once anonymous page source is implemented.
                 break;
             }
@@ -1011,29 +1016,19 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
                 RangeChangeUpdateLocked(offset, PAGE_SIZE);
             }
         }
-
-        target_page_owner = cur;
-        target_page_offset = cur_offset;
-
-        if (cur == this) {
-            break;
-        } else {
-            cur = cur->page_stack_flag_ == StackDir::Left
-                    ? &cur->left_child_locked() : &cur->right_child_locked();
-            cur_offset -= cur->parent_offset_;
-        }
-    }
+    } while (cur != this);
     DEBUG_ASSERT(alloc_failure || cur_offset == offset);
 
     if (last_contig != nullptr) {
         ContiguousCowFixupLocked(page_owner, owner_offset, last_contig, last_contig_offset);
+        if (last_contig == this) {
+            target_page = page;
+        }
     }
 
-    if (alloc_failure) {
+    if (unlikely(alloc_failure)) {
        // Note that this happens after fixing up the contiguous vmo invariant.
         return nullptr;
-    } else if (last_contig == this) {
-        return page;
     } else {
         return target_page;
     }
@@ -1267,6 +1262,15 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
         }
         zx_status_t status = AddPageLocked(res_page, offset);
         DEBUG_ASSERT(status == ZX_OK);
+
+        // If ARM and not fully cached, clean/invalidate the page after zeroing it. Since
+        // clones must be cached, we only need to check this here.
+#if ARCH_ARM64
+        if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+            arch_clean_invalidate_cache_range(
+                    (addr_t) paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
+        }
+#endif
     } else {
         // We need a writable page; let ::CloneCowPageLocked handle inserting one.
         res_page = CloneCowPageLocked(offset, free_list,
@@ -1277,14 +1281,6 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     }
 
     LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", res_page, res_page->paddr());
-
-    // If ARM and not fully cached, clean/invalidate the page after zeroing it. This
-    // can be done here instead of with the clone logic because clones must be cached.
-#if ARCH_ARM64
-    if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
-        arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
-    }
-#endif
 
     if (page_out) {
         *page_out = res_page;
