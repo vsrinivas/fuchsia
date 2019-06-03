@@ -301,9 +301,10 @@ impl super::Station for ClientSme {
                                 }
                             }
                             // Incompatible network
-                            Some(_) => {
-                                inspect_msg.replace("incompatible BSS".to_string());
-                                error!("incompatible BSS");
+                            Some(incompatible_bss) => {
+                                inspect_msg
+                                    .replace(format!("incompatible BSS: {:?}", &incompatible_bss));
+                                error!("incompatible BSS: {:?}", &incompatible_bss);
                                 report_connect_finished(
                                     Some(token.responder),
                                     &self.context,
