@@ -300,7 +300,7 @@ group("all") {
     "//garnet/packages/prod:wlanif",
     "//garnet/packages/prod:wlanphy",
     "//garnet/packages/prod:xi_core",
-    "//src/connectivity/dhcp:dhcpd",
+    "//src/connectivity/network/dhcp:dhcpd",
     "//src/connectivity/telephony:drivers",
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
