@@ -7,9 +7,13 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <stdlib.h>
+#include <string.h>
+#include <zircon/status.h>
 #include <zircon/threads.h>
 #include "acpi.h"
+#include "smbios.h"
 #include "sysmem.h"
 
 zx_handle_t root_resource_handle;
@@ -98,12 +102,23 @@ static zx_status_t x86_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    // TODO - retrieve more useful board name from ACPI data
-    const char board_name[] = {"pc"};
+    char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
+    size_t board_name_actual = 0;
+    status = smbios_get_board_name(board_name, sizeof(board_name), &board_name_actual);
+    if (status != ZX_OK) {
+        if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+            zxlogf(INFO, "acpi: smbios board name too big for sysinfo\n");
+        } else if (status != ZX_ERR_NOT_FOUND) {
+            zxlogf(ERROR, "acpi: smbios board name could not be read: %s\n",
+                   zx_status_get_string(status));
+        }
+        strcpy(board_name, "pc");
+        board_name_actual = strlen(board_name) + 1;
+    }
 
     // Publish board name to sysinfo driver
     status = device_publish_metadata(acpi_root, "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_NAME,
-                                     board_name, sizeof(board_name));
+                                     board_name, board_name_actual);
     if (status != ZX_OK) {
         zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
     }
