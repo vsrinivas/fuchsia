@@ -284,10 +284,6 @@ bool ElfLib::SetDebugData(std::unique_ptr<ElfLib> debug) {
     return false;
   }
 
-  if (header_.e_shnum > 0) {
-    return false;
-  }
-
   debug_ = std::move(debug);
 
   debug_->LoadSectionNames();
