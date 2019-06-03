@@ -5,7 +5,7 @@
 //! The omaha_client::common module contains those types that are common to many parts of the
 //! library.  Many of these don't belong to a specific sub-module.
 
-use crate::protocol::request::InstallSource;
+use crate::protocol::{request::InstallSource, Cohort};
 use itertools::Itertools;
 use std::fmt;
 use std::str::FromStr;
@@ -15,7 +15,7 @@ use std::time::SystemTime;
 /// only recommended method is the Client Regulated - Date method.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#client-regulated-counting-date-based
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum UserCounting {
     ClientRegulatedByDate(
         /// Date (sent by the server) of the last contact with Omaha.
@@ -94,13 +94,27 @@ pub struct App {
     ///
     /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#packages--fingerprints
     pub fingerprint: Option<String>,
+
+    /// The app's current cohort information (cohort id, hint, etc).  This is both provided to Omaha
+    /// as well as returned by Omaha.
+    pub cohort: Cohort,
+
+    /// The app's current user-counting infomation.  This is both provided to Omaha as well as
+    /// returned by Omaha.
+    pub user_counting: UserCounting,
 }
 
 impl App {
     /// Construct an App from an ID and version, from anything that can be converted into a String
     /// and a Version.
-    pub fn new<I: Into<String>, V: Into<Version>>(id: I, version: V) -> Self {
-        App { id: id.into(), version: version.into(), fingerprint: None }
+    pub fn new<I: Into<String>, V: Into<Version>>(id: I, version: V, cohort: Cohort) -> Self {
+        App {
+            id: id.into(),
+            version: version.into(),
+            fingerprint: None,
+            cohort,
+            user_counting: UserCounting::ClientRegulatedByDate(None),
+        }
     }
 
     /// Construct an App from an ID, version, and fingerprint.  From anything that can be converted
@@ -109,8 +123,15 @@ impl App {
         id: I,
         version: V,
         fingerprint: F,
+        cohort: Cohort,
     ) -> Self {
-        App { id: id.into(), version: version.into(), fingerprint: Some(fingerprint.into()) }
+        App {
+            id: id.into(),
+            version: version.into(),
+            fingerprint: Some(fingerprint.into()),
+            cohort,
+            user_counting: UserCounting::ClientRegulatedByDate(None),
+        }
     }
 }
 
@@ -210,17 +231,30 @@ mod tests {
 
     #[test]
     pub fn test_app_new_version() {
-        let app = App::new("some_id", [1, 2]);
+        let app = App::new("some_id", [1, 2], Cohort::from_hint("some-channel"));
         assert_eq!(app.id, "some_id");
         assert_eq!(app.version, [1, 2].into());
         assert_eq!(app.fingerprint, None);
+        assert_eq!(app.cohort.hint, Some("some-channel".to_string()));
+        assert_eq!(app.cohort.name, None);
+        assert_eq!(app.cohort.id, None);
+        assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(None));
     }
 
     #[test]
     pub fn test_app_with_fingerprint() {
-        let app = App::with_fingerprint("some_id_2", [4, 6], "some_fp");
+        let app = App::with_fingerprint(
+            "some_id_2",
+            [4, 6],
+            "some_fp",
+            Cohort::from_hint("test-channel"),
+        );
         assert_eq!(app.id, "some_id_2");
         assert_eq!(app.version, [4, 6].into());
         assert_eq!(app.fingerprint, Some("some_fp".to_string()));
+        assert_eq!(app.cohort.hint, Some("test-channel".to_string()));
+        assert_eq!(app.cohort.name, None);
+        assert_eq!(app.cohort.id, None);
+        assert_eq!(app.user_counting, UserCounting::ClientRegulatedByDate(None));
     }
 }

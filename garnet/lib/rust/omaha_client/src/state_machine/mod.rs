@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule, UserCounting},
+    common::{App, CheckOptions},
     configuration::Config,
     http_request::HttpRequest,
     installer::{Installer, Plan},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
-    protocol::{
-        response::{parse_json_response, OmahaStatus, Response},
-        Cohort,
-    },
+    protocol::response::{parse_json_response, OmahaStatus, Response},
     request_builder::{self, RequestBuilder},
 };
 use failure::Fail;
@@ -19,6 +16,8 @@ use futures::{compat::Stream01CompatExt, prelude::*};
 use http::response::Parts;
 use log::{error, info, warn};
 use std::str::Utf8Error;
+
+pub mod update_check;
 
 mod timer;
 pub use timer::Timer;
@@ -102,19 +101,16 @@ where
         &'a mut self,
         options: CheckOptions,
         apps: &'a [App],
-        _user_counting: UserCounting,
-        current_cohort: Cohort,
-        current_schedule: UpdateCheckSchedule,
-        current_protocol_state: ProtocolState,
+        context: update_check::Context,
     ) -> impl Future<Output = Result<(), serde_json::Error>> + 'a {
         // This async is the main flow for a single update check to Omaha, and subsequent performing
         // of an update (if directed).
         async move {
             info!("Checking to see if an update check is allowed at this time for {:?}", apps);
             let decision = await!(self.policy_engine.update_check_allowed(
-                &apps,
-                &current_schedule,
-                &current_protocol_state,
+                apps,
+                &context.schedule,
+                &context.state,
                 &options,
             ));
 
@@ -145,8 +141,7 @@ where
             // Construct a request for the app(s).
             let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
             for app in apps {
-                request_builder =
-                    request_builder.add_update_check(app, &Some(current_cohort.clone()));
+                request_builder = request_builder.add_update_check(app);
             }
 
             let (_parts, data) =
@@ -319,7 +314,7 @@ where
 pub mod tests {
     use super::*;
     use crate::{
-        common::Version,
+        common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule, UserCounting, Version},
         configuration::test_support::config_generator,
         http_request::mock::MockHttpRequest,
         installer::stub::StubInstaller,
@@ -342,26 +337,20 @@ pub mod tests {
                 id: "{00000000-0000-0000-0000-000000000001}".to_string(),
                 version: Version::from([1, 2, 3, 4]),
                 fingerprint: None,
+                cohort: Cohort::new("stable-channel"),
+                user_counting: UserCounting::ClientRegulatedByDate(None),
             }];
-            let user_counting = UserCounting::ClientRegulatedByDate(None);
-            let current_cohort = Cohort::new("stable-channel");
-            let current_schedule = UpdateCheckSchedule {
-                last_update_time: SystemTime::now() - std::time::Duration::new(500, 0),
-                next_update_time: SystemTime::now(),
-                next_update_window_start: SystemTime::now(),
+            let context = update_check::Context {
+                schedule: UpdateCheckSchedule {
+                    last_update_time: SystemTime::now() - std::time::Duration::new(500, 0),
+                    next_update_time: SystemTime::now(),
+                    next_update_window_start: SystemTime::now(),
+                },
+                state: ProtocolState::default(),
             };
-            let current_protocol_state = ProtocolState::default();
 
             let mut state_machine = StateMachine::new(policy_engine, http, installer, &config);
-            await!(state_machine.perform_update_check(
-                options,
-                &apps,
-                user_counting,
-                current_cohort,
-                current_schedule,
-                current_protocol_state,
-            ))
-            .unwrap();
+            await!(state_machine.perform_update_check(options, &apps, context)).unwrap();
 
             info!("update check complete!");
         });

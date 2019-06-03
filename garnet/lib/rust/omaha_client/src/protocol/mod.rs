@@ -42,6 +42,10 @@ impl Cohort {
     pub fn new(id: &str) -> Cohort {
         Cohort { id: Some(id.to_string()), hint: None, name: None }
     }
+
+    pub fn from_hint(hint: &str) -> Cohort {
+        Cohort { id: None, hint: Some(hint.to_string()), name: None }
+    }
 }
 
 #[cfg(test)]

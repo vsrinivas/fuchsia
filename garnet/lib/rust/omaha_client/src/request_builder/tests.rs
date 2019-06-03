@@ -5,7 +5,10 @@
 use super::*;
 use crate::{
     configuration::test_support::config_generator,
-    protocol::request::{EventResult, EventType},
+    protocol::{
+        request::{EventResult, EventType},
+        Cohort,
+    },
 };
 use futures::{compat::Stream01CompatExt, executor::block_on, prelude::*};
 use pretty_assertions::assert_eq;
@@ -23,10 +26,12 @@ pub fn test_simple_request() {
         &config,
         &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
     )
-    .add_update_check(
-        &App::with_fingerprint("app id", [5, 6, 7, 8], "fp"),
-        &Some(Cohort::new("some-channel")),
-    )
+    .add_update_check(&App::with_fingerprint(
+        "app id",
+        [5, 6, 7, 8],
+        "fp",
+        Cohort::new("some-channel"),
+    ))
     .build_intermediate();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
@@ -73,7 +78,7 @@ pub fn test_single_request() {
         &config,
         &RequestParams { source: InstallSource::OnDemand, use_configured_proxies: false },
     )
-    .add_update_check(&App::new("app id", [5, 6, 7, 8]), &Some(Cohort::new("some-channel")))
+    .add_update_check(&App::new("app id", [5, 6, 7, 8], Cohort::new("some-channel")))
     .build()
     .unwrap()
     .into_parts();
@@ -135,8 +140,7 @@ pub fn test_simple_ping() {
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
     .add_ping(
-        &App::new("ping app id", [6, 7, 8, 9]),
-        &Some(Cohort::new("ping-channel")),
+        &App::new("ping app id", [6, 7, 8, 9], Cohort::new("ping-channel")),
         &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
     )
     .build_intermediate();
@@ -172,8 +176,7 @@ pub fn test_simple_event() {
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
     .add_event(
-        &App::new("event app id", [6, 7, 8, 9]),
-        &Some(Cohort::new("event-channel")),
+        &App::new("event app id", [6, 7, 8, 9], Cohort::new("event-channel")),
         &Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
@@ -202,8 +205,7 @@ pub fn test_multiple_events() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("event app id", [6, 7, 8, 9]);
-    let app_1_cohort = Some(Cohort::new("event-channel"));
+    let app_1 = App::new("event app id", [6, 7, 8, 9], Cohort::new("event-channel"));
 
     // Make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
@@ -212,7 +214,6 @@ pub fn test_multiple_events() {
     )
     .add_event(
         &app_1,
-        &app_1_cohort,
         &Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
@@ -222,7 +223,6 @@ pub fn test_multiple_events() {
     )
     .add_event(
         &app_1,
-        &app_1_cohort,
         &Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Error,
@@ -263,25 +263,19 @@ pub fn test_ping_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4]);
-    let app_1_cohort = Some(Cohort::new("some-channel"));
+    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8]);
-    let app_2_cohort = Some(Cohort::new("some-other-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
-    .add_update_check(&app_1, &app_1_cohort)
-    .add_update_check(&app_2, &app_2_cohort)
-    .add_ping(
-        &app_1,
-        &app_1_cohort,
-        &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
-    )
+    .add_update_check(&app_1)
+    .add_update_check(&app_2)
+    .add_ping(&app_1, &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) })
     .build_intermediate()
     .body
     .request;
@@ -315,25 +309,19 @@ pub fn test_ping_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4]);
-    let app_1_cohort = Some(Cohort::new("some-channel"));
+    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8]);
-    let app_2_cohort = Some(Cohort::new("some-other-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
-    .add_update_check(&app_1, &app_1_cohort)
-    .add_update_check(&app_2, &app_2_cohort)
-    .add_ping(
-        &app_2,
-        &app_2_cohort,
-        &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) },
-    );
+    .add_update_check(&app_1)
+    .add_update_check(&app_2)
+    .add_ping(&app_2, &Ping { date_last_active: Some(34), date_last_roll_call: Some(45) });
 
     let request = builder.build_intermediate().body.request;
 
@@ -366,23 +354,20 @@ pub fn test_event_added_to_first_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4]);
-    let app_1_cohort = Some(Cohort::new("some-channel"));
+    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
 
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8]);
-    let app_2_cohort = Some(Cohort::new("some-other-channel"));
+    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let request = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
-    .add_update_check(&app_1, &app_1_cohort)
-    .add_update_check(&app_2, &app_2_cohort)
+    .add_update_check(&app_1)
+    .add_update_check(&app_2)
     .add_event(
         &app_1,
-        &app_1_cohort,
         &Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Success,
@@ -422,23 +407,20 @@ pub fn test_event_added_to_second_app_update_entry() {
     let config = config_generator();
 
     // Setup the first app and its cohort
-    let app_1 = App::new("first app id", [1, 2, 3, 4]);
-    let app_1_cohort = Some(Cohort::new("some-channel"));
+    let app_1 = App::new("first app id", [1, 2, 3, 4], Cohort::new("some-channel"));
 
+    let app_2 = App::new("second app id", [5, 6, 7, 8], Cohort::new("some-other-channel"));
     // Setup the second app and its cohort
-    let app_2 = App::new("second app id", [5, 6, 7, 8]);
-    let app_2_cohort = Some(Cohort::new("some-other-channel"));
 
     // Now make the call to the RequestBuilder that is being tested.
     let builder = RequestBuilder::new(
         &config,
         &RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: false },
     )
-    .add_update_check(&app_1, &app_1_cohort)
-    .add_update_check(&app_2, &app_2_cohort)
+    .add_update_check(&app_1)
+    .add_update_check(&app_2)
     .add_event(
         &app_2,
-        &app_2_cohort,
         &Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Success,

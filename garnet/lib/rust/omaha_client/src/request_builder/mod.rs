@@ -13,7 +13,7 @@ use crate::{
             Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, HEADER_APP_ID,
             HEADER_INTERACTIVITY, HEADER_UPDATER_NAME,
         },
-        Cohort, PROTOCOL_V3,
+        PROTOCOL_V3,
     },
 };
 use failure::Fail;
@@ -73,9 +73,6 @@ struct AppEntry {
     /// The identifying data for the application.
     app: App,
 
-    /// The optionally-present cohort that this application belongs to.
-    cohort: Option<Cohort>,
-
     /// Set to true if an update check should be performed.
     update_check: bool,
 
@@ -89,14 +86,8 @@ struct AppEntry {
 impl AppEntry {
     /// Basic constructor for the AppEntry.  All AppEntries MUST have an App and a Cohort,
     /// everything else can be omitted.
-    fn new(app: &App, cohort: &Option<Cohort>) -> AppEntry {
-        AppEntry {
-            app: app.clone(),
-            cohort: cohort.clone(),
-            update_check: false,
-            ping: None,
-            events: Vec::new(),
-        }
+    fn new(app: &App) -> AppEntry {
+        AppEntry { app: app.clone(), update_check: false, ping: None, events: Vec::new() }
     }
 }
 
@@ -114,7 +105,7 @@ impl From<AppEntry> for ProtocolApp {
             id: entry.app.id,
             version: entry.app.version.to_string(),
             fingerprint: entry.app.fingerprint,
-            cohort: entry.cohort,
+            cohort: Some(entry.app.cohort),
             update_check: if entry.update_check { Some(UpdateCheck::default()) } else { None },
             events: entry.events,
             ping: entry.ping,
@@ -159,7 +150,7 @@ impl<'a> RequestBuilder<'a> {
 
     /// Insert the given app (with its cohort), and run the associated closure on it.  If the app
     /// already exists in the request (by app id), just run the closure on the AppEntry.
-    fn insert_and_modify_entry<F>(&mut self, app: &App, cohort: &Option<Cohort>, modify: F)
+    fn insert_and_modify_entry<F>(&mut self, app: &App, modify: F)
     where
         F: Fn(&mut AppEntry),
     {
@@ -169,7 +160,7 @@ impl<'a> RequestBuilder<'a> {
         } else {
             // The App wasn't found, so add it to the list after running the closure on a newly
             // generated AppEntry for this App.
-            let mut app_entry = AppEntry::new(app, cohort);
+            let mut app_entry = AppEntry::new(app);
             modify(&mut app_entry);
             self.app_entries.push(app_entry);
         }
@@ -178,8 +169,8 @@ impl<'a> RequestBuilder<'a> {
     /// This function adds an update check for the given App, in the given Cohort.  This function is
     /// an idempotent accumulator, in that it only once adds the App with it's associated Cohort to
     /// the request.  Afterward, it just marks the App as needing an update check.
-    pub fn add_update_check(mut self, app: &App, cohort: &Option<Cohort>) -> Self {
-        self.insert_and_modify_entry(app, cohort, |entry| {
+    pub fn add_update_check(mut self, app: &App) -> Self {
+        self.insert_and_modify_entry(app, |entry| {
             entry.update_check = true;
         });
         self
@@ -188,8 +179,8 @@ impl<'a> RequestBuilder<'a> {
     /// This function adds a Ping for the given App, in the given Cohort.  This function is an
     /// idempotent accumulator, in that it only once adds the App with it's associated Cohort to the
     /// request.  Afterward, it just adds the Ping to the App.
-    pub fn add_ping(mut self, app: &App, cohort: &Option<Cohort>, ping: &Ping) -> Self {
-        self.insert_and_modify_entry(app, cohort, |entry| {
+    pub fn add_ping(mut self, app: &App, ping: &Ping) -> Self {
+        self.insert_and_modify_entry(app, |entry| {
             entry.ping = Some(ping.clone());
         });
         self
@@ -198,8 +189,8 @@ impl<'a> RequestBuilder<'a> {
     /// This function adds an Event for the given App, in the given Cohort.  This function is an
     /// idempotent accumulator, in that it only once adds the App with it's associated Cohort to the
     /// request.  Afterward, it just adds the Event to the App.
-    pub fn add_event(mut self, app: &App, cohort: &Option<Cohort>, event: &Event) -> Self {
-        self.insert_and_modify_entry(app, cohort, |entry| {
+    pub fn add_event(mut self, app: &App, event: &Event) -> Self {
+        self.insert_and_modify_entry(app, |entry| {
             entry.events.push(event.clone());
         });
         self
