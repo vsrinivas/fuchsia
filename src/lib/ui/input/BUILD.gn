@@ -1,0 +1,54 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("gesture") {
+  sources = [
+    "gesture.cc",
+    "gesture.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ui/gfx/cpp",
+    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.input",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":input_unit_tests",
+  ]
+}
+
+test_package("input_unit_tests") {
+  tests = [
+    {
+      name = "gesture_tests"
+      environments = basic_envs
+    },
+  ]
+
+  deps = [
+    ":gesture_tests",
+  ]
+}
+
+executable("gesture_tests") {
+  testonly = true
+
+  sources = [
+    "gesture_tests.cc",
+  ]
+
+  deps = [
+    ":gesture",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}

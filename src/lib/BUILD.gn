@@ -26,5 +26,6 @@ group("tests") {
     "containers/cpp:tests",
     "fidl_table_validation:tests",
     "isolated_devmgr:tests",
+    "ui/input:tests",
   ]
 }
