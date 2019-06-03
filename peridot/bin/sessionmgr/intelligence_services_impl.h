@@ -11,32 +11,20 @@ namespace modular {
 
 class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
  public:
-  // |context_engine| and |suggestion_engine| are not owned and must outlive
-  // this instance.
-  IntelligenceServicesImpl(
-      fuchsia::modular::ComponentScope scope,
-      fuchsia::modular::ContextEngine* context_engine,
-      fuchsia::modular::SuggestionEngine* suggestion_engine);
+  // |context_engine| is not owned and must outlive this instance.
+  IntelligenceServicesImpl(fuchsia::modular::ComponentScope scope,
+                           fuchsia::modular::ContextEngine* context_engine);
 
   void GetContextReader(
       fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
   void GetContextWriter(
       fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
 
-  void GetProposalPublisher(
-      fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request)
-      override;
-
-  void RegisterQueryHandler(
-      fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler)
-      override;
-
  private:
   fuchsia::modular::ComponentScope CloneScope();
 
   fuchsia::modular::ComponentScope scope_;
-  fuchsia::modular::ContextEngine* const context_engine_;        // Not owned.
-  fuchsia::modular::SuggestionEngine* const suggestion_engine_;  // Not owned.
+  fuchsia::modular::ContextEngine* const context_engine_;  // Not owned.
 };
 
 }  // namespace modular

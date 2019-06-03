@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/proposal_hint_ranking_feature_unittest"
-    }
-}

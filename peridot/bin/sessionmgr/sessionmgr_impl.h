@@ -137,9 +137,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
   void GetStoryProvider(
       fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
-  void GetSuggestionProvider(
-      fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request)
-      override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
           request) override;

@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/interrupting_ranking_feature_unittest"
-    }
-}

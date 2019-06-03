@@ -61,29 +61,19 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         focus_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
         puppet_master_connector)
-    : context_(context),
-      story_provider_connector_(std::move(story_provider_connector)),
+    : story_provider_connector_(std::move(story_provider_connector)),
       focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)) {
   context_engine_.Bind(std::move(context_engine_handle));
-
-  // Start dependent processes. We get some component-scope services from
-  // these processes.
-  StartSuggestionEngine();
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
     fuchsia::modular::ComponentScope scope,
     fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
   intelligence_services_bindings_.AddBinding(
-      std::make_unique<IntelligenceServicesImpl>(
-          std::move(scope), context_engine_.get(), suggestion_engine_.get()),
+      std::make_unique<IntelligenceServicesImpl>(std::move(scope),
+                                                 context_engine_.get()),
       std::move(request));
-}
-
-void UserIntelligenceProviderImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request) {
-  suggestion_services_.ConnectToService(std::move(request));
 }
 
 void UserIntelligenceProviderImpl::GetSpeechToText(
@@ -123,42 +113,6 @@ void UserIntelligenceProviderImpl::GetServicesForAgent(
   auto* agent_host = &agent_namespaces_.back();
   service_list.names = AddAgentServices(url, agent_host);
   callback(std::move(service_list));
-}
-
-void UserIntelligenceProviderImpl::StartSuggestionEngine() {
-  auto service_list = fuchsia::sys::ServiceList::New();
-
-  service_list->names.push_back(fuchsia::modular::ContextReader::Name_);
-  suggestion_engine_service_provider_
-      .AddService<fuchsia::modular::ContextReader>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
-            fuchsia::modular::ComponentScope scope;
-            scope.set_global_scope(fuchsia::modular::GlobalScope());
-            context_engine_->GetReader(std::move(scope), std::move(request));
-          });
-
-  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
-  suggestion_engine_service_provider_
-      .AddService<fuchsia::modular::PuppetMaster>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
-            puppet_master_connector_(std::move(request));
-          });
-
-  fuchsia::sys::ServiceProviderPtr service_provider;
-  suggestion_engine_service_provider_.AddBinding(service_provider.NewRequest());
-  service_list->provider = std::move(service_provider);
-
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url =
-      "fuchsia-pkg://fuchsia.com/suggestion_engine#meta/suggestion_engine.cmx";
-  launch_info.directory_request = suggestion_services_.NewRequest();
-  launch_info.additional_services = std::move(service_list);
-  context_->launcher()->CreateComponent(std::move(launch_info), nullptr);
-  suggestion_engine_ =
-      suggestion_services_
-          .ConnectToService<fuchsia::modular::SuggestionEngine>();
 }
 
 void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
@@ -255,13 +209,6 @@ std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
                 request) {
         this->GetComponentIntelligenceServices(CloneScope(client_info),
                                                std::move(request));
-      });
-
-  service_names.push_back(fuchsia::modular::ProposalPublisher::Name_);
-  agent_host->AddService<fuchsia::modular::ProposalPublisher>(
-      [this, url](
-          fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request) {
-        suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
       });
 
   if (session_agents_.find(url) != session_agents_.end()) {

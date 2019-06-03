@@ -22,8 +22,6 @@ protocol UserIntelligenceProvider {
     GetComponentIntelligenceServices(ComponentScope scope,
                                      request<IntelligenceServices> services);
 
-    GetSuggestionProvider(request<SuggestionProvider> suggestion_provider);
-
     GetSpeechToText(request<fuchsia.speech.SpeechToText> speech_to_text);
 
     // The |ComponentContext| is used to create agents and use message queues.

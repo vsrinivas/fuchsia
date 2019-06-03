@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/ranked_passive_filter_unittest"
-    }
-}

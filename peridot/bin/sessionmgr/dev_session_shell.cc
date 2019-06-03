@@ -45,8 +45,6 @@ class Settings {
 };
 
 class DevSessionShellApp : fuchsia::modular::StoryWatcher,
-                           fuchsia::modular::InterruptionListener,
-                           fuchsia::modular::NextListener,
                            fuchsia::modular::SessionShell,
                            public modular::ViewApp {
  public:
@@ -59,16 +57,9 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     startup_context->ConnectToEnvironmentService(
         session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    session_shell_context_->GetSuggestionProvider(
-        suggestion_provider_.NewRequest());
     session_shell_context_->GetFocusController(focus_controller_.NewRequest());
     session_shell_context_->GetVisibleStoriesController(
         visible_stories_controller_.NewRequest());
-
-    suggestion_provider_->SubscribeToInterruptions(
-        interruption_listener_bindings_.AddBinding(this));
-    suggestion_provider_->SubscribeToNext(
-        next_listener_bindings_.AddBinding(this), 3);
 
     startup_context->outgoing().AddPublicService(
         session_shell_bindings_.GetHandler(this));
@@ -191,31 +182,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   // |fuchsia::modular::StoryWatcher|
   void OnModuleFocused(std::vector<std::string> /*module_path*/) override {}
 
-  // |fuchsia::modular::NextListener|
-  void OnNextResults(
-      std::vector<fuchsia::modular::Suggestion> suggestions) override {
-    FXL_VLOG(4)
-        << "DevSessionShell/fuchsia::modular::NextListener::OnNextResults()";
-    for (auto& suggestion : suggestions) {
-      FXL_LOG(INFO) << "  " << suggestion.uuid << " "
-                    << suggestion.display.headline;
-    }
-  }
-
-  // |fuchsia::modular::InterruptionListener|
-  void OnInterrupt(fuchsia::modular::Suggestion suggestion) override {
-    FXL_VLOG(4) << "DevSessionShell/"
-                   "fuchsia::modular::InterruptionListener::OnInterrupt() "
-                << suggestion.uuid;
-  }
-
-  // |fuchsia::modular::NextListener|
-  void OnProcessingChange(bool processing) override {
-    FXL_VLOG(4)
-        << "DevSessionShell/fuchsia::modular::NextListener::OnProcessingChange("
-        << processing << ")";
-  }
-
   const Settings settings_;
 
   fidl::BindingSet<fuchsia::modular::SessionShell> session_shell_bindings_;
@@ -232,11 +198,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   fuchsia::modular::VisibleStoriesControllerPtr visible_stories_controller_;
 
   fidl::Binding<fuchsia::modular::StoryWatcher> story_watcher_binding_;
-
-  fuchsia::modular::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<fuchsia::modular::InterruptionListener>
-      interruption_listener_bindings_;
-  fidl::BindingSet<fuchsia::modular::NextListener> next_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevSessionShellApp);
 };

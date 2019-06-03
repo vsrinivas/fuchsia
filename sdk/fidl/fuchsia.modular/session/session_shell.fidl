@@ -69,7 +69,6 @@ protocol SessionShellContext {
     GetPresentation(request<fuchsia.ui.policy.Presentation> request);
     GetSpeechToText(request<fuchsia.speech.SpeechToText> request);
     GetStoryProvider(request<StoryProvider> request);
-    GetSuggestionProvider(request<SuggestionProvider> request);
     GetVisibleStoriesController(request<VisibleStoriesController> request);
 
     // Requests logout of the user. This causes the basemgr to tear down the

@@ -12,8 +12,4 @@ protocol IntelligenceServices {
     // list.
     GetContextReader(request<ContextReader> context_reader);
     GetContextWriter(request<ContextWriter> context_writer);
-
-    GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
-
-    RegisterQueryHandler(QueryHandler query_handler);
 };

@@ -59,7 +59,6 @@ group("tests") {
     "common",
     "component_context",
     "embed_shell",
-    "maxwell_integration",
     "modular_config",
     "modular_login_tests",
     "module_context",
@@ -68,7 +67,6 @@ group("tests") {
     "session_shell",
     "sessionctl",
     "story_shell",
-    "suggestion",
     "trigger",
   ]
 }

@@ -43,10 +43,6 @@ class UserIntelligenceProviderImpl
       fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
       override;
 
-  void GetSuggestionProvider(
-      fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request)
-      override;
-
   void GetSpeechToText(
       fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
 
@@ -88,26 +84,16 @@ class UserIntelligenceProviderImpl
   using ServiceProviderInitializer = fit::function<void(
       const std::string& url, component::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
-  // attributed context and suggestion service entry points. Returns the names
+  // attributed context entry point. Returns the names
   // of the services added.
   std::vector<std::string> AddAgentServices(
       const std::string& url, component::ServiceNamespace* agent_host);
 
-  // Starts suggestion engine.
-  void StartSuggestionEngine();
-
   void StartAgent(const std::string& url);
 
-  void StartActionLog(fuchsia::modular::SuggestionEngine* suggestion_engine);
   void StartSessionAgent(const std::string& url);
 
-  component::StartupContext* context_;  // Not owned.
-
   fuchsia::modular::ContextEnginePtr context_engine_;
-
-  component::Services suggestion_services_;
-  component::ServiceProviderImpl suggestion_engine_service_provider_;
-  fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
 
   std::map<std::string, SessionAgentData> session_agents_;
 

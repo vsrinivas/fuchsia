@@ -87,7 +87,6 @@ group("maxwell") {
   testonly = true
   public_deps = [
     "//peridot/bin/context_engine",
-    "//peridot/bin/suggestion_engine",
   ]
 }
 

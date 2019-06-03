@@ -930,11 +930,6 @@ void SessionmgrImpl::GetStoryProvider(
   story_provider_impl_->Connect(std::move(request));
 }
 
-void SessionmgrImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request) {
-  user_intelligence_provider_impl_->GetSuggestionProvider(std::move(request));
-}
-
 void SessionmgrImpl::GetVisibleStoriesController(
     fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesController>
         request) {
