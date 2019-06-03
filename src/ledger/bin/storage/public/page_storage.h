@@ -181,10 +181,13 @@ class PageStorage : public PageSyncClient {
   // Finds the piece associated with the given |object_identifier|. The result
   // or an error will be returned through the given |callback|. Only local
   // storage is checked, and if the object is an index, is it returned as is,
-  // and not expanded.
-  virtual void GetPiece(
-      ObjectIdentifier object_identifier,
-      fit::function<void(Status, std::unique_ptr<const Piece>)> callback) = 0;
+  // and not expanded. The piece is guaranteed to remain available in storage as
+  // long as the returned token is alive. The returned token must be nullptr if
+  // and only if the returned piece is nullptr.
+  virtual void GetPiece(ObjectIdentifier object_identifier,
+                        fit::function<void(Status, std::unique_ptr<const Piece>,
+                                           std::unique_ptr<const ObjectToken>)>
+                            callback) = 0;
 
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved

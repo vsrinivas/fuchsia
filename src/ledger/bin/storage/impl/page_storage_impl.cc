@@ -470,6 +470,7 @@ void PageStorageImpl::GetObjectPart(
       [this, location, object_identifier = std::move(object_identifier), offset,
        max_size, callback = std::move(callback)](
           Status status, std::unique_ptr<const Piece> piece,
+          std::unique_ptr<const ObjectToken> token,
           WritePieceCallback write_callback) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
@@ -479,6 +480,7 @@ void PageStorageImpl::GetObjectPart(
         // |piece| is necessarily a blob, so it must have been retrieved from
         // disk or written to disk already.
         FXL_DCHECK(!write_callback);
+
         ObjectDigestInfo digest_info =
             GetObjectDigestInfo(piece->GetIdentifier().object_digest());
 
@@ -512,6 +514,7 @@ void PageStorageImpl::GetObject(
       [this, location, object_identifier = std::move(object_identifier),
        callback = std::move(traced_callback)](
           Status status, std::unique_ptr<const Piece> piece,
+          std::unique_ptr<const ObjectToken> token,
           WritePieceCallback write_callback) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
@@ -556,12 +559,16 @@ void PageStorageImpl::GetObject(
 
 void PageStorageImpl::GetPiece(
     ObjectIdentifier object_identifier,
-    fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Piece>,
+                       std::unique_ptr<const ObjectToken>)>
+        callback) {
   ObjectDigestInfo digest_info =
       GetObjectDigestInfo(object_identifier.object_digest());
   if (digest_info.is_inlined()) {
+    auto token = std::make_unique<DiscardableToken>(object_identifier);
     callback(Status::OK,
-             std::make_unique<InlinePiece>(std::move(object_identifier)));
+             std::make_unique<InlinePiece>(std::move(object_identifier)),
+             std::move(token));
     return;
   }
 
@@ -569,14 +576,14 @@ void PageStorageImpl::GetPiece(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
-          fit::function<void(Status, std::unique_ptr<const Piece>)>
+          fit::function<void(Status, std::unique_ptr<const Piece>,
+                             std::unique_ptr<const ObjectToken>)>
               callback) mutable {
         std::unique_ptr<const Piece> piece;
         std::unique_ptr<const ObjectToken> token;
         Status status = db_->ReadObject(handler, std::move(object_identifier),
                                         &piece, &token);
-        // TODO(kerneis): handle token.
-        callback(status, std::move(piece));
+        callback(status, std::move(piece), std::move(token));
       });
 }
 
@@ -877,9 +884,12 @@ void PageStorageImpl::FillBufferWithObjectContent(
   }
 
   // Iterate over the children pieces, recursing into the ones corresponding to
-  // the part of the object to be copied to the VMO.
+  // the part of the object to be copied to the VMO. Tokens for all pieces are
+  // collected to be kept alive until the finalization callback has run, which
+  // includes writing the current piece to disk if necessary.
   int64_t sub_offset = 0;
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<Status, std::unique_ptr<const ObjectToken>>>(Status::OK);
   for (const auto* child : *file_index->children()) {
     if (sub_offset + child->size() > file_index->size()) {
       callback(Status::DATA_INTEGRITY_ERROR);
@@ -917,48 +927,65 @@ void PageStorageImpl::FillBufferWithObjectContent(
          global_size, child_position, child_size = child->size(), location,
          child_callback = waiter->NewCallback()](
             Status status, std::unique_ptr<const Piece> child_piece,
+            std::unique_ptr<const ObjectToken> token,
             WritePieceCallback write_callback) mutable {
           if (status != Status::OK) {
-            child_callback(status);
+            child_callback(status, nullptr);
             return;
           }
           FXL_DCHECK(child_piece);
+          FXL_DCHECK(token);
           // The |child_piece| is necessarily a blob, so it must have been read
           // from or written to disk already.
           FXL_DCHECK(!write_callback);
+          FXL_VLOG(1) << "Got token for child piece " << token->GetIdentifier();
           FillBufferWithObjectContent(
               *child_piece, std::move(vmo), global_offset, global_size,
-              child_position, child_size, location, std::move(child_callback));
+              child_position, child_size, location,
+              [token = std::move(token),
+               child_callback =
+                   std::move(child_callback)](Status status) mutable {
+                child_callback(status, std::move(token));
+              });
         });
     sub_offset += child->size();
   }
-  waiter->Finalize(std::move(callback));
+  // Collected tokens are kept alive until the final callback has completed.
+  waiter->Finalize(
+      [callback = std::move(callback)](
+          Status status, std::vector<std::unique_ptr<const ObjectToken>>) {
+        callback(status);
+      });
 }
 
 void PageStorageImpl::GetOrDownloadPiece(
     ObjectIdentifier object_identifier, Location location,
     fit::function<void(Status, std::unique_ptr<const Piece>,
-                       WritePieceCallback)>
+                       std::unique_ptr<const ObjectToken>, WritePieceCallback)>
         callback) {
   GetPiece(object_identifier, [this, callback = std::move(callback), location,
                                object_identifier =
                                    std::move(object_identifier)](
                                   Status status,
-                                  std::unique_ptr<const Piece> piece) mutable {
+                                  std::unique_ptr<const Piece> piece,
+                                  std::unique_ptr<const ObjectToken>
+                                      token) mutable {
     // Object was found.
     if (status == Status::OK) {
-      callback(status, std::move(piece), {});
+      callback(status, std::move(piece), std::move(token), {});
       return;
     }
+    FXL_DCHECK(piece == nullptr);
+    FXL_DCHECK(token == nullptr);
     // An unexpected error occured.
     if (status != Status::INTERNAL_NOT_FOUND || location == Location::LOCAL) {
-      callback(status, nullptr, {});
+      callback(status, nullptr, nullptr, {});
       return;
     }
     // Object not found locally, attempt to download it.
     FXL_DCHECK(location == Location::NETWORK);
     if (!page_sync_) {
-      callback(Status::NETWORK_ERROR, nullptr, {});
+      callback(Status::NETWORK_ERROR, nullptr, nullptr, {});
       return;
     }
     coroutine_manager_.StartCoroutine(
@@ -966,6 +993,7 @@ void PageStorageImpl::GetOrDownloadPiece(
         [this, object_identifier = std::move(object_identifier)](
             CoroutineHandler* handler,
             fit::function<void(Status, std::unique_ptr<const Piece>,
+                               std::unique_ptr<const ObjectToken>,
                                WritePieceCallback)>
                 callback) mutable {
           Status status;
@@ -986,11 +1014,11 @@ void PageStorageImpl::GetOrDownloadPiece(
                   },
                   &status, &source, &is_object_synced,
                   &chunk) == coroutine::ContinuationStatus::INTERRUPTED) {
-            callback(Status::INTERRUPTED, nullptr, {});
+            callback(Status::INTERRUPTED, nullptr, nullptr, {});
             return;
           }
           if (status != Status::OK) {
-            callback(status, nullptr, {});
+            callback(status, nullptr, nullptr, {});
             return;
           }
           // Sanity-check of retrieved object.
@@ -1001,7 +1029,7 @@ void PageStorageImpl::GetOrDownloadPiece(
           if (object_identifier.object_digest() !=
               ComputeObjectDigest(digest_info.piece_type,
                                   digest_info.object_type, chunk->Get())) {
-            callback(Status::DATA_INTEGRITY_ERROR, nullptr, {});
+            callback(Status::DATA_INTEGRITY_ERROR, nullptr, nullptr, {});
             return;
           }
           std::unique_ptr<const Piece> piece = std::make_unique<DataChunkPiece>(
@@ -1011,8 +1039,12 @@ void PageStorageImpl::GetOrDownloadPiece(
           // written at this stage as we need the full object.
           if (digest_info.object_type == ObjectType::TREE_NODE &&
               digest_info.piece_type == PieceType::INDEX) {
+            // Return a WritePiece callback and a discardable token since the
+            // piece has not been written to disk.
+            auto token =
+                std::make_unique<DiscardableToken>(piece->GetIdentifier());
             callback(
-                Status::OK, std::move(piece),
+                Status::OK, std::move(piece), std::move(token),
                 [this, source, is_object_synced](
                     std::unique_ptr<const Piece> piece,
                     std::unique_ptr<const Object> object,
@@ -1045,7 +1077,7 @@ void PageStorageImpl::GetOrDownloadPiece(
           ObjectReferencesAndPriority references;
           status = piece->AppendReferences(&references);
           if (status != Status::OK) {
-            callback(status, nullptr, {});
+            callback(status, nullptr, nullptr, {});
             return;
           }
           if (digest_info.object_type == ObjectType::TREE_NODE) {
@@ -1055,7 +1087,7 @@ void PageStorageImpl::GetOrDownloadPiece(
             auto object = std::make_unique<ChunkObject>(std::move(piece));
             status = object->AppendReferences(&references);
             if (status != Status::OK) {
-              callback(status, nullptr, {});
+              callback(status, nullptr, nullptr, {});
               return;
             }
             piece = object->ReleasePiece();
@@ -1063,10 +1095,14 @@ void PageStorageImpl::GetOrDownloadPiece(
           status = SynchronousAddPiece(handler, *piece, source,
                                        is_object_synced, references);
           if (status != Status::OK) {
-            callback(status, nullptr, {});
+            callback(status, nullptr, nullptr, {});
             return;
           }
-          callback(Status::OK, std::move(piece), {});
+          // TODO(kerneis): get a real token in SynchronousAddPiece above
+          // instead.
+          auto token =
+              std::make_unique<DiscardableToken>(piece->GetIdentifier());
+          callback(Status::OK, std::move(piece), std::move(token), {});
         });
   });
 }

@@ -246,14 +246,14 @@ void FakePageStorage::AddObjectFromLocal(
 void FakePageStorage::GetObject(
     ObjectIdentifier object_identifier, Location /*location*/,
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
-  GetPiece(object_identifier,
-           [callback = std::move(callback)](
-               Status status, std::unique_ptr<const Piece> piece) {
-             return callback(
-                 status, piece == nullptr
-                             ? nullptr
-                             : std::make_unique<FakeObject>(std::move(piece)));
-           });
+  GetPiece(
+      object_identifier, [callback = std::move(callback)](
+                             Status status, std::unique_ptr<const Piece> piece,
+                             std::unique_ptr<const ObjectToken> token) {
+        return callback(status, piece == nullptr ? nullptr
+                                                 : std::make_unique<FakeObject>(
+                                                       std::move(piece)));
+      });
 }
 
 void FakePageStorage::GetObjectPart(
@@ -261,7 +261,8 @@ void FakePageStorage::GetObjectPart(
     Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
   GetPiece(object_identifier,
            [offset, max_size, callback = std::move(callback)](
-               Status status, std::unique_ptr<const Piece> piece) {
+               Status status, std::unique_ptr<const Piece> piece,
+               std::unique_ptr<const ObjectToken> token) {
              if (status != Status::OK) {
                callback(status, nullptr);
                return;
@@ -279,18 +280,21 @@ void FakePageStorage::GetObjectPart(
 
 void FakePageStorage::GetPiece(
     ObjectIdentifier object_identifier,
-    fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
+    fit::function<void(Status, std::unique_ptr<const Piece>,
+                       std::unique_ptr<const ObjectToken>)>
+        callback) {
   object_requests_.emplace_back(
       [this, object_identifier = std::move(object_identifier),
        callback = std::move(callback)] {
         auto it = objects_.find(object_identifier);
         if (it == objects_.end()) {
-          callback(Status::INTERNAL_NOT_FOUND, nullptr);
+          callback(Status::INTERNAL_NOT_FOUND, nullptr, nullptr);
           return;
         }
 
         callback(Status::OK,
-                 std::make_unique<FakePiece>(object_identifier, it->second));
+                 std::make_unique<FakePiece>(object_identifier, it->second),
+                 std::make_unique<FakeObjectToken>(object_identifier));
       });
   async::PostDelayedTask(
       environment_->dispatcher(), [this] { SendNextObject(); },

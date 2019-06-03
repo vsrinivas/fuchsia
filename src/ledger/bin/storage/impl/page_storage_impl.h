@@ -109,7 +109,8 @@ class PageStorageImpl : public PageStorage {
                  fit::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
-                fit::function<void(Status, std::unique_ptr<const Piece>)>
+                fit::function<void(Status, std::unique_ptr<const Piece>,
+                                   std::unique_ptr<const ObjectToken>)>
                     callback) override;
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(Status)> callback) override;
@@ -168,11 +169,11 @@ class PageStorageImpl : public PageStorage {
   // LOCAL and NETWORK, and defines whether the piece should be looked up
   // remotely if not available locally.
   // When the piece has been retrieved remotely, attempts to add it to storage
-  // before returning it. If this is not possible, ie. when the piece is an
-  // index tree-node that requires the full object to compute its references,
-  // also returns a WritePieceCallback. It is the callers responsability to
-  // invoke this callback to add the piece to storage once they have gathered
-  // the full object.
+  // before returning it with an ObjectToken. If this is not possible, ie. when
+  // the piece is an index tree-node that requires the full object to compute
+  // its references, also returns a WritePieceCallback, and a null ObjectToken.
+  // It is the callers responsability to invoke this callback to add the piece
+  // to storage once they have gathered the full object.
   // The WritePieceCallback is safe to call as long as this class is valid. It
   // should not outlive the returned piece (since a reference to the piece must
   // be passed to it when invoked), and in practice should be called as soon as
@@ -181,6 +182,7 @@ class PageStorageImpl : public PageStorage {
   void GetOrDownloadPiece(
       ObjectIdentifier object_identifier, Location location,
       fit::function<void(Status, std::unique_ptr<const Piece>,
+                         std::unique_ptr<const ObjectToken>,
                          WritePieceCallback)>
           callback);
 

@@ -467,9 +467,10 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     bool called;
     Status status;
     std::unique_ptr<const Piece> piece;
-    storage_->GetPiece(
-        object_identifier,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &piece));
+    std::unique_ptr<const ObjectToken> token;
+    storage_->GetPiece(object_identifier,
+                       callback::Capture(callback::SetWhenCalled(&called),
+                                         &status, &piece, &token));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(expected_status, status);
@@ -1145,7 +1146,8 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
             storage_->GetPiece(
                 std::move(identifier),
                 [callback = std::move(callback)](
-                    Status status, std::unique_ptr<const Piece> piece) {
+                    Status status, std::unique_ptr<const Piece> piece,
+                    std::unique_ptr<const ObjectToken> token) {
                   if (status != Status::OK) {
                     callback(status, "");
                     return;

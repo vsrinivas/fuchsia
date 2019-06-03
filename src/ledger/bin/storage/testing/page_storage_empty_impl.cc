@@ -153,8 +153,10 @@ void PageStorageEmptyImpl::GetObject(
 
 void PageStorageEmptyImpl::GetPiece(
     ObjectIdentifier /*object_identifier*/,
-    fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
-  callback(Status::NOT_IMPLEMENTED, nullptr);
+    fit::function<void(Status, std::unique_ptr<const Piece>,
+                       std::unique_ptr<const ObjectToken>)>
+        callback) {
+  callback(Status::NOT_IMPLEMENTED, nullptr, nullptr);
 }
 
 void PageStorageEmptyImpl::SetSyncMetadata(
