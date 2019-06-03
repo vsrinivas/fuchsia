@@ -6,6 +6,7 @@ group("camera") {
   deps = [
     "aml-mipicsi",
     "arm-isp",
+    "gdc",
     "imx227",
   ]
 }

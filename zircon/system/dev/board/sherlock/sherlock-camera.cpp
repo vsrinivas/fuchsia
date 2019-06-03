@@ -23,6 +23,55 @@ namespace {
 constexpr uint32_t kClk24MAltFunc = 7;
 constexpr uint32_t kClkGpioDriveStrength = 3;
 
+constexpr pbus_mmio_t gdc_mmios[] = {
+    // HIU for clocks.
+    {
+        .base = T931_HIU_BASE,
+        .length = T931_HIU_LENGTH,
+    },
+    // Memory PD
+    {
+        .base = T931_MEMORY_PD_BASE,
+        .length = T931_MEMORY_PD_LENGTH,
+    },
+    // GDC Base
+    {
+        .base = T931_GDC_BASE,
+        .length = T931_GDC_LENGTH,
+    },
+};
+
+constexpr pbus_bti_t gdc_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_CAMERA,
+    },
+};
+
+// IRQ for ISP
+constexpr pbus_irq_t gdc_irqs[] = {
+    {
+        .irq = T931_MALI_GDC_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static pbus_dev_t gdc_dev = []() {
+    // GDC
+    pbus_dev_t dev;
+    dev.name = "gdc";
+    dev.vid = PDEV_VID_ARM;
+    dev.pid = PDEV_PID_GDC;
+    dev.did = PDEV_DID_ARM_MALI_IV010;
+    dev.mmio_list = gdc_mmios;
+    dev.mmio_count = countof(gdc_mmios);
+    dev.bti_list = gdc_btis;
+    dev.bti_count = countof(gdc_btis);
+    dev.irq_list = gdc_irqs;
+    dev.irq_count = countof(gdc_irqs);
+    return dev;
+}();
+
 constexpr pbus_bti_t isp_btis[] = {
     {
         .iommu_index = 0,
@@ -233,7 +282,6 @@ zx_status_t Sherlock::CameraInit() {
         return status;
     }
 
-    // Add a composite device for camera sensor driver.
     constexpr zx_device_prop_t sensor_props[] = {
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
@@ -245,6 +293,12 @@ zx_status_t Sherlock::CameraInit() {
                              UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
+        return status;
+    }
+
+    status = pbus_.DeviceAdd(&gdc_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
         return status;
     }
 

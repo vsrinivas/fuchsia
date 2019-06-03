@@ -254,6 +254,7 @@ bool sherlock_enumeration_test() {
         "sys/platform/05:00:6/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
         "wifi",
         "sys/platform/05:04:15/aml-mipi",
+        "sys/platform/12:02:2/gdc",
         "imx227-sensor",
         "isp",
         "sys/platform/05:04:e/amlogic_video",

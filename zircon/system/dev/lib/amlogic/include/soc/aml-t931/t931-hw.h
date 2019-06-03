@@ -139,6 +139,10 @@
 #define T931_ISP_BASE                   0xff140000
 #define T931_ISP_LENGTH                 0x00040000
 
+// GDC
+#define T931_GDC_BASE                   0xFF950000
+#define T931_GDC_LENGTH                 0x100
+
 // eMMC/SD register blocks
 #define T931_SD_EMMC_A_BASE             0xffE03000
 #define T931_SD_EMMC_A_LENGTH           0x2000
@@ -194,6 +198,7 @@
 #define T931_RDMA_DONE                  121
 #define T931_UART_C_IRQ                 125
 #define T931_MALI_ISP_IRQ               174
+#define T931_MALI_GDC_IRQ               176
 #define T931_MALI_IRQ_GP                192
 #define T931_MALI_IRQ_GPMMU             193
 #define T931_MALI_IRQ_PP                194

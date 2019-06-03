@@ -206,7 +206,9 @@ __BEGIN_CDECLS
 // ARM
 #define PDEV_VID_ARM                18
 #define PDEV_PID_ISP                1
+#define PDEV_PID_GDC                2
 #define PDEV_DID_ARM_MALI_IV009     1
+#define PDEV_DID_ARM_MALI_IV010     2
 
 // Qualcomm
 #define PDEV_VID_QUALCOMM           19
