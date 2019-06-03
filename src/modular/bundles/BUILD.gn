@@ -6,6 +6,7 @@ group("bundles") {
   testonly = true
   deps = [
     ":framework",
+    ":framework_experimental",
     ":tools",
   ]
 }
@@ -26,6 +27,15 @@ group("framework") {
     "//peridot/packages/prod:maxwell",
     "//peridot/packages/prod:modular",
     "//peridot/packages/prod:module_resolver",
+  ]
+}
+
+# Framework bundle including experimental functionality.
+group("framework_experimental") {
+  testonly = true
+  public_deps = [
+    ":framework",
+    "//peridot/packages/prod:discover",
   ]
 }
 

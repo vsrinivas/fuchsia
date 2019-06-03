@@ -7,7 +7,7 @@ import("//products/terminal.gni")
 base_package_labels -= [ "//garnet/packages/config:terminal" ]
 
 base_package_labels += [
-  "//src/modular/bundles:framework",
+  "//src/modular/bundles:framework_experimental",
   "//topaz/packages/config:ermine",
   "//topaz/packages/prod:ermine",
   "//topaz/packages/prod:term",

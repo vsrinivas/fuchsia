@@ -18,6 +18,7 @@ group("all") {
     "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:clipboard_agent",
     "//peridot/packages/prod:cloud_provider_firestore",
+    "//peridot/packages/prod:discover",
     "//peridot/packages/prod:integration_testing",
     "//peridot/packages/prod:ledger",
     "//peridot/packages/prod:maxwell",
@@ -76,6 +77,7 @@ group("integration_testing") {
     "//peridot/bin/sessionmgr:dev_session_shell",
     "//peridot/bin/sessionmgr/story_runner:dev_story_shell",
     "//peridot/packages/prod:dev_base_shell",
+    "//peridot/packages/prod:discover",
     "//peridot/packages/prod:modular",
     "//peridot/packages/tests:modular_test_harness",
   ]
@@ -101,9 +103,15 @@ group("modular") {
   testonly = true
   public_deps = [
     "//peridot/bin/basemgr",
-    "//peridot/bin/discovermgr",
     "//peridot/bin/sessionmgr",
     "//peridot/cloud/go/src/remote_module_resolver:host",
     "//peridot/packages/prod:auto_login_base_shell",
+  ]
+}
+
+group("discover") {
+  testonly = true
+  public_deps = [
+    "//peridot/bin/discovermgr",
   ]
 }

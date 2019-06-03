@@ -17,6 +17,7 @@ group("framework") {
     "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:clipboard_agent",
     "//peridot/packages/prod:cloud_provider_firestore",
+    "//peridot/packages/prod:discover",
     "//peridot/packages/prod:ledger",
     "//peridot/packages/prod:maxwell",
     "//peridot/packages/prod:modular",
