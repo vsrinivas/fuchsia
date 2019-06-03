@@ -10,11 +10,13 @@
 #include <utility>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -496,6 +498,14 @@ const char kBreakpointHelp[] =
   the breakpoint context for that command only. This allows modifying
   breakpoints regardless of the active one.
 
+Options
+
+  -v
+  --verbose
+      When listing breakpoints, show information on each address that the
+      breakpoint applies to. A symbolic breakpoint can apply to many processes
+      and can expand to more than one address in a process.
+
 Examples
 
   bp
@@ -511,7 +521,7 @@ Examples
       Clears breakpoint 2.
 )";
 
-void ListBreakpoints(ConsoleContext* context) {
+void ListBreakpoints(ConsoleContext* context, bool include_locations) {
   auto breakpoints = context->session()->system().GetBreakpoints();
   if (breakpoints.empty()) {
     Console::get()->Output("No breakpoints.\n");
@@ -526,10 +536,8 @@ void ListBreakpoints(ConsoleContext* context) {
     id_bp[context->IdForBreakpoint(bp)] = bp;
 
   std::vector<std::vector<OutputBuffer>> rows;
-
   for (const auto& pair : id_bp) {
-    rows.emplace_back();
-    std::vector<OutputBuffer>& row = rows.back();
+    std::vector<OutputBuffer>& row = rows.emplace_back();
 
     // "Current breakpoint" marker.
     if (pair.first == active_breakpoint_id)
@@ -538,6 +546,7 @@ void ListBreakpoints(ConsoleContext* context) {
       row.emplace_back();
 
     BreakpointSettings settings = pair.second->GetSettings();
+
     row.push_back(
         OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d", pair.first)));
     row.emplace_back(BreakpointScopeToString(context, settings));
@@ -545,6 +554,20 @@ void ListBreakpoints(ConsoleContext* context) {
     row.emplace_back(BreakpointEnabledToString(settings.enabled));
     row.emplace_back(BreakpointTypeToString(settings.type));
     row.push_back(FormatInputLocation(settings.location));
+
+    if (include_locations) {
+      for (const auto& loc : pair.second->GetLocations()) {
+        std::vector<OutputBuffer>& loc_row = rows.emplace_back();
+
+        loc_row.resize(2);  // Empty columns.
+        Process* process = loc->GetProcess();
+        OutputBuffer out(GetBullet() + " ");
+        out.Append(FormatLocation(process->GetTarget()->GetSymbols(),
+                                  loc->GetLocation(), true, false));
+
+        loc_row.push_back(out);
+      }
+    }
   }
 
   OutputBuffer out;
@@ -573,8 +596,10 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd,
     return true;
 
   if (cmd.GetNounIndex(Noun::kBreakpoint) == Command::kNoIndex) {
-    // Just "breakpoint", this lists available breakpoints.
-    ListBreakpoints(context);
+    // Just "breakpoint", this lists available breakpoints. The verbose switch
+    // expands each individual breakpoint location.
+    bool include_locations = cmd.HasSwitch(kVerboseSwitch);
+    ListBreakpoints(context, include_locations);
     return true;
   }
 

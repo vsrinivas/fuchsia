@@ -110,6 +110,7 @@ source_set("tests") {
     "mock_console.cc",
     "mock_format_value_process_context.cc",
     "mock_format_value_process_context.h",
+    "nouns_unittest.cc",
     "source_util_unittest.cc",
     "string_formatters_unittest.cc",
     "string_util_unittest.cc",
