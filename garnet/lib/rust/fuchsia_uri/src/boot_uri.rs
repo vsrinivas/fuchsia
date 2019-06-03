@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub use crate::errors::ParseError;
-pub use crate::parse::{check_resource, NAME_RE};
+pub use crate::parse::{check_resource, is_name};
 use std::fmt;
 use url::percent_encoding::percent_decode;
 use url::Url;
@@ -39,7 +39,7 @@ impl BootUri {
         if !path_clone.is_empty() {
             let mut iter = path_clone.split('/').fuse();
             if let Some(s) = iter.next() {
-                if !NAME_RE.is_match(s) {
+                if !is_name(s) {
                     return Err(ParseError::InvalidPath);
                 }
             }

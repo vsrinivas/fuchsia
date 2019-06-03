@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub use crate::errors::ParseError;
-pub use crate::parse::{check_resource, HASH_RE, NAME_RE};
+pub use crate::parse::{check_resource, is_name, is_hash};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
 use std::fmt;
@@ -165,7 +165,7 @@ impl PkgUri {
             if variant.is_none() {
                 return Err(ParseError::InvalidVariant);
             }
-            if !HASH_RE.is_match(h) {
+            if !is_hash(h) {
                 return Err(ParseError::InvalidHash);
             }
         }
@@ -339,7 +339,7 @@ fn parse_path(mut path: &str) -> Result<(Option<&str>, Option<&str>), ParseError
         let mut iter = path.split('/').fuse();
 
         if let Some(s) = iter.next() {
-            if NAME_RE.is_match(s) {
+            if is_name(s) {
                 name = Some(s);
             } else {
                 return Err(ParseError::InvalidName);
@@ -347,7 +347,7 @@ fn parse_path(mut path: &str) -> Result<(Option<&str>, Option<&str>), ParseError
         }
 
         if let Some(s) = iter.next() {
-            if NAME_RE.is_match(s) {
+            if is_name(s) {
                 variant = Some(s);
             } else {
                 return Err(ParseError::InvalidVariant);
@@ -369,7 +369,7 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse) -> Result<Option<String
             if query_hash.is_some() {
                 return Err(ParseError::InvalidHash);
             }
-            if !HASH_RE.is_match(&value) {
+            if !is_hash(&value) {
                 return Err(ParseError::InvalidHash);
             }
             query_hash = Some(value.to_string());

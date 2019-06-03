@@ -18,23 +18,14 @@ use {
     fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_zircon::{Channel, MessageBuf, Signals, Status},
     futures::prelude::*,
-    lazy_static::lazy_static,
     log::{info, warn},
     parking_lot::RwLock,
-    regex::Regex,
     std::sync::Arc,
 };
 
-lazy_static! {
-    // The error amber returns if it could not find the merkle for this package.
-    static ref PACKAGE_NOT_FOUND_RE: Regex =
-        Regex::new("^merkle not found for package ").unwrap();
 
-    // The error amber returns if it could resolve a merkle for this package, but it couldn't
-    // download the package.
-    static ref UNAVAILABLE_RE: Regex =
-        Regex::new("^not found in \\d+ active sources").unwrap();
-}
+// The error amber returns if it could not find the merkle for this package.
+const PACKAGE_NOT_FOUND: &str = "merkle not found for package";
 
 pub async fn run_resolver_service(
     rewrites: Arc<RwLock<RewriteManager>>,
@@ -149,6 +140,40 @@ async fn resolve<'a>(
     Ok(())
 }
 
+// Checks for the error amber returns if it could resolve a merkle for this
+// package, but it couldn't download the package.
+//
+// Format: "not found in \\d+ active sources"
+fn is_unavailable_msg(msg: &str) -> bool {
+    const UNAVAILABLE_PRE: &str = "not found in ";
+    const UNAVAILABLE_POST: &str = "active sources";
+
+    if !msg.starts_with(UNAVAILABLE_PRE) {
+        return false;
+    }
+    let (_unavailable_pre, tail) = msg.split_at(UNAVAILABLE_PRE.len());
+    let tail_chars = &mut tail.chars();
+    let mut c = tail_chars.next();
+    // require at least one digit
+    if !c.map_or(false, |c| c.is_numeric()) {
+        return false;
+    }
+    loop {
+        c = tail_chars.next();
+        if !c.map_or(false, |c| c.is_numeric()) {
+            // check for space after digit
+            if let Some(' ') = c {
+                break;
+            } else {
+                return false;
+            }
+        }
+    }
+    // take remaining digits
+    let tail = tail_chars.as_str();
+    return tail.starts_with(UNAVAILABLE_POST);
+}
+
 async fn wait_for_update_to_complete(chan: Channel, uri: &PkgUri) -> Result<BlobId, Status> {
     let mut buf = MessageBuf::new();
 
@@ -164,12 +189,12 @@ async fn wait_for_update_to_complete(chan: Channel, uri: &PkgUri) -> Result<Blob
         if sigs.contains(Signals::USER_0) {
             let msg = String::from_utf8_lossy(&buf);
 
-            if PACKAGE_NOT_FOUND_RE.is_match(&msg) {
+            if msg.starts_with(PACKAGE_NOT_FOUND) {
                 fx_log_info!("package {} was not found: {}", uri, msg);
                 return Err(Status::NOT_FOUND);
             }
 
-            if UNAVAILABLE_RE.is_match(&msg) {
+            if is_unavailable_msg(&msg) {
                 fx_log_info!("package {} is currently unavailable: {}", uri, msg);
                 return Err(Status::UNAVAILABLE);
             }
@@ -573,5 +598,18 @@ mod tests {
         await!(test.run_resolve("fuchsia-pkg://example.com/bar/stable", Err(Status::INVALID_ARGS)));
         await!(test
             .run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
+    }
+
+    #[test]
+    fn test_is_unavailable_msg() {
+        // Success:
+        assert!(is_unavailable_msg("not found in 1 active sources"), "single digit");
+        assert!(is_unavailable_msg("not found in 12345678901928 active sources"), "multiple digits");
+
+        // Failure:
+        assert!(!is_unavailable_msg("not found in  active sources"), "no digits");
+        assert!(!is_unavailable_msg("not found in 1"), "no suffix");
+        assert!(!is_unavailable_msg("1 active sources"), "no prefix");
+        assert!(!is_unavailable_msg(""), "empty");
     }
 }
