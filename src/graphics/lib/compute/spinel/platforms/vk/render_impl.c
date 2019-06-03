@@ -105,7 +105,7 @@ spn_ri_buffer(struct spn_device * const device, spn_render_submit_t const * cons
   //
   // bind block_pool/composition/styling/surface
   //
-  struct spn_vk * const instance = device->target;
+  struct spn_vk * const instance = device->instance;
 
   //
   // DS: BLOCK POOL

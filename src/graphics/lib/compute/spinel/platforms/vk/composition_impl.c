@@ -356,7 +356,7 @@ spn_ci_complete_p_1(void * pfn_payload)
   struct spn_ci_complete_payload_1 const * const payload  = pfn_payload;
   struct spn_composition_impl * const            impl     = payload->impl;
   struct spn_device * const                      device   = impl->device;
-  struct spn_vk * const                          instance = device->target;
+  struct spn_vk * const                          instance = device->instance;
 
   // release descriptor sets
   spn_vk_ds_release_ttcks(instance, payload->ds.ttcks);
@@ -415,7 +415,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   // We're go for launch...
   //
   struct spn_device * const device   = impl->device;
-  struct spn_vk * const     instance = device->target;
+  struct spn_vk * const     instance = device->instance;
 
   // get a cb
   VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
@@ -619,7 +619,7 @@ spn_ci_complete_p_3(void * pfn_payload)
   struct spn_ci_complete_payload_3 const * const p_3      = pfn_payload;
   struct spn_composition_impl * const            impl     = p_3->impl;
   struct spn_device * const                      device   = impl->device;
-  struct spn_vk * const                          instance = device->target;
+  struct spn_vk * const                          instance = device->instance;
 
   // release the ttcks ds -- will never wait()
   spn_vk_ds_release_ttcks(instance, p_3->ds.ttcks);  // FIXME -- reuse
@@ -652,7 +652,7 @@ spn_ci_complete_p_2(void * pfn_payload)
   struct spn_ci_complete_payload_2 const * const p_2      = pfn_payload;
   struct spn_composition_impl * const            impl     = p_2->impl;
   struct spn_device * const                      device   = impl->device;
-  struct spn_vk * const                          instance = device->target;
+  struct spn_vk * const                          instance = device->instance;
 
   // release the copy semaphore
   spn_device_semaphore_pool_release(device, p_2->semaphore.sort);
@@ -701,7 +701,7 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
 {
   //
   struct spn_device * const device   = impl->device;
-  struct spn_vk * const     instance = device->target;
+  struct spn_vk * const     instance = device->instance;
 
   // semaphore will be signaled once segmenting is complete
   impl->vk.semaphore.sealing = spn_device_semaphore_pool_acquire(device);
@@ -1212,7 +1212,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   // save device
   impl->device = device;
 
-  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   impl->config = config;
 
@@ -1343,7 +1343,7 @@ spn_composition_impl_pre_render_ds(struct spn_composition * const   composition,
 {
   struct spn_composition_impl * const impl     = composition->impl;
   struct spn_device * const           device   = impl->device;
-  struct spn_vk * const               instance = device->target;
+  struct spn_vk * const               instance = device->instance;
 
   assert(impl->state >= SPN_CI_STATE_SEALING);
 

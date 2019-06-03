@@ -74,7 +74,7 @@ spn_device_block_pool_create(struct spn_device * const device,
 
   device->block_pool = block_pool;
 
-  struct spn_vk * const                     target = device->target;
+  struct spn_vk * const                     target = device->instance;
   struct spn_vk_target_config const * const config = spn_vk_get_config(target);
 
   // block pool sizing
@@ -176,7 +176,7 @@ spn_device_block_pool_create(struct spn_device * const device,
 void
 spn_device_block_pool_dispose(struct spn_device * const device)
 {
-  struct spn_vk * const         instance   = device->target;
+  struct spn_vk * const         instance   = device->instance;
   struct spn_block_pool * const block_pool = device->block_pool;
 
   spn_vk_ds_release_block_pool(instance, block_pool->ds_block_pool);

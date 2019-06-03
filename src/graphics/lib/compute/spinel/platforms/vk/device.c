@@ -108,12 +108,12 @@ spn_device_create(struct spn_vk_environment * const               environment,
 
   device->environment = environment;
   device->context     = context;
-  device->target      = spn_vk_create(environment, create_info->target);
+  device->instance    = spn_vk_create(environment, create_info->target);
 
   //
   // the target configuration guides early resource allocation
   //
-  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   spn_allocator_host_perm_create(&device->allocator.host.perm,
                                  config->allocator.host.perm.alignment);
@@ -211,7 +211,7 @@ spn_device_dispose(struct spn_device * const device)
   spn_allocator_host_temp_dispose(&device->allocator.host.temp);
   spn_allocator_host_perm_dispose(&device->allocator.host.perm);
 
-  spn_vk_dispose(device->target, device->environment);
+  spn_vk_dispose(device->instance, device->environment);
 
   free(device->context);
   free(device);

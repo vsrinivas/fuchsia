@@ -211,7 +211,7 @@ spn_device_handle_pool_create(struct spn_device * const device, uint32_t const h
   device->handle_pool = handle_pool;
 
   uint32_t const reclaim_size =
-    spn_device_handle_pool_reclaim_size(spn_vk_get_config(device->target));
+    spn_device_handle_pool_reclaim_size(spn_vk_get_config(device->instance));
 
   uint32_t const blocks = (handle_count + reclaim_size - 1) / reclaim_size;
   uint32_t const blocks_padded =
@@ -394,7 +394,7 @@ spn_device_bind_paths_reclaim(struct spn_device * const device,
                               spn_handle_t * const      handles,
                               VkCommandBuffer           cb)
 {
-  struct spn_vk * const               instance = device->target;
+  struct spn_vk * const               instance = device->instance;
   struct spn_vk_ds_block_pool_t const ds       = spn_device_block_pool_get_ds(device);
 
   spn_vk_ds_bind_paths_reclaim_block_pool(instance, cb, ds);
@@ -425,7 +425,7 @@ spn_device_bind_rasters_reclaim(struct spn_device * const device,
                                 spn_handle_t * const      handles,
                                 VkCommandBuffer           cb)
 {
-  struct spn_vk * const               instance = device->target;
+  struct spn_vk * const               instance = device->instance;
   struct spn_vk_ds_block_pool_t const ds       = spn_device_block_pool_get_ds(device);
 
   spn_vk_ds_bind_rasters_reclaim_block_pool(instance, cb, ds);

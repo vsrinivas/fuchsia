@@ -406,7 +406,7 @@ spn_pbi_complete(void * pfn_payload)
   struct spn_pbi_complete_payload const * const payload  = pfn_payload;
   struct spn_path_builder_impl * const          impl     = payload->impl;
   struct spn_device * const                     device   = impl->device;
-  struct spn_vk * const                         instance = device->target;
+  struct spn_vk * const                         instance = device->instance;
 
   // release descriptor set -- simple increment
   spn_vk_ds_release_paths_copy(instance, payload->ds);
@@ -465,7 +465,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   // We're go for launch...
   //
   struct spn_device * const device   = impl->device;
-  struct spn_vk * const     instance = device->target;
+  struct spn_vk * const     instance = device->instance;
 
   // get a cb
   VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
@@ -1062,7 +1062,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   impl->device = device;
 
   // get target config
-  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   // stash device-specific params
   uint32_t const block_dwords    = 1u << config->block_pool.block_dwords_log2;

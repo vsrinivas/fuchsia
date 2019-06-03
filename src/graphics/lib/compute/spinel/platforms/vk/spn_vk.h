@@ -6,7 +6,32 @@
 #define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_SPN_VK_H_
 
 //
+// Each Vulkan shader's descriptor set layout and associated push
+// constants are defined in spn_vk_layouts.h
 //
+// Defining the layouts once ensures *consistency* between the host C
+// source, the GLSL shaders, and the Vulkan pipelines and resources.
+//
+// This file uses the layout file to provide type-safe access to
+// all Vulkan resources.
+//
+// An spn_vk instance does the following:
+//
+//   - Takes a Spinel/VK target and creates device-specific instances
+//     of all Spinel pipelines.
+//
+//   - Allocates fixed size pools of pipeline descriptor sets.
+//
+//   - Enables performant update of descriptor sets using Vulkan
+//     update templates.
+//
+//   - Pumps the scheduler when descriptor sets are unavailable.
+//
+//   - Defines typed C bindings for updating descriptor sets.
+//
+//   - Defines typed C bindings for initializing push constants.
+//
+//   - Defines explicity named pipeline binding functions.
 //
 
 #include <stdbool.h>
@@ -66,7 +91,7 @@ struct spn_vk_target;
 //
 
 //
-// Create an instance of the Spinel target
+// Given a target, create an instance of spn_vk
 //
 
 struct spn_vk *

@@ -323,7 +323,7 @@ spn_styling_impl_create(struct spn_device * const   device,
   // save device
   impl->device = device;
 
-  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   impl->config = config;
 
@@ -390,7 +390,7 @@ spn_styling_impl_pre_render_ds(struct spn_styling * const         styling,
 {
   struct spn_styling_impl * const impl     = styling->impl;
   struct spn_device * const       device   = impl->device;
-  struct spn_vk * const           instance = device->target;
+  struct spn_vk * const           instance = device->instance;
 
   assert(impl->state >= SPN_SI_STATE_SEALING);
 

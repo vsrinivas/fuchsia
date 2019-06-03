@@ -517,7 +517,7 @@ spn_rbi_complete_p_2(void * pfn_payload)
   struct spn_rbi_complete_payload_2 const * const p_2      = pfn_payload;
   struct spn_raster_builder_impl * const          impl     = p_2->impl;
   struct spn_device * const                       device   = impl->device;
-  struct spn_vk * const                           instance = device->target;
+  struct spn_vk * const                           instance = device->instance;
 
   // release the copy semaphore
   spn_device_semaphore_pool_release(device, p_2->semaphore.sort);
@@ -584,7 +584,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   struct spn_rbi_complete_payload_1 const * const p_1      = pfn_payload;
   struct spn_raster_builder_impl * const          impl     = p_1->p_2.impl;
   struct spn_device * const                       device   = impl->device;
-  struct spn_vk * const                           instance = device->target;
+  struct spn_vk * const                           instance = device->instance;
 
   //
   // Release resources
@@ -812,8 +812,8 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //   2.4) RASTERS_PREFIX
   //
   struct spn_device * const                 device   = impl->device;
-  struct spn_vk * const                     instance = device->target;
-  struct spn_vk_target_config const * const config   = spn_vk_get_config(device->target);
+  struct spn_vk * const                     instance = device->instance;
+  struct spn_vk_target_config const * const config   = spn_vk_get_config(device->instance);
 
   //
   // COMMAND BUFFER 1
@@ -1278,7 +1278,7 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   //
   // free ring
   //
-  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   if (config->raster_builder.vk.rings.d != 0)
     {
@@ -1337,7 +1337,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   impl->device = device;
 
   // save config
-  struct spn_vk_target_config const * const config = spn_vk_get_config(device->target);
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   impl->config = config;
 
