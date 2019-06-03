@@ -43,6 +43,9 @@ enum Status {
     // Some other problem occurred that cannot be classified using one of the
     // more specific statuses. Retry is optional.
     UNKNOWN_ERROR = 6;
+    // The request cannot be processed due to an ongoing account or persona
+    // removal.
+    REMOVAL_IN_PROGRESS = 7;
 
     // TODO(jsankey): Add additional statuses as needed. Examples are likely to
     // include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR, INVALID_AUTH_PROVIDER,
