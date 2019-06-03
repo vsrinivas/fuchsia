@@ -53,7 +53,7 @@ zx_status_t RootMockDevice::Create(const IsolatedDevmgr& devmgr,
     // Wait for /dev/test/test to appear
     fbl::unique_fd fd;
     zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
-            devmgr.devfs_root(), "test/test", zx::deadline_after(zx::sec(5)), &fd);
+            devmgr.devfs_root(), "test/test", &fd);
     if (status != ZX_OK) {
         return status;
     }

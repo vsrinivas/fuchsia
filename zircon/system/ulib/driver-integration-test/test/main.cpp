@@ -43,16 +43,13 @@ bool enumeration_test() {
     ASSERT_EQ(IsolatedDevmgr::Create(&args, &devmgr), ZX_OK);
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd),
               ZX_OK);
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd),
               ZX_OK);
 
     END_TEST;

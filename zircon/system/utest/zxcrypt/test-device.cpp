@@ -134,7 +134,6 @@ bool TestDevice::SetupDevmgr() {
               ZX_OK);
     fbl::unique_fd ctl;
     ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl",
-                                                            zx::deadline_after(zx::sec(5)),
                                                             &ctl),
               ZX_OK);
     END_HELPER;
@@ -360,9 +359,7 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
                                 block_size, count, &ramdisk_), ZX_OK);
 
     fbl::unique_fd ramdisk_ignored;
-    devmgr_integration_test::RecursiveWaitForFile(devfs_root_fd,
-                                                  ramdisk_get_path(ramdisk_),
-                                                  zx::deadline_after(zx::sec(5)),
+    devmgr_integration_test::RecursiveWaitForFile(devfs_root_fd, ramdisk_get_path(ramdisk_),
                                                   &ramdisk_ignored);
 
     parent_caller_.reset(ramdisk_get_block_fd(ramdisk_));

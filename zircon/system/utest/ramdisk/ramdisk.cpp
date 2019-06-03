@@ -1628,15 +1628,13 @@ static bool RamdiskCreateAt(void) {
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl", &fd),
               ZX_OK);
     ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(ramdisk_create_at(devmgr.devfs_root().get(), PAGE_SIZE / 2, 512, &ramdisk),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk),
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk), &fd),
               ZX_OK);
     END_TEST;
 }
@@ -1654,16 +1652,14 @@ static bool RamdiskCreateAtGuid(void) {
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr), ZX_OK);
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl", &fd),
               ZX_OK);
     ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(ramdisk_create_at_with_guid(devmgr.devfs_root().get(), PAGE_SIZE / 2, 512, kGuid,
                                           sizeof(kGuid), &ramdisk),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk),
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk), &fd),
               ZX_OK);
     END_TEST;
 }
@@ -1681,15 +1677,13 @@ static bool RamdiskCreateAtVmo(void) {
     ASSERT_EQ(zx::vmo::create(256 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl",
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl", &fd),
               ZX_OK);
     ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(ramdisk_create_at_from_vmo(devmgr.devfs_root().get(), vmo.release(), &ramdisk),
               ZX_OK);
 
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk),
-                                   zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk), &fd),
               ZX_OK);
     END_TEST;
 }

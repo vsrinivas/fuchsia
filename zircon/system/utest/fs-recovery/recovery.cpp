@@ -133,8 +133,7 @@ private:
     bool WaitForDevice(const char* path, fbl::unique_fd* fd) {
         BEGIN_HELPER;
         printf("Wait for device %s\n", path);
-        ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), path,
-                                                                zx::deadline_after(zx::sec(5)), fd),
+        ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), path, fd),
                   ZX_OK);
 
         ASSERT_TRUE(*fd);

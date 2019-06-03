@@ -199,8 +199,7 @@ int main(int argc, char** argv) {
 
     // Wait for /dev/test/test to appear
     fbl::unique_fd fd;
-    status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test",
-                                                           zx::deadline_after(zx::sec(5)), &fd);
+    status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd);
     if (status != ZX_OK) {
         printf("driver-tests: failed to find /dev/test/test\n");
         return -1;

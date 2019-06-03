@@ -48,8 +48,7 @@ zx_status_t FtlTestObserver::WaitForBlockDevice() {
 
     fbl::unique_fd block_device;
     zx_status_t status =  devmgr_integration_test::RecursiveWaitForFile(
-            devfs_root(), "misc/nand-ctl/ram-nand-0/ftl/block", zx::deadline_after(zx::sec(5)),
-            &block_device);
+            devfs_root(), "misc/nand-ctl/ram-nand-0/ftl/block", &block_device);
     if (status != ZX_OK) {
         printf("Unable to open device, %d\n", status);
         return status;

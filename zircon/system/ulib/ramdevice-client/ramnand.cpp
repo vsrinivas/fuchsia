@@ -44,8 +44,7 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     }
 
     fbl::unique_fd ctl;
-    st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/nand-ctl",
-                                                       zx::deadline_after(zx::sec(5)), &ctl);
+    st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/nand-ctl", &ctl);
     if (st != ZX_OK) {
         fprintf(stderr, "ram_nand_ctl device failed enumerated, %d\n", st);
         return st;

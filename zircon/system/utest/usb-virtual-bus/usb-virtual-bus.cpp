@@ -42,8 +42,7 @@ USBVirtualBus::USBVirtualBus() {
     ASSERT_OK(status);
     fbl::unique_fd fd;
     devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-            "sys/platform/11:03:0/usb-virtual-bus",
-            zx::time::infinite(), &fd);
+            "sys/platform/11:03:0/usb-virtual-bus", &fd);
     ASSERT_GT(fd.get(), 0);
 
     fbl::Function<zx_status_t(int, const char*)> callback;

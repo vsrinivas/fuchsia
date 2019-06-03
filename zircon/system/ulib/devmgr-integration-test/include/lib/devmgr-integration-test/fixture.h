@@ -60,11 +60,9 @@ private:
 };
 
 // Wait for |file| to appear in |dir|, and open it when it does.
-zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, zx::time deadline,
-                        fbl::unique_fd* out);
+zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out);
 
 // Waits for the relative |path| starting in |dir| to appear, and opens it.
-zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path,
-                                 zx::time deadline, fbl::unique_fd* out);
+zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fbl::unique_fd* out);
 
 } // namespace devmgr_integration_test

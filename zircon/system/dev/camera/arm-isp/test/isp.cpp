@@ -54,8 +54,7 @@ void IspTest::SetUp() {
     ASSERT_TRUE(devfs_root);
 
     zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
-        devfs_root, "class/isp-device-test/000",
-        zx::time::infinite(), &fd_);
+        devfs_root, "class/isp-device-test/000", &fd_);
     ASSERT_EQ(ZX_OK, status);
 
     status = fdio_get_service_handle(fd_.get(), &handle_);

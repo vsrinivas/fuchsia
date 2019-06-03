@@ -138,8 +138,7 @@ class FactoryResetTest : public Test {
 
   void WaitForDevice(const char* path, fbl::unique_fd* fd) {
     printf("wait for device %s\n", path);
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(
-                  devfs_root(), path, zx::deadline_after(zx::sec(5)), fd),
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path, fd),
               ZX_OK);
 
     ASSERT_TRUE(*fd);

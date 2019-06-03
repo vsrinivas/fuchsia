@@ -65,7 +65,6 @@ TEST_F(IsolatedDevMgrTest, MetadataOneDriverTest) {
     fbl::unique_fd fd;
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
                                                            "sys/platform/11:07:2/metadata-test",
-                                                           zx::deadline_after(zx::sec(5)),
                                                            &fd);
     ASSERT_EQ(ZX_OK, status);
 
@@ -106,13 +105,11 @@ TEST_F(IsolatedDevMgrTest, MetadataTwoDriverTest) {
     fbl::unique_fd fd1;
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
                                                            "sys/platform/11:07:2/metadata-test",
-                                                           zx::deadline_after(zx::sec(5)),
                                                            &fd1);
     ASSERT_EQ(ZX_OK, status);
     fbl::unique_fd fd2;
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
                                                            "sys/platform/11:07:3/metadata-test",
-                                                           zx::deadline_after(zx::sec(5)),
                                                            &fd2);
     ASSERT_EQ(ZX_OK, status);
 

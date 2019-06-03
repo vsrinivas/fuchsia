@@ -48,7 +48,6 @@ public:
         ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
         fbl::unique_fd ctl;
         ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl",
-                                                                zx::deadline_after(zx::sec(5)),
                                                                 &ctl),
                   ZX_OK);
     }
@@ -111,9 +110,8 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
     ramdisk_client_t* ramdisk;
     ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk));
     fbl::unique_fd fd;
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                            ramdisk_get_path(ramdisk),
-                                                            zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk),
+                                                            &fd),
               ZX_OK);
     ASSERT_TRUE(fd);
 
@@ -152,9 +150,8 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
     ramdisk_client_t* ramdisk;
     ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk));
     fbl::unique_fd fd;
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                            ramdisk_get_path(ramdisk),
-                                                            zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk),
+                                                            &fd),
               ZX_OK);
     ASSERT_TRUE(fd);
 
@@ -187,9 +184,8 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
     ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount,
                                           data_guid, sizeof(data_guid), &ramdisk));
     fbl::unique_fd fd;
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                            ramdisk_get_path(ramdisk),
-                                                            zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk),
+                                                            &fd),
               ZX_OK);
     ASSERT_TRUE(fd);
 
@@ -220,9 +216,8 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
                                           data_guid,
                                           sizeof(data_guid), &ramdisk));
     fbl::unique_fd fd;
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                            ramdisk_get_path(ramdisk),
-                                                            zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk),
+                                                            &fd),
               ZX_OK);
 
     ASSERT_TRUE(fd);
@@ -259,9 +254,8 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
     ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
                                           sizeof(data_guid), &ramdisk));
     fbl::unique_fd fd;
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                            ramdisk_get_path(ramdisk),
-                                                            zx::deadline_after(zx::sec(5)), &fd),
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), ramdisk_get_path(ramdisk),
+                                                            &fd),
               ZX_OK);
     ASSERT_TRUE(fd);
 

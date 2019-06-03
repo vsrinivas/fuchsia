@@ -49,7 +49,6 @@ void HidDriverTest::SetUp() {
     // Wait for HidCtl to be created
     status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
                                                            "sys/platform/11:04:0/hidctl",
-                                                           zx::deadline_after(zx::sec(5)),
                                                            &hidctl_fd_);
     ASSERT_EQ(ZX_OK, status);
 
@@ -102,9 +101,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
 
     // Open the corresponding /dev/class/input/ device
     fbl::unique_fd fd_device;
-    status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                           "class/input/000",
-                                                           zx::deadline_after(zx::sec(5)),
+    status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "class/input/000",
                                                            &fd_device);
     ASSERT_EQ(ZX_OK, status);
 

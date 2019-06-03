@@ -74,8 +74,7 @@ void VirtualCameraTest::SetUp() {
     ASSERT_EQ(status, ZX_OK);
 
     status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "sys/platform/11:05:b/virtual_camera",
-        zx::time::infinite(), &fd_);
+        devmgr_.devfs_root(), "sys/platform/11:05:b/virtual_camera", &fd_);
     ASSERT_EQ(ZX_OK, status);
 
     status = fdio_get_service_handle(fd_.get(), &device_handle_);

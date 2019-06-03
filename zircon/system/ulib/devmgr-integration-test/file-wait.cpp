@@ -14,8 +14,7 @@ namespace devmgr_integration_test {
 
 // Waits for |file| to appear in |dir|, and opens it when it does.  Times out if
 // the deadline passes.
-zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, zx::time deadline,
-                        fbl::unique_fd* out) {
+zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out) {
     auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
         auto file = reinterpret_cast<const char*>(cookie);
         if (event != WATCH_EVENT_ADD_FILE) {
@@ -27,7 +26,7 @@ zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, zx::time de
         return ZX_OK;
     };
 
-    zx_status_t status = fdio_watch_directory(dir.get(), watch_func, deadline.get(),
+    zx_status_t status = fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE,
                                               const_cast<char*>(file));
     if (status != ZX_ERR_STOP) {
         return status;
@@ -45,8 +44,7 @@ namespace {
 // using the full_path. This is a workaround to deal with the fact that devhosts
 // do not implement open_at.
 zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& dir,
-                         const char* full_path, const char* file, zx::time deadline,
-                         fbl::unique_fd* out) {
+                         const char* full_path, const char* file, fbl::unique_fd* out) {
     auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
         auto file = reinterpret_cast<const char*>(cookie);
         if (event != WATCH_EVENT_ADD_FILE) {
@@ -58,7 +56,7 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
         return ZX_OK;
     };
 
-    zx_status_t status = fdio_watch_directory(dir.get(), watch_func, deadline.get(),
+    zx_status_t status = fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE,
                                               const_cast<char*>(file));
     if (status != ZX_ERR_STOP) {
         return status;
@@ -72,31 +70,28 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
 
 // Version of recursive_wait_for_file that can mutate its path
 zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& rootdir, const fbl::unique_fd& dir,
-                                       const char* full_path, char* path, zx::time deadline,
-                                       fbl::unique_fd* out) {
+                                       const char* full_path, char* path, fbl::unique_fd* out) {
     char* first_slash = strchr(path, '/');
     if (first_slash == nullptr) {
         // If there's no first slash, then we're just waiting for the file
         // itself to appear.
-        return WaitForFile2(rootdir, dir, full_path, path, deadline, out);
+        return WaitForFile2(rootdir, dir, full_path, path, out);
     }
     *first_slash = 0;
 
     fbl::unique_fd next_dir;
-    zx_status_t status = WaitForFile2(rootdir, dir, full_path, path, deadline, &next_dir);
+    zx_status_t status = WaitForFile2(rootdir, dir, full_path, path, &next_dir);
     if (status != ZX_OK) {
         return status;
     }
     *first_slash = '/';
-    return RecursiveWaitForFileHelper(rootdir, next_dir, full_path, first_slash + 1,
-                                      deadline, out);
+    return RecursiveWaitForFileHelper(rootdir, next_dir, full_path, first_slash + 1, out);
 }
 
 } // namespace
 
 // Waits for the relative |path| starting in |dir| to appear, and opens it.
-zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path,
-                                 zx::time deadline, fbl::unique_fd* out) {
+zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fbl::unique_fd* out) {
     // TODO(FLK-299): Remove this once the root cause is found.
     printf("[%ld ms] RecursiveWaitForFile: %s\n", zx::clock::get_monotonic().get() / ZX_MSEC(1),
         path);
@@ -105,7 +100,7 @@ zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path,
         return ZX_ERR_INVALID_ARGS;
     }
     strcpy(path_copy, path);
-    zx_status_t status = RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, deadline, out);
+    zx_status_t status = RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, out);
     if (status != ZX_OK) {
         // TODO(FLK-299): Remove this once the root cause is found.
         printf("[%ld ms] RecursiveWaitForFile: %s, failed %d\n",
