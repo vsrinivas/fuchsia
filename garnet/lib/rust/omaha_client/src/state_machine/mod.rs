@@ -97,151 +97,147 @@ where
     /// This function constructs the chain of async futures needed to perform all of the async tasks
     /// that comprise an update check.
     /// TODO: change from sync to fire and forget that sets up the future for execution.
-    pub fn perform_update_check<'a>(
+    pub async fn perform_update_check<'a>(
         &'a mut self,
         options: CheckOptions,
         apps: &'a [App],
         context: update_check::Context,
-    ) -> impl Future<Output = Result<(), serde_json::Error>> + 'a {
-        // This async is the main flow for a single update check to Omaha, and subsequent performing
-        // of an update (if directed).
-        async move {
-            info!("Checking to see if an update check is allowed at this time for {:?}", apps);
-            let decision = await!(self.policy_engine.update_check_allowed(
-                apps,
-                &context.schedule,
-                &context.state,
-                &options,
-            ));
+    ) -> Result<(), failure::Error> {
+        info!("Checking to see if an update check is allowed at this time for {:?}", apps);
+        let decision = await!(self.policy_engine.update_check_allowed(
+            apps,
+            &context.schedule,
+            &context.state,
+            &options,
+        ));
 
-            info!("The update check decision is: {:?}", decision);
+        info!("The update check decision is: {:?}", decision);
 
-            let request_params = match decision {
-                // Positive results, will continue with the update check process
-                CheckDecision::Ok(rp) | CheckDecision::OkUpdateDeferred(rp) => rp,
+        let request_params = match decision {
+            // Positive results, will continue with the update check process
+            CheckDecision::Ok(rp) | CheckDecision::OkUpdateDeferred(rp) => rp,
 
-                // Negative results, exit early
-                CheckDecision::TooSoon => {
-                    info!("Too soon for update check, ending");
-                    // TODO: Report status
-                    return Ok(());
-                }
-                CheckDecision::ThrottledByPolicy => {
-                    info!("Update check has been throttled by the Policy, ending");
-                    // TODO: Report status
-                    return Ok(());
-                }
-                CheckDecision::DeniedByPolicy => {
-                    info!("Update check has ben denied by the Policy");
-                    // TODO: Report status
-                    return Ok(());
-                }
-            };
-
-            // Construct a request for the app(s).
-            let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
-            for app in apps {
-                request_builder = request_builder.add_update_check(app);
+            // Negative results, exit early
+            CheckDecision::TooSoon => {
+                info!("Too soon for update check, ending");
+                // TODO: Report status
+                return Ok(());
             }
-
-            let (_parts, data) =
-                match await!(Self::do_omaha_request(&mut self.http, request_builder)) {
-                    Ok(res) => res,
-                    Err(OmahaRequestError::Json(e)) => {
-                        error!("Unable to construct request body! {:?}", e);
-                        // TODO:  Report status
-                        return Ok(());
-                    }
-                    Err(OmahaRequestError::HttpBuilder(e)) => {
-                        error!("Unable to construct HTTP request! {:?}", e);
-                        // TODO:  Report status
-                        return Ok(());
-                    }
-                    Err(OmahaRequestError::Hyper(e)) => {
-                        warn!("Unable to contact Omaha: {:?}", e);
-                        // TODO:  Report status
-                        // TODO:  Parse for proper retry behavior
-                        return Ok(());
-                    }
-                    Err(OmahaRequestError::HttpStatus(e)) => {
-                        warn!("Unable to contact Omaha: {:?}", e);
-                        // TODO:  Report status
-                        // TODO:  Parse for proper retry behavior
-                        return Ok(());
-                    }
-                };
-
-            let response = match Self::parse_omaha_response(&data) {
-                Ok(res) => res,
-                Err(err) => {
-                    warn!("Unable to parse Omaha response: {:?}", err);
-                    // TODO: Report status
-                    // TODO: Report parse error to Omaha
-                    return Ok(());
-                }
-            };
-
-            info!("result: {:?}", response);
-
-            let statuses = Self::get_app_update_statuses(&response);
-            for (app_id, status) in &statuses {
-                info!("Omaha update check status: {} => {:?}", app_id, status);
+            CheckDecision::ThrottledByPolicy => {
+                info!("Update check has been throttled by the Policy, ending");
+                // TODO: Report status
+                return Ok(());
             }
+            CheckDecision::DeniedByPolicy => {
+                info!("Update check has ben denied by the Policy");
+                // TODO: Report status
+                return Ok(());
+            }
+        };
 
-            if statuses.iter().any(|(_id, status)| **status == OmahaStatus::Ok) {
-                info!("At least one app has an update, proceeding to build and process an Install Plan");
+        // Construct a request for the app(s).
+        let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
+        for app in apps {
+            request_builder = request_builder.add_update_check(app);
+        }
 
-                let install_plan = match IN::InstallPlan::try_create_from(&response) {
-                    Ok(plan) => plan,
-                    Err(e) => {
-                        error!("Unable to construct install plan! {}", e);
-                        // TODO: Report status (Error)
-                        // TODO: Report error to Omaha
-                        return Ok(());
-                    }
-                };
+        let (_parts, data) = match await!(Self::do_omaha_request(&mut self.http, request_builder)) {
+            Ok(res) => res,
+            Err(OmahaRequestError::Json(e)) => {
+                error!("Unable to construct request body! {:?}", e);
+                // TODO:  Report status
+                return Ok(());
+            }
+            Err(OmahaRequestError::HttpBuilder(e)) => {
+                error!("Unable to construct HTTP request! {:?}", e);
+                // TODO:  Report status
+                return Ok(());
+            }
+            Err(OmahaRequestError::Hyper(e)) => {
+                warn!("Unable to contact Omaha: {:?}", e);
+                // TODO:  Report status
+                // TODO:  Parse for proper retry behavior
+                return Ok(());
+            }
+            Err(OmahaRequestError::HttpStatus(e)) => {
+                warn!("Unable to contact Omaha: {:?}", e);
+                // TODO:  Report status
+                // TODO:  Parse for proper retry behavior
+                return Ok(());
+            }
+        };
 
-                info!("Validating Install Plan with Policy");
-                let install_plan_decision =
-                    await!(self.policy_engine.update_can_start(&install_plan));
-                match install_plan_decision {
-                    UpdateDecision::Ok => {
-                        info!("Proceeding with install plan.");
-                    }
-                    UpdateDecision::DeferredByPolicy => {
-                        info!("Install plan was deferred by Policy.");
-                        // TODO: Report status (Deferred)
-                        // TODO: Report "error" to Omaha (as this is an event that needs reporting
-                        // TODO:   as the install isn't starting immediately.
-                        return Ok(());
-                    }
-                    UpdateDecision::DeniedByPolicy => {
-                        warn!("Install plan was denied by Policy, see Policy logs for reasoning");
-                        // TODO: Report status (Error)
-                        // TODO: Report error to Omaha
-                        return Ok(());
-                    }
-                }
+        let response = match Self::parse_omaha_response(&data) {
+            Ok(res) => res,
+            Err(err) => {
+                warn!("Unable to parse Omaha response: {:?}", err);
+                // TODO: Report status
+                // TODO: Report parse error to Omaha
+                return Ok(());
+            }
+        };
 
-                // TODO: Report Status (Updating)
-                // TODO: Notify Omaha of download start event.
+        info!("result: {:?}", response);
 
-                let install_result = await!(self.installer.perform_install(&install_plan, None));
-                if let Err(e) = install_result {
-                    warn!("Installation failed: {}", e);
-                    // TODO: Report Status
+        let statuses = Self::get_app_update_statuses(&response);
+        for (app_id, status) in &statuses {
+            info!("Omaha update check status: {} => {:?}", app_id, status);
+        }
+
+        if statuses.iter().any(|(_id, status)| **status == OmahaStatus::Ok) {
+            info!(
+                "At least one app has an update, proceeding to build and process an Install Plan"
+            );
+
+            let install_plan = match IN::InstallPlan::try_create_from(&response) {
+                Ok(plan) => plan,
+                Err(e) => {
+                    error!("Unable to construct install plan! {}", e);
+                    // TODO: Report status (Error)
                     // TODO: Report error to Omaha
                     return Ok(());
                 }
+            };
 
-                // TODO: Report Status (Done)
-                // TODO: Notify Omaha of download complete event.
-
-                // TODO: Consult Policy for next update time.
+            info!("Validating Install Plan with Policy");
+            let install_plan_decision = await!(self.policy_engine.update_can_start(&install_plan));
+            match install_plan_decision {
+                UpdateDecision::Ok => {
+                    info!("Proceeding with install plan.");
+                }
+                UpdateDecision::DeferredByPolicy => {
+                    info!("Install plan was deferred by Policy.");
+                    // TODO: Report status (Deferred)
+                    // TODO: Report "error" to Omaha (as this is an event that needs reporting
+                    // TODO:   as the install isn't starting immediately.
+                    return Ok(());
+                }
+                UpdateDecision::DeniedByPolicy => {
+                    warn!("Install plan was denied by Policy, see Policy logs for reasoning");
+                    // TODO: Report status (Error)
+                    // TODO: Report error to Omaha
+                    return Ok(());
+                }
             }
 
-            Ok(())
+            // TODO: Report Status (Updating)
+            // TODO: Notify Omaha of download start event.
+
+            let install_result = await!(self.installer.perform_install(&install_plan, None));
+            if let Err(e) = install_result {
+                warn!("Installation failed: {}", e);
+                // TODO: Report Status
+                // TODO: Report error to Omaha
+                return Ok(());
+            }
+
+            // TODO: Report Status (Done)
+            // TODO: Notify Omaha of download complete event.
+
+            // TODO: Consult Policy for next update time.
         }
+
+        Ok(())
     }
 
     /// Make an http request to Omaha, and collect the response into an error or a blob of bytes

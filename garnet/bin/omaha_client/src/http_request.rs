@@ -4,8 +4,7 @@
 
 #![allow(dead_code)]
 
-use futures::compat::Future01CompatExt;
-use futures::future::FutureObj;
+use futures::{compat::Future01CompatExt, future::BoxFuture, prelude::*};
 use hyper::{Body, Client, Request, Response};
 use omaha_client::http_request::HttpRequest;
 
@@ -14,8 +13,8 @@ pub struct FuchsiaHyperHttpRequest {
 }
 
 impl HttpRequest for FuchsiaHyperHttpRequest {
-    fn request(&mut self, req: Request<Body>) -> FutureObj<Result<Response<Body>, hyper::Error>> {
-        FutureObj::new(Box::pin(self.client.request(req).compat()))
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<Result<Response<Body>, hyper::Error>> {
+        self.client.request(req).compat().boxed()
     }
 }
 

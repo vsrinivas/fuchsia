@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::future::FutureObj;
+use futures::future::BoxFuture;
 use hyper::{Body, Request, Response};
 
 pub trait HttpRequest {
-    fn request(&mut self, req: Request<Body>) -> FutureObj<Result<Response<Body>, hyper::Error>>;
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<Result<Response<Body>, hyper::Error>>;
 }
 
 #[cfg(test)]

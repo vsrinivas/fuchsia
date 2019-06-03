@@ -8,7 +8,7 @@ use crate::{
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     request_builder::RequestParams,
 };
-use futures::future::FutureObj;
+use futures::future::BoxFuture;
 use futures::prelude::*;
 use std::time::SystemTime;
 
@@ -60,14 +60,14 @@ impl PolicyEngine for StubPolicyEngine {
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> FutureObj<UpdateCheckSchedule> {
+    ) -> BoxFuture<UpdateCheckSchedule> {
         let schedule = StubPolicy::compute_next_update_time(
             &PolicyData { current_time: SystemTime::now() },
             apps,
             scheduling,
             protocol_state,
         );
-        FutureObj::new(future::ready(schedule).boxed())
+        future::ready(schedule).boxed()
     }
 
     fn update_check_allowed(
@@ -76,7 +76,7 @@ impl PolicyEngine for StubPolicyEngine {
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
         check_options: &CheckOptions,
-    ) -> FutureObj<CheckDecision> {
+    ) -> BoxFuture<CheckDecision> {
         let decision = StubPolicy::update_check_allowed(
             &PolicyData { current_time: SystemTime::now() },
             apps,
@@ -84,15 +84,15 @@ impl PolicyEngine for StubPolicyEngine {
             protocol_state,
             check_options,
         );
-        FutureObj::new(future::ready(decision).boxed())
+        future::ready(decision).boxed()
     }
 
-    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> FutureObj<UpdateDecision> {
+    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<UpdateDecision> {
         let decision = StubPolicy::update_can_start(
             &PolicyData { current_time: SystemTime::now() },
             proposed_install_plan,
         );
-        FutureObj::new(future::ready(decision).boxed())
+        future::ready(decision).boxed()
     }
 }
 

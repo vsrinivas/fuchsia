@@ -5,7 +5,7 @@
 use super::*;
 use crate::protocol::response::Response;
 use failure::Fail;
-use futures::future::FutureObj;
+use futures::future::BoxFuture;
 use futures::prelude::*;
 
 /// This is the collection of Errors that can occur during the installation of an update.
@@ -57,7 +57,7 @@ impl Installer for StubInstaller {
         &mut self,
         _install_plan: &StubPlan,
         _observer: Option<&ProgressObserver>,
-    ) -> FutureObj<Result<(), StubInstallErrors>> {
-        FutureObj::new(future::ready(Ok(())).boxed())
+    ) -> BoxFuture<Result<(), StubInstallErrors>> {
+        future::ready(Ok(())).boxed()
     }
 }

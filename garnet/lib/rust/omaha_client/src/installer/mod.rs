@@ -4,7 +4,7 @@
 
 use crate::protocol::response::Response;
 use failure::Fail;
-use futures::future::FutureObj;
+use futures::future::BoxFuture;
 
 pub mod stub;
 
@@ -38,7 +38,7 @@ pub trait Installer {
         &mut self,
         install_plan: &Self::InstallPlan,
         observer: Option<&ProgressObserver>,
-    ) -> FutureObj<Result<(), Self::Error>>;
+    ) -> BoxFuture<Result<(), Self::Error>>;
 }
 
 /// The trait for observing progress on the initiated installation.
