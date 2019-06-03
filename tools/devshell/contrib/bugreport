@@ -1,0 +1,116 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Obtain and parse a bugreport from a connected target.
+
+## Connects to a running target and obtains a bugreport that contains useful
+## information for debugging a target.
+##
+## Information supplied includes:
+## - Build information and annotations.
+## - Kernel and System logs.
+## - Inspect Data.
+##
+## Each element will be separated in its own report file within a supplied
+## directory. If no directory is supplied, a unique one will be generated.
+##
+## Usage: fx bugreport [(--output-directory|-o) <DIRECTORY>]
+##
+##     --output-directory  (Optional) Directory where the files will be stored.
+##                         Must be an existing directory.
+##
+
+# Load environment helpers.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+# Flag Parsing.
+output_dir=
+is_output_dir_provided=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h)
+      fx-command-help
+      exit 0
+      ;;
+    --output-directory|-o)
+      shift
+      output_dir="$1"
+      is_output_dir_provided=true
+      ;;
+    *)
+      echo "Invalid flag $1"
+      exit 1
+  esac
+  shift
+done
+
+# Check the validity of the output file.
+if [[ "${is_output_dir_provided}" == "true" ]]; then
+  if [[ -z "${output_dir}" ]]; then
+    echo "No output directory provided."
+    exit 1
+  fi
+
+  if [[ ! -d "${output_dir}" ]]; then
+    echo "Path provided is not a directory."
+    exit 1
+  fi
+fi
+
+# Verify that we can obtain the target.
+target=$(get-fuchsia-device-addr)
+if [[ -z "${target}" ]]; then
+  echo "Could not obtain target name."
+  exit 1
+fi
+
+# If no output directory is supplied, generate a unique one according to time.
+if [[ -z "${output_dir}" ]]; then
+  # Generate an output directory.
+  # Format is /tmp/bugreports/report_<YearMonthDay_HourMinuteSecond>
+  uuid=`date +"%Y%m%d_%H%M%S"`
+  output_dir="/tmp/bugreports/report_${uuid}"
+  mkdir -p "${output_dir}"
+  if [[ "$?" -ne 0 ]]; then
+    rm -rf "${output_dir}"  # Just in case.
+    echo "Failed to create output directory ${output_dir}."
+    echo "Check errors or provide your own with --output-directory. See --help for more details."
+    exit 1
+  fi
+fi
+
+# At this point, we know that we have a valid output directory.
+
+# Obtain the bug report and store it in a temporary location.
+tempfile="/tmp/__bugreport_temp"
+fx-command-run "ssh" "${target}" "bugreport" > "${tempfile}"
+if [ "$?" -ne 0 ]; then
+  echo "Could not obtain bugreport from target."
+
+  # Do error cleanup.
+  rm -f "${tempfile}"
+  if [[ "${is_output_dir_provided}" == "false" ]]; then
+    rm -rf "${output_dir}"
+  fi
+  exit 1
+fi
+
+# Process the bugreport.
+"${FUCHSIA_BUILD_DIR}/tools/bugreport" "${output_dir}" < "${tempfile}"
+if [ "$?" -ne 0 ]; then
+  echo "Error processing bugreport."
+  echo "Downloaded unprocessed report is in ${tempfile}."
+
+  # Clean up temp directory.
+  if [[ "${is_output_dir_provided}" == "false" ]]; then
+    rm -rf "${output_dir}"
+  fi
+  exit 1
+else
+  # Clean up.
+  rm -f "${tempfile}"
+fi

@@ -87,6 +87,7 @@ if (current_toolchain == host_toolchain) {
 
     deps = [
       ":client_lib",
+      "//src/lib/fxl",
     ]
   }
 }
