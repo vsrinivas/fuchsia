@@ -1,0 +1,27 @@
+[
+ {
+    "id" : 2,
+    "child_ids" : [
+      5,
+      6
+    ],
+    "attributes": {
+      "label" : "Node-2"
+    }
+ },
+ {
+    "id" : 5,
+    "child_ids" : [],
+    "attributes": {
+      "label" : "Node-5"
+    }
+ },
+ {
+    "id" : 6,
+    "child_ids" : [],
+    "attributes": {
+      "label" : "Node-6"
+    }
+ }
+]
+

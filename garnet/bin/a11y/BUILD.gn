@@ -18,6 +18,29 @@ test_package("a11y_tests") {
   deps = [
     "tests",
   ]
+  resources = [
+    # needed for semantics_manager_test
+    {
+      path = "tests/testdata/semantic_tree_single_node.json"
+      dest = "semantic_tree_single_node.json"
+    },
+    {
+      path = "tests/testdata/semantic_tree_even_nodes.json"
+      dest = "semantic_tree_even_nodes.json"
+    },
+    {
+      path = "tests/testdata/semantic_tree_odd_nodes.json"
+      dest = "semantic_tree_odd_nodes.json"
+    },
+    {
+      path = "tests/testdata/deleted_subtree_even_nodes.json"
+      dest = "deleted_subtree_even_nodes.json"
+    },
+    {
+      path = "tests/testdata/cyclic_semantic_tree.json"
+      dest = "cyclic_semantic_tree.json"
+    },
+  ]
 
   tests = [
     {
