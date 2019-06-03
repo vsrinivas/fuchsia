@@ -39,7 +39,7 @@ constexpr pbus_mmio_t gdc_mmios[] = {
 constexpr pbus_bti_t gdc_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_CAMERA,
+        .bti_id = BTI_GDC,
     },
 };
 
@@ -70,7 +70,7 @@ static pbus_dev_t gdc_dev = []() {
 constexpr pbus_bti_t isp_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_CAMERA,
+        .bti_id = BTI_ISP,
     },
 };
 
@@ -234,7 +234,7 @@ constexpr pbus_mmio_t mipi_mmios[] = {
 constexpr pbus_bti_t mipi_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_CAMERA,
+        .bti_id = BTI_MIPI,
     },
 };
 
