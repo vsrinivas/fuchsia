@@ -38,25 +38,38 @@ static void Usage(const char* exe_name) {
       exe_name);
 }
 
+enum Args {
+  kPath = 0,
+  kCommand,
+  kZirconBuildRoot,
+  kFidlgenLlcppPath,
+  kStamp,
+  kDepfile,
+  kTmpDir,
+
+  // Number of arguments
+  kSIZE
+};
+
 int main(int argc, char** argv) {
-  if (argc != 7) {
-    std::cerr << argv[0] << ": Invalid arguments" << "\n\n";
-    Usage(argv[0]);
+  if (argc != Args::kSIZE) {
+    std::cerr << argv[Args::kPath] << ": Invalid arguments" << "\n\n";
+    Usage(argv[Args::kPath]);
     return -1;
   }
   // Since we're dealing with two builds, it's less ambiguous if we start with
   // all absolute paths in the beginning, then convert to relative paths
   // where required, similar to rebase_path in GN.
-  fs::path zircon_build_root = fs::absolute(argv[2]);
-  fs::path fidlgen_llcpp_path = fs::absolute(argv[3]);
-  fs::path stamp_path = fs::absolute(argv[4]);
+  fs::path zircon_build_root = fs::absolute(argv[Args::kZirconBuildRoot]);
+  fs::path fidlgen_llcpp_path = fs::absolute(argv[Args::kFidlgenLlcppPath]);
+  fs::path stamp_path = fs::absolute(argv[Args::kStamp]);
   fs::remove(stamp_path);
-  fs::path depfile_path = fs::absolute(argv[5]);
+  fs::path depfile_path = fs::absolute(argv[Args::kDepfile]);
   fs::remove(depfile_path);
-  fs::path tmp_dir = fs::absolute(argv[6]);
+  fs::path tmp_dir = fs::absolute(argv[Args::kTmpDir]);
 
   std::vector<fs::path> dependencies;
-  if (strcmp(argv[1], "validate") == 0) {
+  if (strcmp(argv[Args::kCommand], "validate") == 0) {
     bool ok = DoValidate(zircon_build_root, fidlgen_llcpp_path, tmp_dir,
                          &dependencies);
     if (!ok) {
@@ -66,12 +79,14 @@ int main(int argc, char** argv) {
                 << "========================================================\n";
       return -1;
     }
-  } else if (strcmp(argv[1], "update") == 0) {
+  } else if (strcmp(argv[Args::kCommand], "update") == 0) {
     DoUpdate(zircon_build_root, fidlgen_llcpp_path, &dependencies);
   } else {
-    std::cerr << argv[0] << ": Expected validate or update, not " << argv[1]
+    std::cerr << argv[Args::kPath]
+              << ": Expected validate or update, not "
+              << argv[Args::kCommand]
               << "\n\n";
-    Usage(argv[0]);
+    Usage(argv[Args::kPath]);
     return -1;
   }
   // Generate depfile
