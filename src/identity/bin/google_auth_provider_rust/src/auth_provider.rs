@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::AuthProviderError;
+use failure::Error;
+use fidl;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::ClientEnd;
-use fidl::Error;
 use fidl_fuchsia_auth::{
     AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker, AuthChallenge,
     AuthProviderGetAppAccessTokenFromAssertionJwtResponder, AuthProviderGetAppAccessTokenResponder,
@@ -17,7 +19,7 @@ use fidl_fuchsia_auth::{
 use futures::prelude::*;
 use log::warn;
 
-type AuthProviderResult<T> = Result<T, AuthProviderStatus>;
+type AuthProviderResult<T> = Result<T, AuthProviderError>;
 
 /// An implementation of the `AuthProvider` FIDL protocol that communicates
 /// with the Google identity system to perform authentication for and issue
@@ -101,7 +103,7 @@ impl GoogleAuthProvider {
         _user_profile_id: Option<String>,
     ) -> AuthProviderResult<(String, UserProfileInfo)> {
         // TODO(satsukiu): implement
-        Err(AuthProviderStatus::InternalError)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 
     /// Implementation of `GetAppAccessToken` method for the `AuthProvider`
@@ -113,7 +115,7 @@ impl GoogleAuthProvider {
         _scopes: Vec<String>,
     ) -> AuthProviderResult<AuthToken> {
         // TODO(satsukiu): implement
-        Err(AuthProviderStatus::InternalError)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 
     /// Implementation of `GetAppIdToken` method for the `AuthProvider`
@@ -124,7 +126,7 @@ impl GoogleAuthProvider {
         _audience: Option<String>,
     ) -> AuthProviderResult<AuthToken> {
         // TODO(satsukiu): implement
-        Err(AuthProviderStatus::InternalError)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 
     /// Implementation of `GetAppFirebaseToken` method for the `AuthProvider`
@@ -135,7 +137,7 @@ impl GoogleAuthProvider {
         _firebase_api_key: String,
     ) -> AuthProviderResult<FirebaseToken> {
         // TODO(satsukiu): implement
-        Err(AuthProviderStatus::InternalError)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 
     /// Implementation of `RevokeAppOrPersistentCredential` method for the
@@ -145,7 +147,7 @@ impl GoogleAuthProvider {
         _credential: String,
     ) -> AuthProviderResult<()> {
         // TODO(satsukiu): implement
-        Err(AuthProviderStatus::InternalError)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 
     /// Implementation of `GetPersistentCredentialFromAttestationJWT` method
@@ -158,7 +160,7 @@ impl GoogleAuthProvider {
         _user_profile_id: Option<String>,
     ) -> AuthProviderResult<(String, AuthToken, AuthChallenge, UserProfileInfo)> {
         // Remote attestation flow is not supported for traditional OAuth.
-        Err(AuthProviderStatus::BadRequest)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 
     /// Implementation of `GetAppAccessTokenFromAssertionJWT` method for the
@@ -171,7 +173,7 @@ impl GoogleAuthProvider {
         _scopes: Vec<String>,
     ) -> AuthProviderResult<(String, AuthToken, AuthChallenge)> {
         // Remote attestation flow is not supported for traditional OAuth.
-        Err(AuthProviderStatus::BadRequest)
+        Err(AuthProviderError::new(AuthProviderStatus::InternalError))
     }
 }
 
@@ -184,7 +186,7 @@ trait Responder: Sized {
     fn send_result(self, result: AuthProviderResult<Self::Data>) {
         let send_result = match result {
             Ok(val) => self.send_raw(AuthProviderStatus::Ok, Some(val)),
-            Err(err) => self.send_raw(err, None),
+            Err(err) => self.send_raw(err.status, None),
         };
         if let Err(err) = send_result {
             warn!("Error sending response to {}: {:?}", Self::METHOD_NAME, err);
@@ -192,7 +194,11 @@ trait Responder: Sized {
     }
 
     /// Send response without handling failures.
-    fn send_raw(self, status: AuthProviderStatus, data: Option<Self::Data>) -> Result<(), Error>;
+    fn send_raw(
+        self,
+        status: AuthProviderStatus,
+        data: Option<Self::Data>,
+    ) -> Result<(), fidl::Error>;
 
     const METHOD_NAME: &'static str;
 }
@@ -205,7 +211,7 @@ impl Responder for AuthProviderGetPersistentCredentialResponder {
         self,
         status: AuthProviderStatus,
         data: Option<(String, UserProfileInfo)>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), fidl::Error> {
         match data {
             None => self.send(status, None, None),
             Some((credential, mut user_profile_info)) => self.send(
@@ -225,7 +231,7 @@ impl Responder for AuthProviderGetAppAccessTokenResponder {
         self,
         status: AuthProviderStatus,
         mut data: Option<AuthToken>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), fidl::Error> {
         self.send(status, data.as_mut().map(OutOfLine))
     }
 }
@@ -238,7 +244,7 @@ impl Responder for AuthProviderGetAppIdTokenResponder {
         self,
         status: AuthProviderStatus,
         mut data: Option<AuthToken>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), fidl::Error> {
         self.send(status, data.as_mut().map(OutOfLine))
     }
 }
@@ -251,7 +257,7 @@ impl Responder for AuthProviderGetAppFirebaseTokenResponder {
         self,
         status: AuthProviderStatus,
         mut data: Option<FirebaseToken>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), fidl::Error> {
         self.send(status, data.as_mut().map(OutOfLine))
     }
 }
@@ -260,7 +266,7 @@ impl Responder for AuthProviderRevokeAppOrPersistentCredentialResponder {
     type Data = ();
     const METHOD_NAME: &'static str = "RevokeAppOrPersistentCredential";
 
-    fn send_raw(self, status: AuthProviderStatus, _data: Option<()>) -> Result<(), Error> {
+    fn send_raw(self, status: AuthProviderStatus, _data: Option<()>) -> Result<(), fidl::Error> {
         self.send(status)
     }
 }
@@ -273,7 +279,7 @@ impl Responder for AuthProviderGetPersistentCredentialFromAttestationJwtResponde
         self,
         status: AuthProviderStatus,
         data: Option<(String, AuthToken, AuthChallenge, UserProfileInfo)>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), fidl::Error> {
         match data {
             None => self.send(status, None, None, None, None),
             Some((credential, mut auth_token, mut auth_challenge, mut user_profile_info)) => self
@@ -296,7 +302,7 @@ impl Responder for AuthProviderGetAppAccessTokenFromAssertionJwtResponder {
         self,
         status: AuthProviderStatus,
         data: Option<(String, AuthToken, AuthChallenge)>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), fidl::Error> {
         match data {
             None => self.send(status, None, None, None),
             Some((credential, mut auth_token, mut auth_challenge)) => self.send(
