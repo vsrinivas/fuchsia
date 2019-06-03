@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_CAST_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_CAST_H_
 
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -10,6 +11,7 @@
 namespace zxdb {
 
 class Err;
+class ExprEvalContext;
 class ExprValue;
 class Type;
 
@@ -68,14 +70,18 @@ const char* CastTypeToString(CastType);
 //
 // The dest_source is an optional specification of what "source location" the
 // returned value should have.
-Err CastExprValue(CastType cast_type, const ExprValue& source,
-                  const fxl::RefPtr<Type>& dest_type, ExprValue* result,
+Err CastExprValue(ExprEvalContext* eval_context, CastType cast_type,
+                  const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                  ExprValue* result,
                   const ExprValueSource& dest_source = ExprValueSource());
 
 // See comment for CastExprValue. This determines whether the source should
 // have references expanded to the referenced data before executing the given
 // cast.
-bool CastShouldFollowReferences(CastType cast_type, const ExprValue& source,
+bool CastShouldFollowReferences(ExprEvalContext* eval_context,
+                                CastType cast_type, const ExprValue& source,
                                 const fxl::RefPtr<Type>& dest_type);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_CAST_H_

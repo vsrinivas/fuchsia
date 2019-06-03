@@ -231,13 +231,14 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
 void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                         EvalCallback cb) const {
   // Callback that does the cast given the right type of value.
-  auto exec_cast = [cast_type = cast_type_, to_type = to_type_->type(),
+  auto exec_cast = [context, cast_type = cast_type_, to_type = to_type_->type(),
                     cb = std::move(cb)](const Err& err, ExprValue value) {
     if (err.has_error()) {
       cb(err, value);
     } else {
       ExprValue cast_result;
-      Err cast_err = CastExprValue(cast_type, value, to_type, &cast_result);
+      Err cast_err =
+          CastExprValue(context.get(), cast_type, value, to_type, &cast_result);
       if (cast_err.has_error())
         cb(cast_err, ExprValue());
       else
@@ -251,8 +252,8 @@ void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
        exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) {
         // This lambda optionally follows the reference on the value according
         // to the requirements of the cast.
-        if (err.has_error() ||
-            !CastShouldFollowReferences(cast_type, value, to_type)) {
+        if (err.has_error() || !CastShouldFollowReferences(
+                                   context.get(), cast_type, value, to_type)) {
           exec_cast(err, value);  // Also handles the error cases.
         } else {
           EnsureResolveReference(context->GetDataProvider(), std::move(value),
