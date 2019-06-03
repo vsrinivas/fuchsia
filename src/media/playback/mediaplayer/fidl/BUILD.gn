@@ -28,12 +28,12 @@ source_set("fidl") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/media/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/decode",

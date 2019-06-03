@@ -48,7 +48,7 @@ source_set("graph") {
 
   public_deps = [
     "//garnet/public/lib/fostr",
-    "//garnet/public/lib/media/timeline",
+    "//sdk/lib/media/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",

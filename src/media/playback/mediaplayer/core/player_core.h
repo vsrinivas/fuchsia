@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/core/sink_segment.h"
 #include "src/media/playback/mediaplayer/core/source_segment.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"

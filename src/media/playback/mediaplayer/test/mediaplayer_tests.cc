@@ -11,8 +11,8 @@
 #include <queue>
 
 #include "lib/fsl/io/fd.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/type_converters.h"
+#include "lib/media/cpp/timeline_function.h"
+#include "lib/media/cpp/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"

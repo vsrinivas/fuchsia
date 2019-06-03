@@ -14,7 +14,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/core/player_core.h"
 #include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/demux/demux.h"

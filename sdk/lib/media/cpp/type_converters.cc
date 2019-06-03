@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/media/timeline/type_converters.h"
+#include "lib/media/cpp/type_converters.h"
 
 namespace fidl {
 

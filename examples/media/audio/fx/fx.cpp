@@ -15,7 +15,7 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/media/timeline/timeline_function.h>
+#include <lib/media/cpp/timeline_function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>

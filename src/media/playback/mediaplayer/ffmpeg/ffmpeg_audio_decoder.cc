@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_audio_decoder.h"
 
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media_player {
@@ -74,7 +74,7 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
                  : AllocatePayloadBuffer(buffer_size);
 
   if (!buffer) {
-      // TODO(dalesat): Record/report packet drop.
+    // TODO(dalesat): Record/report packet drop.
     return -1;
   }
 

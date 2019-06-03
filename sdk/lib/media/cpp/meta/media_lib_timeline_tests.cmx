@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/media_lib_timeline_tests"
-    },
-    "sandbox": {
-        "services": [ ]
     }
 }

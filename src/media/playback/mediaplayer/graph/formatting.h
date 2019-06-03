@@ -8,7 +8,7 @@
 #include <ostream>
 
 #include "lib/fostr/indent.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/nodes/output.h"

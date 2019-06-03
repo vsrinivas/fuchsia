@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_
-#define LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_
+#ifndef LIB_MEDIA_CPP_TIMELINE_RATE_H_
+#define LIB_MEDIA_CPP_TIMELINE_RATE_H_
 
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -156,4 +156,4 @@ inline int64_t operator/(int64_t a, TimelineRate b) {
 
 }  // namespace media
 
-#endif  // LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_
+#endif  // LIB_MEDIA_CPP_TIMELINE_RATE_H_

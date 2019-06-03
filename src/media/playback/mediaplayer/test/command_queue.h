@@ -12,7 +12,7 @@
 
 #include <queue>
 
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media_player {

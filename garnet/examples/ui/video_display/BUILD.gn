@@ -15,12 +15,12 @@ executable("video_display") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/timeline:timeline",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.simplecamera",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/media/cpp",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

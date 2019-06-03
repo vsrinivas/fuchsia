@@ -12,7 +12,7 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"

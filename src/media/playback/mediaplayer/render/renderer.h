@@ -9,7 +9,7 @@
 
 #include <limits>
 
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 

@@ -11,7 +11,7 @@
 #include <atomic>
 #include <cmath>
 
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 

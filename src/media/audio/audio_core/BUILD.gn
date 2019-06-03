@@ -107,9 +107,9 @@ executable("audio_core_bin") {
   deps = [
     ":generate_schemas",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/timeline:no_converters",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/cpp",
+    "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer:audio_mixer_lib",

@@ -40,7 +40,7 @@ source_set("audio_mixer_lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/timeline:no_converters",
+    "//sdk/lib/media/cpp:no_converters",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]

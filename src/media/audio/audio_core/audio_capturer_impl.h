@@ -14,8 +14,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_function.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_object.h"

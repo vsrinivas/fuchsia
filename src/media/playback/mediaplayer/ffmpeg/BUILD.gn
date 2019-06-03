@@ -33,9 +33,9 @@ source_set("ffmpeg") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
+    "//sdk/lib/media/cpp",
     "//src/lib/fxl",
     "//src/media/lib/ffmpeg",
     "//src/media/playback/mediaplayer/decode",

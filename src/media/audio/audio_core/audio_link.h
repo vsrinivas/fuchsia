@@ -8,8 +8,8 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 
-#include "lib/media/timeline/timeline_function.h"
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_function.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/mixer/gain.h"

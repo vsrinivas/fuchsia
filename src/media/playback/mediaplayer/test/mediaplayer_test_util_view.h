@@ -15,7 +15,7 @@
 #include <queue>
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 

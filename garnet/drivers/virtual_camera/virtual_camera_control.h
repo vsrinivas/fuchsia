@@ -11,7 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fzl/vmo-pool.h>
-#include <lib/media/timeline/timeline_function.h>
+#include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/eventpair.h>
 
 namespace virtual_camera {

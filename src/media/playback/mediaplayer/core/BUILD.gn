@@ -30,8 +30,8 @@ source_set("core") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/timeline",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/media/cpp",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",

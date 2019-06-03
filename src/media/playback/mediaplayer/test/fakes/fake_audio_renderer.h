@@ -15,7 +15,7 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/test/fakes/packet_info.h"
 

@@ -37,8 +37,8 @@ executable("tones_bin") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-midi:fuchsia-hardware-midi_c",

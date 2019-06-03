@@ -7,7 +7,7 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/media/playback/mediaplayer/core/segment.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 #include "src/media/playback/mediaplayer/graph/result.h"

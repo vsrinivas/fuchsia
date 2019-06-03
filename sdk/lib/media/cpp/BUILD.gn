@@ -2,24 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-source_set("timeline") {
+sdk_source_set("cpp") {
+  category = "partner"
+
+  sdk_name = "media_cpp"
+
   sources = [
     "type_converters.cc",
     "type_converters.h",
   ]
+
+  include_base = "//sdk"
 
   public_deps = [
     ":no_converters",
     "//sdk/fidl/fuchsia.media",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
+  public_configs = [ "//sdk/config" ]
 }
 
-source_set("no_converters") {
+sdk_source_set("no_converters") {
+  category = "partner"
+
+  sdk_name = "media_cpp_no_converters"
+
   sources = [
     "timeline_function.cc",
     "timeline_function.h",
@@ -27,7 +38,9 @@ source_set("no_converters") {
     "timeline_rate.h",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
+  include_base = "//sdk"
+
+  public_configs = [ "//sdk/config" ]
 }
 
 executable("test_bin") {
@@ -40,7 +53,7 @@ executable("test_bin") {
   ]
 
   deps = [
-    ":timeline",
+    ":cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

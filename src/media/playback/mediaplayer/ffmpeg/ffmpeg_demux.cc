@@ -14,7 +14,7 @@
 #include <optional>
 #include <thread>
 
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"

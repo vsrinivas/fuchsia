@@ -18,7 +18,7 @@
 #include <set>
 #include <thread>
 
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/time/time_point.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"

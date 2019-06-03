@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
-#define LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
+#ifndef LIB_MEDIA_CPP_TIMELINE_FUNCTION_H_
+#define LIB_MEDIA_CPP_TIMELINE_FUNCTION_H_
 
 #include <zircon/assert.h>
 
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_rate.h"
 
 namespace media {
 
@@ -123,4 +123,4 @@ inline TimelineFunction operator*(const TimelineFunction& bc,
 
 }  // namespace media
 
-#endif  // LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
+#endif  // LIB_MEDIA_CPP_TIMELINE_FUNCTION_H_

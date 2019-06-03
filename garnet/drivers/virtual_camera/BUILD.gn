@@ -17,9 +17,9 @@ driver_module("virtual_camera_driver") {
   ]
 
   deps = [
-    "//garnet/public/lib/media/timeline:timeline",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/media/cpp",
     "//src/lib/fxl",
     "//zircon/public/banjo/ddk.protocol.usb",
     "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",

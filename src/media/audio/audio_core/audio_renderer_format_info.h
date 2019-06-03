@@ -9,7 +9,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 
-#include "lib/media/timeline/timeline_rate.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/macros.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 

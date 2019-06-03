@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MEDIA_TIMELINE_TYPE_CONVERTERS_H_
-#define LIB_MEDIA_TIMELINE_TYPE_CONVERTERS_H_
+#ifndef LIB_MEDIA_CPP_TYPE_CONVERTERS_H_
+#define LIB_MEDIA_CPP_TYPE_CONVERTERS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 
 namespace fidl {
 
@@ -27,4 +28,4 @@ struct TypeConverter<media::TimelineFunction,
 
 }  // namespace fidl
 
-#endif  // LIB_MEDIA_TIMELINE_TYPE_CONVERTERS_H_
+#endif  // LIB_MEDIA_CPP_TYPE_CONVERTERS_H_

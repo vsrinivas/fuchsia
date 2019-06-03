@@ -12,7 +12,7 @@
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/media/timeline/timeline_function.h"
+#include "lib/media/cpp/timeline_function.h"
 #include "src/lib/fxl/macros.h"
 
 namespace examples {
