@@ -2002,7 +2002,7 @@ bool create_exception_channel_invalid_args_test() {
     TestLoop loop;
 
     zx::channel exception_channel;
-    EXPECT_EQ(loop.aux_thread().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER,
+    EXPECT_EQ(loop.aux_thread().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                          &exception_channel),
               ZX_ERR_INVALID_ARGS, "");
 
@@ -2333,7 +2333,7 @@ bool exception_channel_order_test() {
 
     // Set the exception channels up in the expected order.
     zx::channel exception_channels[5];
-    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER,
+    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                       &exception_channels[0]),
               ZX_OK, "");
     EXPECT_EQ(loop.aux_thread().create_exception_channel(0u, &exception_channels[1]), ZX_OK, "");
@@ -2361,7 +2361,7 @@ bool thread_lifecycle_channel_exception_test() {
 
     loop.Step1CreateProcess();
     zx::channel exception_channel;
-    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER,
+    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                       &exception_channel),
               ZX_OK, "");
 
@@ -2425,7 +2425,7 @@ bool process_lifecycle_channel_exception_test() {
     {
         TestLoop loop(TestLoop::Control::kManual);
 
-        EXPECT_EQ((loop.*task_func)().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER,
+        EXPECT_EQ((loop.*task_func)().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                                &exception_channel),
                   ZX_OK, "");
 
@@ -2473,10 +2473,10 @@ bool process_start_channel_exception_does_not_bubble_up_test() {
     {
         TestLoop loop(TestLoop::Control::kManual);
 
-        EXPECT_EQ(loop.parent_job().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER,
+        EXPECT_EQ(loop.parent_job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                              &parent_exception_channel),
                   ZX_OK, "");
-        EXPECT_EQ(loop.job().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER,
+        EXPECT_EQ(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                       &exception_channel),
                   ZX_OK, "");
 
@@ -2555,10 +2555,11 @@ bool lifecycle_channel_blocking_test() {
     loop.Step1CreateProcess();
 
     zx::channel job_channel;
-    EXPECT_EQ(loop.job().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER, &job_channel),
+    EXPECT_EQ(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &job_channel),
               ZX_OK, "");
     zx::channel process_channel;
-    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER, &process_channel),
+    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                      &process_channel),
               ZX_OK, "");
 
     // Process/thread start: exception handler should block the task.
@@ -2659,11 +2660,12 @@ bool channel_synthetic_read_write_regs_test() {
     zx::channel process_channel;
 
     TestLoop loop(TestLoop::Control::kManual);
-    EXPECT_EQ(loop.job().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER, &job_channel),
+    EXPECT_EQ(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &job_channel),
               ZX_OK, "");
 
     loop.Step1CreateProcess();
-    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER, &process_channel),
+    EXPECT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                      &process_channel),
               ZX_OK, "");
 
     loop.Step2StartThreads();
@@ -2813,15 +2815,15 @@ RUN_TEST((task_requires_right_test<&TestLoop::job, ZX_RIGHT_ENUMERATE>));
 RUN_TEST(create_second_exception_channel_test);
 RUN_TEST(overwrite_closed_exception_channel_test);
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::aux_thread, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_THREAD, false>));
+                                            ZX_EXCEPTION_CHANNEL_TYPE_THREAD, false>));
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::process, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_PROCESS, true>));
-RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::process, ZX_EXCEPTION_PORT_DEBUGGER,
-                                            ZX_EXCEPTION_PORT_TYPE_DEBUGGER, true>));
+                                            ZX_EXCEPTION_CHANNEL_TYPE_PROCESS, true>));
+RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::process, ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                            ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER, true>));
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::job, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_JOB, true>));
+                                            ZX_EXCEPTION_CHANNEL_TYPE_JOB, true>));
 RUN_TEST_ENABLE_CRASH_HANDLER((receive_test<&TestLoop::parent_job, 0u,
-                                            ZX_EXCEPTION_PORT_TYPE_JOB, true>));
+                                            ZX_EXCEPTION_CHANNEL_TYPE_JOB, true>));
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_resume_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_state_property_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_state_property_bad_args_test);
@@ -2830,10 +2832,10 @@ RUN_TEST_ENABLE_CRASH_HANDLER(close_channel_without_exception_test);
 RUN_TEST((task_death_closes_exception_channel_test<&TestLoop::aux_thread, 0u>));
 RUN_TEST((task_death_closes_exception_channel_test<&TestLoop::process, 0u>));
 RUN_TEST((task_death_closes_exception_channel_test<&TestLoop::process,
-                                                   ZX_EXCEPTION_PORT_DEBUGGER>));
+                                                   ZX_EXCEPTION_CHANNEL_DEBUGGER>));
 RUN_TEST((task_death_closes_exception_channel_test<&TestLoop::job, 0u>));
 RUN_TEST((task_death_closes_exception_channel_test<&TestLoop::job,
-                                                   ZX_EXCEPTION_PORT_DEBUGGER>));
+                                                   ZX_EXCEPTION_CHANNEL_DEBUGGER>));
 RUN_TEST(thread_death_with_exception_in_channel_test);
 RUN_TEST(thread_death_with_exception_received_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_channel_order_test);
@@ -2845,7 +2847,7 @@ RUN_TEST(lifecycle_channel_exception_debug_handlers_only_test);
 RUN_TEST(lifecycle_channel_blocking_test);
 RUN_TEST((channel_read_write_regs_test<&TestLoop::aux_thread, 0u>));
 RUN_TEST((channel_read_write_regs_test<&TestLoop::process, 0u>));
-RUN_TEST((channel_read_write_regs_test<&TestLoop::process, ZX_EXCEPTION_PORT_DEBUGGER>));
+RUN_TEST((channel_read_write_regs_test<&TestLoop::process, ZX_EXCEPTION_CHANNEL_DEBUGGER>));
 RUN_TEST((channel_read_write_regs_test<&TestLoop::job, 0u>));
 RUN_TEST((channel_read_write_regs_test<&TestLoop::parent_job, 0u>));
 RUN_TEST(channel_synthetic_read_write_regs_test);

@@ -117,25 +117,31 @@ typedef struct zx_exception_info {
     zx_excp_type_t type;
 } zx_exception_info_t;
 
-// Options for zx_task_resume_from_exception()
-#define ZX_RESUME_TRY_NEXT ((uint32_t)2)
-// Indicates that instead of resuming from the faulting instruction we instead
-// let the next exception handler in the search order, if any, process the
-// exception. If there are no more then the entire process is killed.
+// Options for zx_create_exception_channel.
+// When creating an exception channel, use the task's debug channel.
+#define ZX_EXCEPTION_CHANNEL_DEBUGGER ((uint32_t)1)
 
-// Options for zx_task_bind_exception_port.
-#define ZX_EXCEPTION_PORT_DEBUGGER ((uint32_t)1)
-// When binding an exception port to a process, set the process's debugger
-// exception port.
-
-// The type of exception port a thread may be waiting for a response from.
+// The type of exception handler a thread may be waiting for a response from.
 // These values are reported in zx_info_thread_t.wait_exception_port_type.
-#define ZX_EXCEPTION_PORT_TYPE_NONE         ((uint32_t)0u)
-#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER     ((uint32_t)1u)
-#define ZX_EXCEPTION_PORT_TYPE_THREAD       ((uint32_t)2u)
-#define ZX_EXCEPTION_PORT_TYPE_PROCESS      ((uint32_t)3u)
-#define ZX_EXCEPTION_PORT_TYPE_JOB          ((uint32_t)4u)
-#define ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER ((uint32_t)5u)
+#define ZX_EXCEPTION_CHANNEL_TYPE_NONE         ((uint32_t)0u)
+#define ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER     ((uint32_t)1u)
+#define ZX_EXCEPTION_CHANNEL_TYPE_THREAD       ((uint32_t)2u)
+#define ZX_EXCEPTION_CHANNEL_TYPE_PROCESS      ((uint32_t)3u)
+#define ZX_EXCEPTION_CHANNEL_TYPE_JOB          ((uint32_t)4u)
+#define ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER ((uint32_t)5u)
+
+// Deprecated, use channel-based exception API instead.
+// TODO(ZX-4031): remove port-based constants once everyone is switched over.
+#define ZX_RESUME_TRY_NEXT ((uint32_t)2)
+
+#define ZX_EXCEPTION_PORT_DEBUGGER ZX_EXCEPTION_CHANNEL_DEBUGGER
+
+#define ZX_EXCEPTION_PORT_TYPE_NONE         ZX_EXCEPTION_CHANNEL_TYPE_NONE
+#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER     ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER
+#define ZX_EXCEPTION_PORT_TYPE_THREAD       ZX_EXCEPTION_CHANNEL_TYPE_THREAD
+#define ZX_EXCEPTION_PORT_TYPE_PROCESS      ZX_EXCEPTION_CHANNEL_TYPE_PROCESS
+#define ZX_EXCEPTION_PORT_TYPE_JOB          ZX_EXCEPTION_CHANNEL_TYPE_JOB
+#define ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER
 
 __END_CDECLS
 

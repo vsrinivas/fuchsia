@@ -174,7 +174,7 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
                                               user_out_handle* out) {
     LTRACE_ENTRY;
 
-    if (options & ~ZX_EXCEPTION_PORT_DEBUGGER)
+    if (options & ~ZX_EXCEPTION_CHANNEL_DEBUGGER)
         return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -209,8 +209,8 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
     zx_rights_t thread_rights = task_rights;
 
     Exceptionate::Type type =
-        (options & ZX_EXCEPTION_PORT_DEBUGGER) ? Exceptionate::Type::kDebug
-                                               : Exceptionate::Type::kStandard;
+        (options & ZX_EXCEPTION_CHANNEL_DEBUGGER) ? Exceptionate::Type::kDebug
+                                                  : Exceptionate::Type::kStandard;
     Exceptionate* exceptionate = nullptr;
     bool job_or_process = false;
 

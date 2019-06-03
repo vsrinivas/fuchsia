@@ -420,7 +420,8 @@ static bool CheckInvokingPolicyWithException(ExceptionTestType test_type,
                                               ZX_EXCEPTION_PORT_DEBUGGER),
                   ZX_OK);
     } else {
-        ASSERT_EQ(proc.create_exception_channel(ZX_EXCEPTION_PORT_DEBUGGER, &exc_channel), ZX_OK);
+        ASSERT_EQ(proc.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exc_channel),
+                  ZX_OK);
     }
 
     EXPECT_EQ(mini_process_cmd_send(ctrl, minip_cmd), ZX_OK);

@@ -25,7 +25,7 @@ exceptions from the thread, process, or job.
 
 *handle* is the thread, process, or job handle to receive exceptions from.
 
-*options* can be 0 or **ZX_EXCEPTION_PORT_DEBUGGER** to register for debug
+*options* can be 0 or **ZX_EXCEPTION_CHANNEL_DEBUGGER** to register for debug
 exceptions (process or job only).
 
 *out* will be filled with the newly created channel endpoint on success. This
