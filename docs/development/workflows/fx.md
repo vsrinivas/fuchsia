@@ -476,6 +476,32 @@ On some devices (most arm64 devices at present) there are also some useful flags
 * `fx reboot -r` reboot into "recovery" (Zedboot)
 * `fx reboot -b` reboot into "bootloader" (Flash)
 
+### Tell a CL's status
+
+`fx whereiscl <query>`
+
+This command tells whether the given CL is merged, and if so whether it passed
+Global Integration. The query can be either a Gerrit review URL, a CL number, a
+Change-Id, or a git revisioin.
+
+```shell
+$ fx whereiscl fxr/286748
+CL status: MERGED
+GI status: PASSED
+
+$ fx whereiscl
+https://fuchsia-review.googlesource.com/c/fuchsia/+/287311/1/garnet/go/src/amber/source/source.go
+CL status: NEW
+
+$ fx whereiscl I94c56fa4e59842d398bfa90a48c45b388f095184
+CL status: MERGED
+GI status: PASSED
+
+$ fx whereiscl 6575aee
+CL status: MERGED
+GI status: PENDING
+```
+
 ### Debugging and developing `fx` commands
 
 * `fx -x` the `-x` flag turns on tracing for the `fx` scripts, printing out all
