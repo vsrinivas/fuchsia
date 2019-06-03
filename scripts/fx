@@ -133,7 +133,7 @@ if [[ -z "${fuchsia_dir}" ]]; then
   while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
     fuchsia_dir="$(dirname "${fuchsia_dir}")"
     if [[ "${fuchsia_dir}" == "/" ]]; then
-      fx-error "Cannot find Platform Source Tree containing $(pwd)"
+      echo "Cannot find Platform Source Tree containing $(pwd)"
       exit 1
     fi
   done
