@@ -2,7 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("audio_player") {
+import("//build/package.gni")
+
+package("audio_player") {
+  deps = [
+    ":audio_player_bin",
+  ]
+
+  binaries = [
+    {
+      name = "audio_player"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/audio_player.cmx")
+      dest = "audio_player.cmx"
+    },
+  ]
+}
+
+executable("audio_player_bin") {
+  output_name = "audio_player"
+
   sources = [
     "audio_player.cc",
     "audio_player.h",

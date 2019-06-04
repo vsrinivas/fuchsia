@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/mediaplayer/audio_player/audio_player.h"
+#include "examples/media/playback/audio_player/audio_player.h"
 
 #include <fcntl.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -14,7 +14,7 @@
 
 #include <iomanip>
 
-#include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
+#include "examples/media/playback/audio_player/audio_player_params.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
 #include "src/lib/fxl/logging.h"

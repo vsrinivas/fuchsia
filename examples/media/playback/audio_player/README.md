@@ -8,7 +8,7 @@ player.
 The audio player uses a file reader or a network reader. To use the file
 reader, you'll need to have an accessible file. Here's an example command line:
 ```
-    audio_player /data/audio.ogg
+    audio_player /tmp/audio.ogg
 ```
 Here's an example using the network reader:
 ```

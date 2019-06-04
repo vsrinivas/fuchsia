@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/audio_player"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.media.playback.Player"
+        ]
+    }
+}

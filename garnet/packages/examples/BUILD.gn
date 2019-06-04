@@ -160,7 +160,7 @@ group("overnet") {
 group("mediaplayer") {
   testonly = true
   public_deps = [
-    "//garnet/examples/mediaplayer:mediaplayer_examples",
+    "//examples/media/playback",
   ]
 }
 
