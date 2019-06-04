@@ -84,6 +84,7 @@ sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
 sdk://tools/bootserver
+sdk://tools/bugreport
 sdk://tools/cmc
 sdk://tools/dev_finder
 sdk://tools/far
