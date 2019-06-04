@@ -281,8 +281,7 @@ impl<'a> ScanResult<'a> {
                 parent
                     .hierarchy
                     .properties
-                    // TODO(CF-808): support lossy conversions to strings.
-                    .push(Property::String(name, String::from_utf8(buffer)?));
+                    .push(Property::String(name, String::from_utf8_lossy(&buffer).to_string()));
             }
             PropertyFormat::Bytes => {
                 parent.hierarchy.properties.push(Property::Bytes(name, buffer));
@@ -294,7 +293,7 @@ impl<'a> ScanResult<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::vmo::constants};
 
     #[test]
     fn read_vmo() {
@@ -349,6 +348,49 @@ mod tests {
                     },
                 ],
             }
+        );
+    }
+
+    #[test]
+    fn from_invalid_utf8_string() {
+        // Creates a perfectly normal Inspector with a perfectly normal string
+        // property with a perfectly normal value.
+        let inspector = Inspector::new().unwrap();
+        let root = inspector.root();
+        let prop = root.create_string("property", "hello world");
+
+        // Now we will excavate the bytes that comprise the string property, then mess with them on
+        // purpose to produce an invalid UTF8 string in the property.
+        let vmo = &inspector.vmo;
+        let snapshot = Snapshot::try_from(vmo).expect("getting snapshot");
+        let block = snapshot.get_block(prop.block_index()).expect("getting block");
+
+        // The first byte of the actual property string is at this byte offset in the VMO.
+        let byte_offset = constants::MIN_ORDER_SIZE
+            * (block.property_extent_index().unwrap() as usize)
+            + constants::HEADER_SIZE_BYTES;
+
+        // Get the raw VMO bytes to mess with.
+        let vmo_size = vmo.get_size().expect("VMO size");
+        let mut buf = vec![0u8; vmo_size as usize];
+        vmo.read(&mut buf[..], /*offset=*/ 0).expect("read is a success");
+
+        // Mess up the first byte of the string property value such that the byte is an invalid
+        // UTF8 character.  Then build a new node hierarchy based off those bytes, see if invalid
+        // string is converted into a valid UTF8 string with some information lost.
+        buf[byte_offset] = 0xFE;
+        let nh = NodeHierarchy::try_from(Snapshot::build(&buf)).expect("creating node hierarchy");
+
+        assert_eq!(
+            nh,
+            NodeHierarchy {
+                name: "root".to_string(),
+                properties: vec![Property::String(
+                    "property".to_string(),
+                    "\u{FFFD}ello world".to_string()
+                )],
+                children: vec![],
+            },
         );
     }
 }

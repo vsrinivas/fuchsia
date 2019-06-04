@@ -340,6 +340,14 @@ macro_rules! property {
                 state: Option<Arc<Mutex<State>>>,
             }
 
+            impl [<$name Property>] {
+                /// FOR TEST ONLY. Excavates block_index from [<$name Property>].
+                #[cfg(test)]
+                pub fn block_index(&self) -> u32 {
+                    self.block_index.unwrap()
+                }
+            }
+
             impl<'t> Property<'t> for [<$name Property>] {
                 type Type = &'t $type;
 
@@ -349,6 +357,7 @@ macro_rules! property {
                             .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
                     }
                 }
+
             }
 
             dummy_trait_impls!([<$name Property>]);
