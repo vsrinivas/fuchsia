@@ -11,9 +11,9 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <unittest/unittest.h>
 #include <zircon/status.h>
 
@@ -29,6 +29,7 @@ enum class Board {
     kSherlock,
     kMt8167sRef,
     kMsm8x53Som,
+    kAs370,
     kUnknown,
 };
 
@@ -69,6 +70,8 @@ Board GetBoardType() {
         return Board::kMt8167sRef;
     } else if (!strcmp(board_name, "msm8x53-som")) {
         return Board::kMsm8x53Som;
+    } else if (!strcmp(board_name, "as370")) {
+        return Board::kAs370;
     }
 
     return Board::kUnknown;
@@ -328,7 +331,21 @@ bool msm8x53_som_enumeration_test() {
         "sys/platform/13:00:3/msm8x53-sdhci",
         "sys/platform/13:00:2/qcom-pil",
         "sys/platform/13:01:4/msm-clk",
-        "sys/platform/13:01:5/msm8x53-power"
+        "sys/platform/13:01:5/msm8x53-power"};
+
+    ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+
+    END_TEST;
+}
+
+bool as370_enumeration_test() {
+    BEGIN_TEST;
+    static const char* kDevicePaths[] = {
+        "sys/platform/as370",
+        "sys/platform/14:01:1",
+        "sys/platform/14:01:1/as370-gpio",
+        "sys/platform/00:00:9",
+        "sys/platform/00:00:9/dw-i2c",
     };
 
     ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
@@ -336,11 +353,11 @@ bool msm8x53_som_enumeration_test() {
     END_TEST;
 }
 
-#define MAKE_TEST_CASE(name) \
-    BEGIN_TEST_CASE(name) \
-    RUN_TEST(name ## _enumeration_test) \
-    END_TEST_CASE(name) \
-    test_case_element* test_case_ ## name = TEST_CASE_ELEMENT(name)
+#define MAKE_TEST_CASE(name)          \
+    BEGIN_TEST_CASE(name)             \
+    RUN_TEST(name##_enumeration_test) \
+    END_TEST_CASE(name)               \
+    test_case_element* test_case_##name = TEST_CASE_ELEMENT(name)
 
 MAKE_TEST_CASE(qemu);
 MAKE_TEST_CASE(vim2);
@@ -349,6 +366,7 @@ MAKE_TEST_CASE(cleo);
 MAKE_TEST_CASE(sherlock);
 MAKE_TEST_CASE(mt8167s_ref);
 MAKE_TEST_CASE(msm8x53_som);
+MAKE_TEST_CASE(as370);
 
 #undef MAKE_TEST_CASE
 
@@ -356,21 +374,23 @@ MAKE_TEST_CASE(msm8x53_som);
 
 int main(int argc, char** argv) {
     switch (GetBoardType()) {
-        case Board::kQemu:
-            return unittest_run_one_test(test_case_qemu, TEST_ALL) ? 0 : -1;
-        case Board::kVim2:
-            return unittest_run_one_test(test_case_vim2, TEST_ALL) ? 0 : -1;
-        case Board::kAstro:
-            return unittest_run_one_test(test_case_astro, TEST_ALL) ? 0 : -1;
-        case Board::kCleo:
-            return unittest_run_one_test(test_case_cleo, TEST_ALL) ? 0 : -1;
-        case Board::kSherlock:
-            return unittest_run_one_test(test_case_sherlock, TEST_ALL) ? 0 : -1;
-        case Board::kMt8167sRef:
-            return unittest_run_one_test(test_case_mt8167s_ref, TEST_ALL) ? 0 : -1;
-        case Board::kMsm8x53Som:
-            return unittest_run_one_test(test_case_msm8x53_som, TEST_ALL) ? 0 : -1;
-        case Board::kUnknown:
-            return 0;
+    case Board::kQemu:
+        return unittest_run_one_test(test_case_qemu, TEST_ALL) ? 0 : -1;
+    case Board::kVim2:
+        return unittest_run_one_test(test_case_vim2, TEST_ALL) ? 0 : -1;
+    case Board::kAstro:
+        return unittest_run_one_test(test_case_astro, TEST_ALL) ? 0 : -1;
+    case Board::kCleo:
+        return unittest_run_one_test(test_case_cleo, TEST_ALL) ? 0 : -1;
+    case Board::kSherlock:
+        return unittest_run_one_test(test_case_sherlock, TEST_ALL) ? 0 : -1;
+    case Board::kMt8167sRef:
+        return unittest_run_one_test(test_case_mt8167s_ref, TEST_ALL) ? 0 : -1;
+    case Board::kMsm8x53Som:
+        return unittest_run_one_test(test_case_msm8x53_som, TEST_ALL) ? 0 : -1;
+    case Board::kAs370:
+        return unittest_run_one_test(test_case_as370, TEST_ALL) ? 0 : -1;
+    case Board::kUnknown:
+        return 0;
     }
 }

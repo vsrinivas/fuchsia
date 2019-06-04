@@ -8,29 +8,31 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <hw/reg.h>
 #include <lib/sync/completion.h>
-#include <zircon/process.h>
 #include <zircon/assert.h>
+#include <zircon/process.h>
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <threads.h>
+#include <unistd.h>
 
 #include "dw-i2c-regs.h"
 
-typedef struct {
-    zx_handle_t                     irq_handle;
-    zx_handle_t                     event_handle;
-    mmio_buffer_t                   regs_iobuff;
-    zx_duration_t                   timeout;
+#define I2C_AS370_DW_TEST 0
 
-    uint32_t                        tx_fifo_depth;
-    uint32_t                        rx_fifo_depth;
+typedef struct {
+    zx_handle_t irq_handle;
+    zx_handle_t event_handle;
+    mmio_buffer_t regs_iobuff;
+    zx_duration_t timeout;
+
+    uint32_t tx_fifo_depth;
+    uint32_t rx_fifo_depth;
 } i2c_dw_dev_t;
 
 typedef struct {
@@ -40,8 +42,8 @@ typedef struct {
     size_t i2c_dev_count;
 } i2c_dw_t;
 
-static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop);
-static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, const uint8_t *buff, uint32_t len, bool stop);
+static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t* buff, uint32_t len, bool stop);
+static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, const uint8_t* buff, uint32_t len, bool stop);
 static zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr);
 
 zx_status_t i2c_dw_dumpstate(i2c_dw_dev_t* dev) {
@@ -78,7 +80,7 @@ static zx_status_t i2c_dw_enable_wait(i2c_dw_dev_t* dev, bool enable) {
 
     do {
         if (I2C_DW_GET_BITS32(DW_I2C_ENABLE_STATUS, DW_I2C_ENABLE_STATUS_EN_START,
-                                                    DW_I2C_ENABLE_STATUS_EN_BITS) == enable) {
+                              DW_I2C_ENABLE_STATUS_EN_BITS) == enable) {
             // we are done. exit
             return ZX_OK;
         }
@@ -87,9 +89,9 @@ static zx_status_t i2c_dw_enable_wait(i2c_dw_dev_t* dev, bool enable) {
     } while (poll++ < max_poll);
 
     zxlogf(ERROR, "%s: Could not %s I2C contoller! DW_I2C_ENABLE_STATUS = 0x%x\n",
-                                                            __FUNCTION__,
-                                                            enable? "enable" : "disable",
-                                                            I2C_DW_READ32(DW_I2C_ENABLE_STATUS));
+           __FUNCTION__,
+           enable ? "enable" : "disable",
+           I2C_DW_READ32(DW_I2C_ENABLE_STATUS));
     i2c_dw_dumpstate(dev);
 
     return ZX_ERR_TIMED_OUT;
@@ -117,8 +119,8 @@ static zx_status_t i2c_dw_disable(i2c_dw_dev_t* dev) {
 }
 
 static zx_status_t i2c_dw_wait_event(i2c_dw_dev_t* dev, uint32_t sig_mask) {
-    uint32_t    observed;
-    zx_time_t   deadline = zx_deadline_after(dev->timeout);
+    uint32_t observed;
+    zx_time_t deadline = zx_deadline_after(dev->timeout);
 
     sig_mask |= I2C_ERROR_SIGNAL;
 
@@ -153,6 +155,7 @@ static int i2c_dw_irq_thread(void* arg) {
         if (reg & DW_I2C_INTR_TX_ABRT) {
             // some sort of error has occurred. figure it out
             i2c_dw_dumpstate(dev);
+            I2C_DW_READ32(DW_I2C_CLR_TX_ABRT);
             zx_object_signal(dev->event_handle, 0, I2C_ERROR_SIGNAL);
             zxlogf(ERROR, "i2c: error on bus\n");
         } else {
@@ -239,15 +242,15 @@ static zx_status_t i2c_dw_set_slave_addr(i2c_dw_dev_t* dev, uint16_t addr) {
     return ZX_OK;
 }
 
-static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, bool stop) {
-     uint32_t rx_limit;
+static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t* buff, uint32_t len, bool stop) {
+    uint32_t rx_limit;
 
     ZX_DEBUG_ASSERT(len <= I2C_DW_MAX_TRANSFER);
     rx_limit = dev->rx_fifo_depth - I2C_DW_READ32(DW_I2C_RXFLR);
     ZX_DEBUG_ASSERT(len <= rx_limit);
 
     // set threshold to the number of bytes we want to read - 1
-    I2C_DW_SET_BITS32(DW_I2C_RX_TL, DW_I2C_RX_TL_START, DW_I2C_RX_TL_BITS, len-1);
+    I2C_DW_SET_BITS32(DW_I2C_RX_TL, DW_I2C_RX_TL_START, DW_I2C_RX_TL_BITS, len - 1);
 
     while (len > 0) {
         uint32_t cmd = 0;
@@ -268,13 +271,13 @@ static zx_status_t i2c_dw_read(i2c_dw_dev_t* dev, uint8_t *buff, uint32_t len, b
     uint32_t avail_read = I2C_DW_READ32(DW_I2C_RXFLR);
     for (uint32_t i = 0; i < avail_read; i++) {
         buff[i] = I2C_DW_GET_BITS32(DW_I2C_DATA_CMD, DW_I2C_DATA_CMD_DAT_START,
-                                                                        DW_I2C_DATA_CMD_DAT_BITS);
+                                    DW_I2C_DATA_CMD_DAT_BITS);
     }
 
     return ZX_OK;
 }
 
-static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, const uint8_t *buff, uint32_t len, bool stop) {
+static zx_status_t i2c_dw_write(i2c_dw_dev_t* dev, const uint8_t* buff, uint32_t len, bool stop) {
     uint32_t tx_limit;
 
     ZX_DEBUG_ASSERT(len <= I2C_DW_MAX_TRANSFER);
@@ -309,18 +312,18 @@ static zx_status_t i2c_dw_host_init(i2c_dw_dev_t* dev) {
 
     if (dw_comp_type != I2C_DW_COMP_TYPE_NUM) {
         zxlogf(ERROR, "%s: Incompatible IP Block detected. Expected = 0x%x, Actual = 0x%x\n",
-            __FUNCTION__, I2C_DW_COMP_TYPE_NUM, dw_comp_type);
+               __FUNCTION__, I2C_DW_COMP_TYPE_NUM, dw_comp_type);
 
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // read the various capabilities of the component
     dev->tx_fifo_depth = I2C_DW_GET_BITS32(DW_I2C_COMP_PARAM_1,
-                                                        DW_I2C_COMP_PARAM_1_TXFIFOSZ_START,
-                                                        DW_I2C_COMP_PARAM_1_TXFIFOSZ_BITS);
+                                           DW_I2C_COMP_PARAM_1_TXFIFOSZ_START,
+                                           DW_I2C_COMP_PARAM_1_TXFIFOSZ_BITS);
     dev->rx_fifo_depth = I2C_DW_GET_BITS32(DW_I2C_COMP_PARAM_1,
-                                                        DW_I2C_COMP_PARAM_1_RXFIFOSZ_START,
-                                                        DW_I2C_COMP_PARAM_1_RXFIFOSZ_BITS);
+                                           DW_I2C_COMP_PARAM_1_RXFIFOSZ_START,
+                                           DW_I2C_COMP_PARAM_1_RXFIFOSZ_BITS);
 
     /* I2C Block Initialization based on DW_apb_i2c_databook Section 7.3 */
 
@@ -331,31 +334,31 @@ static zx_status_t i2c_dw_host_init(i2c_dw_dev_t* dev) {
     // - Slave Disable
     regval = 0;
     regval = I2C_DW_SET_MASK(regval, DW_I2C_CON_SLAVE_DIS_START,
-                                                        DW_I2C_CON_SLAVE_DIS_BITS,
-                                                        I2C_ENABLE);
+                             DW_I2C_CON_SLAVE_DIS_BITS,
+                             I2C_ENABLE);
 
     // - Enable restart mode
     regval = I2C_DW_SET_MASK(regval, DW_I2C_CON_RESTART_EN_START,
-                                                        DW_I2C_CON_RESTART_EN_BITS,
-                                                        I2C_ENABLE);
+                             DW_I2C_CON_RESTART_EN_BITS,
+                             I2C_ENABLE);
 
     // - Set 7-bit address modeset
     regval = I2C_DW_SET_MASK(regval, DW_I2C_CON_10BITADDRSLAVE_START,
-                                                        DW_I2C_CON_10BITADDRSLAVE_BITS,
-                                                        I2C_7BIT_ADDR);
+                             DW_I2C_CON_10BITADDRSLAVE_BITS,
+                             I2C_7BIT_ADDR);
     regval = I2C_DW_SET_MASK(regval, DW_I2C_CON_10BITADDRMASTER_START,
-                                                        DW_I2C_CON_10BITADDRMASTER_BITS,
-                                                        I2C_7BIT_ADDR);
+                             DW_I2C_CON_10BITADDRMASTER_BITS,
+                             I2C_7BIT_ADDR);
 
     // - Set speed to fast, master enable
     regval = I2C_DW_SET_MASK(regval, DW_I2C_CON_SPEED_START,
-                                                        DW_I2C_CON_SPEED_BITS,
-                                                        I2C_FAST_MODE);
+                             DW_I2C_CON_SPEED_BITS,
+                             I2C_FAST_MODE);
 
     // - Set master enable
     regval = I2C_DW_SET_MASK(regval, DW_I2C_CON_MASTER_MODE_START,
-                                                        DW_I2C_CON_MASTER_MODE_BITS,
-                                                        I2C_ENABLE);
+                             DW_I2C_CON_MASTER_MODE_BITS,
+                             I2C_ENABLE);
 
     // write final mask
     I2C_DW_WRITE32(DW_I2C_CON, regval);
@@ -376,15 +379,56 @@ static zx_status_t i2c_dw_host_init(i2c_dw_dev_t* dev) {
     return ZX_OK;
 }
 
+#if I2C_AS370_DW_TEST
+static int i2c_dw_test_thread(void* ctx) {
+    zx_status_t status;
+    bool pass = true;
+    uint8_t addr = 0x66; //SY20212DAIC PMIC device
+    uint8_t data_write = 0;
+    uint8_t data_read;
+
+    i2c_impl_op_t ops[] = {
+        {.address = addr,
+         .data_buffer = &data_write,
+         .data_size = 1,
+         .is_read = false,
+         .stop = false},
+        {.address = addr,
+         .data_buffer = &data_read,
+         .data_size = 1,
+         .is_read = true,
+         .stop = true},
+    };
+
+    status = i2c_dw_transact(ctx, 0, ops, countof(ops));
+    if (status == ZX_OK) {
+        zxlogf(INFO, "I2C Addr: 0x%02X Reg:0x%02X Value:0x%02X\n", addr, data_write, data_read);
+        //Check with reset value of PMIC registers
+        if (data_read != 0x8B) {
+            pass = false;
+        }
+    } else {
+        pass = false;
+    }
+
+    if (pass) {
+        zxlogf(INFO, "DW I2C test for AS370 passed\n");
+    } else {
+        zxlogf(ERROR, "DW I2C test for AS370 failed\n");
+    }
+
+    return 0;
+}
+#endif
+
 static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
     zx_status_t status;
-
     i2c_dw_dev_t* device = &i2c->i2c_devs[index];
 
     device->timeout = ZX_SEC(10);
 
     status = pdev_map_mmio_buffer(&i2c->pdev, index, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                   &device->regs_iobuff);
+                                  &device->regs_iobuff);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer failed %d\n", __FUNCTION__, status);
         goto init_fail;
@@ -410,6 +454,12 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
     thrd_t irq_thread;
     thrd_create_with_name(&irq_thread, i2c_dw_irq_thread, device, "i2c_dw_irq_thread");
 
+#if I2C_AS370_DW_TEST
+    if (index == 0) {
+        thrd_t test_thread;
+        thrd_create_with_name(&test_thread, i2c_dw_test_thread, i2c, "i2c_dw_test_thread");
+    }
+#endif
     return ZX_OK;
 
 init_fail:
@@ -438,7 +488,6 @@ static zx_protocol_device_t i2c_device_proto = {
 };
 
 static zx_status_t dw_i2c_bind(void* ctx, zx_device_t* parent) {
- printf("dw_i2c_bind\n");
     zx_status_t status;
 
     i2c_dw_t* i2c = calloc(1, sizeof(i2c_dw_t));
@@ -506,9 +555,11 @@ static zx_driver_ops_t dw_i2c_driver_ops = {
     .bind = dw_i2c_bind,
 };
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(dw_i2c, dw_i2c_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DW_I2C),
 ZIRCON_DRIVER_END(dw_i2c)
+//clang-format on

@@ -9,6 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/status.h>
 #include <zircon/threads.h>
 
 namespace board_as370 {
@@ -28,7 +29,7 @@ zx_status_t As370::Create(void* ctx, zx_device_t* parent) {
 
     zx_status_t status = board->DdkAdd("as370", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DdkAdd failed %d\n", __func__, status);
+        zxlogf(ERROR, "%s: DdkAdd failed %s\n", __func__, zx_status_get_string(status));
         return status;
     }
 
@@ -47,15 +48,22 @@ zx_status_t As370::Start() {
 }
 
 int As370::Thread() {
-    if (GpioInit() != ZX_OK) {
-        zxlogf(ERROR, "%s: GpioInit() failed\n", __func__);
+    auto status = GpioInit();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: GpioInit() failed: %s\n", __func__, zx_status_get_string(status));
+        return thrd_error;
+    }
+
+    status = I2cInit();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: I2cInit() failed: %s\n", __func__, zx_status_get_string(status));
         return thrd_error;
     }
 
     return 0;
 }
 
-}  // namespace board_as370
+} // namespace board_as370
 
 static constexpr zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops = {};
@@ -64,8 +72,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
     return ops;
 }();
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(as370, driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
 ZIRCON_DRIVER_END(as370)
+//clang-format on

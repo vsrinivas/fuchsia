@@ -25,9 +25,10 @@ private:
     int Thread();
 
     zx_status_t GpioInit();
+    zx_status_t I2cInit();
 
     ddk::PBusProtocolClient pbus_;
     thrd_t thread_;
 };
 
-}  // namespace board_as370
+} // namespace board_as370
