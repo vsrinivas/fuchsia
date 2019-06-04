@@ -551,10 +551,33 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         ServiceObjTy: From<Proxy<LoaderMarker, O>>,
         ServiceObjTy: ServiceObjTrait<Output = O>,
     {
+        let (new_env_controller, app) = self.launch_component_in_nested_environment_with_options(
+            url,
+            arguments,
+            crate::client::LaunchOptions::new(),
+            environment_label,
+        )?;
+        Ok((new_env_controller, app))
+    }
+
+    /// Starts a new component inside an isolated environment with custom launch
+    /// options, see the comment for |launch_component_in_nested_environment()|
+    /// above.
+    pub fn launch_component_in_nested_environment_with_options<O>(
+        &mut self,
+        url: String,
+        arguments: Option<Vec<String>>,
+        options: crate::client::LaunchOptions,
+        environment_label: &str,
+    ) -> Result<(EnvironmentControllerProxy, crate::client::App), Error>
+    where
+        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
+        ServiceObjTy: ServiceObjTrait<Output = O>,
+    {
         let NestedEnvironment { controller, launcher, directory_request: _ } =
             self.create_nested_environment(environment_label)?;
 
-        let app = crate::client::launch(&launcher, url, arguments)?;
+        let app = crate::client::launch_with_options(&launcher, url, arguments, options)?;
         Ok((controller, app))
     }
 }

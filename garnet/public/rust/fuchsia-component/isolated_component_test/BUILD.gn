@@ -55,6 +55,7 @@ rustc_binary("fuchsia_component_test_middle_bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:tempfile",
   ]
   source_root = "middle.rs"
 }

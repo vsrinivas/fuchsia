@@ -13,9 +13,13 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::connect_to_service, fuchsia_single_component_package_url, server::ServiceFs,
+        client::{connect_to_service, LaunchOptions},
+        fuchsia_single_component_package_url,
+        server::ServiceFs,
     },
     futures::prelude::*,
+    std::{env, io::Write},
+    tempfile::TempDir,
 };
 
 fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<Output = ()> {
@@ -33,6 +37,8 @@ const ENV_NAME: &str = "fuchsia_component_inner_test_environment";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    env::set_var("RUST_BACKTRACE", "full");
+
     // Check that all services provided by the parent are available
     let echo = connect_to_service::<EchoExposedByParentMarker>()?;
     assert_eq!(1, await!(echo.echo(1))?);
@@ -48,8 +54,26 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.add_fidl_service(|stream| stream);
 
-    let (_new_env_controller, child_app) =
-        fs.launch_component_in_nested_environment(CHILD_URL.to_string(), None, ENV_NAME)?;
+    let mut launch_options = LaunchOptions::new();
+    let tmp_dir = TempDir::new().expect("tempdir creation");
+    launch_options
+        .add_dir_to_namespace(
+            "/dir_exposed_to_inner".to_string(),
+            std::fs::File::open(tmp_dir.path()).expect("tempdir open"),
+        )
+        .expect("adding dir to namespace");
+    let tmp_file_path = tmp_dir.path().join("it_works");
+    std::fs::File::create(&tmp_file_path)
+        .expect("tempdir open")
+        .write_all("indeed".as_bytes())
+        .expect("write to tempfile");
+
+    let (_new_env_controller, child_app) = fs.launch_component_in_nested_environment_with_options(
+        CHILD_URL.to_string(),
+        None,
+        launch_options,
+        ENV_NAME,
+    )?;
 
     // spawn server to respond to child component requests
     fasync::spawn(fs.for_each_concurrent(None, echo_exposed_server));

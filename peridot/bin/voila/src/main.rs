@@ -16,11 +16,11 @@ use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
 use fidl_fuchsia_modular_internal::{SessionContextMarker, SessionmgrMarker};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fidl_fuchsia_ui_input::PointerEvent;
-use fuchsia_app::{
-    client::{App as LaunchedApp, Launcher},
+use fuchsia_async as fasync;
+use fuchsia_component::{
+    client::{launch, launcher, App as LaunchedApp},
     fuchsia_single_component_package_url,
 };
-use fuchsia_async as fasync;
 use fuchsia_scenic::{
     Circle, EntityNode, Rectangle, SessionPtr, ShapeNode, ViewHolder, ViewTokenPair,
 };
@@ -63,7 +63,9 @@ impl AppAssistant for VoilaAppAssistant {
         _key: ViewKey,
         session: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        let cloud_provider = Launcher::new()?.launch(CLOUD_PROVIDER_URI.to_string(), None)?;
+        let launcher = launcher().context("Failed to open launcher service")?;
+        let cloud_provider = launch(&launcher, CLOUD_PROVIDER_URI.to_string(), None)
+            .context("Failed to launch the cloud provider service")?;
         Ok(Box::new(VoilaViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             circle_node: ShapeNode::new(session.clone()),
@@ -100,9 +102,9 @@ impl VoilaViewAssistant {
         fx_log_info!("creating a replica {}", replica_id);
 
         // Launch an instance of sessionmgr for the replica.
-        let (server, environment_ctrl, app) =
+        let (fs, environment_ctrl, app) =
             make_replica_env(&replica_id, Arc::clone(&self.cloud_provider_app))?;
-        fasync::spawn(server.unwrap_or_else(|e| panic!("error providing services: {:?}", e)));
+        fasync::spawn(fs.collect());
         let sessionmgr = app.connect_to_service::<SessionmgrMarker>()?;
 
         // Set up the emulated account.
@@ -141,14 +143,12 @@ impl VoilaViewAssistant {
             create_endpoints::<SessionContextMarker>()?;
         let session_context = SessionContext {};
         let session_context_stream = session_context_server.into_stream()?;
-        fasync::spawn_local(
-            async move {
-                await!(session_context.handle_requests_from_stream(session_context_stream))
-                    .unwrap_or_else(|err| {
-                        fx_log_warn!("error handling SessionContext request channel: {:?}", err);
-                    })
-            },
-        );
+        fasync::spawn_local(async move {
+            await!(session_context.handle_requests_from_stream(session_context_stream))
+                .unwrap_or_else(|err| {
+                    fx_log_warn!("error handling SessionContext request channel: {:?}", err);
+                })
+        });
 
         sessionmgr
             .initialize(

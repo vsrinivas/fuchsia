@@ -1,14 +1,17 @@
 {
-  "program": {
-    "binary": "bin/app"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.sys.Environment",
-      "fuchsia.sys.Loader",
-      "fuchsia.test.echos.EchoExposedByParent",
-      "fuchsia.test.echos.EchoExposedBySibling",
-      "fuchsia.test.echos.EchoHiddenByParent"
-    ]
-  }
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.test.echos.EchoExposedByParent",
+            "fuchsia.test.echos.EchoExposedBySibling",
+            "fuchsia.test.echos.EchoHiddenByParent"
+        ]
+    }
 }
