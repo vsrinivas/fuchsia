@@ -110,5 +110,18 @@ mod tests {
             needle = "foo bar",
             accept = false,
         }
+        test_parse_url => {
+            // colon is invalid character
+            needle = "fuchsia-pkg://",
+            accept = false,
+        }
+        test_parse_bang => {
+            needle = "hello!",
+            accept = false,
+        }
+        test_parse_shebang => {
+            needle = "#!/etc/bin",
+            accept = false,
+        }
     }
 }
