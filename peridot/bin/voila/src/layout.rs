@@ -71,16 +71,7 @@ fn layout_replica(
 
     // Update the session view.
     let replica_bounds = inset(&replica_bounds, 5.0);
-    let view_properties = ViewProperties {
-        bounding_box: BoundingBox {
-            min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-            max: Vec3 { x: replica_bounds.size.width, y: replica_bounds.size.height, z: 0.0 },
-        },
-        inset_from_min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-        inset_from_max: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
-        focus_change: true,
-        downward_input: false,
-    };
+    let view_properties = get_replica_view_properties(&replica_bounds);
     view.host_view_holder.set_view_properties(view_properties);
     view.host_node.set_translation(replica_bounds.origin.x, replica_bounds.origin.y, REPLICA_Z);
     view.bounds = Some(replica_bounds);
@@ -123,6 +114,20 @@ fn inset(rect: &Rect, padding: f32) -> Rect {
         Point::new(rect.origin.x + inset, rect.origin.y + inset),
         Size::new(rect.size.width - double_inset, rect.size.height - double_inset),
     )
+}
+
+/// Returns the view properties to use for a replica, given the intended bounds.
+fn get_replica_view_properties(bounds: &Rect) -> ViewProperties {
+    ViewProperties {
+        bounding_box: BoundingBox {
+            min: Vec3 { x: 0.0, y: 0.0, z: -1000.0 },
+            max: Vec3 { x: bounds.size.width, y: bounds.size.height, z: 0.0 },
+        },
+        inset_from_min: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+        inset_from_max: Vec3 { x: 0.0, y: 0.0, z: 0.0 },
+        focus_change: true,
+        downward_input: false,
+    }
 }
 
 #[cfg(test)]
@@ -188,5 +193,22 @@ mod tests {
         assert_eq!(result.origin.y, 3.0);
         assert_eq!(result.size.width, 3.0);
         assert_eq!(result.size.height, 4.0);
+    }
+
+    /// Verifies that all dimensions of the resulting view bounding box are
+    /// non-zero.
+    ///
+    /// This is a regression test for LE-746 - while having the Z-dimension
+    /// equal to 0 was OK for Scenic, it made the intermediary view embedded by
+    /// sessionmgr not update.
+    #[test]
+    fn get_replica_view_properties_returns_non_zero_box() {
+        let bounds = Rect::new(Point::new(0.0, 0.0), Size::new(10.0, 10.0));
+
+        let view_properties = get_replica_view_properties(&bounds);
+
+        assert!(view_properties.bounding_box.max.x - view_properties.bounding_box.min.x > 0.0);
+        assert!(view_properties.bounding_box.max.y - view_properties.bounding_box.min.y > 0.0);
+        assert!(view_properties.bounding_box.max.z - view_properties.bounding_box.min.z > 0.0);
     }
 }
