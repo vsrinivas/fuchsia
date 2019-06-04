@@ -25,6 +25,7 @@
 #include <random>
 
 static const char kTapctl[] = "/dev/misc/tapctl";
+static const char kTapctlRelative[] = "misc/tapctl";
 
 #define MAC_LOCAL (0x02)
 #define MAC_MULTICAST (0x01)
@@ -74,8 +75,17 @@ class EthertapClientImpl : public EthertapClient {
 
     fidl::SynchronousInterfacePtr<TapControl> tapctl;
 
-    auto status = fdio_service_connect(
-        kTapctl, tapctl.NewRequest().TakeChannel().release());
+    zx_status_t status;
+
+    if (config.devfs_root.is_valid()) {
+      status =
+          fdio_service_connect_at(config.devfs_root.get(), kTapctlRelative,
+                                  tapctl.NewRequest().TakeChannel().release());
+    } else {
+      status = fdio_service_connect(
+          kTapctl, tapctl.NewRequest().TakeChannel().release());
+    }
+
     if (status != ZX_OK) {
       fprintf(stderr, "could not open %s: %s\n", kTapctl,
               zx_status_get_string(status));
@@ -93,7 +103,7 @@ class EthertapClientImpl : public EthertapClient {
               zx_status_get_string(status));
       return nullptr;
     } else if (o_status != ZX_OK) {
-      fprintf(stderr, "Could not open tap device: %s\n",
+      fprintf(stderr, "Could not open tap device, tap error: %s\n",
               zx_status_get_string(o_status));
       return nullptr;
     }
@@ -151,6 +161,12 @@ void EthertapConfig::SetMacLocallyAdministered() {
 
 bool EthertapConfig::IsMacLocallyAdministered() {
   return (tap_cfg.mac.octets[0] & MAC_LOCAL) != 0;
+}
+
+EthertapConfig::EthertapConfig(EthertapConfig&& oth) {
+  name = std::move(oth.name);
+  devfs_root = std::move(oth.devfs_root);
+  tap_cfg = std::move(oth.tap_cfg);
 }
 
 }  // namespace netemul

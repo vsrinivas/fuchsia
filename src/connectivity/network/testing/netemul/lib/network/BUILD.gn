@@ -92,6 +92,7 @@ executable("network_test_bin") {
     ":netdump",
     ":network_service",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",

@@ -34,7 +34,7 @@ zx_status_t EndpointManager::CreateEndpoint(
         fuchsia::netemul::network::EndpointBacking::ETHERTAP) {
       auto ep = std::make_unique<Endpoint>(parent_, std::string(name),
                                            std::move(config));
-      auto result = ep->Startup();
+      auto result = ep->Startup(*parent_);
       if (result != ZX_OK) {
         return result;
       }

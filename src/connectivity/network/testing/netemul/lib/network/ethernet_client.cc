@@ -16,6 +16,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
+#include <zircon/device/vfs.h>
 #include <zircon/status.h>
 
 #include <iostream>
@@ -420,11 +421,13 @@ std::string EthernetClientFactory::MountPointWithMAC(
     const EthernetClient::Mac& mac, unsigned int deadline_ms) {
   WatchCbArgs args{.base_dir = base_dir_, .search_mac = mac};
 
-  int ethdir = open(base_dir_.c_str(), O_RDONLY);
+  int ethdir = OpenDir();
+
   if (ethdir < 0) {
     fprintf(stderr, "could not open %s: %s\n", base_dir_.c_str(),
             strerror(errno));
-    return nullptr;
+    // empty string if not found
+    return std::string();
   }
 
   zx_status_t status;
@@ -439,37 +442,73 @@ std::string EthernetClientFactory::MountPointWithMAC(
   }
 }
 
-EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(
-    const EthernetClient::Mac& mac, unsigned int deadline_ms,
-    async_dispatcher_t* dispatcher) {
+zx_status_t EthernetClientFactory::Connect(
+    const std::string& path,
+    fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device> req) {
+  if (devfs_root_.is_valid()) {
+    return fdio_service_connect_at(devfs_root_.get(), path.c_str(),
+                                   req.TakeChannel().release());
+  } else {
+    return fdio_service_connect(path.c_str(), req.TakeChannel().release());
+  }
+}
+
+EthernetClient::Ptr EthernetClientFactory::Create(
+    const std::string& path, async_dispatcher_t* dispatcher) {
+  fidl::InterfaceHandle<ZDevice> handle;
+
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }
 
+  auto status = Connect(path, handle.NewRequest());
+  if (status != ZX_OK) {
+    fprintf(stderr, "could not open %s: %s\n", path.c_str(),
+            zx_status_get_string(status));
+    return nullptr;
+  }
+
+  return std::make_unique<EthernetClient>(dispatcher, handle.Bind());
+}
+
+EthernetClient::Ptr EthernetClientFactory::RetrieveWithMAC(
+    const EthernetClient::Mac& mac, unsigned int deadline_ms,
+    async_dispatcher_t* dispatcher) {
   auto mount = MountPointWithMAC(mac, deadline_ms);
   if (mount.empty()) {
     return nullptr;
   }
 
-  int devfd = open(mount.c_str(), O_RDONLY);
-  if (devfd < 0) {
-    fprintf(stderr, "could not open %s: %s\n", mount.c_str(), strerror(errno));
-    return nullptr;
-  }
+  return Create(mount, dispatcher);
+}
 
-  zx::channel svc;
-  {
-    zx_status_t status =
-        fdio_get_service_handle(devfd, svc.reset_and_get_address());
-    if (status != ZX_OK) {
-      return nullptr;
+int EthernetClientFactory::OpenDir() {
+  if (devfs_root_.is_valid()) {
+    zx::channel eth, srv;
+    if (zx::channel::create(0, &eth, &srv) != ZX_OK) {
+      return -1;
     }
+    auto status = fdio_open_at(devfs_root_.get(), base_dir_.c_str(),
+                               ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE,
+                               srv.release());
+    if (status != ZX_OK) {
+      std::cerr << "Failed to open ethernet directory " << base_dir_ << ", "
+                << static_cast<bool>(devfs_root_) << " - "
+                << zx_status_get_string(status);
+      return -1;
+    }
+    int ethdir;
+    if (fdio_fd_create(eth.release(), &ethdir) != ZX_OK) {
+      std::cerr << "Failed to create fdio fd directory " << base_dir_ << ", "
+                << static_cast<bool>(devfs_root_) << " - "
+                << zx_status_get_string(status);
+      return -1;
+    }
+
+    return ethdir;
+  } else {
+    return open(base_dir_.c_str(), O_RDONLY);
   }
-
-  fidl::InterfaceHandle<ZDevice> handle;
-  handle.set_channel(std::move(svc));
-
-  return std::make_unique<EthernetClient>(dispatcher, handle.Bind());
 }
 
 }  // namespace netemul

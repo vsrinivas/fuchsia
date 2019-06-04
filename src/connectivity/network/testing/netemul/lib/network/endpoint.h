@@ -36,7 +36,7 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
   const std::string& name() const { return name_; }
 
   // Sets up the endpoint based on the configuration
-  zx_status_t Startup();
+  zx_status_t Startup(NetworkContext& context);
   // Sets endpoint link up
   void SetLinkUp(bool up);
 

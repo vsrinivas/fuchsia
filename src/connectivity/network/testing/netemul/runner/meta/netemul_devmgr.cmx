@@ -1,0 +1,20 @@
+{
+    "program": {
+        "args": [
+            "--svc_name=fuchsia.netemul.devmgr.IsolatedDevmgr",
+            "--load_driver=/boot/driver/ethertap.so",
+            "--load_driver=/boot/driver/ethernet.so",
+            "--wait_for=misc/tapctl"
+        ],
+        "binary": "bin/isolated_devmgr"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

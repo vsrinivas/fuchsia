@@ -30,7 +30,7 @@ class EndpointImpl : public data::Consumer {
 
   void CloneConfig(Endpoint::Config* config) { config_.Clone(config); }
 
-  zx_status_t Setup(const std::string& name) {
+  zx_status_t Setup(const std::string& name, NetworkContext& context) {
     EthertapConfig config;
     if (config_.mac) {
       config_.mac->Clone(&config.tap_cfg.mac);
@@ -42,22 +42,31 @@ class EndpointImpl : public data::Consumer {
 
     config.name = name;
     config.tap_cfg.mtu = config_.mtu;
-    ethertap_ = EthertapClient::Create(config);
+    fuchsia::hardware::ethernet::MacAddress mac;
+    config.tap_cfg.mac.Clone(&mac);
+    config.devfs_root = context.ConnectDevfs();
+    ethertap_ = EthertapClient::Create(std::move(config));
     if (!ethertap_) {
       return ZX_ERR_INTERNAL;
     }
 
-    ethernet_mount_path_ =
-        EthernetClientFactory().MountPointWithMAC(config.tap_cfg.mac);
+    auto devfs_root = context.ConnectDevfs();
+    if (devfs_root.is_valid()) {
+      ethernet_factory_ = std::make_unique<EthernetClientFactory>(
+          EthernetClientFactory::kDevfsEthernetRoot, std::move(devfs_root));
+    } else {
+      ethernet_factory_ = std::make_unique<EthernetClientFactory>();
+    }
+
+    ethernet_mount_path_ = ethernet_factory_->MountPointWithMAC(mac);
+
     // can't find mount path for ethernet!!
     if (ethernet_mount_path_.empty()) {
       fprintf(
           stderr,
           "Failed to locate ethertap device %s %02X:%02X:%02X:%02X:%02X:%02X\n",
-          name.c_str(), config.tap_cfg.mac.octets[0],
-          config.tap_cfg.mac.octets[1], config.tap_cfg.mac.octets[2],
-          config.tap_cfg.mac.octets[3], config.tap_cfg.mac.octets[4],
-          config.tap_cfg.mac.octets[5]);
+          name.c_str(), mac.octets[0], mac.octets[1], mac.octets[2],
+          mac.octets[3], mac.octets[4], mac.octets[5]);
       return ZX_ERR_INTERNAL;
     }
 
@@ -82,26 +91,23 @@ class EndpointImpl : public data::Consumer {
   fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device>
   GetEthernetDevice() {
     fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> ret;
-    if (ethernet_mount_path_.empty()) {
-      return ret;
+    if (ethernet_factory_) {
+      if (ethernet_factory_->Connect(ethernet_mount_path_, ret.NewRequest()) !=
+          ZX_OK) {
+        // if it didn't succeed, release the request and reset:
+        ret = nullptr;
+      }
     }
-    int ethfd = open(ethernet_mount_path_.c_str(), O_RDONLY);
-    if (ethfd < 0) {
-      return ret;
-    }
-
-    zx::channel chan;
-    zx_status_t status =
-        fdio_get_service_handle(ethfd, chan.reset_and_get_address());
-    if (status == ZX_OK) {
-      ret.set_channel(std::move(chan));
-    }
-
     return ret;
   }
 
   void ConnectEthernetDevice(zx::channel channel) {
-    fdio_service_connect(ethernet_mount_path_.c_str(), channel.release());
+    if (ethernet_factory_) {
+      ethernet_factory_->Connect(
+          ethernet_mount_path_,
+          fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device>(
+              std::move(channel)));
+    }
   }
 
   void Consume(const void* data, size_t len) override {
@@ -127,6 +133,7 @@ class EndpointImpl : public data::Consumer {
   }
 
   std::string ethernet_mount_path_;
+  std::unique_ptr<EthernetClientFactory> ethernet_factory_;
   fit::closure closed_callback_;
   std::unique_ptr<EthertapClient> ethertap_;
   Endpoint::Config config_;
@@ -151,7 +158,9 @@ Endpoint::Endpoint(NetworkContext* context, std::string name,
   bindings_.set_empty_set_handler(close_handler);
 }
 
-zx_status_t Endpoint::Startup() { return impl_->Setup(name_); }
+zx_status_t Endpoint::Startup(NetworkContext& context) {
+  return impl_->Setup(name_, context);
+}
 
 Endpoint::~Endpoint() = default;
 

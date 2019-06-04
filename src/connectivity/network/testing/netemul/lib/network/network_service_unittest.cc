@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
@@ -53,6 +54,11 @@ class NetworkServiceTest : public TestWithEnvironment {
         std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<NetworkContext>(svc_loop_->dispatcher());
+    svc_->SetDevfsHandler([this](zx::channel req) {
+      real_services()->Connect(
+          fidl::InterfaceRequest<fuchsia::netemul::devmgr::IsolatedDevmgr>(
+              std::move(req)));
+    });
 
     auto services =
         EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());

@@ -48,3 +48,13 @@ fidl("sandbox") {
     "//sdk/fidl/fuchsia.sys",
   ]
 }
+
+fidl("devmgr") {
+  name = "fuchsia.netemul.devmgr"
+  sources = [
+    "devmgr.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-io",
+  ]
+}

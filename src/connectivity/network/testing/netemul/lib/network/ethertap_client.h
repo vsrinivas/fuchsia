@@ -22,6 +22,7 @@ namespace netemul {
 class EthertapConfig {
  public:
   std::string name = "etap";
+  zx::channel devfs_root;
   fuchsia::hardware::ethertap::Config tap_cfg;
 
   explicit EthertapConfig(std::string tap_name) : EthertapConfig() {
@@ -39,15 +40,7 @@ class EthertapConfig {
     tap_cfg.mtu = 1500;
   }
 
-  EthertapConfig(EthertapConfig&& oth) {
-    name = std::move(oth.name);
-    tap_cfg = std::move(oth.tap_cfg);
-  }
-
-  EthertapConfig(const EthertapConfig& oth) {
-    name = oth.name;
-    oth.tap_cfg.Clone(&tap_cfg);
-  }
+  EthertapConfig(EthertapConfig&& oth);
 
   // helper to set the unicast bits in the containing tap configuration.
   void SetMacUnicast();

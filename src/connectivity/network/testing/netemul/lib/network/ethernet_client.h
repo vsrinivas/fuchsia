@@ -76,8 +76,11 @@ class EthernetClient {
 
 class EthernetClientFactory {
  public:
-  explicit EthernetClientFactory(std::string root = "/dev/class/ethernet")
-      : base_dir_(std::move(root)) {}
+  static constexpr const char* kDefaultEthernetRoot = "/dev/class/ethernet";
+  static constexpr const char* kDevfsEthernetRoot = "class/ethernet";
+  explicit EthernetClientFactory(std::string root = kDefaultEthernetRoot,
+                                 zx::channel devfs_root = zx::channel())
+      : base_dir_(std::move(root)), devfs_root_(std::move(devfs_root)) {}
 
   // finds the mount point of an ethernet device with given Mac.
   // This is achieved based on directory watching and will only fail on timeout.
@@ -90,8 +93,17 @@ class EthernetClientFactory {
                                       unsigned int deadline_ms = 2000,
                                       async_dispatcher_t* dispatcher = nullptr);
 
+  zx_status_t Connect(
+      const std::string& path,
+      fidl::InterfaceRequest<fuchsia::hardware::ethernet::Device> req);
+  EthernetClient::Ptr Create(const std::string& path,
+                             async_dispatcher_t* dispatcher = nullptr);
+
  private:
+  int OpenDir();
+
   const std::string base_dir_;
+  zx::channel devfs_root_;
 };
 
 }  // namespace netemul

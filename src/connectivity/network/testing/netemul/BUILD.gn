@@ -5,6 +5,7 @@
 group("netemul") {
   testonly = true
   public_deps = [
+    "runner:netemul_devmgr",
     "runner:netemul_sandbox",
     "runner/runner:netemul_runner",
   ]

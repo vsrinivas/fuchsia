@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
+#include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/connectivity/network/testing/netemul/lib/network/ethernet_client.h>
 #include <src/connectivity/network/testing/netemul/lib/network/ethertap_client.h>
@@ -23,11 +24,22 @@ namespace testing {
 using sys::testing::TestWithEnvironment;
 class EthertapClientTest : public TestWithEnvironment {
  public:
+  EthertapClientTest() {
+    services_ = sys::ServiceDirectory::CreateFromNamespace();
+  }
+
+  fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> GetDevmgr() {
+    fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> devmgr;
+    services_->Connect(devmgr.NewRequest());
+    return devmgr;
+  }
+
   // pushes an interface into local vectors
   void PushInterface() {
     EthertapConfig config(fxl::StringPrintf("etap-%lu", taps_.size()));
     config.tap_cfg.mtu = TEST_MTU_SIZE;
     config.tap_cfg.options = fuchsia::hardware::ethertap::OPT_TRACE;
+    config.devfs_root = GetDevmgr().TakeChannel();
 
     ASSERT_TRUE(config.IsMacLocallyAdministered());
 
@@ -36,9 +48,13 @@ class EthertapClientTest : public TestWithEnvironment {
             config.tap_cfg.mac.octets[2], config.tap_cfg.mac.octets[3],
             config.tap_cfg.mac.octets[4], config.tap_cfg.mac.octets[5]);
 
-    auto tap = EthertapClient::Create(config);
+    fuchsia::hardware::ethernet::MacAddress mac;
+    config.tap_cfg.mac.Clone(&mac);
+    auto tap = EthertapClient::Create(std::move(config));
     ASSERT_TRUE(tap);
-    auto eth = EthernetClientFactory().RetrieveWithMAC(config.tap_cfg.mac);
+    auto eth = EthernetClientFactory(EthernetClientFactory::kDevfsEthernetRoot,
+                                     GetDevmgr().TakeChannel())
+                   .RetrieveWithMAC(mac);
     ASSERT_TRUE(eth);
     bool ok = false;
 
@@ -65,6 +81,7 @@ class EthertapClientTest : public TestWithEnvironment {
   }
 
  private:
+  std::shared_ptr<sys::ServiceDirectory> services_;
   std::vector<std::unique_ptr<EthertapClient>> taps_;
   std::vector<std::unique_ptr<EthernetClient>> eths_;
 };

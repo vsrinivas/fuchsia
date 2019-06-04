@@ -19,6 +19,7 @@ class NetworkContext : public fuchsia::netemul::network::NetworkContext {
   using NetworkSetup = fuchsia::netemul::network::NetworkSetup;
   using EndpointSetup = fuchsia::netemul::network::EndpointSetup;
   using FSetupHandle = fuchsia::netemul::network::SetupHandle;
+  using DevfsHandler = fit::function<void(zx::channel req)>;
 
   explicit NetworkContext(async_dispatcher_t* dispatcher = nullptr);
   ~NetworkContext();
@@ -42,12 +43,20 @@ class NetworkContext : public fuchsia::netemul::network::NetworkContext {
 
   fidl::InterfaceRequestHandler<FNetworkContext> GetHandler();
 
+  zx::channel ConnectDevfs();
+
+  void SetDevfsHandler(DevfsHandler handler) {
+    devfs_handler_ = std::move(handler);
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
   NetworkManager network_manager_;
   EndpointManager endpoint_manager_;
+
   std::vector<std::unique_ptr<SetupHandle>> setup_handles_;
   fidl::BindingSet<FNetworkContext> bindings_;
+  DevfsHandler devfs_handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetworkContext);
 };

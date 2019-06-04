@@ -144,4 +144,15 @@ NetworkContext::GetHandler() {
   };
 }
 
+zx::channel NetworkContext::ConnectDevfs() {
+  if (devfs_handler_) {
+    zx::channel cli, req;
+    zx::channel::create(0, &cli, &req);
+    devfs_handler_(std::move(req));
+    return cli;
+  } else {
+    return zx::channel();
+  }
+}
+
 }  // namespace netemul

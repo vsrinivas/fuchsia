@@ -1,13 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.netemul.devmgr.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/netemul_devmgr#meta/netemul_devmgr.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/network_test"
     },
     "sandbox": {
-        "dev": [
-            "misc/tapctl",
-            "class/ethernet"
-        ],
         "services": [
+            "fuchsia.netemul.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Environment"
         ]
     }
