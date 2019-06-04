@@ -159,7 +159,7 @@ void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits,
 }
 
 void PageCloudImpl::GetCommits(
-    std::unique_ptr<cloud_provider::Token> min_position_token,
+    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
     GetCommitsCallback callback) {
   std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
   if (min_position_token) {
@@ -212,9 +212,9 @@ void PageCloudImpl::GetCommits(
             return;
           }
 
-          std::unique_ptr<cloud_provider::Token> token;
+          std::unique_ptr<cloud_provider::PositionToken> token;
           if (!commit_entries.empty()) {
-            token = std::make_unique<cloud_provider::Token>();
+            token = std::make_unique<cloud_provider::PositionToken>();
             token->opaque_id = convert::ToArray(timestamp);
           }
           callback(cloud_provider::Status::OK,
@@ -299,7 +299,7 @@ void PageCloudImpl::GetObject(std::vector<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    std::unique_ptr<cloud_provider::Token> min_position_token,
+    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
   std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
@@ -359,7 +359,7 @@ void PageCloudImpl::OnResponse(
       ShutDownWatcher();
     }
 
-    cloud_provider::Token token;
+    cloud_provider::PositionToken token;
     token.opaque_id = convert::ToArray(timestamp);
     HandleCommits(std::move(commit_entries), std::move(token));
   }
@@ -379,7 +379,7 @@ void PageCloudImpl::OnFinished(grpc::Status status) {
 
 void PageCloudImpl::HandleCommits(
     std::vector<cloud_provider::CommitPackEntry> commit_entries,
-    cloud_provider::Token token) {
+    cloud_provider::PositionToken token) {
   std::move(commit_entries.begin(), commit_entries.end(),
             std::back_inserter(commits_waiting_for_ack_));
   token_for_waiting_commits_ = std::move(token);
@@ -392,7 +392,7 @@ void PageCloudImpl::HandleCommits(
 void PageCloudImpl::SendWaitingCommits() {
   FXL_DCHECK(watcher_);
   FXL_DCHECK(!commits_waiting_for_ack_.empty());
-  cloud_provider::Token token = std::move(token_for_waiting_commits_);
+  cloud_provider::PositionToken token = std::move(token_for_waiting_commits_);
   cloud_provider::CommitPack commit_pack;
   if (!cloud_provider::EncodeCommitPack(commits_waiting_for_ack_,
                                         &commit_pack)) {

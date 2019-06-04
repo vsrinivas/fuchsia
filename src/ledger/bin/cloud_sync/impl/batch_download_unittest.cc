@@ -23,9 +23,9 @@ namespace cloud_sync {
 namespace {
 
 // Creates a dummy continuation token.
-std::unique_ptr<cloud_provider::Token> MakeToken(
+std::unique_ptr<cloud_provider::PositionToken> MakeToken(
     convert::ExtendedStringView token_id) {
-  auto token = std::make_unique<cloud_provider::Token>();
+  auto token = std::make_unique<cloud_provider::PositionToken>();
   token->opaque_id = convert::ToArray(token_id);
   return token;
 }

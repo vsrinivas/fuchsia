@@ -87,9 +87,9 @@ void PageDownload::StartDownload() {
                       << last_commit_token_id;
         }
 
-        std::unique_ptr<cloud_provider::Token> position_token;
+        std::unique_ptr<cloud_provider::PositionToken> position_token;
         if (!last_commit_token_id.empty()) {
-          position_token = std::make_unique<cloud_provider::Token>();
+          position_token = std::make_unique<cloud_provider::PositionToken>();
           position_token->opaque_id = convert::ToArray(last_commit_token_id);
         }
         (*page_cloud_)
@@ -97,7 +97,8 @@ void PageDownload::StartDownload() {
                 std::move(position_token),
                 [this](cloud_provider::Status cloud_status,
                        std::unique_ptr<cloud_provider::CommitPack> commit_pack,
-                       std::unique_ptr<cloud_provider::Token> position_token) {
+                       std::unique_ptr<cloud_provider::PositionToken>
+                           position_token) {
                   if (cloud_status != cloud_provider::Status::OK) {
                     // Fetching the remote commits failed, schedule a retry.
                     FXL_LOG(WARNING)
@@ -187,9 +188,9 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
           return;
         }
 
-        std::unique_ptr<cloud_provider::Token> position_token;
+        std::unique_ptr<cloud_provider::PositionToken> position_token;
         if (!last_commit_token_id.empty()) {
-          position_token = std::make_unique<cloud_provider::Token>();
+          position_token = std::make_unique<cloud_provider::PositionToken>();
           position_token->opaque_id = convert::ToArray(last_commit_token_id);
         }
         cloud_provider::PageCloudWatcherPtr watcher;
@@ -213,7 +214,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
 }
 
 void PageDownload::OnNewCommits(cloud_provider::CommitPack commits,
-                                cloud_provider::Token position_token,
+                                cloud_provider::PositionToken position_token,
                                 OnNewCommitsCallback callback) {
   std::vector<cloud_provider::CommitPackEntry> entries;
   if (!cloud_provider::DecodeCommitPack(commits, &entries)) {
@@ -274,7 +275,7 @@ void PageDownload::OnError(cloud_provider::Status status) {
 
 void PageDownload::DownloadBatch(
     std::vector<cloud_provider::CommitPackEntry> entries,
-    std::unique_ptr<cloud_provider::Token> position_token,
+    std::unique_ptr<cloud_provider::PositionToken> position_token,
     fit::closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(

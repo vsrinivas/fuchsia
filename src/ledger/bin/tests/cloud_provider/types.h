@@ -24,8 +24,8 @@ using PageCloudPtr = fuchsia::ledger::cloud::PageCloudPtr;
 using PageCloudSyncPtr = fuchsia::ledger::cloud::PageCloudSyncPtr;
 using PageCloudWatcher = fuchsia::ledger::cloud::PageCloudWatcher;
 using PageCloudWatcherPtr = fuchsia::ledger::cloud::PageCloudWatcherPtr;
+using PositionToken = fuchsia::ledger::cloud::PositionToken;
 using Status = fuchsia::ledger::cloud::Status;
-using Token = fuchsia::ledger::cloud::Token;
 }  // namespace cloud_provider
 
 #endif  // SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_TYPES_H_

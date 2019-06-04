@@ -44,9 +44,11 @@ pub fn write_buffer(data: &[u8]) -> Result<fidl_fuchsia_mem::Buffer, Error> {
     Ok(fidl_fuchsia_mem::Buffer { vmo, size })
 }
 
-impl TryFrom<Option<Box<fidl_fuchsia_ledger_cloud::Token>>> for Token {
+impl TryFrom<Option<Box<fidl_fuchsia_ledger_cloud::PositionToken>>> for Token {
     type Error = ();
-    fn try_from(val: Option<Box<fidl_fuchsia_ledger_cloud::Token>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        val: Option<Box<fidl_fuchsia_ledger_cloud::PositionToken>>,
+    ) -> Result<Self, Self::Error> {
         match val {
             None => Ok(Token(0)),
             Some(t) => match t.opaque_id.as_slice().try_into().map(usize::from_le_bytes) {
@@ -57,9 +59,11 @@ impl TryFrom<Option<Box<fidl_fuchsia_ledger_cloud::Token>>> for Token {
     }
 }
 
-impl Into<fidl_fuchsia_ledger_cloud::Token> for Token {
-    fn into(self: Token) -> fidl_fuchsia_ledger_cloud::Token {
-        fidl_fuchsia_ledger_cloud::Token { opaque_id: Vec::from(&self.0.to_le_bytes() as &[u8]) }
+impl Into<fidl_fuchsia_ledger_cloud::PositionToken> for Token {
+    fn into(self: Token) -> fidl_fuchsia_ledger_cloud::PositionToken {
+        fidl_fuchsia_ledger_cloud::PositionToken {
+            opaque_id: Vec::from(&self.0.to_le_bytes() as &[u8]),
+        }
     }
 }
 

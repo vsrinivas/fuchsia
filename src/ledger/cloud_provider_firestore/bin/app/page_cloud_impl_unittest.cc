@@ -42,13 +42,13 @@ class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
   ~TestPageCloudWatcher() override {}
 
   std::vector<cloud_provider::CommitPackEntry> received_commits;
-  std::vector<cloud_provider::Token> received_tokens;
+  std::vector<cloud_provider::PositionToken> received_tokens;
   OnNewCommitsCallback pending_on_new_commit_callback = nullptr;
 
  private:
   // cloud_provider::PageCloudWatcher:
   void OnNewCommits(cloud_provider::CommitPack commit_pack,
-                    cloud_provider::Token position_token,
+                    cloud_provider::PositionToken position_token,
                     OnNewCommitsCallback callback) override {
     std::vector<cloud_provider::CommitPackEntry> entries;
     EXPECT_TRUE(cloud_provider::DecodeCommitPack(commit_pack, &entries));
@@ -132,7 +132,7 @@ TEST_F(PageCloudImplTest, GetCommits) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   std::unique_ptr<cloud_provider::CommitPack> commit_pack;
-  std::unique_ptr<cloud_provider::Token> position_token;
+  std::unique_ptr<cloud_provider::PositionToken> position_token;
   page_cloud_->GetCommits(
       nullptr, callback::Capture(callback::SetWhenCalled(&callback_called),
                                  &status, &commit_pack, &position_token));
@@ -193,7 +193,7 @@ TEST_F(PageCloudImplTest, GetCommitsQueryPositionToken) {
   timestamp.set_nanos(1);
   std::string position_token_str;
   ASSERT_TRUE(timestamp.SerializeToString(&position_token_str));
-  auto position_token = std::make_unique<cloud_provider::Token>();
+  auto position_token = std::make_unique<cloud_provider::PositionToken>();
   position_token->opaque_id = convert::ToArray(position_token_str);
   page_cloud_->GetCommits(
       std::move(position_token),

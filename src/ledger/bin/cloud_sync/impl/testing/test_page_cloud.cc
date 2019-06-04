@@ -66,7 +66,7 @@ void TestPageCloud::AddCommits(cloud_provider::CommitPack commits,
 }
 
 void TestPageCloud::GetCommits(
-    std::unique_ptr<cloud_provider::Token> /*min_position_token*/,
+    std::unique_ptr<cloud_provider::PositionToken> /*min_position_token*/,
     GetCommitsCallback callback) {
   get_commits_calls++;
   cloud_provider::CommitPack commit_pack;
@@ -126,7 +126,7 @@ void TestPageCloud::GetObject(std::vector<uint8_t> id,
 }
 
 void TestPageCloud::SetWatcher(
-    std::unique_ptr<cloud_provider::Token> min_position_token,
+    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
   set_watcher_position_tokens.push_back(std::move(min_position_token));

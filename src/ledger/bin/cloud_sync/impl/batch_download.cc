@@ -20,8 +20,8 @@ BatchDownload::BatchDownload(
     storage::PageStorage* storage,
     encryption::EncryptionService* encryption_service,
     std::vector<cloud_provider::CommitPackEntry> entries,
-    std::unique_ptr<cloud_provider::Token> position_token, fit::closure on_done,
-    fit::closure on_error)
+    std::unique_ptr<cloud_provider::PositionToken> position_token,
+    fit::closure on_done, fit::closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
       entries_(std::move(entries)),

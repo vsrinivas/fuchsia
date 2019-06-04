@@ -29,16 +29,17 @@ constexpr uint32_t kGetCommitsSeed = 2u;
 constexpr uint32_t kAddObjectSeed = 3u;
 constexpr uint32_t kGetObjectSeed = 4u;
 
-cloud_provider::Token PositionToToken(size_t position) {
+cloud_provider::PositionToken PositionToToken(size_t position) {
   std::string bytes(
       std::string(reinterpret_cast<char*>(&position), sizeof(position)));
-  cloud_provider::Token result;
+  cloud_provider::PositionToken result;
   result.opaque_id = convert::ToArray(bytes);
   return result;
 }
 
-bool TokenToPosition(const std::unique_ptr<cloud_provider::Token>& token,
-                     size_t* result) {
+bool TokenToPosition(
+    const std::unique_ptr<cloud_provider::PositionToken>& token,
+    size_t* result) {
   if (!token) {
     *result = 0u;
     return true;
@@ -196,7 +197,7 @@ void FakePageCloud::AddCommits(cloud_provider::CommitPack commits,
 }
 
 void FakePageCloud::GetCommits(
-    std::unique_ptr<cloud_provider::Token> min_position_token,
+    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
     GetCommitsCallback callback) {
   if (MustReturnError(GetVectorSignature(min_position_token
                                              ? min_position_token->opaque_id
@@ -215,7 +216,7 @@ void FakePageCloud::GetCommits(
   for (size_t i = start; i < commits_.size(); i++) {
     result.push_back(commits_[i]);
   }
-  std::unique_ptr<cloud_provider::Token> token;
+  std::unique_ptr<cloud_provider::PositionToken> token;
   if (!result.empty()) {
     // This will cause the last commit to be delivered again when the token is
     // used for the next GetCommits() call. This is allowed by the FIDL contract
@@ -268,7 +269,7 @@ void FakePageCloud::GetObject(std::vector<uint8_t> id,
 }
 
 void FakePageCloud::SetWatcher(
-    std::unique_ptr<cloud_provider::Token> min_position_token,
+    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
   // TODO(qsr): Inject errors here when LE-438 is fixed.

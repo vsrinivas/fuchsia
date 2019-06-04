@@ -73,7 +73,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
 
   ::testing::AssertionResult GetLatestPositionToken(
       PageCloudSyncPtr* page_cloud,
-      std::unique_ptr<cloud_provider::Token>* token) {
+      std::unique_ptr<cloud_provider::PositionToken>* token) {
     Status status = Status::INTERNAL_ERROR;
     std::unique_ptr<cloud_provider::CommitPack> commit_pack;
     if ((*page_cloud)->GetCommits(nullptr, &status, &commit_pack, token) !=
@@ -93,14 +93,15 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
 
   int on_new_commits_calls_ = 0;
   std::vector<CommitPackEntry> on_new_commits_commits_;
-  cloud_provider::Token on_new_commits_position_token_;
+  cloud_provider::PositionToken on_new_commits_position_token_;
   OnNewCommitsCallback on_new_commits_commits_callback_;
 
   cloud_provider::Status on_error_status_ = cloud_provider::Status::OK;
 
  private:
   // PageCloudWatcher:
-  void OnNewCommits(CommitPack commits, cloud_provider::Token position_token,
+  void OnNewCommits(CommitPack commits,
+                    cloud_provider::PositionToken position_token,
                     OnNewCommitsCallback callback) override {
     std::vector<CommitPackEntry> entries;
     ASSERT_TRUE(DecodeCommitPack(commits, &entries));
@@ -134,7 +135,7 @@ TEST_F(PageCloudTest, GetNoCommits) {
   ASSERT_TRUE(GetPageCloud(ToArray("app_id"), ToArray("page_id"), &page_cloud));
 
   std::unique_ptr<cloud_provider::CommitPack> commit_pack;
-  std::unique_ptr<Token> token;
+  std::unique_ptr<PositionToken> token;
   Status status = Status::INTERNAL_ERROR;
   ASSERT_EQ(ZX_OK,
             page_cloud->GetCommits(nullptr, &status, &commit_pack, &token));
@@ -158,7 +159,7 @@ TEST_F(PageCloudTest, AddAndGetCommits) {
   EXPECT_EQ(Status::OK, status);
 
   std::unique_ptr<CommitPack> result;
-  std::unique_ptr<Token> token;
+  std::unique_ptr<PositionToken> token;
   ASSERT_EQ(ZX_OK, page_cloud->GetCommits(nullptr, &status, &result, &token));
   EXPECT_EQ(Status::OK, status);
   ASSERT_TRUE(result);
@@ -182,7 +183,7 @@ TEST_F(PageCloudTest, GetCommitsByPositionToken) {
   EXPECT_EQ(Status::OK, status);
 
   // Retrieve the position token of the newest of the two (`id1`).
-  std::unique_ptr<cloud_provider::Token> token;
+  std::unique_ptr<cloud_provider::PositionToken> token;
   ASSERT_TRUE(GetLatestPositionToken(&page_cloud, &token));
   EXPECT_TRUE(token);
 
@@ -320,7 +321,7 @@ TEST_F(PageCloudTest, WatchWithPositionToken) {
   EXPECT_EQ(Status::OK, status);
 
   // Retrieve the position token of the newest of the two (`id1`).
-  std::unique_ptr<cloud_provider::Token> token;
+  std::unique_ptr<cloud_provider::PositionToken> token;
   ASSERT_TRUE(GetLatestPositionToken(&page_cloud, &token));
   EXPECT_TRUE(token);
 
@@ -368,7 +369,7 @@ TEST_F(PageCloudTest, WatchWithPositionTokenBatch) {
   EXPECT_EQ(Status::OK, status);
 
   // Retrieve the position token of the newest of the two (`id1`).
-  std::unique_ptr<cloud_provider::Token> token;
+  std::unique_ptr<cloud_provider::PositionToken> token;
   ASSERT_TRUE(GetLatestPositionToken(&page_cloud, &token));
   EXPECT_TRUE(token);
 

@@ -91,8 +91,9 @@ struct CommitPack {
     fuchsia.mem.Buffer buffer;
 };
 
-/// A continuation token for paginated requests.
-struct Token {
+/// An opaque representation of a position in the stream of commits handled by
+/// a PageCloud instance.
+struct PositionToken {
     bytes opaque_id;
 };
 
@@ -138,8 +139,8 @@ protocol PageCloud {
     /// (might be empty) and |position_token| contains the position token of the
     /// most recent of the |commits| (equivalent to |min_position_token| if
     /// |commits| is empty).
-    GetCommits(Token? min_position_token)
-        -> (Status status, CommitPack? commits, Token? position_token);
+    GetCommits(PositionToken? min_position_token)
+        -> (Status status, CommitPack? commits, PositionToken? position_token);
 
     /// Uploads the given object to the cloud under the given id.
     ///
@@ -163,7 +164,7 @@ protocol PageCloud {
     /// addition to that, additional commits older than or at |min_position_token|
     /// may be delivered to. If |min_position_token| is null, notifications for
     /// all commits are delivered.
-    SetWatcher(Token? min_position_token, PageCloudWatcher watcher)
+    SetWatcher(PositionToken? min_position_token, PageCloudWatcher watcher)
         -> (Status status);
 };
 
@@ -176,7 +177,7 @@ protocol PageCloudWatcher {
     ///
     /// No subsequent calls are made until the client calls the callback of the
     /// previous one.
-    OnNewCommits(CommitPack commits, Token position_token) -> ();
+    OnNewCommits(CommitPack commits, PositionToken position_token) -> ();
 
     /// Called when a new object is added to the cloud.
     ///

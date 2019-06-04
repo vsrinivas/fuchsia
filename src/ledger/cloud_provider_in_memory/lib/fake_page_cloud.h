@@ -33,13 +33,14 @@ class FakePageCloud : public cloud_provider::PageCloud {
   // cloud_provider::PageCloud:
   void AddCommits(cloud_provider::CommitPack commits,
                   AddCommitsCallback callback) override;
-  void GetCommits(std::unique_ptr<cloud_provider::Token> min_position_token,
-                  GetCommitsCallback callback) override;
+  void GetCommits(
+      std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+      GetCommitsCallback callback) override;
   void AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                  AddObjectCallback callback) override;
   void GetObject(std::vector<uint8_t> id, GetObjectCallback callback) override;
   void SetWatcher(
-      std::unique_ptr<cloud_provider::Token> min_position_token,
+      std::unique_ptr<cloud_provider::PositionToken> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       SetWatcherCallback callback) override;
 

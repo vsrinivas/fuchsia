@@ -33,8 +33,8 @@ namespace cloud_sync {
 namespace {
 
 // Creates a dummy continuation token.
-cloud_provider::Token MakeToken(convert::ExtendedStringView token_id) {
-  cloud_provider::Token token;
+cloud_provider::PositionToken MakeToken(convert::ExtendedStringView token_id) {
+  cloud_provider::PositionToken token;
   token.opaque_id = convert::ToArray(token_id);
   return token;
 }

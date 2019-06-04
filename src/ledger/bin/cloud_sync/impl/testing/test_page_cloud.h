@@ -49,7 +49,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
   // GetCommits().
   unsigned int get_commits_calls = 0u;
   std::vector<cloud_provider::CommitPackEntry> commits_to_return;
-  std::unique_ptr<cloud_provider::Token> position_token_to_return;
+  std::unique_ptr<cloud_provider::PositionToken> position_token_to_return;
 
   // AddObject().
   unsigned int add_object_calls = 0u;
@@ -63,7 +63,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
   std::map<std::string, std::string> objects_to_return;
 
   // SetWatcher().
-  std::vector<std::unique_ptr<cloud_provider::Token>>
+  std::vector<std::unique_ptr<cloud_provider::PositionToken>>
       set_watcher_position_tokens;
   cloud_provider::PageCloudWatcherPtr set_watcher;
 
@@ -71,13 +71,14 @@ class TestPageCloud : public cloud_provider::PageCloud {
   // cloud_provider::PageCloud:
   void AddCommits(cloud_provider::CommitPack commits,
                   AddCommitsCallback callback) override;
-  void GetCommits(std::unique_ptr<cloud_provider::Token> min_position_token,
-                  GetCommitsCallback callback) override;
+  void GetCommits(
+      std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+      GetCommitsCallback callback) override;
   void AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                  AddObjectCallback callback) override;
   void GetObject(std::vector<uint8_t> id, GetObjectCallback callback) override;
   void SetWatcher(
-      std::unique_ptr<cloud_provider::Token> min_position_token,
+      std::unique_ptr<cloud_provider::PositionToken> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       SetWatcherCallback callback) override;
 
