@@ -22,6 +22,7 @@ group("banjo") {
     "ddk.protocol.camerasensor",
     "ddk.protocol.clock",
     "ddk.protocol.clockimpl",
+    "ddk.protocol.codec",
     "ddk.protocol.composite",
     "ddk.protocol.display.controller",
     "ddk.protocol.dsiimpl",

@@ -32,7 +32,7 @@ struct DaiFormat {
     /// Which channels to use in the DAI.
     vector<uint32> channels_to_use;
     /// The format of all samples in the DAI.
-    SampleFormat sample_type;
+    SampleFormat sample_format;
     /// The justification of all samples in the DAI.
     JustifyFormat justify_format;
     /// The frame rate for all samples in the DAI.
@@ -48,7 +48,7 @@ struct DaiSupportedFormats {
     /// All possible number of channels supported by the codec.
     vector<uint32> number_of_channels;
     /// Sample formats supported by the codec.
-    vector<SampleFormat> types;
+    vector<SampleFormat> sample_formats;
     /// Justify formats supported by the codec.
     vector<JustifyFormat> justify_formats;
     /// Rates supported by the codec.
