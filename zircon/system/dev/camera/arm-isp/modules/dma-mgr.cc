@@ -7,6 +7,7 @@
 #include "../pingpong_regs.h"
 #include "dma-format.h"
 #include <cstdint>
+#include <lib/syslog/global.h>
 
 namespace camera {
 
@@ -93,7 +94,7 @@ void DmaManager::OnNewFrame() {
     // 1) Get another buffer
     auto buffer = buffers_.LockBufferForWrite();
     if (!buffer) {
-        zxlogf(ERROR, "Failed to get buffer\n");
+        FX_LOG(ERROR, "", "Failed to get buffer\n");
         // TODO(garratt): what should we do when we run out of buffers?
         return;
     }

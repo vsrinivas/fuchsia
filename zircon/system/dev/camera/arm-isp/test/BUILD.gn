@@ -7,7 +7,7 @@ test("arm-isp") {
     "dma-format.cpp",
   ]
   deps = [
-    "$zx/system/dev/camera/arm-isp:isp-format",
+    "$zx/system/dev/camera/arm-isp:isp-common",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
