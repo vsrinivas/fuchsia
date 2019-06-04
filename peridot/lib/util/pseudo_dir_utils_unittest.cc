@@ -33,11 +33,11 @@ class PseudoDirUtilsTest : public gtest::RealLoopFixture {
   }
 };
 
-TEST_F(PseudoDirUtilsTest, FileSmallerThanDefaultBuffer) {
+TEST_F(PseudoDirUtilsTest, DISABLED_FileSmallerThanDefaultBuffer) {
   test_make_file_with_contents_sizes(kDefaultBufferSize - 10);
 }
 
-TEST_F(PseudoDirUtilsTest, FileLargerThanDefaultBuffer) {
+TEST_F(PseudoDirUtilsTest, DISABLED_FileLargerThanDefaultBuffer) {
   test_make_file_with_contents_sizes(kDefaultBufferSize + 10);
 }
 
