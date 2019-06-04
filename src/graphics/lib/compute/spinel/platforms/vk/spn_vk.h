@@ -114,6 +114,13 @@ struct spn_vk_target_config const *
 spn_vk_get_config(struct spn_vk const * const instance);
 
 //
+// Get the VkPipelineLayout that HotSort will operate on
+//
+
+VkPipelineLayout
+spn_vk_pl_hotsort(struct spn_vk const * const instance);
+
+//
 // Declare host-side descriptor set buffer/image binding structures:
 //
 //   struct spn_vk_buf_block_pool_bp_ids

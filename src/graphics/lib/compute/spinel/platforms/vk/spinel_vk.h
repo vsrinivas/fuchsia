@@ -38,9 +38,17 @@ struct spn_vk_environment
 
 struct spn_vk_context_create_info
 {
-  struct spn_vk_target const * target;
-  uint64_t                     block_pool_size;
-  uint32_t                     handle_count;
+  //
+  // NOTE(allanmac): This interface is in flux.
+  //
+  // When Spinel constructs a target for a particular device, it also
+  // generates a custom HotSort target.  These will always be bundled
+  // together.
+  //
+  struct spn_vk_target const *     spn;      // FIXME(allanmac): /spn_/spinel_/ ?
+  struct hotsort_vk_target const * hotsort;  // FIXME(allanmac): /hotsort_/hs_/ ?
+  uint64_t                         block_pool_size;
+  uint32_t                         handle_count;
 };
 
 spn_result

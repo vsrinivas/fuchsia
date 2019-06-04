@@ -17,6 +17,7 @@
 #include "context.h"
 #include "fence_pool.h"
 #include "handle_pool.h"
+#include "hotsort/platforms/vk/hotsort_vk.h"
 #include "path_builder_impl.h"
 #include "queue_pool.h"
 #include "raster_builder_impl.h"
@@ -106,9 +107,25 @@ spn_device_create(struct spn_vk_environment * const               environment,
 
   context->device = device;
 
+  //
+  // Keep the environment and a back-pointer to the context
+  //
   device->environment = environment;
   device->context     = context;
-  device->instance    = spn_vk_create(environment, create_info->target);
+
+  //
+  // create the Spinel instance
+  //
+  device->instance = spn_vk_create(environment, create_info->spn);
+
+  //
+  // create the associated HotSort instance
+  //
+  device->hs = hotsort_vk_create(environment->d,
+                                 environment->ac,
+                                 environment->pc,
+                                 spn_vk_pl_hotsort(device->instance),
+                                 create_info->hotsort);
 
   //
   // the target configuration guides early resource allocation
@@ -210,6 +227,8 @@ spn_device_dispose(struct spn_device * const device)
 
   spn_allocator_host_temp_dispose(&device->allocator.host.temp);
   spn_allocator_host_perm_dispose(&device->allocator.host.perm);
+
+  hotsort_vk_release(device->environment->d, device->environment->ac, device->hs);
 
   spn_vk_dispose(device->instance, device->environment);
 

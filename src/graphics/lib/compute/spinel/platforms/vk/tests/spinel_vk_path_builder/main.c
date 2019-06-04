@@ -16,16 +16,21 @@
 // Spinel targets
 //
 
+#include "targets/vendors/amd/gcn3/hotsort/hs_target.h"
 #include "targets/vendors/amd/gcn3/spn_target.h"
+#include "targets/vendors/intel/gen8/hotsort/hs_target.h"
 #include "targets/vendors/intel/gen8/spn_target.h"
+#include "targets/vendors/nvidia/sm50/hotsort/hs_target.h"
 #include "targets/vendors/nvidia/sm50/spn_target.h"
 
 //
 //
 //
 
-static struct spn_vk_target const *
-find_target(uint32_t const vendor_id, uint32_t const device_id)
+static bool
+spn_find_target(uint32_t const                            vendor_id,
+                uint32_t const                            device_id,
+                struct spn_vk_context_create_info * const create_info)
 {
   switch (vendor_id)
     {
@@ -36,7 +41,11 @@ find_target(uint32_t const vendor_id, uint32_t const device_id)
           // sm_35+ devices.  You could add some rigorous rejection by
           // device id here...
           //
-          return spn_nvidia_sm50;
+          create_info->spn             = spn_nvidia_sm50;
+          create_info->hotsort         = hs_nvidia_sm35_u64;
+          create_info->block_pool_size = 128 << 20;  // 128 MB block pool
+          create_info->handle_count    = 1 << 17;    // 128K handles
+          return true;
         }
         case 0x8086:  // INTEL
         {
@@ -47,14 +56,22 @@ find_target(uint32_t const vendor_id, uint32_t const device_id)
           // architectural "shape" than GEN8 GTx.  You could add some
           // rigorous rejection by device id here...
           //
-          return spn_intel_gen8;
+          create_info->spn             = spn_intel_gen8;
+          create_info->hotsort         = hs_intel_gen8_u64;
+          create_info->block_pool_size = 128 << 20;  // 128 MB block pool
+          create_info->handle_count    = 1 << 17;    // 128K handles
+          return true;
         }
         case 0x1002:  // AMD
         {
           //
           // AMD GCN
           //
-          return spn_amd_gcn3;
+          create_info->spn             = spn_amd_gcn3;
+          create_info->hotsort         = hs_amd_gcn3_u64;
+          create_info->block_pool_size = 128 << 20;  // 128 MB block pool
+          create_info->handle_count    = 1 << 17;    // 128K handles
+          return true;
         }
         case 0x13B5: {
           //
@@ -66,7 +83,7 @@ find_target(uint32_t const vendor_id, uint32_t const device_id)
               // BIFROST GEN1 - subgroupSize = 4
               //
               fprintf(stdout, "Detected Bifrost4...\n");
-              return NULL;  // spn_arm_bifrost4;
+              return false;  // spn_arm_bifrost4;
             }
           else if (device_id == 0x5678)
             {
@@ -74,15 +91,15 @@ find_target(uint32_t const vendor_id, uint32_t const device_id)
               // BIFROST GEN2 - subgroupSize = 8
               //
               fprintf(stdout, "Detected Bifrost8...\n");
-              return NULL;  // spn_arm_bifrost8;
+              return false;  // spn_arm_bifrost8;
             }
           else
             {
-              return NULL;
+              return false;
             }
         }
       default:
-        return NULL;
+        return false;
     }
 }
 
@@ -420,13 +437,9 @@ main(int argc, char const * argv[])
   //
   // find spinel target
   //
-  struct spn_vk_context_create_info const create_info = {
-    .target          = find_target(vendor_id, device_id),
-    .block_pool_size = 128 << 20,  // 128 MB block pool
-    .handle_count    = 1 << 17     // 128K handles
-  };
+  struct spn_vk_context_create_info create_info;
 
-  if (create_info.target == NULL)
+  if (!spn_find_target(vendor_id, device_id, &create_info))
     {
       fprintf(stderr, "Device %X : %X has no target.\n", vendor_id, device_id);
 

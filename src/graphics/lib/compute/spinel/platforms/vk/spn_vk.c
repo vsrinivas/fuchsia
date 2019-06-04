@@ -907,6 +907,18 @@ SPN_VK_P_EXPAND()
 SPN_VK_P_EXPAND()
 
 //
+// Get the VkPipelineLayout that HotSort will operate on
+//
+
+VkPipelineLayout
+spn_vk_pl_hotsort(struct spn_vk const * const instance)
+{
+  // Both SPN_VK_P_ID_SEGMENT_TTRK and SPN_VK_P_ID_SEGMENT_TTCK
+  // pipelines have compatible pipeline layouts
+  return instance->pl.named.SPN_VK_P_ID_SEGMENT_TTRK;
+}
+
+//
 // Most descriptor sets are only acquired immediately before a
 // pipeline launch.
 //

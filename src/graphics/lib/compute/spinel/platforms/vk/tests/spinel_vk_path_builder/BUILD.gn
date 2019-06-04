@@ -39,6 +39,10 @@ group("targets") {
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
     "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
+    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
   ]
 }
 
