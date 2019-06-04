@@ -9,10 +9,4 @@ declare_args() {
   # A list of package labels to include in the 'base' package set. Used by the
   # board definition rather than the product definition.
   board_package_labels = []
-
-  # Does nothing.
-  #
-  # Will be removed after 30 April 2019.
-  allow_layer_guesswork = false
-  board_packages = []
 }
