@@ -29,10 +29,10 @@ public:
     ~LibGptTest() {}
 
     // Creates a ramdisk and initialize GPT on it.
-    bool Init();
+    void Init();
 
     // Removes the backing ramdisk device.
-    bool Teardown();
+    void Teardown();
 
     // Returns total size of the disk under test.
     uint64_t GetDiskSize() const { return blk_size_ * blk_count_; }
@@ -62,22 +62,22 @@ public:
     const char* GetDevicePath() const { return disk_path_; }
 
     // Remove all partition from GPT and keep device in GPT initialized state.
-    bool Reset();
+    void Reset();
 
     // Finalize uninitialized disk and verify.
-    bool Finalize();
+    void Finalize();
 
     // Sync and verify.
-    bool Sync();
+    void Sync();
 
     // Get the Range from GPT.
-    bool ReadRange();
+    void ReadRange();
 
     // Prepare disk to run Add Partition tests.
     // 1. initialize GPT
     // 2. optionally sync
     // 3. get the usable range
-    bool PrepDisk(bool sync);
+    void PrepDisk(bool sync);
 
     // gpt_ changes across Reset(). So we do not expose pointer to GptDevice to
     // any of the test. Instead we expose following wrapper funtions for
@@ -134,16 +134,16 @@ public:
 
 private:
     // Initialize a physical media.
-    bool InitDisk(const char* disk_path);
+    void InitDisk(const char* disk_path);
 
     // Create and initialize and ramdisk.
-    bool InitRamDisk();
+    void InitRamDisk();
 
     // Teardown the disk.
-    bool TearDownDisk();
+    void TearDownDisk();
 
     // Teardown and destroy ram disk.
-    bool TearDownRamDisk();
+    void TearDownRamDisk();
 
     // Block size of the device.
     uint32_t blk_size_ = kBlockSize;

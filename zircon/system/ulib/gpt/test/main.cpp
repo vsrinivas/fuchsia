@@ -4,8 +4,8 @@
 
 #include <limits.h>
 #include <time.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
+#include <zxtest/zxtest.h>
 
 bool gUseRamDisk = true;
 unsigned int gRandSeed = 1;
@@ -27,5 +27,6 @@ int main(int argc, char** argv) {
     fprintf(stdout, "Starting test with %u\n", gRandSeed);
     srand(gRandSeed);
 
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return RUN_ALL_TESTS(argc, argv);
+    return 0;
 }

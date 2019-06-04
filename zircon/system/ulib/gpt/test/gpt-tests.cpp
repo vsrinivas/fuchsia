@@ -6,8 +6,8 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <ramdevice-client/ramdisk.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
+#include <zxtest/zxtest.h>
 
 #include "gpt-tests.h"
 #include <gpt/guid.h>
@@ -34,9 +34,7 @@ constexpr uint64_t partition_size(const gpt_partition_t* p) {
     return p->last - p->first + 1;
 }
 
-bool destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_count) {
-    BEGIN_HELPER;
-
+void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_count) {
     char zero[block_size];
     memset(zero, 0, sizeof(zero));
 
@@ -53,7 +51,6 @@ bool destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_co
     // fsync is not supported in rpc-server.cpp
     // TODO(ZX-3294) to fix this
     // ASSERT_EQ(fsync(fd), 0, "Failed to fsync");
-    END_HELPER;
 }
 
 // This class keeps track of what we expect partitions to be on the
@@ -70,10 +67,10 @@ public:
     uint32_t GetCount() const { return partition_count_; }
 
     // Marks a partition as created in GPT.
-    bool MarkCreated(uint32_t index);
+    void MarkCreated(uint32_t index);
 
     // Mark a partition as removed in GPT.
-    bool ClearCreated(uint32_t index);
+    void ClearCreated(uint32_t index);
 
     // Returns true if the GPT should have the partition.
     bool IsCreated(uint32_t index) const;
@@ -90,25 +87,25 @@ public:
 
     // Changes gpt_partition_t.type. One of the fields in the guid_t
     // is increamented.
-    bool ChangePartitionType(uint32_t partition_index);
+    void ChangePartitionType(uint32_t partition_index);
 
     // Changes gpt_partition_t.guid. One of the fields in the guid_t
     // is increamented.
-    bool ChangePartitionGuid(uint32_t partition_index);
+    void ChangePartitionGuid(uint32_t partition_index);
 
     // Sets the visibility attribute of the partition
-    bool SetPartitionVisibility(uint32_t partition_index, bool visible);
+    void SetPartitionVisibility(uint32_t partition_index, bool visible);
 
     // Changes the range a partition covers. The function doesn't check if these
     // changes are valid or not (whether they over lap with other partitions,
     // cross device limits)
-    bool ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end);
+    void ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end);
 
     // Gets the current value of gpt_partition_t.flags
-    bool GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const;
+    void GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const;
 
     // Sets the current value of gpt_partition_t.flags
-    bool SetPartitionFlags(uint32_t partition_index, uint64_t flags);
+    void SetPartitionFlags(uint32_t partition_index, uint64_t flags);
 
 private:
     // List of partitions
@@ -160,28 +157,18 @@ const gpt_partition_t* Partitions::GetPartition(uint32_t index) const {
     return &partitions_[index];
 }
 
-bool Partitions::MarkCreated(uint32_t index) {
-    BEGIN_HELPER;
-    ASSERT_LT(index, partition_count_, "Index out of range");
-
+void Partitions::MarkCreated(uint32_t index) {
+    ASSERT_LT(index, partition_count_);
     created_[index] = true;
-    END_HELPER;
 }
 
-bool Partitions::ClearCreated(uint32_t index) {
-    BEGIN_HELPER;
-    ASSERT_LT(index, partition_count_, "Index out of range");
-
+void Partitions::ClearCreated(uint32_t index) {
+    ASSERT_LT(index, partition_count_);
     created_[index] = false;
-    END_HELPER;
 }
 
 bool Partitions::IsCreated(uint32_t index) const {
-    BEGIN_HELPER;
-    ASSERT_LT(index, partition_count_, "Index out of range");
-
     return created_[index];
-    END_HELPER;
 }
 
 uint32_t Partitions::CreatedCount() const {
@@ -249,69 +236,59 @@ void IncrementGuid(guid_t* g) {
     g->data3++;
 }
 
-bool Partitions::ChangePartitionGuid(uint32_t partition_index) {
-    BEGIN_HELPER;
-    ASSERT_LT(partition_index, partition_count_, "Partition index out of range");
+void Partitions::ChangePartitionGuid(uint32_t partition_index) {
+    ASSERT_LT(partition_index, partition_count_);
     IncrementGuid(reinterpret_cast<guid_t*>(partitions_[partition_index].guid));
-    END_HELPER;
 }
 
-bool Partitions::ChangePartitionType(uint32_t partition_index) {
-    BEGIN_HELPER;
-    ASSERT_LT(partition_index, partition_count_, "Partition index out of range");
+void Partitions::ChangePartitionType(uint32_t partition_index) {
+    ASSERT_LT(partition_index, partition_count_);
     IncrementGuid(reinterpret_cast<guid_t*>(partitions_[partition_index].type));
-    END_HELPER;
 }
 
-bool Partitions::SetPartitionVisibility(uint32_t partition_index, bool visible) {
-    BEGIN_HELPER;
-    ASSERT_LT(partition_index, partition_count_, "Partition index out of range");
+void Partitions::SetPartitionVisibility(uint32_t partition_index, bool visible) {
+    ASSERT_LT(partition_index, partition_count_);
     gpt::SetPartitionVisibility(&partitions_[partition_index], visible);
-    END_HELPER;
 }
 
-bool Partitions::ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
-    BEGIN_HELPER;
-    ASSERT_LT(partition_index, partition_count_, "Partition index out of range");
+void Partitions::ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
+    ASSERT_LT(partition_index, partition_count_);
     partitions_[partition_index].first = start;
     partitions_[partition_index].last = end;
-    END_HELPER;
 }
 
-bool Partitions::GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
-    BEGIN_HELPER;
-    ASSERT_LT(partition_index, partition_count_, "Partition index out of range");
+void Partitions::GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
+    ASSERT_LT(partition_index, partition_count_);
     *flags = partitions_[partition_index].flags;
-    END_HELPER;
 }
 
-bool Partitions::SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
-    BEGIN_HELPER;
-    ASSERT_LT(partition_index, partition_count_, "Partition index out of range");
+void Partitions::SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
+    ASSERT_LT(partition_index, partition_count_);
     partitions_[partition_index].flags = flags;
-    END_HELPER;
 }
 
-// Defines a libgpt test function which can be passed to the TestWrapper.
-typedef bool (*TestFunction)(LibGptTest* libGptTest);
-#define RUN_TEST_WRAP(test_name) RUN_TEST_MEDIUM(TestWrapper<test_name>)
+class LibGptTestFixture : public zxtest::Test {
+public:
+    LibGptTest* GetLibGptTest() const { return lib_gpt_test_.get(); }
 
-// A test wrapper which runs a libgpt test.
-template <TestFunction TestFunc>
-bool TestWrapper(void) {
-    BEGIN_TEST;
+protected:
+    void SetUp() override {
+        lib_gpt_test_.reset(new LibGptTest(gUseRamDisk));
+        lib_gpt_test_->Init();
+    }
 
-    LibGptTest libGptTest(gUseRamDisk);
-    ASSERT_TRUE(libGptTest.Init(), "Setting up the block device");
-    // Run the test. This should pass.
-    ASSERT_TRUE(TestFunc(&libGptTest));
-    ASSERT_TRUE(libGptTest.Teardown(), "Tearing down and cleaning up the block device");
+    void TearDown() override {
+        lib_gpt_test_->Teardown();
+        lib_gpt_test_.reset(nullptr);
+    }
 
-    END_TEST;
-}
+private:
+    std::unique_ptr<LibGptTest> lib_gpt_test_ = {};
+};
 
-bool LibGptTest::Reset() {
-    BEGIN_HELPER;
+using GptDeviceTest = LibGptTestFixture;
+
+void LibGptTest::Reset() {
     fbl::unique_ptr<GptDevice> gpt;
 
     // explicitly close the fd, if open, before we attempt to reopen it.
@@ -322,29 +299,22 @@ bool LibGptTest::Reset() {
     ASSERT_TRUE(fd_.is_valid(), "Could not open block device\n");
     ASSERT_EQ(GptDevice::Create(fd_.get(), GetBlockSize(), GetBlockCount(), &gpt), ZX_OK);
     gpt_ = std::move(gpt);
-    END_HELPER;
 }
 
-bool LibGptTest::Finalize() {
-    BEGIN_HELPER;
+void LibGptTest::Finalize() {
     ASSERT_FALSE(gpt_->Valid(), "Valid GPT on uninitialized disk");
 
     ASSERT_EQ(gpt_->Finalize(), ZX_OK, "Failed to finalize");
     ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after finalize");
-    END_HELPER;
 }
 
-bool LibGptTest::Sync() {
-    BEGIN_HELPER;
+void LibGptTest::Sync() {
 
     ASSERT_EQ(gpt_->Sync(), ZX_OK, "Failed to sync");
     ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after sync");
-
-    END_HELPER;
 }
 
-bool LibGptTest::ReadRange() {
-    BEGIN_HELPER;
+void LibGptTest::ReadRange() {
 
     ASSERT_EQ(gpt_->Range(&usable_start_block_, &usable_last_block_), ZX_OK,
               "Retrieval of device range failed.");
@@ -356,12 +326,9 @@ bool LibGptTest::ReadRange() {
     ASSERT_LT(GetUsableStartBlock(), GetUsableLastBlock(), "Invalid range");
     ASSERT_LT(GetUsableLastBlock(), GetBlockCount(), "Range end greater than block count");
     ASSERT_GT(GetUsableBlockCount(), 0, "GPT occupied all available blocks");
-
-    END_HELPER;
 }
 
-bool LibGptTest::PrepDisk(bool sync) {
-    BEGIN_HELPER;
+void LibGptTest::PrepDisk(bool sync) {
 
     if (sync) {
         Sync();
@@ -369,12 +336,10 @@ bool LibGptTest::PrepDisk(bool sync) {
         Finalize();
     }
 
-    ASSERT_TRUE(ReadRange(), "Read range failed");
-    END_HELPER;
+    ReadRange();
 }
 
-bool LibGptTest::InitDisk(const char* disk_path) {
-    BEGIN_HELPER;
+void LibGptTest::InitDisk(const char* disk_path) {
 
     use_ramdisk_ = false;
     snprintf(disk_path_, PATH_MAX, "%s", disk_path);
@@ -393,30 +358,22 @@ bool LibGptTest::InitDisk(const char* disk_path) {
 
     ASSERT_GE(GetDiskSize(), kAccptableMinimumSize, "Insufficient disk space for tests");
     fd_ = std::move(fd);
-
-    END_HELPER;
 }
 
-bool LibGptTest::InitRamDisk() {
-    BEGIN_HELPER;
+void LibGptTest::InitRamDisk() {
     ASSERT_EQ(ramdisk_create(GetBlockSize(), GetBlockCount(), &ramdisk_), ZX_OK,
               "Could not create ramdisk");
     strlcpy(disk_path_, ramdisk_get_path(ramdisk_), sizeof(disk_path_));
     fd_.reset(open(disk_path_, O_RDWR));
-    if (!fd_) {
-        return false;
-    }
-
-    END_HELPER;
+    ASSERT_TRUE(fd_);
 }
 
-bool LibGptTest::Init() {
-    BEGIN_HELPER;
+void LibGptTest::Init() {
     auto error = fbl::MakeAutoCall([this]() { Teardown(); });
     if (use_ramdisk_) {
-        ASSERT_TRUE(InitRamDisk());
+        InitRamDisk();
     } else {
-        ASSERT_TRUE(InitDisk(gDevPath));
+        InitDisk(gDevPath);
     }
 
     // TODO(auradkar): All tests assume that the disks don't have an initialized
@@ -430,44 +387,34 @@ bool LibGptTest::Init() {
     // device. We also ignore any backup copies on the device.
     // Once there exists an api in libgpt to get size and location(s) of gpt,
     // we can setup/cleanup before/after running tests in a better way.
-    ASSERT_TRUE(destroy_gpt(fd_.get(), GetBlockSize(), 0, GptMetadataBlocksCount()),
-                "Failed to destroy gpt");
+    destroy_gpt(fd_.get(), GetBlockSize(), 0, GptMetadataBlocksCount());
 
-    ASSERT_TRUE(Reset());
+    Reset();
     error.cancel();
-    END_HELPER;
 }
 
-bool LibGptTest::TearDownDisk() {
-    BEGIN_HELPER;
+void LibGptTest::TearDownDisk() {
     ASSERT_FALSE(use_ramdisk_);
-    END_HELPER;
 }
 
-bool LibGptTest::TearDownRamDisk() {
-    BEGIN_HELPER;
+void LibGptTest::TearDownRamDisk() {
     ASSERT_EQ(ramdisk_destroy(ramdisk_), ZX_OK);
-    END_HELPER;
 }
 
-bool LibGptTest::Teardown() {
-    BEGIN_HELPER;
+void LibGptTest::Teardown() {
 
     if (use_ramdisk_) {
-        ASSERT_TRUE(TearDownRamDisk());
+        TearDownRamDisk();
     } else {
-        ASSERT_TRUE(TearDownDisk());
+        TearDownDisk();
     }
-
-    END_HELPER;
 }
 
 } // namespace
 
 // Creates "partitions->GetCount()"" number of partitions on GPT.
 //  The information needed to create a partitions is passed in "partitions".
-bool AddPartitionHelper(LibGptTest* libGptTest, Partitions* partitions) {
-    BEGIN_HELPER;
+void AddPartitionHelper(LibGptTest* libGptTest, Partitions* partitions) {
 
     ASSERT_GT(partitions->GetCount(), 0, "At least one partition is required");
     for (uint32_t i = 0; i < partitions->GetCount(); i++) {
@@ -477,13 +424,10 @@ bool AddPartitionHelper(LibGptTest* libGptTest, Partitions* partitions) {
                   ZX_OK, "Add partition failed");
         partitions->MarkCreated(i);
     }
-
-    END_HELPER;
 }
 
 // Removes randomly selected "remove_count" number of partitions.
-bool RemovePartitionsHelper(LibGptTest* libGptTest, Partitions* partitions, uint32_t remove_count) {
-    BEGIN_HELPER;
+void RemovePartitionsHelper(LibGptTest* libGptTest, Partitions* partitions, uint32_t remove_count) {
     uint32_t index;
 
     ASSERT_LE(remove_count, partitions->GetCount(), "Remove count exceeds whats available");
@@ -502,15 +446,13 @@ bool RemovePartitionsHelper(LibGptTest* libGptTest, Partitions* partitions, uint
         ASSERT_EQ(libGptTest->RemovePartition(p->guid), ZX_OK, "Failed to remove partition");
         partitions->ClearCreated(index);
     }
-    END_HELPER;
 }
 
 // Verifies all the partitions that exists on GPT are the ones that are created
 // by the test and vice-versa.
-bool PartitionVerify(LibGptTest* libGptTest, const Partitions* partitions) {
-    BEGIN_HELPER;
+void PartitionVerify(LibGptTest* libGptTest, const Partitions* partitions) {
     bool found[gpt::kPartitionCount] = {};
-    uint32_t found_index;
+    uint32_t found_index = 0;
 
     // Check what's found on disk is created by us
     // iteratre over all partition that are present on disk and make sure
@@ -537,49 +479,35 @@ bool PartitionVerify(LibGptTest* libGptTest, const Partitions* partitions) {
             ASSERT_TRUE(found[i], "Created partition is missing on disk");
         }
     }
-
-    END_TEST;
 }
 
 // Creates partitions and verifies them.
-bool AddPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sync) {
-    BEGIN_HELPER;
-
-    ASSERT_TRUE(AddPartitionHelper(libGptTest, partitions), "AddPartitionHelper failed");
+void AddPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sync) {
+    AddPartitionHelper(libGptTest, partitions);
 
     if (sync) {
-        ASSERT_TRUE(libGptTest->Sync(), "Sync failed");
+        libGptTest->Sync();
     }
 
-    ASSERT_TRUE(PartitionVerify(libGptTest, partitions), "Partition verify failed");
-    ASSERT_EQ(partitions->GetCount(), partitions->CreatedCount(),
-              "Not as many created as we wanted to");
-
-    END_HELPER;
+    PartitionVerify(libGptTest, partitions);
+    ASSERT_EQ(partitions->GetCount(), partitions->CreatedCount());
 }
 
 // Removes partitions and verifies them.
-bool RemovePartitions(LibGptTest* libGptTest, Partitions* partitions, uint32_t remove_count,
+void RemovePartitions(LibGptTest* libGptTest, Partitions* partitions, uint32_t remove_count,
                       bool sync) {
-    BEGIN_HELPER;
-
-    ASSERT_TRUE(RemovePartitionsHelper(libGptTest, partitions, remove_count),
-                "RemovePartitionsHelper failed");
+    RemovePartitionsHelper(libGptTest, partitions, remove_count);
     if (sync) {
-        ASSERT_TRUE(libGptTest->Sync(), "Sync failed");
+        libGptTest->Sync();
     }
 
-    ASSERT_TRUE(PartitionVerify(libGptTest, partitions), "Partition verify failed");
+    PartitionVerify(libGptTest, partitions);
     ASSERT_EQ(partitions->GetCount() - partitions->CreatedCount(), remove_count,
               "Not as many removed as we wanted to");
-
-    END_HELPER;
 }
 
 // Removes all partitions and verifies them.
-bool RemoveAllPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sync) {
-    BEGIN_HELPER;
-
+void RemoveAllPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sync) {
     ASSERT_LE(partitions->GetCount(), partitions->CreatedCount(), "Not all partitions populated");
     ASSERT_EQ(libGptTest->RemoveAllPartitions(), ZX_OK, "Failed to remove all partition");
 
@@ -587,114 +515,52 @@ bool RemoveAllPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sy
         partitions->ClearCreated(i);
     }
 
-    ASSERT_TRUE(PartitionVerify(libGptTest, partitions), "Partition verify failed");
+    PartitionVerify(libGptTest, partitions);
     ASSERT_EQ(partitions->CreatedCount(), 0, "Not as many removed as we wanted to");
-    END_HELPER;
-}
-
-// Tests if we can create a GptDevice.
-bool CreateTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
-
-    ASSERT_FALSE(libGptTest->IsGptValid(), "Valid GPT on uninitialized disk");
-    ASSERT_TRUE(libGptTest->Reset(), "Failed to reset Test");
-    ASSERT_FALSE(libGptTest->IsGptValid(), "Valid GPT after reset");
-    END_TEST;
-}
-
-// Tests Finalize initializes GPT in-memory only and doesn't commit to disk.
-bool FinalizeTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(libGptTest->Finalize(), "Finalize failed");
-
-    // Finalize initializes GPT but doesn't write changes to disk.
-    // Resetting the Test should bring invalid gpt back.
-    ASSERT_TRUE(libGptTest->Reset(), "Failed to reset Test");
-    ASSERT_FALSE(libGptTest->IsGptValid(), "Valid GPT after finalize and reset");
-    END_TEST;
-}
-
-// Tests Finalize initializes GPT and writes it to disk.
-bool SyncTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
-
-    ASSERT_FALSE(libGptTest->IsGptValid(), "Valid GPT on uninitialized disk");
-
-    // Sync should write changes to disk. Resetting should bring valid gpt back.
-    ASSERT_TRUE(libGptTest->Sync(), "Sync failed");
-    ASSERT_TRUE(libGptTest->Reset(), "Failed to reset Test");
-    ASSERT_TRUE(libGptTest->IsGptValid(), "Invalid GPT after sync and reset");
-    END_TEST;
-}
-
-// Tests the range the GPT blocks falls within disk.
-bool RangeTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(libGptTest->Finalize(), "Finalize failed");
-    ASSERT_TRUE(libGptTest->ReadRange(), "Failed to read range");
-
-    END_TEST;
 }
 
 // Test adding total_partitions partitions to GPT w/o writing to disk
-template <uint32_t total_partitions, bool sync>
-bool AddPartitionTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
-
+void AddPartitionTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
+    libGptTest->PrepDisk(sync);
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
-    END_TEST;
+    AddPartitions(libGptTest, &partitions, sync);
 }
 
 // Test adding total_partitions partitions to GPT and test removing remove_count
 // partitions later w/o writing to disk.
-template <uint32_t total_partitions, uint32_t remove_count, bool sync>
-bool RemovePartitionTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
-
+void RemovePartition(LibGptTest* libGptTest, uint32_t total_partitions, uint32_t remove_count,
+                     bool sync) {
+    libGptTest->PrepDisk(sync);
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
-    ASSERT_TRUE(RemovePartitions(libGptTest, &partitions, remove_count, sync),
-                "RemovePartitions failed");
-
-    END_TEST;
+    AddPartitions(libGptTest, &partitions, sync);
+    RemovePartitions(libGptTest, &partitions, remove_count, sync);
 }
 
 // Test removing all total_partititions from GPT w/o syncing.
-template <uint32_t total_partitions, bool sync>
-bool RemovePartitionAllTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void RemoveAllPartitions(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
 
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
+    libGptTest->PrepDisk(sync);
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
-    ASSERT_TRUE(RemoveAllPartitions(libGptTest, &partitions, sync), "RemoveAllPartitions failed");
-
-    END_TEST;
+    AddPartitions(libGptTest, &partitions, sync);
+    RemoveAllPartitions(libGptTest, &partitions, sync);
 }
 
-template <uint32_t total_partitions, bool sync>
-bool SetPartitionTypeTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void SetPartitionTypeTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
     guid_t before, after;
 
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
+    libGptTest->PrepDisk(sync);
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
+    AddPartitions(libGptTest, &partitions, sync);
 
     // Change partition type in cached copy so that we can verify the
     // changes in GptDevice
@@ -706,30 +572,27 @@ bool SetPartitionTypeTest(LibGptTest* libGptTest) {
     memcpy(&before, p->type, sizeof(before));
 
     // Change the type in GptDevice
-    ASSERT_EQ(libGptTest->SetPartitionType(index, partitions.GetPartition(index)->type), ZX_OK, "");
+    EXPECT_OK(libGptTest->SetPartitionType(index, partitions.GetPartition(index)->type));
 
     // Get the changes
     p = libGptTest->GetPartition(index);
     memcpy(&after, p->type, sizeof(after));
 
     // The type should have changed by now in GptDevice
-    ASSERT_NE(memcmp(&before, &after, sizeof(before)), 0, "Same type before and after");
+    EXPECT_NE(memcmp(&before, &after, sizeof(before)), 0);
 
-    ASSERT_TRUE(PartitionVerify(libGptTest, &partitions), "");
-    END_TEST;
+    PartitionVerify(libGptTest, &partitions);
 }
 
-template <uint32_t total_partitions, bool sync>
-bool SetPartitionGuidTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void SetPartitionGuidTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
     guid_t before, after;
 
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
+    libGptTest->PrepDisk(sync);
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
+    AddPartitions(libGptTest, &partitions, sync);
 
     // Change partition id in cached copy so that we can verify the
     // changes in GptDevice
@@ -741,17 +604,16 @@ bool SetPartitionGuidTest(LibGptTest* libGptTest) {
     memcpy(&before, p->guid, sizeof(before));
 
     // Change the guid in GptDevice
-    ASSERT_EQ(libGptTest->SetPartitionGuid(index, partitions.GetPartition(index)->guid), ZX_OK, "");
+    EXPECT_OK(libGptTest->SetPartitionGuid(index, partitions.GetPartition(index)->guid));
 
     // Get the changes
     p = libGptTest->GetPartition(index);
     memcpy(&after, p->guid, sizeof(after));
 
     // The guid should have changed by now in GptDevice
-    ASSERT_NE(memcmp(&before, &after, sizeof(before)), 0, "Same guid before and after");
+    EXPECT_NE(memcmp(&before, &after, sizeof(before)), 0);
 
-    ASSERT_TRUE(PartitionVerify(libGptTest, &partitions), "");
-    END_TEST;
+    PartitionVerify(libGptTest, &partitions);
 }
 
 // Find a partition that has a hole between it's end and start of next partition
@@ -808,43 +670,40 @@ zx_status_t FindPartitionToShrink(const Partitions* partitions, uint32_t* out_in
 typedef zx_status_t (*find_partition_t)(const Partitions* partitions, uint32_t* out_index,
                                         uint64_t* out_first, uint64_t* out_last);
 
-template <uint32_t total_partitions, bool sync, find_partition_t find_part>
-bool SetPartitionRangeTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void SetPartitionRangeTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync,
+                                 find_partition_t find_part) {
     uint64_t new_last = 0, new_first = 0;
 
     ASSERT_GT(total_partitions, 1, "For range to test we need at least two partition");
 
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
+    libGptTest->PrepDisk(sync);
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock() - kHoleSize);
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
+    AddPartitions(libGptTest, &partitions, sync);
 
     uint32_t index;
-    ASSERT_EQ(find_part(&partitions, &index, &new_first, &new_last), ZX_OK, "");
+    EXPECT_OK(find_part(&partitions, &index, &new_first, &new_last));
 
     ASSERT_NE(index, partitions.GetCount(), "Could not find a hole");
     ASSERT_NE(new_first, 0, "Could not find a hole to change range");
     ASSERT_NE(new_last, 0, "Could not find a hole to change range");
 
-    ASSERT_TRUE(partitions.ChangePartitionRange(index, new_first, new_last), "");
+    partitions.ChangePartitionRange(index, new_first, new_last);
 
     // Change the range in GptDevice
-    ASSERT_EQ(libGptTest->SetPartitionRange(index, new_first, new_last), ZX_OK, "");
+    EXPECT_OK(libGptTest->SetPartitionRange(index, new_first, new_last));
 
     // Get the changes
     gpt_partition_t* p = libGptTest->GetPartition(index);
-    ASSERT_EQ(p->first, new_first, "First doesn't match after update");
-    ASSERT_EQ(p->last, new_last, "Last doesn't match after update");
+    EXPECT_EQ(p->first, new_first, "First doesn't match after update");
+    EXPECT_EQ(p->last, new_last, "Last doesn't match after update");
 
-    ASSERT_TRUE(PartitionVerify(libGptTest, &partitions), "Partition verify failed");
-    END_TEST;
+    PartitionVerify(libGptTest, &partitions);
 }
 
-bool PartitionVisibilityFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t index) {
-    BEGIN_HELPER;
+void PartitionVisibilityFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t index) {
 
     // Get the current visibility and flip it
     const gpt_partition_t* p = libGptTest->GetPartition(index);
@@ -853,35 +712,29 @@ bool PartitionVisibilityFlip(LibGptTest* libGptTest, Partitions* partitions, uin
     partitions->SetPartitionVisibility(index, visible);
 
     // Change the guid in GptDevice
-    ASSERT_EQ(libGptTest->SetPartitionVisibility(index, visible), ZX_OK, "");
+    EXPECT_OK(libGptTest->SetPartitionVisibility(index, visible));
 
     // Get the changes and verify
     p = libGptTest->GetPartition(index);
-    ASSERT_EQ(gpt::IsPartitionVisible(p), visible, "Changes not reflected");
-    ASSERT_TRUE(PartitionVerify(libGptTest, partitions), "");
-
-    END_HELPER;
+    EXPECT_EQ(gpt::IsPartitionVisible(p), visible);
+    PartitionVerify(libGptTest, partitions);
 }
 
-template <uint32_t total_partitions, bool sync>
-bool PartitionVisibilityTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void PartitionVisibilityTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
 
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
+    libGptTest->PrepDisk(sync);
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
+    AddPartitions(libGptTest, &partitions, sync);
     uint32_t index = static_cast<uint32_t>(rand_r(&gRandSeed) % total_partitions);
 
-    ASSERT_TRUE(PartitionVisibilityFlip(libGptTest, &partitions, index), "");
-    ASSERT_TRUE(PartitionVisibilityFlip(libGptTest, &partitions, index), "Flipping visibility");
-    END_TEST;
+    PartitionVisibilityFlip(libGptTest, &partitions, index);
+    PartitionVisibilityFlip(libGptTest, &partitions, index);
 }
 
-bool PartitionFlagsFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t index) {
-    BEGIN_HELPER;
+void PartitionFlagsFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t index) {
 
     // Get the current flags
     uint64_t old_flags, updated_flags;
@@ -896,95 +749,207 @@ bool PartitionFlagsFlip(LibGptTest* libGptTest, Partitions* partitions, uint32_t
     // Get the changes and verify
     ASSERT_EQ(libGptTest->GetPartitionFlags(index, &updated_flags), ZX_OK, "");
     ASSERT_EQ(new_flags, updated_flags, "Flags update failed");
-    ASSERT_TRUE(PartitionVerify(libGptTest, partitions), "");
-
-    END_HELPER;
+    PartitionVerify(libGptTest, partitions);
 }
 
-template <uint32_t total_partitions, bool sync>
-bool PartitionFlagsTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void PartitionFlagsTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
 
-    ASSERT_TRUE(libGptTest->PrepDisk(sync), "Failed to setup disk");
+    libGptTest->PrepDisk(sync);
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
 
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, sync), "AddPartitions failed");
+    AddPartitions(libGptTest, &partitions, sync);
     uint32_t index = static_cast<uint32_t>(rand_r(&gRandSeed) % total_partitions);
 
-    ASSERT_TRUE(PartitionFlagsFlip(libGptTest, &partitions, index), "");
-    ASSERT_TRUE(PartitionFlagsFlip(libGptTest, &partitions, index), "Flipping flags");
-    END_TEST;
+    PartitionFlagsFlip(libGptTest, &partitions, index);
+    PartitionFlagsFlip(libGptTest, &partitions, index);
 }
 
 // Test if Diffs after adding partitions reflect all the changes.
-template <uint32_t total_partitions>
-bool DiffsTest(LibGptTest* libGptTest) {
-    BEGIN_TEST;
+void DiffsTestHelper(LibGptTest* libGptTest, uint32_t total_partitions) {
     uint32_t diffs;
 
-    ASSERT_NE(libGptTest->GetDiffs(0, &diffs), ZX_OK, "GetDiffs should fail before PrepDisk");
-    ASSERT_TRUE(libGptTest->PrepDisk(false), "");
-    ASSERT_NE(libGptTest->GetDiffs(0, &diffs), ZX_OK,
+    EXPECT_NE(libGptTest->GetDiffs(0, &diffs), ZX_OK, "GetDiffs should fail before PrepDisk");
+    libGptTest->PrepDisk(false);
+    EXPECT_NE(libGptTest->GetDiffs(0, &diffs), ZX_OK,
               "GetDiffs for non-existing partition should fail");
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
-    ASSERT_TRUE(AddPartitions(libGptTest, &partitions, false), "");
-    ASSERT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "Diffs zero after adding partition");
+    AddPartitions(libGptTest, &partitions, false);
+    EXPECT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "Diffs zero after adding partition");
 
-    ASSERT_EQ(diffs,
+    EXPECT_EQ(diffs,
               gpt::kGptDiffType | gpt::kGptDiffGuid | gpt::kGptDiffFirst | gpt::kGptDiffLast |
                   gpt::kGptDiffName,
               "Unexpected diff after creating partition");
-    ASSERT_TRUE(libGptTest->Sync(), "");
-    ASSERT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "");
-    ASSERT_EQ(diffs, 0, "Diffs not zero after syncing partition");
+    libGptTest->Sync();
+    EXPECT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "");
+    EXPECT_EQ(diffs, 0, "Diffs not zero after syncing partition");
+}
 
-    END_TEST;
+// Tests if we can create a GptDevice.
+TEST_F(GptDeviceTest, ValidGptOnUninitilizedDisk) {
+    LibGptTest* libGptTest = GetLibGptTest();
+
+    EXPECT_FALSE(libGptTest->IsGptValid(), "Valid GPT on uninitialized disk");
+}
+
+TEST_F(GptDeviceTest, ValidGptAfterResetOnUninitilized) {
+    LibGptTest* libGptTest = GetLibGptTest();
+
+    libGptTest->Reset();
+    EXPECT_FALSE(libGptTest->IsGptValid(), "Valid GPT after reset");
+}
+
+// Tests Finalize initializes GPT in-memory only and doesn't commit to disk.
+TEST_F(GptDeviceTest, FinalizeNoSync) {
+    LibGptTest* libGptTest = GetLibGptTest();
+
+    libGptTest->Finalize();
+
+    // Finalize initializes GPT but doesn't write changes to disk.
+    // Resetting the Test should bring invalid gpt back.
+    libGptTest->Reset();
+    EXPECT_FALSE(libGptTest->IsGptValid(), "Valid GPT after finalize and reset");
+}
+
+// Tests Finalize initializes GPT and writes it to disk.
+TEST_F(GptDeviceTest, FinalizeAndSync) {
+    auto libGptTest = GetLibGptTest();
+    EXPECT_FALSE(libGptTest->IsGptValid());
+
+    // Sync should write changes to disk. Resetting should bring valid gpt back.
+    libGptTest->Sync();
+    libGptTest->Reset();
+    EXPECT_TRUE(libGptTest->IsGptValid());
+}
+
+// Tests the range the GPT blocks falls within disk.
+TEST_F(GptDeviceTest, Range) {
+    auto libGptTest = GetLibGptTest();
+    libGptTest->Finalize();
+    libGptTest->ReadRange();
+}
+
+TEST_F(GptDeviceTest, AddPartitionNoSync) {
+    AddPartitionTestHelper(GetLibGptTest(), 3, false);
+}
+
+TEST_F(GptDeviceTest, AddPartition) {
+    AddPartitionTestHelper(GetLibGptTest(), 20, true);
+}
+
+TEST_F(GptDeviceTest, RemovePartitionNoSync) {
+    RemovePartition(GetLibGptTest(), 12, 4, false);
+}
+
+TEST_F(GptDeviceTest, RemovePartition) {
+    RemovePartition(GetLibGptTest(), 3, 2, true);
+}
+
+TEST_F(GptDeviceTest, RemovePartitionRemoveAllOneAtATime) {
+    RemovePartition(GetLibGptTest(), 11, 11, false);
+}
+
+TEST_F(GptDeviceTest, RemoveAllPartitions) {
+    RemoveAllPartitions(GetLibGptTest(), 12, true);
+}
+
+TEST_F(GptDeviceTest, RemoveAllPartitionsNoSync) {
+    RemoveAllPartitions(GetLibGptTest(), 15, false);
+}
+
+TEST_F(GptDeviceTest, SetPartitionType) {
+    SetPartitionTypeTestHelper(GetLibGptTest(), 4, true);
+}
+
+TEST_F(GptDeviceTest, SetPartitionTypeNoSync) {
+    SetPartitionTypeTestHelper(GetLibGptTest(), 8, false);
+}
+
+TEST_F(GptDeviceTest, SetPartitionGuidSync) {
+    SetPartitionGuidTestHelper(GetLibGptTest(), 5, true);
+}
+
+TEST_F(GptDeviceTest, SetPartitionGuidNoSync) {
+    SetPartitionGuidTestHelper(GetLibGptTest(), 7, false);
+}
+
+TEST_F(GptDeviceTest, ExpandPartitionSync) {
+    SetPartitionRangeTestHelper(GetLibGptTest(), 3, true, FindPartitionToExpand);
+}
+
+TEST_F(GptDeviceTest, ExpandPartitionNoSync) {
+    SetPartitionRangeTestHelper(GetLibGptTest(), 3, false, FindPartitionToExpand);
+}
+
+TEST_F(GptDeviceTest, ShrinkPartitionSync) {
+    SetPartitionRangeTestHelper(GetLibGptTest(), 3, true, FindPartitionToShrink);
+}
+
+TEST_F(GptDeviceTest, ShrinkPartitionNoSync) {
+    SetPartitionRangeTestHelper(GetLibGptTest(), 3, false, FindPartitionToShrink);
+}
+
+TEST_F(GptDeviceTest, PartitionVisibilityOnSyncTest) {
+    PartitionVisibilityTestHelper(GetLibGptTest(), 5, true);
+}
+
+TEST_F(GptDeviceTest, PartitionVisibilityNoSyncTest) {
+    PartitionVisibilityTestHelper(GetLibGptTest(), 3, false);
+}
+
+TEST_F(GptDeviceTest, UpdatePartitionFlagsSync) {
+    PartitionFlagsTestHelper(GetLibGptTest(), 9, true);
+}
+
+TEST_F(GptDeviceTest, UpdatePartitionFlagsNoSync) {
+    PartitionFlagsTestHelper(GetLibGptTest(), 1, false);
+}
+
+TEST_F(GptDeviceTest, GetDiffsForAddingOnePartition) {
+    DiffsTestHelper(GetLibGptTest(), 1);
+}
+
+TEST_F(GptDeviceTest, GetDiffsForAddingMultiplePartition) {
+    DiffsTestHelper(GetLibGptTest(), 9);
 }
 
 // KnownGuid is statically built. Verify that there are no double entries for
 // human friendly GUID name.
-bool KnownGuidUniqueNameTest() {
-    BEGIN_TEST;
+TEST(KnownGuidTest, UniqueName) {
     for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
         for (auto j = i + 1; j != KnownGuid::end(); j++) {
-            ASSERT_NE(strcmp(i->name(), j->name()), 0, "Guid names not unique");
+            EXPECT_NE(strcmp(i->name(), j->name()), 0);
         }
     }
-    END_TEST;
 }
 
 // KnownGuid is statically built. Verify that there are no double entries for
 // GUID.
-bool KnownGuidUniqueGuidTest() {
-    BEGIN_TEST;
+TEST(KnownGuidTest, UniqueGuid) {
     for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
         for (auto j = i + 1; j != KnownGuid::end(); j++) {
-            ASSERT_NE(memcmp(i->guid(), j->guid(), sizeof(guid_t)), 0, "Guid not unique");
+            EXPECT_NE(memcmp(i->guid(), j->guid(), sizeof(guid_t)), 0);
         }
     }
-    END_TEST;
 }
 
 // KnownGuid is statically built. Verify that there are no double entries for
 // human friendly GUID string.
-bool KnownGuidUniqueStrTest() {
-    BEGIN_TEST;
+TEST(KnownGuidTest, UniqueStr) {
     for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
         for (auto j = i + 1; j != KnownGuid::end(); j++) {
-            ASSERT_NE(strcmp(i->str(), j->str()), 0, "Guid str not unique");
+            EXPECT_NE(strcmp(i->str(), j->str()), 0);
         }
     }
-    END_TEST;
 }
 
 // KnownGuid is statically built. Verify that there are no wrong entries for GUID to
 // string conversion.
-bool KnownGuidToStrTest() {
-    BEGIN_TEST;
+TEST(KnownGuidTest, KnownGuidToStr) {
     char str[GPT_NAME_LEN];
     bool pass = true;
     for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
@@ -995,91 +960,50 @@ bool KnownGuidToStrTest() {
         }
     }
 
-    ASSERT_TRUE(pass, "test failed");
-    END_TEST;
+    EXPECT_TRUE(pass);
 }
 
 // Litmus test for Guid to human friendly Name conversions
-bool GuidToNameTest() {
-    BEGIN_TEST;
+TEST(KnownGuidTest, GuidToName) {
 
     uint8_t install[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
     auto res = KnownGuid::GuidToName(install);
-    ASSERT_EQ(strcmp(res, "fuchsia-install"), 0, "Could not lookup fuchsia-install");
+    EXPECT_EQ(strcmp(res, "fuchsia-install"), 0);
 
     uint8_t bl[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
     res = KnownGuid::GuidToName(bl);
-    ASSERT_EQ(strcmp(res, "bootloader"), 0, "Could not lookup bootloader");
+    EXPECT_EQ(strcmp(res, "bootloader"), 0);
 
     uint8_t zb[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
     res = KnownGuid::GuidToName(zb);
-    ASSERT_EQ(strcmp(res, "zircon-b"), 0, "Could not lookup zircon-b");
-
-    END_TEST;
+    EXPECT_EQ(strcmp(res, "zircon-b"), 0);
 }
 
 // Litmus test for Guid to human friendly Name conversions
-bool NameToGuidTest() {
-    BEGIN_TEST;
+TEST(KnownGuidTest, NameToGuid) {
     uint8_t guid[GPT_GUID_LEN];
 
     uint8_t sys[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-    ASSERT_TRUE(KnownGuid::NameToGuid("fuchsia-system", guid), "fuchsia-system not found");
-    ASSERT_EQ(memcmp(guid, sys, GPT_GUID_LEN), 0, "Could not lookup fuchsia-system");
+    EXPECT_TRUE(KnownGuid::NameToGuid("fuchsia-system", guid));
+    EXPECT_EQ(memcmp(guid, sys, GPT_GUID_LEN), 0);
 
     uint8_t factory[GPT_GUID_LEN] = GUID_FACTORY_CONFIG_VALUE;
-    ASSERT_TRUE(KnownGuid::NameToGuid("factory", guid), "factory not found");
-    ASSERT_EQ(memcmp(guid, factory, GPT_GUID_LEN), 0, "Could not lookup factory");
+    EXPECT_TRUE(KnownGuid::NameToGuid("factory", guid));
+    EXPECT_EQ(memcmp(guid, factory, GPT_GUID_LEN), 0);
 
-    uint8_t vbmeta[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
-    ASSERT_TRUE(KnownGuid::NameToGuid("vbmeta_a", guid), "vbmeta_a not found");
-    ASSERT_EQ(memcmp(guid, vbmeta, GPT_GUID_LEN), 0, "Could not lookup vbmeta_a");
-
-    END_TEST;
+    uint8_t vbmeta_a[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
+    EXPECT_TRUE(KnownGuid::NameToGuid("vbmeta_a", guid), "vbmeta_a not found");
+    EXPECT_EQ(memcmp(guid, vbmeta_a, GPT_GUID_LEN), 0);
 }
 
 // Litmus test for guid str to name conversions
-bool GuidStrToNameTest() {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(
+TEST(KnownGuidTest, GuidStrToName) {
+    EXPECT_EQ(
         strcmp(KnownGuid::GuidStrToName("CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3"), "cros-firmware"),
-        "No match for cros-firmware");
+        0);
 
-    ASSERT_TRUE(
-        strcmp(KnownGuid::GuidStrToName("3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC"), "cros-rootfs"),
-        "No match for cros-rootfs");
-
-    ASSERT_TRUE(
-        strcmp(KnownGuid::GuidStrToName("41D0E340-57E3-954E-8C1E-17ECAC44CFF5"), "fuchsia-fvm"),
-        "No match for fuchsia-fvm");
-
-    END_TEST;
+    EXPECT_EQ(
+        strcmp(KnownGuid::GuidStrToName("3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC"), "cros-rootfs"), 0);
+    EXPECT_EQ(
+        strcmp(KnownGuid::GuidStrToName("41D0E340-57E3-954E-8C1E-17ECAC44CFF5"), "fuchsia-fvm"), 0);
 }
-
-BEGIN_TEST_CASE(libgpt_tests)
-RUN_TEST_WRAP(CreateTest)
-RUN_TEST_WRAP(FinalizeTest)
-RUN_TEST_WRAP(SyncTest)
-RUN_TEST_WRAP(RangeTest)
-RUN_TEST_WRAP((AddPartitionTest<3, false>))
-RUN_TEST_WRAP((AddPartitionTest<20, true>))
-RUN_TEST_WRAP((RemovePartitionTest<12, 4, false>))
-RUN_TEST_WRAP((RemovePartitionTest<3, 2, true>))
-RUN_TEST_WRAP((RemovePartitionTest<11, 11, false>))
-RUN_TEST_WRAP((RemovePartitionAllTest<12, true>))
-RUN_TEST_WRAP((RemovePartitionAllTest<15, false>))
-RUN_TEST_WRAP((SetPartitionTypeTest<4, true>))
-RUN_TEST_WRAP((SetPartitionTypeTest<8, false>))
-RUN_TEST_WRAP((SetPartitionGuidTest<5, true>))
-RUN_TEST_WRAP((SetPartitionGuidTest<7, false>))
-RUN_TEST_WRAP((SetPartitionRangeTest<14, true, FindPartitionToExpand>))
-RUN_TEST_WRAP((SetPartitionRangeTest<18, false, FindPartitionToShrink>))
-RUN_TEST_WRAP((PartitionVisibilityTest<2, true>))
-RUN_TEST_WRAP((PartitionFlagsTest<1, true>))
-RUN_TEST_WRAP((DiffsTest<9>))
-RUN_TEST_MEDIUM(KnownGuidUniqueNameTest)
-RUN_TEST_MEDIUM(KnownGuidUniqueGuidTest)
-RUN_TEST_MEDIUM(KnownGuidUniqueStrTest)
-RUN_TEST_MEDIUM(KnownGuidToStrTest)
-END_TEST_CASE(libgpt_tests)

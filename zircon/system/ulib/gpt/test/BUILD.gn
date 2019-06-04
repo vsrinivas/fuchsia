@@ -21,9 +21,9 @@ test("gpt-unit") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/cksum",
   ]
 }
