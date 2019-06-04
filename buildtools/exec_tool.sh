@@ -25,7 +25,7 @@ readonly TOOL_PATH="${SCRIPT_ROOT}/${HOST_PLATFORM}/${TOOL_NAME}"
 
 if [[ ! -x "${TOOL_PATH}" ]]; then
   echo "Cannot find ${TOOL_PATH}"
-  echo "Did you run update.sh?"
+  echo "Did you run `jiri fetch-packages`?"
   exit 1
 fi
 
