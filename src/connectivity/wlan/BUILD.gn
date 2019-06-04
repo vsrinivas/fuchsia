@@ -15,24 +15,14 @@ group("wlan") {
 group("service") {
   testonly = true
   deps = [
-    ":bin-only",
+    ":bin",
     ":config",
   ]
 }
 
-group("bin-only") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/wlan/wlancfg",
-    "//src/connectivity/wlan/wlanstack",
-  ]
-}
-
-# TODO(WLAN-1123): Remove once all products are using `:service`.
 group("bin") {
   testonly = true
   public_deps = [
-    ":config",
     "//src/connectivity/wlan/wlancfg",
     "//src/connectivity/wlan/wlanstack",
   ]
