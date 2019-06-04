@@ -17,10 +17,12 @@
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/isp.h>
+#include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <hw/reg.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fit/function.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/fidl.h>
@@ -120,6 +122,12 @@ private:
 
     sync_completion_t frame_processing_signal_;
 
+    // Callback to call when calling DdkUnbind,
+    // so the ArmIspDeviceTester (if it exists) stops interfacing
+    // with this class.
+    fit::callback<void()> on_isp_unbind_;
+    // This lock prevents this class from being unbound while it's child is being set up:
+    fbl::Mutex unbind_lock_;
     friend class ArmIspDeviceTester;
 };
 

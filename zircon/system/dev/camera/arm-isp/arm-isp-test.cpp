@@ -7,18 +7,21 @@
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <fuchsia/camera/test/c/fidl.h>
 #include <zircon/fidl.h>
 
 namespace camera {
 
-zx_status_t ArmIspDeviceTester::Create(ArmIspDevice* isp) {
+zx_status_t ArmIspDeviceTester::Create(ArmIspDevice* isp, fit::callback<void()>* on_isp_unbind) {
     fbl::AllocChecker ac;
-    auto isp_test_device = fbl::make_unique_checked<ArmIspDeviceTester>(&ac, isp, isp->parent());
+    auto isp_test_device = fbl::make_unique_checked<ArmIspDeviceTester>(&ac, isp, isp->zxdev());
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Unable to start ArmIspDeviceTester \n", __func__);
         return ZX_ERR_NO_MEMORY;
     }
+
+    *on_isp_unbind = fit::bind_member(isp_test_device.get(), &ArmIspDeviceTester::Disconnect);
 
     zx_status_t status = isp_test_device->DdkAdd("arm-isp-tester");
     if (status != ZX_OK) {
@@ -43,6 +46,11 @@ void ArmIspDeviceTester::DdkUnbind() {
     DdkRemove();
 }
 
+void ArmIspDeviceTester::Disconnect() {
+    fbl::AutoLock guard(&isp_lock_);
+    isp_ = nullptr;
+}
+
 zx_status_t ArmIspDeviceTester::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_camera_test_IspTester_dispatch(this, txn, msg, &isp_tester_ops);
 }
@@ -50,6 +58,10 @@ zx_status_t ArmIspDeviceTester::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 // DDKMessage Helper Functions.
 zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
     fuchsia_camera_test_TestReport report = {1, 0, 0};
+    fbl::AutoLock guard(&isp_lock_);
+    if (!isp_) {
+        return ZX_ERR_BAD_STATE;
+    }
     if (isp_->RunTests() == ZX_OK) {
         report.success_count++;
     } else {

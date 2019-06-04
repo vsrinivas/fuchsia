@@ -9,6 +9,7 @@
 #include <ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <memory>
 #include <stdlib.h>
@@ -327,13 +328,6 @@ zx_status_t ArmIspDevice::InitIsp() {
         .set_mcu_override_config_select(1)
         .WriteTo(&isp_mmio_);
 
-    // TODO(garratt): Enable this only under test.
-    status = ArmIspDeviceTester::Create(this);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to create ISP Tester\n", __func__);
-        return status;
-    }
-
     return ZX_OK;
 }
 
@@ -480,6 +474,16 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
         zxlogf(INFO, "arm-isp: Added arm-isp device\n");
     }
 
+    // TODO(garratt): Enable this only under test.
+    // Hold the unbind lock so we do not become unbound while the
+    // ArmIspDeviceTester is being created:
+    fbl::AutoLock guard(&isp_device->unbind_lock_);
+    status = ArmIspDeviceTester::Create(isp_device.get(), &(isp_device->on_isp_unbind_));
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create ISP Tester\n", __func__);
+        return status;
+    }
+
     // isp_device intentionally leaked as it is now held by DevMgr.
     __UNUSED auto ptr = isp_device.release();
 
@@ -529,6 +533,11 @@ ArmIspDevice::~ArmIspDevice() {
 }
 
 void ArmIspDevice::DdkUnbind() {
+    // Make sure we don't unbind while the ArmIspTester is being constructed:
+    fbl::AutoLock guard(&unbind_lock_);
+    if (on_isp_unbind_) {
+        on_isp_unbind_();
+    }
     ShutDown();
     DdkRemove();
 }
