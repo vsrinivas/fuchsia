@@ -4,10 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ALLOCATOR_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ALLOCATOR_H_
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
 
-#include "../allocation.h"
+#include "../../allocation.h"
 
 namespace pci {
 
@@ -24,4 +24,4 @@ public:
 
 } // namespace pci
 
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ALLOCATOR_H_
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_

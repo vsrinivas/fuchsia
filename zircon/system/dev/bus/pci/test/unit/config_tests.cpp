@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "../config.h"
-#include "fake_pciroot.h"
+#include "../../config.h"
+#include "../fakes/fake_pciroot.h"
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>

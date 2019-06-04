@@ -105,11 +105,63 @@ zx_status_t Device::RpcReply(const zx::unowned_channel& ch, zx_status_t st,
 }
 
 zx_status_t Device::RpcConfigRead(const zx::unowned_channel& ch) {
-    RPC_UNIMPLEMENTED;
+    response_.cfg.width = request_.cfg.width;
+    response_.cfg.offset = request_.cfg.offset;
+
+    if (request_.cfg.offset >= PCI_EXT_CONFIG_SIZE) {
+        return RpcReply(ch, ZX_ERR_OUT_OF_RANGE);
+    }
+
+    switch (request_.cfg.width) {
+    case 1:
+        response_.cfg.value = cfg_->Read(PciReg8(request_.cfg.offset));
+        break;
+    case 2:
+        response_.cfg.value = cfg_->Read(PciReg16(request_.cfg.offset));
+        break;
+    case 4:
+        response_.cfg.value = cfg_->Read(PciReg32(request_.cfg.offset));
+        break;
+    default:
+        return RpcReply(ch, ZX_ERR_INVALID_ARGS);
+    }
+
+    pci_tracef("%s Read%u[%#x] = %#x\n", cfg_->addr(), request_.cfg.width * 8, request_.cfg.offset,
+               response_.cfg.value);
+    return RpcReply(ch, ZX_OK);
 }
 
 zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
-    RPC_UNIMPLEMENTED;
+    response_.cfg.width = request_.cfg.width;
+    response_.cfg.offset = request_.cfg.offset;
+    response_.cfg.value = request_.cfg.value;
+
+    // Don't permit writes inside the config header.
+    if (request_.cfg.offset < PCI_CONFIG_HDR_SIZE) {
+        return RpcReply(ch, ZX_ERR_ACCESS_DENIED);
+    }
+
+    if (request_.cfg.offset >= PCI_EXT_CONFIG_SIZE) {
+        return RpcReply(ch, ZX_ERR_OUT_OF_RANGE);
+    }
+
+    switch (request_.cfg.width) {
+    case 1:
+        cfg_->Write(PciReg8(request_.cfg.offset), static_cast<uint8_t>(request_.cfg.value));
+        break;
+    case 2:
+        cfg_->Write(PciReg16(request_.cfg.offset), static_cast<uint16_t>(request_.cfg.value));
+        break;
+    case 4:
+        cfg_->Write(PciReg32(request_.cfg.offset), request_.cfg.value);
+        break;
+    default:
+        return RpcReply(ch, ZX_ERR_INVALID_ARGS);
+    }
+
+    pci_tracef("%s Write%u[%#x] <- %#x\n", cfg_->addr(), request_.cfg.width * 8,
+               request_.cfg.offset, request_.cfg.value);
+    return RpcReply(ch, ZX_OK);
 }
 
 zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {

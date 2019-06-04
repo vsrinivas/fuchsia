@@ -14,12 +14,13 @@
 #include <inttypes.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
+#include <memory>
 #include <string.h>
 #include <zircon/rights.h>
 
 namespace pci {
 
-zx_status_t PciAllocation::CreateVmObject(fbl::unique_ptr<zx::vmo>* out_vmo) const {
+zx_status_t PciAllocation::CreateVmObject(std::unique_ptr<zx::vmo>* out_vmo) const {
     zx::vmo temp;
     zx_status_t status = zx::vmo::create_physical(resource_, base(), size(), &temp);
     if (status != ZX_OK) {
@@ -32,7 +33,7 @@ zx_status_t PciAllocation::CreateVmObject(fbl::unique_ptr<zx::vmo>* out_vmo) con
 
 zx_status_t PciRootAllocator::GetRegion(zx_paddr_t in_base,
                                         size_t size,
-                                        fbl::unique_ptr<PciAllocation>* alloc) {
+                                        std::unique_ptr<PciAllocation>* alloc) {
 
     zx_paddr_t out_base;
     zx::resource res;
@@ -45,27 +46,21 @@ zx_status_t PciRootAllocator::GetRegion(zx_paddr_t in_base,
 
     auto cleanup = fbl::MakeAutoCall([&]() { pciroot_.FreeAddressSpace(out_base, size, type_); });
 
-    fbl::AllocChecker ac;
-    *alloc = fbl::unique_ptr<PciRootAllocation>(new (&ac) PciRootAllocation(pciroot_, type_,
-                                                                            std::move(res),
-                                                                            out_base, size));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    *alloc = std::make_unique<PciRootAllocation>(pciroot_, type_, std::move(res), out_base, size);
     cleanup.cancel();
     return ZX_OK;
 }
 
-zx_status_t PciRootAllocator::AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) {
+zx_status_t PciRootAllocator::AddAddressSpace(std::unique_ptr<PciAllocation> alloc) {
     // PciRootAllocations will free any space they hold when they are destroyed,
     // and nothing seeds a PciRootAllocator.
+    alloc.release();
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t PciRegionAllocator::GetRegion(zx_paddr_t base,
                                           size_t size,
-                                          fbl::unique_ptr<PciAllocation>* alloc) {
+                                          std::unique_ptr<PciAllocation>* alloc) {
     RegionAllocator::Region::UPtr region_uptr;
     zx_status_t status;
     // Only use base if it is non-zero
@@ -93,7 +88,7 @@ zx_status_t PciRegionAllocator::GetRegion(zx_paddr_t base,
                region_uptr->base + size);
     fbl::AllocChecker ac;
     *alloc =
-        fbl::unique_ptr<PciRegionAllocation>(new (&ac) PciRegionAllocation(std::move(out_resource),
+        std::unique_ptr<PciRegionAllocation>(new (&ac) PciRegionAllocation(std::move(out_resource),
                                                                            std::move(region_uptr)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -102,7 +97,7 @@ zx_status_t PciRegionAllocator::GetRegion(zx_paddr_t base,
     return ZX_OK;
 }
 
-zx_status_t PciRegionAllocator::AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) {
+zx_status_t PciRegionAllocator::AddAddressSpace(std::unique_ptr<PciAllocation> alloc) {
     backing_alloc_ = std::move(alloc);
     auto base = backing_alloc_->base();
     auto size = backing_alloc_->size();

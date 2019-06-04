@@ -4,14 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_BUS_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_BUS_H_
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_BUS_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_BUS_H_
 
-#include "../bus.h"
+#include "../../bus.h"
 #include <ddk/mmio-buffer.h>
 #include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/hw/pci.h>
 
 namespace pci {
@@ -32,6 +31,9 @@ public:
         return *device_list_.find(bdf);
     }
 
+    // For use with Devices that need to link to a Bus.
+    BusLinkInterface* bli() { return static_cast<BusLinkInterface*>(this); }
+
     const pci::DeviceList& device_list() { return device_list_; }
 
 private:
@@ -41,4 +43,4 @@ private:
 
 } // namespace pci
 
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_BUS_H_
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_BUS_H_

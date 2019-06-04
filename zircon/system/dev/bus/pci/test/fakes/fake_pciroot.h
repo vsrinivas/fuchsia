@@ -4,12 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_PCIROOT_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_PCIROOT_H_
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
 
 #include "fake_ecam.h"
 #include <ddktl/protocol/pciroot.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 // This FakePciroot class for the moment is a stub and test files
 // will specialize the methods they need. Eventually when more tests
@@ -37,10 +36,12 @@ public:
     FakePciroot& operator=(const FakePciroot&) = delete;
 
     const pciroot_protocol_t* proto() const { return &proto_; }
+    FakeEcam& ecam() { return ecam_; }
     uint8_t bus_start() { return bus_start_; }
     uint8_t bus_end() { return bus_end_; }
-    int32_t allocation_cnt() { return allocation_cnt_; }
-    FakeEcam& ecam() { return ecam_; }
+    int32_t allocation_cnt() {
+        return allocation_cnt_;
+    }
 
     // Protocol methods.
     zx_status_t PcirootGetAuxdata(const char* args, void* out_data, size_t data_size,
@@ -68,7 +69,6 @@ public:
     zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
                                     uint16_t* value) {
         if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
-            printf("bus_start_ %u bus_end_ %u bus addr %u\n", bus_start_, bus_end_, address->bus_id);
             return ZX_ERR_NOT_SUPPORTED;
         }
 
@@ -134,7 +134,6 @@ private:
     FakePciroot(uint8_t bus_start, uint8_t bus_end, FakeEcam&& ecam)
         : bus_start_(bus_start), bus_end_(bus_end), proto_({&pciroot_protocol_ops_, this}),
           ecam_(std::move(ecam)) {}
-
     uint8_t bus_start_ = 0;
     uint8_t bus_end_ = 0;
     pciroot_protocol_t proto_;
@@ -142,4 +141,4 @@ private:
     int32_t allocation_cnt_ = 0;
 };
 
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_PCIROOT_H_
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_PCIROOT_H_

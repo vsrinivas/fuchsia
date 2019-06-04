@@ -75,7 +75,7 @@ public:
     // Create a VMO bounded by the base/size of this allocation using the
     // provided resource. This is used to provide VMOs for device BAR
     // allocations.
-    zx_status_t CreateVmObject(fbl::unique_ptr<zx::vmo>* out_vmo) const;
+    zx_status_t CreateVmObject(std::unique_ptr<zx::vmo>* out_vmo) const;
 
 protected:
     PciAllocation(zx::resource&& resource)
@@ -100,22 +100,20 @@ private:
 
 class PciRootAllocation final : public PciAllocation {
 public:
-    PciRootAllocation(const ddk::PcirootProtocolClient pciroot,
+    PciRootAllocation(const ddk::PcirootProtocolClient client,
                       const pci_address_space_t type,
                       zx::resource&& resource,
                       zx_paddr_t base,
                       size_t size)
-        : PciAllocation(std::move(resource)), pciroot_(pciroot), type_(type), base_(base),
+        : PciAllocation(std::move(resource)), pciroot_client_(client), type_(type), base_(base),
           size_(size) {}
-    ~PciRootAllocation() {
-        pciroot_.FreeAddressSpace(base_, size_, type_);
-    }
+    ~PciRootAllocation() final { pciroot_client_.FreeAddressSpace(base_, size_, type_); }
 
     zx_paddr_t base() const final { return base_; }
     size_t size() const final { return size_; }
 
 private:
-    ddk::PcirootProtocolClient const pciroot_;
+    const ddk::PcirootProtocolClient pciroot_client_;
     const pci_address_space_t type_;
     const zx_paddr_t base_;
     const size_t size_;
@@ -125,6 +123,7 @@ class PciRegionAllocation final : public PciAllocation {
 public:
     PciRegionAllocation(zx::resource&& resource, RegionAllocator::Region::UPtr&& region)
         : PciAllocation(std::move(resource)), region_(std::move(region)) {}
+
     zx_paddr_t base() const final { return region_->base; }
     size_t size() const final { return region_->size; }
 
@@ -145,12 +144,12 @@ public:
     // Request a region of address space spanning from |base| to |base| + |size|.
     virtual zx_status_t GetRegion(zx_paddr_t base,
                                   size_t size,
-                                  fbl::unique_ptr<PciAllocation>* out_alloc) = 0;
+                                  std::unique_ptr<PciAllocation>* out_alloc) = 0;
     // Request a region of address space of size |size| anywhere in the window.
-    zx_status_t GetRegion(size_t size, fbl::unique_ptr<PciAllocation>* out_alloc) {
+    zx_status_t GetRegion(size_t size, std::unique_ptr<PciAllocation>* out_alloc) {
         return GetRegion(/* base */ 0, size, out_alloc);
     }
-    virtual zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) = 0;
+    virtual zx_status_t AddAddressSpace(std::unique_ptr<PciAllocation> alloc) = 0;
 
 protected:
     PciAllocator() = default;
@@ -165,8 +164,8 @@ public:
         : pciroot_(proto), type_(type), low_(low) {}
     zx_status_t GetRegion(zx_paddr_t base,
                           size_t size,
-                          fbl::unique_ptr<PciAllocation>* alloc) final;
-    zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc);
+                          std::unique_ptr<PciAllocation>* alloc) final;
+    zx_status_t AddAddressSpace(std::unique_ptr<PciAllocation> alloc);
 
 private:
     // The bus driver outlives allocator objects.
@@ -186,18 +185,18 @@ public:
     PciRegionAllocator() = default;
     zx_status_t GetRegion(zx_paddr_t base,
                           size_t size,
-                          fbl::unique_ptr<PciAllocation>* alloc) final;
-    zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) final;
+                          std::unique_ptr<PciAllocation>* alloc) final;
+    zx_status_t AddAddressSpace(std::unique_ptr<PciAllocation> alloc) final;
     void SetRegionPool(RegionAllocator::RegionPool::RefPtr pool) { allocator_.SetRegionPool(pool); }
 
 private:
     // This PciAllocation is the object handed to the bridge by the upstream node
     // and holds a reservation for that address space in the upstream bridge's window
     // for use downstream this bridge.
-    fbl::unique_ptr<PciAllocation> backing_alloc_;
+    std::unique_ptr<PciAllocation> backing_alloc_;
     RegionAllocator allocator_;
 };
 
 } // namespace pci
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_
+#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_ALLOCATION_H_

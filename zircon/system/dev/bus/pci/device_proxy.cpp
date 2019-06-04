@@ -3,10 +3,12 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 
+#define RPC_ENTRY \
+    pci_tracef("[%s] %s: entry\n", cfg_->addr(), __func__)
+
 #define DEVICE_PROXY_UNIMPLEMENTED                       \
     zxlogf(INFO, "[DeviceProxy] called %s\n", __func__); \
     return ZX_ERR_NOT_SUPPORTED
-
 
 // This file contains the PciProtocol implementation that is proxied over
 // a channel to the specific pci::Device objects in the PCI Bus Driver.
@@ -100,7 +102,16 @@ zx_status_t DeviceProxy::PciGetDeviceInfo(zx_pcie_device_info_t* out_info) {
 
 template <typename T>
 zx_status_t DeviceProxy::PciConfigRead(uint16_t offset, T* out_value) {
-    DEVICE_PROXY_UNIMPLEMENTED;
+    PciRpcMsg req = {};
+    PciRpcMsg resp = {};
+
+    req.cfg.offset = offset;
+    req.cfg.width = static_cast<uint16_t>(sizeof(T));
+    zx_status_t st = RpcRequest(PCI_OP_CONFIG_READ, nullptr, &req, &resp);
+    if (st == ZX_OK) {
+        *out_value = static_cast<T>(resp.cfg.value);
+    }
+    return st;
 }
 
 zx_status_t DeviceProxy::PciConfigRead8(uint16_t offset, uint8_t* out_value) {
@@ -117,7 +128,13 @@ zx_status_t DeviceProxy::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
 
 template <typename T>
 zx_status_t DeviceProxy::PciConfigWrite(uint16_t offset, T value) {
-    return ZX_ERR_NOT_SUPPORTED;
+    PciRpcMsg req = {};
+    PciRpcMsg resp = {};
+
+    req.cfg.offset = offset;
+    req.cfg.width = static_cast<uint16_t>(sizeof(T));
+    req.cfg.value = value;
+    return RpcRequest(PCI_OP_CONFIG_WRITE, nullptr, &req, &resp);
 }
 
 zx_status_t DeviceProxy::PciConfigWrite8(uint16_t offset, uint8_t value) {
@@ -167,6 +184,7 @@ static constexpr zx_driver_ops_t pci_device_proxy_driver_ops = []() {
     return ops;
 }();
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(pci_device_proxy, pci_device_proxy_driver_ops, "zircon", "0.1", 1)
     BI_ABORT_IF_AUTOBIND,
 ZIRCON_DRIVER_END(pci_device_proxy)

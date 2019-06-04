@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "../config.h"
-#include "../device.h"
-#include "fake_bus.h"
-#include "fake_pciroot.h"
-#include "fake_upstream_node.h"
+#include "../../config.h"
+#include "../../device.h"
+#include "../fakes/fake_bus.h"
+#include "../fakes/fake_pciroot.h"
+#include "../fakes/fake_upstream_node.h"
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/limits.h>
 #include <zxtest/zxtest.h>
 

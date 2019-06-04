@@ -264,7 +264,7 @@ static zx_status_t pci_op_get_bti(void* ctx, uint32_t index, zx_handle_t* out_ha
     }
 
     kpci_device_t* dev = ctx;
-    pci_msg_t req = { .bti_index = index };
+    pci_msg_t req = {.bti_index = index};
     pci_msg_t resp = {};
     zx_handle_t handle;
     zx_status_t st = pci_rpc_request(dev, PCI_OP_GET_BTI, &handle, &req, &resp);
@@ -370,17 +370,17 @@ static zx_status_t pci_sysmem_connect(void* ctx, zx_handle_t handle) {
 };
 
 static sysmem_protocol_ops_t sysmem_protocol = {
-    .connect = pci_sysmem_connect
+    .connect = pci_sysmem_connect,
 };
 
 static zx_status_t get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
     if (proto_id == ZX_PROTOCOL_SYSMEM) {
-        sysmem_protocol_t *proto = protocol;
+        sysmem_protocol_t* proto = protocol;
         proto->ctx = ctx;
         proto->ops = &sysmem_protocol;
         return ZX_OK;
     } else if (proto_id == ZX_PROTOCOL_PCI) {
-        pci_protocol_t *proto = protocol;
+        pci_protocol_t* proto = protocol;
         proto->ctx = ctx;
         proto->ops = &_pci_protocol;
         return ZX_OK;

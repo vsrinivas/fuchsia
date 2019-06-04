@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
+#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ECAM_H_
+#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ECAM_H_
+
+#include "../../common.h"
 
 #include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/hw/pci.h>
 
@@ -211,8 +212,8 @@ static_assert(sizeof(FakePciType1Config) == 64, "Bad size for PciType1Config");
 union FakeDeviceConfig {
     FakePciType0Config device;
     FakePciType1Config bridge;
-    uint8_t config[256];
-    uint8_t ext_config[4096];
+    uint8_t config[PCI_BASE_CONFIG_SIZE];
+    uint8_t ext_config[PCI_EXT_CONFIG_SIZE];
 };
 static_assert(sizeof(FakeDeviceConfig) == 4096, "Bad size for FakeDeviceConfig");
 
@@ -302,4 +303,4 @@ private:
     FakeDeviceConfig* configs_;
 };
 
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKE_ECAM_H_
+#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_FAKES_FAKE_ECAM_H_
