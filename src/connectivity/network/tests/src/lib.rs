@@ -71,11 +71,11 @@ fn create_netstack_environment(
     >()
     .context("failed to create managed environment proxy")?;
     let () = sandbox
-            .create_environment(
-                server,
-                fidl_fuchsia_netemul_environment::EnvironmentOptions {
-                    name: Some(name),
-                    services:  Some([
+        .create_environment(
+            server,
+            fidl_fuchsia_netemul_environment::EnvironmentOptions {
+                name: Some(name),
+                services:  Some([
                     <fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::ServiceMarker>::NAME,
                     <fidl_fuchsia_net::SocketProviderMarker as fidl::endpoints::ServiceMarker>::NAME,
                     <fidl_fuchsia_net_stack::StackMarker as fidl::endpoints::ServiceMarker>::NAME,
@@ -85,24 +85,34 @@ fn create_netstack_environment(
                     .iter()
                     .map(std::ops::Deref::deref)
                     .map(str::to_string)
-            .map(|name| fidl_fuchsia_netemul_environment::LaunchService {
-                name,
-                url: fuchsia_component::fuchsia_single_component_package_url!("netstack")
-                    .to_string(),
-                arguments: Some(vec!["--sniff".to_string()]),
-            })
-            .collect()),
-                    devices: None,
-                    inherit_parent_launch_services: None,
-                    logger_options: Some(fidl_fuchsia_netemul_environment::LoggerOptions {
-                        enabled: Some(true),
-                        klogs_enabled: None,
-                        filter_options: None,
-                        syslog_output: Some(true),
-                    }),
-                },
-            )
-            .context("failed to create environment")?;
+                    .map(|name| fidl_fuchsia_netemul_environment::LaunchService {
+                        name,
+                        url: fuchsia_component::fuchsia_single_component_package_url!("netstack")
+                            .to_string(),
+                        arguments: Some(
+                            [
+                                "--sniff",
+                                "--verbosity=debug",
+                            ]
+                                // TODO(tamird): use into_iter after
+                                // https://github.com/rust-lang/rust/issues/25725.
+                                .iter()
+                                .map(std::ops::Deref::deref)
+                                .map(str::to_string).collect()
+                        ),
+                    })
+                    .collect()),
+                devices: None,
+                inherit_parent_launch_services: None,
+                logger_options: Some(fidl_fuchsia_netemul_environment::LoggerOptions {
+                    enabled: Some(true),
+                    klogs_enabled: None,
+                    filter_options: None,
+                    syslog_output: Some(true),
+                }),
+            },
+        )
+        .context("failed to create environment")?;
     Ok(client)
 }
 

@@ -37,8 +37,11 @@ import (
 )
 
 func Main() {
+	logLevel := syslog.InfoLevel
+
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	sniff := flags.Bool("sniff", false, "Enable the sniffer")
+	flags.Var(&logLevel, "verbosity", "Set the logging verbosity")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
@@ -46,7 +49,7 @@ func Main() {
 	ctx := context.CreateFromStartupInfo()
 
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
-		LogLevel:                      syslog.InfoLevel,
+		LogLevel:                      logLevel,
 		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
 		Tags: []string{"netstack"},
 	})
