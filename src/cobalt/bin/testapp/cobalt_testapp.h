@@ -30,10 +30,14 @@ constexpr size_t kEventAggregatorBackfillDays = 2;
 
 class CobaltTestApp {
  public:
-  CobaltTestApp(bool use_network)
+  CobaltTestApp(bool use_network, bool test_for_prober)
       : context_(sys::ComponentContext::Create()),
-        logger_(use_network, &cobalt_controller_) {
+        logger_(use_network, &cobalt_controller_),
+        test_for_prober_(test_for_prober) {
     clock_.reset(new util::SystemClock);
+    if (test_for_prober) {
+      FXL_LOG(INFO) << "Running the Cobalt test app in prober mode";
+    }
   }
 
   // Runs all of the tests. Returns true if they all pass.
@@ -54,6 +58,7 @@ class CobaltTestApp {
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   CobaltTestAppLogger logger_;
+  bool test_for_prober_;
   std::unique_ptr<util::ClockInterface> clock_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);

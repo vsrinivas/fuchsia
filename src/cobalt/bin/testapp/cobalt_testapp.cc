@@ -25,6 +25,7 @@
 #include "lib/svc/cpp/services.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
+#include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/tests.h"
 #include "src/lib/fxl/command_line.h"
@@ -36,7 +37,6 @@
 namespace cobalt {
 namespace testapp {
 
-
 // This must be less than 2^31. There appears to be a bug in
 // std::condition_variable::wait_for() in which setting the wait time to
 // std::chrono::seconds::max() effectively sets the wait time to zero.
@@ -47,10 +47,10 @@ constexpr uint32_t kInfiniteTime = 999999999;
     return false;      \
   }
 
-#define CONNECT_AND_TRY_TEST(test, backfill_days) \
-  Connect(kInfiniteTime, 0, backfill_days, false);    \
-  if (!(test)) {                                  \
-    return false;                                 \
+#define CONNECT_AND_TRY_TEST(test, backfill_days)  \
+  Connect(kInfiniteTime, 0, backfill_days, false); \
+  if (!(test)) {                                   \
+    return false;                                  \
   }
 
 bool CobaltTestApp::RunTests() {
@@ -60,17 +60,24 @@ bool CobaltTestApp::RunTests() {
   // in response to RequestSendSoon().
   Connect(kInfiniteTime, 0);
 
+  if (test_for_prober_) {
+    TRY_TEST(CheckMetricIds());
+  }
+
   // TODO(zmbush): Create tests for all logger methods.
-  //TRY_TEST(TestLogEvent(&logger_));
-  //TRY_TEST(TestLogEventCount(&logger_));
+  TRY_TEST(TestLogEvent(&logger_));
+  TRY_TEST(TestLogEventCount(&logger_));
   TRY_TEST(TestLogElapsedTime(&logger_));
-  /*
   TRY_TEST(TestLogFrameRate(&logger_));
   TRY_TEST(TestLogMemoryUsage(&logger_));
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
 
+  // TODO(pesk): Count generated observations only for reports in the test
+  // registry and turn local aggregation tests back on. (Currently these tests
+  // are failing due to observations generated for cobalt-internal reports.)
+  /*
   if (!DoLocalAggregationTests(kEventAggregatorBackfillDays)) {
     return false;
   }
@@ -156,14 +163,18 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   services.Connect(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  std::string project_name =
+      (test_for_prober_ ? cobalt_prober_registry::kProjectName
+                        : cobalt_registry::kProjectName);
+  FXL_LOG(INFO) << "Test app is logging for the " << project_name << " project";
   logger_factory->CreateLoggerFromProjectName(
-      cobalt_registry::kProjectName, fuchsia::cobalt::ReleaseStage::DEBUG,
+      project_name, fuchsia::cobalt::ReleaseStage::DEBUG,
       logger_.logger_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 
   logger_factory->CreateLoggerSimpleFromProjectName(
-      cobalt_registry::kProjectName, fuchsia::cobalt::ReleaseStage::DEBUG,
+      project_name, fuchsia::cobalt::ReleaseStage::DEBUG,
       logger_.logger_simple_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);

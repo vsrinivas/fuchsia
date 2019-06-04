@@ -52,18 +52,32 @@ test_package("cobalt_tests") {
     },
 
     {
-      name = rebase_path("testapp/cobalt_testapp_no_network.sh")
+      name = rebase_path("meta/cobalt_testapp_no_network.cmx")
       dest = "cobalt_testapp_no_network"
       environments = basic_envs
     },
 
     {
-      name = rebase_path("testapp/cobalt_testapp_no_environment.sh")
+      name = rebase_path("meta/cobalt_testapp_no_environment.cmx")
       dest = "cobalt_testapp_no_environment"
 
-      # We don't want to run this version cobalt_testapp in the Garnet
-      # CI/CQ  because it uses the real network. We run cobalt_testap_no_network
+      # We don't want to run this version of cobalt_testapp in the Garnet
+      # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
+      # instead. This version is run in the stand-alone cobalt_client CQ.
+      disabled = true
+      environments = basic_envs
+    },
+
+    {
+      name =
+          rebase_path("meta/cobalt_testapp_for_prober_do_not_run_manually.cmx")
+      dest = "cobalt_testapp_for_prober_do_not_run_manually"
+
+      # We don't want to run this version of cobalt_testapp in the Garnet
+      # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
       # instead. This version is run in the stand-alone cobalt_client CI.
+      # It should not be run outside of CI, since it populates a test pipeline
+      # whose output is inspected.
       disabled = true
       environments = basic_envs
     },

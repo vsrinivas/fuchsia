@@ -9,6 +9,7 @@ group("testapp") {
   testonly = true
   deps = [
     ":cobalt_testapp",
+    ":prober_metrics_registry",
     ":testapp_metrics_registry",
   ]
 }
@@ -18,6 +19,15 @@ metrics_registry("testapp_metrics_registry") {
   # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
   project_name = "test_app2"
   namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
+}
+
+metrics_registry("prober_metrics_registry") {
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "prober"
+  namespace = "cobalt_prober_registry"
   generate_cc = true
   generate_binarypb = false
 }
@@ -35,6 +45,7 @@ executable("cobalt_testapp") {
   ]
 
   deps = [
+    ":prober_metrics_registry_cc",
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
@@ -45,6 +56,7 @@ executable("cobalt_testapp") {
     "//third_party/cobalt/config:id",
     "//third_party/cobalt/util:clock",
     "//third_party/cobalt/util:datetime_util",
+    "//third_party/cobalt/util/crypto_util",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
   ]

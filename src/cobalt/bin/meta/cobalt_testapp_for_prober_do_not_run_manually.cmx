@@ -1,0 +1,32 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
+            },
+            "system-services": [
+                "fuchsia.net.Connectivity",
+                "fuchsia.net.SocketProvider",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack"
+            ]
+        }
+    },
+    "program": {
+        "args": [
+            "--skip_environment_test",
+            "--test_for_prober",
+            "--override_prober_warning",
+            "--verbose=10"
+        ],
+        "binary": "bin/cobalt_testapp"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.net.oldhttp",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

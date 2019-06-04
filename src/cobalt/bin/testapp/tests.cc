@@ -4,13 +4,18 @@
 
 #include "src/cobalt/bin/testapp/tests.h"
 
+#include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/test_constants.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
+#include "third_party/cobalt/config/cobalt_registry.pb.h"
 #include "third_party/cobalt/config/metric_definition.pb.h"
+#include "third_party/cobalt/util/crypto_util/base64.h"
 #include "third_party/cobalt/util/datetime_util.h"
 
 namespace cobalt {
+
+using crypto::Base64Decode;
 
 using util::ClockInterface;
 using util::TimeToDayIndex;
@@ -37,6 +42,46 @@ bool SendAndCheckSuccess(const std::string& test_name,
   return true;
 }
 }  // namespace
+
+// Checks that for every metric in the testapp registry, a metric with the same
+// ID and name appears in the prober registry. If this test passes, then it is
+// safe to use the generated constants from the testapp registry in order to log
+// events for the prober project.
+bool CheckMetricIds() {
+  std::string decoded_testapp_config;
+  std::string decoded_prober_config;
+
+  Base64Decode(cobalt_registry::kConfig, &decoded_testapp_config);
+  Base64Decode(cobalt_prober_registry::kConfig, &decoded_prober_config);
+
+  CobaltRegistry testapp_registry;
+  CobaltRegistry prober_registry;
+
+  testapp_registry.ParseFromString(decoded_testapp_config);
+  prober_registry.ParseFromString(decoded_prober_config);
+
+  std::map<uint32_t, std::string> prober_metrics;
+
+  for (const auto& prober_metric :
+       prober_registry.customers(0).projects(0).metrics()) {
+    prober_metrics[prober_metric.id()] = prober_metric.metric_name();
+  }
+
+  for (const auto& testapp_metric :
+       testapp_registry.customers(0).projects(0).metrics()) {
+    auto i = prober_metrics.find(testapp_metric.id());
+    if (i == prober_metrics.end()) {
+      FXL_LOG(ERROR) << "Metric ID " << testapp_metric.id()
+                     << " not found in prober project.";
+      return false;
+    } else if (i->second != testapp_metric.metric_name()) {
+      FXL_LOG(ERROR) << "Name of metric " << testapp_metric.id()
+                     << " differs between testapp and prober projects.";
+      return false;
+    }
+  }
+  return true;
+}
 
 bool TestLogEvent(CobaltTestAppLogger* logger) {
   FXL_LOG(INFO) << "========================";
