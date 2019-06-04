@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -138,6 +139,69 @@ TEST(Cast, Implicit) {
                       ptr_to_double_type, &result);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(-1, result.GetAs<int64_t>());
+}
+
+// Enums can be casted to and fro.
+TEST(Cast, Enum) {
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+
+  // Enumeration values used in both enums below.
+  Enumeration::Map values;
+  values[0] = "kZero";
+  values[1] = "kOne";
+  values[static_cast<uint64_t>(-1)] = "kMinus";
+
+  // An untyped enum (old-style C with no qualification). This one is unsigned.
+  auto untyped = fxl::MakeRefCounted<Enumeration>("Untyped", LazySymbol(), 4,
+                                                  false, values);
+
+  // An explicitly-typed 8-bit signed enum
+  auto char_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
+  auto typed = fxl::MakeRefCounted<Enumeration>(
+      "Untyped", LazySymbol(char_type), 1, true, values);
+
+  ExprValue untyped_value(untyped, {1, 0, 0, 0});
+  ExprValue typed_value(typed, {1});
+
+  // Untyped to int32.
+  auto int32_type = MakeInt32Type();
+  ExprValue result;
+  Err err = CastExprValue(eval_context.get(), CastType::kImplicit,
+                          untyped_value, int32_type, &result);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1, result.GetAs<int32_t>());
+
+  // Typed to int32.
+  err = CastExprValue(eval_context.get(), CastType::kImplicit, typed_value,
+                      int32_type, &result);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1, result.GetAs<int32_t>());
+
+  // Untyped to char.
+  err = CastExprValue(eval_context.get(), CastType::kImplicit, untyped_value,
+                      char_type, &result);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1, result.GetAs<int8_t>());
+
+  // Typed to char.
+  err = CastExprValue(eval_context.get(), CastType::kImplicit, typed_value,
+                      char_type, &result);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(1, result.GetAs<int8_t>());
+
+  // Signed char to untyped (should be sign-extended).
+  ExprValue char_minus_one(char_type, {0xff});
+  err = CastExprValue(eval_context.get(), CastType::kImplicit, char_minus_one,
+                      untyped, &result);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(-1, result.GetAs<int32_t>());
+
+  // Signed char to typed.
+  err = CastExprValue(eval_context.get(), CastType::kImplicit, char_minus_one,
+                      typed, &result);
+  EXPECT_FALSE(err.has_error()) << err.msg();
+  EXPECT_EQ(-1, result.GetAs<int8_t>());
 }
 
 // Tests implicit casting when there are derived classes.

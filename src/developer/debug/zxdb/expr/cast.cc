@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
@@ -25,6 +26,10 @@ bool IsIntegerLike(const Type* t) {
   // Pointers count.
   if (const ModifiedType* modified_type = t->AsModifiedType())
     return modified_type->tag() == DwarfTag::kPointerType;
+
+  // Enums count.
+  if (t->AsEnumeration())
+    return true;
 
   const BaseType* base_type = t->AsBaseType();
   if (!base_type)
@@ -230,7 +235,7 @@ Err CastNumberToBool(const ExprValue& source, const Type* concrete_from,
       }
     }
   } else {
-    // floating-point-like sources which can't do a byte-by-byte comparison.
+    // Floating-point-like sources which can't do a byte-by-byte comparison.
     FXL_DCHECK(IsFloatingPointBaseType(concrete_from));
     double double_value;
     Err err = source.PromoteToDouble(&double_value);
