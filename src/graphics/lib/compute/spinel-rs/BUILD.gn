@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("spinel-rs") {
+  name = "spinel-rs"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:failure",
+  ]
+  non_rust_deps = [
+    # TODO: Currently we're using a stubbed out version
+    #       of Spinel that always returns OK. Will eventually
+    #       be replaced with actual Spinel once we have a way
+    #       to run the tests.
+    # "//src/graphics/lib/compute/spinel",
+  ]
+  features = [
+    "spinel-null"
+  ]
+}
+
+package("spinel-rs-tests") {
+  testonly = true
+  deps = [
+    ":spinel-rs",
+  ]
+  tests = [
+    {
+      name = "spinel_rs_lib_test"
+    },
+  ]
+}

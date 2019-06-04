@@ -4,6 +4,13 @@
 
 group("graphics") {
   deps = [
-    "lib"
+    "lib",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "lib/compute/spinel-rs:spinel-rs-tests($host_toolchain)",
   ]
 }

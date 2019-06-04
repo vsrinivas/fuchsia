@@ -7,6 +7,8 @@ group("compute") {
     "common",
     "common/vk",
     "hotsort",
+    "spinel",
+    "spinel-rs",
     "spinel/platforms/vk",
   ]
 }
