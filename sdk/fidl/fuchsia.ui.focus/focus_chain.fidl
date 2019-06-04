@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.privileged;
+library fuchsia.ui.focus;
 
 using fuchsia.ui.views;
 
@@ -20,20 +20,18 @@ using fuchsia.ui.views;
 /// no View is destroyed, Scenic can still cause invalidation by raising a
 /// ZX_USER_SIGNAL_0 on the root ViewRef.
 ///
-/// Reception. Only privileged components may receive a FocusChain, as it
+/// Reception. Only certain components may receive a FocusChain, as it
 /// captures global information about the scene graph.
 table FocusChain {
     1: vector<fuchsia.ui.views.ViewRef> focus_chain;
 };
 
-/// A FocusChainListener is a privileged interface that receives an updated
-/// FocusChain from Scenic.
+/// A FocusChainListener receives an updated FocusChain when focus changes.
 protocol FocusChainListener {
     OnFocusChange(FocusChain focus_chain) -> ();
 };
 
-/// A FocusChainListenerRegistry is a privileged interface that allows
-/// listening to FocusChain updates. Scenic implements this protocol.
+/// A FocusChainListenerRegistry allows listening to FocusChain updates.
 [Discoverable]
 protocol FocusChainListenerRegistry {
     Register(FocusChainListener listener);
