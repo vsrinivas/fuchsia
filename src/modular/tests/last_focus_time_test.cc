@@ -128,7 +128,7 @@ class TestStoryWatcher : fuchsia::modular::StoryWatcher {
 
 const char kStoryName[] = "storyname";
 
-TEST_F(LastFocusTimeTest, DISABLED_LastFocusTimeIncreases) {
+TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   modular::testing::TestHarnessBuilder builder;
 
   TestSessionShell test_session_shell;
