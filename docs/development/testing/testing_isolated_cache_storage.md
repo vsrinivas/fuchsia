@@ -23,6 +23,6 @@ component on the system.
 An example demonstrating test coverage of a user of `isolated-cache-storage` is
 available at [`//examples/isolated_cache`][cache-example].
 
-[cache-feature]: ../../the-book/package_metadata.md#sandbox
-[cache-example]: ../../../examples/isolated_cache
-[cache-control]: ../../../sdk/fidl/fuchsia.sys.test/cache.fidl
+[cache-feature]: /docs/the-book/package_metadata.md#sandbox
+[cache-example]: /examples/isolated_cache
+[cache-control]: /sdk/fidl/fuchsia.sys.test/cache.fidl

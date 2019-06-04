@@ -78,5 +78,5 @@ to enforce that components cannot access data from other components.
 [stash_ctl]: ../stash_ctl
 [dgonyeo]: mailto:dgonyeo@google.com
 [joshlf]: mailto:joshlf@google.com
-[test_package]: ../../../docs/development/tests/test_component.md
+[test_package]: /docs/development/tests/test_component.md
 [stash.rs]: ../bluetooth/bt-gap/src/store/stash.rs
