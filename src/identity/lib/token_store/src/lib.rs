@@ -7,6 +7,7 @@
 #[macro_use]
 mod macros;
 pub mod file;
+pub mod mem;
 mod serializer;
 /// FIXME remove when https://github.com/rust-lang/rust/issues/57264 is fixed
 pub use self::serializer::JsonSerializer;
