@@ -36,7 +36,7 @@ int main(int argc, const char** argv) {
   std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
 
   // TODO(PT-118): Input latency tests are only currently supported on NUC.
-  if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
+  if (benchmarks_bot_name == "peridot-x64-perf-dawson_canyon") {
     // simplest_app
     {
       constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
@@ -61,6 +61,14 @@ int main(int argc, const char** argv) {
            "--out_file", out_file, "--benchmark_label", kLabel},
           out_file);
     }
+  } else if (benchmarks_bot_name == "peridot-arm64-perf-vim2") {
+    FXL_LOG(INFO) << "Input latency tests skipped on bot '"
+                  << benchmarks_bot_name << '\'';
+  } else {
+    FXL_LOG(ERROR)
+        << "Bot '" << benchmarks_bot_name
+        << "' not recognized: please update benchmarks.cc in peridot.";
+    exit(1);
   }
 
   AddGraphicsBenchmarks(&benchmarks_runner);
