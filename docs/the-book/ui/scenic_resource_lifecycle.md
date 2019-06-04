@@ -41,7 +41,7 @@ the EntityNode as the child of the root node in the scene graph:
 ![Image of a simple scene graph. There is a root Scene node with a strong link
 to its child entity node. Client A's ResourceMap also has a strong reference to
 both the root node and the entity node. There is a second image to the right,
-labeled "projected scene", that shows a blank screen.](scene_graph_lifecycle_root.png)
+labeled "projected scene", that shows a blank screen.](meta/scene_graph_lifecycle_root.png)
 
 Client A can apply commands to the EntityNode as long as it maintains a
 reference to it in the ResourceMap. For example:
@@ -171,7 +171,7 @@ disconnected event (i.e. `fuchsia.ui.gfx.ViewHolderDisconnected` or
 ### Removing a ViewHolder
 
 A ViewHolder is treated as another child node in a Session, and so follows the
-same [lifecycle rules](##removing-a-node). If a ViewHolder is released as a
+same [lifecycle rules](#removing-a-node). If a ViewHolder is released as a
 Resource, and detached from the scene graph, the ViewHolder is destroyed.
 
 Say that Client B has not released its View. When the ViewHolder is destroyed,

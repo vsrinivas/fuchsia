@@ -40,34 +40,34 @@ consumption by Scenic or other entities.
 
 It also instructs Scenic to create the top-level (or "root") elements of the
 scene graph, and vends the
-[Presenter API](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
+[Presenter API](/sdk/fidl/fuchsia.ui.policy/presenter.fidl)
 that UI clients use to attach their visual content to the scene graph.
 
 The general transformation for an input event through RootPresenter is from HID
 report, to
-[`InputReport`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl),
+[`InputReport`](/sdk/fidl/fuchsia.ui.input/input_reports.fidl),
 to
-[`InputEvent`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl).
+[`InputEvent`](/sdk/fidl/fuchsia.ui.input/input_events.fidl).
 The `InputEvent` is sent to Scenic.
 
 ### Implementation
 
 The
-[`InputReader` library](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/input_reader/)
+[`InputReader` library](/garnet/bin/ui/input_reader/)
 is the code responsible for actually monitoring `/dev/class/input` for new
 peripherals, and reacting to new reports from existing peripherals. It forwards
 new events for processing to other parts of RootPresenter.
 More information on `InputReader` can be found
-[here](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/input_reader/README.md).
+[here](/garnet/bin/ui/input_reader/README.md).
 
 For each new peripheral (an input device), `InputReader` assigns a new
 `InputInterpreter` object that reads the HID descriptor report for a single
 input device, and performs bookkeeping by pushing a
-[`DeviceDescriptor`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_reports.fidl)
+[`DeviceDescriptor`](/sdk/fidl/fuchsia.ui.input/input_reports.fidl)
 and its designated event forwarding channel, an
-[`InputDevice`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#17),
+[`InputDevice`](/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#17),
 to the
-[`InputDeviceRegistry`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#12)
+[`InputDeviceRegistry`](/sdk/fidl/fuchsia.ui.input/input_device_registry.fidl#12)
 FIDL protocol. (The `InputDeviceRegistry` protocol also enables programmatic
 input injection from outside RootPresenter.) The `InputDeviceRegistry` protocol
 is vended by RootPresenter, and in addition to bookkeeping (details below),
@@ -78,7 +78,7 @@ transforms it into an `InputReport`, and forwards it on
 `InputDevice::DispatchReport`.
 
 The
-[implementation of `DispatchReport`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/input/input_device_impl.h)
+[implementation of `DispatchReport`](/garnet/public/lib/ui/input/input_device_impl.h)
 forwards the `InputReport` to the registered `InputDeviceImpl::Listener`,
 typically the RootPresenter itself. In turn, the `InputReport` is forwarded to
 the active `Presentation`.
@@ -115,7 +115,7 @@ dispatch to each UI client.
 Scenic accepts commands from a client over its session. RootPresenter is a
 privileged client that may submit input commands, each of which encapsulates an
 `InputEvent`. The Scenic-side implementation of session logic has an
-[`InputCommandDispatcher`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/ui/input/input_system.h)
+[`InputCommandDispatcher`](/garnet/lib/ui/input/input_system.h)
 that farms out different types of events to appropriate dispatch logic.
 
 We outline some representative event flows below.
@@ -124,7 +124,7 @@ We outline some representative event flows below.
 
 Pointer events, such as touch, typically follow an ADD &rarr; DOWN &rarr; MOVE\*
 &rarr; UP &rarr; REMOVE state sequence, encoded as
-[`PointerEventPhase`](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.input/input_events.fidl).
+[`PointerEventPhase`](/sdk/fidl/fuchsia.ui.input/input_events.fidl).
 
 On ADD, we identify the set of potential clients by performing a hit test, and
 forward this event to these clients. To associate future touch events by the

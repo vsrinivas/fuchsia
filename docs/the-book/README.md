@@ -109,6 +109,6 @@ also provides core drivers and Fuchsia's libc implementation.
 [telephony]: /src/connectivity/telephony/
 [magma]: /garnet/lib/magma/
 [escher]: /src/ui/lib/escher/README.md
-[scenic]: /garnet/docs/ui/scenic.md
-[input-manager]: /garnet/docs/ui/input.md
+[scenic]: ui/scenic.md
+[input-manager]: ui/input.md
 [flutter]: https://flutter.io/
