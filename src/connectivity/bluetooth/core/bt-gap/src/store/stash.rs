@@ -15,6 +15,9 @@ use {
     std::collections::HashMap,
 };
 
+#[cfg(test)]
+use {fidl::endpoints::Proxy, fuchsia_async as fasync, fuchsia_zircon as zx};
+
 use crate::store::{
     keys::{
         bonding_data_key, host_data_key, host_id_from_key, BONDING_DATA_PREFIX, HOST_DATA_PREFIX,
@@ -191,6 +194,14 @@ impl Stash {
             }
         }
         Ok(host_data_map)
+    }
+
+    #[cfg(test)]
+    pub fn stub() -> Result<Stash, Error> {
+        let (proxy, _server) = zx::Channel::create()?;
+        let proxy = fasync::Channel::from_channel(proxy)?;
+        let proxy = StoreAccessorProxy::from_channel(proxy);
+        Ok(Stash { proxy, bonding_data: HashMap::new(), host_data: HashMap::new() })
     }
 }
 

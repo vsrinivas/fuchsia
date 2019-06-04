@@ -4,16 +4,15 @@
 
 use {
     failure::Error,
-    fidl::encoding::OutOfLine,
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_bluetooth,
+    fidl::{encoding::OutOfLine, endpoints::RequestStream},
     fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream},
     fuchsia_bluetooth::bt_fidl_status,
+    fuchsia_syslog::fx_log_warn,
     futures::prelude::*,
     std::sync::Arc,
 };
 
-use crate::host_dispatcher::*;
+use crate::{host_dispatcher::*, types::status_response};
 
 struct ControlSession {
     discovery_token: Option<Arc<DiscoveryRequestToken>>,
@@ -28,7 +27,10 @@ impl ControlSession {
 
 /// Build the ControlImpl to interact with fidl messages
 /// State is stored in the HostDispatcher object
-pub async fn start_control_service(hd: HostDispatcher, mut stream: ControlRequestStream) -> Result<(), Error> {
+pub async fn start_control_service(
+    hd: HostDispatcher,
+    mut stream: ControlRequestStream,
+) -> Result<(), Error> {
     let event_listener = Arc::new(stream.control_handle());
     hd.add_event_listener(Arc::downgrade(&event_listener));
     let mut session = ControlSession::new();
@@ -47,16 +49,22 @@ async fn handler(
 ) -> fidl::Result<()> {
     match event {
         ControlRequest::Connect { device_id, responder } => {
-            let mut status = await!(hd.connect(device_id))?;
-            responder.send(&mut status)
+            let result = await!(hd.connect(device_id));
+            responder.send(&mut status_response(result))
         }
         ControlRequest::SetDiscoverable { discoverable, responder } => {
-            let (mut resp, token) = if discoverable {
-                await!(hd.set_discoverable())?
+            let mut resp = if discoverable {
+                match await!(hd.set_discoverable()) {
+                    Ok(token) => {
+                        session.discoverable_token = Some(token);
+                        bt_fidl_status!()
+                    }
+                    Err(err) => err.as_status(),
+                }
             } else {
-                (bt_fidl_status!(), None)
+                session.discoverable_token = None;
+                bt_fidl_status!()
             };
-            session.discoverable_token = token;
             responder.send(&mut resp)
         }
         ControlRequest::SetIoCapabilities { input, output, control_handle: _ } => {
@@ -64,13 +72,13 @@ async fn handler(
             Ok(())
         }
         ControlRequest::Forget { device_id, responder } => {
-            let mut status = await!(hd.forget(device_id))?;
-            responder.send(&mut status)
+            let result = await!(hd.forget(device_id));
+            responder.send(&mut status_response(result))
         }
         ControlRequest::Disconnect { device_id, responder } => {
             // TODO work with classic as well
-            let mut status = await!(hd.disconnect(device_id))?;
-            responder.send(&mut status)
+            let result = await!(hd.disconnect(device_id));
+            responder.send(&mut status_response(result))
         }
         ControlRequest::GetKnownRemoteDevices { responder } => {
             let mut devices = hd.get_remote_devices();
@@ -78,45 +86,56 @@ async fn handler(
         }
         ControlRequest::IsBluetoothAvailable { responder } => {
             let is_available = hd.get_active_adapter_info().is_some();
-            let _ = responder.send(is_available);
-            Ok(())
+            responder.send(is_available)
         }
         ControlRequest::SetPairingDelegate { delegate, responder } => {
             let status = match delegate.map(|d| d.into_proxy()) {
                 Some(Ok(proxy)) => hd.set_pairing_delegate(Some(proxy)),
-                Some(Err(_ignored)) => return Ok(()), // TODO - should we return this error?
+                Some(Err(err)) => {
+                    fx_log_warn!(
+                        "Invalid Pairing Delegate passed to SetPairingDelegate - ignoring: {}",
+                        err
+                    );
+                    false
+                }
                 None => hd.set_pairing_delegate(None),
             };
-            let _ = responder.send(status);
-            Ok(())
+            responder.send(status)
         }
         ControlRequest::GetAdapters { responder } => {
-            let mut resp = await!(hd.get_adapters())?;
-            responder.send(Some(&mut resp.iter_mut()))
+            let mut adapters = await!(hd.get_adapters());
+            responder.send(Some(&mut adapters.iter_mut()))
         }
         ControlRequest::SetActiveAdapter { identifier, responder } => {
-            let mut success = hd.set_active_adapter(identifier.clone());
-            let _ = responder.send(&mut success);
-            Ok(())
+            let result = hd.set_active_adapter(identifier.clone());
+            responder.send(&mut status_response(result))
         }
         ControlRequest::GetActiveAdapterInfo { responder } => {
             let mut adap = hd.get_active_adapter_info();
-            let _ = responder.send(adap.as_mut().map(OutOfLine));
-            Ok(())
+            responder.send(adap.as_mut().map(OutOfLine))
         }
         ControlRequest::RequestDiscovery { discovery, responder } => {
-            let (mut resp, token) =
-                if discovery { await!(hd.start_discovery())? } else { (bt_fidl_status!(), None) };
-            session.discovery_token = token;
+            let mut resp = if discovery {
+                match await!(hd.start_discovery()) {
+                    Ok(token) => {
+                        session.discovery_token = Some(token);
+                        bt_fidl_status!()
+                    }
+                    Err(err) => err.as_status(),
+                }
+            } else {
+                session.discovery_token = None;
+                bt_fidl_status!()
+            };
             responder.send(&mut resp)
         }
         ControlRequest::SetName { name, responder } => {
-            let mut resp = await!(hd.set_name(name))?;
-            responder.send(&mut resp)
+            let result = await!(hd.set_name(name));
+            responder.send(&mut status_response(result))
         }
         ControlRequest::SetDeviceClass { device_class, responder } => {
-            let mut resp = await!(hd.set_device_class(device_class))?;
-            responder.send(&mut resp)
+            let result = await!(hd.set_device_class(device_class));
+            responder.send(&mut status_response(result))
         }
     }
 }
