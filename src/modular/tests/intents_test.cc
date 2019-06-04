@@ -16,8 +16,6 @@
 
 namespace {
 
-constexpr zx::duration kTimeout = zx::sec(30);
-
 // The name of the intent parameter which contains a string which the second
 // module is to append to its signal.
 constexpr char kIntentParameterName[] = "intent_parameter";
@@ -116,8 +114,7 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
   // Check that the intent handler received the intent
@@ -134,8 +131,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
   // Launch second module using first module's |module_context|
@@ -149,8 +145,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
                                 second_module_param_data),
                    second_module_controller.NewRequest(), &module_started);
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return number_of_intents_handled_ == 2; }, kTimeout));
+  RunLoopUntil([&] { return number_of_intents_handled_ == 2; });
 
   EXPECT_TRUE(IntentMatchesExpectations(
       &latest_handled_intent_, kIntentParameterName, second_module_param_data));
@@ -164,8 +159,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
   // Launch second module using first module's |module_context|
@@ -180,8 +174,7 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
                                 second_module_param_data),
                    second_module_controller.NewRequest(), &module_started);
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return number_of_intents_handled_ == 2; }, kTimeout));
+  RunLoopUntil([&] { return number_of_intents_handled_ == 2; });
 
   EXPECT_TRUE(IntentMatchesExpectations(&latest_handled_intent_,
                                         second_module_param_name,
@@ -196,8 +189,7 @@ TEST_F(IntentsTest, DifferentHandler) {
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
   AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return number_of_intents_handled_ == 1; }, kTimeout));
+  RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
   // Launch second module using first module's |module_context|
@@ -214,8 +206,7 @@ TEST_F(IntentsTest, DifferentHandler) {
   AddModuleToStory(test_module_->module_context(), std::move(different_intent),
                    second_module_controller.NewRequest(), &module_started);
 
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return module_started; }, kTimeout));
+  RunLoopUntil([&] { return module_started; });
 
   // Check that the intercepted_module_'s latest handled intent matches the
   // initial module

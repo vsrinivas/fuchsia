@@ -72,7 +72,7 @@ TEST_F(SessionShellTest, GetPackageName) {
     got_name = true;
   });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return got_name; }, zx::sec(30)));
+  RunLoopUntil([&] { return got_name; });
 }
 
 TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
@@ -89,8 +89,7 @@ TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
         tried_get_story_info = true;
       });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return tried_get_story_info; },
-                                        zx::sec(30)));
+  RunLoopUntil([&] { return tried_get_story_info; });
 }
 
 TEST_F(SessionShellTest, GetLink) {
@@ -108,8 +107,7 @@ TEST_F(SessionShellTest, GetLink) {
         called_get_link = true;
       });
 
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return called_get_link; }, zx::sec(30)));
+  RunLoopUntil([&] { return called_get_link; });
 }
 
 TEST_F(SessionShellTest, GetStoriesEmpty) {
@@ -127,8 +125,7 @@ TEST_F(SessionShellTest, GetStoriesEmpty) {
         called_get_stories = true;
       });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_get_stories; },
-                                        zx::sec(30)));
+  RunLoopUntil([&] { return called_get_stories; });
 }
 
 TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
@@ -184,8 +181,7 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
       [&execute_called](fuchsia::modular::ExecuteResult result) {
         execute_called = true;
       });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return execute_called; }, zx::sec(10)));
+  RunLoopUntil([&] { return execute_called; });
 
   // Stop the story. Check that the story went through the correct sequence
   // of states (see StoryState FIDL file for valid state transitions). Since we
@@ -195,12 +191,10 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   story_provider->GetController(kStoryId, story_controller.NewRequest());
   bool stop_called = false;
   story_controller->Stop([&stop_called] { stop_called = true; });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(10)));
+  RunLoopUntil([&] { return stop_called; });
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(10)));
+  RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
   EXPECT_THAT(sequence_of_story_states,
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
                                    StoryState::STOPPING, StoryState::STOPPED));
@@ -249,8 +243,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
               execute_and_get_story_info_called = true;
             });
       });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return execute_and_get_story_info_called; }, zx::sec(30)));
+  RunLoopUntil([&] { return execute_and_get_story_info_called; });
 
   // Delete the story and confirm that the story info is null now.
   bool delete_called = false;
@@ -262,8 +255,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
             });
         delete_called = true;
       });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return delete_called; }, zx::sec(30)));
+  RunLoopUntil([&] { return delete_called; });
 }
 
 TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
@@ -302,8 +294,7 @@ TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
         });
   });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_get_stories; },
-                                        zx::sec(30)));
+  RunLoopUntil([&] { return called_get_stories; });
 }
 
 TEST_F(SessionShellTest, AttachesAndDetachesView) {
@@ -353,8 +344,7 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   fake_session_shell_.set_on_attach_view(
       [&called_attach_view](ViewIdentifier) { called_attach_view = true; });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_attach_view; },
-                                        zx::sec(30)));
+  RunLoopUntil([&] { return called_attach_view; });
 
   // Stop the story. Confirm that:
   //  a. DetachView() was called.
@@ -369,12 +359,10 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   story_provider->GetController(kStoryId, story_controller.NewRequest());
   bool stop_called = false;
   story_controller->Stop([&stop_called] { stop_called = true; });
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(30)));
+  RunLoopUntil([&] { return stop_called; });
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(30)));
+  RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
   EXPECT_TRUE(called_detach_view);
   EXPECT_THAT(sequence_of_story_states,
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
@@ -429,8 +417,7 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   fake_session_shell_.set_on_attach_view(
       [&called_attach_view](ViewIdentifier) { called_attach_view = true; });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return called_attach_view; },
-                                        zx::sec(30)));
+  RunLoopUntil([&] { return called_attach_view; });
 
   // Stop the story. Confirm that:
   //  a. The story stopped, even though it didn't see the DetachView() response
@@ -444,12 +431,10 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   bool stop_called = false;
   story_controller->Stop([&stop_called] { stop_called = true; });
 
-  ASSERT_TRUE(
-      RunLoopWithTimeoutOrUntil([&] { return stop_called; }, zx::sec(30)));
+  RunLoopUntil([&] { return stop_called; });
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return sequence_of_story_states.size() == 4; }, zx::sec(30)));
+  RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
   EXPECT_THAT(sequence_of_story_states,
               testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
                                    StoryState::STOPPING, StoryState::STOPPED));

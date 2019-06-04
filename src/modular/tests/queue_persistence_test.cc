@@ -21,9 +21,6 @@
 
 namespace {
 
-// Timeout for each call to RunLoopWithTimeoutOrUntil().
-constexpr auto kTimeout = zx::sec(30);
-
 const char kModuleName[] = "module-name";
 const char kStoryName[] = "story-name";
 
@@ -152,25 +149,21 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   fuchsia::modular::Intent intent;
   intent.handler = test_module_url;
   AddModToStory(std::move(intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module.is_running(); }, kTimeout));
+  RunLoopUntil([&] { return test_module.is_running(); });
 
   // Connect to the test agent from the test mod.
   test_module.ConnectToAgent(test_agent_url);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return test_agent.is_running(); },
-                                        kTimeout));
+  RunLoopUntil([&] { return test_agent.is_running(); });
 
   // Fetch the queue token from the agent's queue persistence service.
   std::string queue_token;
   test_module.agent_service()->GetMessageQueueToken(
       [&](const fidl::StringPtr& token) { queue_token = token; });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return !queue_token.empty(); },
-                                        kTimeout));
+  RunLoopUntil([&] { return !queue_token.empty(); });
 
   // Disconnect from the agent. This should tear down the agent.
   test_module.DisconnectFromAgent();
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return !test_agent.is_running(); }, kTimeout));
+  RunLoopUntil([&] { return !test_agent.is_running(); });
 
   // Send a message to the stopped agent which should be persisted to local
   // storage. No triggers are set so the agent won't be automatically started.
@@ -183,7 +176,5 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   // The agent should receive the message upon restarting.
   test_module.ConnectToAgent(test_agent_url);
   RunLoopUntil([&] { return test_agent.is_running(); });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_agent.GetLastReceivedMessage() == kMessage; },
-      kTimeout));
+  RunLoopUntil([&] { return test_agent.GetLastReceivedMessage() == kMessage; });
 }

@@ -16,9 +16,6 @@
 
 namespace {
 
-// Timeout for each call to RunLoopWithTimeoutOrUntil().
-constexpr zx::duration kTimeout = zx::sec(30);
-
 // An implementation of the fuchsia.modular.StoryShellFactory FIDL service, to
 // be used in session shell components in integration tests.
 class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
@@ -149,8 +146,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     test_harness()->Run(std::move(spec));
 
     // Wait for our session shell to start.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return test_session_shell_->is_running(); }, kTimeout));
+    RunLoopUntil([this] { return test_session_shell_->is_running(); });
 
     // Connect to the PuppetMaster service also provided to the session shell.
     fuchsia::modular::testing::ModularService modular_service;
@@ -171,8 +167,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     AddModToStory(std::move(intent), mod_name, story_name);
 
     // Wait for the story to be created.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return test_module_->is_running(); }, kTimeout));
+    RunLoopUntil([this] { return test_module_->is_running(); });
   }
 
   void DeleteStory() {
@@ -184,8 +179,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     puppet_master_->DeleteStory(story_name, [this] {});
 
     // Wait for the story to be deleted.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return !test_module_->is_running(); }, kTimeout));
+    RunLoopUntil([this] { return !test_module_->is_running(); });
   }
 
   fuchsia::modular::StoryControllerPtr ControlStory() {
@@ -231,7 +225,7 @@ TEST_F(StoryShellFactoryTest, AttachCalledOnStoryStart) {
   story_controller->RequestStart();
 
   // Wait for the StoryShellFactory to attach the StoryShell.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return is_attached; }, kTimeout));
+  RunLoopUntil([&] { return is_attached; });
 };
 
 TEST_F(StoryShellFactoryTest, DetachCalledOnStoryStop) {
@@ -253,7 +247,7 @@ TEST_F(StoryShellFactoryTest, DetachCalledOnStoryStop) {
   story_controller->Stop([]() {});
 
   // Wait for the StoryShellFactory to detach the StoryShell.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return is_detached; }, kTimeout));
+  RunLoopUntil([&] { return is_detached; });
 };
 
 TEST_F(StoryShellFactoryTest, DetachCalledOnStoryDelete) {
@@ -274,7 +268,7 @@ TEST_F(StoryShellFactoryTest, DetachCalledOnStoryDelete) {
   DeleteStory();
 
   // Wait for the StoryShellFactory to detach the StoryShell.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return is_detached; }, kTimeout));
+  RunLoopUntil([&] { return is_detached; });
 };
 
 }  // namespace

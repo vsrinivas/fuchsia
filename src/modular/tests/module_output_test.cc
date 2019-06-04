@@ -19,8 +19,6 @@ constexpr char kIntentAction[] = "action";
 constexpr char kTestData[] = "test-data";
 constexpr char kTestType[] = "test-type";
 
-constexpr zx::duration kTimeout = zx::sec(15);
-
 class ModuleOutputTest : public modular::testing::TestHarnessFixture {
  public:
   void SetUp() override {
@@ -50,8 +48,8 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
   intent.action = kIntentAction;
 
   AddModToStory(std::move(intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module_->is_running(); }, kTimeout));
+  RunLoopUntil(
+      [&] { return test_module_->is_running(); });
 
   fsl::SizedVmo vmo;
   fsl::VmoFromString(kTestData, &vmo);
@@ -63,8 +61,7 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
         reference = std::move(entity_reference);
       });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return !reference.is_null(); },
-                                        kTimeout));
+  RunLoopUntil([&] { return !reference.is_null(); });
 
   fuchsia::app::discover::ModuleOutputWriterPtr module_output;
   test_module_->component_context()->svc()->Connect(module_output.NewRequest());
@@ -78,8 +75,7 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
                          output_written = true;
                        });
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&output_written] { return output_written; }, kTimeout));
+  RunLoopUntil([&output_written] { return output_written; });
 }
 
 }  // namespace

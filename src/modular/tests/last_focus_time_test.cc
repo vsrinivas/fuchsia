@@ -19,9 +19,6 @@ using testing::Gt;
 
 namespace {
 
-// Timeout for each call to RunLoopWithTimeoutOrUntil().
-constexpr auto kTimeout = zx::sec(30);
-
 class LastFocusTimeTest : public modular::testing::TestHarnessFixture {};
 
 // A basic fake session shell component: gives access to services
@@ -147,8 +144,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   test_harness()->Run(builder.BuildSpec());
 
   // Wait for our session shell to start.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_session_shell.is_running(); }, kTimeout));
+  RunLoopUntil([&] { return test_session_shell.is_running(); });
 
   fuchsia::modular::FocusControllerPtr focus_controller;
   fuchsia::modular::FocusProviderPtr focus_provider;
@@ -175,8 +171,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   intent.action = "action";
   AddModToStory(std::move(intent), "modname", kStoryName);
 
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return test_module.is_running(); }, kTimeout));
+  RunLoopUntil([&] { return test_module.is_running(); });
 
   // Watch the story and then start it.
   TestStoryWatcher story_watcher;
@@ -196,7 +191,6 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   // 1) The story is created.
   // 2) The story transitions to running.
   // 3) The story is focused.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return last_focus_timestamps.size() == 3; }, kTimeout));
+  RunLoopUntil([&] { return last_focus_timestamps.size() == 3; });
   EXPECT_THAT(last_focus_timestamps, ElementsAre(0, 0, Gt(0)));
 }

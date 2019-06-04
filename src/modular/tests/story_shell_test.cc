@@ -20,9 +20,6 @@ using testing::ElementsAre;
 
 namespace {
 
-// Timeout for all instances of RunLoopWithTimeoutOrUntil()
-constexpr auto kTimeout = zx::sec(30);
-
 // A basic fake story shell component: gives access to services
 // available to story shells in their environment, as well as an
 // implementation of fuchsia::modular::StoryShell built for tests.
@@ -65,7 +62,8 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
                fidl::InterfaceHandle<
                    fuchsia::modular::testing::InterceptedComponent>
                    intercepted_component) {
-          intercepted_modules_.push_back(std::make_unique<modular::testing::FakeComponent>());
+          intercepted_modules_.push_back(
+              std::make_unique<modular::testing::FakeComponent>());
           intercepted_modules_.back()->GetOnCreateHandler()(
               std::move(startup_info), std::move(intercepted_component));
         },
@@ -80,8 +78,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
     test_harness()->ConnectToModularService(std::move(request));
 
     // Wait for our session shell to start.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this] { return session_shell_.is_running(); }, kTimeout));
+    RunLoopUntil([this] { return session_shell_.is_running(); });
   }
 
   void AddModToStory(std::string story_name, std::string mod_name,
@@ -105,7 +102,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
         [&](fuchsia::modular::ExecuteResult result) { created = true; });
 
     // Wait for the story to be created.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return created; }, kTimeout));
+    RunLoopUntil([&] { return created; });
   }
 
   void RestartStory(std::string story_name) {
@@ -118,7 +115,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
       story_controller->RequestStart();
       restarted = true;
     });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return restarted; }, kTimeout));
+    RunLoopUntil([&] { return restarted; });
   }
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
@@ -128,7 +125,8 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
   // Stories must have modules in them so the stories created above
   // contain fake intercepted modules. This list holds onto them so that
   // they can be successfully launched and don't die immediately.
-  std::vector<std::unique_ptr<modular::testing::FakeComponent>> intercepted_modules_;
+  std::vector<std::unique_ptr<modular::testing::FakeComponent>>
+      intercepted_modules_;
 
   std::string fake_module_url_;
 };
@@ -140,8 +138,7 @@ TEST_F(StoryShellTest, LinkIsPersistent) {
 
   AddModToStory("story1", "a_mod");
   // Wait for our story shell to start and initialize.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return story_shell_.is_initialized(); }, kTimeout));
+  RunLoopUntil([&] { return story_shell_.is_initialized(); });
 
   // Write link data.
   fuchsia::modular::LinkPtr link;
@@ -161,7 +158,7 @@ TEST_F(StoryShellTest, LinkIsPersistent) {
               ASSERT_NE(nullptr, buffer.get());
               ASSERT_TRUE(fsl::StringFromVmo(*buffer, &content));
             });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return got_content; }, kTimeout));
+  RunLoopUntil([&] { return got_content; });
   EXPECT_EQ("42", content);
 
   // Restart the story.
@@ -170,10 +167,8 @@ TEST_F(StoryShellTest, LinkIsPersistent) {
   RestartStory("story1");
 
   // Wait for it to die and then restart again.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return story_shell_destroyed; },
-                                        kTimeout));
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return story_shell_.is_running(); }, kTimeout));
+  RunLoopUntil([&] { return story_shell_destroyed; });
+  RunLoopUntil([&] { return story_shell_.is_running(); });
 
   // Show that the contents of the Link are still accessible after a restart.
   story_shell_.story_shell_context()->GetLink(link.NewRequest());
@@ -185,7 +180,7 @@ TEST_F(StoryShellTest, LinkIsPersistent) {
               ASSERT_NE(nullptr, buffer.get());
               fsl::StringFromVmo(*buffer, &content);
             });
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return got_content; }, kTimeout));
+  RunLoopUntil([&] { return got_content; });
   EXPECT_EQ("42", content);
 }
 
@@ -202,16 +197,14 @@ TEST_F(StoryShellTest, GetsModuleMetadata) {
   AddModToStory("story1", "mod1");
   AddModToStory("story1", "mod2", {"mod1"} /* surface relation parent */);
   // Wait for the story shell to be notified of the new modules.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return surface_ids_added.size() == 2; }, kTimeout));
+  RunLoopUntil([&] { return surface_ids_added.size() == 2; });
   EXPECT_THAT(surface_ids_added, ElementsAre("mod1", "mod1:mod2"));
 
   // Stop the story shell and restart it. Expect to see the same mods notified
   // to the story shell in the same order.
   surface_ids_added.clear();
   RestartStory("story1");
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return surface_ids_added.size() == 2; }, kTimeout));
+  RunLoopUntil([&] { return surface_ids_added.size() == 2; });
   EXPECT_THAT(surface_ids_added, ElementsAre("mod1", "mod1:mod2"));
 }
 
