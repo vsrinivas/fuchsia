@@ -5,7 +5,7 @@ for debugging Fuchsia programs.
 
 ## The ZX debugger
 
-For C/C++ code, try zxdb. See the [zxdb docs](/garnet/docs/debugger.md) for more details.
+For C/C++ code, try zxdb. See the [zxdb documentation](/docs/development/debugger/README.md) for more details.
 
 ## Backtraces
 

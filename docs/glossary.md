@@ -448,4 +448,4 @@ ZX is an abbreviation of "Zircon" used in Zircon C APIs/ABIs (`zx_channel_create
 #### **ZXDB**
 
 The native low-level system debugger.
-- [Reference](/garnet/docs/debugger.md)
+- [Reference](/docs/development/debugger/README.md)
