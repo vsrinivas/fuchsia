@@ -16,6 +16,7 @@ dart_library("client") {
     "src/dump.dart",
     "src/exceptions.dart",
     "src/input.dart",
+    "src/inspect.dart",
     "src/performance.dart",
     "src/scenic.dart",
     "src/setui.dart",
@@ -34,6 +35,7 @@ dart_library("client") {
 dart_test("sl4f_client_tests") {
   sources = [
     "input_test.dart",
+    "inspect_test.dart",
     "performance_test.dart",
     "scenic_test.dart",
   ]
