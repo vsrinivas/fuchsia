@@ -84,7 +84,8 @@ impl TestEnv {
         .expect("/data/amber to mount");
 
         let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg_resolver#meta/pkg_resolver.cmx".to_owned(),
+            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg_resolver_integration_test.cmx"
+                .to_owned(),
         );
 
         let mut fs = ServiceFs::new();
@@ -156,8 +157,6 @@ impl TestEnv {
                 .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
                 .expect("static /configs to mount")
                 .arg("add_src")
-                // Run amberctl in non-exclusive mode so it doesn't disable existing source configs
-                .arg("-x")
                 .arg("-f=/configs/test.json")
         ));
     }
@@ -280,17 +279,16 @@ async fn test_add_src_with_ipv4_id() {
 
     let source = SourceConfigBuilder::new("http://10.0.0.1:8083")
         .repo_url("http://10.0.0.1:8083")
-        .add_root_key(ROOT_KEY_1)
-        .build();
+        .add_root_key(ROOT_KEY_1);
 
     let repo = RepositoryConfigBuilder::new("fuchsia-pkg://http___10_0_0_1_8083".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
         .add_mirror(MirrorConfigBuilder::new("http://10.0.0.1:8083"))
         .build();
 
-    await!(env.run_amberctl_add_src(source.clone()));
+    await!(env.run_amberctl_add_src(source.clone().build()));
 
-    assert_eq!(await!(env.amber_list_sources()), vec![source]);
+    assert_eq!(await!(env.amber_list_sources()), vec![source.id("http___10_0_0_1_8083").build()]);
     assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
     assert_eq!(
         await!(env.rewrite_engine_list_rules()),
@@ -304,8 +302,7 @@ async fn test_add_src_with_ipv6_id() {
 
     let source = SourceConfigBuilder::new("http://[fe80::1122:3344]:8083")
         .repo_url("http://[fe80::1122:3344]:8083")
-        .add_root_key(ROOT_KEY_1)
-        .build();
+        .add_root_key(ROOT_KEY_1);
 
     let repo = RepositoryConfigBuilder::new(
         "fuchsia-pkg://http____fe80__1122_3344__8083".parse().unwrap(),
@@ -314,9 +311,12 @@ async fn test_add_src_with_ipv6_id() {
     .add_mirror(MirrorConfigBuilder::new("http://[fe80::1122:3344]:8083"))
     .build();
 
-    await!(env.run_amberctl_add_src(source.clone()));
+    await!(env.run_amberctl_add_src(source.clone().build()));
 
-    assert_eq!(await!(env.amber_list_sources()), vec![source]);
+    assert_eq!(
+        await!(env.amber_list_sources()),
+        vec![source.id("http____fe80__1122_3344__8083").build()]
+    );
     assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
     assert_eq!(
         await!(env.rewrite_engine_list_rules()),
@@ -368,14 +368,13 @@ async fn test_rm_src() {
     let cfg_b = SourceConfigBuilder::new("b")
         .repo_url("http://example.com/b")
         .rate_period(60)
-        .add_root_key(ROOT_KEY_2)
-        .build();
+        .add_root_key(ROOT_KEY_2);
 
     await!(env.run_amberctl_add_src(cfg_a.clone().into()));
-    await!(env.run_amberctl_add_src(cfg_b.clone().into()));
+    await!(env.run_amberctl_add_src(cfg_b.clone().build().into()));
 
     await!(env.run_amberctl(&["rm_src", "-n", "http://[fe80::1122:3344]:8083"]));
-    assert_eq!(await!(env.amber_list_sources()), vec![cfg_b]);
+    assert_eq!(await!(env.amber_list_sources()), vec![cfg_b.enabled(false).build()]);
     assert_eq!(
         await!(env.resolver_list_repos()),
         vec![RepositoryConfigBuilder::new("fuchsia-pkg://b".parse().unwrap())
@@ -463,7 +462,7 @@ async fn test_enable_src_disables_other_sources() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_disable_src() {
+async fn test_disable_src_disables_all_sources() {
     let env = TestEnv::new();
 
     let cfg_a = SourceConfigBuilder::new("a")
@@ -479,11 +478,11 @@ async fn test_disable_src() {
     await!(env.run_amberctl_add_src(cfg_a.clone().build().into()));
     await!(env.run_amberctl_add_src(cfg_b.clone().build().into()));
 
-    await!(env.run_amberctl(&["disable_src", "-n", "a"]));
+    await!(env.run_amberctl(&["disable_src"]));
 
     assert_eq!(
         await!(env.amber_list_sources()),
-        vec![cfg_a.enabled(false).build(), cfg_b.enabled(true).build().into(),]
+        vec![cfg_a.enabled(false).build(), cfg_b.enabled(false).build().into(),]
     );
     assert_eq!(
         await!(env.resolver_list_repos()),
