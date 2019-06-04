@@ -11,11 +11,10 @@
 namespace {
 
 using ::fuchsia::ui::input::KeyboardEventPhase;
-using ::testing::HasSubstr;
 
 void PressAndReleaseKey(FakeScenic* scenic, KeyboardEventHidUsage usage) {
-  scenic->BroadcastKeyEvent(usage, KeyboardEventPhase::PRESSED);
-  scenic->BroadcastKeyEvent(usage, KeyboardEventPhase::RELEASED);
+  scenic->SendKeyEvent(usage, KeyboardEventPhase::PRESSED);
+  scenic->SendKeyEvent(usage, KeyboardEventPhase::RELEASED);
 }
 
 // Create an alias, as "TEST_F" requires the fixture name to be a valid C token.

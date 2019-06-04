@@ -15,9 +15,12 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/svc/cpp/services.h>
 #include <src/lib/fxl/logging.h>
 #include <string.h>
+
+#include <optional>
 
 // This file implements a minimal fuschsia::ui::scenic::Scenic implementation
 // capable of broadcasting input events (such as keystrokes) to sessions.
@@ -41,22 +44,22 @@ enum class KeyboardEventHidUsage : uint16_t {
 
 class FakeSession : public fuchsia::ui::scenic::testing::Session_TestBase {
  public:
-  FakeSession() = default;
-
-  // Bind a session request to this session.
-  void Bind(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+  FakeSession(
+      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
       fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
 
-  // Broadcast an event to all listeners.
-  void BroadcastEvent(const fuchsia::ui::scenic::Event& event);
+  // Send a list of events to any attached listeners.
+  void SendEvents(std::vector<fuchsia::ui::scenic::Event> events);
+
+  // Call the given callback if the connection has an error.
+  void set_error_handler(fit::function<void(zx_status_t)> error_handler);
 
  protected:
   void NotImplemented_(const std::string& name) final;
 
  private:
-  fidl::BindingSet<fuchsia::ui::scenic::Session> bindings_;
-  fidl::InterfacePtrSet<fuchsia::ui::scenic::SessionListener> listeners_;
+  fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
+  fidl::Binding<fuchsia::ui::scenic::Session> binding_;
 };
 
 class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
@@ -65,12 +68,12 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler();
 
-  // Broadcast an event to all listeners.
-  void BroadcastEvent(const fuchsia::ui::scenic::Event& event);
+  // Send a list of events to any attached listener.
+  void SendEvents(std::vector<fuchsia::ui::scenic::Event> events);
 
-  // Broadcast a keyboard event to all listeners.
-  void BroadcastKeyEvent(KeyboardEventHidUsage usage,
-                         fuchsia::ui::input::KeyboardEventPhase phase);
+  // Send a keyboard events to any attached listener.
+  void SendKeyEvent(KeyboardEventHidUsage usage,
+                    fuchsia::ui::input::KeyboardEventPhase phase);
 
  protected:
   // |fuchsia::ui::scenic::Scenic|
@@ -82,9 +85,11 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   void NotImplemented_(const std::string& name) final;
 
  private:
+  // We only support a single session at a time. A session is active iff
+  // session_ != nullopt.
+  std::optional<FakeSession> session_;
+
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  fidl::InterfaceHandle<fuchsia::ui::scenic::Scenic> real_scenic_;
-  FakeSession session_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_

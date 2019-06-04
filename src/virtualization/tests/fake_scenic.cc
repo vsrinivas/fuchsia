@@ -14,57 +14,73 @@
 #include <lib/svc/cpp/services.h>
 #include <src/lib/fxl/logging.h>
 #include <string.h>
+#include <zircon/errors.h>
+
+using fuchsia::ui::input::KeyboardEventPhase;
+using fuchsia::ui::scenic::Event;
+using fuchsia::ui::scenic::Scenic;
+using fuchsia::ui::scenic::Session;
+using fuchsia::ui::scenic::SessionListener;
+
+FakeSession::FakeSession(fidl::InterfaceRequest<Session> request,
+                         fidl::InterfaceHandle<SessionListener> listener)
+    : binding_(this, std::move(request)) {
+  listener_.Bind(std::move(listener));
+}
+
+void FakeSession::SendEvents(std::vector<Event> events) {
+  if (listener_.is_bound()) {
+    listener_->OnScenicEvent(std::move(events));
+  }
+}
+
+void FakeSession::set_error_handler(
+    fit::function<void(zx_status_t)> error_handler) {
+  binding_.set_error_handler(std::move(error_handler));
+}
 
 void FakeSession::NotImplemented_(const std::string& name) {
   FXL_LOG(INFO) << "Unimplemented method '" << name << "' called.";
 }
 
-void FakeSession::Bind(
-    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  bindings_.AddBinding(this, std::move(session_request));
-  listeners_.AddInterfacePtr(listener.Bind());
-}
-
-void FakeSession::BroadcastEvent(const fuchsia::ui::scenic::Event& event) {
-  for (const auto& ptr : listeners_.ptrs()) {
-    // Each call to OnScenicEvent consumes our Event object, so we must make
-    // a new copy each loop iteration.
-    fuchsia::ui::scenic::Event cloned_event;
-    zx_status_t result = event.Clone(&cloned_event);
-    FXL_CHECK(result == ZX_OK);
-    std::vector<fuchsia::ui::scenic::Event> event_list;
-    event_list.push_back(std::move(cloned_event));
-    (*ptr)->OnScenicEvent(std::move(event_list));
+void FakeScenic::SendEvents(std::vector<Event> event) {
+  if (session_.has_value()) {
+    session_->SendEvents(std::move(event));
   }
 }
 
-void FakeScenic::BroadcastEvent(const fuchsia::ui::scenic::Event& event) {
-  session_.BroadcastEvent(event);
-}
-
-void FakeScenic::BroadcastKeyEvent(
-    KeyboardEventHidUsage usage, fuchsia::ui::input::KeyboardEventPhase phase) {
-  fuchsia::ui::scenic::Event event;
+void FakeScenic::SendKeyEvent(KeyboardEventHidUsage usage,
+                              fuchsia::ui::input::KeyboardEventPhase phase) {
+  Event event;
   auto& keyboard_event = event.input().keyboard();
   keyboard_event.device_id = 0;
   keyboard_event.phase = phase;
   keyboard_event.hid_usage = static_cast<uint16_t>(usage);
   keyboard_event.code_point = 0;
-  BroadcastEvent(event);
+  std::vector<Event> events;
+  events.push_back(std::move(event));
+  SendEvents(std::move(events));
 }
 
-fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic>
-FakeScenic::GetHandler() {
+fidl::InterfaceRequestHandler<Scenic> FakeScenic::GetHandler() {
   return bindings_.GetHandler(this);
 }
 
 void FakeScenic::CreateSession(
-    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  // We only have a single session, which will broadcast events to all
-  // listeners.
-  session_.Bind(std::move(session_request), std::move(listener));
+    fidl::InterfaceRequest<Session> session_request,
+    fidl::InterfaceHandle<SessionListener> listener) {
+  // Ensure we don't already have a session open.
+  if (session_.has_value()) {
+    FXL_LOG(WARNING)
+        << "Attempt to create a second session on FakeScenic was rejected.";
+    session_request.Close(ZX_ERR_NO_RESOURCES);
+    return;
+  }
+
+  // Create a new session.
+  session_.emplace(std::move(session_request), std::move(listener));
+  session_->set_error_handler(
+      [this](zx_status_t /*error*/) { session_.reset(); });
 }
 
 void FakeScenic::NotImplemented_(const std::string& name) {
