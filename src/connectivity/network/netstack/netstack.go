@@ -432,10 +432,11 @@ func (ifs *ifState) stateChange(s link.State) {
 	ifs.mu.Lock()
 	switch s {
 	case link.StateClosed:
+		syslog.Infof("NIC %s: link.StateClosed", ifs.mu.name)
 		delete(ifs.ns.mu.ifStates, ifs.nicid)
 		fallthrough
 	case link.StateDown:
-		syslog.Infof("NIC %s: stopped", ifs.mu.name)
+		syslog.Infof("NIC %s: link.StateDown", ifs.mu.name)
 		ifs.mu.dhcp.cancel()
 
 		// TODO(crawshaw): more cleanup to be done here:
@@ -456,7 +457,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		}
 
 	case link.StateStarted:
-		syslog.Infof("NIC %s: starting", ifs.mu.name)
+		syslog.Infof("NIC %s: link.StateStarted", ifs.mu.name)
 		// Re-enable static routes out this interface.
 		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionEnableStatic)
 		if ifs.mu.dhcp.enabled {
