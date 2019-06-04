@@ -32,7 +32,7 @@ if jiri_manifest != ""
 
   let &runtimepath .= "," .
         \ g:fuchsia_dir . "/scripts/vim/," .
-        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/" .
+        \ g:fuchsia_dir . "/garnet/public/lib/fidl/tools/vim/," .
         \ g:fuchsia_dir . "/third_party/json5.vim/"
 
   " The "filetype plugin" line must come AFTER the changes to runtimepath
