@@ -40,6 +40,10 @@ test_package("a11y_tests") {
       path = "tests/testdata/cyclic_semantic_tree.json"
       dest = "cyclic_semantic_tree.json"
     },
+    {
+      path = "tests/testdata/semantic_tree_not_parseable.json"
+      dest = "semantic_tree_not_parseable.json"
+    },
   ]
 
   tests = [

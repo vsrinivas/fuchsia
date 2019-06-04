@@ -1,0 +1,22 @@
+[
+  {
+    "id" : 0,
+    "child_ids" : [
+      1,
+      2
+    ],
+    "attributes": {
+      "label" : "Node-0"
+    }
+ }
+ {
+    "id" : 1,
+    "child_ids" : [
+      3,
+      4
+    ],
+    "attributes": {
+      "label" : "Node-1"
+    }
+ }
+]
