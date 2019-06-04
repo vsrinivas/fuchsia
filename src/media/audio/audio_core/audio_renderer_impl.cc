@@ -10,6 +10,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
 
@@ -30,6 +31,7 @@ AudioRendererImpl::AudioRendererImpl(
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       ref_clock_to_frac_frames_(0, 0, {0, 1}) {
+  REP(AddingRenderer(*this));
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     audio_renderer_binding_.Unbind();
     Shutdown();
@@ -41,6 +43,7 @@ AudioRendererImpl::~AudioRendererImpl() {
   FXL_DCHECK(is_shutdown_);
   FXL_DCHECK(!audio_renderer_binding_.is_bound());
   FXL_DCHECK(gain_control_bindings_.size() == 0);
+  REP(RemovingRenderer(*this));
 }
 
 void AudioRendererImpl::Shutdown() {
@@ -102,6 +105,7 @@ void AudioRendererImpl::RecomputeMinClockLeadTime() {
   });
 
   if (min_clock_lead_nsec_ != cur_lead_time) {
+    REP(SettingRendererMinClockLeadTime(*this, cur_lead_time));
     min_clock_lead_nsec_ = cur_lead_time;
     ReportNewMinClockLeadTime();
   }
@@ -227,6 +231,8 @@ void AudioRendererImpl::SetPcmStreamType(
     return;
   }
 
+  REP(SettingRendererStreamType(*this, format));
+
   // Everything checks out. Discard any existing links we hold (including
   // throttle output). New links need to be created with our new format.
   Unlink();
@@ -294,6 +300,8 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
     return;
   }
 
+  REP(AddingRendererPayloadBuffer(*this, id, payload_buffer_->size()));
+
   // Things went well, cancel the cleanup hook. If our config had been
   // validated previously, it will have to be revalidated as we move into the
   // operational phase of our life.
@@ -346,6 +354,8 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
                    << ")";
     return;
   }
+
+  REP(SettingRendererPtsContinuityThreshold(*this, threshold_seconds));
 
   pts_continuity_threshold_ = threshold_seconds;
   pts_continuity_threshold_set_ = true;
@@ -655,6 +665,8 @@ void AudioRendererImpl::SetGain(float gain_db) {
     return;
   }
 
+  REP(SettingRendererGain(*this, gain_db));
+
   stream_gain_db_ = gain_db;
 
   // Set this gain with every link (except the link to throttle output)
@@ -680,11 +692,13 @@ void AudioRendererImpl::SetGainWithRamp(
     return;
   }
 
+  REP(SettingRendererGainWithRamp(*this, gain_db, duration_ns, ramp_type));
+
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), gain_db,
                    duration_ns, ramp_type](auto& link) {
     if (&link != throttle_ptr) {
       link.bookkeeping()->gain.SetSourceGainWithRamp(gain_db, duration_ns,
-                                                      ramp_type);
+                                                     ramp_type);
     }
   });
 
@@ -701,6 +715,7 @@ void AudioRendererImpl::SetMute(bool mute) {
     return;
   }
 
+  REP(SettingRendererMute(*this, mute));
   mute_ = mute;
 
   ForEachDestLink(

@@ -24,6 +24,7 @@
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/driver_output.h"
+#include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
 
@@ -91,6 +92,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
   // Open the device node.
   fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
+    REP(FailedToOpenDevice(name, is_input, errno));
     FXL_LOG(WARNING) << "AudioPlugDetector failed to open device node at \""
                      << name << "\". (" << strerror(errno) << " : " << errno
                      << ")";
@@ -104,8 +106,10 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
   res = fdio_get_service_handle(dev_node.release(),
                                 dev_channel.reset_and_get_address());
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to obtain FDIO service channel to AudioOutput "
-                   << "(res " << res << ")";
+    REP(FailedToObtainFdioServiceChannel(name, is_input, res));
+    FXL_LOG(ERROR) << "Failed to obtain FDIO service channel to audio "
+                   << (is_input ? "input" : "output") << " (status " << res
+                   << ")";
     return;
   }
 
@@ -115,7 +119,9 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
 
   res = dev.GetChannel(&channel);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to open channel to AudioOutput (res " << res
+    REP(FailedToObtainStreamChannel(name, is_input, res));
+    FXL_LOG(ERROR) << "Failed to open channel to audio "
+                   << (is_input ? "input" : "output") << " (status " << res
                    << ")";
     return;
   }
@@ -133,6 +139,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
                      << (is_input ? "input" : "output") << " for \"" << name
                      << "\"";
   } else {
+    REP(AddingDevice(name, *new_device));
     manager_->AddDevice(std::move(new_device));
   }
 }

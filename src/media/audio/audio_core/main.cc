@@ -6,10 +6,13 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/reporter.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  media::audio::AudioCoreImpl impl(sys::ComponentContext::Create());
+  auto component_context = sys::ComponentContext::Create();
+  REP(Init(component_context.get()));
+  media::audio::AudioCoreImpl impl(std::move(component_context));
   loop.Run();
   return 0;
 }

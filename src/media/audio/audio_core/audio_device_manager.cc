@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/mixer/fx_loader.h"
+#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 
 namespace media::audio {
@@ -120,6 +121,7 @@ zx_status_t AudioDeviceManager::AddDevice(
 
   zx_status_t res = device->Startup();
   if (res != ZX_OK) {
+    REP(DeviceStartupFailed(*device));
     device->Shutdown();
   } else {
     devices_pending_init_.insert(std::move(device));
@@ -178,9 +180,12 @@ void AudioDeviceManager::ActivateDevice(
 
   // Is this device configured to be ignored? If so, remove (don't activate) it.
   if (settings->ignore_device()) {
+    REP(IgnoringDevice(*device));
     RemoveDevice(device);
     return;
   }
+
+  REP(ActivatingDevice(*device));
 
   // Move the device over to the set of active devices.
   devices_.insert(devices_pending_init_.erase(*device));
@@ -202,6 +207,7 @@ void AudioDeviceManager::ActivateDevice(
                                     fuchsia::media::SetAudioGainFlag_AgcValid;
   fuchsia::media::AudioGainInfo gain_info;
   settings->GetGainInfo(&gain_info);
+  REP(SettingDeviceGainInfo(*device, gain_info, kAllSetFlags));
   device->SetGainInfo(gain_info, kAllSetFlags);
 
   // TODO(mpuryear): Configure the FxProcessor based on settings, here?
@@ -236,6 +242,8 @@ void AudioDeviceManager::ActivateDevice(
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
   FXL_DCHECK(device->is_output() || (device != throttle_output_));
+
+  REP(RemovingDevice(*device));
 
   device->PreventNewLinks();
   device->Unlink();
@@ -354,6 +362,7 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   dev->system_gain_dirty = true;
 
   // Change the gain and then report the new settings to our clients.
+  REP(SettingDeviceGainInfo(*dev, gain_info, set_flags));
   dev->SetGainInfo(gain_info, set_flags);
   NotifyDeviceGainChanged(*dev);
   CommitDirtySettings();
@@ -750,6 +759,7 @@ void AudioDeviceManager::UpdateDeviceToSystemGain(
       service_->system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};
 
   FXL_DCHECK(device != nullptr);
+  REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
   device->SetGainInfo(set_cmd, set_flags);
   CommitDirtySettings();
 }

@@ -9,6 +9,7 @@
 #include "lib/media/audio/cpp/types.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/utils.h"
 
 // Allow (at most) 256 slabs of pending capture buffers. At 16KB per slab, this
@@ -45,6 +46,7 @@ AudioCapturerImpl::AudioCapturerImpl(
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false) {
+  REP(AddingCapturer(*this));
   // TODO(johngro) : See ZX-940. Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
   zx::profile profile;
@@ -70,6 +72,7 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   FXL_DCHECK(!payload_buf_vmo_.is_valid());
   FXL_DCHECK(payload_buf_virt_ == nullptr);
   FXL_DCHECK(payload_buf_size_ == 0);
+  REP(RemovingCapturer(*this));
 }
 
 void AudioCapturerImpl::SetInitialFormat(
@@ -208,6 +211,8 @@ void AudioCapturerImpl::SetPcmStreamType(
       return;
   }
 
+  REP(SettingCapturerStreamType(*this, stream_type));
+
   // Success, record our new format.
   UpdateFormat(stream_type.sample_format, stream_type.channels,
                stream_type.frames_per_second);
@@ -261,6 +266,8 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
                    << ", bytes per frame = " << bytes_per_frame_ << ")";
     return;
   }
+
+  REP(AddingCapturerPayloadBuffer(*this, id, payload_buf_size_));
 
   payload_buf_frames_ =
       static_cast<uint32_t>(payload_buf_size_ / bytes_per_frame_);
@@ -1418,6 +1425,8 @@ void AudioCapturerImpl::SetGain(float gain_db) {
     return;
   }
 
+  REP(SettingCapturerGain(*this, gain_db));
+
   stream_gain_db_.store(gain_db);
 
   ForEachSourceLink([gain_db](auto& link) {
@@ -1434,6 +1443,8 @@ void AudioCapturerImpl::SetMute(bool mute) {
   if (mute_ == mute) {
     return;
   }
+
+  REP(SettingCapturerMute(*this, mute));
 
   mute_ = mute;
 
