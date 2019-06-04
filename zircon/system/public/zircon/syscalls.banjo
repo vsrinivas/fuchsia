@@ -257,6 +257,7 @@ protocol Api {
     object_get_child(handle handle, uint64 koid, zx.rights rights) ->
         (zx.status status, handle out);
 
+    /// Apply a scheduling profile to a thread.
     [rights="handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.",
      rights="profile must be of type ZX_OBJ_TYPE_PROFILE and have ZX_RIGHT_APPLY_PROFILE."]
     object_set_profile(handle handle, handle profile, uint32 options) -> (zx.status status);
@@ -832,6 +833,7 @@ protocol Api {
     //
     //
 
+    /// Create a scheduler profile.
     [rights="root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.",
      argtype="profile IN",
      argtype="out handle_acquire"]
