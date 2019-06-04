@@ -10,6 +10,7 @@ Summary::Summary(const Capture& capture)
     : time_(capture.time()), kstats_(capture.kmem()) {
   std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>>
       vmo_to_processes;
+  auto const& koid_to_vmo = capture.koid_to_vmo();
   for (auto const& pair : capture.koid_to_process()) {
     auto process_koid = pair.first;
     auto& process = pair.second;
@@ -19,6 +20,10 @@ Summary::Summary(const Capture& capture)
         vmo_to_processes[vmo_koid].insert(process_koid);
         s.vmos_.insert(vmo_koid);
         auto const& vmo = capture.vmo_for_koid(vmo_koid);
+        // The parent koid could be missing.
+        if (koid_to_vmo.find(vmo.parent_koid) == koid_to_vmo.end()) {
+          break;
+        }
         vmo_koid = vmo.parent_koid;
       } while (vmo_koid);
     }

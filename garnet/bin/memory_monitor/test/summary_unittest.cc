@@ -282,5 +282,32 @@ TEST_F(SummaryUnitTest, TwoProcessesChild) {
   EXPECT_EQ(100U, sizes.total_bytes);
 }
 
+TEST_F(SummaryUnitTest, MissingParent) {
+  // Child VMO with parent koid that's not found.
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .vmos = {
+      {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+    },
+    .processes = {
+      {.koid = 1, .name = "p1", .vmos = {2}},
+    }
+  });
+  Summary s(c);
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(1U, process_summaries.size());
+  ProcessSummary ps = process_summaries.at(0);
+  EXPECT_STREQ("p1", ps.name().c_str());
+  EXPECT_EQ(1U, ps.koid());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+  sizes = ps.GetSizes("v2");
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+}
+
 }  // namespace test
 }  // namespace memory
