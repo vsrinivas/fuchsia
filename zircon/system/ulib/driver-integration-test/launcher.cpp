@@ -95,28 +95,6 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries,
     *out = std::move(vmo);
     return ZX_OK;
 }
-zx_status_t GetArguments(const fbl::Vector<const char*>& arguments, zx::vmo* out,
-                         uint32_t* length) {
-    size_t size = 0;
-    for (const char* arg : arguments) {
-        size += strlen(arg);
-    }
-
-    zx::vmo vmo;
-    zx_status_t status = zx::vmo::create(size, 0, &vmo);
-    size_t offset = 0;
-    for (const char* arg : arguments) {
-        vmo.write(arg, offset, strlen(arg));
-        if (status != ZX_OK) {
-            return status;
-        }
-        offset += strlen(arg);
-    }
-
-    *length = static_cast<uint32_t>(size);
-    *out = std::move(vmo);
-    return status;
-}
 
 } // namespace
 
@@ -132,9 +110,6 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* o
     devmgr_args.get_boot_item = [args](uint32_t type, uint32_t extra, zx::vmo* out,
                                        uint32_t* length) {
         return GetBootItem(args->device_list, type, extra, out, length);
-    };
-    devmgr_args.get_arguments = [args](zx::vmo* out, uint32_t* length) {
-        return GetArguments(args->arguments, out, length);
     };
 
     zx_status_t status =
