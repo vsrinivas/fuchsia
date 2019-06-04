@@ -62,6 +62,7 @@ group("base") {
   public_deps = [
     "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/config:amber",
+    "//garnet/packages/config:mdns",
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",
@@ -74,6 +75,7 @@ group("base") {
     "//garnet/packages/prod:device_settings",
     "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:logger",
+    "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network_time",
@@ -96,7 +98,5 @@ group("graphical") {
   public_deps = [
     "//garnet/packages/prod:scenic",
     "//garnet/packages/products:base",
-    "//src/connectivity/network/mdns/bundles:config",
-    "//src/connectivity/network/mdns/bundles:services",
   ]
 }

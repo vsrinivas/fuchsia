@@ -386,6 +386,7 @@ group("all") {
     ":log_listener",
     ":logger",
     ":magma",
+    ":mdns",
     ":media",
     ":memory_monitor",
     ":netcfg_tests",
@@ -448,7 +449,6 @@ group("all") {
     "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/go/src/pm:host_tests",
     "//src/connectivity/network/dhcp:dhcp_tests",
-    "//src/connectivity/network/mdns/bundles:tests",
     "//src/sys/component_index:component_index_tests",
     "//src/sys/dash:dash_test",
     "//src/sys/locate:locate_integration_test",
@@ -741,6 +741,15 @@ group("fidl_compatibility_test_server_rust") {
   testonly = true
   public_deps = [
     "//garnet/bin/fidl_compatibility_test:fidl_compatibility_test_server_rust",
+  ]
+}
+
+group("mdns") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/prod:run",
+    "//src/connectivity/network/mdns/service:mdns_fuzzers",
+    "//src/connectivity/network/mdns/service:mdns_tests",
   ]
 }
 

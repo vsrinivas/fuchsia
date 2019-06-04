@@ -11,6 +11,8 @@ group("framework") {
     "//garnet/packages/config:mdns",
     "//garnet/packages/config:netconnector",
     "//garnet/packages/prod:cobalt_client",
+    "//garnet/packages/prod:mdns",
+    "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:netconnector",
     "//peridot/packages/prod:basemgr_launcher",
     "//peridot/packages/prod:clipboard_agent",
@@ -21,8 +23,6 @@ group("framework") {
     "//peridot/packages/prod:modular",
     "//peridot/packages/prod:module_resolver",
     "//peridot/packages/prod:sessionctl",
-    "//src/connectivity/network/mdns/bundles:services",
-    "//src/connectivity/network/mdns/bundles:utils",
   ]
 }
 
