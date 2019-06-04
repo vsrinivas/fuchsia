@@ -20,7 +20,7 @@ static constexpr char kRealm[] = "realmguestintegrationtest";
 static constexpr char kFuchsiaTestUtilsUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
 static constexpr char kDebianTestUtilDir[] = "/test_utils";
-static constexpr zx::duration kLoopTimeout = zx::sec(20);
+static constexpr zx::duration kLoopTimeout = zx::sec(300);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);
 static constexpr size_t kNumRetries = 40;
 static constexpr zx::duration kRetryStep = zx::msec(200);
