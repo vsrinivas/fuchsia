@@ -136,7 +136,7 @@ impl App {
 }
 
 /// Options controlling a single update check
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CheckOptions {
     /// Was this check initiated by a person that's waiting for an answer?
     ///  This is used to ignore the background poll rate, and to be aggressive about

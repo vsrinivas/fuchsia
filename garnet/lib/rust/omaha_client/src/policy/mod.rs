@@ -10,8 +10,13 @@ use crate::{
 use futures::future::BoxFuture;
 use std::time::SystemTime;
 
-pub mod stub;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+pub use mock::MockPolicyEngine;
+mod stub;
 pub use stub::StubPolicy;
+pub use stub::StubPolicyEngine;
 
 /// Data about the local system that's needed to fulfill Policy questions
 pub struct PolicyData {

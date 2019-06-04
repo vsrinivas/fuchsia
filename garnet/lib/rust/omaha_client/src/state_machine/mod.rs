@@ -8,8 +8,11 @@ use crate::{
     http_request::HttpRequest,
     installer::{Installer, Plan},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
-    protocol::response::{parse_json_response, OmahaStatus, Response},
-    request_builder::{self, RequestBuilder},
+    protocol::{
+        request::{Event, EventErrorCode, EventResult, EventType},
+        response::{parse_json_response, OmahaStatus, Response},
+    },
+    request_builder::{self, RequestBuilder, RequestParams},
 };
 use failure::Fail;
 use futures::{compat::Stream01CompatExt, prelude::*};
@@ -171,8 +174,11 @@ where
             Ok(res) => res,
             Err(err) => {
                 warn!("Unable to parse Omaha response: {:?}", err);
-                // TODO: Report status
-                // TODO: Report parse error to Omaha
+                await!(self.report_error_event(
+                    apps,
+                    &request_params,
+                    EventErrorCode::ParseResponse,
+                ));
                 return Ok(());
             }
         };
@@ -193,8 +199,11 @@ where
                 Ok(plan) => plan,
                 Err(e) => {
                     error!("Unable to construct install plan! {}", e);
-                    // TODO: Report status (Error)
-                    // TODO: Report error to Omaha
+                    await!(self.report_error_event(
+                        apps,
+                        &request_params,
+                        EventErrorCode::ConstructInstallPlan
+                    ));
                     return Ok(());
                 }
             };
@@ -208,36 +217,103 @@ where
                 UpdateDecision::DeferredByPolicy => {
                     info!("Install plan was deferred by Policy.");
                     // TODO: Report status (Deferred)
-                    // TODO: Report "error" to Omaha (as this is an event that needs reporting
-                    // TODO:   as the install isn't starting immediately.
+                    let event = Event {
+                        event_type: EventType::UpdateComplete,
+                        event_result: EventResult::UpdateDeferred,
+                        ..Event::default()
+                    };
+                    await!(self.report_omaha_event(apps, &request_params, event));
                     return Ok(());
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
                     // TODO: Report status (Error)
-                    // TODO: Report error to Omaha
+                    await!(self.report_error_event(
+                        apps,
+                        &request_params,
+                        EventErrorCode::DeniedByPolicy
+                    ));
                     return Ok(());
                 }
             }
 
             // TODO: Report Status (Updating)
-            // TODO: Notify Omaha of download start event.
+            await!(self.report_success_event(
+                apps,
+                &request_params,
+                EventType::UpdateDownloadStarted
+            ));
 
             let install_result = await!(self.installer.perform_install(&install_plan, None));
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
-                // TODO: Report Status
-                // TODO: Report error to Omaha
+                await!(self.report_error_event(
+                    apps,
+                    &request_params,
+                    EventErrorCode::Installation
+                ));
                 return Ok(());
             }
 
             // TODO: Report Status (Done)
-            // TODO: Notify Omaha of download complete event.
+            await!(self.report_success_event(
+                apps,
+                &request_params,
+                EventType::UpdateDownloadFinished
+            ));
+
+            // TODO: Verify downloaded update if needed.
+
+            await!(self.report_success_event(apps, &request_params, EventType::UpdateComplete));
 
             // TODO: Consult Policy for next update time.
         }
 
         Ok(())
+    }
+
+    /// Report an error event to Omaha.
+    async fn report_error_event<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        request_params: &'a RequestParams,
+        errorcode: EventErrorCode,
+    ) {
+        // TODO: Report ENCOUNTERED_ERROR status
+        let event = Event {
+            event_type: EventType::UpdateComplete,
+            errorcode: Some(errorcode),
+            ..Event::default()
+        };
+        await!(self.report_omaha_event(apps, &request_params, event));
+    }
+
+    /// Report a successful event to Omaha, for example download started, download finished, etc.
+    async fn report_success_event<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        request_params: &'a RequestParams,
+        event_type: EventType,
+    ) {
+        let event = Event { event_type, event_result: EventResult::Success, ..Event::default() };
+        await!(self.report_omaha_event(apps, &request_params, event));
+    }
+
+    /// Report the given |event| to Omaha, errors occurred during reporting are logged but not
+    /// acted on.
+    async fn report_omaha_event<'a>(
+        &'a mut self,
+        apps: &'a [App],
+        request_params: &'a RequestParams,
+        event: Event,
+    ) {
+        let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
+        for app in apps {
+            request_builder = request_builder.add_event(app, &event);
+        }
+        if let Err(e) = await!(Self::do_omaha_request(&mut self.http, request_builder)) {
+            warn!("Unable to report event to Omaha: {:?}", e);
+        }
     }
 
     /// Make an http request to Omaha, and collect the response into an error or a blob of bytes
@@ -310,45 +386,267 @@ where
 pub mod tests {
     use super::*;
     use crate::{
-        common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule, UserCounting, Version},
+        common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
         configuration::test_support::config_generator,
         http_request::mock::MockHttpRequest,
         installer::stub::StubInstaller,
-        policy::stub::StubPolicyEngine,
-        protocol::{request::InstallSource, Cohort},
+        policy::{MockPolicyEngine, StubPolicyEngine},
+        protocol::Cohort,
     };
     use futures::executor::block_on;
     use log::info;
+    use serde_json::json;
     use std::time::SystemTime;
 
+    async fn do_update_check<'a, PE, HR, IN>(
+        state_machine: &'a mut StateMachine<PE, HR, IN>,
+        apps: &'a [App],
+    ) where
+        PE: PolicyEngine,
+        HR: HttpRequest,
+        IN: Installer,
+    {
+        let options = CheckOptions::default();
+
+        let context = update_check::Context {
+            schedule: UpdateCheckSchedule {
+                last_update_time: SystemTime::now() - std::time::Duration::new(500, 0),
+                next_update_time: SystemTime::now(),
+                next_update_window_start: SystemTime::now(),
+            },
+            state: ProtocolState::default(),
+        };
+
+        await!(state_machine.perform_update_check(options, &apps, context)).unwrap();
+    }
+
+    fn make_test_apps() -> Vec<App> {
+        vec![App::new(
+            "{00000000-0000-0000-0000-000000000001}",
+            [1, 2, 3, 4],
+            Cohort::new("stable-channel"),
+        )]
+    }
+
+    // Assert that the last request made to |http| is equal to the request built by
+    // |request_builder|.
+    async fn assert_request<'a>(http: MockHttpRequest, request_builder: RequestBuilder<'a>) {
+        let body = await!(request_builder.build().unwrap().into_body().compat().try_concat())
+            .unwrap()
+            .to_vec();
+        // Compare string instead of Vec<u8> for easier debugging.
+        let body_str = String::from_utf8_lossy(&body);
+        await!(http.assert_body_str(&body_str));
+    }
+
     #[test]
-    pub fn run_simple_check_with_noupdate_result() {
+    fn run_simple_check_with_noupdate_result() {
         block_on(async {
             let config = config_generator();
-            let http = MockHttpRequest::new(hyper::Response::new("  ".into()));
-            let policy_engine = StubPolicyEngine;
-            let installer = StubInstaller;
-            let options = CheckOptions { source: InstallSource::OnDemand };
-            let apps = vec![App {
-                id: "{00000000-0000-0000-0000-000000000001}".to_string(),
-                version: Version::from([1, 2, 3, 4]),
-                fingerprint: None,
-                cohort: Cohort::new("stable-channel"),
-                user_counting: UserCounting::ClientRegulatedByDate(None),
-            }];
-            let context = update_check::Context {
-                schedule: UpdateCheckSchedule {
-                    last_update_time: SystemTime::now() - std::time::Duration::new(500, 0),
-                    next_update_time: SystemTime::now(),
-                    next_update_window_start: SystemTime::now(),
-                },
-                state: ProtocolState::default(),
-            };
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "noupdate"
+                }
+              }]
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine = StateMachine::new(policy_engine, http, installer, &config);
-            await!(state_machine.perform_update_check(options, &apps, context)).unwrap();
+            let mut state_machine =
+                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let apps = make_test_apps();
+            await!(do_update_check(&mut state_machine, &apps));
 
             info!("update check complete!");
+        });
+    }
+
+    #[test]
+    fn test_report_parse_response_error() {
+        block_on(async {
+            let config = config_generator();
+            let mut http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
+            http.add_response(hyper::Response::new("".into()));
+
+            let mut state_machine =
+                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let apps = make_test_apps();
+            await!(do_update_check(&mut state_machine, &apps));
+
+            let request_params = RequestParams::default();
+            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let event = Event {
+                event_type: EventType::UpdateComplete,
+                errorcode: Some(EventErrorCode::ParseResponse),
+                ..Event::default()
+            };
+            request_builder = request_builder.add_event(&apps[0], &event);
+            await!(assert_request(state_machine.http, request_builder));
+        });
+    }
+
+    #[test]
+    fn test_report_construct_install_plan_error() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "4.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            http.add_response(hyper::Response::new("".into()));
+
+            let mut state_machine =
+                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let apps = make_test_apps();
+            await!(do_update_check(&mut state_machine, &apps));
+
+            let request_params = RequestParams::default();
+            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let event = Event {
+                event_type: EventType::UpdateComplete,
+                errorcode: Some(EventErrorCode::ConstructInstallPlan),
+                ..Event::default()
+            };
+            request_builder = request_builder.add_event(&apps[0], &event);
+            await!(assert_request(state_machine.http, request_builder));
+        });
+    }
+
+    #[test]
+    fn test_report_installation_error() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            // For reporting UpdateDownloadStarted
+            http.add_response(hyper::Response::new("".into()));
+            // For reporting installation error
+            http.add_response(hyper::Response::new("".into()));
+
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller { should_fail: true },
+                &config,
+            );
+            let apps = make_test_apps();
+            await!(do_update_check(&mut state_machine, &apps));
+
+            let request_params = RequestParams::default();
+            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let event = Event {
+                event_type: EventType::UpdateComplete,
+                errorcode: Some(EventErrorCode::Installation),
+                ..Event::default()
+            };
+            request_builder = request_builder.add_event(&apps[0], &event);
+            await!(assert_request(state_machine.http, request_builder));
+        });
+    }
+
+    #[test]
+    fn test_report_deferred_by_policy() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            http.add_response(hyper::Response::new("".into()));
+
+            let policy_engine = MockPolicyEngine {
+                check_decision: Some(CheckDecision::Ok(RequestParams::default())),
+                update_decision: Some(UpdateDecision::DeferredByPolicy),
+                ..MockPolicyEngine::default()
+            };
+            let mut state_machine =
+                StateMachine::new(policy_engine, http, StubInstaller::default(), &config);
+            let apps = make_test_apps();
+            await!(do_update_check(&mut state_machine, &apps));
+
+            let request_params = RequestParams::default();
+            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let event = Event {
+                event_type: EventType::UpdateComplete,
+                event_result: EventResult::UpdateDeferred,
+                ..Event::default()
+            };
+            request_builder = request_builder.add_event(&apps[0], &event);
+            await!(assert_request(state_machine.http, request_builder));
+        });
+    }
+
+    #[test]
+    fn test_report_denied_by_policy() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            http.add_response(hyper::Response::new("".into()));
+            let policy_engine = MockPolicyEngine {
+                check_decision: Some(CheckDecision::Ok(RequestParams::default())),
+                update_decision: Some(UpdateDecision::DeniedByPolicy),
+                ..MockPolicyEngine::default()
+            };
+            let mut state_machine =
+                StateMachine::new(policy_engine, http, StubInstaller::default(), &config);
+            let apps = make_test_apps();
+            await!(do_update_check(&mut state_machine, &apps));
+
+            let request_params = RequestParams::default();
+            let mut request_builder = RequestBuilder::new(&config, &request_params);
+            let event = Event {
+                event_type: EventType::UpdateComplete,
+                errorcode: Some(EventErrorCode::DeniedByPolicy),
+                ..Event::default()
+            };
+            request_builder = request_builder.add_event(&apps[0], &event);
+            await!(assert_request(state_machine.http, request_builder));
         });
     }
 }

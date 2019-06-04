@@ -36,15 +36,22 @@ pub struct StubPlan;
 impl Plan for StubPlan {
     type Error = StubPlanErrors;
 
-    fn try_create_from(_response: &Response) -> Result<Self, Self::Error> {
-        Ok(StubPlan)
+    fn try_create_from(response: &Response) -> Result<Self, Self::Error> {
+        if response.protocol_version != "3.0" {
+            Err(StubPlanErrors::Failed)
+        } else {
+            Ok(StubPlan)
+        }
     }
 }
 
 /// The Installer is responsible for performing (or triggering) the installation of the update
 /// that's referred to by the InstallPlan.
 ///
-pub struct StubInstaller;
+#[derive(Debug, Default)]
+pub struct StubInstaller {
+    pub should_fail: bool,
+}
 
 impl Installer for StubInstaller {
     type InstallPlan = StubPlan;
@@ -58,6 +65,10 @@ impl Installer for StubInstaller {
         _install_plan: &StubPlan,
         _observer: Option<&ProgressObserver>,
     ) -> BoxFuture<Result<(), StubInstallErrors>> {
-        future::ready(Ok(())).boxed()
+        if self.should_fail {
+            future::ready(Err(StubInstallErrors::Failed)).boxed()
+        } else {
+            future::ready(Ok(())).boxed()
+        }
     }
 }

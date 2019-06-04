@@ -6,7 +6,7 @@ use super::*;
 use crate::{
     configuration::test_support::config_generator,
     protocol::{
-        request::{EventResult, EventType},
+        request::{EventErrorCode, EventResult, EventType},
         Cohort,
     },
 };
@@ -180,7 +180,7 @@ pub fn test_simple_event() {
         &Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
-            errorcode: Some(26598),
+            errorcode: Some(EventErrorCode::Installation),
             ..Event::default()
         },
     )
@@ -196,7 +196,7 @@ pub fn test_simple_event() {
     let event = &app.events[0];
     assert_eq!(event.event_type, EventType::UpdateDownloadStarted);
     assert_eq!(event.event_result, EventResult::Success);
-    assert_eq!(event.errorcode, Some(26598));
+    assert_eq!(event.errorcode, Some(EventErrorCode::Installation));
 }
 
 /// Test that multiple events are properly added to an App entry
@@ -217,7 +217,7 @@ pub fn test_multiple_events() {
         &Event {
             event_type: EventType::UpdateDownloadStarted,
             event_result: EventResult::Success,
-            errorcode: Some(26598),
+            errorcode: Some(EventErrorCode::Installation),
             ..Event::default()
         },
     )
@@ -226,7 +226,7 @@ pub fn test_multiple_events() {
         &Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Error,
-            errorcode: Some(988456),
+            errorcode: Some(EventErrorCode::DeniedByPolicy),
             ..Event::default()
         },
     )
@@ -244,12 +244,12 @@ pub fn test_multiple_events() {
     let event = &app.events[0];
     assert_eq!(event.event_type, EventType::UpdateDownloadStarted);
     assert_eq!(event.event_result, EventResult::Success);
-    assert_eq!(event.errorcode, Some(26598));
+    assert_eq!(event.errorcode, Some(EventErrorCode::Installation));
 
     let event = &app.events[1];
     assert_eq!(event.event_type, EventType::UpdateDownloadFinished);
     assert_eq!(event.event_result, EventResult::Error);
-    assert_eq!(event.errorcode, Some(988456));
+    assert_eq!(event.errorcode, Some(EventErrorCode::DeniedByPolicy));
 }
 
 /// When adding multiple apps to a request, a ping or an event needs to be attached to the
@@ -371,7 +371,7 @@ pub fn test_event_added_to_first_app_update_entry() {
         &Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Success,
-            errorcode: Some(2456),
+            errorcode: Some(EventErrorCode::Installation),
             ..Event::default()
         },
     )
@@ -390,7 +390,7 @@ pub fn test_event_added_to_first_app_update_entry() {
     let event = &app.events[0];
     assert_eq!(event.event_type, EventType::UpdateDownloadFinished);
     assert_eq!(event.event_result, EventResult::Success);
-    assert_eq!(event.errorcode, Some(2456));
+    assert_eq!(event.errorcode, Some(EventErrorCode::Installation));
 
     // And the second app should not.
     let app = &request.apps[1];
@@ -424,7 +424,7 @@ pub fn test_event_added_to_second_app_update_entry() {
         &Event {
             event_type: EventType::UpdateDownloadFinished,
             event_result: EventResult::Success,
-            errorcode: Some(2456),
+            errorcode: Some(EventErrorCode::Installation),
             ..Event::default()
         },
     );
@@ -451,5 +451,5 @@ pub fn test_event_added_to_second_app_update_entry() {
     let event = &app.events[0];
     assert_eq!(event.event_type, EventType::UpdateDownloadFinished);
     assert_eq!(event.event_result, EventResult::Success);
-    assert_eq!(event.errorcode, Some(2456));
+    assert_eq!(event.errorcode, Some(EventErrorCode::Installation));
 }

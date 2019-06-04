@@ -51,7 +51,7 @@ impl From<http::Error> for Error {
 pub type Result<T> = result::Result<T, Error>;
 
 /// These are the parameters that describe how the request should be performed.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RequestParams {
     /// The install source for a request changes a number of properties of the request, including
     /// the HTTP request headers, and influences how Omaha services the request (e.g. throttling)

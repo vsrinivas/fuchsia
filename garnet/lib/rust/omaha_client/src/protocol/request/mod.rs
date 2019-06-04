@@ -232,7 +232,7 @@ pub struct Event {
     ///
     /// This is the errorcode attribute of the event object.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub errorcode: Option<i32>,
+    pub errorcode: Option<EventErrorCode>,
 
     /// The version of the app that was present on the machine at the time of the update-check of
     /// this update flow, regardless of the success or failure of the update operation.
@@ -296,5 +296,25 @@ pub enum EventResult {
 impl Default for EventResult {
     fn default() -> Self {
         EventResult::Error
+    }
+}
+
+/// The error code of the event.  These are application specific.
+#[derive(Debug, Clone, Eq, PartialEq, Serialize_repr)]
+#[repr(i32)]
+pub enum EventErrorCode {
+    /// Error when parsing Omaha response.
+    ParseResponse = 0,
+    /// Error when constructing install plan.
+    ConstructInstallPlan = 1,
+    /// Error when installing the update.
+    Installation = 2,
+    /// The update is denied by policy.
+    DeniedByPolicy = 3,
+}
+
+impl Default for EventErrorCode {
+    fn default() -> Self {
+        EventErrorCode::ParseResponse
     }
 }

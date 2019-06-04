@@ -8,30 +8,32 @@ use futures::executor::block_on;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use hyper::{Body, Request, Response};
+use pretty_assertions::assert_eq;
+use std::collections::VecDeque;
 
 pub struct MockHttpRequest {
     // The last request made using this mock.
     request: Request<Body>,
-    // The fake response for the next request, only valid for one request.
-    response: Option<Response<Body>>,
+    // The queue of fake responses for the upcoming requests.
+    responses: VecDeque<Response<Body>>,
 }
 
 impl HttpRequest for MockHttpRequest {
     fn request(&mut self, req: Request<Body>) -> BoxFuture<Result<Response<Body>, hyper::Error>> {
         self.request = req;
 
-        let resp = self.response.take().expect("no response to return");
+        let resp = self.responses.pop_front().expect("no response to return");
         return future::ready(Ok(resp)).boxed();
     }
 }
 
 impl MockHttpRequest {
     pub fn new(res: Response<Body>) -> MockHttpRequest {
-        MockHttpRequest { request: Request::default(), response: Some(res) }
+        MockHttpRequest { request: Request::default(), responses: vec![res].into() }
     }
 
-    pub fn set_response(&mut self, res: Response<Body>) {
-        self.response = Some(res);
+    pub fn add_response(&mut self, res: Response<Body>) {
+        self.responses.push_back(res);
     }
 
     pub fn assert_method(&self, method: &hyper::Method) {
@@ -51,6 +53,11 @@ impl MockHttpRequest {
     pub async fn assert_body(self, body: &[u8]) {
         let chunks = await!(self.request.into_body().compat().try_concat()).unwrap();
         assert_eq!(body, chunks.as_ref())
+    }
+
+    pub async fn assert_body_str(self, body: &str) {
+        let chunks = await!(self.request.into_body().compat().try_concat()).unwrap();
+        assert_eq!(body, String::from_utf8_lossy(chunks.as_ref()));
     }
 }
 
@@ -92,15 +99,16 @@ fn test_missing_response() {
 }
 
 #[test]
-fn test_set_response() {
+fn test_multiple_responses() {
     let res_body = vec![1, 2, 3];
     let mut mock = MockHttpRequest::new(Response::new(res_body.clone().into()));
+    let res_body2 = vec![4, 5, 6];
+    mock.add_response(Response::new(res_body2.clone().into()));
+
     block_on(async {
         let response = await!(mock.request(Request::default())).unwrap();
         assert_eq!(res_body, await!(response_to_vec(response)));
 
-        let res_body2 = vec![4, 5, 6];
-        mock.set_response(Response::new(res_body2.clone().into()));
         let response2 = await!(mock.request(Request::default())).unwrap();
         assert_eq!(res_body2, await!(response_to_vec(response2)));
     });

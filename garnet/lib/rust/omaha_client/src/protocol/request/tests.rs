@@ -161,7 +161,7 @@ pub fn basic_event_serialization_test() {
                 events: vec![Event {
                     event_type: EventType::InstallComplete,
                     event_result: EventResult::Success,
-                    errorcode: Some(0),
+                    errorcode: Some(EventErrorCode::ParseResponse),
                     ..Event::default()
                 }],
                 ..App::default()
@@ -232,7 +232,7 @@ pub fn multiple_event_serialization_test() {
                     Event {
                         event_type: EventType::InstallComplete,
                         event_result: EventResult::Success,
-                        errorcode: Some(0),
+                        errorcode: Some(EventErrorCode::ParseResponse),
                         ..Event::default()
                     },
                     Event {
@@ -332,7 +332,7 @@ pub fn all_fields_serialization_test() {
                     Event {
                         event_type: EventType::InstallComplete,
                         event_result: EventResult::Success,
-                        errorcode: Some(0),
+                        errorcode: Some(EventErrorCode::ParseResponse),
                         ..Event::default()
                     },
                     Event {
