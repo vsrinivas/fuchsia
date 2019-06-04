@@ -111,9 +111,9 @@ example.cpp:
 ```C++
 #include "example.h"
 
-fbl::Mutext a_global_lock;
+fbl::Mutex a_global_lock;
 
-fbl::Mutext MyType::all_objects_lock_;
+fbl::Mutex MyType::all_objects_lock_;
 ```
 
 The instrumentation simplifies declaring locks by declaring singleton types that
