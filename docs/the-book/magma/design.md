@@ -38,8 +38,8 @@ For details on the process of building these two components, see the [porting](p
 
 ## The Magma interface
 
-The Magma interface is a service interface provided by the Magma system driver. The interface is designed to be useful for implementing an accelerated graphics api.  It consists of [magma.h](../include/magma_abi/magma.h)
-plus gpu specific headers (example: [intel](../../../drivers/gpu/msd-intel-gen/include/msd_intel_gen_query.h)).
+The Magma interface is a service interface provided by the Magma system driver. The interface is designed to be useful for implementing an accelerated graphics api.  It consists of [magma.h](/garnet/lib/magma/include/magma_abi/magma.h)
+plus gpu specific headers (example: [intel](/garnet/drivers/gpu/msd-intel-gen/include/msd_intel_gen_query.h)).
 
 ### Physical devices
 During the Fuchsia boot sequence, a Magma system driver is instantiated for each physical device capable of accelerated graphics.  The instantiation creates a device binding in the class gpu; for example, in a single gpu system the device is bound to /dev/class/gpu/000.
@@ -57,7 +57,7 @@ Magma supports multiple contexts per connection; this is to allow for more than 
 When a client connection is closed, to avoid gpu fault the address space must remain alive while gpu is executing work using that address space; therefore, context takes a shared reference on the address space.
 
 ### Buffers and Mappings
-Currently Magma requires a unified memory architecture, as is the case with most mobile hardware, where cpu and gpu access the same physical memory.   Magma buffers are just zircon virtual memory objects ([VMOs](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md)). Client drivers allocate buffers and register those buffers with the system driver.
+Currently Magma requires a unified memory architecture, as is the case with most mobile hardware, where cpu and gpu access the same physical memory.   Magma buffers are just zircon virtual memory objects ([VMOs](/zircon/docs/objects/vm_object.md)). Client drivers allocate buffers and register those buffers with the system driver.
 
 Gpu address space management may be performed by the client or by the system driver. The client driver design may dictate the model.
 
@@ -76,7 +76,7 @@ Pre-emption of inflight command buffers, if supported by hardware, can be used t
 
 ### Semaphores
 
-Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/event.md).
+Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](/zircon/docs/objects/event.md).
 
 ### Summary of object ownership
 * Client: owns connections; shared ownership of buffers, mappings, contexts
@@ -90,7 +90,7 @@ Magma provides semaphores as a general signalling mechanism that can be used to 
 
 The thread model used for each installed GPU device and driver is as follows:
 
-The msd is typically loaded by the [platform bus driver](../../../../zircon/docs/ddk/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
+The msd is typically loaded by the [platform bus driver](/zircon/docs/ddk/platform-bus.md) and a msd main devhost thread is created.  The msd main thread in turn creates a device thread to talk to the GPU and a driver-dependent number of interrupt threads to service GPU interrupts.
 
 A client driver library that implements the Vulkan api is referred to as a **vcd** (Vulkan Client Driver).  When a Vulkan application starts and makes a new VkDevice, the vcd makes a request to the msd to establish a connection for the device over which all Vulkan commands will be communicated.  The msd main thread responds to this call by creating a new connection thread to service all client commands. The connection thread in turn creates two zircon communication channels: the primary channel and the notification channel.
 

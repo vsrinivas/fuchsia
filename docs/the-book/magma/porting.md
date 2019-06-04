@@ -7,7 +7,7 @@ For each component, a short term and long term process is described, where, in t
 
 ## Magma system driver
 
-The magma system driver must be open source but not GPL and hosted on *fuchsia.googlesource.com*.  A magma system driver must provide an implementation of the [msd interface](../../../lib/magma/include/msd_abi/msd.h).
+The magma system driver must be open source but not GPL and hosted on *fuchsia.googlesource.com*.  A magma system driver must provide an implementation of the [msd interface](/garnet/lib/magma/include/msd_abi/msd.h).
 
 ### Short term
 
@@ -79,8 +79,9 @@ Eventually, the vendor will be able to build and test for Fuchsia, so the Fuchsi
 
 ### Validation Stages
 * A simple Vulkan test passes
-	* Test: [vkreadback](../../../lib/magma/tests/vkreadback) (draws a color then reads back the framebuffer values)
+	* Test: [vkreadback](/garnet/lib/magma/tests/vkreadback) (draws a color then reads back the framebuffer values)
 * Add support for fuchsia window system integration extensions using zircon framebuffer library
-    * Test: [vkcube](../../../lib/magma/tests/vkcube) (animated, using VK_KHR_swapchain)
+    * Test: [vkcube](/garnet/lib/magma/tests/vkcube) (animated, using VK_KHR_swapchain)
 * Add support for fuchsia external memory and semaphore extensions
-	* Test: [vkext](../../../lib/magma/tests/vkext)
+	* Test: [vkext](/garnet/lib/magma/tests/vkext)
+

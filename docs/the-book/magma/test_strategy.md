@@ -8,9 +8,9 @@ Magma Test Strategy
 Four major interfaces
 
 * [Vulkan](https://www.khronos.org/vulkan)
-* [magma](../include/magma_abi/magma.h)
-* [magma system](../src/magma_util/platform/platform_connection.h)
-* [msd](../include/msd_abi/msd.h)
+* [magma](/garnet/lib/magma/include/magma_abi/magma.h)
+* [magma system](/garnet/lib/magma/src/magma_util/platform/platform_connection.h)
+* [msd](/garnet/lib/magma/include/msd_abi/msd.h)
 
 Four major components
 
@@ -96,3 +96,4 @@ GPUs are complex pieces of hardware with flaws that may trigger misbehavior infr
 
 ## See Also
 * [Contributing](contributing.md)
+

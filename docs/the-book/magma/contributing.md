@@ -2,7 +2,7 @@
 
 ### Submitting a patch
 
-See [Contributing](../../../CONTRIBUTING.md).
+See [Contributing](/CONTRIBUTING.md).
 
 ### Source Code
 
@@ -10,11 +10,11 @@ The source code for a magma graphics driver may be hosted entirely within the ga
 
 The core magma code is found under:
 
-* [lib/magma/src](../src)
+* [lib/magma/src](/garnet/lib/magma/src)
 
 Implementations of the magma service drivers are found under:
 
-* [drivers/gpu](../../../drivers/gpu)
+* [drivers/gpu](/garnet/drivers/gpu)
 
 Implementations of the magma application driver may be located in drivers/gpu; though
 often these are built from third party projects, such as third_party/mesa.
@@ -65,11 +65,11 @@ Includes all unit tests and integration tests.  There are 2 steps at this tps le
 1. Build with --args magma_enable_developer_build=true; this will run unit tests that require hardware,
 then present the device as usual for general applications.  Inspect the syslog for test results.
 
-2. Run the test script [lib/magma/scripts/test.sh](../../../lib/magma/scripts/test.sh) and inspect the test results.
+2. Run the test script [lib/magma/scripts/test.sh](/garnet/lib/magma/scripts/test.sh) and inspect the test results.
 
 #### L1
 
-If you have an attached display, execute the spinning [vkcube](../../../lib/vulkan/tests/vkcube).
+If you have an attached display, execute the spinning [vkcube](/garnet/lib/vulkan/tests/vkcube).
 This test uses an imagepipe swapchain to pass frames to the system compositor.  
 Build with `--with garnet/packages/examples/vkcube_on_scenic`.
 Run the test with `run fuchsia-pkg://fuchsia.com/present_view#meta/present_view.cmx fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx`.
@@ -106,7 +106,7 @@ For some changes, it's appropriate to run benchmarks to validate performance met
 
 For details on the Vulkan conformance test suite, see
 
-* [../third_party/vulkan-cts](../../../../third_party/vulkan-cts)
+* [../third_party/vulkan-cts](/third_party/vulkan-cts)
 
 ### Benchmarking
 
