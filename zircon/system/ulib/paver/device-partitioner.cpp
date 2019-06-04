@@ -1102,7 +1102,8 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(Partition partition_type,
         break;
     }
     case Partition::kZirconR: {
-        const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+        // TODO(ZX-2689): Remove hack once astro partition map is fixed.
+        const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
         memcpy(type, zircon_r_type, GPT_GUID_LEN);
         break;
     }

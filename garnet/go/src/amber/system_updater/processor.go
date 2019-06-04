@@ -169,10 +169,6 @@ func WriteImgs(imgs []string, imgsPath string) error {
 			c = exec.Command(diskImagerPath, "install-zircona")
 		case "zedboot", "zedboot.signed":
 			c = exec.Command(diskImagerPath, "install-zirconr")
-			// TODO(ZX-2689): remove once the bootloader is booting zirconr as recovery.
-			if img == "zedboot.signed" {
-				c = exec.Command(diskImagerPath, "install-zirconb")
-			}
 		case "bootloader":
 			c = exec.Command(diskImagerPath, "install-bootloader")
 		case "board":

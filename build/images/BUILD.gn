@@ -809,8 +809,7 @@ if (custom_signing_script != "") {
         "$root_out_dir/zedboot.vboot",
       ]
 
-      # TODO(ZX-2689): Re-enable after system_updater is fixed.
-      # updater = "zedboot.signed"
+      updater = "zedboot.signed"
       installer = "zedboot.zbi"
     },
   ]
