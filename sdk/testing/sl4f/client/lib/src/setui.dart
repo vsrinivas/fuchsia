@@ -19,7 +19,7 @@ final _overrideToJson = {
 class SetUi {
   final Sl4f _sl4f;
 
-  SetUi([Sl4f sl4f]) : _sl4f = sl4f ?? Sl4f.fromEnvironment();
+  SetUi(this._sl4f);
 
   Future<void> mutateLoginOverride(LoginOverride override) => _sl4f.request(
       'setui_facade.Mutate', {

@@ -20,11 +20,8 @@ class Input {
 
   /// Construct an [Input] object.
   ///
-  /// It can optionally take an [Sl4f] object, or create one using the
-  /// environment variables, to connect to the device.
   /// You can change the default [screenRotation] to compensate for.
-  Input([Sl4f sl4f, this._screenRotation = Rotation.degrees0])
-      : _sl4f = sl4f ?? Sl4f.fromEnvironment();
+  Input(this._sl4f, [this._screenRotation = Rotation.degrees0]);
 
   /// Taps on the screen at coordinates ([coord.x], [coord.y]).
   ///

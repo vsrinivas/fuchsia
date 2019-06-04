@@ -15,15 +15,8 @@ class Audio {
   final Sl4f _sl4f;
   final Dump _dump;
 
-  Audio([Sl4f sl4f, Dump dump])
-      : _sl4f = sl4f ?? Sl4f.fromEnvironment(),
-        _dump = dump ?? Dump();
-
-  /// Closes the underlying HTTP client. This need not be called if the
-  /// Sl4f client is closed instead.
-  void close() {
-    _sl4f.close();
-  }
+  Audio(this._sl4f, [Dump dump])
+      : _dump = dump ?? Dump();
 
   // TODO(perley): Drop this after migrating internal clients.
   Future<void> putPlayback(File file) async {
