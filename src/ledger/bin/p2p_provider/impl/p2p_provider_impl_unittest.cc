@@ -14,6 +14,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 
+#include "fuchsia/netconnector/cpp/fidl.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
@@ -212,5 +213,83 @@ TEST_F(P2PProviderImplTest, TwoHosts_Messages) {
   EXPECT_THAT(client2.messages, testing::ElementsAre(RecordingClient::Message{
                                     "host1", "datagram"}));
 }
+
+class MockNetConnector : public fuchsia::netconnector::NetConnector {
+ public:
+  explicit MockNetConnector(
+      fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request)
+      : binding_(this, std::move(request)) {}
+
+  void RegisterServiceProvider(
+      std::string service_name,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider)
+      override {
+    FXL_NOTIMPLEMENTED();
+  }
+
+  void GetDeviceServiceProvider(
+      std::string device_name,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider)
+      override {
+    device_requests.push_back(std::move(device_name));
+  }
+
+  void GetKnownDeviceNames(uint64_t version_last_seen,
+                           GetKnownDeviceNamesCallback callback) override {
+    device_names_callbacks.emplace_back(version_last_seen, std::move(callback));
+  }
+
+  std::vector<std::string> device_requests;
+  std::vector<std::pair<uint64_t, GetKnownDeviceNamesCallback>>
+      device_names_callbacks;
+
+ private:
+  fidl::Binding<fuchsia::netconnector::NetConnector> binding_;
+};
+
+// Verifies that P2PProviderImpl does not do symmetrical connections
+TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
+  fuchsia::netconnector::NetConnectorPtr netconnector_ptr_0;
+  MockNetConnector netconnector_impl_0(netconnector_ptr_0.NewRequest());
+  auto p2p_provider_0 = std::make_unique<p2p_provider::P2PProviderImpl>(
+      "device0", std::move(netconnector_ptr_0),
+      std::make_unique<StaticUserIdProvider>("user"));
+
+  RecordingClient client1;
+  p2p_provider_0->Start(&client1);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1U, netconnector_impl_0.device_names_callbacks.size());
+
+  auto request1 = std::move(netconnector_impl_0.device_names_callbacks[0]);
+  request1.second(1, {"device1"});
+
+  RunLoopUntilIdle();
+
+  fuchsia::netconnector::NetConnectorPtr netconnector_ptr_1;
+  MockNetConnector netconnector_impl_1(netconnector_ptr_1.NewRequest());
+  auto p2p_provider_1 = std::make_unique<p2p_provider::P2PProviderImpl>(
+      "device1", std::move(netconnector_ptr_1),
+      std::make_unique<StaticUserIdProvider>("user"));
+
+  RecordingClient client2;
+  p2p_provider_1->Start(&client2);
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1U, netconnector_impl_1.device_names_callbacks.size());
+
+  auto request2 = std::move(netconnector_impl_1.device_names_callbacks[0]);
+  request2.second(1, {"device0"});
+
+  RunLoopUntilIdle();
+
+  // Only one device should initiate the connection. We don't really care which
+  // one, as long as it is reliably correct.
+  EXPECT_EQ(1U, netconnector_impl_0.device_requests.size() +
+                    netconnector_impl_1.device_requests.size());
+}
+
 }  // namespace
 }  // namespace p2p_provider

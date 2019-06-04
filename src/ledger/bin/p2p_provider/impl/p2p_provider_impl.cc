@@ -184,6 +184,11 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
           if (remote_name == host_name_) {
             continue;
           }
+          if (remote_name < host_name_) {
+            // The other side will connect to us, no need to duplicate
+            // connections.
+            continue;
+          }
           std::string remote_name_str(remote_name);
 
           zx::channel local;
