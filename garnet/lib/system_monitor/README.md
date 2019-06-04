@@ -5,7 +5,7 @@ device and its processes. Samples are collected for global and per-process CPU,
 memory usage, and process list which are relayed to the Host computer for
 display.
 
-See also: garnet/bin/system_monitor/README.md
+See also: /docs/development/system_monitor/README.md
 
 ### Dockyard Library
 

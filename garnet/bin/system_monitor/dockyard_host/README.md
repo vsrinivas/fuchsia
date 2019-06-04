@@ -26,4 +26,4 @@ $ run fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_har
 If the harvester is not able to connect to the dockyard_host, try using your
 host's local IP instead of 192.168.3.53 (see `ifconfig` for your IP addresses).
 
-See also: ../README.md
+See also: /docs/development/system_monitor/README.md

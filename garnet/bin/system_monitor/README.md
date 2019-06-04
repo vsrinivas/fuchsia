@@ -1,3 +1,3 @@
 # System Monitor
 
-See: //garnet/docs/system_monitor/README.md
+See: /docs/development/system_monitor/README.md
