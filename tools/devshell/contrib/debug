@@ -24,6 +24,8 @@
 ##    --no-agent        Don't start a Debug Agent.
 ##    --port            Port the debug agent will be listening on.
 ##                      Will use 2345 by default.
+##    --target_core     Look on the target for a minidump file taken by
+##                      crashpad, download it and load it into zxdb.
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
 ##
@@ -39,6 +41,7 @@ core=
 unwind_flag=
 agent_out="/dev/null"
 no_agent=
+target_core=
 
 # Flag parsing.
 while [[ $# -gt 0 ]]; do
@@ -71,6 +74,10 @@ while [[ $# -gt 0 ]]; do
       core="${1:7}"
       no_agent=true
       ;;
+    --target-core)
+      target_core=true
+      no_agent=true
+      ;;
     --unwind)
       shift
       unwind_flag="--unwind=$1"
@@ -94,13 +101,55 @@ if [[ -n "${port}" && -n "${core}" ]]; then
   exit 1
 fi
 
-if [[ -n "${core}" && ! -f "${core}" ]]; then
-  echo "Cannot find file ${core}"
+if [[ -n "${target_core}" && -n "${core}" ]]; then
+  echo "Cannot specify a core file when fetching a core from the target"
+  exit 1;
+fi
+
+if [[ -n "${port}" && -n "${target_core}" ]]; then
+  echo "Cannot specify a port file when fetching a core from the target"
   exit 1
 fi
 
 if [[ -z "${port}" ]]; then
   port=2345
+fi
+
+if [[ -n "${target_core}" ]]; then
+  target=$(get-fuchsia-device-addr-or-die)
+
+  crashpad_agent_dir=`fx-command-run "ssh" "${target}" "ls /data/r/sys" | \
+    grep crashpad_agent`
+  if [[ -z "${crashpad_agent_dir}" ]]; then
+    fx-error "Could not find crashpad agent directory"
+    exit 1
+  fi
+
+  core_name=`fx-command-run "ssh" ${target} \
+    "ls /data/r/sys/${crashpad_agent_dir}/crashes/completed" | grep -v meta`
+
+  if [[ -z "${core_name}" ]]; then
+    fx-error "No cores available on device"
+    exit 1
+  fi
+
+  if [[ "$(echo "${core_name}" | wc -l)" -ge 2 ]]; then
+    echo "Which core would you like to analyze?"
+    select choice in ${core_name}; do
+      core_name=${choice}
+      break
+    done
+  fi
+
+  core="/tmp/zxdb_fetched_core.dmp"
+  fx-command-run "cp" "--to-host" \
+    "/data/r/sys/${crashpad_agent_dir}/crashes/completed/${core_name}" \
+    "${core}"
+fi
+
+if [[ -n "${core}" && ! -f "${core}" ]]; then
+  echo "Cannot find file ${core}"
+  exit 1
 fi
 
 connect_ops=

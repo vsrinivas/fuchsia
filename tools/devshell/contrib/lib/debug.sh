@@ -6,6 +6,15 @@
 fx-config-read
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
+get-fuchsia-device-addr-or-die() {
+  got=$(get-fuchsia-device-addr)
+  if [[ -z "${got}" ]]; then
+    fx-error "Could not find fuchsia device" "$(get-device-name)"
+    exit 1
+  fi
+  echo ${got}
+}
+
 # Starts a debug agent on the target.  Requires $port to be set to the port you
 # want the debug agent to start, and $agent_out to be set to where you want the
 # agent's log output.
@@ -16,11 +25,7 @@ launch_debug_agent() {
   trap 'kill ${fx_ssh_pid} > /dev/null 2>&1' EXIT
 
 # Get the defaulted device address.
-  target=$(get-fuchsia-device-addr)
-  if [[ -z "${target}" ]]; then
-    fx-error "Could not find fuchsia device" "$(get-device-name)"
-    exit 1
-  fi
+  target=$(get-fuchsia-device-addr-or-die)
 
 # Leave the SSH connection open. Will be closed on script end.
 # We branch out on whether the user used the verbose-agent flag. If so, we
