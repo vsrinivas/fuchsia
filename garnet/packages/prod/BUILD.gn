@@ -241,8 +241,6 @@ group("all") {
     "//garnet/packages/prod:magma-arm-mali",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
-    "//garnet/packages/prod:mdns",
-    "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:media",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
@@ -301,6 +299,8 @@ group("all") {
     "//garnet/packages/prod:wlanphy",
     "//garnet/packages/prod:xi_core",
     "//src/connectivity/network/dhcp:dhcpd",
+    "//src/connectivity/network/mdns/bundles:services",
+    "//src/connectivity/network/mdns/bundles:utils",
     "//src/connectivity/telephony:drivers",
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
@@ -397,7 +397,7 @@ group("netconnector") {
   testonly = true
   public_deps = [
     "//garnet/bin/netconnector",
-    "//garnet/packages/prod:mdns",
+    "//src/connectivity/network/mdns/bundles:services",
   ]
 }
 
@@ -551,13 +551,6 @@ group("odu") {
   testonly = true
   public_deps = [
     "//garnet/bin/odu",
-  ]
-}
-
-group("mdns") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/mdns/service:mdns",
   ]
 }
 
@@ -937,13 +930,6 @@ group("mediasession") {
   testonly = true
   public_deps = [
     "//src/media/sessions",
-  ]
-}
-
-group("mdns-util") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/mdns/util:mdns-util",
   ]
 }
 

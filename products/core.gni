@@ -20,6 +20,8 @@ base_package_labels += [
   "//garnet/packages/prod:feedback_agent",
   "//garnet/packages/prod:kernel_crash_checker",
   "//garnet/packages/products:base",
+  "//src/connectivity/network/mdns/bundles:config",
+  "//src/connectivity/network/mdns/bundles:services",
   "//src/connectivity/wlan:service",
   "//src/recovery/factory_reset",
 ]
