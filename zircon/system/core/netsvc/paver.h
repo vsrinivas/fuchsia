@@ -10,7 +10,7 @@
 #include <limits.h>
 
 #include <fuchsia/paver/c/fidl.h>
-#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -98,7 +98,7 @@ private:
     };
 
     // Buffer used for stashing data from tftp until it can be written out to the paver.
-    fzl::OwnedVmoMapper buffer_mapper_;
+    fzl::ResizeableVmoMapper buffer_mapper_;
     // Buffer write offset.
     std::atomic<size_t> write_offset_ = 0;
     std::atomic<unsigned int> buf_refcount_ = 0;

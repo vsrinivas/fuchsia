@@ -371,13 +371,13 @@ bool vmo_resize_test() {
 }
 
 // Check that non-resizable VMOs cannot get resized.
-bool vmo_no_resize_test() {
+bool vmo_no_resize_test_helper(uint32_t flag) {
     BEGIN_TEST;
 
     const size_t len = PAGE_SIZE * 4;
     zx_handle_t vmo = ZX_HANDLE_INVALID;
 
-    zx_vmo_create(len, ZX_VMO_NON_RESIZABLE, &vmo);
+    zx_vmo_create(len, flag, &vmo);
 
     EXPECT_NE(vmo, ZX_HANDLE_INVALID);
 
@@ -408,6 +408,15 @@ bool vmo_no_resize_test() {
     EXPECT_EQ(ZX_OK, status, "handle_close");
 
     END_TEST;
+}
+
+bool vmo_no_resize_test() {
+    static_assert(ZX_VMO_NON_RESIZABLE == 0);
+    return vmo_no_resize_test_helper(0);
+}
+
+bool vmo_legacy_no_resize_test() {
+    return vmo_no_resize_test_helper(1);
 }
 
 bool vmo_info_test() {
@@ -1182,6 +1191,7 @@ RUN_TEST(vmo_no_perm_map_test);
 RUN_TEST(vmo_no_perm_protect_test);
 RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_no_resize_test);
+RUN_TEST(vmo_legacy_no_resize_test);
 RUN_TEST(vmo_size_align_test);
 RUN_TEST(vmo_resize_align_test);
 RUN_TEST(vmo_rights_test);

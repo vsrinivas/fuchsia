@@ -80,7 +80,7 @@ multiconst!(zx_rights_t, [
 ]);
 
 multiconst!(u32, [
-    ZX_VMO_NON_RESIZABLE = 1;
+    ZX_VMO_NON_RESIZABLE = 0;
     ZX_VMO_RESIZABLE = 1 << 1;
 ]);
 
@@ -343,7 +343,7 @@ pub const ZX_SOCKET_SHUTDOWN_READ: u32 = 1 << 1;
 
 // VM Object clone flags
 pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1;
-pub const ZX_VMO_CHILD_NON_RESIZEABLE: u32 = 1 << 1;
+pub const ZX_VMO_CHILD_NON_RESIZEABLE: u32 = 0;
 pub const ZX_VMO_CHILD_RESIZABLE: u32 = 1 << 2;
 
 // channel write size constants

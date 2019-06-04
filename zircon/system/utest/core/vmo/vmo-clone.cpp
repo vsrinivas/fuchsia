@@ -625,7 +625,7 @@ bool vmo_clone_resize_parent_ok() {
 }
 
 // Check that non-resizable VMOs cannot get resized.
-bool vmo_clone_no_resize_test() {
+bool vmo_clone_no_resize_test_helper(bool flag) {
     BEGIN_TEST;
 
     const size_t len = PAGE_SIZE * 4;
@@ -634,7 +634,7 @@ bool vmo_clone_no_resize_test() {
 
     zx_vmo_create(len, 0, &parent);
     zx_vmo_create_child(parent,
-        ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NON_RESIZEABLE,
+        ZX_VMO_CHILD_COPY_ON_WRITE | flag,
         0, len, &vmo);
 
     EXPECT_NE(vmo, ZX_HANDLE_INVALID);
@@ -668,6 +668,15 @@ bool vmo_clone_no_resize_test() {
     END_TEST;
 }
 
+bool vmo_clone_no_resize_test() {
+    static_assert(ZX_VMO_CHILD_NON_RESIZEABLE == 0);
+    return vmo_clone_no_resize_test_helper(0);
+}
+
+bool vmo_clone_legacy_no_resize_test() {
+    return vmo_clone_no_resize_test_helper(2);
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(vmo_clone_tests)
@@ -682,4 +691,5 @@ RUN_TEST(vmo_clone_rights_test);
 RUN_TEST(vmo_clone_resize_clone_hazard);
 RUN_TEST(vmo_clone_resize_parent_ok);
 RUN_TEST(vmo_clone_no_resize_test);
+RUN_TEST(vmo_clone_legacy_no_resize_test);
 END_TEST_CASE(vmo_clone_tests)
