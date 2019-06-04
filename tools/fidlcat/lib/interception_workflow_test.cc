@@ -104,10 +104,10 @@ class DataForZxChannelTest {
                   std::back_inserter(block.data));
         break;
       }
-      case kStackPointer: {
+      case kStackPointer + sizeof(uint64_t): {
         // Should only be requested for zx_channel_read.  Having this
         // available for zx_channel_write should not affect behavior, though.
-        std::copy(stack_, stack_ + sizeof(stack_),
+        std::copy(stack_ + sizeof(uint64_t), stack_ + sizeof(stack_),
                   std::back_inserter(block.data));
         break;
       }
@@ -172,6 +172,9 @@ class DataForZxChannelTest {
         // stack pointer
         Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
                               current_stack_ptr_, &registers);
+        // link register needs to be non-zero
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_lr, 0x1010101,
+                              &registers);
       } else if (arch_ == debug_ipc::Arch::kX64) {
         // zx_handle_t handle
         Populate32BitRegister(debug_ipc::RegisterID::kX64_rdi, 0xcefa1db0,
@@ -229,6 +232,9 @@ class DataForZxChannelTest {
         // stack pointer
         Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
                               current_stack_ptr_, &registers);
+        // link register needs to be non-zero
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_lr, 0x1010101,
+                              &registers);
       } else if (arch_ == debug_ipc::Arch::kX64) {
         if (!first_register_read_) {
           // return value for zx_channel_read

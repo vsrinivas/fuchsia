@@ -107,6 +107,13 @@ class ZxChannelParams {
 using ZxChannelCallback =
     std::function<void(const zxdb::Err&, const ZxChannelParams&)>;
 
+namespace {
+
+// Defined in zx_channel_params.cc
+class CallingConventionDecoder;
+
+}  // namespace
+
 // Generic superclass for building params for zx_channel_read/write/call
 // invocations.
 class ZxChannelParamsBuilder {
@@ -132,13 +139,10 @@ class ZxChannelParamsBuilder {
   virtual ~ZxChannelParamsBuilder() {}
 
  protected:
-  virtual void BuildX86AndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                                   const std::vector<zxdb::Register>& regs,
-                                   BreakpointRegisterer& registerer) = 0;
-
-  virtual void BuildArmAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                                   const std::vector<zxdb::Register>& regs,
-                                   BreakpointRegisterer& registerer) = 0;
+  virtual void BuildAndContinue(CallingConventionDecoder* fetcher,
+                                fxl::WeakPtr<zxdb::Thread> thread,
+                                const std::vector<zxdb::Register>& regs,
+                                BreakpointRegisterer& registerer) = 0;
 
   const std::vector<zxdb::Register>* GetGeneralRegisters(
       fxl::WeakPtr<zxdb::Thread> thread, const zxdb::Err& err,
@@ -165,18 +169,10 @@ class ZxChannelParamsBuilder {
 
 class ZxChannelWriteParamsBuilder : public ZxChannelParamsBuilder {
  protected:
-  virtual void BuildX86AndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                                   const std::vector<zxdb::Register>& regs,
-                                   BreakpointRegisterer& registerer) override;
-  virtual void BuildArmAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                                   const std::vector<zxdb::Register>& regs,
-                                   BreakpointRegisterer& registerer) override;
-
- private:
-  void BuildCommonAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                              zx_handle_t handle, uint32_t options,
-                              uint64_t bytes_address, uint64_t handles_address,
-                              uint32_t num_bytes, uint32_t num_handles);
+  virtual void BuildAndContinue(CallingConventionDecoder* fetcher,
+                                fxl::WeakPtr<zxdb::Thread> thread,
+                                const std::vector<zxdb::Register>& regs,
+                                BreakpointRegisterer& registerer) override;
 };
 
 class ZxChannelReadParamsBuilder : public ZxChannelParamsBuilder {
@@ -193,13 +189,10 @@ class ZxChannelReadParamsBuilder : public ZxChannelParamsBuilder {
   virtual ~ZxChannelReadParamsBuilder();
 
  protected:
-  virtual void BuildX86AndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                                   const std::vector<zxdb::Register>& regs,
-                                   BreakpointRegisterer& registerer) override;
-
-  virtual void BuildArmAndContinue(fxl::WeakPtr<zxdb::Thread> thread,
-                                   const std::vector<zxdb::Register>& regs,
-                                   BreakpointRegisterer& registerer) override;
+  virtual void BuildAndContinue(CallingConventionDecoder* fetcher,
+                                fxl::WeakPtr<zxdb::Thread> thread,
+                                const std::vector<zxdb::Register>& regs,
+                                BreakpointRegisterer& registerer) override;
 
  private:
   // This method steps the object through the state machine described by
