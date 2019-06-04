@@ -79,7 +79,8 @@ link against these libraries directly.
 A client that takes a dependency on a client library must also take a dependency
 on all the dependencies of that library. For this reason, client libraries
 should have minimal dependencies. For example, client libraries should avoid
-dependencies on FBL, FXL, FSL, or other "base" libraries.
+dependencies on FBL, FXL, FSL, or other "base" libraries that are not in
+the SDK.
 
 Client libraries that need to perform asynchronous operations should depend on
 `libasync.a` and `libasync-default.so`. However, these libraries should not
