@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
+
 ### Individual test environments ###
 
 qemu_env = {
@@ -54,9 +56,14 @@ mac_env = {
 ### Select environment lists ###
 
 # The basic, freely usable test environments supported by the infrastructure.
-basic_envs = [ qemu_env ]
-if (current_cpu == "x64") {
-  basic_envs += [ nuc_env ]
-} else if (current_cpu == "arm64") {
+basic_envs = []
+if (board_name == "pc") {
+  basic_envs += [
+    qemu_env,
+    nuc_env,
+  ]
+} else if (board_name == "qemu-arm64") {
+  basic_envs += [ qemu_env ]
+} else if (board_name == "vim2") {
   basic_envs += [ vim2_env ]
 }

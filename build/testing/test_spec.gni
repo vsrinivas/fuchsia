@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/platforms.gni")
 
@@ -61,13 +62,12 @@ template("test_spec") {
       environments = [ qemu_env ]
     }
 
-    if (current_cpu == "arm64") {
+    if (board_name == "astro") {
       # TODO(IN-876): Remove after astros are ready to be targeted.
       environments += [ astro_env ]
-      if (!envs_specified) {
-        # TODO(IN-571): Remove after vim2s are ready to be targeted.
-        environments += [ vim2_env ]
-      }
+    } else if (board_name == "vim2" && !envs_specified) {
+      # TODO(IN-571): Remove after vim2s are ready to be targeted.
+      environments += [ vim2_env ]
     }
   } else if (is_linux || is_mac) {
     if (!defined(environments)) {
@@ -195,6 +195,56 @@ template("test_spec") {
     target_name_deps += [ ":$runtime_deps_target_name" ]
   }
 
+  # A given board, by definition, restrict which devices it meant for.
+  # We constrain the allowed device types and the dimensions considered as
+  # a function of this.
+  # TODO(joshuaseaton): Use board_name instead of cpu in the reasoning above.
+  allowed_device_types = []
+  if (board_name == "pc") {  # x64.gni
+    allowed_device_types = [
+      "QEMU",
+      "Intel NUC Kit NUC7i5DNHE",
+    ]
+  } else if (board_name == "qemu-arm64") {  # arm64.gni
+    allowed_device_types = [ "QEMU" ]
+  } else if (board_name == "vim2") {
+    allowed_device_types = [ "Khadas Vim2 Max" ]
+  } else if (board_name == "astro") {
+    allowed_device_types = [ "Astro" ]
+  }
+
+  _environments = []
+  foreach(env, target_envs) {
+    dims = []  # Clear from previous iteration.
+    dims = env.dimensions
+
+    if (defined(dims.os) && dims.os == "mac") {
+      # When running tests for a mac build, we only wish to run mac tests; we
+      # enforce the "mac" tag in that case to filter out other tests.
+      assert(defined(env.tags) && [ "mac" ] + env.tags - env.tags == [],
+             "Mac environments must have a tag of \"mac\"")
+    }
+
+    # TODO(IN-876): Delete this block once astros are ready to be targeted.
+    if (defined(dims.device_type) && dims.device_type == "Astro") {
+      assert(defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
+             "astros may not yet be targeted.")
+    }
+
+    # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
+    if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
+      assert(defined(env.tags) && [ "vim2" ] + env.tags - env.tags == [],
+             "vim2s may not yet be targeted.")
+    }
+
+    has_allowed_device_type = defined(dims.device_type) &&
+                              allowed_device_types + [ dims.device_type ] -
+                              [ dims.device_type ] != allowed_device_types
+    if (has_allowed_device_type || !defined(dims.device_type)) {
+      _environments += [ env ]
+    }
+  }
+
   test_spec = {
     test = {
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
@@ -210,32 +260,8 @@ template("test_spec") {
         deps_file = rebase_path(runtime_deps_file, root_build_dir)
       }
     }
-    environments = []  # Clear from above.
-    environments = target_envs
-  }
-
-  foreach(env, target_envs) {
-    dims = []  # Clear from previous iteration.
-    dims = env.dimensions
-
-    if (defined(dims.os) && dims.os == "mac") {
-      # When running tests for a mac build, we only wish to run mac tests; we
-      # enforce the "mac" tag in that case to filter out other tests.
-      assert(defined(env.tags) && ["mac"] + env.tags  - env.tags == [],
-             "Mac environments must have a tag of \"mac\"")
-    }
-
-    # TODO(IN-876): Delete this block once astros are ready to be targeted.
-    if (defined(dims.device_type) && dims.device_type == "Astro") {
-      assert(defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
-             "astros may not yet be targeted.")
-    }
-
-    # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
-    if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
-      assert(defined(env.tags) && [ "vim2" ] + env.tags - env.tags == [],
-             "vim2s may not yet be targeted.")
-    }
+    environments = []  # Clear from previous iteration.
+    environments = _environments
   }
 
   group(target_name) {
@@ -244,4 +270,8 @@ template("test_spec") {
     }
     deps = target_name_deps
   }
+
+  # When an unreferenced board_name is used, the allowed_device_types
+  # assignment will have no effect.
+  not_needed(["allowed_device_types"])
 }
