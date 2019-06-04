@@ -87,6 +87,7 @@
               "build-info",
               "config-data",
               "deprecated-misc-storage",
+              "deprecated-shell",
               "isolated-cache-storage",
               "isolated-persistent-storage",
               "shell",
