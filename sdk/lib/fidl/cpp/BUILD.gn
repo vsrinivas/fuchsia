@@ -163,6 +163,7 @@ source_set("host_test_sources") {
     "string_unittest.cc",
     "table_unittest.cc",
     "vector_unittest.cc",
+    "xunion_unittest.cc",
   ]
 
   deps = [

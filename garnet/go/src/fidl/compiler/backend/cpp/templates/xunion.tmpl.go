@@ -50,7 +50,7 @@ class {{ .Name }} {
   //{{ . }}
   {{- end}}
   const {{ .Type.Decl }}& {{ .Name }}() const { return {{ .StorageName }}; }
-  void set_{{ .Name }}({{ .Type.Decl }} value);
+  {{ $.Name }}& set_{{ .Name }}({{ .Type.Decl }} value);
   {{- end }}
 
   Tag Which() const { return Tag(tag_); }
@@ -237,9 +237,10 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
 
 {{- range $member := .Members }}
 
-void {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
+{{ $.Name }}& {{ $.Name }}::set_{{ .Name }}({{ .Type.Decl }} value) {
   EnsureStorageInitialized(Tag::{{ .TagName }});
   {{ .StorageName }} = std::move(value);
+  return *this;
 }
 
 {{- end }}

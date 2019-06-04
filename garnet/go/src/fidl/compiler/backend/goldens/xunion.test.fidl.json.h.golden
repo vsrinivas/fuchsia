@@ -41,7 +41,7 @@ class OlderSimpleUnion {
   }
   
   const int64_t& i() const { return i_; }
-  void set_i(int64_t value);
+  OlderSimpleUnion& set_i(int64_t value);
 
   bool is_f() const { return tag_ == Tag::kF; }
   
@@ -51,7 +51,7 @@ class OlderSimpleUnion {
   }
   
   const float& f() const { return f_; }
-  void set_f(float value);
+  OlderSimpleUnion& set_f(float value);
 
   Tag Which() const { return Tag(tag_); }
 
@@ -116,7 +116,7 @@ class NewerSimpleUnion {
   }
   
   const int64_t& i() const { return i_; }
-  void set_i(int64_t value);
+  NewerSimpleUnion& set_i(int64_t value);
 
   bool is_s() const { return tag_ == Tag::kS; }
   
@@ -126,7 +126,7 @@ class NewerSimpleUnion {
   }
   
   const ::std::string& s() const { return s_; }
-  void set_s(::std::string value);
+  NewerSimpleUnion& set_s(::std::string value);
 
   bool is_v() const { return tag_ == Tag::kV; }
   
@@ -136,7 +136,7 @@ class NewerSimpleUnion {
   }
   
   const ::std::vector<::std::string>& v() const { return v_; }
-  void set_v(::std::vector<::std::string> value);
+  NewerSimpleUnion& set_v(::std::vector<::std::string> value);
 
   Tag Which() const { return Tag(tag_); }
 

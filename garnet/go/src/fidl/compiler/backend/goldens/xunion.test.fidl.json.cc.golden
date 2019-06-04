@@ -137,14 +137,16 @@ bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
   }
 #endif
 
-void OlderSimpleUnion::set_i(int64_t value) {
+OlderSimpleUnion& OlderSimpleUnion::set_i(int64_t value) {
   EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
+  return *this;
 }
 
-void OlderSimpleUnion::set_f(float value) {
+OlderSimpleUnion& OlderSimpleUnion::set_f(float value) {
   EnsureStorageInitialized(Tag::kF);
   f_ = std::move(value);
+  return *this;
 }
 
 void OlderSimpleUnion::Destroy() {
@@ -326,19 +328,22 @@ bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
   }
 #endif
 
-void NewerSimpleUnion::set_i(int64_t value) {
+NewerSimpleUnion& NewerSimpleUnion::set_i(int64_t value) {
   EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
+  return *this;
 }
 
-void NewerSimpleUnion::set_s(::std::string value) {
+NewerSimpleUnion& NewerSimpleUnion::set_s(::std::string value) {
   EnsureStorageInitialized(Tag::kS);
   s_ = std::move(value);
+  return *this;
 }
 
-void NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
+NewerSimpleUnion& NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
   EnsureStorageInitialized(Tag::kV);
   v_ = std::move(value);
+  return *this;
 }
 
 void NewerSimpleUnion::Destroy() {
