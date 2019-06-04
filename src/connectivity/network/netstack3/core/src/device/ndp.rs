@@ -18,6 +18,13 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
+use std::collections::HashMap;
+use std::time::Duration;
+
+use log::debug;
+use packet::{MtuError, Serializer};
+use zerocopy::ByteSlice;
+
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId};
 use crate::ip::{IpAddress, IpProto, Ipv6, Ipv6Addr};
@@ -26,12 +33,7 @@ use crate::wire::icmp::ndp::{
 };
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet};
 use crate::wire::ipv6::Ipv6PacketBuilder;
-use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
-use log::debug;
-use packet::{MtuError, Serializer};
-use std::collections::HashMap;
-use std::time::Duration;
-use zerocopy::ByteSlice;
+use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// The the default value for *RetransTimer* as defined in
 /// [RFC 4861 section 10].
@@ -72,13 +74,13 @@ pub(crate) trait NdpDevice: Sized {
 
     /// Get a mutable reference to a device's NDP state.
     fn get_ndp_state<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+        state: &mut StackState<D>,
         device_id: u64,
     ) -> &mut NdpState<Self>;
 
     /// Get the link layer address for a device.
     fn get_link_layer_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+        state: &StackState<D>,
         device_id: u64,
     ) -> Self::LinkAddress;
 
@@ -86,13 +88,14 @@ pub(crate) trait NdpDevice: Sized {
     ///
     /// Any **unicast** IPv6 address is a valid return value. Violating this
     /// rule may result in incorrect IP packets being sent.
-    fn get_ipv6_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<Ipv6Addr>;
+    fn get_ipv6_addr<D: EventDispatcher>(state: &StackState<D>, device_id: u64)
+        -> Option<Ipv6Addr>;
 
     /// Checks whether this device has the provided `address`.
     ///
     /// `address` is guaranteed to be a valid unicast address.
     fn has_ipv6_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+        state: &StackState<D>,
         device_id: u64,
         address: &Ipv6Addr,
     ) -> bool;
@@ -196,7 +199,7 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: NdpTi
 }
 
 fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>, id: NdpTimerId) {
-    let ndp_state = ND::get_ndp_state(ctx, id.device_id);
+    let ndp_state = ND::get_ndp_state(ctx.state_mut(), id.device_id);
     match ndp_state.neighbors.get_neighbor_state_mut(&id.neighbor_addr) {
         Some(NeighborState {
             link_address: LinkAddressResolutionValue::Waiting { ref mut transmit_counter },
@@ -233,7 +236,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
         return Some(ND::BROADCAST);
     }
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
-    let ndpstate = ND::get_ndp_state(ctx, device_id);
+    let ndpstate = ND::get_ndp_state(ctx.state_mut(), device_id);
     let result = ndpstate.neighbors.get_neighbor_state(&lookup_addr);
 
     match result {
@@ -265,7 +268,7 @@ pub(crate) fn insert_neighbor<D: EventDispatcher, ND: NdpDevice>(
     net: Ipv6Addr,
     hw: ND::LinkAddress,
 ) {
-    ND::get_ndp_state(ctx, device_id).neighbors.set_link_address(net, hw)
+    ND::get_ndp_state(ctx.state_mut(), device_id).neighbors.set_link_address(net, hw)
 }
 
 /// `NeighborState` keeps all state that NDP may want to keep about neighbors,
@@ -339,9 +342,9 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
     //  the source IP to the same IP as the packet that triggered the
     //  solicitation, so that when we hit the neighbor they'll have us in their
     //  cache, reducing overall burden on the network.
-    if let Some(device_addr) = ND::get_ipv6_addr(ctx, device_id) {
+    if let Some(device_addr) = ND::get_ipv6_addr(ctx.state(), device_id) {
         debug_assert!(device_addr.is_valid_unicast());
-        let src_ll = ND::get_link_layer_addr(ctx, device_id);
+        let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
         let dst_ip = lookup_addr.to_solicited_node_address();
         send_ndp_packet::<_, ND, &[u8], _>(
             ctx,
@@ -382,7 +385,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
     // information, but it is not necessary. So it is perfectly valid that
     // trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
-    let src_ll = ND::get_link_layer_addr(ctx, device_id);
+    let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
     let options = [NdpOption::TargetLinkLayerAddress(src_ll.bytes())];
     let body = ndp::OptionsSerializer::<_>::new(options.iter())
         .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
@@ -470,7 +473,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
         Icmpv6Packet::NeighborSolicitation(p) => {
             let target_address = p.message().target_address();
             if !(target_address.is_valid_unicast()
-                && ND::has_ipv6_addr(ctx, device_id, target_address))
+                && ND::has_ipv6_addr(ctx.state(), device_id, target_address))
             {
                 // just ignore packet, either it was not really meant for us or
                 // is malformed.
@@ -483,7 +486,9 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 // TODO(brunodalbo) the reachability state of the neighbor
                 //  that is added to the cache by this route must be set to
                 //  STALE.
-                ND::get_ndp_state(ctx, device_id).neighbors.set_link_address(src_ip, ll);
+                ND::get_ndp_state(ctx.state_mut(), device_id)
+                    .neighbors
+                    .set_link_address(src_ip, ll);
             }
 
             // Finally we ought to reply to the Neighbor Solicitation with a
@@ -492,7 +497,7 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
         }
         Icmpv6Packet::NeighborAdvertisment(p) => {
             increment_counter!(ctx, "ndp::rx_neighbor_advertisement");
-            let state = ND::get_ndp_state(ctx, device_id);
+            let state = ND::get_ndp_state(ctx.state_mut(), device_id);
             match state.neighbors.get_neighbor_state_mut(&src_ip) {
                 None => {
                     // If the neighbor is not in the cache, we just ignore the
@@ -663,7 +668,7 @@ mod tests {
         // at the end of the exchange, both sides should have each other on
         // their ndp tables:
         assert_eq!(
-            EthernetNdpDevice::get_ndp_state::<_>(net.context("local"), device_id.id())
+            EthernetNdpDevice::get_ndp_state::<_>(net.context("local").state_mut(), device_id.id())
                 .neighbors
                 .get_neighbor_state(&remote_ip())
                 .unwrap()
@@ -671,11 +676,14 @@ mod tests {
             LinkAddressResolutionValue::<Mac>::Known { address: TEST_REMOTE_MAC }
         );
         assert_eq!(
-            EthernetNdpDevice::get_ndp_state::<_>(net.context("remote"), device_id.id())
-                .neighbors
-                .get_neighbor_state(&local_ip())
-                .unwrap()
-                .link_address,
+            EthernetNdpDevice::get_ndp_state::<_>(
+                net.context("remote").state_mut(),
+                device_id.id()
+            )
+            .neighbors
+            .get_neighbor_state(&local_ip())
+            .unwrap()
+            .link_address,
             LinkAddressResolutionValue::<Mac>::Known { address: TEST_LOCAL_MAC }
         );
         // and the local timer should've been unscheduled:

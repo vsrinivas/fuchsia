@@ -14,7 +14,7 @@ use crate::device::ethernet::EthernetArpDevice;
 use crate::device::DeviceLayerTimerId;
 use crate::ip::Ipv4Addr;
 use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
-use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
+use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 use log::debug;
 
 /// The type of an ARP operation.
@@ -109,16 +109,16 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
 
     /// Get a mutable reference to a device's ARP state.
     fn get_arp_state<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+        state: &mut StackState<D>,
         device_id: u64,
     ) -> &mut ArpState<P, Self>;
 
     /// Get the protocol address of this interface.
-    fn get_protocol_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<P>;
+    fn get_protocol_addr<D: EventDispatcher>(state: &StackState<D>, device_id: u64) -> Option<P>;
 
     /// Get the hardware address of this interface.
     fn get_hardware_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+        state: &StackState<D>,
         device_id: u64,
     ) -> Self::HardwareAddr;
 
@@ -191,8 +191,8 @@ pub(crate) fn receive_arp_packet<
     };
 
     let addressed_to_me =
-        Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx, device_id);
-    let table = &mut AD::get_arp_state(ctx, device_id).table;
+        Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx.state(), device_id);
+    let table = &mut AD::get_arp_state(ctx.state_mut(), device_id).table;
 
     // The following logic is equivalent to the "ARP, Proxy ARP, and Gratuitous ARP"
     // section of RFC 2002.
@@ -276,7 +276,7 @@ pub(crate) fn receive_arp_packet<
         );
     }
     if addressed_to_me && packet.operation() == ArpOp::Request {
-        let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+        let self_hw_addr = AD::get_hardware_addr(ctx.state(), device_id);
         increment_counter!(ctx, "arp::rx_request");
         AD::send_arp_frame(
             ctx,
@@ -303,7 +303,7 @@ pub(crate) fn insert<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>
     net: P,
     hw: AD::HardwareAddr,
 ) {
-    AD::get_arp_state(ctx, device_id).table.insert(net, hw);
+    AD::get_arp_state(ctx.state_mut(), device_id).table.insert(net, hw);
 }
 
 /// Look up the hardware address for a network protocol address.
@@ -318,7 +318,7 @@ pub(crate) fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>
     // How do we associate them with the right ARP reply? How do we retreive
     // them when we get that ARP reply? How do we time out so we don't hold onto
     // a stale frame forever?
-    let result = AD::get_arp_state(ctx, device_id).table.lookup(lookup_addr).cloned();
+    let result = AD::get_arp_state(ctx.state_mut(), device_id).table.lookup(lookup_addr).cloned();
 
     // Send an ARP Request if the address is not in our cache
     if result.is_none() {
@@ -340,13 +340,13 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     device_id: u64,
     lookup_addr: P,
 ) {
-    let tries_remaining = AD::get_arp_state(ctx, device_id)
+    let tries_remaining = AD::get_arp_state(ctx.state_mut(), device_id)
         .table
         .get_remaining_tries(lookup_addr)
         .unwrap_or(DEFAULT_ARP_REQUEST_MAX_TRIES);
 
-    if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx, device_id) {
-        let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+    if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx.state(), device_id) {
+        let self_hw_addr = AD::get_hardware_addr(ctx.state(), device_id);
         // TODO(joshlf): Do something if send_arp_frame returns an error?
         AD::send_arp_frame(
             ctx,
@@ -368,10 +368,12 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timeout.
             ctx.dispatcher.schedule_timeout(Duration::from_secs(DEFAULT_ARP_REQUEST_PERIOD), id);
-            AD::get_arp_state(ctx, device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
+            AD::get_arp_state(ctx.state_mut(), device_id)
+                .table
+                .set_waiting(lookup_addr, tries_remaining - 1);
         } else {
             ctx.dispatcher.cancel_timeout(id);
-            AD::get_arp_state(ctx, device_id).table.remove(lookup_addr);
+            AD::get_arp_state(ctx.state_mut(), device_id).table.remove(lookup_addr);
             AD::address_resolution_failed(ctx, device_id, lookup_addr);
         }
     } else {
@@ -545,7 +547,7 @@ mod tests {
         );
 
         assert_eq!(
-            *EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+            *EthernetArpDevice::get_arp_state(ctx.state_mut(), device_id)
                 .table
                 .lookup(TEST_REMOTE_IPV4)
                 .unwrap(),
@@ -576,7 +578,7 @@ mod tests {
         );
 
         assert_eq!(
-            *EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+            *EthernetArpDevice::get_arp_state(ctx.state_mut(), device_id)
                 .table
                 .lookup(TEST_REMOTE_IPV4)
                 .unwrap(),
@@ -678,7 +680,7 @@ mod tests {
             // of DEFAULT_ARP_REQUEST_MAX_TRIES ARP requests are sent.
             if num_requests_sent < DEFAULT_ARP_REQUEST_MAX_TRIES {
                 assert_eq!(
-                    EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+                    EthernetArpDevice::get_arp_state(ctx.state_mut(), device_id)
                         .table
                         .get_remaining_tries(TEST_REMOTE_IPV4),
                     Some(DEFAULT_ARP_REQUEST_MAX_TRIES - num_requests_sent)
@@ -686,7 +688,7 @@ mod tests {
                 assert!(ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id));
             } else {
                 assert_eq!(
-                    EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+                    EthernetArpDevice::get_arp_state(ctx.state_mut(), device_id)
                         .table
                         .get_remaining_tries(TEST_REMOTE_IPV4),
                     None
@@ -845,17 +847,23 @@ mod tests {
         // at the end of the exchange, both sides should have each other on
         // their arp tables:
         assert_eq!(
-            *EthernetArpDevice::get_arp_state::<_>(net.context("local"), device_id.id())
-                .table
-                .lookup(remote_ip)
-                .unwrap(),
+            *EthernetArpDevice::get_arp_state::<_>(
+                net.context("local").state_mut(),
+                device_id.id()
+            )
+            .table
+            .lookup(remote_ip)
+            .unwrap(),
             TEST_REMOTE_MAC
         );
         assert_eq!(
-            *EthernetArpDevice::get_arp_state::<_>(net.context("remote"), device_id.id())
-                .table
-                .lookup(local_ip)
-                .unwrap(),
+            *EthernetArpDevice::get_arp_state::<_>(
+                net.context("remote").state_mut(),
+                device_id.id()
+            )
+            .table
+            .lookup(local_ip)
+            .unwrap(),
             TEST_LOCAL_MAC
         );
         // and the local timer should've been unscheduled:
