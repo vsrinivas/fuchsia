@@ -174,6 +174,8 @@ class CodecAdapterSW : public CodecAdapter {
       LocalOutput local_output;
       {
         std::lock_guard<std::mutex> lock(lock_);
+        ZX_DEBUG_ASSERT(in_use_by_client_.find(packet) !=
+                        in_use_by_client_.end());
         local_output = std::move(in_use_by_client_[packet]);
         in_use_by_client_.erase(packet);
       }

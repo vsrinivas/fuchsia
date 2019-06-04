@@ -40,7 +40,7 @@ class RawFrames {
 
   std::optional<Image> Frame(size_t frame_index);
 
-  size_t frame_count();
+  size_t frame_count() const;
 
  private:
   RawFrames(Layout layout, zx::vmo frames, fzl::VmoMapper mapper,

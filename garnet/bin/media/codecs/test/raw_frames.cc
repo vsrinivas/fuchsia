@@ -127,7 +127,7 @@ std::optional<RawFrames::Image> RawFrames::Frame(size_t frame_index) {
   }};
 }
 
-size_t RawFrames::frame_count() { return frame_count_; }
+size_t RawFrames::frame_count() const { return frame_count_; }
 
 RawFrames::RawFrames(RawFrames::Layout layout, zx::vmo frames,
                      fzl::VmoMapper mapper, size_t frame_stored_size,

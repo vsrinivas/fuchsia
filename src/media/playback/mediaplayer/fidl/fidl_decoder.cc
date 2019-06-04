@@ -459,8 +459,9 @@ void FidlDecoder::OnOutputConstraints(
   if (!constraints.has_buffer_constraints_action_required() ||
       !constraints.buffer_constraints_action_required()) {
     if (init_callback_) {
-      FXL_LOG(ERROR) << "OnOutputConstraints: constraints action not required on "
-                        "initial constraints.";
+      FXL_LOG(ERROR)
+          << "OnOutputConstraints: constraints action not required on "
+             "initial constraints.";
       InitFailed();
       return;
     }
@@ -565,7 +566,8 @@ void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet,
   }
 
   if (!output_buffers_.has_current_set()) {
-    FXL_LOG(FATAL) << "OnOutputPacket event without prior OnOutputConstraints event";
+    FXL_LOG(FATAL)
+        << "OnOutputPacket event without prior OnOutputConstraints event";
     // TODO(dalesat): Report error rather than crashing.
   }
 

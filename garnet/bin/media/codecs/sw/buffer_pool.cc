@@ -7,13 +7,14 @@
 #include <src/lib/fxl/logging.h>
 
 void BufferPool::AddBuffer(const CodecBuffer* buffer) {
+  ZX_DEBUG_ASSERT(buffer);
   free_buffers_.Push(buffer);
 }
 
-std::optional<const CodecBuffer*> BufferPool::AllocateBuffer(size_t alloc_len) {
+const CodecBuffer* BufferPool::AllocateBuffer(size_t alloc_len) {
   auto maybe_buffer = free_buffers_.WaitForElement();
   if (!maybe_buffer) {
-    return std::nullopt;
+    return nullptr;
   }
   auto& buffer = *maybe_buffer;
 
@@ -25,20 +26,20 @@ std::optional<const CodecBuffer*> BufferPool::AllocateBuffer(size_t alloc_len) {
     };
   }
 
-  return maybe_buffer;
+  return buffer;
 }
 
 void BufferPool::FreeBuffer(uint8_t* base) {
-  BufferPool::Allocation allocation;
-  fit::closure free_callback;
+  const CodecBuffer* buffer;
   {
     std::lock_guard<std::mutex> lock(lock_);
-    auto iter = buffers_in_use_.find(base);
-    ZX_DEBUG_ASSERT(iter != buffers_in_use_.end());
-    allocation = iter->second;
-    buffers_in_use_.erase(base);
+    {
+      auto nh = buffers_in_use_.extract(base);
+      ZX_DEBUG_ASSERT(!nh.empty());
+      buffer = nh.mapped().buffer;
+    }
   }
-  free_buffers_.Push(std::move(allocation.buffer));
+  free_buffers_.Push(buffer);
 }
 
 std::optional<BufferPool::Allocation> BufferPool::FindBufferByBase(

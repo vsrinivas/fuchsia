@@ -187,7 +187,7 @@ CodecImpl::CodecImpl(
   });
   initial_input_format_details_ = decoder_params_
                                       ? &decoder_params_->input_details()
-                                      : &encoder_params_->input_format();
+                                      : &encoder_params_->input_details();
 }
 
 CodecImpl::~CodecImpl() {
@@ -3418,7 +3418,6 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
          (decoder_params_->has_promise_separate_access_units_on_input() &&
           decoder_params_->promise_separate_access_units_on_input())) &&
         packet->has_timestamp_ish();
-    uint64_t timestamp_ish = has_timestamp_ish ? packet->timestamp_ish() : 0;
     fuchsia::media::Packet p;
     p.mutable_header()->set_buffer_lifetime_ordinal(
         packet->buffer_lifetime_ordinal());
@@ -3427,7 +3426,9 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
     p.set_stream_lifetime_ordinal(stream_lifetime_ordinal_);
     p.set_start_offset(packet->start_offset());
     p.set_valid_length_bytes(packet->valid_length_bytes());
-    p.set_timestamp_ish(timestamp_ish);
+    if (has_timestamp_ish) {
+      p.set_timestamp_ish(packet->timestamp_ish());
+    }
     p.set_start_access_unit(true);
     p.set_known_end_access_unit(true);
     PostToSharedFidl([this, p = std::move(p), error_detected_before,

@@ -581,6 +581,7 @@ group("media_codec") {
   public_deps = [
     "//garnet/bin/media:codec_factory",
     "//garnet/bin/media:codec_runner_sw_ffmpeg",
+    "//garnet/bin/media:codec_runner_sw_sbc",
   ]
 }
 

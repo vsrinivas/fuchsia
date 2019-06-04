@@ -172,17 +172,11 @@ table CreateEncoder_Params {
     /// format details for the encoder to use when reading buffers.
     ///
     /// To be elibigible an encoder must support the input format.
-    1: fuchsia.media.FormatDetails input_format;
-
-    /// The desired format of the encoded output data.
-    ///
-    /// To be eligible an encoder must support the output mime_type and any
-    /// compressed format details.
-    2: fuchsia.media.FormatDetails output_format;
+    1: fuchsia.media.FormatDetails input_details;
 
     /// If true, require that the returned codec is HW-accelerated.
     // TODO(FIDL-609): Default to false.
-    3: bool require_hw;
+    2: bool require_hw;
 };
 
 enum CodecType {

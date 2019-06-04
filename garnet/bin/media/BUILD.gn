@@ -9,6 +9,7 @@ group("media") {
   deps = [
     ":codec_factory",
     ":codec_runner_sw_ffmpeg",
+    ":codec_runner_sw_sbc",
     ":services",
     "camera_manager",
     "codec_factory",
@@ -57,6 +58,26 @@ package("codec_runner_sw_ffmpeg") {
   binaries = [
     {
       name = "codec_runner_sw_ffmpeg"
+    },
+  ]
+}
+
+# This package is only really expected to be used by the codec_factory package.
+package("codec_runner_sw_sbc") {
+  meta = [
+    {
+      path = rebase_path("codecs/meta/codec_runner_sw_sbc.cmx")
+      dest = "codec_runner_sw_sbc.cmx"
+    },
+  ]
+
+  deps = [
+    "//garnet/bin/media/codecs/sw/sbc:codec_runner_sw_sbc",
+  ]
+
+  binaries = [
+    {
+      name = "codec_runner_sw_sbc"
     },
   ]
 }

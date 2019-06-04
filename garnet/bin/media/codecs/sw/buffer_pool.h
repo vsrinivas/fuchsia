@@ -23,7 +23,7 @@ class BufferPool {
   void AddBuffer(const CodecBuffer* buffer);
 
   // Allocates a buffer for the caller and remembers the allocation size.
-  std::optional<const CodecBuffer*> AllocateBuffer(size_t alloc_len);
+  const CodecBuffer* AllocateBuffer(size_t alloc_len = 0);
 
   // Frees a buffer by its base address, releasing it back to the pool.
   void FreeBuffer(uint8_t* base);

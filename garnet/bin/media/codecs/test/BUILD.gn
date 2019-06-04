@@ -15,11 +15,14 @@ group("test") {
     ":raw_frames",
     ":raw_frames_test",
     ":raw_frames_test_bin",
+    ":sbc_encoder_test",
     ":timestamp_extrapolator_tests",
   ]
 }
 
 source_set("raw_frames") {
+  testonly = true
+
   sources = [
     "raw_frames.cc",
   ]
@@ -33,6 +36,82 @@ source_set("raw_frames") {
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/fzl",
+  ]
+}
+
+source_set("frame_encoder") {
+  testonly = true
+
+  sources = [
+    "frame_encoder.cc",
+  ]
+
+  public = [
+    "frame_encoder.h",
+  ]
+
+  public_deps = [
+    ":raw_frames",
+    "//garnet/lib/media/test:codec_client",
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("raw_audio") {
+  testonly = true
+
+  sources = [
+    "raw_audio.cc",
+  ]
+
+  public = [
+    "raw_audio.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+executable("sbc_encoder_test_bin") {
+  output_name = "sbc_encoder_test"
+
+  testonly = true
+
+  sources = [
+    "sbc_encoder_test.cc",
+  ]
+
+  deps = [
+    ":frame_encoder",
+    ":raw_audio",
+  ]
+}
+
+test_package("sbc_encoder_test") {
+  deps = [
+    ":sbc_encoder_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "sbc_encoder_test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("test_data/third_party/sfx_s16be.au")
+      dest = "sfx_s16be.au"
+    },
+    {
+      path = rebase_path("test_data/third_party/sfx_s16be.au.sbc")
+      dest = "sfx_s16be.au.sbc"
+    },
   ]
 }
 

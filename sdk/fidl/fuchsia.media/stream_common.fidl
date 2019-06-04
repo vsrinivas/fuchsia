@@ -46,56 +46,39 @@ struct Parameter {
 // that's widely shared.  Maybe some encoder settings could remain
 // codec-specific.
 //
-// For decoders input, the format details tend to be fairly sparse, since most
+// For decoder input, the format details tend to be fairly sparse, since most
 // compressed formats tend to be mostly self-describing.
 //
 // For decoder output and encoder input, the format details need to include all
 // the out-of-band information regarding the uncompressed data, which tends not
 // to be self-describing.
 //
-// For encoder output, we also include in FormatDetails some additional
-// encoding parameters which are needed to configure the encoder. These are not
-// really needed by any downstream decoder under most circumstances, but these
-// encoder config settings are legitimate optional format details, so we use
-// the same overall structure, but name them "Encoder" to make it more obvious
-// that these are mostly relevant to the encoder.  A downstream consumer could
-// potentially benefit from knowing these settings, but most won't look at them.
-//
 // Settings that are completely redundant with the data in the format itself
-// should not be in a required field here.  Some encoder parameters may also be
-// represented in oob_bytes on the output of an encoder - a downstream
-// consumer can assume the oob_bytes are correct and not check for whether
-// encoder settings are present or consistent.
+// should not be in a required field here. An encoder may set oob_bytes on its
+// output.
 //
-// With some exceptions made for encoder settings on output of an encoder, this
-// stuff should be limited to things we need to know to properly process the
+// This stuff should be limited to things we need to know to properly process the
 // data which we can't already determine from the data itself, and which isn't
 // already covered by a format's defined OOB binary config blob, which is
 // conveyed in oob_bytes.
-//
-// TODO(dustingreen): Consider whether to split encoder settings into a
-// separate struct - the main counter-argument would be if a consumer
-// immediately downstream of an encoder may have good reason to know encoder
-// settings to help process the data.  For example, the nominal bit-rate.
-// Compressed formats tend to be much more self-describing than uncompressed
-// formats.  (The "self" in "self-describing" includes the oob_bytes.)
 //
 // Most decoders can have FormatDetails.domain null.
 
 /// AudioCompressedFormat
 ///
-/// Format details relevant to compressed audio, mostly for encoder settings.
+/// Format details relevant to compressed audio, mostly for encoder settings,
+/// (but see TODO below).
 ///
 /// Unless otherwise specified in a comment on a field in this structure,
 /// FormatDetails.domain is null for a decoder.  A sub-structure whose name
 /// ends in "Encoder" is for encoder output settings.
 ///
-// TODO(dustingreen): Consider whether splitting encoder settings out separately
-// would be better.
-union AudioCompressedFormat {
+// TODO(dustingreen): Complete process of splitting encoder settings out.
+xunion AudioCompressedFormat {
     // For an aac encoder, this field has settings the encoder needs which are
     // specific to AAC encoding.
     AudioCompressedFormatAacEncoder aac;
+    AudioCompressedFormatSbc sbc;
 };
 
 enum AudioBitrateMode {
@@ -144,6 +127,9 @@ struct AudioCompressedFormatAacEncoder {
     AudioBitrateMode bitrate_mode;
 
     // TODO(dustingreen): AAC profile settings.
+};
+
+struct AudioCompressedFormatSbc {
 };
 
 /// AudioPcmMode
@@ -396,6 +382,52 @@ union DomainFormat {
 
 const uint64 kMaxOobBytesSize = 8192;
 
+enum SbcSubBands {
+    SUB_BANDS_4 = 4;
+    SUB_BANDS_8 = 8;
+};
+
+enum SbcBlockCount {
+    BLOCK_COUNT_4 = 4;
+    BLOCK_COUNT_8 = 8;
+    BLOCK_COUNT_12 = 12;
+    BLOCK_COUNT_16 = 16;
+};
+
+enum SbcAllocation {
+    ALLOC_LOUDNESS = 0;
+    ALLOC_SNR = 1;
+};
+
+enum SbcChannelMode {
+    MONO = 0;
+    DUAL = 1;
+    STEREO = 2;
+    JOINT_STEREO = 3;
+};
+
+/// Settings for an SBC Encoder.
+///
+/// SBC Encoders take signed little endian 16 bit linear PCM samples and
+/// return encoded SBC frames. SBC encoder PCM data in batches of
+/// `sub_bands * block_count` PCM frames. This encoder will accept PCM data on
+/// arbitrary frame boundaries, but the output flushed when EOS is queued may be
+/// zero-padded to make a full batch for encoding.
+struct SbcEncoderSettings {
+    SbcSubBands sub_bands = SUB_BANDS_8;
+    SbcAllocation allocation = ALLOC_LOUDNESS;
+    SbcBlockCount block_count = BLOCK_COUNT_4;
+    SbcChannelMode channel_mode;
+    /// SBC bit pool value.
+    uint64 bit_pool;
+};
+
+/// Settings for encoders that tell them how to encode raw
+/// formats.
+xunion EncoderSettings {
+    SbcEncoderSettings sbc;
+};
+
 /// FormatDetails
 ///
 /// This describes/details the format on input or output of a StreamProcessor
@@ -492,4 +524,25 @@ table FormatDetails {
     // For streams that define their own stream-specific config/OOB data, put
     // that in oob_bytes above instead of this field.
     5: vector<Parameter> pass_through_parameters;
+
+    /// Instructs an encoder on how to encode raw data.
+    ///
+    /// Decoders may ignore this field but are entitled to rejected requests with
+    /// this field set because it doesn't make sense.
+    6: EncoderSettings encoder_settings;
+
+    /// The number of ticks of the timebase of input packet timestamp_ish values
+    /// per second.
+    ///
+    /// The timebase is only used used for optional extrapolation of timestamp_ish
+    /// values when an input timestamp which applies to byte 0 of the valid portion
+    /// of the input packet does not correspond directly to byte 0 of the valid
+    /// portion of any output packet.
+    ///
+    /// Leave unset if timestamp extrapolation is not needed, either due to lack of
+    /// timestamps on input, or due to input being provided in increments of the
+    /// encoder's input chunk size (based on the encoder settings and calculated
+    /// independently by the client).  Set if timestamp extrapolation is known to be
+    /// needed or known to be acceptable to the client.
+    7: uint64 timebase;
 };

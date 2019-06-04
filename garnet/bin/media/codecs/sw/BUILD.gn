@@ -12,6 +12,7 @@ group("sw") {
     ":codec_runner_sw",
     "ffmpeg",
     "low_layer",
+    "sbc",
   ]
 }
 

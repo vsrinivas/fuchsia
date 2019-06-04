@@ -169,7 +169,7 @@ int CodecAdapterFfmpegDecoder::GetBuffer(
   }
 
   AVBufferRef* buffer_ref = av_buffer_create(
-      (*buffer)->buffer_base(), static_cast<int>((*buffer)->buffer_size()),
+      buffer->buffer_base(), static_cast<int>(buffer->buffer_size()),
       FfmpegFreeBufferCallback, this, flags);
 
   int fill_arrays_status = av_image_fill_arrays(
