@@ -99,8 +99,6 @@ typedef uint64_t __be64;
 
 #define ioread8(addr) (*(volatile uint8_t*)(uintptr_t)(addr))
 
-#define usleep(us) zx_nanosleep(zx_deadline_after(ZX_USEC(us)))
-#define usleep_range(early, late) usleep(early)
 #define msleep(ms) zx_nanosleep(zx_deadline_after(ZX_MSEC(ms)))
 #define PAUSE zx_nanosleep(zx_deadline_after(ZX_MSEC(50)))
 

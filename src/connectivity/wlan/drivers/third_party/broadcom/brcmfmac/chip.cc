@@ -305,7 +305,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
             BACKPLANE_TARGET_STATE_LOW_REJECT);
 
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-        usleep(1);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
         SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh)) &
                   BACKPLANE_TARGET_STATE_HIGH_BUSY),
                  100000);
@@ -321,7 +321,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
             val |= BACKPLANE_INITIATOR_STATE_REJECT;
             ci->ops->write32(ci->ctx, CORE_SB(base, sbimstate), val);
             val = ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate));
-            usleep(1);
+            zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
             SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate)) &
                       BACKPLANE_INITIATOR_STATE_BUSY),
                      100000);
@@ -332,7 +332,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
             BACKPLANE_TARGET_STATE_LOW_REJECT | BACKPLANE_TARGET_STATE_LOW_RESET;
         ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), val);
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-        usleep(10);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
         /* clear the initiator reject bit */
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbidlow));
@@ -346,7 +346,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
     /* leave reset and reject asserted */
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), (BACKPLANE_TARGET_STATE_LOW_REJECT |
                                                             BACKPLANE_TARGET_STATE_LOW_RESET));
-    usleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
 }
 
 static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t prereset,
@@ -369,7 +369,7 @@ static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t pre
 
     /* put in reset */
     ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL, BC_CORE_RESET_CONTROL_RESET);
-    usleep_range(10, 20);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
     /* wait till reset is 1 */
     uint32_t spinresult;
     SPINWAIT((spinresult = ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL)) !=
@@ -406,7 +406,7 @@ static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prere
                      BACKPLANE_TARGET_STATE_LOW_GATED_CLOCKS | BACKPLANE_TARGET_STATE_LOW_CLOCK |
                      BACKPLANE_TARGET_STATE_LOW_RESET);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    usleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
 
     /* clear any serror */
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh));
@@ -424,12 +424,12 @@ static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prere
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), BACKPLANE_TARGET_STATE_LOW_GATED_CLOCKS |
                                                            BACKPLANE_TARGET_STATE_LOW_CLOCK);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    usleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
 
     /* leave clock enabled */
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), BACKPLANE_TARGET_STATE_LOW_CLOCK);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    usleep(1);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
 }
 
 static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset,
@@ -450,7 +450,7 @@ static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prere
         if (count > 50) {
             break;
         }
-        usleep_range(40, 60);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(40)));
     }
 
     ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_CONTROL, postreset | BC_CORE_CONTROL_CLOCK);

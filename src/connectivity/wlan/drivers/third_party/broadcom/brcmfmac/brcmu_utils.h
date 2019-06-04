@@ -27,13 +27,13 @@
  * Caller should explicitly test 'exp' when this completes
  * and take appropriate error action if 'exp' is still true.
  */
-#define SPINWAIT(exp, us)                    \
-    {                                        \
-        uint countdown = (us) + 9;           \
-        while ((exp) && (countdown >= 10)) { \
-            usleep(10);                      \
-            countdown -= 10;                 \
-        }                                    \
+#define SPINWAIT(exp, us)                                  \
+    {                                                      \
+        uint countdown = (us) + 9;                         \
+        while ((exp) && (countdown >= 10)) {               \
+            zx_nanosleep(zx_deadline_after(ZX_USEC(10)));  \
+            countdown -= 10;                               \
+        }                                                  \
     }
 
 /* osl multi-precedence packet queue */

@@ -662,7 +662,7 @@ static zx_status_t brcmf_sdio_kso_control(struct brcmf_sdio* bus, bool on) {
          */
         cmp_val = SBSDIO_FUNC1_SLEEPCSR_KSO_MASK | SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK;
         bmask = cmp_val;
-        usleep_range(2000, 3000);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(2000)));
     } else {
         /* Put device to sleep, turn off KSO */
         cmp_val = 0;
@@ -690,7 +690,7 @@ static zx_status_t brcmf_sdio_kso_control(struct brcmf_sdio* bus, bool on) {
             break;
         }
 
-        usleep(KSO_WAIT_US);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(KSO_WAIT_US)));
         brcmf_sdiod_func1_wb(bus->sdiodev, SBSDIO_FUNC1_SLEEPCSR, wr_val, &err);
 
     } while (try_cnt++ < MAX_KSO_ATTEMPTS);
@@ -769,7 +769,7 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
             if (zx_clock_get_monotonic() > timeout) {
                 break;
             } else {
-                usleep_range(5000, 10000);
+                zx_nanosleep(zx_deadline_after(ZX_USEC(5000)));
             }
         }
         if (err != ZX_OK) {
@@ -3532,7 +3532,7 @@ static zx_status_t brcmf_sdio_buscoreprep(void* ctx) {
 
     clkset = SBSDIO_FORCE_HW_CLKREQ_OFF | SBSDIO_FORCE_ALP;
     brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, clkset, &err);
-    usleep(65);
+    zx_nanosleep(zx_deadline_after(ZX_USEC(65)));
 
     /* Also, disable the extra SDIO pull-ups */
     brcmf_sdiod_func1_wb(sdiodev, SBSDIO_FUNC1_SDIOPULLUP, 0, NULL);
