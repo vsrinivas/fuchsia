@@ -660,6 +660,7 @@ where
 impl<'a, B, T> LayoutVerified<B, T>
 where
     B: 'a + ByteSlice,
+    T: FromBytes,
 {
     /// Convert this `LayoutVerified` into a reference.
     ///
@@ -739,6 +740,7 @@ where
 impl<B, T> LayoutVerified<B, T>
 where
     B: ByteSlice,
+    T: FromBytes,
 {
     /// Create an immutable reference to `T` with a specific lifetime.
     ///
@@ -752,7 +754,7 @@ where
     /// and no mutable references to the same memory may be constructed during
     /// `'a`.
     unsafe fn deref_helper<'a>(&self) -> &'a T {
-        &mut *(self.0.as_ptr() as *mut T)
+        &*(self.0.as_ptr() as *const T)
     }
 }
 
