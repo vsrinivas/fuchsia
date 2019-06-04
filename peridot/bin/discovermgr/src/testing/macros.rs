@@ -21,10 +21,10 @@ macro_rules! suggestion {
                 Intent::new()
                     .with_action($action)
                     $(.add_parameter($name, $reference))*,
+                Some("story_name".to_string()),
                 None,
             ),
             DisplayInfo::new().with_title($title),
-            Some("story_name".to_string()),
         )
     }
 }

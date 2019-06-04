@@ -4,15 +4,14 @@
 
 use {
     crate::{
-        action_match::query_text_match, models::Suggestion, story_context_store::ContextEntity,
+        action_match::query_text_match, mod_manager::ModManager, models::Suggestion,
+        story_context_store::ContextEntity,
     },
     failure::Error,
-    fidl_fuchsia_modular::{
-        ExecuteStatus, PuppetMasterProxy, StoryCommand, StoryPuppetMasterMarker,
-    },
     fuchsia_syslog::macros::*,
     futures::future::{join_all, LocalFutureObj},
-    std::{collections::HashMap, pin::Pin},
+    parking_lot::Mutex,
+    std::{collections::HashMap, pin::Pin, sync::Arc},
 };
 
 /// Clients who wish to provide suggestions should implement this.
@@ -29,12 +28,12 @@ pub trait SearchSuggestionsProvider: Send + Sync {
 pub struct SuggestionsManager {
     suggestions: HashMap<String, Suggestion>,
     providers: Vec<Box<SearchSuggestionsProvider>>,
-    puppet_master: PuppetMasterProxy,
+    mod_manager: Arc<Mutex<ModManager>>,
 }
 
 impl SuggestionsManager {
-    pub fn new(puppet_master: PuppetMasterProxy) -> Self {
-        SuggestionsManager { suggestions: HashMap::new(), puppet_master, providers: vec![] }
+    pub fn new(mod_manager: Arc<Mutex<ModManager>>) -> Self {
+        SuggestionsManager { suggestions: HashMap::new(), providers: vec![], mod_manager }
     }
 
     /// Registers a suggestion provider.
@@ -80,20 +79,8 @@ impl SuggestionsManager {
                 Ok(())
             }
             Some(suggestion) => {
-                let (story_puppet_master, server_end) =
-                    fidl::endpoints::create_proxy::<StoryPuppetMasterMarker>()?;
-                self.puppet_master.control_story(suggestion.story_name(), server_end)?;
-                let command = StoryCommand::AddMod(suggestion.action().clone().into());
-                story_puppet_master.enqueue(&mut vec![command].iter_mut())?;
-                let result = await!(story_puppet_master.execute())?;
-                if result.status != ExecuteStatus::Ok {
-                    fx_log_err!(
-                        "Modular error status:{:?} message:{}",
-                        result.status,
-                        result.error_message.unwrap_or("none".to_string())
-                    )
-                }
-                Ok(())
+                let mut issuer = self.mod_manager.lock();
+                await!(issuer.execute_suggestion(suggestion))
             }
         }
     }
@@ -110,7 +97,9 @@ mod tests {
                 puppet_master_fake::PuppetMasterFake, suggestion_providers::TestSuggestionsProvider,
             },
         },
-        fidl_fuchsia_modular::{IntentParameter, IntentParameterData, PuppetMasterMarker},
+        fidl_fuchsia_modular::{
+            IntentParameter, IntentParameterData, PuppetMasterMarker, StoryCommand,
+        },
         fuchsia_async as fasync,
         maplit::{hashmap, hashset},
         std::collections::HashSet,
@@ -120,7 +109,7 @@ mod tests {
     async fn get_suggestions_and_execute() -> Result<(), Error> {
         // Set up the fake puppet master client that is dependency. Even if we
         // don't using it in this test.
-        let (client, request_stream) =
+        let (puppet_master_client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
         let mut puppet_master_fake = PuppetMasterFake::new();
         puppet_master_fake.set_on_execute("story_name", |_commands| {
@@ -132,7 +121,8 @@ mod tests {
 
         // Set up our test suggestions provider. This will provide two suggestions
         // all the time.
-        let mut suggestions_manager = SuggestionsManager::new(client);
+        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
+        let mut suggestions_manager = SuggestionsManager::new(mod_manager);
         suggestions_manager.register_suggestions_provider(Box::new(TestSuggestionsProvider::new()));
 
         // Get suggestions and ensure the right ones are received.
@@ -153,7 +143,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn execute() -> Result<(), Error> {
         // Setup puppet master fake.
-        let (client, request_stream) =
+        let (puppet_master_client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
         let mut puppet_master_fake = PuppetMasterFake::new();
 
@@ -175,7 +165,8 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let mut suggestions_manager = SuggestionsManager::new(client);
+        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
+        let mut suggestions_manager = SuggestionsManager::new(mod_manager);
 
         // Set some fake suggestions.
         suggestions_manager.suggestions = hashmap!(

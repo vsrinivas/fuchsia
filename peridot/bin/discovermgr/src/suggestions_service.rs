@@ -91,6 +91,7 @@ impl SuggestionsService {
 mod tests {
     use {
         super::*,
+        crate::ModManager,
         fidl_fuchsia_app_discover::{
             SuggestionsIteratorMarker, SuggestionsMarker, SuggestionsProxy,
         },
@@ -101,7 +102,8 @@ mod tests {
         let (puppet_master, _) = fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>()?;
 
         let context_store = Arc::new(Mutex::new(StoryContextStore::new()));
-        let suggestions_manager = Arc::new(Mutex::new(SuggestionsManager::new(puppet_master)));
+        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master)));
+        let suggestions_manager = Arc::new(Mutex::new(SuggestionsManager::new(mod_manager)));
 
         // Initialize service client and server.
         let (client, request_stream) =

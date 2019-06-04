@@ -62,37 +62,32 @@ pub struct WebFulfillment {
 pub struct Suggestion {
     id: String,
     display_info: DisplayInfo,
-    story_name: String,
     action: AddMod,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct AddMod {
     mod_name: String,
+    story_name: String,
     pub intent: Intent,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Intent {
     pub handler: Option<String>,
-    action: Option<String>,
-    parameters: Option<Vec<IntentParameter>>,
+    pub action: Option<String>,
+    pub parameters: Option<Vec<IntentParameter>>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct IntentParameter {
-    name: String,
-    entity_reference: String,
+    pub name: String,
+    pub entity_reference: String,
 }
 
 impl Suggestion {
-    pub fn new(action: AddMod, display_info: DisplayInfo, story_name: Option<String>) -> Self {
-        Suggestion {
-            id: Uuid::new_v4().to_string(),
-            story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),
-            action,
-            display_info,
-        }
+    pub fn new(action: AddMod, display_info: DisplayInfo) -> Self {
+        Suggestion { id: Uuid::new_v4().to_string(), action, display_info }
     }
 
     pub fn action(&self) -> &AddMod {
@@ -101,10 +96,6 @@ impl Suggestion {
 
     pub fn id(&self) -> &str {
         &self.id
-    }
-
-    pub fn story_name(&self) -> &str {
-        &self.story_name
     }
 
     pub fn display_info(&self) -> &DisplayInfo {
@@ -123,6 +114,12 @@ impl Suggestion {
     }
 }
 
+impl IntentParameter {
+    pub fn entity_reference(&self) -> &str {
+        &self.entity_reference
+    }
+}
+
 impl DisplayInfo {
     pub fn new() -> Self {
         DisplayInfo { title: None, icon: None, subtitle: None }
@@ -136,22 +133,66 @@ impl DisplayInfo {
 }
 
 impl AddMod {
-    pub fn new_raw(component_url: &str, mod_name: Option<String>) -> Self {
+    pub fn new_raw(
+        component_url: &str,
+        story_name: Option<String>,
+        mod_name: Option<String>,
+    ) -> Self {
         AddMod {
+            story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),
             mod_name: mod_name.unwrap_or(Uuid::new_v4().to_string()),
             intent: Intent::new().with_handler(component_url),
         }
     }
 
     #[cfg(test)]
-    pub fn new(intent: Intent, mod_name: Option<String>) -> Self {
-        AddMod { mod_name: mod_name.unwrap_or(Uuid::new_v4().to_string()), intent: intent }
+    pub fn new(intent: Intent, story_name: Option<String>, mod_name: Option<String>) -> Self {
+        AddMod {
+            story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),
+            mod_name: mod_name.unwrap_or(Uuid::new_v4().to_string()),
+            intent: intent,
+        }
+    }
+
+    pub fn story_name(&self) -> &str {
+        &self.story_name
+    }
+
+    pub fn intent(&self) -> &Intent {
+        &self.intent
+    }
+
+    pub fn replace_reference_in_parameters(self, old: &str, new: &str) -> Self {
+        AddMod {
+            story_name: self.story_name,
+            mod_name: self.mod_name,
+            intent: Intent {
+                handler: self.intent.handler,
+                action: self.intent.action,
+                parameters: self.intent.parameters.map(|parameters| {
+                    parameters
+                        .into_iter()
+                        .map(|p| {
+                            if p.entity_reference == old {
+                                IntentParameter { name: p.name, entity_reference: new.to_string() }
+                            } else {
+                                p
+                            }
+                        })
+                        .collect::<Vec<IntentParameter>>()
+                }),
+            },
+        }
     }
 }
 
 impl Intent {
     pub fn new() -> Self {
         Intent { handler: None, action: None, parameters: None }
+    }
+
+    pub fn parameters(&self) -> &Option<Vec<IntentParameter>> {
+        &self.parameters
     }
 
     pub fn with_handler(mut self, handler: &str) -> Self {
@@ -188,7 +229,8 @@ impl Into<FidlDisplayInfo> for DisplayInfo {
 
 impl Into<FidlSuggestion> for Suggestion {
     fn into(self) -> FidlSuggestion {
-        FidlSuggestion { id: Some(self.id), display_info: Some(self.display_info.into()) }
+        let display_info = self.filled_display_info();
+        FidlSuggestion { id: Some(self.id), display_info: Some(display_info) }
     }
 }
 
@@ -274,8 +316,8 @@ mod tests {
             action: AddMod {
                 mod_name: "mod_name".to_string(),
                 intent: Intent { handler: None, action: None, parameters: None },
+                story_name: "story_name".to_string(),
             },
-            story_name: "story_name".to_string(),
         };
 
         let suggestion_fidl: FidlSuggestion = suggestion.clone().into();
@@ -296,7 +338,11 @@ mod tests {
                 entity_reference: "ref".to_string(),
             }]),
         };
-        let add_mod = AddMod { mod_name: "mod_name".to_string(), intent: intent };
+        let add_mod = AddMod {
+            story_name: "story_name".to_string(),
+            mod_name: "mod_name".to_string(),
+            intent: intent,
+        };
         let add_mod_fidl: FidlAddMod = add_mod.clone().into();
 
         assert_eq!(add_mod_fidl.mod_name, vec![add_mod.mod_name]);
@@ -313,5 +359,36 @@ mod tests {
                     && param_fidl.data
                         == FidlIntentParameterData::EntityReference(param.entity_reference.clone())
             }));
+    }
+
+    #[test]
+    fn replace_reference_in_parameters() {
+        let mut intent = Intent {
+            handler: Some("handler".to_string()),
+            action: Some("action".to_string()),
+            parameters: Some(vec![
+                IntentParameter {
+                    name: "param_name".to_string(),
+                    entity_reference: "ref".to_string(),
+                },
+                IntentParameter {
+                    name: "other_param".to_string(),
+                    entity_reference: "some-other-ref".to_string(),
+                },
+                IntentParameter {
+                    name: "another_param".to_string(),
+                    entity_reference: "ref".to_string(),
+                },
+            ]),
+        };
+        let add_mod = AddMod {
+            story_name: "story_name".to_string(),
+            mod_name: "mod_name".to_string(),
+            intent: intent.clone(),
+        };
+        let add_mod = add_mod.replace_reference_in_parameters("ref", "new-ref");
+        intent.parameters.as_mut().map(|params| params[0].entity_reference = "new-ref".to_string());
+        intent.parameters.as_mut().map(|params| params[2].entity_reference = "new-ref".to_string());
+        assert_eq!(add_mod.intent, intent);
     }
 }

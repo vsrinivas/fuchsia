@@ -43,9 +43,8 @@ impl PackageSuggestionsProvider {
         let caps = re.captures(&url)?;
         display_info.title = Some(format!("open {}", &caps["name"]));
         Some(Suggestion::new(
-            AddMod::new_raw(&url, None /* mod_name */),
+            AddMod::new_raw(&url, None /* story_name */, None /* mod_name */),
             display_info,
-            None, /* mod_name */
         ))
     }
 }

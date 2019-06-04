@@ -5,18 +5,17 @@
 #![feature(async_await, await_macro)]
 
 use {
-    crate::story_context_store::StoryContextStore,
-    crate::suggestion_providers::PackageSuggestionsProvider,
-    crate::suggestions_manager::SuggestionsManager,
-    crate::suggestions_service::SuggestionsService,
+    crate::{
+        mod_manager::ModManager, story_context_store::StoryContextStore,
+        suggestion_providers::PackageSuggestionsProvider, suggestions_manager::SuggestionsManager,
+        suggestions_service::SuggestionsService,
+    },
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{DiscoverRegistryRequestStream, SuggestionsRequestStream},
     fidl_fuchsia_modular::PuppetMasterMarker,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_syslog as syslog,
-    fuchsia_syslog::macros::*,
+    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_syslog::{self as syslog, macros::*},
     futures::prelude::*,
     parking_lot::Mutex,
     std::sync::Arc,
@@ -27,6 +26,7 @@ mod testing;
 mod action_match;
 mod cloud_action_provider;
 mod discover_registry;
+mod mod_manager;
 mod models;
 mod module_output;
 mod story_context_store;
@@ -47,11 +47,12 @@ enum IncomingServices {
 async fn run_fidl_service(
     story_context_store: Arc<Mutex<StoryContextStore>>,
     suggestions_manager: Arc<Mutex<SuggestionsManager>>,
+    mod_manager: Arc<Mutex<ModManager>>,
     incoming_service_stream: IncomingServices,
 ) -> Result<(), Error> {
     match incoming_service_stream {
         IncomingServices::DiscoverRegistry(stream) => {
-            await!(discover_registry::run_server(story_context_store, stream))
+            await!(discover_registry::run_server(story_context_store, mod_manager, stream))
         }
         IncomingServices::Suggestions(stream) => {
             let mut service = SuggestionsService::new(story_context_store, suggestions_manager);
@@ -66,10 +67,10 @@ async fn main() -> Result<(), Error> {
 
     let puppet_master =
         connect_to_service::<PuppetMasterMarker>().context("failed to connect to puppet master")?;
+    let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master)));
 
-    let package_suggestions_provider = PackageSuggestionsProvider::new();
-    let mut suggestions_manager = SuggestionsManager::new(puppet_master);
-    suggestions_manager.register_suggestions_provider(Box::new(package_suggestions_provider));
+    let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
+    suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
 
     let suggestions_manager_ref = Arc::new(Mutex::new(suggestions_manager));
     let story_context_store = Arc::new(Mutex::new(StoryContextStore::new()));
@@ -86,6 +87,7 @@ async fn main() -> Result<(), Error> {
         run_fidl_service(
             story_context_store.clone(),
             suggestions_manager_ref.clone(),
+            mod_manager.clone(),
             incoming_service_stream,
         )
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))

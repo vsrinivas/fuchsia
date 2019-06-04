@@ -52,6 +52,17 @@ impl StoryContextStore {
         StoryContextStore { context_entities: HashMap::new(), contributor_to_refs: HashMap::new() }
     }
 
+    pub fn get_reference(
+        &self,
+        story_id: &str,
+        module_id: &str,
+        parameter_name: &str,
+    ) -> Option<&EntityReference> {
+        let contributor = Contributor::module_new(story_id, module_id, parameter_name);
+        // A module contributor will only have one reference at a time.
+        self.contributor_to_refs.get(&contributor).and_then(|references| references.iter().next())
+    }
+
     pub fn contribute(
         &mut self,
         story_id: &str,
