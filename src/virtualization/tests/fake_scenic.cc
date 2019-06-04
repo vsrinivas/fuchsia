@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/tests/fake_input_only_scenic.h"
+#include "src/virtualization/tests/fake_scenic.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -15,19 +15,18 @@
 #include <src/lib/fxl/logging.h>
 #include <string.h>
 
-void FakeInputOnlySession::NotImplemented_(const std::string& name) {
+void FakeSession::NotImplemented_(const std::string& name) {
   FXL_LOG(INFO) << "Unimplemented method '" << name << "' called.";
 }
 
-void FakeInputOnlySession::Bind(
+void FakeSession::Bind(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   bindings_.AddBinding(this, std::move(session_request));
   listeners_.AddInterfacePtr(listener.Bind());
 }
 
-void FakeInputOnlySession::BroadcastEvent(
-    const fuchsia::ui::scenic::Event& event) {
+void FakeSession::BroadcastEvent(const fuchsia::ui::scenic::Event& event) {
   for (const auto& ptr : listeners_.ptrs()) {
     // Each call to OnScenicEvent consumes our Event object, so we must make
     // a new copy each loop iteration.
@@ -40,12 +39,11 @@ void FakeInputOnlySession::BroadcastEvent(
   }
 }
 
-void FakeInputOnlyScenic::BroadcastEvent(
-    const fuchsia::ui::scenic::Event& event) {
+void FakeScenic::BroadcastEvent(const fuchsia::ui::scenic::Event& event) {
   session_.BroadcastEvent(event);
 }
 
-void FakeInputOnlyScenic::BroadcastKeyEvent(
+void FakeScenic::BroadcastKeyEvent(
     KeyboardEventHidUsage usage, fuchsia::ui::input::KeyboardEventPhase phase) {
   fuchsia::ui::scenic::Event event;
   auto& keyboard_event = event.input().keyboard();
@@ -57,11 +55,11 @@ void FakeInputOnlyScenic::BroadcastKeyEvent(
 }
 
 fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic>
-FakeInputOnlyScenic::GetHandler() {
+FakeScenic::GetHandler() {
   return bindings_.GetHandler(this);
 }
 
-void FakeInputOnlyScenic::CreateSession(
+void FakeScenic::CreateSession(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   // We only have a single session, which will broadcast events to all
@@ -69,6 +67,6 @@ void FakeInputOnlyScenic::CreateSession(
   session_.Bind(std::move(session_request), std::move(listener));
 }
 
-void FakeInputOnlyScenic::NotImplemented_(const std::string& name) {
+void FakeScenic::NotImplemented_(const std::string& name) {
   FXL_LOG(INFO) << "Unimplemented method '" << name << "' called.";
 }

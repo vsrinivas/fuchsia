@@ -39,10 +39,9 @@ enum class KeyboardEventHidUsage : uint16_t {
   KEY_LSHIFT = 0xe1,
 };
 
-class FakeInputOnlySession
-    : public fuchsia::ui::scenic::testing::Session_TestBase {
+class FakeSession : public fuchsia::ui::scenic::testing::Session_TestBase {
  public:
-  FakeInputOnlySession() = default;
+  FakeSession() = default;
 
   // Bind a session request to this session.
   void Bind(
@@ -60,10 +59,9 @@ class FakeInputOnlySession
   fidl::InterfacePtrSet<fuchsia::ui::scenic::SessionListener> listeners_;
 };
 
-class FakeInputOnlyScenic
-    : public fuchsia::ui::scenic::testing::Scenic_TestBase {
+class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
-  FakeInputOnlyScenic() = default;
+  FakeScenic() = default;
 
   fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetHandler();
 
@@ -86,7 +84,7 @@ class FakeInputOnlyScenic
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
   fidl::InterfaceHandle<fuchsia::ui::scenic::Scenic> real_scenic_;
-  FakeInputOnlySession session_;
+  FakeSession session_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_

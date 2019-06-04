@@ -10,7 +10,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include "src/virtualization/tests/fake_input_only_scenic.h"
+#include "src/virtualization/tests/fake_scenic.h"
 #include "src/virtualization/tests/guest_console.h"
 #include "src/virtualization/tests/mock_netstack.h"
 
@@ -77,7 +77,7 @@ class EnclosedGuest {
 
   MockNetstack* GetNetstack() { return &mock_netstack_; }
 
-  FakeInputOnlyScenic* GetScenic() { return &fake_scenic_; }
+  FakeScenic* GetScenic() { return &fake_scenic_; }
 
   GuestConsole* GetConsole() { return console_.get(); }
 
@@ -99,7 +99,7 @@ class EnclosedGuest {
   fuchsia::virtualization::ManagerPtr manager_;
   fuchsia::virtualization::RealmPtr realm_;
   fuchsia::virtualization::GuestPtr guest_;
-  FakeInputOnlyScenic fake_scenic_;
+  FakeScenic fake_scenic_;
   MockNetstack mock_netstack_;
   std::unique_ptr<GuestConsole> console_;
   uint32_t guest_cid_;

@@ -13,8 +13,7 @@ namespace {
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::testing::HasSubstr;
 
-void PressAndReleaseKey(FakeInputOnlyScenic* scenic,
-                        KeyboardEventHidUsage usage) {
+void PressAndReleaseKey(FakeScenic* scenic, KeyboardEventHidUsage usage) {
   scenic->BroadcastKeyEvent(usage, KeyboardEventPhase::PRESSED);
   scenic->BroadcastKeyEvent(usage, KeyboardEventPhase::RELEASED);
 }

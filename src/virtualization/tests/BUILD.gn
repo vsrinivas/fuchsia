@@ -65,8 +65,8 @@ executable("bin") {
   sources = [
     "enclosed_guest.cc",
     "enclosed_guest.h",
-    "fake_input_only_scenic.cc",
-    "fake_input_only_scenic.h",
+    "fake_scenic.cc",
+    "fake_scenic.h",
     "guest_test.h",
     "main.cc",
     "mock_netstack.cc",
