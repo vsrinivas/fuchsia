@@ -36,12 +36,18 @@ pub struct ElementaryStreamChunk<'a> {
 #[derive(Copy, Clone, Debug)]
 pub enum Significance {
     Video(VideoSignificance),
+    Audio(AudioSignificance),
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum VideoSignificance {
     Picture,
     NotPicture,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum AudioSignificance {
+    PcmFrames,
 }
 
 /// Wraps an elementary stream and adds sequential dummy timestamps to its chunks.

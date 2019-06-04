@@ -32,8 +32,7 @@ pub struct TestSpec {
 pub enum CaseRelation {
     /// With serial relation, test cases will be run in sequence using the same codec server.
     Serial,
-    /// With concurrent relation, test cases will run concurrently using two codec servers.
-    #[allow(unused)]
+    /// With concurrent relation, test cases will run concurrently using two or more codec servers.
     Concurrent,
 }
 
