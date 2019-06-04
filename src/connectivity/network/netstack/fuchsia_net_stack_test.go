@@ -10,20 +10,15 @@ import (
 
 	"netstack/fidlconv"
 
+	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
+	"fidl/fuchsia/netstack"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/netstack/tcpip"
-	tcpipstack "github.com/google/netstack/tcpip/stack"
 )
-
-func MakeFuchsiaNetstackService() stackImpl {
-	ret := stackImpl{
-		ns: &Netstack{},
-	}
-	ret.ns.mu.stack = tcpipstack.New(nil, nil, tcpipstack.Options{})
-	return ret
-}
 
 func TestValidateIPAddressMask(t *testing.T) {
 	for _, tc := range []struct {
@@ -53,80 +48,131 @@ func TestValidateIPAddressMask(t *testing.T) {
 
 func TestFuchsiaNetStack(t *testing.T) {
 	go fidl.Serve()
-	t.Run("Add and Delete Forwarding Entry", func(t *testing.T) {
-		ni := MakeFuchsiaNetstackService()
+	t.Run("Add and Delete Forwarding Entries", func(t *testing.T) {
+		ns := newNetstack(t)
+		eth := deviceForAddEth(ethernet.Info{}, t)
+		if _, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth); err != nil {
+			t.Fatal(err)
+		}
+		ni := stackImpl{ns: ns}
 
 		table, err := ni.GetForwardingTable()
 		AssertNoError(t, err)
 
-		var dest stack.ForwardingDestination
-		dest.SetDeviceId(789)
-		subnet := net.Subnet{
-			Addr:      fidlconv.ToNetIpAddress("\x0a\x0b\xe0\x00"),
-			PrefixLen: 19,
-		}
-		fe := stack.ForwardingEntry{
-			Subnet:      subnet,
-			Destination: dest,
-		}
-
-		status, err := ni.AddForwardingEntry(fe)
-		AssertNoError(t, err)
-		if status != nil {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", fe, status)
-		}
-
-		table, err = ni.GetForwardingTable()
-		AssertNoError(t, err)
-		if len(table) != 1 {
-			t.Errorf("got len(table) = %d, want = 1", len(table))
-		}
-		if table[0] != fe {
-			t.Errorf("got table[0] = %#v, want = %#v\n", table[0], fe)
-		}
-
-		status, err = ni.AddForwardingEntry(fe)
-		AssertNoError(t, err)
-		if status == nil || status.Type != stack.ErrorTypeAlreadyExists {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = ErrorTypeAlreadyExists", fe, status)
-		}
+		var destInvalid, destNic, destNextHop stack.ForwardingDestination
+		destInvalid.SetDeviceId(789)
+		destNic.SetDeviceId(1)
+		destNextHop.SetNextHop(fidlconv.ToNetIpAddress("\xc0\xa8\x20\x01"))
 
 		nonexistentSubnet := net.Subnet{
 			Addr:      fidlconv.ToNetIpAddress("\xaa\x0b\xe0\x00"),
 			PrefixLen: 19,
 		}
+		badMaskSubnet := net.Subnet{
+			Addr:      fidlconv.ToNetIpAddress("\xc0\xa8\x11\x01"),
+			PrefixLen: 19,
+		}
+		localSubnet := net.Subnet{
+			Addr:      fidlconv.ToNetIpAddress("\xc0\xa8\x20\x00"),
+			PrefixLen: 19,
+		}
+		defaultSubnet := net.Subnet{
+			Addr:      fidlconv.ToNetIpAddress("\x00\x00\x00\x00"),
+			PrefixLen: 0,
+		}
+
+		invalidRoute := stack.ForwardingEntry{
+			Subnet:      localSubnet,
+			Destination: destInvalid,
+		}
+		localRoute := stack.ForwardingEntry{
+			Subnet:      localSubnet,
+			Destination: destNic,
+		}
+		defaultRoute := stack.ForwardingEntry{
+			Subnet:      defaultSubnet,
+			Destination: destNextHop,
+		}
+
+		// Add an invalid entry.
+		status, err := ni.AddForwardingEntry(invalidRoute)
+		AssertNoError(t, err)
+		if status == nil || status.Type != stack.ErrorTypeInvalidArgs {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = ErrorTypeInvalidArgs", invalidRoute, status)
+		}
+
+		// Add a local subnet route.
+		status, err = ni.AddForwardingEntry(localRoute)
+		AssertNoError(t, err)
+		if status != nil {
+			t.Fatalf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		}
+		table, err = ni.GetForwardingTable()
+		AssertNoError(t, err)
+		expectedTable := []stack.ForwardingEntry{localRoute}
+		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
+		}
+
+		// Add the same entry again.
+		status, err = ni.AddForwardingEntry(localRoute)
+		AssertNoError(t, err)
+		if status != nil {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		}
+		table, err = ni.GetForwardingTable()
+		AssertNoError(t, err)
+		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
+		}
+
+		// Add default route.
+		status, err = ni.AddForwardingEntry(defaultRoute)
+		AssertNoError(t, err)
+		if status != nil {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", defaultRoute, status)
+		}
+		table, err = ni.GetForwardingTable()
+		AssertNoError(t, err)
+		expectedTable = append(expectedTable, defaultRoute)
+		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
+		}
+
+		// Remove nonexistent subnet.
 		status, err = ni.DelForwardingEntry(nonexistentSubnet)
 		if status == nil || status.Type != stack.ErrorTypeNotFound {
 			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = ErrorTypeNotFound", nonexistentSubnet, status)
 		}
 
-		badMaskSubnet := net.Subnet{
-			Addr:      fidlconv.ToNetIpAddress("\x0a\x0b\xf0\x00"),
-			PrefixLen: 19,
-		}
+		// Remove subnet with bad subnet mask.
 		status, err = ni.DelForwardingEntry(badMaskSubnet)
 		if status == nil || status.Type != stack.ErrorTypeInvalidArgs {
 			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = ErrorTypeInvalidArgs", badMaskSubnet, status)
 		}
 
-		badForwardingEntry := stack.ForwardingEntry{
-			Subnet:      badMaskSubnet,
-			Destination: dest,
-		}
-		status, err = ni.AddForwardingEntry(badForwardingEntry)
-		if status == nil || status.Type != stack.ErrorTypeInvalidArgs {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = ErrorTypeInvalidArgs", badForwardingEntry, status)
-		}
-
-		status, err = ni.DelForwardingEntry(subnet)
+		// Remove local route.
+		status, err = ni.DelForwardingEntry(localSubnet)
 		if status != nil {
-			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = nil", subnet, status)
+			t.Fatalf("got ni.DelForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
 		}
-
 		table, err = ni.GetForwardingTable()
 		AssertNoError(t, err)
-		if len(table) != 0 {
-			t.Errorf("got len(table) = %d, want len(table) = 0", len(table))
+		expectedTable = []stack.ForwardingEntry{defaultRoute}
+		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
+		}
+
+		// Remove default route.
+		status, err = ni.DelForwardingEntry(defaultSubnet)
+		if status != nil {
+			t.Fatalf("got ni.DelForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		}
+		table, err = ni.GetForwardingTable()
+		AssertNoError(t, err)
+		expectedTable = []stack.ForwardingEntry{}
+		if diff := cmp.Diff(table, expectedTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Fatalf("forwarding table mismatch (-want +got):\n%s", diff)
 		}
 	})
 }

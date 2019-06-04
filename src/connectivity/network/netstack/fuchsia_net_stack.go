@@ -192,13 +192,10 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 }
 
 func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
-	ns.mu.Lock()
-	table := ns.mu.stack.GetRouteTable()
-	ns.mu.Unlock()
-
-	entries := make([]stack.ForwardingEntry, 0)
-	for _, route := range table {
-		entries = append(entries, fidlconv.TcpipRouteToForwardingEntry(route))
+	ert := ns.GetExtendedRouteTable()
+	entries := make([]stack.ForwardingEntry, 0, len(ert))
+	for _, er := range ert {
+		entries = append(entries, fidlconv.TcpipRouteToForwardingEntry(er.Route))
 	}
 	return entries
 }
@@ -245,16 +242,12 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) *stack.Error
 	if !validateSubnet(entry.Subnet) {
 		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-	table := ns.mu.stack.GetRouteTable()
 
-	for _, route := range table {
-		if equalSubnetAndRoute(entry.Subnet, route) {
-			return &stack.Error{Type: stack.ErrorTypeAlreadyExists}
-		}
+	if err := ns.AddRoute(fidlconv.ForwardingEntryToTcpipRoute(entry), metricNotSet, false /* not dynamic */); err != nil {
+		syslog.Errorf("adding forwarding entry %+v to route table failed: %s", entry, err)
+		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
-	ns.mu.stack.SetRouteTable(append(table, fidlconv.ForwardingEntryToTcpipRoute(entry)))
+
 	return nil
 }
 
@@ -262,19 +255,19 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
 	if !validateSubnet(subnet) {
 		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-	table := ns.mu.stack.GetRouteTable()
 
-	for i, route := range table {
-		if equalSubnetAndRoute(subnet, route) {
-			table[i] = table[len(table)-1]
-			table = table[:len(table)-1]
-			ns.mu.stack.SetRouteTable(table)
-			return nil
-		}
+	sn, err := fidlconv.ToTCPIPSubnet(subnet)
+	if err != nil {
+		syslog.Errorf("cannot convert subnet %+v: %s", subnet, err)
+		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
-	return &stack.Error{Type: stack.ErrorTypeNotFound}
+
+	if err := ns.DelRoute(tcpip.Route{Destination: sn.ID(), Mask: sn.Mask()}); err != nil {
+		syslog.Errorf("deleting forwarding entry %+v from route table failed: %s", subnet, err)
+		return &stack.Error{Type: stack.ErrorTypeNotFound}
+	}
+
+	return nil
 }
 
 func (ns *Netstack) enablePacketFilter(id uint64) *stack.Error {
