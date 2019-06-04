@@ -26,6 +26,7 @@
 namespace {
 
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
+using GetArgumentsFunction = devmgr_launcher::GetArgumentsFunction;
 
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
     const auto& get_boot_item = *static_cast<GetBootItemFunction*>(ctx);
@@ -42,6 +43,23 @@ zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) 
 
 constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
+};
+
+zx_status_t ArgumentsGet(void* ctx, fidl_txn_t* txn) {
+    const auto& get_arguments = *static_cast<GetArgumentsFunction*>(ctx);
+    zx::vmo vmo;
+    uint32_t length = 0;
+    if (get_arguments) {
+        zx_status_t status = get_arguments(&vmo, &length);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    return fuchsia_boot_ArgumentsGet_reply(txn, vmo.release(), length);
+}
+
+constexpr fuchsia_boot_Arguments_ops kArgumentsOps = {
+    .Get = ArgumentsGet,
 };
 
 zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
@@ -66,7 +84,7 @@ fbl::RefPtr<fs::Service> MakeNode(async_dispatcher_t* dispatcher, fidl_dispatch_
 }
 
 zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boot_item,
-                         zx::unowned_job root_job) {
+                         GetArgumentsFunction get_arguments, zx::unowned_job root_job) {
     async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
 
     // Quit the loop when the channel is closed.
@@ -77,9 +95,16 @@ zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boo
     // Setup VFS.
     fs::SynchronousVfs vfs(loop.dispatcher());
     auto root = fbl::MakeRefCounted<fs::PseudoDir>();
+
     auto items_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
     auto items_node = MakeNode(loop.dispatcher(), items_dispatch, &get_boot_item, &kItemsOps);
     root->AddEntry(fuchsia_boot_Items_Name, items_node);
+
+    auto arguments_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Arguments_dispatch);
+    auto arguments_node = MakeNode(loop.dispatcher(), arguments_dispatch, &get_arguments,
+                                   &kArgumentsOps);
+    root->AddEntry(fuchsia_boot_Arguments_Name, arguments_node);
+
     auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
     auto root_job_node = MakeNode(loop.dispatcher(), root_job_dispatch, &root_job, &kRootJobOps);
     root->AddEntry(fuchsia_boot_RootJob_Name, root_job_node);
@@ -122,6 +147,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
     }
 
     GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
+    GetArgumentsFunction get_arguments = std::move(args.get_arguments);
     IsolatedDevmgr devmgr;
     zx::channel devfs;
     status = devmgr_launcher::Launch(std::move(args), std::move(bootsvc_client), &devmgr.job_,
@@ -133,7 +159,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
     // Launch bootsvc_main thread after calling devmgr_launcher::Launch, to
     // avoid a race when accessing devmgr.job_.
     std::thread(bootsvc_main, std::move(bootsvc_server), std::move(get_boot_item),
-                zx::unowned_job(devmgr.job_)).detach();
+                std::move(get_arguments), zx::unowned_job(devmgr.job_)).detach();
 
     int fd;
     status = fdio_fd_create(devfs.release(), &fd);

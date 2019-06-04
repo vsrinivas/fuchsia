@@ -24,6 +24,8 @@ public:
         fbl::Vector<const char*> load_drivers;
         // A list of vid/pid/did triplets to spawn in their own devhosts.
         fbl::Vector<board_test::DeviceEntry> device_list;
+        // A list of kernel cmdline arguments to pass to the devmgr process.
+        fbl::Vector<const char*> arguments;
         // If set to true, the block watcher will be disabled.
         bool disable_block_watcher = true;
         // If set to true, the netsvc will be disabled.

@@ -17,6 +17,9 @@ namespace devmgr_launcher {
 using GetBootItemFunction = fit::inline_function<
     zx_status_t(uint32_t type, uint32_t extra, zx::vmo* vmo, uint32_t* length)>;
 
+using GetArgumentsFunction = fit::inline_function<
+    zx_status_t(zx::vmo* vmo, uint32_t* length)>;
+
 struct Args {
     // A list of absolute paths (in devmgr's view of the filesystem) to search
     // for drivers in.  The search is non-recursive.  If empty, this uses
@@ -41,6 +44,8 @@ struct Args {
     bool disable_netsvc = false;
     // Function to handle requests for boot items.
     GetBootItemFunction get_boot_item;
+    // Function to handle requests for boot arguments.
+    GetArgumentsFunction get_arguments;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it.
