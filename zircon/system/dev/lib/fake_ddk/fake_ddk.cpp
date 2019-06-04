@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 #include <stdlib.h>
 
 #include <utility>
@@ -57,8 +56,18 @@ void Bind::SetMetadata(const void* data, size_t data_length) {
 
 zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
                             device_add_args_t* args, zx_device_t** out) {
+    zx_status_t status;
     if (parent != kFakeParent) {
         bad_parent_ = true;
+    }
+
+    if (args && args->ops) {
+        const zx_protocol_device_t* ops = reinterpret_cast<const zx_protocol_device_t*>(args->ops);
+        if (ops->message) {
+            if ((status = fidl_.SetMessageOp(args->ctx, ops->message)) < 0) {
+                return status;
+            }
+        }
     }
 
     *out = kFakeDevice;
@@ -152,7 +161,7 @@ zx_off_t Bind::DeviceGetSize(zx_device_t* device) {
     return size_;
 }
 
-}  // namespace fake_ddk
+} // namespace fake_ddk
 
 zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                    device_add_args_t* args, zx_device_t** out) {

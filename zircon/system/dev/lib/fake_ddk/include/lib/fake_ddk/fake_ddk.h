@@ -8,6 +8,8 @@
 #include <ddk/driver.h>
 #include <fbl/array.h>
 
+#include "fidl-helper.h"
+
 namespace fake_ddk {
 
 // Generic protocol.
@@ -65,6 +67,8 @@ public:
 
     static Bind* Instance() { return instance_; }
 
+    const zx::channel& FidlClient() { return fidl_.local(); }
+
     // Internal fake implementation of ddk functionality.
     virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
                                   device_add_args_t* args, zx_device_t** out);
@@ -116,6 +120,7 @@ protected:
     zx_off_t size_ = 0;
 
     fbl::Array<ProtocolEntry> protocols_;
+    FidlMessenger fidl_;
 };
 
 } // namespace fake_ddk

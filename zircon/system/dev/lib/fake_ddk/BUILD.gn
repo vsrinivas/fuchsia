@@ -12,5 +12,17 @@ library("fake_ddk") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fidl-async:fidl-async",
+  ]
+  public_deps = [
+    # <lib/fake_ddk/fidl-helper.h> has #include <lib/async-loop/cpp/loop.h>.
+    "$zx/system/ulib/async-loop:headers",
+    # <lib/fake_ddk/fidl-helper.h> has #include <lib/fidl-async/bind.h>.
+    "$zx/system/ulib/fidl-async:headers",
   ]
 }
