@@ -30,9 +30,6 @@ struct PaperRendererConfig {
   // Choose a shadow algorithm.
   PaperRendererShadowType shadow_type = PaperRendererShadowType::kNone;
 
-  // Turn on some sort of debug visualization.
-  bool debug = false;
-
   // Multisampling antialiasing (MSAA) sample count: 1, 2, or 4.
   uint8_t msaa_sample_count = 1;
 
@@ -40,6 +37,12 @@ struct PaperRendererConfig {
   // TODO(SCN-486): this type of transient resource should be provided by a
   // "FrameGraph" which has global knowledge of the entire frame.
   uint8_t num_depth_buffers = 1;
+
+  // Turn on some sort of debug visualization.
+  bool debug = false;
+
+  // Blit the current frame number to the output image.
+  bool debug_frame_number = false;
 };
 
 ESCHER_DEBUG_PRINTABLE(PaperRendererConfig);

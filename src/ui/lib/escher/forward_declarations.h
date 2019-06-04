@@ -17,6 +17,7 @@ class BufferCache;
 class Camera;
 struct ClipPlanes;
 class CommandBuffer;
+class DebugFont;
 class DefaultShaderProgramFactory;
 class Escher;
 class Frame;

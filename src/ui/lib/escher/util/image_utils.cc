@@ -174,6 +174,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
 
 void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader,
                         const uint8_t* pixels, const ImagePtr& image,
+                        vk::ImageLayout final_layout,
                         const ImageConversionFunction& conversion_func) {
   FXL_DCHECK(batch_gpu_uploader);
   FXL_DCHECK(image);
@@ -201,20 +202,21 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader,
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  writer->WriteImage(image, region);
+  writer->WriteImage(image, region, final_layout);
   batch_gpu_uploader->PostWriter(std::move(writer));
 }
 
 ImagePtr NewRgbaImage(ImageFactory* image_factory,
                       BatchGpuUploader* gpu_uploader, uint32_t width,
-                      uint32_t height, const uint8_t* pixels) {
+                      uint32_t height, const uint8_t* pixels,
+                      vk::ImageLayout final_layout) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
   auto image =
       NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
 
-  WritePixelsToImage(gpu_uploader, pixels, image);
+  WritePixelsToImage(gpu_uploader, pixels, image, final_layout);
   return image;
 }
 

@@ -46,7 +46,8 @@ void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target,
 }
 
 void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target,
-                                          vk::BufferImageCopy region) {
+                                          vk::BufferImageCopy region,
+                                          vk::ImageLayout final_layout) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteImage");
 
   BatchGpuUploader::SemaphoreAssignmentHelper(target.get(),
@@ -58,9 +59,10 @@ void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->vk().copyBufferToImage(buffer_->vk(), target->vk(),
                                           vk::ImageLayout::eTransferDstOptimal,
                                           1, &region);
-  command_buffer_->impl()->TransitionImageLayout(
-      target, vk::ImageLayout::eTransferDstOptimal,
-      vk::ImageLayout::eShaderReadOnlyOptimal);
+  if (final_layout != vk::ImageLayout::eTransferDstOptimal) {
+    command_buffer_->impl()->TransitionImageLayout(
+        target, vk::ImageLayout::eTransferDstOptimal, final_layout);
+  }
 
   command_buffer_->impl()->KeepAlive(target);
 }

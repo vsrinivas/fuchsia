@@ -188,6 +188,10 @@ class PaperRenderer final : public Renderer {
                                  const FrameData& frame_data,
                                  uint32_t camera_index);
 
+  // Called when |config_.debug_frame_number| is true.  Uses |debug_font_| to
+  // blit the current frame number to the output image.
+  void RenderFrameCounter();
+
   PaperRendererConfig config_;
 
   PaperDrawCallFactory draw_call_factory_;
@@ -207,6 +211,8 @@ class PaperRenderer final : public Renderer {
   ShaderProgramPtr shadow_volume_geometry_program_;
   ShaderProgramPtr shadow_volume_geometry_debug_program_;
   ShaderProgramPtr shadow_volume_lighting_program_;
+
+  std::unique_ptr<DebugFont> debug_font_;
 };
 
 }  // namespace escher

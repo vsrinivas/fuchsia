@@ -88,10 +88,12 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
 // Note that all escher images are stored in GPU memory.  The use of gpu_image
 // here is to specifically differentiate it from pixels, which may be stored in
 // host_memory.
-void WritePixelsToImage(escher::BatchGpuUploader* batch_gpu_uploader,
-                        const uint8_t* pixels, const ImagePtr& gpu_image,
-                        const escher::image_utils::ImageConversionFunction&
-                            convertion_func = nullptr);
+void WritePixelsToImage(
+    escher::BatchGpuUploader* batch_gpu_uploader, const uint8_t* pixels,
+    const ImagePtr& gpu_image,
+    vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+    const escher::image_utils::ImageConversionFunction& convertion_func =
+        nullptr);
 
 // Return new Image containing the provided pixels.  Uses transfer queue to
 // efficiently transfer image data to GPU.  If bytes is null, don't bother
@@ -99,9 +101,10 @@ void WritePixelsToImage(escher::BatchGpuUploader* batch_gpu_uploader,
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewRgbaImage(ImageFactory* image_factory,
-                      BatchGpuUploader* gpu_uploader, uint32_t width,
-                      uint32_t height, const uint8_t* bytes);
+ImagePtr NewRgbaImage(
+    ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
+    uint32_t height, const uint8_t* bytes,
+    vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal);
 
 // Returns RGBA image.
 // |image_factory| is a generic interface that could be an Image cache (in which

@@ -45,6 +45,7 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
 
   renderer_ = escher::PaperRenderer::New(GetEscherWeakPtr());
 
+  renderer_config_.debug_frame_number = true;
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
   renderer_config_.msaa_sample_count = 2;
   renderer_config_.num_depth_buffers =

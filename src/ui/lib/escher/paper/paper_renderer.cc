@@ -5,8 +5,10 @@
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 
 #include <glm/gtc/matrix_access.hpp>
+#include <vulkan/vulkan.hpp>
 
 // TODO(ES-153): possibly delete.  See comment below about NUM_CLIP_PLANES.
+#include "src/ui/lib/escher/debug/debug_font.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/clip_planes.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
@@ -224,10 +226,20 @@ void PaperRenderer::BeginFrame(const FramePtr& frame,
       ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
 
   frame->command_buffer()->TakeWaitSemaphore(
-      output_image, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+      output_image, vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                        vk::PipelineStageFlagBits::eTransfer);
 
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(),
                           frame->frame_number());
+
+  if (config_.debug_frame_number) {
+    if (!debug_font_) {
+      debug_font_ = DebugFont::New(frame_data_->gpu_uploader.get(),
+                                   escher()->image_cache());
+    }
+  } else {
+    debug_font_.reset();
+  }
 
   {
     // As described in the header file, we use the first camera's transform for
@@ -282,10 +294,42 @@ void PaperRenderer::EndFrame() {
   }
   render_queue_.Clear();
 
+  if (config_.debug_frame_number) {
+    RenderFrameCounter();
+  }
+
   frame_data_ = nullptr;
   transform_stack_.Clear();
   shape_cache_.EndFrame();
   draw_call_factory_.EndFrame();
+}
+
+void PaperRenderer::RenderFrameCounter() {
+  auto cb = frame_data_->frame->cmds();
+  auto& output_image = frame_data_->output_image;
+  auto layout = output_image->swapchain_layout();
+
+  if (layout == vk::ImageLayout::eUndefined)
+    return;
+
+  cb->ImageBarrier(output_image, layout, vk::ImageLayout::eTransferDstOptimal,
+                   vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                       vk::PipelineStageFlagBits::eTransfer,
+                   vk::AccessFlagBits::eColorAttachmentWrite |
+                       vk::AccessFlagBits::eTransferWrite,
+                   vk::PipelineStageFlagBits::eTransfer,
+                   vk::AccessFlagBits::eTransferWrite);
+
+  debug_font_->Blit(cb, std::to_string(frame_data_->frame->frame_number()),
+                    output_image, {10, 10}, 4);
+
+  cb->ImageBarrier(output_image, vk::ImageLayout::eTransferDstOptimal, layout,
+                   vk::PipelineStageFlagBits::eTransfer,
+                   vk::AccessFlagBits::eTransferWrite,
+                   vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                       vk::PipelineStageFlagBits::eTransfer,
+                   vk::AccessFlagBits::eColorAttachmentWrite |
+                       vk::AccessFlagBits::eTransferWrite);
 }
 
 void PaperRenderer::BindSceneAndCameraUniforms(uint32_t camera_index) {

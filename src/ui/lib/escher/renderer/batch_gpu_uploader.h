@@ -50,7 +50,9 @@ class BatchGpuUploader {
     // is called.  Retains a reference to the target until the submission's
     // CommandBuffer is retired. Places a wait semaphore on the target,
     // which is signaled when the batched commands are done.
-    void WriteImage(const ImagePtr& target, vk::BufferImageCopy region);
+    void WriteImage(
+        const ImagePtr& target, vk::BufferImageCopy region,
+        vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal);
 
     uint8_t* host_ptr() const { return buffer_->host_ptr(); }
     vk::DeviceSize size() const { return buffer_->size(); }

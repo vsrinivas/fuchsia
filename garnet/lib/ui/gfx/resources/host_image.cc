@@ -166,7 +166,8 @@ bool HostImage::UpdatePixels(escher::BatchGpuUploader* gpu_uploader) {
   TRACE_DURATION("gfx", "UpdatePixels");
   escher::image_utils::WritePixelsToImage(
       gpu_uploader, static_cast<uint8_t*>(memory_->host_ptr()) + memory_offset_,
-      image_, image_conversion_function_);
+      image_, vk::ImageLayout::eShaderReadOnlyOptimal,
+      image_conversion_function_);
   // Pixels have been updated, dirty state is now false.
   return false;
 }

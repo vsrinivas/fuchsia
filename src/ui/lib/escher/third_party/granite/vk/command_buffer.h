@@ -199,6 +199,12 @@ class CommandBuffer : public Reffable {
                                        const vk::ClearDepthStencilValue& value,
                                        vk::ImageAspectFlags aspect);
 
+  // Simple blit between base layers of two images.
+  void Blit(const ImagePtr& src_image, vk::Offset2D src_offset,
+            vk::Extent2D src_extent, const ImagePtr& dst_image,
+            vk::Offset2D dst_offset, vk::Extent2D dst_extent,
+            vk::Filter filter);
+
   // Convenient way to bring CommandBuffer to a known default state.  See the
   // implementation of SetToDefaultState() for more details; it's basically a
   // big switch statement.

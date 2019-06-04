@@ -208,9 +208,12 @@ source_set("escher") {
     ":vulkan",
     "//src/lib/fxl",
     "//src/ui/lib/escher/base:escher_base",
+    "//src/ui/lib/escher/types:escher_types",
   ]
 
   sources = [
+    "debug/debug_font.cc",
+    "debug/debug_font.h",
     "defaults/default_shader_program_factory.cc",
     "defaults/default_shader_program_factory.h",
     "escher.cc",

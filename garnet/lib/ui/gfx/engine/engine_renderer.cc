@@ -44,8 +44,7 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
           escher_, {.shadow_type = escher::PaperRendererShadowType::kNone,
                     .num_depth_buffers = 2})),
       pose_buffer_latching_shader_(
-          std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {
-}
+          std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {}
 
 EngineRenderer::~EngineRenderer() = default;
 
@@ -160,7 +159,7 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
   }
 
   DrawLayerWithPaperRenderer(frame, target_presentation_time, layer,
-                              shadow_type, output_image, overlay_model);
+                             shadow_type, output_image, overlay_model);
 }
 
 std::vector<escher::Camera>
@@ -215,9 +214,11 @@ void EngineRenderer::DrawLayerWithPaperRenderer(
   auto camera = renderer->camera();
   auto& scene = camera->scene();
 
-  paper_renderer_->SetConfig(escher::PaperRendererConfig{
-      .shadow_type = shadow_type,
-      .debug = renderer->enable_debugging(),
+  paper_renderer_->SetConfig(escher::PaperRendererConfig {
+    .shadow_type = shadow_type, .debug = renderer->enable_debugging(),
+#if SCENIC_DISPLAY_FRAME_NUMBER
+    .debug_frame_number = true,
+#endif
   });
 
   // Set up PaperScene from Scenic Scene resource.

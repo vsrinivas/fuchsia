@@ -316,6 +316,9 @@ bool DisplaySwapchain::InitializeFramebuffers(
       FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";
       device_.destroyImage(image_result.value);
       return false;
+    } else {
+      buffer.escher_image->set_swapchain_layout(
+          vk::ImageLayout::eColorAttachmentOptimal);
     }
 
     buffer.fb_id = display_manager_->ImportImage(display_collection_id, 0);
@@ -577,7 +580,9 @@ void DisplaySwapchain::OnVsync(zx_time_t timestamp,
 namespace {
 
 vk::ImageUsageFlags GetFramebufferImageUsage() {
-  return vk::ImageUsageFlagBits::eColorAttachment;
+  return vk::ImageUsageFlagBits::eColorAttachment |
+         // For blitting frame #.
+         vk::ImageUsageFlagBits::eTransferDst;
 }
 
 vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {

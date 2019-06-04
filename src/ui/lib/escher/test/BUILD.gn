@@ -20,7 +20,10 @@ if (is_mac) {
 } else {
   test("escher_unittests") {
     sources = [
+      "debug/debug_font_unittest.cc",
       "fake_gpu_allocator.cc",
+      "fixtures/readback_test.cc",
+      "fixtures/readback_test.h",
       "fs/hack_filesystem_unittest.cc",
       "geometry/bounding_box_unittest.cc",
       "geometry/clip_planes_unittest.cc",

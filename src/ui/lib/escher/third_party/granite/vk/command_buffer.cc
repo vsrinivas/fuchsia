@@ -774,6 +774,31 @@ void CommandBuffer::ClearDepthStencilAttachmentRect(
                       value, aspect);
 }
 
+void CommandBuffer::Blit(const ImagePtr& src_image, vk::Offset2D src_offset,
+                         vk::Extent2D src_extent, const ImagePtr& dst_image,
+                         vk::Offset2D dst_offset, vk::Extent2D dst_extent,
+                         vk::Filter filter) {
+  impl_->KeepAlive(src_image);
+  impl_->KeepAlive(dst_image);
+
+  vk::ImageBlit blit;
+  blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+  blit.srcSubresource.mipLevel = 0;
+  blit.srcSubresource.baseArrayLayer = 0;
+  blit.srcSubresource.layerCount = 1;
+  blit.dstSubresource = blit.srcSubresource;
+  blit.srcOffsets[0] = vk::Offset3D(src_offset.x, src_offset.y, 0);
+  blit.srcOffsets[1] = vk::Offset3D(src_offset.x + src_extent.width,
+                                    src_offset.y + src_extent.height, 1);
+  blit.dstOffsets[0] = vk::Offset3D(dst_offset.x, dst_offset.y, 0);
+  blit.dstOffsets[1] = vk::Offset3D(dst_offset.x + dst_extent.width,
+                                    dst_offset.y + dst_extent.height, 1);
+
+  vk().blitImage(src_image->vk(), vk::ImageLayout::eTransferSrcOptimal,
+                 dst_image->vk(), vk::ImageLayout::eTransferDstOptimal, 1,
+                 &blit, filter);
+}
+
 void CommandBuffer::SetShaderProgram(ShaderProgram* program,
                                      const SamplerPtr& immutable_sampler) {
   // TODO(ES-83): checking the uid() isn't really necessary since we're using
