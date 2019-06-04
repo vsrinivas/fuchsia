@@ -6,3 +6,4 @@ mod binding;
 mod mocks;
 mod routing;
 mod routing_test_helpers;
+mod test_hooks;

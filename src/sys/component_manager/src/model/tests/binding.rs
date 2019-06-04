@@ -5,6 +5,7 @@
 use {
     crate::model::tests::mocks::*,
     crate::model::tests::routing_test_helpers::*,
+    crate::model::tests::test_hooks::TestHooks,
     crate::model::*,
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
@@ -32,6 +33,7 @@ async fn bind_instance_root() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers: Vec::new(),
     });
     let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::root()));
     let expected_res: Result<(), ModelError> = Ok(());
@@ -56,6 +58,7 @@ async fn bind_instance_root_non_existent() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers: Vec::new(),
     });
     let res = await!(model.look_up_and_bind_instance(vec!["no-such-instance"].into()));
     let expected_res: Result<(), ModelError> =
@@ -93,11 +96,15 @@ async fn bind_instance_child() {
     mock_resolver.add_component("system", default_component_decl());
     mock_resolver.add_component("echo", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
+    let observer = Arc::new(TestHooks::new());
+    let mut model_observers: ModelObservers = Vec::new();
+    model_observers.push(observer.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers,
     });
     // bind to system
     assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
@@ -126,6 +133,9 @@ async fn bind_instance_child() {
     let echo_realm = await!(get_child_realm(&*model.root_realm, "echo"));
     let actual_children = await!(get_children(&*echo_realm));
     assert!(actual_children.is_empty());
+
+    // Verify that the component topology matches expectations.
+    assert_eq!("(echo,system)", observer.print());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -152,6 +162,7 @@ async fn bind_instance_child_non_existent() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers: Vec::new(),
     });
     // bind to system
     assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
@@ -239,11 +250,15 @@ async fn bind_instance_eager_children() {
     );
     mock_resolver.add_component("e", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
+    let observer = Arc::new(TestHooks::new());
+    let mut model_observers: ModelObservers = Vec::new();
+    model_observers.push(observer.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers,
     });
 
     // Bind to the top component, and check that it and the eager components were started.
@@ -271,6 +286,8 @@ async fn bind_instance_eager_children() {
             *actual_urls
         );
     }
+    // Verify that the component topology matches expectations.
+    assert_eq!("(a(b,c(d(e))))", observer.print());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -310,6 +327,7 @@ async fn bind_instance_no_execute() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers: Vec::new(),
     });
 
     // Bind to the parent component. The child should be started. However, the parent component
@@ -358,11 +376,15 @@ async fn bind_instance_recursive_child() {
     mock_resolver.add_component("logger", default_component_decl());
     mock_resolver.add_component("netstack", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
+    let observer = Arc::new(TestHooks::new());
+    let mut model_observers: ModelObservers = Vec::new();
+    model_observers.push(observer.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
+        model_observers,
     });
 
     // bind to logger (before ever binding to system)
@@ -385,25 +407,6 @@ async fn bind_instance_recursive_child() {
     ];
     assert_eq!(*await!(urls_run.lock()), expected_urls);
 
-    // validate children
-    let actual_children = await!(get_children(&*model.root_realm));
-    let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
-    expected_children.insert("system".into());
-    assert_eq!(actual_children, expected_children);
-
-    let system_realm = await!(get_child_realm(&*model.root_realm, "system"));
-
-    let actual_children = await!(get_children(&*system_realm));
-    let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
-    expected_children.insert("logger".into());
-    expected_children.insert("netstack".into());
-    assert_eq!(actual_children, expected_children);
-
-    let logger_realm = await!(get_child_realm(&*system_realm, "logger"));
-    let actual_children = await!(get_children(&*logger_realm));
-    assert!(actual_children.is_empty());
-
-    let netstack_realm = await!(get_child_realm(&*system_realm, "netstack"));
-    let actual_children = await!(get_children(&*netstack_realm));
-    assert!(actual_children.is_empty());
+    // validate the component topology.
+    assert_eq!("(system(logger,netstack))", observer.print());
 }

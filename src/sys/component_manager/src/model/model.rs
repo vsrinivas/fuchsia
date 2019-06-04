@@ -11,11 +11,27 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        future::{join_all, FutureObj},
+        future::{join_all, BoxFuture, FutureObj},
         lock::Mutex,
     },
     std::sync::Arc,
 };
+
+// Observers of the component model implement this trait.
+// TODO(fsamuel): It's conceivable that as we add clients and event types,
+// many clients may be interested in just a small subset of events but they'd
+// have to implement all the functions in this trait. Alternatively, we can
+// break down each event type into a separate trait so that clients can pick
+// and choose which events they'd like to monitor.
+pub trait ModelObserver {
+    // Called when a component instance is bound to the given |realm|.
+    fn on_bind_instance(&self, realm: Arc<Realm>) -> BoxFuture<()>;
+
+    // Called when a new |realm|'s declaration has been resolved.
+    fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<()>;
+}
+
+pub type ModelObservers = Vec<Arc<dyn ModelObserver + Send + Sync + 'static>>;
 
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
@@ -29,6 +45,8 @@ pub struct ModelParams {
     pub root_resolver_registry: ResolverRegistry,
     /// The default runner used in the root realm (nominally runs ELF binaries).
     pub root_default_runner: Box<dyn Runner + Send + Sync + 'static>,
+    /// A set of observers of changes to the Model.
+    pub model_observers: ModelObservers,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -43,6 +61,7 @@ pub struct ModelParams {
 pub struct Model {
     pub root_realm: Arc<Realm>,
     pub ambient: Arc<dyn AmbientEnvironment>,
+    pub model_observers: ModelObservers,
 }
 
 impl Model {
@@ -65,6 +84,7 @@ impl Model {
                     }),
                 },
             }),
+            model_observers: params.model_observers,
         }
     }
 
@@ -134,58 +154,85 @@ impl Model {
         Ok(cur_realm)
     }
 
+    // Populates the InstanceState struct and starts the component instance.
+    async fn populate_instance_state<'a>(
+        &'a self,
+        state: &'a mut InstanceState,
+        realm: Arc<Realm>,
+    ) -> Result<Vec<Arc<Realm>>, ModelError> {
+        if state.execution.is_some() {
+            return Ok(vec![]);
+        }
+
+        let component = await!(realm.resolver_registry.resolve(&realm.instance.component_url))?;
+        state.populate_decl(component.decl, &*realm)?;
+        let decl = state.decl.as_ref().expect("ComponentDecl unavailable.");
+        if decl.program.is_some() {
+            let (outgoing_dir_client, outgoing_dir_server) =
+                zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+            let mut namespace = IncomingNamespace::new(component.package)?;
+            let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
+            let execution = Execution::start_from(
+                component.resolved_url,
+                namespace,
+                DirectoryProxy::from_channel(
+                    fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+                ),
+            )?;
+
+            let start_info = fsys::ComponentStartInfo {
+                resolved_url: Some(execution.resolved_url.clone()),
+                program: data::clone_option_dictionary(&decl.program),
+                ns: Some(ns),
+                outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
+            };
+            await!(realm.default_runner.start(start_info))?;
+            state.execution = Some(execution);
+        }
+
+        let mut child_realms: Vec<Arc<Realm>> = Vec::new();
+        for child_realm in
+            state.child_realms.as_ref().expect("Unable to access child realms.").values()
+        {
+            child_realms.push(child_realm.clone());
+        }
+        Ok(child_realms)
+    }
+
     /// Binds to the component instance in the given realm, starting it if it's not
     /// already running. Returns the list of child realms whose instances need to be eagerly started
     /// after this function returns. The caller is responsible for calling
     /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
     async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
-        // There can only be one task manipulating an instance's execution at a time.
-        let mut started = false;
-        let mut state = await!(realm.instance.state.lock());
-        match state.execution {
-            Some(_) => {}
-            None => {
-                let component =
-                    await!(realm.resolver_registry.resolve(&realm.instance.component_url))?;
-                state.populate_decl(component.decl, &*realm)?;
-                let decl = state.decl.as_ref().unwrap();
-                if decl.program.is_some() {
-                    let (outgoing_dir_client, outgoing_dir_server) = zx::Channel::create()
-                        .map_err(|e| ModelError::namespace_creation_failed(e))?;
-                    let mut namespace = IncomingNamespace::new(component.package)?;
-                    let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
-                    let execution = Execution::start_from(
-                        component.resolved_url,
-                        namespace,
-                        DirectoryProxy::from_channel(
-                            fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-                        ),
-                    )?;
-
-                    let start_info = fsys::ComponentStartInfo {
-                        resolved_url: Some(execution.resolved_url.clone()),
-                        program: data::clone_option_dictionary(&decl.program),
-                        ns: Some(ns),
-                        outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
-                    };
-                    await!(realm.default_runner.start(start_info))?;
-                    state.execution = Some(execution);
-                }
-                started = true;
-            }
-        }
-        // Return children that need eager starting.
+        let mut child_realms;
+        let realm_copy = realm.clone();
         let mut eager_children = vec![];
-        if started {
-            for child_realm in state.child_realms.as_ref().unwrap().values() {
-                match child_realm.instance.startup {
-                    fsys::StartupMode::Eager => {
-                        eager_children.push(child_realm.clone());
-                    }
-                    fsys::StartupMode::Lazy => {}
+        // Create a new scope for the InstanceState lock. To avoid deadlock, we cannot be holding
+        // that lock while calling out to observers so release the lock first.
+        {
+            let mut state = await!(realm.instance.state.lock());
+            child_realms = await!(self.populate_instance_state(&mut *state, realm.clone()))?;
+        }
+
+        // Return children that need eager starting.
+        for child_realm in child_realms.iter() {
+            match child_realm.instance.startup {
+                fsys::StartupMode::Eager => {
+                    eager_children.push(child_realm.clone());
                 }
+                fsys::StartupMode::Lazy => {}
             }
         }
+
+        for observer in self.model_observers.iter() {
+            await!(observer.on_bind_instance(realm_copy.clone()));
+        }
+        for child_realm in child_realms.iter() {
+            for observer in self.model_observers.iter() {
+                await!(observer.on_resolve_realm(child_realm.clone()));
+            }
+        }
+
         Ok(eager_children)
     }
 

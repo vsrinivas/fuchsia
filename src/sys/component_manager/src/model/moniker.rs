@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Fail, std::fmt};
+use {
+    core::cmp::{self, Ord, Ordering},
+    failure::Fail,
+    std::fmt,
+};
 
 /// A child moniker locally identifies a child component instance using the name assigned by
 /// its parent and its collection (if present). It is a building block for more complex monikers.
@@ -66,6 +70,18 @@ impl From<&str> for ChildMoniker {
     }
 }
 
+impl Ord for ChildMoniker {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (&self.collection, &self.name).cmp(&(&other.collection, &other.name))
+    }
+}
+
+impl PartialOrd for ChildMoniker {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl fmt::Display for ChildMoniker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_str())
@@ -106,6 +122,10 @@ impl AbsoluteMoniker {
         AbsoluteMoniker { path: vec![] }
     }
 
+    pub fn name(&self) -> Option<String> {
+        self.path.last().map(|m| m.name().to_string())
+    }
+
     pub fn is_root(&self) -> bool {
         self.path.is_empty()
     }
@@ -130,6 +150,32 @@ impl From<Vec<&str>> for AbsoluteMoniker {
     fn from(rep: Vec<&str>) -> Self {
         AbsoluteMoniker::parse(&rep)
             .expect(&format!("absolute moniker failed to parse: {:?}", &rep))
+    }
+}
+
+impl cmp::Ord for AbsoluteMoniker {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        let min_size = cmp::min(self.path.len(), other.path.len());
+        for i in 0..min_size {
+            if self.path[i] < other.path[i] {
+                return cmp::Ordering::Less;
+            } else if self.path[i] > other.path[i] {
+                return cmp::Ordering::Greater;
+            }
+        }
+        if self.path.len() > other.path.len() {
+            return cmp::Ordering::Greater;
+        } else if self.path.len() < other.path.len() {
+            return cmp::Ordering::Less;
+        }
+
+        return cmp::Ordering::Equal;
+    }
+}
+
+impl PartialOrd for AbsoluteMoniker {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -249,6 +295,42 @@ mod tests {
     }
 
     #[test]
+    fn child_moniker_compare() {
+        let a = ChildMoniker::new("a".to_string(), None);
+        let aa = ChildMoniker::new("a".to_string(), Some("a".to_string()));
+        let ab = ChildMoniker::new("a".to_string(), Some("b".to_string()));
+        let ba = ChildMoniker::new("b".to_string(), Some("a".to_string()));
+        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()));
+        let aa_same = ChildMoniker::new("a".to_string(), Some("a".to_string()));
+
+        assert_eq!(Ordering::Less, a.cmp(&aa));
+        assert_eq!(Ordering::Greater, aa.cmp(&a));
+        assert_eq!(Ordering::Less, a.cmp(&ab));
+        assert_eq!(Ordering::Greater, ab.cmp(&a));
+        assert_eq!(Ordering::Less, a.cmp(&ba));
+        assert_eq!(Ordering::Greater, ba.cmp(&a));
+        assert_eq!(Ordering::Less, a.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&a));
+
+        assert_eq!(Ordering::Less, aa.cmp(&ab));
+        assert_eq!(Ordering::Greater, ab.cmp(&aa));
+        assert_eq!(Ordering::Less, aa.cmp(&ba));
+        assert_eq!(Ordering::Greater, ba.cmp(&aa));
+        assert_eq!(Ordering::Less, aa.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&aa));
+        assert_eq!(Ordering::Equal, aa.cmp(&aa_same));
+        assert_eq!(Ordering::Equal, aa_same.cmp(&aa));
+
+        assert_eq!(Ordering::Greater, ab.cmp(&ba));
+        assert_eq!(Ordering::Less, ba.cmp(&ab));
+        assert_eq!(Ordering::Less, ab.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&ab));
+
+        assert_eq!(Ordering::Less, ba.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&ba));
+    }
+
+    #[test]
     fn absolute_monikers() {
         let root = AbsoluteMoniker::root();
         assert_eq!(true, root.is_root());
@@ -278,6 +360,45 @@ mod tests {
         assert_eq!("/a", format!("{}", leaf.parent().unwrap()));
         assert_eq!("/", format!("{}", leaf.parent().unwrap().parent().unwrap()));
         assert_eq!(None, leaf.parent().unwrap().parent().unwrap().parent());
+        assert_eq!("b", format!("{}", leaf.name().unwrap()));
+    }
+
+    #[test]
+    fn absolute_moniker_compare() {
+        let a = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+            ChildMoniker::new("c".to_string(), None),
+        ]);
+        let b = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+        ]);
+        let c = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+            ChildMoniker::new("c".to_string(), None),
+            ChildMoniker::new("d".to_string(), None),
+        ]);
+        let d = AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+            ChildMoniker::new("c".to_string(), None),
+        ]);
+
+        assert_eq!(Ordering::Greater, a.cmp(&b));
+        assert_eq!(Ordering::Less, b.cmp(&a));
+        assert_eq!(Ordering::Less, a.cmp(&c));
+        assert_eq!(Ordering::Greater, c.cmp(&a));
+        assert_eq!(Ordering::Equal, a.cmp(&d));
+        assert_eq!(Ordering::Equal, d.cmp(&a));
+        assert_eq!(Ordering::Less, b.cmp(&c));
+        assert_eq!(Ordering::Greater, c.cmp(&b));
+        assert_eq!(Ordering::Less, b.cmp(&d));
+        assert_eq!(Ordering::Greater, d.cmp(&b));
+        assert_eq!(Ordering::Greater, c.cmp(&d));
+        assert_eq!(Ordering::Less, d.cmp(&c));
     }
 
     #[test]
