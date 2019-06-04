@@ -28,21 +28,35 @@ Document protocols, introduce essential concepts, explain how everything fits to
 
 ## Where should I put documents?  What goes where?
 
-Keep your documentation in the source tree near the things it describes. The location of the
-document depends on the type of document and its topic.
+Documentation that is only for developers working on creating or maintaining
+a specific part of the code should be kept in the same directory as the source code.
 
-Preferred locations:
+Documentation that should be generally available to developers must be
+available in one of two locations:
 
-- Documents about a specific project should go into the `docs` folder at the root of that project's
-  repository and be arranged by topic.
-  e.g. `//apps/my-project/docs/my-feature.md`
-- Documents about Fuchsia as a whole should go into the top-level `docs` repository itself.  e.g.
-  `//docs/build_packages.md`
-
-Alternate locations:
-
-- Adding a `README.md` to the root of a project's repository may serve as a brief orientation to the
-  project for first time visitors but this is not required.
+* Zircon specific documentation should be created in `/zircon/docs`.
+* Fuchsia documentation that is not specific to Zircon specific should
+   be created in `/docs`.  In the `/docs/` directory, you should create your
+   documentation or images in one of these sub-directories:
+    * `best-practices`
+       General best practice guidelines on how to develop with Fuchsia source.
+       If you create best practice documentation about about using a specific
+       feature of Fuchsia, you should create the documentation in the same
+       directory as the other documentation for that specific feature.
+    *  `development`
+        Instructions, tutorials, and procedural documentation for developers
+        that are working on Fuchsia. This directory includes documentation
+        on how to get started, build, run, and test Fuchsia and software
+        running on devices operating Fuchsia. You should organize the content
+        that you create by specific activities, such as testing, getting
+        started, or by workflow topic.
+    * `the-book`
+        Concept and developer guides about the features of Fuchsia. You
+        should organize the content that you create by specific features.
+    * `images`
+        Images that are used in the documentation. You should place images in
+        this common directory and avoid placing images in the same directory
+        as documentation.
 
 ## What documentation should I create?
 
