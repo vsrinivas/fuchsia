@@ -111,6 +111,11 @@ unittest_package("guest_unit_tests") {
 test_package("guest_integration_tests") {
   deps = [
     ":bin",
+
+    # Integration tests rely on launching Debian, Zircon and the guest_manager.
+    "//garnet/packages/experimental:debian_guest",
+    "//garnet/packages/experimental:zircon_guest",
+    "//src/virtualization/bin/guest_manager",
   ]
 
   tests = [
