@@ -23,10 +23,10 @@ namespace image_utils {
 
 #ifdef __Fuchsia__
 using ImageConversionFunction =
-    fit::function<void(void*, void*, uint32_t, uint32_t)>;
+    fit::function<void(void*, const void*, uint32_t, uint32_t)>;
 #else
 using ImageConversionFunction =
-    fit::function<void(void*, void*, uint32_t, uint32_t)>;
+    fit::function<void(void*, const void*, uint32_t, uint32_t)>;
 #endif
 
 // Returns the number of bytes per pixel for the given format.
@@ -89,7 +89,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
 // here is to specifically differentiate it from pixels, which may be stored in
 // host_memory.
 void WritePixelsToImage(escher::BatchGpuUploader* batch_gpu_uploader,
-                        uint8_t* pixels, ImagePtr gpu_image,
+                        const uint8_t* pixels, const ImagePtr& gpu_image,
                         const escher::image_utils::ImageConversionFunction&
                             convertion_func = nullptr);
 
@@ -101,7 +101,7 @@ void WritePixelsToImage(escher::BatchGpuUploader* batch_gpu_uploader,
 // the factory could allocate a new Image every time.
 ImagePtr NewRgbaImage(ImageFactory* image_factory,
                       BatchGpuUploader* gpu_uploader, uint32_t width,
-                      uint32_t height, uint8_t* bytes);
+                      uint32_t height, const uint8_t* bytes);
 
 // Returns RGBA image.
 // |image_factory| is a generic interface that could be an Image cache (in which
