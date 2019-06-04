@@ -7,11 +7,11 @@
 [package]
 edition = "2018"
 name = "zerocopy"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["Joshua Liebow-Feeser <joshlf@google.com>"]
 description = "Utilities for zero-copy parsing and serialization"
 license = "BSD-3-Clause"
-repository = "https://fuchsia.googlesource.com/garnet"
+repository = "https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/rust/zerocopy"
 
 include = ["src/*", "Cargo.toml", "LICENSE"]
 
