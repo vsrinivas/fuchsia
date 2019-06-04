@@ -4,6 +4,7 @@
 
 #include "garnet/lib/perfmon/controller_impl.h"
 
+#include <fuchsia/perfmon/cpu/cpp/fidl.h>
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/perfmon/config_impl.h"
@@ -13,9 +14,10 @@
 namespace perfmon {
 namespace internal {
 
-ControllerImpl::ControllerImpl(fxl::UniqueFD fd, uint32_t num_traces,
+ControllerImpl::ControllerImpl(ControllerSyncPtr controller_ptr,
+                               uint32_t num_traces,
                                uint32_t buffer_size_in_pages, Config config)
-    : fd_(std::move(fd)),
+    : controller_ptr_(std::move(controller_ptr)),
       num_traces_(num_traces),
       buffer_size_in_pages_(buffer_size_in_pages),
       config_(std::move(config)),
@@ -36,24 +38,25 @@ bool ControllerImpl::Start() {
     return false;
   }
 
-  auto status = ioctl_perfmon_start(fd_.get());
+  ::fuchsia::perfmon::cpu::Controller_Start_Result result;
+  zx_status_t status = controller_ptr_->Start(&result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "ioctl_perfmon_start failed: status=" << status;
-  } else {
-    started_ = true;
+    FXL_LOG(ERROR) << "Starting trace failed: status=" << status;
+    return false;
   }
-  return status == ZX_OK;
+  if (result.is_err()) {
+    FXL_LOG(ERROR) << "Starting trace failed: error=" << result.err();
+    return false;
+  }
+
+  started_ = true;
+  return true;
 }
 
 void ControllerImpl::Stop() {
-  auto status = ioctl_perfmon_stop(fd_.get());
+  zx_status_t status = controller_ptr_->Stop();
   if (status != ZX_OK) {
-    // This can get called while tracing is currently stopped.
-    if (!started_ && status == ZX_ERR_BAD_STATE) {
-      ;  // dont report an error in this case
-    } else {
-      FXL_LOG(ERROR) << "ioctl_perfmon_stop failed: status=" << status;
-    }
+    FXL_LOG(ERROR) << "Stopping trace failed: status=" << status;
   } else {
     started_ = false;
   }
@@ -62,42 +65,48 @@ void ControllerImpl::Stop() {
 bool ControllerImpl::Stage() {
   FXL_DCHECK(!started_);
 
-  perfmon_ioctl_config_t ioctl_config;
-  internal::PerfmonToIoctlConfig(config_, &ioctl_config);
+  FidlPerfmonConfig fidl_config;
+  internal::PerfmonToFidlConfig(config_, &fidl_config);
 
-  auto status = ioctl_perfmon_stage_config(fd_.get(), &ioctl_config);
+  ::fuchsia::perfmon::cpu::Controller_StageConfig_Result result;
+  zx_status_t status = controller_ptr_->StageConfig(fidl_config, &result);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "ioctl_perfmon_stage_config failed: status=" << status;
+    FXL_LOG(ERROR) << "Staging config failed: status=" << status;
+    return false;
   }
-  return status == ZX_OK;
+  if (result.is_err()) {
+    FXL_LOG(ERROR) << "Staging config failed: error=" << result.err();
+    return false;
+  }
+
+  return true;
 }
 
-void ControllerImpl::Free() {
-  auto status = ioctl_perfmon_free_trace(fd_.get());
+void ControllerImpl::Terminate() {
+  zx_status_t status = controller_ptr_->Terminate();
   if (status != ZX_OK) {
-    // This can get called while tracing is currently stopped.
-    if (!started_ && status == ZX_ERR_BAD_STATE) {
-      ;  // dont report an error in this case
-    } else {
-      FXL_LOG(ERROR) << "ioctl_perfmon_free_trace failed: status=" << status;
-    }
+    FXL_LOG(ERROR) << "Terminating trace failed: status=" << status;
+  } else {
+    started_ = false;
   }
 }
 
 void ControllerImpl::Reset() {
   Stop();
-  Free();
+  Terminate();
 }
 
 bool ControllerImpl::GetBufferHandle(const std::string& name,
                                      uint32_t trace_num, zx::vmo* out_vmo) {
-  ioctl_perfmon_buffer_handle_req_t req;
-  req.descriptor = trace_num;
-  auto status = ioctl_perfmon_get_buffer_handle(
-      fd_.get(), &req, out_vmo->reset_and_get_address());
-  if (status < 0) {
-    FXL_LOG(ERROR) << name << ": ioctl_perfmon_get_buffer_handle failed: "
+  uint32_t descriptor = trace_num;
+  zx_status_t status = controller_ptr_->GetBufferHandle(descriptor, out_vmo);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Getting buffer handle failed: status="
                    << status;
+    return false;
+  }
+  if (!*out_vmo) {
+    FXL_LOG(ERROR) << "Getting buffer handle failed: no handle returned";
     return false;
   }
   return true;

@@ -119,58 +119,45 @@ void PerfmonDevice::FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t nu
     per_trace->buffers.reset();
 }
 
-zx_status_t PerfmonDevice::PmuGetProperties(void* reply, size_t replymax,
-                                            size_t* out_actual) {
+void PerfmonDevice::PmuGetProperties(FidlPerfmonProperties* props) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    perfmon_ioctl_properties_t props{};
-    if (replymax < sizeof(props)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    props.api_version = kApiVersion;
-    props.pm_version = pmu_hw_properties_.pm_version;
-    props.max_num_events = perfmon::kMaxNumEvents;
+    props->api_version = fuchsia_perfmon_cpu_API_VERSION;
+    props->pm_version = pmu_hw_properties_.pm_version;
+    static_assert(perfmon::kMaxNumEvents == fuchsia_perfmon_cpu_MAX_NUM_EVENTS);
+    props->max_num_events = fuchsia_perfmon_cpu_MAX_NUM_EVENTS;
 
     // These numbers are for informational/debug purposes. There can be
     // further restrictions and limitations.
     // TODO(dje): Something more elaborate can wait for publishing them via
     // some namespace.
-    props.max_num_fixed_events = pmu_hw_properties_.max_num_fixed_events;
-    props.max_fixed_counter_width = pmu_hw_properties_.max_fixed_counter_width;
-    props.max_num_programmable_events = pmu_hw_properties_.max_num_programmable_events;
-    props.max_programmable_counter_width = pmu_hw_properties_.max_programmable_counter_width;
-    props.max_num_misc_events = pmu_hw_properties_.max_num_misc_events;
-    props.max_misc_counter_width = pmu_hw_properties_.max_misc_counter_width;
+    props->max_num_fixed_events = pmu_hw_properties_.max_num_fixed_events;
+    props->max_fixed_counter_width = pmu_hw_properties_.max_fixed_counter_width;
+    props->max_num_programmable_events = pmu_hw_properties_.max_num_programmable_events;
+    props->max_programmable_counter_width = pmu_hw_properties_.max_programmable_counter_width;
+    props->max_num_misc_events = pmu_hw_properties_.max_num_misc_events;
+    props->max_misc_counter_width = pmu_hw_properties_.max_misc_counter_width;
 
+    props->flags = 0;
 #ifdef __x86_64__
     if (pmu_hw_properties_.lbr_stack_size > 0) {
-        props.flags |= PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH;
+        props->flags |= fuchsia_perfmon_cpu_PropertyFlags_HAS_LAST_BRANCH;
     }
 #endif
-
-    memcpy(reply, &props, sizeof(props));
-    *out_actual = sizeof(props);
-    return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
+zx_status_t PerfmonDevice::PmuInitialize(const FidlPerfmonAllocation* allocation) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (per_trace_state_) {
         return ZX_ERR_BAD_STATE;
     }
 
-    ioctl_perfmon_alloc_t alloc;
-    if (cmdlen != sizeof(alloc)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(&alloc, cmd, sizeof(alloc));
     uint32_t num_cpus = zx_system_get_num_cpus();
-    if (alloc.num_buffers != num_cpus) { // TODO(dje): for now
+    if (allocation->num_buffers != num_cpus) { // TODO(dje): for now
         return ZX_ERR_INVALID_ARGS;
     }
-    if (alloc.buffer_size_in_pages > kMaxPerTraceSpaceInPages) {
+    if (allocation->buffer_size_in_pages > kMaxPerTraceSpaceInPages) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -185,7 +172,7 @@ zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    size_t buffer_size = alloc.buffer_size_in_pages * kPageSize;
+    size_t buffer_size = allocation->buffer_size_in_pages * kPageSize;
     uint32_t i = 0;
     for ( ; i < num_cpus; ++i) {
         zx_status_t status =
@@ -199,30 +186,27 @@ zx_status_t PerfmonDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    per_trace->num_buffers = alloc.num_buffers;
-    per_trace->buffer_size_in_pages = alloc.buffer_size_in_pages;
+    per_trace->num_buffers = allocation->num_buffers;
+    per_trace->buffer_size_in_pages = allocation->buffer_size_in_pages;
     per_trace_state_ = std::move(per_trace);
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuFreeTrace() {
+void PerfmonDevice::PmuTerminate() {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (active_) {
-        return ZX_ERR_BAD_STATE;
+        PmuStop();
     }
+
     PmuPerTraceState* per_trace = per_trace_state_.get();
-    if (!per_trace) {
-        return ZX_ERR_BAD_STATE;
+    if (per_trace) {
+        FreeBuffersForTrace(per_trace, per_trace->num_buffers);
+        per_trace_state_.reset();
     }
-
-    FreeBuffersForTrace(per_trace, per_trace->num_buffers);
-    per_trace_state_.reset();
-    return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuGetAlloc(void* reply, size_t replymax,
-                                       size_t* out_actual) {
+zx_status_t PerfmonDevice::PmuGetAllocation(FidlPerfmonAllocation* allocation) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     const PmuPerTraceState* per_trace = per_trace_state_.get();
@@ -230,21 +214,13 @@ zx_status_t PerfmonDevice::PmuGetAlloc(void* reply, size_t replymax,
         return ZX_ERR_BAD_STATE;
     }
 
-    ioctl_perfmon_alloc_t alloc{};
-    if (replymax < sizeof(alloc)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    alloc.num_buffers = per_trace->num_buffers;
-    alloc.buffer_size_in_pages = per_trace->buffer_size_in_pages;
-    memcpy(reply, &alloc, sizeof(alloc));
-    *out_actual = sizeof(alloc);
+    allocation->num_buffers = per_trace->num_buffers;
+    allocation->buffer_size_in_pages = per_trace->buffer_size_in_pages;
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
-                                              void* reply, size_t replymax,
-                                              size_t* out_actual) {
+zx_status_t PerfmonDevice::PmuGetBufferHandle(uint32_t descriptor,
+                                              zx_handle_t* out_handle) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     const PmuPerTraceState* per_trace = per_trace_state_.get();
@@ -252,32 +228,28 @@ zx_status_t PerfmonDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
         return ZX_ERR_BAD_STATE;
     }
 
-    ioctl_perfmon_buffer_handle_req_t req;
+    if (descriptor >= per_trace->num_buffers)  {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
     zx_handle_t h;
-
-    if (cmdlen != sizeof(req)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (replymax < sizeof(h)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(&req, cmd, sizeof(req));
-    if (req.descriptor >= per_trace->num_buffers) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx_status_t status = zx_handle_duplicate(per_trace->buffers[req.descriptor].vmo_handle, ZX_RIGHT_SAME_RIGHTS, &h);
-    if (status < 0) {
+    zx_status_t status =
+        zx_handle_duplicate(per_trace->buffers[descriptor].vmo_handle,
+                            ZX_RIGHT_SAME_RIGHTS, &h);
+    if (status != ZX_OK) {
+        // This failure could be hard to debug. Give the user some help.
+        zxlogf(ERROR, "%s: Failed to duplicate %u buffer handle: %d\n",
+               __func__, descriptor, status);
         return status;
     }
-    memcpy(reply, &h, sizeof(h));
-    *out_actual = sizeof(h);
+
+    *out_handle = h;
     return ZX_OK;
 }
 
 // Do an architecture-independent verification pass over |icfg|,
 // and see if there's a timebase event.
-static zx_status_t VerifyAndCheckTimebase(const perfmon_ioctl_config_t* icfg,
+static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg,
                                           PmuConfig* ocfg) {
     unsigned ii;  // ii: input index
     for (ii = 0; ii < countof(icfg->events); ++ii) {
@@ -288,12 +260,7 @@ static zx_status_t VerifyAndCheckTimebase(const perfmon_ioctl_config_t* icfg,
         EventRate rate = icfg->events[ii].rate;
         uint32_t flags = icfg->events[ii].flags;
 
-        if (flags & ~PERFMON_CONFIG_FLAG_MASK) {
-            zxlogf(ERROR, "%s: reserved flag bits set [%u]\n", __func__, ii);
-            return ZX_ERR_INVALID_ARGS;
-        }
-
-        if (flags & PERFMON_CONFIG_FLAG_TIMEBASE) {
+        if (flags & fuchsia_perfmon_cpu_EventConfigFlags_IS_TIMEBASE) {
             if (ocfg->timebase_event != kEventIdNone) {
                 zxlogf(ERROR, "%s: multiple timebases [%u]\n", __func__, ii);
                 return ZX_ERR_INVALID_ARGS;
@@ -301,7 +268,7 @@ static zx_status_t VerifyAndCheckTimebase(const perfmon_ioctl_config_t* icfg,
             ocfg->timebase_event = icfg->events[ii].event;
         }
 
-        if (flags & PERFMON_CONFIG_FLAG_PC) {
+        if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_PC) {
             if (rate == 0) {
                 zxlogf(ERROR, "%s: PC flag requires own timebase, event [%u]\n",
                        __func__, ii);
@@ -309,7 +276,7 @@ static zx_status_t VerifyAndCheckTimebase(const perfmon_ioctl_config_t* icfg,
             }
         }
 
-        if (flags & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
+        if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_LAST_BRANCH) {
             // Further verification is architecture specific.
             if (icfg->events[ii].rate == 0) {
                 zxlogf(ERROR, "%s: Last branch requires own timebase, event [%u]\n",
@@ -343,7 +310,7 @@ static zx_status_t VerifyAndCheckTimebase(const perfmon_ioctl_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
+zx_status_t PerfmonDevice::PmuStageConfig(const FidlPerfmonConfig* fidl_config) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (active_) {
@@ -358,12 +325,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     // can't be used.
     per_trace->configured = false;
 
-    perfmon_ioctl_config_t ioctl_config;
-    perfmon_ioctl_config_t* icfg = &ioctl_config;
-    if (cmdlen != sizeof(*icfg)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(icfg, cmd, sizeof(*icfg));
+    const FidlPerfmonConfig* icfg = fidl_config;
 
     PmuConfig* ocfg = &per_trace->config;
     *ocfg = {};
@@ -418,13 +380,12 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
 
     // TODO(dje): Basic sanity check that some data will be collected.
 
-    per_trace->ioctl_config = *icfg;
+    per_trace->fidl_config = *icfg;
     per_trace->configured = true;
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::PmuGetConfig(void* reply, size_t replymax,
-                                        size_t* out_actual) {
+zx_status_t PerfmonDevice::PmuGetConfig(FidlPerfmonConfig* config) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     const PmuPerTraceState* per_trace = per_trace_state_.get();
@@ -436,13 +397,7 @@ zx_status_t PerfmonDevice::PmuGetConfig(void* reply, size_t replymax,
         return ZX_ERR_BAD_STATE;
     }
 
-    const perfmon_ioctl_config_t* config = &per_trace->ioctl_config;
-    if (replymax < sizeof(*config)) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    memcpy(reply, config, sizeof(*config));
-    *out_actual = sizeof(*config);
+    *config = per_trace->fidl_config;
     return ZX_OK;
 }
 
@@ -544,68 +499,113 @@ void PerfmonDevice::PmuStop() {
     assert(status == ZX_OK);
 }
 
-// Dispatch the various kinds of requests.
+// Fidl interface.
 
-zx_status_t PerfmonDevice::IoctlWorker(uint32_t op,
-                                       const void* cmd, size_t cmdlen,
-                                       void* reply, size_t replymax,
-                                       size_t* out_actual) {
-    assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_PERFMON);
-
-    switch (op) {
-    case IOCTL_PERFMON_GET_PROPERTIES:
-        if (cmdlen != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return PmuGetProperties(reply, replymax, out_actual);
-
-    case IOCTL_PERFMON_ALLOC_TRACE:
-        if (replymax != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return PmuAllocTrace(cmd, cmdlen);
-
-    case IOCTL_PERFMON_FREE_TRACE:
-        if (cmdlen != 0 || replymax != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return PmuFreeTrace();
-
-    case IOCTL_PERFMON_GET_ALLOC:
-        if (cmdlen != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return PmuGetAlloc(reply, replymax, out_actual);
-
-    case IOCTL_PERFMON_GET_BUFFER_HANDLE:
-        return PmuGetBufferHandle(cmd, cmdlen, reply, replymax, out_actual);
-
-    case IOCTL_PERFMON_STAGE_CONFIG:
-        if (replymax != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return PmuStageConfig(cmd, cmdlen);
-
-    case IOCTL_PERFMON_GET_CONFIG:
-        return PmuGetConfig(reply, replymax, out_actual);
-
-    case IOCTL_PERFMON_START:
-        if (cmdlen != 0 || replymax != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        return PmuStart();
-
-    case IOCTL_PERFMON_STOP:
-        if (cmdlen != 0 || replymax != 0) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        PmuStop();
-        return ZX_OK;
-
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
+static zx_status_t fidl_GetProperties(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    FidlPerfmonProperties props{};
+    dev->PmuGetProperties(&props);
+    return fuchsia_perfmon_cpu_ControllerGetProperties_reply(txn, &props);
 }
+
+static zx_status_t fidl_Initialize(void* ctx,
+                                   const FidlPerfmonAllocation* allocation,
+                                   fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    zx_status_t status = dev->PmuInitialize(allocation);
+    fuchsia_perfmon_cpu_Controller_Initialize_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_perfmon_cpu_Controller_Initialize_ResultTag_response;
+    } else {
+        result.tag = fuchsia_perfmon_cpu_Controller_Initialize_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_perfmon_cpu_ControllerInitialize_reply(txn, &result);
+}
+
+static zx_status_t fidl_Terminate(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    dev->PmuTerminate();
+    return fuchsia_perfmon_cpu_ControllerTerminate_reply(txn);
+}
+
+static zx_status_t fidl_GetAllocation(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    FidlPerfmonAllocation alloc{};
+    zx_status_t status = dev->PmuGetAllocation(&alloc);
+    if (status != ZX_OK) {
+        return fuchsia_perfmon_cpu_ControllerGetAllocation_reply(
+            txn, nullptr);
+    }
+    return fuchsia_perfmon_cpu_ControllerGetAllocation_reply(txn, &alloc);
+}
+
+static zx_status_t fidl_StageConfig(void* ctx, const FidlPerfmonConfig* config,
+                                    fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    zx_status_t status = dev->PmuStageConfig(config);
+    fuchsia_perfmon_cpu_Controller_StageConfig_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_perfmon_cpu_Controller_StageConfig_ResultTag_response;
+    } else {
+        result.tag = fuchsia_perfmon_cpu_Controller_StageConfig_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_perfmon_cpu_ControllerStageConfig_reply(txn, &result);
+}
+
+static zx_status_t fidl_GetConfig(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    FidlPerfmonConfig config{};
+    zx_status_t status = dev->PmuGetConfig(&config);
+    if (status != ZX_OK) {
+        return fuchsia_perfmon_cpu_ControllerGetConfig_reply(txn, nullptr);
+    }
+    return fuchsia_perfmon_cpu_ControllerGetConfig_reply(txn, &config);
+}
+
+static zx_status_t fidl_GetBufferHandle(void* ctx, uint32_t descriptor, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    zx_handle_t handle;
+    zx_status_t status = dev->PmuGetBufferHandle(descriptor, &handle);
+    if (status != ZX_OK) {
+        return fuchsia_perfmon_cpu_ControllerGetBufferHandle_reply(
+            txn, ZX_HANDLE_INVALID);
+    }
+    return fuchsia_perfmon_cpu_ControllerGetBufferHandle_reply(txn, handle);
+}
+
+static zx_status_t fidl_Start(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    zx_status_t status = dev->PmuStart();
+    fuchsia_perfmon_cpu_Controller_Start_Result result{};
+    if (status == ZX_OK) {
+        result.tag = fuchsia_perfmon_cpu_Controller_Start_ResultTag_response;
+    } else {
+        result.tag = fuchsia_perfmon_cpu_Controller_Start_ResultTag_err;
+        result.err = status;
+    }
+    return fuchsia_perfmon_cpu_ControllerStart_reply(txn, &result);
+}
+
+static zx_status_t fidl_Stop(void* ctx, fidl_txn_t* txn) {
+    auto dev = reinterpret_cast<PerfmonDevice*>(ctx);
+    dev->PmuStop();
+    return fuchsia_perfmon_cpu_ControllerStop_reply(txn);
+}
+
+static const fuchsia_perfmon_cpu_Controller_ops_t fidl_ops = {
+    .GetProperties = fidl_GetProperties,
+    .Initialize = fidl_Initialize,
+    .Terminate = fidl_Terminate,
+    .GetAllocation = fidl_GetAllocation,
+    .StageConfig = fidl_StageConfig,
+    .GetConfig = fidl_GetConfig,
+    .GetBufferHandle = fidl_GetBufferHandle,
+    .Start = fidl_Start,
+    .Stop = fidl_Stop,
+};
+
 
 // Devhost interface.
 
@@ -623,32 +623,18 @@ zx_status_t PerfmonDevice::DdkClose(uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
-                                    void* reply, size_t replymax,
-                                    size_t* out_actual) {
+zx_status_t PerfmonDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     mtx_lock(&lock_);
-
-    ssize_t result;
-    switch (IOCTL_FAMILY(op)) {
-        case IOCTL_FAMILY_PERFMON:
-            result = IoctlWorker(op, cmd, cmdlen,
-                                 reply, replymax, out_actual);
-            break;
-        default:
-            result = ZX_ERR_INVALID_ARGS;
-            break;
-    }
-
+    zx_status_t status =
+        fuchsia_perfmon_cpu_Controller_dispatch(this, txn, msg, &fidl_ops);
     mtx_unlock(&lock_);
 
-    return static_cast<zx_status_t>(result);
+    return status;
 }
 
 void PerfmonDevice::DdkRelease() {
-    // TODO(dje): None of these should fail. What to do?
-    // Suggest flagging things as busted and prevent further use.
     PmuStop();
-    PmuFreeTrace();
+    PmuTerminate();
 
     delete this;
 }

@@ -193,7 +193,7 @@ void PerfmonDevice::InitializeStagingState(StagingState* ss) {
          : ~0ul);
 }
 
-zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
+zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg,
                                             StagingState* ss,
                                             unsigned input_index,
                                             PmuConfig* ocfg) {
@@ -235,10 +235,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
     }
 
     unsigned enable = 0;
-    if (flags & PERFMON_CONFIG_FLAG_OS) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_OS) {
         enable |= FIXED_CTR_ENABLE_OS;
     }
-    if (flags & PERFMON_CONFIG_FLAG_USER) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_USER) {
         enable |= FIXED_CTR_ENABLE_USR;
     }
     ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(counter);
@@ -247,10 +247,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
     if (uses_timebase) {
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagUsesTimebase;
     }
-    if (flags & PERFMON_CONFIG_FLAG_PC) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_PC) {
         ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
     }
-    if (flags & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_LAST_BRANCH) {
         if (!LbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n",
                    __func__, ii);
@@ -264,7 +264,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t* icfg,
+zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg,
                                                    StagingState* ss,
                                                    unsigned input_index,
                                                    PmuConfig* ocfg) {
@@ -282,6 +282,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
                __func__);
         return ZX_ERR_INVALID_ARGS;
     }
+
     ocfg->programmable_events[ss->num_programmable] = id;
 
     if (rate == 0) {
@@ -323,10 +324,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     uint64_t evtsel = 0;
     evtsel |= details->event << IA32_PERFEVTSEL_EVENT_SELECT_SHIFT;
     evtsel |= details->umask << IA32_PERFEVTSEL_UMASK_SHIFT;
-    if (flags & PERFMON_CONFIG_FLAG_OS) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_OS) {
         evtsel |= IA32_PERFEVTSEL_OS_MASK;
     }
-    if (flags & PERFMON_CONFIG_FLAG_USER) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_USER) {
         evtsel |= IA32_PERFEVTSEL_USR_MASK;
     }
     if (details->flags & IPM_REG_FLAG_EDG) {
@@ -351,10 +352,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     if (uses_timebase) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagUsesTimebase;
     }
-    if (flags & PERFMON_CONFIG_FLAG_PC) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_PC) {
         ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
     }
-    if (flags & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_LAST_BRANCH) {
         if (!LbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n",
                    __func__, ii);
@@ -368,7 +369,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
+zx_status_t PerfmonDevice::StageMiscConfig(const FidlPerfmonConfig* icfg,
                                            StagingState* ss,
                                            unsigned input_index,
                                            PmuConfig* ocfg) {
@@ -400,6 +401,7 @@ zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
 
     ss->have_misc[event / 64] |= 1ul << (event % 64);
     ocfg->misc_events[ss->num_misc] = id;
+
     if (uses_timebase) {
         ocfg->misc_flags[ss->num_misc] |= kPmuConfigFlagUsesTimebase;
     }

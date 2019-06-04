@@ -108,7 +108,7 @@ void PerfmonDevice::InitializeStagingState(StagingState* ss) {
          : ~0ul);
 }
 
-zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
+zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg,
                                             StagingState* ss,
                                             unsigned input_index,
                                             PmuConfig* ocfg) {
@@ -152,10 +152,10 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
     }
 
     uint32_t pmu_flags = 0;
-    if (flags & PERFMON_CONFIG_FLAG_OS) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_OS) {
         pmu_flags |= kPmuConfigFlagOs;
     }
-    if (flags & PERFMON_CONFIG_FLAG_USER) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_USER) {
         pmu_flags |= kPmuConfigFlagUser;
     }
     // TODO(ZX-3302): PC flag.
@@ -165,7 +165,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const perfmon_ioctl_config_t* icfg,
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t* icfg,
+zx_status_t PerfmonDevice::StageProgrammableConfig(const FidlPerfmonConfig* icfg,
                                                    StagingState* ss,
                                                    unsigned input_index,
                                                    PmuConfig* ocfg) {
@@ -233,10 +233,10 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     }
 
     uint32_t pmu_flags = 0;
-    if (flags & PERFMON_CONFIG_FLAG_OS) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_OS) {
         pmu_flags |= kPmuConfigFlagOs;
     }
-    if (flags & PERFMON_CONFIG_FLAG_USER) {
+    if (flags & fuchsia_perfmon_cpu_EventConfigFlags_COLLECT_USER) {
         pmu_flags |= kPmuConfigFlagUser;
     }
     // TODO(ZX-3302): PC flag.
@@ -246,7 +246,7 @@ zx_status_t PerfmonDevice::StageProgrammableConfig(const perfmon_ioctl_config_t*
     return ZX_OK;
 }
 
-zx_status_t PerfmonDevice::StageMiscConfig(const perfmon_ioctl_config_t* icfg,
+zx_status_t PerfmonDevice::StageMiscConfig(const FidlPerfmonConfig* icfg,
                                            StagingState* ss,
                                            unsigned input_index,
                                            PmuConfig* ocfg) {

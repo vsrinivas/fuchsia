@@ -7,7 +7,11 @@
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
+#include "garnet/lib/perfmon/config_impl.h"
+
 namespace perfmon {
+
+using ::fuchsia::perfmon::cpu::EventConfigFlags;
 
 std::string Config::StatusToString(Status status) {
   switch (status) {
@@ -72,38 +76,36 @@ std::string Config::ToString() {
   return result;
 }
 
-static void ToIoctlEvent(const Config::EventConfig& event, size_t index,
-                         perfmon_ioctl_config_t* out_config) {
+static void ToFidlEvent(const Config::EventConfig& event, size_t index,
+                        FidlPerfmonConfig* out_config) {
   out_config->events[index].event = event.event;
   out_config->events[index].rate = event.rate;
   if (event.flags & Config::kFlagOs) {
-    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_OS;
+    out_config->events[index].flags |= EventConfigFlags::COLLECT_OS;
   }
   if (event.flags & Config::kFlagUser) {
-    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_USER;
+    out_config->events[index].flags |= EventConfigFlags::COLLECT_USER;
   }
   if (event.flags & Config::kFlagPc) {
-    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_PC;
+    out_config->events[index].flags |= EventConfigFlags::COLLECT_PC;
   }
   if (event.flags & Config::kFlagTimebase) {
-    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_TIMEBASE;
+    out_config->events[index].flags |= EventConfigFlags::IS_TIMEBASE;
   }
   if (event.flags & Config::kFlagLastBranch) {
-    out_config->events[index].flags |= PERFMON_CONFIG_FLAG_LAST_BRANCH;
+    out_config->events[index].flags |= EventConfigFlags::COLLECT_LAST_BRANCH;
   }
 }
 
 namespace internal {
 
-void PerfmonToIoctlConfig(const Config& config,
-                          perfmon_ioctl_config_t* out_config) {
+void PerfmonToFidlConfig(const Config& config, FidlPerfmonConfig* out_config) {
   *out_config = {};
   FXL_DCHECK(config.GetEventCount() <= kMaxNumEvents);
 
   size_t i = 0;
-
   config.IterateOverEvents([&](const Config::EventConfig& event) {
-    ToIoctlEvent(event, i, out_config);
+    ToFidlEvent(event, i, out_config);
     ++i;
   });
 }

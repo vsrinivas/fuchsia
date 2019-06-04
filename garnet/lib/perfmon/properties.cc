@@ -7,8 +7,10 @@
 namespace perfmon {
 namespace internal {
 
-void IoctlToPerfmonProperties(const perfmon_ioctl_properties_t& props,
-                              Properties* out_props) {
+using ::fuchsia::perfmon::cpu::PropertyFlags;
+
+void FidlToPerfmonProperties(const FidlPerfmonProperties& props,
+                             Properties* out_props) {
   *out_props = {};
 
   out_props->api_version = props.api_version;
@@ -27,7 +29,7 @@ void IoctlToPerfmonProperties(const perfmon_ioctl_properties_t& props,
   out_props->max_misc_counter_width = props.max_misc_counter_width;
 
   out_props->flags = 0;
-  if (props.flags & PERFMON_PROPERTY_FLAG_HAS_LAST_BRANCH) {
+  if ((props.flags & PropertyFlags::HAS_LAST_BRANCH) == PropertyFlags::HAS_LAST_BRANCH) {
     out_props->flags |= Properties::kFlagHasLastBranch;
   }
 }

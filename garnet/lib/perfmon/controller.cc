@@ -4,11 +4,11 @@
 
 #include "garnet/lib/perfmon/controller.h"
 
-#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <fbl/algorithm.h>
-#include <src/lib/files/unique_fd.h>
+#include <fuchsia/perfmon/cpu/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
@@ -18,6 +18,9 @@
 #include "garnet/lib/perfmon/properties_impl.h"
 
 namespace perfmon {
+
+// Shorten some long FIDL names.
+using FidlPerfmonAllocation = ::fuchsia::perfmon::cpu::Allocation;
 
 const char kPerfMonDev[] = "/dev/sys/cpu-trace/perfmon";
 
@@ -54,54 +57,72 @@ bool Controller::IsSupported() {
 }
 
 bool Controller::GetProperties(Properties* props) {
-  int raw_fd = open(kPerfMonDev, O_WRONLY);
-  if (raw_fd < 0) {
-    FXL_LOG(ERROR) << "Failed to open " << kPerfMonDev << ": errno=" << errno;
+  ::fuchsia::perfmon::cpu::ControllerSyncPtr controller_ptr;
+  zx_status_t status = fdio_service_connect(
+      kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": "
+                   << status;
     return false;
   }
-  fxl::UniqueFD fd(raw_fd);
 
-  perfmon_ioctl_properties_t properties;
-  auto status = ioctl_perfmon_get_properties(fd.get(), &properties);
-  if (status < 0) {
+  FidlPerfmonProperties properties;
+  status = controller_ptr->GetProperties(&properties);
+  if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get properties: " << status;
     return false;
   }
 
-  internal::IoctlToPerfmonProperties(properties, props);
+  internal::FidlToPerfmonProperties(properties, props);
   return true;
 }
 
-bool Controller::Alloc(int fd, uint32_t num_traces,
-                       uint32_t buffer_size_in_pages) {
-  ioctl_perfmon_alloc_t alloc;
-  alloc.num_buffers = num_traces;
-  alloc.buffer_size_in_pages = buffer_size_in_pages;
+static bool Initialize(
+    ::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_ptr,
+    uint32_t num_traces, uint32_t buffer_size_in_pages) {
+  FidlPerfmonAllocation allocation;
+  allocation.num_buffers = num_traces;
+  allocation.buffer_size_in_pages = buffer_size_in_pages;
   FXL_VLOG(2) << fxl::StringPrintf("num_buffers=%u, buffer_size_in_pages=0x%x",
                                    num_traces, buffer_size_in_pages);
-  auto status = ioctl_perfmon_alloc_trace(fd, &alloc);
-  // TODO(dje): If we get BAD_STATE, a previous run may have crashed without
-  // resetting the device. The device doesn't reset itself on close yet.
-  if (status == ZX_ERR_BAD_STATE) {
-    FXL_VLOG(1) << "Got BAD_STATE trying to allocate a trace,"
-                << " resetting device and trying again";
-    status = ioctl_perfmon_stop(fd);
-    if (status != ZX_OK) {
-      FXL_VLOG(1) << "Stopping device failed: " << status;
-    }
-    status = ioctl_perfmon_free_trace(fd);
-    if (status != ZX_OK) {
-      FXL_VLOG(1) << "Freeing previous trace failed: " << status;
-    }
-    status = ioctl_perfmon_alloc_trace(fd, &alloc);
-    if (status == ZX_OK) {
-      FXL_VLOG(1) << "Second allocation succeeded";
-    }
+
+  ::fuchsia::perfmon::cpu::Controller_Initialize_Result result;
+  zx_status_t status = (*controller_ptr)->Initialize(allocation, &result);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Initialize failed: status=" << status;
+    return false;
+  }
+  if (result.is_err() && result.err() != ZX_ERR_BAD_STATE) {
+    FXL_LOG(ERROR) << "Initialize failed: error=" << result.err();
+    return false;
   }
 
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "ioctl_perfmon_alloc_trace failed: status=" << status;
-    return false;
+  // TODO(dje): If we get BAD_STATE, a previous run may have crashed without
+  // resetting the device. The device doesn't reset itself on close yet.
+  if (result.is_err()) {
+    FXL_DCHECK(result.err() == ZX_ERR_BAD_STATE);
+    FXL_VLOG(2) << "Got BAD_STATE trying to initialize a trace,"
+                << " resetting device and trying again";
+    status = (*controller_ptr)->Stop();
+    if (status != ZX_OK) {
+      FXL_VLOG(2) << "Stopping device failed: status=" << status;
+      return false;
+    }
+    status = (*controller_ptr)->Terminate();
+    if (status != ZX_OK) {
+      FXL_VLOG(2) << "Terminating previous trace failed: status=" << status;
+      return false;
+    }
+    status = (*controller_ptr)->Initialize(allocation, &result);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Initialize try #2 failed: status=" << status;
+      return false;
+    }
+    if (result.is_err()) {
+      FXL_LOG(ERROR) << "Initialize try #2 failed: error=" << result.err();
+      return false;
+    }
+    FXL_VLOG(2) << "Second Initialize attempt succeeded";
   }
 
   return true;
@@ -109,16 +130,18 @@ bool Controller::Alloc(int fd, uint32_t num_traces,
 
 bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
                         std::unique_ptr<Controller>* out_controller) {
-  int raw_fd = open(kPerfMonDev, O_WRONLY);
-  if (raw_fd < 0) {
-    FXL_LOG(ERROR) << "Failed to open " << kPerfMonDev << ": errno=" << errno;
-    return false;
-  }
-  fxl::UniqueFD fd(raw_fd);
-
   if (buffer_size_in_pages > kMaxBufferSizeInPages) {
     FXL_LOG(ERROR) << "Buffer size is too large, max " << kMaxBufferSizeInPages
                    << " pages";
+    return false;
+  }
+
+  ::fuchsia::perfmon::cpu::ControllerSyncPtr controller_ptr;
+  zx_status_t status = fdio_service_connect(
+      kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error connecting to " << kPerfMonDev << ": "
+                   << status;
     return false;
   }
 
@@ -129,12 +152,14 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
   uint32_t actual_buffer_size_in_pages =
       GetBufferSizeInPages(mode, buffer_size_in_pages);
 
-  if (!Alloc(fd.get(), num_traces, actual_buffer_size_in_pages)) {
+  if (!Initialize(&controller_ptr, num_traces,
+                  actual_buffer_size_in_pages)) {
     return false;
   }
 
   out_controller->reset(new internal::ControllerImpl(
-      std::move(fd), num_traces, buffer_size_in_pages, std::move(config)));
+      std::move(controller_ptr), num_traces, buffer_size_in_pages,
+      std::move(config)));
   return true;
 }
 

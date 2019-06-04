@@ -10,6 +10,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <fuchsia/perfmon/cpu/c/fidl.h>
 #include <lib/zx/bti.h>
 
 #include <ddk/driver.h>
@@ -27,6 +28,11 @@
 #endif
 
 namespace perfmon {
+
+// Shorten some long FIDL names.
+using FidlPerfmonAllocation = fuchsia_perfmon_cpu_Allocation;
+using FidlPerfmonConfig = fuchsia_perfmon_cpu_Config;
+using FidlPerfmonProperties = fuchsia_perfmon_cpu_Properties;
 
 #if defined(__x86_64__)
 using PmuHwProperties = X86PmuProperties;
@@ -61,17 +67,17 @@ zx_status_t BuildEventMap(const EventDetails* events, size_t count,
                           const uint16_t** out_event_map, size_t* out_map_size);
 
 // All configuration data is staged here before writing any MSRs, etc.
-// Then when ready the "START" ioctl will write all the necessary MSRS,
+// Then when ready the "Start" FIDL call will write all the necessary MSRS,
 // and do whatever kernel operations are required for collecting data.
 
 struct PmuPerTraceState {
     // True if |config| has been set.
     bool configured;
 
-    // The trace configuration as given to us via the ioctl.
-    perfmon_ioctl_config_t ioctl_config;
+    // The trace configuration as given to us via FIDL.
+    FidlPerfmonConfig fidl_config;
 
-    // The internalized form of |ioctl_config| that we pass to the kernel.
+    // The internalized form of |FidlPerfmonConfig| that we pass to the kernel.
     PmuConfig config;
 
     // # of entries in |buffers|.
@@ -94,7 +100,7 @@ class PerfmonDevice;
 using DeviceType = ddk::Device<PerfmonDevice,
                                ddk::Openable,
                                ddk::Closable,
-                               ddk::Ioctlable>;
+                               ddk::Messageable>;
 
 class PerfmonDevice : public DeviceType {
   public:
@@ -121,46 +127,39 @@ class PerfmonDevice : public DeviceType {
 
     void DdkRelease();
 
-    // Device protocol implementation
-    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-    zx_status_t DdkClose(uint32_t flags);
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
-
-  private:
-    static void FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t num_allocated);
-
     // Handlers for each of the operations.
-    zx_status_t PmuGetProperties(void* reply, size_t replymax,
-                                 size_t* out_actual);
-    zx_status_t PmuAllocTrace(const void* cmd, size_t cmdlen);
-    zx_status_t PmuFreeTrace();
-    zx_status_t PmuGetAlloc(void* reply, size_t replymax,
-                            size_t* out_actual);
-    zx_status_t PmuGetBufferHandle(const void* cmd, size_t cmdlen,
-                                   void* reply, size_t replymax,
-                                   size_t* out_actual);
-    zx_status_t PmuStageConfig(const void* cmd, size_t cmdlen);
-    zx_status_t PmuGetConfig(void* reply, size_t replymax, size_t* out_actual);
+    void PmuGetProperties(FidlPerfmonProperties* props);
+    zx_status_t PmuInitialize(const FidlPerfmonAllocation* allocation);
+    void PmuTerminate();
+    zx_status_t PmuGetAllocation(FidlPerfmonAllocation* allocation);
+    zx_status_t PmuGetBufferHandle(uint32_t descriptor,
+                                   zx_handle_t* out_handle);
+    zx_status_t PmuStageConfig(const FidlPerfmonConfig* config);
+    zx_status_t PmuGetConfig(FidlPerfmonConfig* config);
     zx_status_t PmuStart();
     void PmuStop();
 
-    zx_status_t IoctlWorker(uint32_t op, const void* cmd, size_t cmdlen,
-                            void* reply, size_t replymax, size_t* out_actual);
+    // Device protocol implementation
+    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+    zx_status_t DdkClose(uint32_t flags);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+  private:
+    static void FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t num_allocated);
 
     // Architecture-provided helpers for |PmuStageConfig()|.
     // Initialize |ss| in preparation for processing the PMU configuration.
     void InitializeStagingState(StagingState* ss);
     // Stage fixed counter |input_index| in |icfg|.
-    zx_status_t StageFixedConfig(const perfmon_ioctl_config_t* icfg,
+    zx_status_t StageFixedConfig(const FidlPerfmonConfig* icfg,
                                  StagingState* ss, unsigned input_index,
                                  PmuConfig* ocfg);
     // Stage fixed counter |input_index| in |icfg|.
-    zx_status_t StageProgrammableConfig(const perfmon_ioctl_config_t* icfg,
+    zx_status_t StageProgrammableConfig(const FidlPerfmonConfig* icfg,
                                         StagingState* ss, unsigned input_index,
                                         PmuConfig* ocfg);
     // Stage fixed counter |input_index| in |icfg|.
-    zx_status_t StageMiscConfig(const perfmon_ioctl_config_t* icfg,
+    zx_status_t StageMiscConfig(const FidlPerfmonConfig* icfg,
                                 StagingState* ss, unsigned input_index,
                                 PmuConfig* ocfg);
     // Verify the result. This is where the architecture can do any last

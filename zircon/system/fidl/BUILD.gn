@@ -70,6 +70,7 @@ group("fidl") {
     "fuchsia-net",
     "fuchsia-net-stack",
     "fuchsia-paver",
+    "fuchsia-perfmon-cpu",
     "fuchsia-power",
     "fuchsia-process",
     "fuchsia-scheduler",

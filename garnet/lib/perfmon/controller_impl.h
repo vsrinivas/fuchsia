@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_PERFMON_CONTROLLER_IMPL_H_
 #define GARNET_LIB_PERFMON_CONTROLLER_IMPL_H_
 
-#include <src/lib/files/unique_fd.h>
+#include <fuchsia/perfmon/cpu/cpp/fidl.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "garnet/lib/perfmon/controller.h"
@@ -13,9 +13,11 @@
 namespace perfmon {
 namespace internal {
 
+using ::fuchsia::perfmon::cpu::ControllerSyncPtr;
+
 class ControllerImpl final : public Controller {
  public:
-  ControllerImpl(fxl::UniqueFD fd, uint32_t num_traces,
+  ControllerImpl(ControllerSyncPtr controller_ptr, uint32_t num_traces,
                  uint32_t buffer_size_in_pages, Config config);
   ~ControllerImpl() override;
 
@@ -36,10 +38,10 @@ class ControllerImpl final : public Controller {
 
  private:
   bool Stage();
-  void Free();
+  void Terminate();
   void Reset();
 
-  fxl::UniqueFD fd_;
+  ControllerSyncPtr controller_ptr_;
   // The number of traces we will collect (== #cpus for now).
   uint32_t num_traces_;
   // This is the actual buffer size we use, in pages.

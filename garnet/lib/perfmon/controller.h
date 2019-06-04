@@ -61,9 +61,6 @@ class Controller {
  protected:
   Controller() = default;
 
- private:
-  static bool Alloc(int fd, uint32_t num_traces, uint32_t buffer_size_in_pages);
-
   FXL_DISALLOW_COPY_AND_ASSIGN(Controller);
 };
 

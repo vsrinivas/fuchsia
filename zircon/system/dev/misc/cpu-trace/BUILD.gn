@@ -19,9 +19,11 @@ driver("cpu-trace") {
 
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/fidl/fuchsia-perfmon-cpu:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",

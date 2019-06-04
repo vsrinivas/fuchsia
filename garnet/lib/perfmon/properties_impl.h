@@ -5,17 +5,22 @@
 #ifndef GARNET_LIB_PERFMON_PROPERTIES_IMPL_H_
 #define GARNET_LIB_PERFMON_PROPERTIES_IMPL_H_
 
+#include <fuchsia/perfmon/cpu/cpp/fidl.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 
 #include "garnet/lib/perfmon/properties.h"
 
 namespace perfmon {
+
+using FidlPerfmonProperties = fuchsia::perfmon::cpu::Properties;
+
 namespace internal {
 
-void IoctlToPerfmonProperties(const perfmon_ioctl_properties_t& props,
-                              Properties* out_props);
+void FidlToPerfmonProperties(const FidlPerfmonProperties& props,
+                             Properties* out_props);
 
 }  // namespace internal
+
 }  // namespace perfmon
 
 #endif  // GARNET_LIB_PERFMON_PROPERTIES_IMPL_H_
