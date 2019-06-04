@@ -9,6 +9,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/files/glob.h>
+#include <test/modular/test/harness/cpp/fidl.h>
 
 #include "gmock/gmock.h"
 
@@ -300,4 +301,110 @@ TEST(TestHarnessFixtureCleanupTest, CleanupInDestructor) {
   // TestHarnessFixture is destroyed.
   exists = files::Glob(kTestHarnessHubGlob).size() == 1;
   EXPECT_FALSE(exists);
+}
+
+// TestHarnessBuilder. Provides a service directory, typically used for testing
+// environment service building.
+class TestHarnessBuilderTest : public modular::testing::TestHarnessFixture {
+ public:
+  TestHarnessBuilderTest() {
+    zx::channel dir_req;
+    env_service_dir_ = sys::ServiceDirectory::CreateWithRequest(&dir_req);
+    env_pseudo_dir_.Serve(
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+        std::move(dir_req));
+  }
+
+  template <typename Interface>
+  void AddEnvService(fidl::InterfaceRequestHandler<Interface> req_handler) {
+    env_pseudo_dir_.AddEntry(
+        Interface::Name_,
+        std::make_unique<vfs::Service>(
+            [req_handler = std::move(req_handler)](
+                zx::channel request, async_dispatcher_t* dispatcher) mutable {
+              req_handler(
+                  fidl::InterfaceRequest<Interface>(std::move(request)));
+            }));
+  }
+
+  std::shared_ptr<sys::ServiceDirectory> env_service_dir() {
+    return env_service_dir_;
+  }
+
+ private:
+  vfs::PseudoDir env_pseudo_dir_;
+  std::shared_ptr<sys::ServiceDirectory> env_service_dir_;
+};
+
+// A Pinger implementation used for testing environment services.
+class PingerImpl : public test::modular::test::harness::Pinger {
+ public:
+  bool pinged() { return pinged_; }
+
+ private:
+  // |test::modular::test::harness::Pinger|
+  void Ping() override { pinged_ = true; }
+
+  bool pinged_ = false;
+};
+
+// Inject the 'Pinger' service into the env. Test that we can connect to Pinger
+// and use it successfully.
+TEST_F(TestHarnessBuilderTest, AddService) {
+  PingerImpl pinger_impl;
+  fidl::BindingSet<test::modular::test::harness::Pinger> pinger_bindings;
+
+  modular::testing::TestHarnessBuilder builder;
+  builder.AddService<test::modular::test::harness::Pinger>(
+      pinger_bindings.GetHandler(&pinger_impl));
+  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
+  test_harness()->Run(builder.BuildSpec());
+
+  test::modular::test::harness::PingerPtr pinger;
+  test_harness()->ConnectToEnvironmentService(
+      test::modular::test::harness::Pinger::Name_,
+      pinger.NewRequest().TakeChannel());
+
+  pinger->Ping();
+  RunLoopUntil([&] { return pinger_impl.pinged(); });
+}
+
+// Test that TestHarnessBuilder::BuildSpec() populates the
+// env_services.services_from_components correctly.
+TEST_F(TestHarnessBuilderTest, AddServiceFromComponent) {
+  modular::testing::TestHarnessBuilder builder;
+  auto fake_url = builder.GenerateFakeUrl();
+  builder.AddServiceFromComponent<test::modular::test::harness::Pinger>(
+      fake_url);
+  auto spec = builder.BuildSpec();
+
+  auto& services_from_components =
+      spec.env_services().services_from_components();
+  ASSERT_EQ(1u, services_from_components.size());
+  EXPECT_EQ(test::modular::test::harness::Pinger::Name_,
+            services_from_components[0].name);
+  EXPECT_EQ(fake_url, services_from_components[0].url);
+}
+
+// Test that InheritService() borrows services from the given |service_dir|.
+// This is tested by trying to inherit and use the Pinger service.
+TEST_F(TestHarnessBuilderTest, AddServiceFromServiceDirectory) {
+  PingerImpl pinger_impl;
+  fidl::BindingSet<test::modular::test::harness::Pinger> pinger_bindings;
+
+  AddEnvService<test::modular::test::harness::Pinger>(
+      pinger_bindings.GetHandler(&pinger_impl));
+
+  modular::testing::TestHarnessBuilder builder;
+  builder.AddServiceFromServiceDirectory<test::modular::test::harness::Pinger>(
+      env_service_dir());
+  test_harness()->Run(builder.BuildSpec());
+
+  test::modular::test::harness::PingerPtr pinger;
+  test_harness()->ConnectToEnvironmentService(
+      test::modular::test::harness::Pinger::Name_,
+      pinger.NewRequest().TakeChannel());
+
+  pinger->Ping();
+  RunLoopUntil([&] { return pinger_impl.pinged(); });
 }

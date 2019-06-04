@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/cpp/sdk_source_set.gni")
+import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 
@@ -50,12 +51,19 @@ sdk_source_set("test_harness_fixture") {
   ]
 }
 
+fidl("test.modular.test.harness") {
+  sources = [
+    "test_harness_fixture.test.fidl",
+  ]
+}
+
 executable("test_harness_fixture_test_bin") {
   testonly = true
   sources = [
     "test_harness_fixture_test.cc",
   ]
   deps = [
+    ":test.modular.test.harness",
     ":test_harness_fixture",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.testing",

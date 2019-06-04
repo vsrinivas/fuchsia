@@ -63,6 +63,13 @@ bool BufferFromString(std::string str, fuchsia::mem::Buffer* buffer) {
 }  // namespace
 
 fuchsia::modular::testing::TestHarnessSpec TestHarnessBuilder::BuildSpec() {
+  fuchsia::io::DirectoryPtr dir;
+  // This directory must be READABLE *and* WRITABLE, otherwise service
+  // connections fail.
+  env_services_.Serve(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      dir.NewRequest().TakeChannel());
+  spec_.mutable_env_services()->set_service_dir(dir.Unbind().TakeChannel());
   return std::move(spec_);
 }
 
@@ -146,6 +153,33 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(
       ->mutable_app_config()
       ->set_url(url);
   return *this;
+}
+
+TestHarnessBuilder& TestHarnessBuilder::AddService(
+    const std::string& service_name, vfs::Service::Connector connector) {
+  env_services_.AddEntry(service_name,
+                         std::make_unique<vfs::Service>(std::move(connector)));
+  return *this;
+}
+
+TestHarnessBuilder& TestHarnessBuilder::AddServiceFromComponent(
+    const std::string& service_name, const std::string& component_url) {
+  fuchsia::modular::testing::ComponentService svc;
+  svc.name = service_name;
+  svc.url = component_url;
+  spec_.mutable_env_services()->mutable_services_from_components()->push_back(
+      std::move(svc));
+  return *this;
+}
+
+TestHarnessBuilder& TestHarnessBuilder::AddServiceFromServiceDirectory(
+    const std::string& service_name,
+    std::shared_ptr<sys::ServiceDirectory> services) {
+  return AddService(service_name, [service_name, services](
+                                      zx::channel request,
+                                      async_dispatcher_t* dispatcher) mutable {
+    services->Connect(service_name, std::move(request));
+  });
 }
 
 std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) const {
@@ -248,8 +282,8 @@ std::string TestHarnessFixture::InterceptStoryShell(
 }
 
 void TestHarnessFixture::AddModToStory(fuchsia::modular::Intent intent,
-                                          std::string mod_name,
-                                          std::string story_name) {
+                                       std::string mod_name,
+                                       std::string story_name) {
   fuchsia::modular::AddMod add_mod;
   add_mod.mod_name_transitional = {mod_name};
   add_mod.intent = std::move(intent);
@@ -278,12 +312,13 @@ void TestHarnessFixture::AddModToStory(fuchsia::modular::Intent intent,
 TestHarnessFixture::TestHarnessFixture() {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kTestHarnessUrl;
-  svc_ =
+  test_harness_svc_ =
       sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher_ptr()->CreateComponent(std::move(launch_info),
                                   test_harness_ctrl_.NewRequest());
 
-  test_harness_ = svc_->Connect<fuchsia::modular::testing::TestHarness>();
+  test_harness_ =
+      test_harness_svc_->Connect<fuchsia::modular::testing::TestHarness>();
 }
 
 }  // namespace testing
