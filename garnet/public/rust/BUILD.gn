@@ -13,6 +13,7 @@ unittest_package("rust-crates-tests") {
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
     "fuchsia-inspect",
+    "fuchsia-inspect-contrib",
     "fuchsia-merkle",
     "fuchsia-trace",
     "fuchsia-vfs/pseudo-fs",
@@ -38,6 +39,10 @@ unittest_package("rust-crates-tests") {
     },
     {
       name = "fuchsia_inspect_lib_test"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_inspect_contrib_lib_test"
       environments = basic_envs
     },
     {
