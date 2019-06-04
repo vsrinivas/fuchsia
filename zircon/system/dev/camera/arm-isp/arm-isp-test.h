@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "global_regs.h"
+#include "pingpong_regs.h"
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
@@ -16,6 +19,13 @@
 namespace camera {
 // |ArmIspDeviceTester| is spawned by the driver in |arm-isp.cpp|
 // This provides the interface provided in fuchsia-camera-test/isp.fidl in Zircon.
+
+// Organizes the data from a register dump.
+struct ArmIspRegisterDump {
+    uint32_t global_config[kGlobalConfigSize];
+    uint32_t ping_config[kContextConfigSize];
+    uint32_t pong_config[kContextConfigSize];
+};
 
 class ArmIspDevice;
 
@@ -52,6 +62,11 @@ private:
     static constexpr fuchsia_camera_test_IspTester_ops isp_tester_ops = {
         .RunTests = fidl::Binder<ArmIspDeviceTester>::BindMember<&ArmIspDeviceTester::RunTests>,
     };
+
+    // ISP Tests:
+    // Test the GetRegisters interface by writing to a register.
+    // |report| is updated with the results of the tests this function performs.
+    void TestWriteRegister(fuchsia_camera_test_TestReport& report);
 
     // The ArmIspDevice is a parent of the ArmIspDeviceTester.  It will call Disconnect()
     // during its DdkUnbind() call, so that isp_ never references an invalid instance.

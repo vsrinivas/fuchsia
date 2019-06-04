@@ -98,6 +98,10 @@ private:
     zx_status_t StartStreaming();
     zx_status_t StopStreaming();
 
+    // Functions used by the debugging / testing interface:
+    // Returns all the current registers written into a struct for analysis.
+    ArmIspRegisterDump DumpRegisters();
+
     ddk::PDev pdev_;
 
     ddk::MmioBuffer hiu_mmio_;

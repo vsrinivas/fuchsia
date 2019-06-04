@@ -55,6 +55,36 @@ zx_status_t ArmIspDeviceTester::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_camera_test_IspTester_dispatch(this, txn, msg, &isp_tester_ops);
 }
 
+void ArmIspDeviceTester::TestWriteRegister(fuchsia_camera_test_TestReport& report) {
+    // We'll enable then disable the global debug register:
+    fbl::AutoLock guard(&isp_lock_);
+    IspGlobalDbg::Get()
+        .ReadFrom(&(isp_->isp_mmio_))
+        .set_mode_en(1)
+        .WriteTo(&(isp_->isp_mmio_));
+    ArmIspRegisterDump after_enable = isp_->DumpRegisters();
+    IspGlobalDbg::Get()
+        .ReadFrom(&(isp_->isp_mmio_))
+        .set_mode_en(0)
+        .WriteTo(&(isp_->isp_mmio_));
+    ArmIspRegisterDump after_disable = isp_->DumpRegisters();
+    uint32_t offset = IspGlobalDbg::Get().addr() / 4; // divide by 4 to get the word address.
+
+    report.test_count += 2;
+    if (after_enable.global_config[offset] != 1) {
+        zxlogf(ERROR, "%s Global debug was not enabled!\n", __func__);
+        report.failure_count++;
+    } else {
+        report.success_count++;
+    }
+    if (after_disable.global_config[offset] != 0) {
+        zxlogf(ERROR, "%s Global debug was not disabled!\n", __func__);
+        report.failure_count++;
+    } else {
+        report.success_count++;
+    }
+}
+
 // DDKMessage Helper Functions.
 zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
     fuchsia_camera_test_TestReport report = {1, 0, 0};
@@ -67,6 +97,7 @@ zx_status_t ArmIspDeviceTester::RunTests(fidl_txn_t* txn) {
     } else {
         report.failure_count++;
     }
+    TestWriteRegister(report);
     return fuchsia_camera_test_IspTesterRunTests_reply(txn, ZX_OK, &report);
 }
 

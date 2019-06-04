@@ -9,6 +9,10 @@
 
 namespace camera {
 
+// some consts relating to the size of configs:
+// Size of the global config in 32bit words:
+constexpr size_t kGlobalConfigSize = 64;
+
 class Id_Api : public hwreg::RegisterBase<Id_Api, uint32_t> {
 public:
     DEF_FIELD(31, 0, value);

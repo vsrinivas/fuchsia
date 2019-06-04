@@ -10,6 +10,21 @@
 
 namespace camera {
 
+// ISP memory offsets
+constexpr uint32_t kDecompander0PingOffset = 0xAB6C;
+constexpr uint32_t kPingConfigSize = 0x17FC0;
+constexpr uint32_t kAexpHistStatsOffset = 0x24A8;
+constexpr uint32_t kHistSize = 0x2000;
+constexpr uint32_t kPingMeteringStatsOffset = 0x44B0;
+constexpr uint32_t kPongMeteringStatsOffset = kPingMeteringStatsOffset + kPingConfigSize;
+constexpr uint32_t kDecompander0PongOffset = kDecompander0PingOffset + kPingConfigSize;
+constexpr uint32_t kMeteringSize = 0x8000;
+constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
+constexpr uint32_t kConfigSize = 0x1231C;
+constexpr uint32_t kPingContextConfigOffset = 0x18e88;
+constexpr uint32_t kPongContextConfigOffset = 0x30E48;
+constexpr uint32_t kContextConfigSize = 0x1000; // in 32 bit words
+
 #define DEF_NAMESPACE_REG(classname, namespc, address)                                \
     namespace namespc {                                                               \
     class classname : public camera::classname {                                      \

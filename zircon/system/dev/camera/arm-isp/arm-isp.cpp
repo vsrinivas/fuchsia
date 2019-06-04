@@ -40,18 +40,6 @@ constexpr uint8_t kCopyFromIsp = 1;
 constexpr uint8_t kSafeStop = 0;
 constexpr uint8_t kSafeStart = 1;
 
-// ISP memory offsets
-constexpr uint32_t kDecompander0PingOffset = 0xAB6C;
-constexpr uint32_t kPingConfigSize = 0x17FC0;
-constexpr uint32_t kAexpHistStatsOffset = 0x24A8;
-constexpr uint32_t kHistSize = 0x2000;
-constexpr uint32_t kPingMeteringStatsOffset = 0x44B0;
-constexpr uint32_t kPongMeteringStatsOffset = kPingMeteringStatsOffset + kPingConfigSize;
-constexpr uint32_t kDecompander0PongOffset = kDecompander0PingOffset + kPingConfigSize;
-constexpr uint32_t kMeteringSize = 0x8000;
-constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
-constexpr uint32_t kConfigSize = 0x1231C;
-
 enum {
     COMPONENT_PDEV,
     COMPONENT_CAMERA_SENSOR,
@@ -256,6 +244,20 @@ zx_status_t ArmIspDevice::IspContextInit() {
 
     // Input port safe start
     return SetPort(kSafeStart);
+}
+
+ArmIspRegisterDump ArmIspDevice::DumpRegisters() {
+    ArmIspRegisterDump dump;
+    // First dump the global registers:
+    for (size_t i = 0; i < kGlobalConfigSize; i++) {
+        dump.global_config[i] = isp_mmio_.Read<uint32_t>(4 * i);
+    }
+    // Then ping and pong:
+    for (size_t i = 0; i < kContextConfigSize; i++) {
+        dump.ping_config[i] = isp_mmio_.Read<uint32_t>(kPingContextConfigOffset + 4 * i);
+        dump.pong_config[i] = isp_mmio_.Read<uint32_t>(kPongContextConfigOffset + 4 * i);
+    }
+    return dump;
 }
 
 zx_status_t ArmIspDevice::InitIsp() {
