@@ -97,13 +97,6 @@ should be reported.
 
 ## Tips and tricks
 
-### Visualizing the hierarchy of build packages
-
-```bash
-$ scripts/visualize_module_tree.py > tree.dot
-$ dot -Tpng tree.dot -o tree.png
-```
-
 ### Inspecting the content of a GN target
 
 ```bash
