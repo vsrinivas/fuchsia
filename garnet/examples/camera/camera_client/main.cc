@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/eventpair.h>
+#include <src/lib/fxl/logging.h>
+
+#include <iostream>
 
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
@@ -43,7 +43,7 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
        or the full path to the camera driver if use_camera_manager
        is false
  */
-zx_status_t run_camera(bool use_camera_manager, const char *source) {
+zx_status_t run_camera(bool use_camera_manager, const char* source) {
   printf("Connecting to camera using %s\n",
          use_camera_manager ? "camera manager" : "camera driver");
 
@@ -129,7 +129,7 @@ int main(int argc, const char** argv) {
   printf("hello camera client\n");
 
   bool use_camera_manager = true;
-  const char *source = "0";
+  const char* source = "0";
   for (int i = 1; i < argc; ++i) {
     if (!strcmp("--driver", argv[i])) {
       use_camera_manager = false;

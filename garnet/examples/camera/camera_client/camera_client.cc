@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include "garnet/examples/camera/camera_client/camera_client.h"
 
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/fzl/fdio.h>
+
+#include <iostream>
 
 namespace camera {
 
@@ -88,9 +88,10 @@ zx_status_t Client::StartManager(int device_id) {
   }
 
   return LoadVideoFormats(
-      [device_id, &devices, this](uint32_t format_index,
-                       std::vector<fuchsia::camera::VideoFormat> *formats,
-                       uint32_t *total_format_count) {
+      [device_id, &devices, this](
+          uint32_t format_index,
+          std::vector<fuchsia::camera::VideoFormat> *formats,
+          uint32_t *total_format_count) {
         return manager()->GetFormats(devices[device_id].camera_id, format_index,
                                      formats, total_format_count);
       });

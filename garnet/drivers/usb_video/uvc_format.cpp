@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/drivers/usb_video/uvc_format.h"
+
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/vector.h>
@@ -10,7 +12,6 @@
 #include <zircon/hw/usb/video.h>
 
 #include "garnet/drivers/usb_video/usb-video-stream.h"
-#include "garnet/drivers/usb_video/uvc_format.h"
 
 namespace video {
 namespace usb {

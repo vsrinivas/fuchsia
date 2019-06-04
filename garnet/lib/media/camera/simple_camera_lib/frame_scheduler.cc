@@ -13,9 +13,10 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   uint64_t now_ns = zx_clock_get_monotonic();
 
   if (now_ns < capture_time_ns) {
-      FXL_LOG(WARNING) << "Capture time is in the future!"
-      << " now: " << now_ns << " capture_time_ns " << capture_time_ns;
-      capture_time_ns = now_ns;
+    FXL_LOG(WARNING) << "Capture time is in the future!"
+                     << " now: " << now_ns << " capture_time_ns "
+                     << capture_time_ns;
+    capture_time_ns = now_ns;
   }
 
   if (last_capture_time_ns_ > capture_time_ns) {
@@ -37,9 +38,8 @@ uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   // add the lead delay, and send it out:
   if (now_ns - capture_time_ns > kAcquireDelayNs) {
     FXL_VLOG(1) << "Unexpected delay between capture and availability!"
-                     << " now_ns - capture_time_ns = "
-                     << now_ns - capture_time_ns << " > AcquireDelay ("
-                     << kAcquireDelayNs << ")";
+                << " now_ns - capture_time_ns = " << now_ns - capture_time_ns
+                << " > AcquireDelay (" << kAcquireDelayNs << ")";
     pres_time = now_ns + kLeadDelayNs;
   }
 

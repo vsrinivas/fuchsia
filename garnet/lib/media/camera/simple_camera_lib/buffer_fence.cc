@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/lib/media/camera/simple_camera_lib/buffer_fence.h>
+#include "garnet/lib/media/camera/simple_camera_lib/buffer_fence.h"
 
 #include <fcntl.h>
-#include <stdio.h>
-#include <unistd.h>
-
-#include <memory>
-#include <utility>
-
 #include <lib/async/default.h>
 #include <lib/fdio/io.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include <memory>
+#include <utility>
 
 namespace simple_camera {
 
@@ -46,15 +45,12 @@ std::unique_ptr<BufferFence> BufferFence::Create(uint32_t index) {
 
 BufferFence::BufferFence() = default;
 
-BufferFence::~BufferFence() {
- release_fence_waiter_.Cancel();
-}
+BufferFence::~BufferFence() { release_fence_waiter_.Cancel(); }
 
-void BufferFence::OnReleaseFenceSignalled(
-    async_dispatcher_t* dispatcher,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal* signal) {
+void BufferFence::OnReleaseFenceSignalled(async_dispatcher_t* dispatcher,
+                                          async::WaitBase* wait,
+                                          zx_status_t status,
+                                          const zx_packet_signal* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "AsyncWaiter received an error ("
                    << zx_status_get_string(status) << ").  Exiting.";
@@ -93,8 +89,6 @@ void BufferFence::Reset() {
   release_fence_.signal(ZX_EVENT_SIGNALED, 0);
 }
 
-void BufferFence::Signal() {
-  acquire_fence_.signal(0, ZX_EVENT_SIGNALED);
-}
+void BufferFence::Signal() { acquire_fence_.signal(0, ZX_EVENT_SIGNALED); }
 
 }  // namespace simple_camera

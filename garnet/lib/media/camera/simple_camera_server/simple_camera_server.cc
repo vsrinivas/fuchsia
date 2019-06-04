@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "simple_camera_server_app.h"
-
 #include <lib/async-loop/cpp/loop.h>
+
+#include "simple_camera_server_app.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

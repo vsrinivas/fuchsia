@@ -10,8 +10,8 @@
 #include <fuchsia/camera/cpp/fidl.h>
 #include <usb/usb.h>
 #include <zircon/compiler.h>
-#include <zircon/hw/usb/video.h>
 #include <zircon/hw/usb.h>
+#include <zircon/hw/usb/video.h>
 
 namespace video {
 namespace usb {
@@ -31,7 +31,7 @@ struct UvcFrameDesc {
 
 enum UvcPixelFormat {
   INVALID,  // default value, not supported
-  BGRA32,    // 32bpp BGRA, 1 plane.
+  BGRA32,   // 32bpp BGRA, 1 plane.
   I420,
   M420,
   NV12,
@@ -61,8 +61,7 @@ struct UvcFormat {
 
 fuchsia::camera::VideoFormat ToFidl(const UvcFormat &format_in);
 
-bool Compare(const fuchsia::camera::VideoFormat &vf,
-             const UvcFormat &uf);
+bool Compare(const fuchsia::camera::VideoFormat &vf, const UvcFormat &uf);
 
 class UvcFormatList {
  public:

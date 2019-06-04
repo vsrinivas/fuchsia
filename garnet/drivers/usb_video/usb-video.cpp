@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/drivers/usb_video/usb-video.h"
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
-#include <usb/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
+#include <usb/usb.h>
 #include <zircon/hw/usb/video.h>
 
 #include "garnet/drivers/usb_video/usb-video-stream.h"
-#include "garnet/drivers/usb_video/usb-video.h"
 #include "garnet/drivers/usb_video/uvc_format.h"
 
 namespace {
@@ -31,9 +32,9 @@ std::string FetchString(const usb_protocol_t& usb_proto,
   uint8_t str_buf[kUsbDescriptorStringSize];
   size_t buflen = sizeof(str_buf);
   uint16_t language_id = 0;
-  zx_status_t res = usb_get_string_descriptor(&usb_proto, description_index,
-                                              language_id,  &language_id,
-                                              str_buf, buflen, &buflen);
+  zx_status_t res =
+      usb_get_string_descriptor(&usb_proto, description_index, language_id,
+                                &language_id, str_buf, buflen, &buflen);
   if (res != ZX_OK) {
     return std::string();
   }
@@ -320,7 +321,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
   if (formats.Size() > 0) {
     status = video::usb::UsbVideoStream::Create(
         device, &usb, video_source_index++, intf, control_header, input_header,
-        std::move(formats), &streaming_settings, std::move(device_info), parent_req_size);
+        std::move(formats), &streaming_settings, std::move(device_info),
+        parent_req_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "UsbVideoStream::Create failed: %d\n", status);
     }

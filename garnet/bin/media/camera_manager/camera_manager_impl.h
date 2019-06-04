@@ -5,14 +5,14 @@
 #ifndef GARNET_BIN_MEDIA_CAMERA_MANAGER_CAMERA_MANAGER_IMPL_H_
 #define GARNET_BIN_MEDIA_CAMERA_MANAGER_CAMERA_MANAGER_IMPL_H_
 
-#include <list>
-
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <garnet/bin/media/camera_manager/video_device_client.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/io/device_watcher.h>
+
+#include <list>
 
 namespace camera {
 // Implements camera::Manager FIDL service.  Keeps track of the cameras and

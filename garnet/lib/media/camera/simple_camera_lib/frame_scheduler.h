@@ -6,12 +6,12 @@
 #define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_FRAME_SCHEDULER_H_
 
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <deque>
 #include <mutex>
 #include <thread>
-
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace simple_camera {
 
@@ -102,8 +102,7 @@ class SimpleFrameScheduler {
   // @param pres_interval the period in ns between frame presentations
   // @param requested_pres_time the time in the CLOCK_MONOTONIC domain
   // when we requested the frame be presented.
-  void OnFramePresented(uint64_t pres_time,
-                        uint64_t pres_interval,
+  void OnFramePresented(uint64_t pres_time, uint64_t pres_interval,
                         uint64_t requested_pres_time = 0);
 
  private:

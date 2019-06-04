@@ -14,10 +14,10 @@
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/fzl/vmo-pool.h>
 #include <lib/zx/vmo.h>
 #include <usb/usb.h>
 
-#include <lib/fzl/vmo-pool.h>
 #include "garnet/drivers/usb_video/camera_control_impl.h"
 #include "garnet/drivers/usb_video/usb-video.h"
 #include "garnet/drivers/usb_video/uvc_format.h"

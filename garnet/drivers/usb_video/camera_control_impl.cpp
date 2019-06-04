@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include "src/lib/fxl/logging.h"
-
 #include "garnet/drivers/usb_video/camera_control_impl.h"
+
+#include <ddk/debug.h>
+
 #include "garnet/drivers/usb_video/usb-video-stream.h"
+#include "src/lib/fxl/logging.h"
 
 namespace camera {
 
@@ -34,7 +35,8 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
     }
   }
 
-  size_t min_index = std::max((size_t)0, std::min((size_t)index, formats_->size() - 1));
+  size_t min_index =
+      std::max((size_t)0, std::min((size_t)index, formats_->size() - 1));
   size_t max_index =
       std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
                formats_->size() - 1);

@@ -10,8 +10,8 @@
 #include <fuchsia/camera/cpp/fidl.h>
 #include <usb/usb.h>
 #include <zircon/compiler.h>
-#include <zircon/hw/usb/video.h>
 #include <zircon/hw/usb.h>
+#include <zircon/hw/usb/video.h>
 
 #include "garnet/drivers/usb_video/uvc_format.h"
 

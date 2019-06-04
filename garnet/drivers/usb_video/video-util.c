@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <usb/usb.h>
-#include <string.h>
-
 #include "garnet/drivers/usb_video/video-util.h"
+
+#include <ddk/debug.h>
+#include <string.h>
+#include <usb/usb.h>
 
 static void print_controls(usb_video_vc_probe_and_commit_controls* proposal) {
   zxlogf(TRACE, "bmHint 0x%x\n", proposal->bmHint);
@@ -31,10 +31,10 @@ zx_status_t usb_video_negotiate_probe(
   // (in this case USB_VIDEO_VS_PROBE_CONTROL) in the high byte,
   // and the low byte must be set to zero.
   // See UVC 1.5 Spec. 4.2.1 Interface Control Requests.
-  status = usb_control_out(usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                           USB_VIDEO_SET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8,
-                           vs_interface_num, ZX_TIME_INFINITE,
-                           proposal, sizeof(*proposal));
+  status = usb_control_out(
+      usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+      USB_VIDEO_SET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8, vs_interface_num,
+      ZX_TIME_INFINITE, proposal, sizeof(*proposal));
   if (status != ZX_OK)
     goto out;
 
@@ -42,10 +42,10 @@ zx_status_t usb_video_negotiate_probe(
   memset(out_result, 0, sizeof(usb_video_vc_probe_and_commit_controls));
 
   zxlogf(TRACE, "usb_video_negotiate_probe: PROBE_CONTROL GET_CUR\n");
-  status = usb_control_in(usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                          USB_VIDEO_GET_CUR, USB_VIDEO_VS_PROBE_CONTROL << 8,
-                          vs_interface_num, ZX_TIME_INFINITE,
-                          out_result, sizeof(*out_result), &out_length);
+  status = usb_control_in(
+      usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE, USB_VIDEO_GET_CUR,
+      USB_VIDEO_VS_PROBE_CONTROL << 8, vs_interface_num, ZX_TIME_INFINITE,
+      out_result, sizeof(*out_result), &out_length);
   if (status != ZX_OK) {
     goto out;
   }

@@ -26,7 +26,7 @@ namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQS = 8;
 // Device FIDL thunks
-const fuchsia_hardware_camera_Device_ops_t UsbVideoStream::CAMERA_FIDL_THUNKS {
+const fuchsia_hardware_camera_Device_ops_t UsbVideoStream::CAMERA_FIDL_THUNKS{
     .GetChannel = [](void* ctx, zx_handle_t handle) -> zx_status_t {
       return reinterpret_cast<UsbVideoStream*>(ctx)->GetChannel(handle);
     },
@@ -42,7 +42,8 @@ fbl::unique_ptr<async::Loop> UsbVideoStream::fidl_dispatch_loop_ = nullptr;
 UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb,
                                UvcFormatList format_list,
                                fbl::Vector<UsbVideoStreamingSetting>* settings,
-                               UsbDeviceInfo device_info, size_t parent_req_size)
+                               UsbDeviceInfo device_info,
+                               size_t parent_req_size)
     : UsbVideoStreamBase(parent),
       usb_(*usb),
       format_list_(std::move(format_list)),
@@ -61,14 +62,16 @@ UsbVideoStream::~UsbVideoStream() {
   // List may not have been initialized.
   if (free_reqs_.next) {
     while (!list_is_empty(&free_reqs_)) {
-      usb_request_release(usb_req_list_remove_head(&free_reqs_, parent_req_size_));
+      usb_request_release(
+          usb_req_list_remove_head(&free_reqs_, parent_req_size_));
     }
   }
 }
 
-void UsbVideoStream::RequestCompleteCallback(void* ctx, usb_request_t* request) {
-    ZX_DEBUG_ASSERT(ctx != nullptr);
-    reinterpret_cast<UsbVideoStream*>(ctx)->RequestComplete(request);
+void UsbVideoStream::RequestCompleteCallback(void* ctx,
+                                             usb_request_t* request) {
+  ZX_DEBUG_ASSERT(ctx != nullptr);
+  reinterpret_cast<UsbVideoStream*>(ctx)->RequestComplete(request);
 }
 
 // static
@@ -76,15 +79,16 @@ zx_status_t UsbVideoStream::Create(
     zx_device_t* device, usb_protocol_t* usb, int index,
     usb_interface_descriptor_t* intf, usb_video_vc_header_desc* control_header,
     usb_video_vs_input_header_desc* input_header, UvcFormatList format_list,
-    fbl::Vector<UsbVideoStreamingSetting>* settings,
-    UsbDeviceInfo device_info, size_t parent_req_size) {
+    fbl::Vector<UsbVideoStreamingSetting>* settings, UsbDeviceInfo device_info,
+    size_t parent_req_size) {
   if (!usb || !intf || !control_header || !input_header || !settings ||
       settings->size() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto dev = fbl::unique_ptr<UsbVideoStream>(new UsbVideoStream(
-      device, usb, std::move(format_list), settings, std::move(device_info), parent_req_size));
+  auto dev = fbl::unique_ptr<UsbVideoStream>(
+      new UsbVideoStream(device, usb, std::move(format_list), settings,
+                         std::move(device_info), parent_req_size));
 
   char name[ZX_DEVICE_NAME_MAX];
   snprintf(name, sizeof(name), "usb-video-source-%d", index);
@@ -163,7 +167,8 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
   }
   // Need to allocate new usb requests, release any existing ones.
   while (!list_is_empty(&free_reqs_)) {
-    usb_request_release(usb_req_list_remove_head(&free_reqs_, parent_req_size_));
+    usb_request_release(
+        usb_req_list_remove_head(&free_reqs_, parent_req_size_));
   }
 
   zxlogf(TRACE, "allocating %d usb requests of size %lu\n",
@@ -293,7 +298,8 @@ zx_status_t UsbVideoStream::GetChannel(zx_handle_t handle) {
   if (handle == ZX_HANDLE_INVALID) {
     return ZX_ERR_INVALID_ARGS;
   }
-  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(std::move(channel));
+  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface(
+      std::move(channel));
   camera_control_ = std::make_unique<camera::ControlImpl>(
       this, std::move(control_interface), fidl_dispatch_loop_->dispatcher(),
       [this] {
@@ -417,8 +423,8 @@ void UsbVideoStream::QueueRequestLocked() {
   num_free_reqs_--;
   req->header.length = send_req_size_;
   usb_request_complete_t complete = {
-    .callback = UsbVideoStream::RequestCompleteCallback,
-    .ctx = this,
+      .callback = UsbVideoStream::RequestCompleteCallback,
+      .ctx = this,
   };
   usb_request_queue(&usb_, req, &complete);
 }
@@ -428,7 +434,8 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
 
   if (streaming_state_ != StreamingState::STARTED) {
     // Stopped streaming so don't need to process the result.
-    zx_status_t status = usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
+    zx_status_t status =
+        usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     num_free_reqs_++;
     if (num_free_reqs_ == num_allocated_reqs_) {
@@ -439,7 +446,8 @@ void UsbVideoStream::RequestComplete(usb_request_t* req) {
     return;
   }
   ProcessPayloadLocked(req);
-  zx_status_t status = usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
+  zx_status_t status =
+      usb_req_list_add_head(&free_reqs_, req, parent_req_size_);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   num_free_reqs_++;
   QueueRequestLocked();
@@ -456,7 +464,7 @@ void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
   usb_video_vs_uncompressed_payload_header header = {};
   usb_request_copy_from(req, &header,
-                    sizeof(usb_video_vs_uncompressed_payload_header), 0);
+                        sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
   // PTS should stay the same for payloads of the same frame,
   // but it's probably not a critical error if they're different.
@@ -601,7 +609,7 @@ zx_status_t UsbVideoStream::ParsePayloadHeaderLocked(
   // the same first two bytes.
   usb_video_vs_payload_header header;
   size_t len = usb_request_copy_from(req, &header,
-                                 sizeof(usb_video_vs_payload_header), 0);
+                                     sizeof(usb_video_vs_payload_header), 0);
 
   if (len != sizeof(usb_video_vs_payload_header) ||
       header.bHeaderLength > req->response.actual) {

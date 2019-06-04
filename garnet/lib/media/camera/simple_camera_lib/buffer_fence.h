@@ -5,15 +5,14 @@
 #ifndef GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_BUFFER_FENCE_H_
 #define GARNET_LIB_MEDIA_CAMERA_SIMPLE_CAMERA_LIB_BUFFER_FENCE_H_
 
-#include <stdint.h>
-
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <lib/zx/event.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
+#include <stdint.h>
 #include <zircon/status.h>
-#include <lib/zx/event.h>
 
 namespace simple_camera {
 
@@ -61,8 +60,7 @@ class BufferFence {
 
   // This function is called when the release fence is signalled
   void OnReleaseFenceSignalled(async_dispatcher_t* dispatcher,
-                               async::WaitBase* wait,
-                               zx_status_t status,
+                               async::WaitBase* wait, zx_status_t status,
                                const zx_packet_signal* signal);
 
   // Set a handler function that will be called whenever the release fence
