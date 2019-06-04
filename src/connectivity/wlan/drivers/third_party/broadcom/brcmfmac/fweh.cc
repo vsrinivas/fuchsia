@@ -17,6 +17,7 @@
 #include "fweh.h"
 
 #include <threads.h>
+#include <zircon/status.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -353,6 +354,7 @@ void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code co
 zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     int i;
     zx_status_t err;
+    int32_t fw_err = 0;
     int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
 
     memset(eventmask, 0, sizeof(eventmask));
@@ -368,9 +370,10 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
     brcmf_dbg(EVENT, "enable event IF\n");
     setbit(eventmask, BRCMF_E_IF);
 
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Set event_msgs error (%d)\n", err);
+        brcmf_err("Set event_msgs error: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
 
     return err;

@@ -77,6 +77,7 @@ struct brcmf_mp_global_t brcmf_mp_global;
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     struct brcmf_join_pref_params join_pref_params[2];
     zx_status_t err;
+    int32_t fw_err = 0;
 
     /* Setup join_pref to select target by RSSI (boost on 5GHz) */
     join_pref_params[0].type = BRCMF_JOIN_PREF_RSSI_DELTA;
@@ -89,9 +90,10 @@ void brcmf_c_set_joinpref_default(struct brcmf_if* ifp) {
     join_pref_params[1].rssi_gain = 0;
     join_pref_params[1].band = 0;
     err = brcmf_fil_iovar_data_set(ifp, "join_pref", join_pref_params, sizeof(join_pref_params),
-                                   nullptr);
+                                   &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Set join_pref error (%d)\n", err);
+        brcmf_err("Set join_pref error: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
 }
 
@@ -155,6 +157,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     uint16_t dl_flag = DL_BEGIN;
     uint32_t status;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     brcmf_dbg(TRACE, "Enter\n");
 
@@ -203,9 +206,10 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     if (err != ZX_OK) {
         brcmf_err("clmload (%zu byte file) failed (%d); ", clm->size, err);
         /* Retrieve clmload_status and print */
-        err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status, nullptr);
+        err = brcmf_fil_iovar_int_get(ifp, "clmload_status", &status, &fw_err);
         if (err != ZX_OK) {
-            brcmf_err("get clmload_status failed (%d)\n", err);
+            brcmf_err("get clmload_status failed: %s, fw err %s\n", zx_status_get_string(err),
+                      brcmf_fil_get_errstr(fw_err));
         } else {
             brcmf_dbg(INFO, "clmload_status=%d\n", status);
         }
@@ -229,11 +233,12 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
     // Use static MAC address defined in the firmware.
     // eg. "macaddr" field of brcmfmac43455-sdio.txt
     uint8_t mac_addr[ETH_ALEN];
+    int32_t fw_err = 0;
 
-    zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, nullptr);
+    zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Retrieving mac address from firmware failed, %s\n",
-                  zx_status_get_string(err));
+        brcmf_err("Retrieving mac address from firmware failed: %s, fw err %s\n",
+                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
         return err;
     }
 
@@ -244,6 +249,7 @@ zx_status_t brcmf_set_macaddr_from_firmware(struct brcmf_if* ifp) {
 
 static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
     uint8_t mac_addr[ETH_ALEN];
+    int32_t fw_err = 0;
 
     zx_status_t err = brcmf_bus_get_bootloader_macaddr(ifp->drvr->bus_if, mac_addr);
     if (err != ZX_OK) {
@@ -257,9 +263,10 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
                   mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     }
 
-    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Setting mac address failed, %s\n", zx_status_get_string(err));
+        brcmf_err("Setting mac address failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         return err;
     }
 
@@ -276,16 +283,18 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     char* clmver;
     char* ptr;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     err = brcmf_set_macaddr(ifp);
     if (err != ZX_OK) {
         goto done;
     }
 
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo), nullptr);
+    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_REVINFO, &revinfo, sizeof(revinfo), &fw_err);
     ri = &ifp->drvr->revinfo;
     if (err != ZX_OK) {
-        brcmf_err("retrieving revision info failed, %d\n", err);
+        brcmf_err("retrieving revision info failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     } else {
         ri->vendorid = revinfo.vendorid;
         ri->deviceid = revinfo.deviceid;
@@ -317,9 +326,10 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     /* query for 'ver' to get version info from firmware */
     memset(buf, 0, sizeof(buf));
     strcpy((char*)buf, "ver");
-    err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf), nullptr);
+    err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Retrieving version information failed, %d\n", err);
+        brcmf_err("Retrieving version information failed: %s, fw err %s\n",
+                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
         goto done;
     }
     ptr = (char*)buf;
@@ -334,9 +344,10 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
 
     /* Query for 'clmver' to get CLM version info from firmware */
     memset(buf, 0, sizeof(buf));
-    err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf), nullptr);
+    err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf), &fw_err);
     if (err != ZX_OK) {
-        brcmf_dbg(TRACE, "retrieving clmver failed, %d\n", err);
+        brcmf_dbg(TRACE, "retrieving clmver failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     } else {
         clmver = (char*)buf;
         /* store CLM version for adding it to revinfo debugfs file */
@@ -355,42 +366,47 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     }
 
     /* set mpc */
-    err = brcmf_fil_iovar_int_set(ifp, "mpc", 1, nullptr);
+    err = brcmf_fil_iovar_int_set(ifp, "mpc", 1, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("failed setting mpc\n");
+        brcmf_err("failed setting mpc: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         goto done;
     }
 
     brcmf_c_set_joinpref_default(ifp);
 
     /* Setup event_msgs, enable E_IF */
-    err = brcmf_fil_iovar_data_get(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
+    err = brcmf_fil_iovar_data_get(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Get event_msgs error (%d)\n", err);
+        brcmf_err("Get event_msgs error: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         goto done;
     }
     setbit(eventmask, BRCMF_E_IF);
-    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Set event_msgs error (%d)\n", err);
+        brcmf_err("Set event_msgs error: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         goto done;
     }
 
     /* Setup default scan channel time */
     err =
         brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME, BRCMF_DEFAULT_SCAN_CHANNEL_TIME,
-                              nullptr);
+                              &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("BRCMF_C_SET_SCAN_CHANNEL_TIME error (%d)\n", err);
+        brcmf_err("BRCMF_C_SET_SCAN_CHANNEL_TIME error: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         goto done;
     }
 
     /* Setup default scan unassoc time */
     err =
         brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_UNASSOC_TIME, BRCMF_DEFAULT_SCAN_UNASSOC_TIME,
-                              nullptr);
+                              &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("BRCMF_C_SET_SCAN_UNASSOC_TIME error (%d)\n", err);
+        brcmf_err("BRCMF_C_SET_SCAN_UNASSOC_TIME error: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         goto done;
     }
 

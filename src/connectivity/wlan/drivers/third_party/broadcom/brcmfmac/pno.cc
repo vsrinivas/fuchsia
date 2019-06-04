@@ -17,6 +17,7 @@
 #include "pno.h"
 
 #include <threads.h>
+#include <zircon/status.h>
 
 #include "cfg80211.h"
 #include "core.h"
@@ -112,6 +113,7 @@ static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, ui
     uint16_t flags;
     uint32_t pfnmem;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     memset(&pfn_param, 0, sizeof(pfn_param));
     pfn_param.version = BRCMF_PNO_VERSION;
@@ -128,15 +130,17 @@ static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, ui
         pfnmem = bestn;
 
         /* set bestn in firmware */
-        err = brcmf_fil_iovar_int_set(ifp, "pfnmem", pfnmem, nullptr);
+        err = brcmf_fil_iovar_int_set(ifp, "pfnmem", pfnmem, &fw_err);
         if (err != ZX_OK) {
-            brcmf_err("failed to set pfnmem\n");
+            brcmf_err("failed to set pfnmem: %s, fw err %s\n", zx_status_get_string(err),
+                      brcmf_fil_get_errstr(fw_err));
             goto exit;
         }
         /* get max mscan which the firmware supports */
-        err = brcmf_fil_iovar_int_get(ifp, "pfnmem", &pfnmem, nullptr);
+        err = brcmf_fil_iovar_int_get(ifp, "pfnmem", &pfnmem, &fw_err);
         if (err != ZX_OK) {
-            brcmf_err("failed to get pfnmem\n");
+            brcmf_err("failed to get pfnmem: %s, fw err %s\n", zx_status_get_string(err),
+                      brcmf_fil_get_errstr(fw_err));
             goto exit;
         }
         mscan = min_t(uint32_t, mscan, pfnmem);
@@ -147,9 +151,10 @@ static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, ui
     }
 
     pfn_param.flags = flags;
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_set", &pfn_param, sizeof(pfn_param), nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_set", &pfn_param, sizeof(pfn_param), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("pfn_set failed, err=%d\n", err);
+        brcmf_err("pfn_set failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
 
 exit:
@@ -162,6 +167,7 @@ static zx_status_t brcmf_pno_set_random(struct brcmf_if* ifp, struct brcmf_pno_i
     uint8_t* mac_mask = NULL;
     int i;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     for (i = 0; i < pi->n_reqs; i++)
         if (pi->reqs[i]->flags & NL80211_SCAN_FLAG_RANDOM_ADDR) {
@@ -189,9 +195,10 @@ static zx_status_t brcmf_pno_set_random(struct brcmf_if* ifp, struct brcmf_pno_i
     pfn_mac.mac[0] |= 0x02;
 
     brcmf_dbg(SCAN, "enabling random mac: reqid=%lu mac=%pM\n", pi->reqs[i]->reqid, pfn_mac.mac);
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac), nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("pfn_macaddr failed, err=%d\n", err);
+        brcmf_err("pfn_macaddr failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
 
     return err;
@@ -201,6 +208,7 @@ static zx_status_t brcmf_pno_add_ssid(struct brcmf_if* ifp, struct cfg80211_ssid
                                       bool active) {
     struct brcmf_pno_net_param_le pfn;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     pfn.auth = WLAN_AUTH_OPEN;
     pfn.wpa_auth = BRCMF_PNO_WPA_AUTH_ANY;
@@ -214,9 +222,10 @@ static zx_status_t brcmf_pno_add_ssid(struct brcmf_if* ifp, struct cfg80211_ssid
     memcpy(pfn.ssid.SSID, ssid->ssid, ssid->ssid_len);
 
     brcmf_dbg(SCAN, "adding ssid=%.32s (active=%d)\n", ssid->ssid, active);
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_add", &pfn, sizeof(pfn), nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_add", &pfn, sizeof(pfn), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("adding failed: err=%d\n", err);
+        brcmf_err("adding failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
     return err;
 }
@@ -224,14 +233,16 @@ static zx_status_t brcmf_pno_add_ssid(struct brcmf_if* ifp, struct cfg80211_ssid
 static zx_status_t brcmf_pno_add_bssid(struct brcmf_if* ifp, const uint8_t* bssid) {
     struct brcmf_pno_bssid_le bssid_cfg;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     memcpy(bssid_cfg.bssid, bssid, ETH_ALEN);
     bssid_cfg.flags = 0;
 
     brcmf_dbg(SCAN, "adding bssid=%pM\n", bssid);
-    err = brcmf_fil_iovar_data_set(ifp, "pfn_add_bssid", &bssid_cfg, sizeof(bssid_cfg), nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "pfn_add_bssid", &bssid_cfg, sizeof(bssid_cfg), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("adding failed: err=%d\n", err);
+        brcmf_err("adding failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
     return err;
 }
@@ -256,15 +267,17 @@ static bool brcmf_is_ssid_active(struct cfg80211_ssid* ssid,
 
 static zx_status_t brcmf_pno_clean(struct brcmf_if* ifp) {
     zx_status_t ret;
+    int32_t fw_err = 0;
 
     /* Disable pfn */
-    ret = brcmf_fil_iovar_int_set(ifp, "pfn", 0, nullptr);
+    ret = brcmf_fil_iovar_int_set(ifp, "pfn", 0, &fw_err);
     if (ret == ZX_OK) {
         /* clear pfn */
-        ret = brcmf_fil_iovar_data_set(ifp, "pfnclear", NULL, 0, nullptr);
+        ret = brcmf_fil_iovar_data_set(ifp, "pfnclear", NULL, 0, &fw_err);
     }
     if (ret != ZX_OK) {
-        brcmf_err("failed code %d\n", ret);
+        brcmf_err("failed code %s, fw err %s\n", zx_status_get_string(ret),
+                  brcmf_fil_get_errstr(fw_err));
     }
 
     return ret;

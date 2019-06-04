@@ -91,6 +91,7 @@ struct brcmf_if* brcmf_get_ifp(struct brcmf_pub* drvr, int ifidx) {
 void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
     zx_status_t err;
     uint32_t mode;
+    int32_t fw_err = 0;
 
     if (enable) {
         mode = BRCMF_ARP_OL_AGENT | BRCMF_ARP_OL_PEER_AUTO_REPLY;
@@ -100,21 +101,24 @@ void brcmf_configure_arp_nd_offload(struct brcmf_if* ifp, bool enable) {
 
     /* Try to set and enable ARP offload feature, this may fail, then it  */
     /* is simply not supported and err 0 will be returned                 */
-    err = brcmf_fil_iovar_int_set(ifp, "arp_ol", mode, nullptr);
+    err = brcmf_fil_iovar_int_set(ifp, "arp_ol", mode, &fw_err);
     if (err != ZX_OK) {
-        brcmf_dbg(TRACE, "failed to set ARP offload mode to 0x%x, err = %d\n", mode, err);
+        brcmf_dbg(TRACE, "failed to set ARP offload mode to 0x%x, err=%s, fw_err=%s\n", mode,
+                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     } else {
-        err = brcmf_fil_iovar_int_set(ifp, "arpoe", enable, nullptr);
+        err = brcmf_fil_iovar_int_set(ifp, "arpoe", enable, &fw_err);
         if (err != ZX_OK) {
-            brcmf_dbg(TRACE, "failed to configure (%d) ARP offload err = %d\n", enable, err);
+            brcmf_dbg(TRACE, "failed to configure (%d) ARP offload err=%s, fw_err=%s\n", enable,
+                      zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
         } else {
             brcmf_dbg(TRACE, "successfully configured (%d) ARP offload to 0x%x\n", enable, mode);
         }
     }
 
-    err = brcmf_fil_iovar_int_set(ifp, "ndoe", enable, nullptr);
+    err = brcmf_fil_iovar_int_set(ifp, "ndoe", enable, &fw_err);
     if (err != ZX_OK) {
-        brcmf_dbg(TRACE, "failed to configure (%d) ND offload err = %d\n", enable, err);
+        brcmf_dbg(TRACE, "failed to configure (%d) ND offload err=%s, fw_err=%s\n", enable,
+                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     } else {
         brcmf_dbg(TRACE, "successfully configured (%d) ND offload to 0x%x\n", enable, mode);
     }
@@ -130,6 +134,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     char* bufp;
     uint32_t buflen;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     ifp = containerof(work, struct brcmf_if, multicast_work);
 
@@ -162,9 +167,10 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
         cnt--;
     }
 
-    err = brcmf_fil_iovar_data_set(ifp, "mcast_list", buf, buflen, nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "mcast_list", buf, buflen, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Setting mcast_list failed, %d\n", err);
+        brcmf_err("Setting mcast_list failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         cmd_value = cnt ? true : cmd_value;
     }
 
@@ -175,16 +181,18 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
      * net_device flags, but might be modified above to be turned on if we
      * were trying to set some addresses and dongle rejected it...
      */
-    err = brcmf_fil_iovar_int_set(ifp, "allmulti", cmd_value, nullptr);
+    err = brcmf_fil_iovar_int_set(ifp, "allmulti", cmd_value, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Setting allmulti failed, %d\n", err);
+        brcmf_err("Setting allmulti failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
 
     /*Finally, pick up the PROMISC flag */
     cmd_value = (ndev->flags & IFF_PROMISC) ? true : false;
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PROMISC, cmd_value, nullptr);
+    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PROMISC, cmd_value, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Setting BRCMF_C_SET_PROMISC failed, %d\n", err);
+        brcmf_err("Setting BRCMF_C_SET_PROMISC failed, %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     }
     brcmf_configure_arp_nd_offload(ifp, !cmd_value);
 }
@@ -194,21 +202,24 @@ static void _brcmf_update_ndtable(struct work_struct* work) {
     struct brcmf_if* ifp;
     int i;
     zx_status_t ret;
+    int32_t fw_err = 0;
 
     ifp = containerof(work, struct brcmf_if, ndoffload_work);
 
     /* clear the table in firmware */
-    ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip_clear", NULL, 0, nullptr);
+    ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip_clear", NULL, 0, &fw_err);
     if (ret != ZX_OK) {
-        brcmf_dbg(TRACE, "fail to clear nd ip table err:%d\n", ret);
+        brcmf_dbg(TRACE, "fail to clear nd ip table err: %s, fw err %s\n",
+                  zx_status_get_string(ret), brcmf_fil_get_errstr(fw_err));
         return;
     }
 
     for (i = 0; i < ifp->ipv6addr_idx; i++) {
         ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip", &ifp->ipv6_addr_tbl[i],
-                                       sizeof(struct in6_addr), nullptr);
+                                       sizeof(struct in6_addr), &fw_err);
         if (ret != ZX_OK) {
-            brcmf_err("add nd ip err %s\n", zx_status_get_string(ret));
+            brcmf_err("add nd ip err: %s, fw err %s\n", zx_status_get_string(ret),
+                      brcmf_fil_get_errstr(fw_err));
         }
     }
 }
@@ -220,12 +231,14 @@ zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* addr) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct sockaddr* sa = (struct sockaddr*)addr;
     zx_status_t err;
+    int32_t fw_err = 0;
 
     brcmf_dbg(TRACE, "Enter, bsscfgidx=%d\n", ifp->bsscfgidx);
 
-    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", sa->sa_data, ETH_ALEN, nullptr);
+    err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", sa->sa_data, ETH_ALEN, &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("Setting cur_etheraddr failed, %d\n", err);
+        brcmf_err("Setting cur_etheraddr failed: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
     } else {
         brcmf_dbg(TRACE, "updated to %pM\n", sa->sa_data);
         memcpy(ifp->mac_addr, sa->sa_data, ETH_ALEN);
@@ -809,6 +822,7 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
     struct brcmf_if* ifp;
     int idx, i;
     zx_status_t ret;
+    int32_t fw_err = 0;
     uint32_t val;
     __be32 addr_table[ARPOL_MAX_ENTRIES] = {0};
 
@@ -839,9 +853,10 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
     }
 
     /* retrieve the table from firmware */
-    ret = brcmf_fil_iovar_data_get(ifp, "arp_hostip", addr_table, sizeof(addr_table), nullptr);
+    ret = brcmf_fil_iovar_data_get(ifp, "arp_hostip", addr_table, sizeof(addr_table), &fw_err);
     if (ret != ZX_OK) {
-        brcmf_err("fail to get arp ip table err:%d\n", ret);
+        brcmf_err("fail to get arp ip table err:%s, fw err %s\n", zx_status_get_string(ret),
+                  brcmf_fil_get_errstr(fw_err));
         return NOTIFY_OK;
     }
 
@@ -856,9 +871,10 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
             brcmf_dbg(TRACE, "add %pI4 to arp table\n", &ifa->ifa_address);
             /* set it directly */
             ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip", &ifa->ifa_address,
-                                           sizeof(ifa->ifa_address), nullptr);
+                                           sizeof(ifa->ifa_address), &fw_err);
             if (ret != ZX_OK) {
-                brcmf_err("add arp ip err %s\n", zx_status_get_string(ret));
+                brcmf_err("add arp ip err: %s, fw err %s\n", zx_status_get_string(ret),
+                          brcmf_fil_get_errstr(fw_err));
             }
         }
         break;
@@ -867,9 +883,11 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
             addr_table[i] = 0;
             brcmf_dbg(TRACE, "remove %pI4 from arp table\n", &ifa->ifa_address);
             /* clear the table in firmware */
-            ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip_clear", NULL, 0, nullptr);
+            ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip_clear", NULL, 0, &fw_err);
             if (ret != ZX_OK) {
-                brcmf_err("fail to clear arp ip table err:%d\n", ret);
+                brcmf_err("fail to clear arp ip table err: %s, fw err %s\n",
+                          zx_status_get_string(ret), brcmf_fil_get_errstr(fw_err));
+;
                 return NOTIFY_OK;
             }
             for (i = 0; i < ARPOL_MAX_ENTRIES; i++) {
@@ -877,9 +895,10 @@ static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long actio
                     continue;
                 }
                 ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip", &addr_table[i],
-                                               sizeof(addr_table[i]), nullptr);
+                                               sizeof(addr_table[i]), &fw_err);
                 if (ret != ZX_OK) {
-                    brcmf_err("add arp ip err %s\n", zx_status_get_string(ret));
+                    brcmf_err("add arp ip err: %s, fw err %s\n", zx_status_get_string(ret),
+                              brcmf_fil_get_errstr(fw_err));
                 }
             }
         }

@@ -17,6 +17,7 @@
 #include "feature.h"
 
 #include <string.h>
+#include <zircon/status.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_wifi.h"
@@ -95,14 +96,15 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
                                      const char* name) {
     uint32_t data;
     zx_status_t err;
+    int32_t fw_err = 0;
 
-    err = brcmf_fil_iovar_int_get(ifp, name, &data, nullptr);
+    err = brcmf_fil_iovar_int_get(ifp, name, &data, &fw_err);
     if (err == ZX_OK) {
         brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
     } else {
-        brcmf_dbg(TRACE, "%s feature check failed: %d%s\n", brcmf_feat_names[id], err,
-            (err == ZX_ERR_NOT_SUPPORTED) ? " (FW: not supported)" : "");
+        brcmf_dbg(TRACE, "%s feature check failed: %s, fw err %s\n", brcmf_feat_names[id],
+                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     }
 }
 
@@ -133,10 +135,12 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
     enum brcmf_feat_id id;
     int i;
     zx_status_t err;
+    int32_t fw_err = 0;
 
-    err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), nullptr);
+    err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("could not get firmware cap (%d)\n", err);
+        brcmf_err("could not get firmware cap: %s, fw err %s\n", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
         return;
     }
 
