@@ -381,7 +381,7 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
         root_component_url: format!("test:///{}", test.root_component),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers: Vec::new(),
+        hooks: Vec::new(),
     });
     for (moniker, capability, should_succeed) in test.users_to_check {
         assert!(await!(model.look_up_and_bind_instance(moniker.clone())).is_ok());

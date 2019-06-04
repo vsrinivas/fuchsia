@@ -5,7 +5,7 @@
 use {
     crate::model::tests::mocks::*,
     crate::model::tests::routing_test_helpers::*,
-    crate::model::tests::test_hooks::TestHooks,
+    crate::model::tests::test_hook::TestHook,
     crate::model::*,
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
@@ -33,7 +33,7 @@ async fn bind_instance_root() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers: Vec::new(),
+        hooks: Vec::new(),
     });
     let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::root()));
     let expected_res: Result<(), ModelError> = Ok(());
@@ -58,7 +58,7 @@ async fn bind_instance_root_non_existent() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers: Vec::new(),
+        hooks: Vec::new(),
     });
     let res = await!(model.look_up_and_bind_instance(vec!["no-such-instance"].into()));
     let expected_res: Result<(), ModelError> =
@@ -96,15 +96,15 @@ async fn bind_instance_child() {
     mock_resolver.add_component("system", default_component_decl());
     mock_resolver.add_component("echo", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let observer = Arc::new(TestHooks::new());
-    let mut model_observers: ModelObservers = Vec::new();
-    model_observers.push(observer.clone());
+    let observer = Arc::new(TestHook::new());
+    let mut hooks: Hooks = Vec::new();
+    hooks.push(observer.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers,
+        hooks,
     });
     // bind to system
     assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
@@ -162,7 +162,7 @@ async fn bind_instance_child_non_existent() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers: Vec::new(),
+        hooks: Vec::new(),
     });
     // bind to system
     assert!(await!(model.look_up_and_bind_instance(vec!["system"].into())).is_ok());
@@ -250,15 +250,15 @@ async fn bind_instance_eager_children() {
     );
     mock_resolver.add_component("e", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let observer = Arc::new(TestHooks::new());
-    let mut model_observers: ModelObservers = Vec::new();
-    model_observers.push(observer.clone());
+    let observer = Arc::new(TestHook::new());
+    let mut hooks: Hooks = Vec::new();
+    hooks.push(observer.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers,
+        hooks,
     });
 
     // Bind to the top component, and check that it and the eager components were started.
@@ -327,7 +327,7 @@ async fn bind_instance_no_execute() {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers: Vec::new(),
+        hooks: Vec::new(),
     });
 
     // Bind to the parent component. The child should be started. However, the parent component
@@ -376,15 +376,15 @@ async fn bind_instance_recursive_child() {
     mock_resolver.add_component("logger", default_component_decl());
     mock_resolver.add_component("netstack", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let observer = Arc::new(TestHooks::new());
-    let mut model_observers: ModelObservers = Vec::new();
-    model_observers.push(observer.clone());
+    let observer = Arc::new(TestHook::new());
+    let mut hooks: Hooks = Vec::new();
+    hooks.push(observer.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
-        model_observers,
+        hooks,
     });
 
     // bind to logger (before ever binding to system)

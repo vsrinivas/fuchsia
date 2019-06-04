@@ -17,13 +17,13 @@ use {
     std::sync::Arc,
 };
 
-// Observers of the component model implement this trait.
+// Hooks into the component model implement this trait.
 // TODO(fsamuel): It's conceivable that as we add clients and event types,
 // many clients may be interested in just a small subset of events but they'd
 // have to implement all the functions in this trait. Alternatively, we can
 // break down each event type into a separate trait so that clients can pick
 // and choose which events they'd like to monitor.
-pub trait ModelObserver {
+pub trait Hook {
     // Called when a component instance is bound to the given |realm|.
     fn on_bind_instance(&self, realm: Arc<Realm>) -> BoxFuture<()>;
 
@@ -31,7 +31,7 @@ pub trait ModelObserver {
     fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<()>;
 }
 
-pub type ModelObservers = Vec<Arc<dyn ModelObserver + Send + Sync + 'static>>;
+pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
 
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
@@ -45,8 +45,8 @@ pub struct ModelParams {
     pub root_resolver_registry: ResolverRegistry,
     /// The default runner used in the root realm (nominally runs ELF binaries).
     pub root_default_runner: Box<dyn Runner + Send + Sync + 'static>,
-    /// A set of observers of changes to the Model.
-    pub model_observers: ModelObservers,
+    /// A set of hooks into key events of the Model.
+    pub hooks: Hooks,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -61,7 +61,7 @@ pub struct ModelParams {
 pub struct Model {
     pub root_realm: Arc<Realm>,
     pub ambient: Arc<dyn AmbientEnvironment>,
-    pub model_observers: ModelObservers,
+    pub hooks: Hooks,
 }
 
 impl Model {
@@ -84,7 +84,7 @@ impl Model {
                     }),
                 },
             }),
-            model_observers: params.model_observers,
+            hooks: params.hooks,
         }
     }
 
@@ -205,10 +205,9 @@ impl Model {
     /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
     async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
         let mut child_realms;
-        let realm_copy = realm.clone();
         let mut eager_children = vec![];
         // Create a new scope for the InstanceState lock. To avoid deadlock, we cannot be holding
-        // that lock while calling out to observers so release the lock first.
+        // that lock while calling out to hooks so release the lock first.
         {
             let mut state = await!(realm.instance.state.lock());
             child_realms = await!(self.populate_instance_state(&mut *state, realm.clone()))?;
@@ -224,12 +223,12 @@ impl Model {
             }
         }
 
-        for observer in self.model_observers.iter() {
-            await!(observer.on_bind_instance(realm_copy.clone()));
+        for hook in self.hooks.iter() {
+            await!(hook.on_bind_instance(realm.clone()));
         }
         for child_realm in child_realms.iter() {
-            for observer in self.model_observers.iter() {
-                await!(observer.on_resolve_realm(child_realm.clone()));
+            for hook in self.hooks.iter() {
+                await!(hook.on_resolve_realm(child_realm.clone()));
             }
         }
 

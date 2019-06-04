@@ -50,7 +50,7 @@ fn main() -> Result<(), Error> {
         root_component_url: opt.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Box::new(ElfRunner::new()),
-        model_observers: Vec::new(),
+        hooks: Vec::new(),
     };
 
     let model = Arc::new(Model::new(params));

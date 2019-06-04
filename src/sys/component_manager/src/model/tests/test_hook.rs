@@ -14,8 +14,8 @@ struct ComponentInstance {
 }
 
 impl Clone for ComponentInstance {
-    // This is used by TestHooks. ComponentInstance is immutable so when a change
-    // needs to be made, TestHooks clones ComponentInstance and makes the change
+    // This is used by TestHook. ComponentInstance is immutable so when a change
+    // needs to be made, TestHook clones ComponentInstance and makes the change
     // in the new copy.
     fn clone(&self) -> Self {
         let children = block_on(self.children.lock());
@@ -66,27 +66,27 @@ impl ComponentInstance {
     }
 }
 
-pub struct TestHooks {
+pub struct TestHook {
     instances: Mutex<HashMap<AbsoluteMoniker, Arc<ComponentInstance>>>,
 }
 
-impl fmt::Display for TestHooks {
+impl fmt::Display for TestHook {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.print())?;
         Ok(())
     }
 }
 
-/// TestHooks is a ModelObserver that generates a strings representing the component
+/// TestHook is a Hook that generates a strings representing the component
 /// topology.
-impl TestHooks {
-    pub fn new() -> TestHooks {
+impl TestHook {
+    pub fn new() -> TestHook {
         let abs_moniker = AbsoluteMoniker::root();
         let instance =
             ComponentInstance { abs_moniker: abs_moniker.clone(), children: Mutex::new(vec![]) };
         let mut instances = HashMap::new();
         instances.insert(abs_moniker, Arc::new(instance));
-        TestHooks { instances: Mutex::new(instances) }
+        TestHook { instances: Mutex::new(instances) }
     }
 
     // Recursively traverse the Instance tree to generate a string representing the component
@@ -127,7 +127,7 @@ impl TestHooks {
     }
 }
 
-impl ModelObserver for TestHooks {
+impl Hook for TestHook {
     fn on_bind_instance(&self, realm: Arc<Realm>) -> BoxFuture<()> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
     }
@@ -171,7 +171,7 @@ mod tests {
         // Try adding parent followed by children then verify the topology string
         // is correct.
         {
-            let test_hooks = TestHooks::new();
+            let test_hooks = TestHook::new();
             await!(test_hooks.create_instance_if_necessary(a.clone()));
             await!(test_hooks.create_instance_if_necessary(ab.clone()));
             await!(test_hooks.create_instance_if_necessary(ac.clone()));
@@ -183,7 +183,7 @@ mod tests {
 
         // Changing the order of monikers should not affect the output string.
         {
-            let test_hooks = TestHooks::new();
+            let test_hooks = TestHook::new();
             await!(test_hooks.create_instance_if_necessary(a.clone()));
             await!(test_hooks.create_instance_if_necessary(ac.clone()));
             await!(test_hooks.create_instance_if_necessary(ab.clone()));
@@ -195,7 +195,7 @@ mod tests {
 
         // Submitting children before parents should still succeed.
         {
-            let test_hooks = TestHooks::new();
+            let test_hooks = TestHook::new();
             await!(test_hooks.create_instance_if_necessary(acf.clone()));
             await!(test_hooks.create_instance_if_necessary(abe.clone()));
             await!(test_hooks.create_instance_if_necessary(abd.clone()));
