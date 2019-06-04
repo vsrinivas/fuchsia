@@ -41,6 +41,8 @@ struct PbusSmc {
     /// service_call_num_base to service_call_num_base + count - 1.
     uint32 service_call_num_base;
     uint32 count;
+    /// The device has exclusive access to this smc range.
+    bool exclusive;
 };
 
 /// Device metadata.

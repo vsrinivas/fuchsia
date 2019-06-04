@@ -34,6 +34,7 @@ static const pbus_smc_t astro_tee_smcs[] = {
     {
         .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_BASE,
         .count = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_LENGTH,
+        .exclusive = false,
     },
 };
 

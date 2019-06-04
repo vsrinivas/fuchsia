@@ -122,7 +122,9 @@ zx_status_t CompositeDevice::PDevGetSmc(uint32_t index, zx::resource* out_resour
 
     const pbus_smc_t& smc = resources_.smc(index);
 
-    uint32_t options = ZX_RSRC_KIND_SMC | ZX_RSRC_FLAG_EXCLUSIVE;
+    uint32_t options = ZX_RSRC_KIND_SMC;
+    if (smc.exclusive)
+        options |= ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
     snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
     return zx::resource::create(*bus_->GetResource(), options, smc.service_call_num_base, smc.count,

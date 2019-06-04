@@ -20,6 +20,7 @@ zx_status_t Msm8x53::PilInit() {
         {
             .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_SIP_SERVICE_BASE,
             .count = ARM_SMC_SERVICE_CALL_NUM_SIP_SERVICE_LENGTH,
+            .exclusive = true,
         }};
     constexpr pbus_clk_t clks[] = {
         {.clk = msm8x53::kCryptoAhbClk},

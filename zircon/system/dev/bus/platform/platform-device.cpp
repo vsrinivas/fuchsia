@@ -141,7 +141,9 @@ zx_status_t PlatformDevice::RpcGetSmc(uint32_t index, zx_handle_t* out_handle,
 
     zx::resource resource;
     const pbus_smc_t& smc = resources_.smc(index);
-    uint32_t options = ZX_RSRC_KIND_SMC | ZX_RSRC_FLAG_EXCLUSIVE;
+    uint32_t options = ZX_RSRC_KIND_SMC;
+    if (smc.exclusive)
+        options |= ZX_RSRC_FLAG_EXCLUSIVE;
     char rsrc_name[ZX_MAX_NAME_LEN];
     snprintf(rsrc_name, ZX_MAX_NAME_LEN - 1, "%s.pbus[%u]", name_, index);
     zx_status_t status = zx::resource::create(*root_rsrc, options,
