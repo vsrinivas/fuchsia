@@ -424,7 +424,7 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
-                                "myself": {}
+                                "self": {}
                             },
                             "target_path": "/svc/fuchsia.ui.Scenic"
                         }
@@ -471,7 +471,7 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
-                                "myself": {},
+                                "self": {},
                                 "child": {
                                     "name": "foo"
                                 }
@@ -528,7 +528,7 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
-                                "myself": {}
+                                "self": {}
                             },
                             "targets": [
                                 {
@@ -645,7 +645,7 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
-                                "myself": {},
+                                "self": {},
                                 "child": {
                                     "name": "foo"
                                 }
@@ -718,7 +718,7 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
-                                "myself": {}
+                                "self": {}
                             },
                             "targets": [
                                 {

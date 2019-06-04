@@ -4,6 +4,16 @@
 
 library fuchsia.sys2;
 
+/// A reference to a capability source or destination relative to this
+/// component.
+xunion Ref {
+    RealmRef realm;
+    SelfRef self;
+    ChildRef child;
+    CollectionRef collection;
+    StorageRef storage;
+};
+
 /// A reference to a component’s containing realm, i.e. the parent component.
 table RealmRef {};
 

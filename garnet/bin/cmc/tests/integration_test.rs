@@ -3,8 +3,8 @@ use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, ExposeSource, OfferDecl, OfferDest, OfferServiceDecl, OfferSource,
-    OfferTarget, SelfRef, StartupMode, UseDecl, UseServiceDecl,
+    ExposeDirectoryDecl, OfferDecl, OfferServiceDecl, OfferTarget, Ref, SelfRef, StartupMode,
+    UseDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -28,21 +28,19 @@ fn main() {
             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
         })];
         let exposes = vec![ExposeDecl::Directory(ExposeDirectoryDecl {
-            source: Some(ExposeSource::Myself(SelfRef {})),
+            source: Some(Ref::Self_(SelfRef {})),
             source_path: Some("/volumes/blobfs".to_string()),
             target_path: Some("/volumes/blobfs".to_string()),
         })];
         let offers = vec![OfferDecl::Service(OfferServiceDecl {
-            source: Some(OfferSource::Child(ChildRef {
+            source: Some(Ref::Child(ChildRef {
                 name: Some("logger".to_string()),
                 collection: None,
             })),
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
             targets: Some(vec![OfferTarget {
                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                dest: Some(OfferDest::Collection(CollectionRef {
-                    name: Some("modular".to_string()),
-                })),
+                dest: Some(Ref::Collection(CollectionRef { name: Some("modular".to_string()) })),
             }]),
         })];
         let children = vec![ChildDecl {

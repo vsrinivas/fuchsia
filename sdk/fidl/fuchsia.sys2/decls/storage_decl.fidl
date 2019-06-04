@@ -29,6 +29,6 @@ table StorageDecl {
     2: string:MAX_PATH_LENGTH source_path;
 
     /// The provider of the underlying directory capability relative to the
-    /// component itself.
-    3: OfferSource source;
+    /// component itself. Must be |realm|, |self|, or |child|.
+    3: Ref source;
 };

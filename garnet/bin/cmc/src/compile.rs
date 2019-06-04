@@ -186,7 +186,7 @@ fn translate_collections(
     Ok(out_collections)
 }
 
-fn extract_expose_source<T>(in_obj: &T) -> Result<cm::ExposeSource, Error>
+fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
@@ -196,16 +196,16 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::ExposeSource::Child(cm::ChildRef { name: child_name.to_string() })
+        cm::Ref::Child(cm::ChildRef { name: child_name.to_string() })
     } else if from == "self" {
-        cm::ExposeSource::Myself(cm::SelfRef {})
+        cm::Ref::Self_(cm::SelfRef {})
     } else {
         return Err(Error::internal(format!("invalid \"from\" for \"expose\": {}", from)));
     };
     Ok(ret)
 }
 
-fn extract_offer_source<T>(in_obj: &T) -> Result<cm::OfferSource, Error>
+fn extract_offer_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
 where
     T: cml::FromClause,
 {
@@ -215,11 +215,11 @@ where
     }
     let ret = if from.starts_with("#") {
         let (_, child_name) = from.split_at(1);
-        cm::OfferSource::Child(cm::ChildRef { name: child_name.to_string() })
+        cm::Ref::Child(cm::ChildRef { name: child_name.to_string() })
     } else if from == "realm" {
-        cm::OfferSource::Realm(cm::RealmRef {})
+        cm::Ref::Realm(cm::RealmRef {})
     } else if from == "self" {
-        cm::OfferSource::Myself(cm::SelfRef {})
+        cm::Ref::Self_(cm::SelfRef {})
     } else {
         return Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", from)));
     };
@@ -240,9 +240,9 @@ fn extract_targets(
         }?;
         let name = caps[1].to_string();
         let dest = if all_children.contains(&name as &str) {
-            cm::OfferDest::Child(cm::ChildRef { name: name.to_string() })
+            cm::Ref::Child(cm::ChildRef { name: name.to_string() })
         } else if all_collections.contains(&name as &str) {
-            cm::OfferDest::Collection(cm::CollectionRef { name: name.to_string() })
+            cm::Ref::Collection(cm::CollectionRef { name: name.to_string() })
         } else {
             return Err(Error::internal(format!("dangling reference: \"{}\"", name)));
         };
@@ -396,7 +396,7 @@ mod tests {
         {
             "directory": {
                 "source": {
-                    "myself": {}
+                    "self": {}
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs"
@@ -677,7 +677,7 @@ mod tests {
         {
             "directory": {
                 "source": {
-                    "myself": {}
+                    "self": {}
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs"

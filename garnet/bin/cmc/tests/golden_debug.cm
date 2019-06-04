@@ -14,7 +14,7 @@
         {
             "directory": {
                 "source": {
-                    "myself": {}
+                    "self": {}
                 },
                 "source_path": "/volumes/blobfs",
                 "target_path": "/volumes/blobfs"

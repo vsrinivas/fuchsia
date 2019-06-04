@@ -36,77 +36,20 @@
         "meta"
       ]
     },
-    "expose-source-clause": {
-      "title": "Exposed capability source component",
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [ "myself" ]
-        },
-        {
-          "required": [ "child" ]
-        }
-      ],
-      "properties": {
-        "myself": {
-          "type": "object",
-          "title": "Component itself"
-        },
-        "child": {
-          "type": "object",
-          "title": "Component's child",
-          "required": [ "name" ],
-          "properties": {
-            "name": {
-              "title": "Child name",
-              "allOf": [{ "$ref": "#/definitions/name-clause" }]
-            }
-          }
-        }
-      }
-    },
-    "offer-source-clause": {
-      "title": "Offered capability source component",
+    "reference-clause": {
       "type": "object",
       "oneOf": [
         {
           "required": [ "realm" ]
         },
         {
-          "required": [ "myself" ]
+          "required": [ "self" ]
         },
         {
           "required": [ "child" ]
-        }
-      ],
-      "properties": {
-        "realm": {
-          "type": "object",
-          "title": "Component's containing realm (parent component)"
         },
-        "myself": {
-          "type": "object",
-          "title": "Component itself"
-        },
-        "child": {
-          "type": "object",
-          "title": "Component's child",
-          "required": [ "name" ],
-          "properties": {
-            "name": {
-              "title": "Child name",
-              "allOf": [{ "$ref": "#/definitions/name-clause" }]
-            }
-          }
-        }
-      }
-    },
-    "offer-storage-source-clause": {
-      "title": "Offered storage capability source component",
-      "type": "object",
-      "oneOf": [
         {
-          "required": [ "realm" ]
+          "required": [ "collection" ]
         },
         {
           "required": [ "storage" ]
@@ -117,34 +60,13 @@
           "type": "object",
           "title": "Component's containing realm (parent component)"
         },
-        "storage": {
+        "self": {
           "type": "object",
-          "title": "Component's storage section",
-          "required": [ "name" ],
-          "properties": {
-            "name": {
-              "title": "Storage section name",
-              "allOf": [{ "$ref": "#/definitions/name-clause" }]
-            }
-          }
-        }
-      }
-    },
-    "offer-dest-clause": {
-      "title": "Offered capability target component",
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [ "child" ]
+          "title": "Component itself"
         },
-        {
-          "required": [ "collection" ]
-        }
-      ],
-      "properties": {
         "child": {
           "type": "object",
-          "title": "Offered target component's child",
+          "title": "Component's child",
           "required": [ "name" ],
           "properties": {
             "name": {
@@ -155,11 +77,22 @@
         },
         "collection": {
           "type": "object",
-          "title": "Offered target component's collection",
+          "title": "Component's collection",
           "required": [ "name" ],
           "properties": {
             "name": {
               "title": "Collection name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "title": "Component's storage section",
+          "required": [ "name" ],
+          "properties": {
+            "name": {
+              "title": "Storage section name",
               "allOf": [{ "$ref": "#/definitions/name-clause" }]
             }
           }
@@ -184,7 +117,7 @@
             "allOf": [{ "$ref": "#/definitions/path-clause" }]
           },
           "dest": {
-            "allOf": [{ "$ref": "#/definitions/offer-dest-clause" }]
+            "allOf": [{ "$ref": "#/definitions/reference-clause" }]
           }
         }
       }
@@ -296,7 +229,7 @@
             "properties": {
               "source": {
                 "title": "Exposed service source component",
-                "allOf": [{ "$ref": "#/definitions/expose-source-clause" }]
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
                 "title": "Exposed service source path",
@@ -319,7 +252,7 @@
             "properties": {
               "source": {
                 "title": "Exposed directory source component",
-                "allOf": [{ "$ref": "#/definitions/expose-source-clause" }]
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
                 "title": "Exposed directory source path",
@@ -361,7 +294,7 @@
             "properties": {
               "source": {
                 "title": "Offered service source component",
-                "allOf": [{ "$ref": "#/definitions/offer-source-clause" }]
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
                 "title": "Offered service source path",
@@ -382,7 +315,7 @@
             "properties": {
               "source": {
                 "title": "Offered directory source component",
-                "allOf": [{ "$ref": "#/definitions/offer-source-clause" }]
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
                 "title": "Offered directory source path",
@@ -407,7 +340,7 @@
               },
               "source": {
                 "title": "Offered storage source component",
-                "allOf": [{ "$ref": "#/definitions/offer-storage-source-clause" }]
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "dests": {
                 "title": "Offered storage targets",
@@ -415,7 +348,7 @@
                 "uniqueItems": true,
                 "minItems": 1,
                 "items": {
-                  "allOf": [{ "$ref": "#/definitions/offer-dest-clause" }]
+                  "allOf": [{ "$ref": "#/definitions/reference-clause" }]
                 }
               }
             }
@@ -472,7 +405,7 @@
           },
           "source": {
             "title": "Backing directory source component",
-            "allOf": [{ "$ref": "#/definitions/offer-source-clause" }]
+            "allOf": [{ "$ref": "#/definitions/reference-clause" }]
           }
         }
       }

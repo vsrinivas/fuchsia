@@ -184,7 +184,7 @@ async fn find_capability_source<'a>(
                     };
                     continue 'offerloop;
                 }
-                OfferSource::Myself => {
+                OfferSource::Self_ => {
                     // The offered capability comes from the current component,
                     // return our current location in the tree.
                     return Ok(CapabilitySource::Component(
@@ -221,7 +221,7 @@ async fn find_capability_source<'a>(
                 ExposeDecl::Directory(d) => &d.source,
             };
             match source {
-                ExposeSource::Myself => {
+                ExposeSource::Self_ => {
                     // The offered capability comes from the current component, return our
                     // current location in the tree.
                     return Ok(CapabilitySource::Component(

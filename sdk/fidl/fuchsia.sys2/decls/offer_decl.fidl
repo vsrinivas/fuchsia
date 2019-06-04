@@ -17,8 +17,9 @@ xunion OfferDecl {
 /// have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
 table OfferServiceDecl {
-    /// The provider of the capability relative to the component itself.
-    1: OfferSource source;
+    /// The provider of the capability relative to the component itself. Must be
+    /// |realm|, |self|, or |child|.
+    1: Ref source;
 
     /// Path identifying the service being offered.
     2: string:MAX_PATH_LENGTH source_path;
@@ -31,16 +32,16 @@ table OfferServiceDecl {
 /// have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
 table OfferDirectoryDecl {
-    /// Path identifying the directory being offered.
-    1: string:MAX_PATH_LENGTH source_path;
+    /// The provider of the capability relative to the component itself. Must be
+    /// |realm|, |self|, or |child|.
+    1: Ref source;
 
-    /// The provider of the capability relative to the component itself.
-    2: OfferSource source;
+    /// Path identifying the directory being offered.
+    2: string:MAX_PATH_LENGTH source_path;
 
     /// The list of children to which the capability should be offered.
     3: vector<OfferTarget> targets;
 };
-
 
 /// Declares a storage capability offered by a component to one of its children,
 /// such as meta storage offered by the component's containing realm or cache
@@ -49,26 +50,12 @@ table OfferStorageDecl {
     /// The type of storage being offered.
     1: StorageType type;
 
-    /// The source of the storage capability.
-    2: OfferStorageSource source;
+    /// The source of the storage capability. Must be |realm| or |storage|.
+    2: Ref source;
 
-    /// The list of children to which the capability should be offered.
-    3: vector<OfferDest> dests;
-};
-
-/// The source of an offered storage capability, which may be either the realm
-/// or the name of a storage section on the component itself.
-xunion OfferStorageSource {
-    RealmRef realm;
-    StorageRef storage;
-};
-
-/// Identifies a source component of an OfferDecl.
-// TODO: Split OfferSource by capability type.
-xunion OfferSource {
-  RealmRef realm;
-  SelfRef myself;
-  ChildRef child;
+    /// The destinations to which the capability should be offered. Each |Ref|
+    /// must be |child| or |collection|.
+    3: vector<Ref> dests;
 };
 
 /// Describes a target for a capability offering.
@@ -79,13 +66,6 @@ table OfferTarget {
     /// Must be an absolute path starting with /.
     1: string:MAX_PATH_LENGTH target_path;
 
-    /// Reference to the destination.
-    2: OfferDest dest;
+    /// Reference to the destination. Must be |child| or |collection|.
+    2: Ref dest;
 };
-
-/// References the destination of an OfferTarget.
-xunion OfferDest {
-    ChildRef child;
-    CollectionRef collection;
-};
-

@@ -45,7 +45,7 @@ pub struct Collection {
 pub struct Storage {
     pub name: String,
     pub source_path: String,
-    pub source: OfferSource,
+    pub source: Ref,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -87,14 +87,14 @@ pub enum Expose {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExposeService {
-    pub source: ExposeSource,
+    pub source: Ref,
     pub source_path: String,
     pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExposeDirectory {
-    pub source: ExposeSource,
+    pub source: Ref,
     pub source_path: String,
     pub target_path: String,
 }
@@ -111,14 +111,14 @@ pub enum Offer {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferService {
-    pub source: OfferSource,
+    pub source: Ref,
     pub source_path: String,
     pub targets: Vec<Target>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferDirectory {
-    pub source: OfferSource,
+    pub source: Ref,
     pub source_path: String,
     pub targets: Vec<Target>,
 }
@@ -127,34 +127,8 @@ pub struct OfferDirectory {
 pub struct OfferStorage {
     #[serde(rename = "type")]
     pub type_: StorageType,
-    pub source: OfferStorageSource,
-    pub dests: Vec<OfferDest>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum ExposeSource {
-    #[serde(rename = "myself")]
-    Myself(SelfRef),
-    #[serde(rename = "child")]
-    Child(ChildRef),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum OfferSource {
-    #[serde(rename = "realm")]
-    Realm(RealmRef),
-    #[serde(rename = "myself")]
-    Myself(SelfRef),
-    #[serde(rename = "child")]
-    Child(ChildRef),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum OfferStorageSource {
-    #[serde(rename = "realm")]
-    Realm(RealmRef),
-    #[serde(rename = "storage")]
-    Storage(StorageRef),
+    pub source: Ref,
+    pub dests: Vec<Ref>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -170,15 +144,21 @@ pub enum StorageType {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Target {
     pub target_path: String,
-    pub dest: OfferDest,
+    pub dest: Ref,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum OfferDest {
+pub enum Ref {
+    #[serde(rename = "realm")]
+    Realm(RealmRef),
+    #[serde(rename = "self")]
+    Self_(SelfRef),
     #[serde(rename = "child")]
     Child(ChildRef),
     #[serde(rename = "collection")]
     Collection(CollectionRef),
+    #[serde(rename = "storage")]
+    Storage(StorageRef),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

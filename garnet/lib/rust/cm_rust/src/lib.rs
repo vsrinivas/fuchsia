@@ -55,8 +55,8 @@ macro_rules! fidl_translations_identical {
     };
 }
 
-/// Generates a struct with a `FidlIntoNative` implementation that calls `fidl_into_native()` on each
-/// field.
+/// Generates a struct with a `FidlIntoNative` implementation that calls `fidl_into_native()` on
+/// each field.
 /// - `into_type` is the name of the struct and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
@@ -349,7 +349,7 @@ fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
 fidl_into_vec!(StorageDecl, fsys::StorageDecl);
 fidl_into_vec!(OfferTarget, fsys::OfferTarget);
-fidl_into_vec!(OfferDest, fsys::OfferDest);
+fidl_into_vec!(OfferDest, fsys::Ref);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
@@ -679,28 +679,27 @@ impl OfferStorageDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExposeSource {
-    Myself,
+    Self_,
     Child(String),
 }
 
-impl FidlIntoNative<ExposeSource> for Option<fsys::ExposeSource> {
+impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> ExposeSource {
         match self.unwrap() {
-            fsys::ExposeSource::Myself(_) => ExposeSource::Myself,
-            fsys::ExposeSource::Child(c) => ExposeSource::Child(c.name.unwrap()),
-            fsys::ExposeSource::__UnknownVariant { .. } => panic!("unknown ExposeSource variant"),
+            fsys::Ref::Self_(_) => ExposeSource::Self_,
+            fsys::Ref::Child(c) => ExposeSource::Child(c.name.unwrap()),
+            _ => panic!("invalid ExposeSource variant"),
         }
     }
 }
 
-impl NativeIntoFidl<Option<fsys::ExposeSource>> for ExposeSource {
-    fn native_into_fidl(self) -> Option<fsys::ExposeSource> {
+impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            ExposeSource::Myself => fsys::ExposeSource::Myself(fsys::SelfRef {}),
-            ExposeSource::Child(child_name) => fsys::ExposeSource::Child(fsys::ChildRef {
-                name: Some(child_name),
-                collection: None,
-            }),
+            ExposeSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            ExposeSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: Some(child_name), collection: None })
+            }
         })
     }
 }
@@ -708,30 +707,29 @@ impl NativeIntoFidl<Option<fsys::ExposeSource>> for ExposeSource {
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferSource {
     Realm,
-    Myself,
+    Self_,
     Child(String),
 }
 
-impl FidlIntoNative<OfferSource> for Option<fsys::OfferSource> {
+impl FidlIntoNative<OfferSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferSource {
         match self.unwrap() {
-            fsys::OfferSource::Realm(_) => OfferSource::Realm,
-            fsys::OfferSource::Myself(_) => OfferSource::Myself,
-            fsys::OfferSource::Child(c) => OfferSource::Child(c.name.unwrap()),
-            fsys::OfferSource::__UnknownVariant { .. } => panic!("unknown OfferSource variant"),
+            fsys::Ref::Realm(_) => OfferSource::Realm,
+            fsys::Ref::Self_(_) => OfferSource::Self_,
+            fsys::Ref::Child(c) => OfferSource::Child(c.name.unwrap()),
+            _ => panic!("invalid OfferSource variant"),
         }
     }
 }
 
-impl NativeIntoFidl<Option<fsys::OfferSource>> for OfferSource {
-    fn native_into_fidl(self) -> Option<fsys::OfferSource> {
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferSource::Realm => fsys::OfferSource::Realm(fsys::RealmRef {}),
-            OfferSource::Myself => fsys::OfferSource::Myself(fsys::SelfRef {}),
-            OfferSource::Child(child_name) => fsys::OfferSource::Child(fsys::ChildRef {
-                name: Some(child_name),
-                collection: None,
-            }),
+            OfferSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            OfferSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: Some(child_name), collection: None })
+            }
         })
     }
 }
@@ -742,37 +740,37 @@ pub enum OfferDest {
     Collection(String),
 }
 
-impl FidlIntoNative<OfferDest> for fsys::OfferDest {
+impl FidlIntoNative<OfferDest> for fsys::Ref {
     fn fidl_into_native(self) -> OfferDest {
         match self {
-            fsys::OfferDest::Child(c) => OfferDest::Child(c.name.unwrap()),
-            fsys::OfferDest::Collection(c) => OfferDest::Collection(c.name.unwrap()),
-            fsys::OfferDest::__UnknownVariant { .. } => panic!("unknown OfferDest variant"),
+            fsys::Ref::Child(c) => OfferDest::Child(c.name.unwrap()),
+            fsys::Ref::Collection(c) => OfferDest::Collection(c.name.unwrap()),
+            _ => panic!("invalid OfferDest variant"),
         }
     }
 }
 
-impl NativeIntoFidl<fsys::OfferDest> for OfferDest {
-    fn native_into_fidl(self) -> fsys::OfferDest {
+impl NativeIntoFidl<fsys::Ref> for OfferDest {
+    fn native_into_fidl(self) -> fsys::Ref {
         match self {
             OfferDest::Child(child_name) => {
-                fsys::OfferDest::Child(fsys::ChildRef { name: Some(child_name), collection: None })
+                fsys::Ref::Child(fsys::ChildRef { name: Some(child_name), collection: None })
             }
             OfferDest::Collection(collection_name) => {
-                fsys::OfferDest::Collection(fsys::CollectionRef { name: Some(collection_name) })
+                fsys::Ref::Collection(fsys::CollectionRef { name: Some(collection_name) })
             }
         }
     }
 }
 
-impl FidlIntoNative<OfferDest> for Option<fsys::OfferDest> {
+impl FidlIntoNative<OfferDest> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferDest {
         self.unwrap().fidl_into_native()
     }
 }
 
-impl NativeIntoFidl<Option<fsys::OfferDest>> for OfferDest {
-    fn native_into_fidl(self) -> Option<fsys::OfferDest> {
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferDest {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(self.native_into_fidl())
     }
 }
@@ -783,24 +781,22 @@ pub enum OfferStorageSource {
     Storage(String),
 }
 
-impl FidlIntoNative<OfferStorageSource> for Option<fsys::OfferStorageSource> {
+impl FidlIntoNative<OfferStorageSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferStorageSource {
         match self.unwrap() {
-            fsys::OfferStorageSource::Realm(_) => OfferStorageSource::Realm,
-            fsys::OfferStorageSource::Storage(c) => OfferStorageSource::Storage(c.name.unwrap()),
-            fsys::OfferStorageSource::__UnknownVariant { .. } => {
-                panic!("unknown OfferStorageSource variant")
-            }
+            fsys::Ref::Realm(_) => OfferStorageSource::Realm,
+            fsys::Ref::Storage(c) => OfferStorageSource::Storage(c.name.unwrap()),
+            _ => panic!("invalid OfferStorageSource variant"),
         }
     }
 }
 
-impl NativeIntoFidl<Option<fsys::OfferStorageSource>> for OfferStorageSource {
-    fn native_into_fidl(self) -> Option<fsys::OfferStorageSource> {
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferStorageSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
-            OfferStorageSource::Realm => fsys::OfferStorageSource::Realm(fsys::RealmRef {}),
+            OfferStorageSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
             OfferStorageSource::Storage(name) => {
-                fsys::OfferStorageSource::Storage(fsys::StorageRef { name: Some(name) })
+                fsys::Ref::Storage(fsys::StorageRef { name: Some(name) })
             }
         })
     }
@@ -898,7 +894,9 @@ mod tests {
             $(
                 $test_name:ident => {
                     input = $input:expr,
+                    input_type = $input_type:ty,
                     result = $result:expr,
+                    result_type = $result_type:ty,
                 },
             )+
         ) => {
@@ -906,12 +904,12 @@ mod tests {
                 #[test]
                 fn $test_name() {
                     {
-                        let res: Vec<_> =
+                        let res: Vec<$result_type> =
                             $input.into_iter().map(|e| e.fidl_into_native()).collect();
                         assert_eq!(res, $result);
                     }
                     {
-                        let res: Vec<_> =
+                        let res: Vec<$input_type> =
                             $result.into_iter().map(|e| e.native_into_fidl()).collect();
                         assert_eq!(res, $input);
                     }
@@ -1024,7 +1022,7 @@ mod tests {
                ]),
                exposes: Some(vec![
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                       source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
+                       source: Some(fsys::Ref::Child(fsys::ChildRef {
                            name: Some("netstack".to_string()),
                            collection: None,
                        })),
@@ -1032,7 +1030,7 @@ mod tests {
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
-                       source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
+                       source: Some(fsys::Ref::Child(fsys::ChildRef {
                            name: Some("netstack".to_string()),
                            collection: None,
                        })),
@@ -1042,12 +1040,12 @@ mod tests {
                ]),
                offers: Some(vec![
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                       source: Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/netstack".to_string()),
                        targets: Some(vec![
                            fsys::OfferTarget{
                                target_path: Some("/svc/mynetstack".to_string()),
-                               dest: Some(fsys::OfferDest::Child(
+                               dest: Some(fsys::Ref::Child(
                                   fsys::ChildRef {
                                       name: Some("echo".to_string()),
                                       collection: None,
@@ -1057,12 +1055,12 @@ mod tests {
                        ]),
                    }),
                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                       source: Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/data/dir".to_string()),
                        targets: Some(vec![
                            fsys::OfferTarget{
                                target_path: Some("/data".to_string()),
-                               dest: Some(fsys::OfferDest::Collection(
+                               dest: Some(fsys::Ref::Collection(
                                    fsys::CollectionRef { name: Some("modular".to_string()) }
                                )),
                            },
@@ -1070,11 +1068,11 @@ mod tests {
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
-                       source: Some(fsys::OfferStorageSource::Storage(fsys::StorageRef {
+                       source: Some(fsys::Ref::Storage(fsys::StorageRef {
                            name: Some("memfs".to_string()),
                        })),
                        dests: Some(vec![
-                           fsys::OfferDest::Collection(
+                           fsys::Ref::Collection(
                                fsys::CollectionRef { name: Some("modular".to_string()) }
                            ),
                        ]),
@@ -1114,7 +1112,7 @@ mod tests {
                    fsys::StorageDecl {
                        name: Some("memfs".to_string()),
                        source_path: Some("/memfs".to_string()),
-                       source: Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                    }
                ])
             },
@@ -1278,12 +1276,12 @@ mod tests {
         from_expose_capability => {
             input = vec![
                 ExposeDecl::Service(ExposeServiceDecl {
-                    source: ExposeSource::Myself,
+                    source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Myself,
+                    source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),
@@ -1296,7 +1294,7 @@ mod tests {
         from_offer_capability => {
             input = vec![
                 OfferDecl::Service(OfferServiceDecl {
-                    source: OfferSource::Myself,
+                    source: OfferSource::Self_,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     targets: vec![
                         OfferTarget {
@@ -1306,7 +1304,7 @@ mod tests {
                     ],
                 }),
                 OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Myself,
+                    source: OfferSource::Self_,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     targets: vec![
                         OfferTarget {
@@ -1333,60 +1331,67 @@ mod tests {
     test_fidl_into_and_from! {
         fidl_into_and_from_expose_source => {
             input = vec![
-                Some(fsys::ExposeSource::Myself(fsys::SelfRef {})),
-                Some(fsys::ExposeSource::Child(fsys::ChildRef {
+                Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                Some(fsys::Ref::Child(fsys::ChildRef {
                     name: Some("foo".to_string()),
                     collection: None,
                 })),
             ],
+            input_type = Option<fsys::Ref>,
             result = vec![
-                ExposeSource::Myself,
+                ExposeSource::Self_,
                 ExposeSource::Child("foo".to_string()),
             ],
+            result_type = ExposeSource,
         },
         fidl_into_and_from_offer_source => {
             input = vec![
-                Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
-                Some(fsys::OfferSource::Myself(fsys::SelfRef {})),
-                Some(fsys::OfferSource::Child(fsys::ChildRef {
+                Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                Some(fsys::Ref::Child(fsys::ChildRef {
                     name: Some("foo".to_string()),
                     collection: None,
                 })),
             ],
+            input_type = Option<fsys::Ref>,
             result = vec![
                 OfferSource::Realm,
-                OfferSource::Myself,
+                OfferSource::Self_,
                 OfferSource::Child("foo".to_string()),
             ],
+            result_type = OfferSource,
         },
         fidl_into_and_from_offer_storage_source => {
             input = vec![
-                Some(fsys::OfferStorageSource::Realm(fsys::RealmRef {})),
-                Some(fsys::OfferStorageSource::Storage(fsys::StorageRef {
+                Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                Some(fsys::Ref::Storage(fsys::StorageRef {
                     name: Some("foo".to_string()),
                 })),
             ],
+            input_type = Option<fsys::Ref>,
             result = vec![
                 OfferStorageSource::Realm,
                 OfferStorageSource::Storage("foo".to_string()),
             ],
+            result_type = OfferStorageSource,
         },
         fidl_into_and_from_storage_capability => {
             input = vec![
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
                     source_path: Some("/minfs".to_string()),
-                    source: Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
+                    source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                 },
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
                     source_path: Some("/minfs".to_string()),
-                    source: Some(fsys::OfferSource::Child(fsys::ChildRef {
+                    source: Some(fsys::Ref::Child(fsys::ChildRef {
                         name: Some("foo".to_string()),
                         collection: None,
                     })),
                 },
             ],
+            input_type = fsys::StorageDecl,
             result = vec![
                 StorageDecl {
                     name: "minfs".to_string(),
@@ -1399,6 +1404,7 @@ mod tests {
                     source: OfferSource::Child("foo".to_string()),
                 },
             ],
+            result_type = StorageDecl,
         },
     }
 

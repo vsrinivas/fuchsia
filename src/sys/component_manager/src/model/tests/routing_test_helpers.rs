@@ -337,7 +337,7 @@ pub fn new_directory_capability() -> Capability {
 }
 
 /// construct the given component topology, host `/svc/foo` and `/data/foo` from the outgoing
-/// directory of any component offering or exposing from `Myself`, and attempt to use the use
+/// directory of any component offering or exposing from `Self`, and attempt to use the use
 /// declarations referenced in `test.users_to_check`
 pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
     let mut resolver = ResolverRegistry::new();
@@ -346,14 +346,14 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
 
     let mut mock_resolver = MockResolver::new();
     for (name, decl) in test.components.clone() {
-        // if this decl is offering/exposing something from Myself, let's host it
+        // if this decl is offering/exposing something from Self, let's host it
         let mut out_dir = None;
         for expose in decl.exposes.iter() {
             let source = match expose {
                 ExposeDecl::Service(s) => &s.source,
                 ExposeDecl::Directory(d) => &d.source,
             };
-            if *source == ExposeSource::Myself {
+            if *source == ExposeSource::Self_ {
                 host_capability(&mut out_dir, &expose.clone().into());
             }
         }
@@ -363,7 +363,7 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
                 OfferDecl::Directory(d) => &d.source,
                 OfferDecl::Storage(_) => panic!("storage capabilities are not supported"),
             };
-            if *source == OfferSource::Myself {
+            if *source == OfferSource::Self_ {
                 host_capability(&mut out_dir, &offer.clone().into());
             }
         }

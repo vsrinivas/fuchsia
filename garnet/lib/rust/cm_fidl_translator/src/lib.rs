@@ -70,7 +70,7 @@ cm_into_opt_vec!(fsys::ChildDecl, cm::Child);
 cm_into_opt_vec!(fsys::CollectionDecl, cm::Collection);
 cm_into_opt_vec!(fsys::StorageDecl, cm::Storage);
 cm_into_vec!(fsys::OfferTarget, cm::Target);
-cm_into_vec!(fsys::OfferDest, cm::OfferDest);
+cm_into_vec!(fsys::Ref, cm::Ref);
 
 impl CmInto<fsys::ComponentDecl> for cm::Document {
     fn cm_into(self) -> Result<fsys::ComponentDecl, Error> {
@@ -203,17 +203,6 @@ impl CmInto<fsys::StorageType> for cm::StorageType {
     }
 }
 
-impl CmInto<fsys::OfferStorageSource> for cm::OfferStorageSource {
-    fn cm_into(self) -> Result<fsys::OfferStorageSource, Error> {
-        match self {
-            cm::OfferStorageSource::Realm(r) => Ok(fsys::OfferStorageSource::Realm(r.cm_into()?)),
-            cm::OfferStorageSource::Storage(s) => {
-                Ok(fsys::OfferStorageSource::Storage(s.cm_into()?))
-            }
-        }
-    }
-}
-
 impl CmInto<fsys::ChildDecl> for cm::Child {
     fn cm_into(self) -> Result<fsys::ChildDecl, Error> {
         Ok(fsys::ChildDecl {
@@ -239,25 +228,6 @@ impl CmInto<fsys::StorageDecl> for cm::Storage {
             name: Some(self.name),
             source_path: Some(self.source_path),
             source: Some(self.source.cm_into()?),
-        })
-    }
-}
-
-impl CmInto<fsys::ExposeSource> for cm::ExposeSource {
-    fn cm_into(self) -> Result<fsys::ExposeSource, Error> {
-        Ok(match self {
-            cm::ExposeSource::Myself(s) => fsys::ExposeSource::Myself(s.cm_into()?),
-            cm::ExposeSource::Child(c) => fsys::ExposeSource::Child(c.cm_into()?),
-        })
-    }
-}
-
-impl CmInto<fsys::OfferSource> for cm::OfferSource {
-    fn cm_into(self) -> Result<fsys::OfferSource, Error> {
-        Ok(match self {
-            cm::OfferSource::Realm(r) => fsys::OfferSource::Realm(r.cm_into()?),
-            cm::OfferSource::Myself(s) => fsys::OfferSource::Myself(s.cm_into()?),
-            cm::OfferSource::Child(c) => fsys::OfferSource::Child(c.cm_into()?),
         })
     }
 }
@@ -301,11 +271,14 @@ impl CmInto<fsys::OfferTarget> for cm::Target {
     }
 }
 
-impl CmInto<fsys::OfferDest> for cm::OfferDest {
-    fn cm_into(self) -> Result<fsys::OfferDest, Error> {
+impl CmInto<fsys::Ref> for cm::Ref {
+    fn cm_into(self) -> Result<fsys::Ref, Error> {
         Ok(match self {
-            cm::OfferDest::Child(c) => fsys::OfferDest::Child(c.cm_into()?),
-            cm::OfferDest::Collection(c) => fsys::OfferDest::Collection(c.cm_into()?),
+            cm::Ref::Realm(r) => fsys::Ref::Realm(r.cm_into()?),
+            cm::Ref::Self_(s) => fsys::Ref::Self_(s.cm_into()?),
+            cm::Ref::Child(c) => fsys::Ref::Child(c.cm_into()?),
+            cm::Ref::Collection(c) => fsys::Ref::Collection(c.cm_into()?),
+            cm::Ref::Storage(r) => fsys::Ref::Storage(r.cm_into()?),
         })
     }
 }
@@ -609,7 +582,7 @@ mod tests {
                     {
                         "directory": {
                             "source": {
-                                "myself": {}
+                                "self": {}
                             },
                             "source_path": "/volumes/blobfs",
                             "target_path": "/volumes/blobfs"
@@ -628,7 +601,7 @@ mod tests {
                 let exposes = vec![
                     fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::ExposeSource::Child(fsys::ChildRef {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                             collection: None,
                         })),
@@ -636,7 +609,7 @@ mod tests {
                     }),
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source_path: Some("/volumes/blobfs".to_string()),
-                        source: Some(fsys::ExposeSource::Myself(fsys::SelfRef{})),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         target_path: Some("/volumes/blobfs".to_string()),
                     }),
                 ];
@@ -685,7 +658,7 @@ mod tests {
                     {
                         "directory": {
                             "source": {
-                                "myself": {}
+                                "self": {}
                             },
                             "source_path": "/data/config",
                             "targets": [
@@ -786,7 +759,7 @@ mod tests {
                         "name": "memfs",
                         "source_path": "/memfs",
                         "source": {
-                            "myself": {}
+                            "self": {}
                         }
                     }
                 ],
@@ -795,11 +768,11 @@ mod tests {
                 let offers = vec![
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source_path: Some("/data/assets".to_string()),
-                        source: Some(fsys::OfferSource::Realm(fsys::RealmRef{})),
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
                         targets: Some(vec![
                             fsys::OfferTarget {
                                 target_path: Some("/data/realm_assets".to_string()),
-                                dest: Some(fsys::OfferDest::Child(
+                                dest: Some(fsys::Ref::Child(
                                    fsys::ChildRef {
                                        name: Some("logger".to_string()),
                                        collection: None,
@@ -808,7 +781,7 @@ mod tests {
                             },
                             fsys::OfferTarget {
                                 target_path: Some("/data/assets".to_string()),
-                                dest: Some(fsys::OfferDest::Collection(
+                                dest: Some(fsys::Ref::Collection(
                                    fsys::CollectionRef { name: Some("modular".to_string()) }
                                 )),
                             },
@@ -816,11 +789,11 @@ mod tests {
                     }),
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source_path: Some("/data/config".to_string()),
-                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/data/config".to_string()),
-                                dest: Some(fsys::OfferDest::Child(
+                                dest: Some(fsys::Ref::Child(
                                    fsys::ChildRef {
                                        name: Some("netstack".to_string()),
                                        collection: None,
@@ -831,14 +804,14 @@ mod tests {
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        source: Some(fsys::OfferSource::Child(fsys::ChildRef {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                             collection: None,
                         })),
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
-                                dest: Some(fsys::OfferDest::Collection(
+                                dest: Some(fsys::Ref::Collection(
                                    fsys::CollectionRef { name: Some("modular".to_string()) }
                                 )),
                             },
@@ -846,26 +819,26 @@ mod tests {
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Data),
-                        source: Some(fsys::OfferStorageSource::Storage(fsys::StorageRef {
+                        source: Some(fsys::Ref::Storage(fsys::StorageRef {
                             name: Some("memfs".to_string()),
                         })),
                         dests: Some(vec![
-                            fsys::OfferDest::Collection(
+                            fsys::Ref::Collection(
                                fsys::CollectionRef { name: Some("modular".to_string()) }
                             ),
-                            fsys::OfferDest::Child(
+                            fsys::Ref::Child(
                                fsys::ChildRef { name: Some("logger".to_string()), collection: None }
                             ),
                         ]),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Meta),
-                        source: Some(fsys::OfferStorageSource::Realm(fsys::RealmRef { })),
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
                         dests: Some(vec![
-                            fsys::OfferDest::Collection(
+                            fsys::Ref::Collection(
                                fsys::CollectionRef { name: Some("modular".to_string()) }
                             ),
-                            fsys::OfferDest::Child(
+                            fsys::Ref::Child(
                                fsys::ChildRef { name: Some("logger".to_string()), collection: None }
                             ),
                         ]),
@@ -893,7 +866,7 @@ mod tests {
                     fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
-                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1008,7 +981,7 @@ mod tests {
                         "name": "memfs",
                         "source_path": "/memfs",
                         "source": {
-                            "myself": {}
+                            "self": {}
                         }
                     }
                 ]
@@ -1018,7 +991,7 @@ mod tests {
                     fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
-                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1044,7 +1017,7 @@ mod tests {
                     {
                         "directory": {
                             "source": {
-                                "myself": {}
+                                "self": {}
                             },
                             "source_path": "/volumes/blobfs",
                             "target_path": "/volumes/blobfs"
@@ -1108,7 +1081,7 @@ mod tests {
                         "name": "memfs",
                         "source_path": "/memfs",
                         "source": {
-                            "myself": {}
+                            "self": {}
                         }
                     }
                 ]
@@ -1128,14 +1101,14 @@ mod tests {
                 ];
                 let exposes = vec![
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
-                        source: Some(fsys::ExposeSource::Myself(fsys::SelfRef{})),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         source_path: Some("/volumes/blobfs".to_string()),
                         target_path: Some("/volumes/blobfs".to_string()),
                     }),
                 ];
                 let offers = vec![
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                        source: Some(fsys::OfferSource::Child(fsys::ChildRef {
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                             collection: None,
                         })),
@@ -1143,7 +1116,7 @@ mod tests {
                         targets: Some(vec![
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                                dest: Some(fsys::OfferDest::Child(
+                                dest: Some(fsys::Ref::Child(
                                    fsys::ChildRef {
                                        name: Some("netstack".to_string()),
                                        collection: None,
@@ -1152,7 +1125,7 @@ mod tests {
                             },
                             fsys::OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                                dest: Some(fsys::OfferDest::Collection(
+                                dest: Some(fsys::Ref::Collection(
                                    fsys::CollectionRef { name: Some("modular".to_string()) }
                                 )),
                             },
@@ -1191,7 +1164,7 @@ mod tests {
                     fsys::StorageDecl {
                         name: Some("memfs".to_string()),
                         source_path: Some("/memfs".to_string()),
-                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                     },
                 ];
                 fsys::ComponentDecl {
