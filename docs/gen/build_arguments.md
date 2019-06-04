@@ -16,21 +16,12 @@ archives.
 
 From //build/images/BUILD.gn:51
 
-### allow_layer_guesswork
-Does nothing.
-
-Will be removed after 30 April 2019.
-
-**Current value (from the default):** `false`
-
-From //build/board.gni:16
-
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:838
+From //build/images/BUILD.gn:837
 
 ### auto_login_to_guest
 Whether basemgr should automatically login as a persistent guest user.
@@ -128,7 +119,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers", "//garnet/packages/prod:sysmem-assistant"]`
 
-From //boards/arm64.gni:11
+From //boards/arm64.gni:9
 
 **Overridden from the default:** `[]`
 
@@ -136,29 +127,11 @@ From //build/board.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers"]`
 
-From //boards/x64.gni:13
+From //boards/x64.gni:11
 
 **Overridden from the default:** `[]`
 
 From //build/board.gni:11
-
-### board_packages
-
-**Current value for `target_cpu = "arm64"`:** `[]`
-
-From //boards/arm64.gni:9
-
-**Overridden from the default:** `[]`
-
-From //build/board.gni:17
-
-**Current value for `target_cpu = "x64"`:** `[]`
-
-From //boards/x64.gni:9
-
-**Overridden from the default:** `[]`
-
-From //build/board.gni:17
 
 ### bootfs_extra
 List of extra manifest entries for files to add to the BOOTFS.
