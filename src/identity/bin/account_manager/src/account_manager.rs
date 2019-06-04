@@ -22,7 +22,7 @@ use fidl_fuchsia_auth_account::{
 };
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_inspect::vmo::{Inspector, Property};
-use futures::lock::Mutex;
+use futures::lock::{Mutex, MutexGuard};
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::{info, warn};
@@ -166,14 +166,28 @@ impl AccountManager {
 
     /// Returns an `AccountHandlerConnection` for the specified `LocalAccountId`, either by
     /// returning the existing entry from the map or by creating and adding a new entry to the map.
+    /// This method automatically locks and unlocks the mutex for the account map.
     async fn get_handler_for_existing_account<'a>(
         &'a self,
         account_id: &'a LocalAccountId,
     ) -> Result<Arc<AccountHandlerConnection>, AccountManagerError> {
-        let mut ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        let ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
+        await!(self.get_handler_for_existing_account_with_lock(account_id, ids_to_handlers_lock))
+            .map(|(new_handler, _ids_to_handlers_lock)| new_handler)
+    }
+
+    /// Returns an `AccountHandlerConnection` for the specified `LocalAccountId`, either by
+    /// returning the existing entry from the map or by creating and adding a new entry to the map.
+    /// This method accepts a mutex guard in cases where the lock needs to be kept longer than for
+    /// the duration of this method.
+    async fn get_handler_for_existing_account_with_lock<'a>(
+        &'a self,
+        account_id: &'a LocalAccountId,
+        mut ids_to_handlers_lock: MutexGuard<'a, AccountMap>,
+    ) -> Result<(Arc<AccountHandlerConnection>, MutexGuard<'a, AccountMap>), AccountManagerError> {
         match ids_to_handlers_lock.get(account_id) {
             None => return Err(AccountManagerError::new(Status::NotFound)),
-            Some(Some(existing_handler)) => return Ok(Arc::clone(existing_handler)),
+            Some(Some(existing_handler)) => return Ok((Arc::clone(existing_handler), ids_to_handlers_lock)),
             Some(None) => { /* ID is valid but a handler doesn't exist yet */ }
         }
 
@@ -183,7 +197,7 @@ impl AccountManager {
         ))?);
         ids_to_handlers_lock.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
         let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers_lock) as u64);
-        Ok(new_handler)
+        Ok((new_handler, ids_to_handlers_lock))
     }
 
     async fn get_account_ids(&self) -> Vec<FidlLocalAccountId> {
@@ -259,16 +273,18 @@ impl AccountManager {
     }
 
     async fn remove_account(&self, id: LocalAccountId) -> Status {
-        // TODO(jsankey): Open an account handler if necessary and ask it to remove persistent
-        // storage for the account.
         let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
-        match ids_to_handlers.get(&id) {
-            None => return Status::NotFound,
-            Some(None) => info!("Removing account without open handler: {:?}", id),
-            Some(Some(account_handler)) => {
-                info!("Removing account and terminating its handler: {:?}", id);
-                await!(account_handler.terminate());
-            }
+        let account_handler = match await!(self.get_handler_for_existing_account_with_lock(&id, ids_to_handlers)) {
+            Ok((account_handler, lock)) => {
+                ids_to_handlers = lock;
+                account_handler
+            },
+            Err(err) => return err.status,
+        };
+        match await!(account_handler.proxy().remove_account()) {
+            Ok(Status::Ok) => await!(account_handler.terminate()),
+            Ok(status) => return status,
+            Err(_) => return Status::IoError,
         };
         let account_ids = ids_to_handlers
             .keys()
@@ -276,6 +292,7 @@ impl AccountManager {
             .map(|id| StoredAccountMetadata::new(id.clone()))
             .collect();
         if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
+            warn!("Could not save updated account list: {:?}", err);
             return err.status;
         }
         let event = AccountEvent::AccountRemoved(id.clone());
@@ -521,10 +538,6 @@ mod tests {
         AccountManager::new(data_dir.to_path_buf(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap()
     }
 
-    fn fidl_local_id_vec(ints: Vec<u64>) -> Vec<FidlLocalAccountId> {
-        ints.into_iter().map(|i| FidlLocalAccountId { id: i }).collect()
-    }
-
     /// Note: Many AccountManager methods launch instances of an AccountHandler. Since its
     /// currently not convenient to mock out this component launching in Rust, we rely on the
     /// hermetic component test to provide coverage for these areas and only cover the in-process
@@ -577,36 +590,7 @@ mod tests {
         });
     }
 
-    #[test]
-    fn test_remove_present_account() {
-        let data_dir = TempDir::new().unwrap();
-        let stored_account_list = StoredAccountList::new(vec![
-            StoredAccountMetadata::new(LocalAccountId::new(1)),
-            StoredAccountMetadata::new(LocalAccountId::new(2)),
-        ]);
-        stored_account_list.save(data_dir.path()).unwrap();
-        // Manually create an account manager from an account_list_dir with two pre-populated dirs.
-        request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
-            // Try to remove the first account.
-            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 2);
-            assert_eq!(await!(proxy.remove_account(LocalAccountId::new(1).as_mut()))?, Status::Ok);
-            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);
-
-            // Verify that the second account is present.
-            assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
-            Ok(())
-        });
-        // Now create another account manager using the same directory, which should pick up the new
-        // state from the operations of the first account manager.
-        request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
-            // Verify the only the second account is present.
-            assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);
-            assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
-            Ok(())
-        });
-    }
-
-    /// Sets up an AccountListener which receives two events, init and remove.
+    /// Sets up an AccountListener which an init event.
     #[test]
     fn test_account_listener() {
         let mut options = AccountListenerOptions {
@@ -643,13 +627,6 @@ mod tests {
                 } else {
                     panic!("Unexpected message received");
                 };
-                let request = await!(stream.try_next()).expect("stream error");
-                if let Some(AccountListenerRequest::OnAccountRemoved { id, responder }) = request {
-                    assert_eq!(LocalAccountId::from(id), LocalAccountId::new(1));
-                    responder.send().unwrap();
-                } else {
-                    panic!("Unexpected message received");
-                };
                 if let Some(_) = await!(stream.try_next()).expect("stream error") {
                     panic!("Unexpected message, channel should be closed");
                 }
@@ -658,17 +635,6 @@ mod tests {
                 // The registering itself triggers the init event.
                 assert_eq!(
                     await!(proxy.register_account_listener(client_end, &mut options)).unwrap(),
-                    Status::Ok
-                );
-
-                // Non-existing account removal shouldn't trigger any event.
-                assert_eq!(
-                    await!(proxy.remove_account(LocalAccountId::new(42).as_mut())).unwrap(),
-                    Status::NotFound
-                );
-                // Removal of existing account triggers the remove event.
-                assert_eq!(
-                    await!(proxy.remove_account(LocalAccountId::new(1).as_mut())).unwrap(),
                     Status::Ok
                 );
             };

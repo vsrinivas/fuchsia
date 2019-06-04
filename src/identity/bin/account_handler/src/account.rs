@@ -58,7 +58,6 @@ pub struct Account {
 
     /// Collection of tasks that are using this instance.
     task_group: TaskGroup,
-
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
     // LocalPersonaId to Persona struct, and changing default_persona from a struct to an ID. We
@@ -137,8 +136,13 @@ impl Account {
         await!(Self::new(account_id, local_persona_id, account_dir, context_proxy))
     }
 
+    /// Removes the account from disk or returns the account and the error.
+    pub fn remove(self) -> Result<(), (Self, AccountManagerError)> {
+        self.remove_inner().map_err(|err| (self, err))
+    }
+
     /// Removes the account from disk.
-    pub fn remove(&self) -> Result<(), AccountManagerError> {
+    fn remove_inner(&self) -> Result<(), AccountManagerError> {
         let token_db_path = &self.account_dir.join(TOKEN_DB);
         if token_db_path.exists() {
             fs::remove_file(token_db_path).map_err(|err| {
@@ -146,7 +150,8 @@ impl Account {
                 AccountManagerError::new(Status::IoError).with_cause(err)
             })?;
         }
-        fs::remove_file(StoredAccount::path(&self.account_dir)).map_err(|err| {
+        let to_remove = StoredAccount::path(&self.account_dir.clone());
+        fs::remove_file(to_remove).map_err(|err| {
             warn!("Failed to delete account doc: {:?}", err);
             AccountManagerError::new(Status::IoError).with_cause(err)
         })

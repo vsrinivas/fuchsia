@@ -13,10 +13,23 @@ use fidl_fuchsia_auth_account_internal::{
     AccountHandlerControlRequestStream,
 };
 use futures::prelude::*;
+use identity_common::TaskGroupError;
 use log::{error, info, warn};
 use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
+
+/// The states of an AccountHandler.
+enum Lifecycle {
+    /// An account has not yet been created or loaded.
+    Uninitialized,
+
+    /// An account is currently loaded and is available.
+    Initialized { account: Arc<Account> },
+
+    /// There is no account present, and initialization is not possible.
+    Finished,
+}
 
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
 /// the execution context and a TokenManager.
@@ -25,7 +38,7 @@ pub struct AccountHandler {
     //
     // This will be None until a particular Account is established over the control channel. Once
     // set, the account will never be cleared or modified.
-    account: RwLock<Option<Arc<Account>>>,
+    account: RwLock<Lifecycle>,
 
     /// Root directory containing persistent resources for an AccountHandler instance.
     data_dir: PathBuf,
@@ -39,7 +52,7 @@ impl AccountHandler {
 
     /// Constructs a new AccountHandler.
     pub fn new(data_dir: PathBuf) -> AccountHandler {
-        Self { account: RwLock::new(None), data_dir }
+        Self { account: RwLock::new(Lifecycle::Uninitialized), data_dir }
     }
 
     /// Asynchronously handles the supplied stream of `AccountHandlerControlRequest` messages.
@@ -69,7 +82,7 @@ impl AccountHandler {
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::RemoveAccount { responder } => {
-                let response = self.remove_account();
+                let response = await!(self.remove_account());
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::GetAccount {
@@ -81,8 +94,7 @@ impl AccountHandler {
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
-                // TODO(jsankey): Close any open files once we have them and shutdown dependant
-                // channels on the account, personae, and token manager.
+                await!(self.terminate());
                 control_handle.shutdown();
             }
         }
@@ -110,12 +122,14 @@ impl AccountHandler {
         // lock.
         let account_result = await!(construct_account_fn(id, self.data_dir.clone(), context_proxy));
         let mut account_lock = self.account.write();
-        if account_lock.is_some() {
-            return Err(AccountManagerError::new(Status::InternalError)
-                .with_cause(format_err!("AccountHandler is already initialized")));
+        match *account_lock {
+            Lifecycle::Uninitialized => {
+                *account_lock = Lifecycle::Initialized { account: Arc::new(account_result?) };
+                Ok(())
+            }
+            _ => Err(AccountManagerError::new(Status::InternalError)
+                .with_cause(format_err!("AccountHandler is already initialized"))),
         }
-        *account_lock = Some(Arc::new(account_result?));
-        Ok(())
     }
 
     /// Creates a new Fuchsia account and attaches it to this handler.
@@ -148,23 +162,41 @@ impl AccountHandler {
         }
     }
 
-    fn remove_account(&self) -> Status {
-        let mut account_lock = self.account.write();
-        let account = match &*account_lock {
-            Some(account) => account,
-            None => {
-                warn!("No account is initialized or it has already been removed");
+    /// Remove the active account. This method should not be retried on failure.
+    async fn remove_account(&self) -> Status {
+        let old_lifecycle = {
+            let mut account_lock = self.account.write();
+            std::mem::replace(&mut *account_lock, Lifecycle::Finished)
+        };
+        let account_arc = match old_lifecycle {
+            Lifecycle::Initialized { account } => account,
+            _ => {
+                warn!("No account is initialized");
                 return Status::InvalidRequest;
             }
         };
+        // TODO(AUTH-212): After this point, error recovery might include putting the account back
+        // in the lock.
+        if let Err(TaskGroupError::AlreadyCancelled) = await!(account_arc.task_group().cancel()) {
+            warn!("Task group was already cancelled prior to account removal.");
+        }
+        // At this point we have exclusive access to the account, so we move it out of the Arc to
+        // destroy it.
+        let account = match Arc::try_unwrap(account_arc) {
+            Ok(account) => account,
+            Err(_account_arc) => {
+                warn!("Could not acquire exclusive access to account");
+                return Status::InternalError;
+            }
+        };
+        let account_id = account.id().clone();
         match account.remove() {
             Ok(()) => {
-                info!("Deleted Fuchsia account {:?}", &account.id());
-                *account_lock = None;
+                info!("Deleted Fuchsia account {:?}", account_id);
                 Status::Ok
             }
-            Err(err) => {
-                warn!("Could not remove account: {:?}", err);
+            Err((_account, err)) => {
+                warn!("Could not remove account {:?}: {:?}", account_id, err);
                 err.status
             }
         }
@@ -175,11 +207,12 @@ impl AccountHandler {
         auth_context_provider_client_end: ClientEnd<AuthenticationContextProviderMarker>,
         account_server_end: ServerEnd<AccountMarker>,
     ) -> Status {
-        let account = if let Some(account) = &*self.account.read() {
-            Arc::clone(account)
-        } else {
-            warn!("AccountHandler not yet initialized");
-            return Status::NotFound;
+        let account_arc = match &*self.account.read() {
+            Lifecycle::Initialized { account } => Arc::clone(account),
+            _ => {
+                warn!("AccountHandler is not initialized");
+                return Status::NotFound;
+            }
         };
 
         let context = match auth_context_provider_client_end.into_proxy() {
@@ -197,15 +230,28 @@ impl AccountHandler {
             }
         };
 
-        let account_clone = Arc::clone(&account);
-        match await!(account.task_group().spawn(|cancel| async move {
-            await!(account_clone.handle_requests_from_stream(&context, stream, cancel))
+        let account_arc_clone = Arc::clone(&account_arc);
+        match await!(account_arc.task_group().spawn(|cancel| async move {
+            await!(account_arc_clone.handle_requests_from_stream(&context, stream, cancel))
                 .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e));
         })) {
             // Since AccountHandler serves only one channel of requests in serial, this is an
             // inconsistent state rather than a conflict.
             Err(_) => Status::InternalError,
             Ok(()) => Status::Ok,
+        }
+    }
+
+    async fn terminate(&self) {
+        info!("Gracefully shutting down AccountHandler");
+        let old_lifecycle = {
+            let mut account_lock = self.account.write();
+            std::mem::replace(&mut *account_lock, Lifecycle::Finished)
+        };
+        if let Lifecycle::Initialized { account } = old_lifecycle {
+            if await!(account.task_group().cancel()).is_err() {
+                warn!("Task group cancelled but account is still initialized");
+            }
         }
     }
 }
@@ -330,14 +376,30 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_remove_account() {
+    fn test_remove_account() {
         let location = TempLocation::new();
         request_stream_test(&location.path, async move |proxy, ahc_client_end| {
-            let status = await!(
-                proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-            )?;
-            assert_eq!(status, Status::Ok);
+            assert_eq!(
+                await!(
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
+                )?,
+                Status::Ok
+            );
+
+            // Keep an open channel to an account.
+            let (account_client_end, account_server_end) = create_endpoints().unwrap();
+            let (acp_client_end, _) = create_endpoints().unwrap();
+            await!(proxy.get_account(acp_client_end, account_server_end)).unwrap();
+            let account_proxy = account_client_end.into_proxy().unwrap();
+
+            // Make sure remove_account() can make progress with an open channel.
             assert_eq!(await!(proxy.remove_account())?, Status::Ok);
+
+            // Make sure that the channel is in fact closed.
+            assert!(await!(account_proxy.get_auth_state()).is_err());
+
+            // We cannot remove twice.
+            assert_eq!(await!(proxy.remove_account())?, Status::InvalidRequest);
             Ok(())
         });
     }
@@ -352,18 +414,31 @@ mod tests {
     }
 
     #[test]
-    fn test_create_and_remove_account_twice() {
+    fn test_terminate() {
         let location = TempLocation::new();
         request_stream_test(&location.path, async move |proxy, ahc_client_end| {
-            let status = await!(
-                proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
-            )?;
-            assert_eq!(status, Status::Ok);
-            assert_eq!(await!(proxy.remove_account())?, Status::Ok);
             assert_eq!(
-                await!(proxy.remove_account())?,
-                Status::InvalidRequest // You can only remove once
+                await!(
+                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().as_mut().into())
+                )?,
+                Status::Ok
             );
+
+            // Keep an open channel to an account.
+            let (account_client_end, account_server_end) = create_endpoints().unwrap();
+            let (acp_client_end, _) = create_endpoints().unwrap();
+            await!(proxy.get_account(acp_client_end, account_server_end)).unwrap();
+            let account_proxy = account_client_end.into_proxy().unwrap();
+
+            // Terminate the handler
+            assert!(proxy.terminate().is_ok());
+
+            // Check that further operations fail
+            assert!(await!(proxy.remove_account()).is_err());
+            assert!(proxy.terminate().is_err());
+
+            // Make sure that the channel closed too.
+            assert!(await!(account_proxy.get_auth_state()).is_err());
             Ok(())
         });
     }
