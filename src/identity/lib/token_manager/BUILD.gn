@@ -14,11 +14,13 @@ rustc_library("token_manager") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "//src/identity/lib/identity_common",
     "//src/identity/lib/token_cache",
     "//src/identity/lib/token_store",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:tempfile",
   ]
 }

@@ -19,6 +19,7 @@ use fidl_fuchsia_auth::{
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
+use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -44,11 +45,17 @@ pub struct TokenManager<T: AuthProviderSupplier> {
     token_store: Mutex<Box<AuthDb + Send + Sync>>,
     /// An in-memory cache of recently used tokens.
     token_cache: Mutex<TokenCache>,
+    /// Collection of tasks that are using this instance.
+    task_group: TaskGroup,
 }
 
 impl<T: AuthProviderSupplier> TokenManager<T> {
     /// Creates a new TokenManager.
-    pub fn new(db_path: &Path, auth_provider_supplier: T) -> Result<Self, failure::Error> {
+    pub fn new(
+        db_path: &Path,
+        auth_provider_supplier: T,
+        task_group: TaskGroup,
+    ) -> Result<Self, failure::Error> {
         let token_store = AuthDbFile::new(db_path)
             .map_err(|err| format_err!("Error creating AuthDb at {:?}, {:?}", db_path, err))?;
         let token_cache = TokenCache::new(CACHE_SIZE);
@@ -58,7 +65,13 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             auth_providers: Mutex::new(HashMap::new()),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
+            task_group,
         })
+    }
+
+    /// Returns a task group which can be used to spawn and cancel tasks that use this instance.
+    pub fn task_group(&self) -> &TaskGroup {
+        &self.task_group
     }
 
     /// Asynchronously handles the supplied stream of `TokenManagerRequest` messages.
@@ -66,9 +79,14 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         &'a self,
         context: &'a TokenManagerContext,
         mut stream: TokenManagerRequestStream,
+        cancel: TaskGroupCancel,
     ) -> Result<(), failure::Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            await!(self.handle_request(context, req))?;
+        // TODO(dnordstrom): Allow cancellation within long running requests
+        while let Some(result) = await!(cancel_or(&cancel, stream.try_next())) {
+            match result? {
+                Some(request) => await!(self.handle_request(context, request))?,
+                None => break,
+            }
         }
         Ok(())
     }
@@ -734,3 +752,61 @@ impl Responder for TokenManagerListProfileIdsResponder {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fake_auth_provider_supplier::FakeAuthProviderSupplier;
+    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+    use fidl_fuchsia_auth::{AuthenticationContextProviderMarker, TokenManagerMarker};
+    use fuchsia_async as fasync;
+    use tempfile::TempDir;
+
+    fn create_app_config(auth_provider_type: &str) -> AppConfig {
+        AppConfig {
+            auth_provider_type: auth_provider_type.to_string(),
+            client_id: None,
+            client_secret: None,
+            redirect_uri: None,
+        }
+    }
+
+    fn create_token_manager_context() -> TokenManagerContext {
+        let (ui_context_provider_proxy, _) =
+            create_proxy::<AuthenticationContextProviderMarker>().unwrap();
+        TokenManagerContext {
+            application_url: "APPLICATION_URL".to_string(),
+            auth_ui_context_provider: ui_context_provider_proxy,
+        }
+    }
+
+    /// Create a TokenManager and terminate it using its task group.
+    #[fasync::run_until_stalled(test)]
+    async fn create_and_terminate() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        let tmp_dir = TempDir::new().expect("failed creating temp dir");
+        let db_path = tmp_dir.path().join("tokens.json");
+        let task_group = TaskGroup::new();
+
+        let token_manager = Arc::new(
+            TokenManager::new(&db_path, auth_provider_supplier, task_group.clone())
+                .expect("failed creating TokenManager"),
+        );
+        let (proxy, stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let token_manager_clone = Arc::clone(&token_manager);
+        await!(token_manager.task_group().spawn(|cancel| async move {
+            let context = create_token_manager_context();
+            assert!(await!(
+                token_manager_clone.handle_requests_from_stream(&context, stream, cancel)
+            )
+            .is_ok());
+        }))
+        .expect("spawning failed");
+        assert!(await!(token_manager.task_group().cancel()).is_ok());
+        // Check that the accessor's task group cancelled the task group that was passed to new()
+        assert!(await!(task_group.cancel()).is_err());
+
+        // Now the channel should be closed
+        let mut app_config = create_app_config("hooli");
+        assert!(await!(proxy.list_profile_ids(&mut app_config)).is_err());
+    }
+}

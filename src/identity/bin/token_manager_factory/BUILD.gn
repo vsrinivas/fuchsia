@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
+    "//src/identity/lib/identity_common",
     "//src/identity/lib/token_manager",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

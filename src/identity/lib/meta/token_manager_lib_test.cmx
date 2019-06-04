@@ -3,6 +3,9 @@
         "binary": "test/token_manager_lib_test"
     },
     "sandbox": {
-        "services": []
+        "services": [],
+        "features": [
+            "system-temp"
+        ]
     }
 }

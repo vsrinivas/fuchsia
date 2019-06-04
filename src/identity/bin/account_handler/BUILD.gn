@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
     "//src/identity/fidl:account-rustc",
     "//src/identity/lib/account_common",
+    "//src/identity/lib/identity_common",
     "//src/identity/lib/token_manager",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

@@ -7,8 +7,8 @@ use failure::{Error, ResultExt};
 use fidl_fuchsia_auth::{
     AuthProviderConfig, TokenManagerFactoryRequest, TokenManagerFactoryRequestStream,
 };
-use fuchsia_async as fasync;
 use futures::prelude::*;
+use identity_common::TaskGroup;
 use log::{info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -100,14 +100,12 @@ impl TokenManagerFactory {
                     .into_stream()
                     .context("Error creating request stream")?;
 
-                fasync::spawn(
-                    async move {
-                        await!(token_manager.handle_requests_from_stream(&context, stream))
-                            .unwrap_or_else(|err| {
-                                warn!("Error handling TokenManager channel: {:?}", err);
-                            })
-                    },
-                );
+                let token_manager_clone = Arc::clone(&token_manager);
+                await!(token_manager.task_group().spawn(|cancel| async move {
+                    await!(token_manager_clone
+                        .handle_requests_from_stream(&context, stream, cancel))
+                    .unwrap_or_else(|e| warn!("Error handling TokenManager channel {:?}", e))
+                }))?;
                 Ok(())
             }
         }
@@ -165,6 +163,7 @@ impl TokenManagerFactory {
         let token_manager = Arc::new(TokenManager::new(
             &db_path,
             self.get_auth_provider_supplier(auth_provider_configs)?,
+            TaskGroup::new(),
         )?);
         user_to_token_manager.insert(user_id, Arc::clone(&token_manager));
         Ok(token_manager)

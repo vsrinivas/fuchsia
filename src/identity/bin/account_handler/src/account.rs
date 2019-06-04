@@ -22,8 +22,8 @@ use fidl_fuchsia_auth_account::{
     AccountRequest, AccountRequestStream, AuthListenerMarker, PersonaMarker, Status,
 };
 use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
-use fuchsia_async as fasync;
 use futures::prelude::*;
+use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, info, warn};
 use std::fs;
 use std::path::PathBuf;
@@ -55,6 +55,10 @@ pub struct Account {
 
     /// The default persona for this account.
     default_persona: Arc<Persona>,
+
+    /// Collection of tasks that are using this instance.
+    task_group: TaskGroup,
+
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
     // LocalPersonaId to Persona struct, and changing default_persona from a struct to an ID. We
@@ -67,26 +71,41 @@ impl Account {
     const DEFAULT_ACCOUNT_NAME: &'static str = "Unnamed account";
 
     /// Manually construct an account object, shouldn't normally be called directly.
-    fn new(
+    async fn new(
         account_id: LocalAccountId,
         persona_id: LocalPersonaId,
         account_dir: PathBuf,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
+        let task_group = TaskGroup::new();
+        let token_manager_task_group = await!(task_group.create_child())
+            .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
+        let default_persona_task_group = await!(task_group.create_child())
+            .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
         let token_db_path = account_dir.join(TOKEN_DB);
         let token_manager = Arc::new(
-            TokenManager::new(&token_db_path, AuthProviderSupplier::new(context_proxy))
-                .account_manager_status(Status::UnknownError)?,
+            TokenManager::new(
+                &token_db_path,
+                AuthProviderSupplier::new(context_proxy),
+                token_manager_task_group,
+            )
+            .account_manager_status(Status::UnknownError)?,
         );
         Ok(Self {
             id: account_id.clone(),
             account_dir,
-            default_persona: Arc::new(Persona::new(persona_id, account_id, token_manager)),
+            default_persona: Arc::new(Persona::new(
+                persona_id,
+                account_id,
+                token_manager,
+                default_persona_task_group,
+            )),
+            task_group,
         })
     }
 
     /// Creates a new Fuchsia account and persist it on disk.
-    pub fn create(
+    pub async fn create(
         account_id: LocalAccountId,
         account_dir: PathBuf,
         context_proxy: AccountHandlerContextProxy,
@@ -99,7 +118,7 @@ impl Account {
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
         let stored_account = StoredAccount::new(local_persona_id.clone());
         match stored_account.save(&account_dir) {
-            Ok(_) => Self::new(account_id, local_persona_id, account_dir, context_proxy),
+            Ok(_) => await!(Self::new(account_id, local_persona_id, account_dir, context_proxy)),
             Err(err) => {
                 warn!("Failed to initialize new Account: {:?}", err);
                 Err(err)
@@ -108,14 +127,14 @@ impl Account {
     }
 
     /// Loads an existing Fuchsia account from disk.
-    pub fn load(
+    pub async fn load(
         account_id: LocalAccountId,
         account_dir: PathBuf,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         let stored_account = StoredAccount::load(&account_dir)?;
         let local_persona_id = stored_account.get_default_persona_id().clone();
-        Self::new(account_id, local_persona_id, account_dir, context_proxy)
+        await!(Self::new(account_id, local_persona_id, account_dir, context_proxy))
     }
 
     /// Removes the account from disk.
@@ -133,6 +152,11 @@ impl Account {
         })
     }
 
+    /// Returns a task group which can be used to spawn and cancel tasks that use this instance.
+    pub fn task_group(&self) -> &TaskGroup {
+        &self.task_group
+    }
+
     /// A device-local identifier for this account
     pub fn id(&self) -> &LocalAccountId {
         &self.id
@@ -143,18 +167,23 @@ impl Account {
         &'a self,
         context: &'a AccountContext,
         mut stream: AccountRequestStream,
+        cancel: TaskGroupCancel,
     ) -> Result<(), Error> {
-        while let Some(req) = await!(stream.try_next())? {
-            self.handle_request(context, req)?;
+        while let Some(result) = await!(cancel_or(&cancel, stream.try_next())) {
+            if let Some(request) = result? {
+                await!(self.handle_request(context, request))?;
+            } else {
+                break;
+            }
         }
         Ok(())
     }
 
     /// Dispatches an `AccountRequest` message to the appropriate handler method
     /// based on its type.
-    pub fn handle_request(
-        &self,
-        context: &AccountContext,
+    pub async fn handle_request<'a>(
+        &'a self,
+        context: &'a AccountContext,
         req: AccountRequest,
     ) -> Result<(), fidl::Error> {
         match req {
@@ -180,11 +209,11 @@ impl Account {
                 responder.send(&mut response.iter_mut())?;
             }
             AccountRequest::GetDefaultPersona { persona, responder } => {
-                let mut response = self.get_default_persona(context, persona);
+                let mut response = await!(self.get_default_persona(context, persona));
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
             }
             AccountRequest::GetPersona { id, persona, responder } => {
-                let response = self.get_persona(context, id.into(), persona);
+                let response = await!(self.get_persona(context, id.into(), persona));
                 responder.send(response)?;
             }
             AccountRequest::GetRecoveryAccount { responder } => {
@@ -225,9 +254,9 @@ impl Account {
         vec![self.default_persona.id().clone().into()]
     }
 
-    fn get_default_persona(
-        &self,
-        context: &AccountContext,
+    async fn get_default_persona<'a>(
+        &'a self,
+        context: &'a AccountContext,
         persona_server_end: ServerEnd<PersonaMarker>,
     ) -> (Status, Option<FidlLocalPersonaId>) {
         let persona_clone = Arc::clone(&self.default_persona);
@@ -235,11 +264,17 @@ impl Account {
             PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
         match persona_server_end.into_stream() {
             Ok(stream) => {
-                fasync::spawn(async move {
-                    await!(persona_clone.handle_requests_from_stream(&persona_context, stream))
-                        .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
-                });
-                (Status::Ok, Some(self.default_persona.id().clone().into()))
+                match await!(self.default_persona.task_group().spawn(|cancel| async move {
+                    await!(persona_clone.handle_requests_from_stream(
+                        &persona_context,
+                        stream,
+                        cancel
+                    ))
+                    .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
+                })) {
+                    Err(_) => (Status::RemovalInProgress, None),
+                    Ok(()) => (Status::Ok, Some(self.default_persona.id().clone().into())),
+                }
             }
             Err(e) => {
                 error!("Error opening Persona channel {:?}", e);
@@ -248,14 +283,14 @@ impl Account {
         }
     }
 
-    fn get_persona(
-        &self,
-        context: &AccountContext,
+    async fn get_persona<'a>(
+        &'a self,
+        context: &'a AccountContext,
         id: LocalPersonaId,
         persona_server_end: ServerEnd<PersonaMarker>,
     ) -> Status {
         if &id == self.default_persona.id() {
-            self.get_default_persona(context, persona_server_end).0
+            await!(self.get_default_persona(context, persona_server_end)).0
         } else {
             warn!("Requested persona does not exist {:?}", id);
             Status::NotFound
@@ -288,39 +323,35 @@ mod tests {
     /// Type to hold the common state require during construction of test objects and execution
     /// of a test, including an async executor and a temporary location in the filesystem.
     struct Test {
-        executor: fasync::Executor,
         location: TempLocation,
     }
 
     impl Test {
         fn new() -> Test {
-            Test {
-                executor: fasync::Executor::new().expect("Failed to create executor"),
-                location: TempLocation::new(),
-            }
+            Test { location: TempLocation::new() }
         }
 
-        fn create_account(&self) -> Result<Account, AccountManagerError> {
+        async fn create_account(&self) -> Result<Account, AccountManagerError> {
             let (account_handler_context_client_end, _) =
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
-            Account::create(
+            await!(Account::create(
                 TEST_ACCOUNT_ID.clone(),
                 self.location.path.clone(),
                 account_handler_context_client_end.into_proxy().unwrap(),
-            )
+            ))
         }
 
-        fn load_account(&self) -> Result<Account, AccountManagerError> {
+        async fn load_account(&self) -> Result<Account, AccountManagerError> {
             let (account_handler_context_client_end, _) =
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
-            Account::load(
+            await!(Account::load(
                 TEST_ACCOUNT_ID.clone(),
                 self.location.path.clone(),
                 account_handler_context_client_end.into_proxy().unwrap(),
-            )
+            ))
         }
 
-        fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
+        async fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
         where
             TestFn: FnOnce(AccountProxy) -> Fut,
             Fut: Future<Output = Result<(), Error>>,
@@ -336,72 +367,75 @@ mod tests {
                 auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
             };
 
-            fasync::spawn(async move {
-                await!(test_object.handle_requests_from_stream(&context, request_stream))
-                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-            });
+            let task_group = TaskGroup::new();
 
-            self.executor.run_singlethreaded(test_fn(account_proxy)).expect("Executor run failed.")
+            await!(task_group.spawn(|cancel| async move {
+                await!(test_object.handle_requests_from_stream(&context, request_stream, cancel))
+                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
+            },))
+            .expect("Unable to spawn task");
+            await!(test_fn(account_proxy)).expect("Test function failed.")
         }
     }
 
-    #[test]
-    fn test_random_persona_id() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_random_persona_id() {
         let mut test = Test::new();
         // Generating two accounts with the same accountID should lead to two different persona IDs
-        let account_1 = test.create_account().unwrap();
+        let account_1 = await!(test.create_account()).unwrap();
         test.location = TempLocation::new();
-        let account_2 = test.create_account().unwrap();
+        let account_2 = await!(test.create_account()).unwrap();
         assert_ne!(account_1.default_persona.id(), account_2.default_persona.id());
     }
 
-    #[test]
-    fn test_get_account_name() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_account_name() {
         let mut test = Test::new();
-        test.run(test.create_account().unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_account_name())?, Account::DEFAULT_ACCOUNT_NAME);
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_create_and_load() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_create_and_load() {
         let test = Test::new();
-        let account_1 = test.create_account().unwrap(); // Persists the account on disk
-        let account_2 = test.load_account().unwrap(); // Reads from same location
-                                                      // Since persona ids are random, we can check that loading worked successfully here
+        let account_1 = await!(test.create_account()).unwrap(); // Persists the account on disk
+        let account_2 = await!(test.load_account()).unwrap(); // Reads from same location
+
+        // Since persona ids are random, we can check that loading worked successfully here
         assert_eq!(account_1.default_persona.id(), account_2.default_persona.id());
     }
 
-    #[test]
-    fn test_load_non_existing() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_load_non_existing() {
         let test = Test::new();
-        assert!(test.load_account().is_err()); // Reads from uninitialized location
+        assert!(await!(test.load_account()).is_err()); // Reads from uninitialized location
     }
 
-    #[test]
-    fn test_create_twice() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_create_twice() {
         let test = Test::new();
-        assert!(test.create_account().is_ok());
-        assert!(test.create_account().is_err()); // Tries to write to same dir
+        assert!(await!(test.create_account()).is_ok());
+        assert!(await!(test.create_account()).is_err()); // Tries to write to same dir
     }
 
-    #[test]
-    fn test_get_auth_state() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_auth_state() {
         let mut test = Test::new();
-        test.run(test.create_account().unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_register_auth_listener() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_register_auth_listener() {
         let mut test = Test::new();
-        test.run(test.create_account().unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
             let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
@@ -412,32 +446,32 @@ mod tests {
                 Status::InternalError
             );
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_get_persona_ids() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_persona_ids() {
         let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = test.create_account().unwrap();
+        let account = await!(test.create_account()).unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, async move |proxy| {
+        await!(test.run(account, async move |proxy| {
             let response = await!(proxy.get_persona_ids())?;
             assert_eq!(response.len(), 1);
             assert_eq!(&LocalPersonaId::new(response[0].id), persona_id);
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_get_default_persona() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_default_persona() {
         let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = test.create_account().unwrap();
+        let account = await!(test.create_account()).unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, async move |account_proxy| {
+        await!(test.run(account, async move |account_proxy| {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             let response = await!(account_proxy.get_default_persona(persona_server_end))?;
             assert_eq!(response.0, Status::Ok);
@@ -451,16 +485,16 @@ mod tests {
             );
 
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_get_persona_by_correct_id() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_persona_by_correct_id() {
         let mut test = Test::new();
-        let account = test.create_account().unwrap();
+        let account = await!(test.create_account()).unwrap();
         let persona_id = account.default_persona.id().clone();
 
-        test.run(account, async move |account_proxy| {
+        await!(test.run(account, async move |account_proxy| {
             let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(account_proxy
@@ -476,18 +510,18 @@ mod tests {
             );
 
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_get_persona_by_incorrect_id() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_persona_by_incorrect_id() {
         let mut test = Test::new();
-        let account = test.create_account().unwrap();
+        let account = await!(test.create_account()).unwrap();
         // Note: This fixed value has a 1 - 2^64 probability of not matching the randomly chosen
         // one.
         let wrong_id = LocalPersonaId::new(13);
 
-        test.run(account, async move |proxy| {
+        await!(test.run(account, async move |proxy| {
             let (_, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.get_persona(&mut wrong_id.into(), persona_server_end))?,
@@ -495,33 +529,33 @@ mod tests {
             );
 
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_set_recovery_account() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_set_recovery_account() {
         let mut test = Test::new();
         let mut service_provider_account = ServiceProviderAccount {
             identity_provider_domain: "google.com".to_string(),
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        test.run(test.create_account().unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.set_recovery_account(&mut service_provider_account))?,
                 Status::InternalError
             );
             Ok(())
-        });
+        }));
     }
 
-    #[test]
-    fn test_get_recovery_account() {
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_recovery_account() {
         let mut test = Test::new();
         let expectation = (Status::InternalError, None);
-        test.run(test.create_account().unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_recovery_account())?, expectation);
             Ok(())
-        });
+        }));
     }
 }

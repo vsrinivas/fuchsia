@@ -12,10 +12,9 @@ use fidl_fuchsia_auth_account_internal::{
     AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerControlRequest,
     AccountHandlerControlRequestStream,
 };
-use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, info, warn};
-use parking_lot::{RwLock, RwLockWriteGuard};
+use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -78,40 +77,45 @@ impl AccountHandler {
                 account,
                 responder,
             } => {
-                let response = self.get_account(auth_context_provider, account);
+                let response = await!(self.get_account(auth_context_provider, account));
                 responder.send(response)?;
             }
             AccountHandlerControlRequest::Terminate { control_handle } => {
                 // TODO(jsankey): Close any open files once we have them and shutdown dependant
                 // channels on the account, personae, and token manager.
-                info!("Gracefully shutting down AccountHandler");
                 control_handle.shutdown();
             }
         }
         Ok(())
     }
 
-    /// Helper method which prepares an account for being attached, used for both loading and
-    /// creating accounts. Returns a AccountHandlerContextProxy and a write lock which is
-    /// pre-checked for existing accounts.
-    async fn init_account(
+    /// Helper method which constructs a new account using the supplied function and stores it in
+    /// self.account.
+    async fn init_account<F, Fut>(
         &self,
+        construct_account_fn: F,
+        id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
-    ) -> Result<
-        (AccountHandlerContextProxy, RwLockWriteGuard<Option<Arc<Account>>>),
-        AccountManagerError,
-    > {
+    ) -> Result<(), AccountManagerError>
+    where
+        F: FnOnce(LocalAccountId, PathBuf, AccountHandlerContextProxy) -> Fut,
+        Fut: Future<Output = Result<Account, AccountManagerError>>,
+    {
         let context_proxy = context
             .into_proxy()
             .context("Invalid AccountHandlerContext given")
             .account_manager_status(Status::InvalidRequest)?;
-        let account_lock = self.account.write();
+
+        // The function evaluation is front loaded because await is not allowed while holding the
+        // lock.
+        let account_result = await!(construct_account_fn(id, self.data_dir.clone(), context_proxy));
+        let mut account_lock = self.account.write();
         if account_lock.is_some() {
-            Err(AccountManagerError::new(Status::InternalError)
-                .with_cause(format_err!("AccountHandler is already initialized")))
-        } else {
-            Ok((context_proxy, account_lock))
+            return Err(AccountManagerError::new(Status::InternalError)
+                .with_cause(format_err!("AccountHandler is already initialized")));
         }
+        *account_lock = Some(Arc::new(account_result?));
+        Ok(())
     }
 
     /// Creates a new Fuchsia account and attaches it to this handler.
@@ -120,18 +124,13 @@ impl AccountHandler {
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Status {
-        await!(self.init_account(context))
-            .and_then(|(context_proxy, mut account_lock)| {
-                let account = Account::create(id, self.data_dir.clone(), context_proxy)?;
-                Ok(*account_lock = Some(Arc::new(account)))
-            })
-            .map_or_else(
-                |err| {
-                    warn!("Failed creating Fuchsia account: {:?}", err);
-                    err.status
-                },
-                |()| Status::Ok,
-            )
+        match await!(self.init_account(Account::create, id, context)) {
+            Ok(()) => Status::Ok,
+            Err(err) => {
+                warn!("Failed creating Fuchsia account: {:?}", err);
+                err.status
+            }
+        }
     }
 
     /// Loads an existing Fuchsia account and attaches it to this handler.
@@ -140,18 +139,13 @@ impl AccountHandler {
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Status {
-        await!(self.init_account(context))
-            .and_then(|(context_proxy, mut account_lock)| {
-                let account = Account::load(id, self.data_dir.clone(), context_proxy)?;
-                Ok(*account_lock = Some(Arc::new(account)))
-            })
-            .map_or_else(
-                |err| {
-                    warn!("Failed loading Fuchsia account: {:?}", err);
-                    err.status
-                },
-                |()| Status::Ok,
-            )
+        match await!(self.init_account(Account::load, id, context)) {
+            Ok(()) => Status::Ok,
+            Err(err) => {
+                warn!("Failed creating Fuchsia account: {:?}", err);
+                err.status
+            }
+        }
     }
 
     fn remove_account(&self) -> Status {
@@ -176,7 +170,7 @@ impl AccountHandler {
         }
     }
 
-    fn get_account(
+    async fn get_account(
         &self,
         auth_context_provider_client_end: ClientEnd<AuthenticationContextProviderMarker>,
         account_server_end: ServerEnd<AccountMarker>,
@@ -203,11 +197,16 @@ impl AccountHandler {
             }
         };
 
-        fasync::spawn(async move {
-            await!(account.handle_requests_from_stream(&context, stream))
-                .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e))
-        });
-        Status::Ok
+        let account_clone = Arc::clone(&account);
+        match await!(account.task_group().spawn(|cancel| async move {
+            await!(account_clone.handle_requests_from_stream(&context, stream, cancel))
+                .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e));
+        })) {
+            // Since AccountHandler serves only one channel of requests in serial, this is an
+            // inconsistent state rather than a conflict.
+            Err(_) => Status::InternalError,
+            Ok(()) => Status::Ok,
+        }
     }
 }
 
