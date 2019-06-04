@@ -88,6 +88,7 @@ This section covers Fuchsia-wide conventions and best practices.
 ## Miscellaneous
 
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
+ - [Component Inspection](inspect/README.md)
 
 
 [acer_12]: /zircon/docs/targets/acer12.md "Acer 12"

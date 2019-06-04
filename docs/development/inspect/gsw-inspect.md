@@ -630,7 +630,7 @@ From Chris:
 -->
 
 <!-- cross references -->
-[iquery]: /garnet/docs/inspect/iquery.md
-[inspect]: /garnet/docs/inspect/README.md
+[iquery]: /docs/development/inspect/iquery.md
+[inspect]: /docs/inspect/README.md
 [zxdb]: /garnet/docs/debugger.md
 [example.cc]: /garnet/public/lib/inspect/integration/example.cc

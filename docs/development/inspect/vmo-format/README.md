@@ -374,6 +374,6 @@ practice.
 
 <!-- xrefs -->
 [buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
-[VMO]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md
-[block.h]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/inspect-vmo/include/lib/inspect-vmo/block.h
+[VMO]: /zircon/docs/objects/vm_object.md
+[block.h]: /zircon/system/ulib/inspect-vmo/include/lib/inspect-vmo/block.h
 
