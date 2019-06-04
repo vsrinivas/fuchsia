@@ -122,19 +122,18 @@ spn_vk_get_config(struct spn_vk const * const instance);
 //   struct spn_vk_buf_render_surface
 //
 
-#define SPN_VK_TARGET_BUFFER_NAME(_ds_id, _name) struct spn_vk_buf_##_ds_id##_##_name
+#define SPN_VK_BUFFER_NAME(_ds_id, _name) struct spn_vk_buf_##_ds_id##_##_name
 
-#define SPN_VK_TARGET_GLSL_LAYOUT_BUFFER(_ds_id, _s_idx, _b_idx, _name)                            \
-  SPN_VK_TARGET_BUFFER_NAME(_ds_id, _name)
+#define SPN_VK_GLSL_LAYOUT_BUFFER(_ds_id, _s_idx, _b_idx, _name) SPN_VK_BUFFER_NAME(_ds_id, _name)
 
-#define SPN_VK_TARGET_GLSL_LAYOUT_IMAGE2D(_ds_id, _s_idx, _b_idx, _img_type, _name)
+#define SPN_VK_GLSL_LAYOUT_IMAGE2D(_ds_id, _s_idx, _b_idx, _img_type, _name)
 
-SPN_VK_TARGET_GLSL_DS_EXPAND()
+SPN_VK_GLSL_DS_EXPAND()
 
 //
 // If the host-side buffer structure is simply:
 //
-//   struct SPN_VK_TARGET_BUFFER_NAME(foo,bar) {
+//   struct SPN_VK_BUFFER_NAME(foo,bar) {
 //     <type> bar[0];
 //   };
 //
@@ -142,8 +141,8 @@ SPN_VK_TARGET_GLSL_DS_EXPAND()
 //
 //
 
-#define SPN_VK_TARGET_BUFFER_OFFSETOF(_ds_id, _name, _member)                                      \
-  OFFSET_OF_MACRO(SPN_VK_TARGET_BUFFER_NAME(_ds_id, _name), _member)
+#define SPN_VK_BUFFER_OFFSETOF(_ds_id, _name, _member)                                             \
+  OFFSET_OF_MACRO(SPN_VK_BUFFER_NAME(_ds_id, _name), _member)
 
 //
 // Define host-side pipeline push constant structures
@@ -154,138 +153,136 @@ SPN_VK_TARGET_GLSL_DS_EXPAND()
 //
 //
 
-#define SPN_VK_TARGET_PUSH_NAME(_p_id) struct spn_vk_push_##_p_id
+#define SPN_VK_PUSH_NAME(_p_id) struct spn_vk_push_##_p_id
 
-#undef SPN_VK_TARGET_VK_DS
-#define SPN_VK_TARGET_VK_DS(_p_id, _ds_idx, _ds_id)
+#undef SPN_VK_HOST_DS
+#define SPN_VK_HOST_DS(_p_id, _ds_idx, _ds_id)
 
-#undef SPN_VK_TARGET_VK_PUSH
-#define SPN_VK_TARGET_VK_PUSH(_p_id, _p_pc) SPN_VK_TARGET_PUSH_NAME(_p_id){ _p_pc };
+#undef SPN_VK_HOST_PUSH
+#define SPN_VK_HOST_PUSH(_p_id, _p_pc) SPN_VK_PUSH_NAME(_p_id){ _p_pc };
 
-#undef SPN_VK_TARGET_P_EXPAND_X
-#define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) _p_descs
+#undef SPN_VK_P_EXPAND_X
+#define SPN_VK_P_EXPAND_X(_p_idx, _p_id, _p_descs) _p_descs
 
-SPN_VK_TARGET_P_EXPAND()
+SPN_VK_P_EXPAND()
 
 //
 // Declare descriptor acquire/release/update functions
 //
 
-#define SPN_VK_TARGET_DS_TYPE(_ds_id) struct spn_vk_ds_##_ds_id##_t
-#define SPN_VK_TARGET_DS_TYPE_DECLARE(_ds_id)                                                      \
-  SPN_VK_TARGET_DS_TYPE(_ds_id)                                                                    \
+#define SPN_VK_DS_TYPE(_ds_id) struct spn_vk_ds_##_ds_id##_t
+#define SPN_VK_DS_TYPE_DECLARE(_ds_id)                                                             \
+  SPN_VK_DS_TYPE(_ds_id)                                                                           \
   {                                                                                                \
     uint32_t idx;                                                                                  \
   }
 
-#define SPN_VK_TARGET_DS_ACQUIRE_FUNC(_ds_id) spn_vk_ds_acquire_##_ds_id
-#define SPN_VK_TARGET_DS_UPDATE_FUNC(_ds_id) spn_vk_ds_update_##_ds_id
-#define SPN_VK_TARGET_DS_RELEASE_FUNC(_ds_id) spn_vk_ds_release_##_ds_id
+#define SPN_VK_DS_ACQUIRE_FUNC(_ds_id) spn_vk_ds_acquire_##_ds_id
+#define SPN_VK_DS_UPDATE_FUNC(_ds_id) spn_vk_ds_update_##_ds_id
+#define SPN_VK_DS_RELEASE_FUNC(_ds_id) spn_vk_ds_release_##_ds_id
 
-#define SPN_VK_TARGET_DS_ACQUIRE_PROTO(_ds_id)                                                     \
-  void SPN_VK_TARGET_DS_ACQUIRE_FUNC(_ds_id)(struct spn_vk * const                 instance,       \
-                                             struct spn_device * const             device,         \
-                                             SPN_VK_TARGET_DS_TYPE(_ds_id) * const ds)
+#define SPN_VK_DS_ACQUIRE_PROTO(_ds_id)                                                            \
+  void SPN_VK_DS_ACQUIRE_FUNC(_ds_id)(struct spn_vk * const          instance,                     \
+                                      struct spn_device * const      device,                       \
+                                      SPN_VK_DS_TYPE(_ds_id) * const ds)
 
-#define SPN_VK_TARGET_DS_UPDATE_PROTO(_ds_id)                                                      \
-  void SPN_VK_TARGET_DS_UPDATE_FUNC(_ds_id)(struct spn_vk * const             instance,            \
-                                            struct spn_vk_environment * const environment,         \
-                                            SPN_VK_TARGET_DS_TYPE(_ds_id) const ds)
+#define SPN_VK_DS_UPDATE_PROTO(_ds_id)                                                             \
+  void SPN_VK_DS_UPDATE_FUNC(_ds_id)(struct spn_vk * const             instance,                   \
+                                     struct spn_vk_environment * const environment,                \
+                                     SPN_VK_DS_TYPE(_ds_id) const ds)
 
-#define SPN_VK_TARGET_DS_RELEASE_PROTO(_ds_id)                                                     \
-  void SPN_VK_TARGET_DS_RELEASE_FUNC(_ds_id)(struct spn_vk * const instance,                       \
-                                             SPN_VK_TARGET_DS_TYPE(_ds_id) const ds)
+#define SPN_VK_DS_RELEASE_PROTO(_ds_id)                                                            \
+  void SPN_VK_DS_RELEASE_FUNC(_ds_id)(struct spn_vk * const instance,                              \
+                                      SPN_VK_DS_TYPE(_ds_id) const ds)
 
-#undef SPN_VK_TARGET_DS_EXPAND_X
-#define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                            \
-  SPN_VK_TARGET_DS_TYPE_DECLARE(_ds_id);                                                           \
-  SPN_VK_TARGET_DS_ACQUIRE_PROTO(_ds_id);                                                          \
-  SPN_VK_TARGET_DS_UPDATE_PROTO(_ds_id);                                                           \
-  SPN_VK_TARGET_DS_RELEASE_PROTO(_ds_id);
+#undef SPN_VK_DS_EXPAND_X
+#define SPN_VK_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                                   \
+  SPN_VK_DS_TYPE_DECLARE(_ds_id);                                                                  \
+  SPN_VK_DS_ACQUIRE_PROTO(_ds_id);                                                                 \
+  SPN_VK_DS_UPDATE_PROTO(_ds_id);                                                                  \
+  SPN_VK_DS_RELEASE_PROTO(_ds_id);
 
-SPN_VK_TARGET_DS_EXPAND()
+SPN_VK_DS_EXPAND()
 
 //
 // Get references to descriptor set entries
 //
 
-#define SPN_VK_TARGET_DS_GET_FUNC(_ds_id, _d_id) spn_vk_ds_get_##_ds_id##_##_d_id
+#define SPN_VK_DS_GET_FUNC(_ds_id, _d_id) spn_vk_ds_get_##_ds_id##_##_d_id
 
-#define SPN_VK_TARGET_DS_GET_PROTO_STORAGE_BUFFER(_ds_id, _d_id)                                   \
-  VkDescriptorBufferInfo * SPN_VK_TARGET_DS_GET_FUNC(_ds_id, _d_id)(                               \
-    struct spn_vk * const instance,                                                                \
-    SPN_VK_TARGET_DS_TYPE(_ds_id) const ds)
+#define SPN_VK_DS_GET_PROTO_STORAGE_BUFFER(_ds_id, _d_id)                                          \
+  VkDescriptorBufferInfo * SPN_VK_DS_GET_FUNC(_ds_id, _d_id)(struct spn_vk * const instance,       \
+                                                             SPN_VK_DS_TYPE(_ds_id) const ds)
 
-#define SPN_VK_TARGET_DS_GET_PROTO_STORAGE_IMAGE(_ds_id, _d_id)                                    \
-  VkDescriptorImageInfo * SPN_VK_TARGET_DS_GET_FUNC(_ds_id, _d_id)(struct spn_vk * const instance, \
-                                                                   SPN_VK_TARGET_DS_TYPE(_ds_id)   \
-                                                                     const ds);
+#define SPN_VK_DS_GET_PROTO_STORAGE_IMAGE(_ds_id, _d_id)                                           \
+  VkDescriptorImageInfo * SPN_VK_DS_GET_FUNC(_ds_id, _d_id)(struct spn_vk * const instance,        \
+                                                            SPN_VK_DS_TYPE(_ds_id) const ds);
 
-#undef SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id)                      \
-  SPN_VK_TARGET_DS_GET_PROTO_STORAGE_BUFFER(_ds_id, _d_id);
+#undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id)                             \
+  SPN_VK_DS_GET_PROTO_STORAGE_BUFFER(_ds_id, _d_id);
 
-#undef SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                       \
-  SPN_VK_TARGET_DS_GET_PROTO_STORAGE_IMAGE(_ds_id, _d_id);
+#undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                              \
+  SPN_VK_DS_GET_PROTO_STORAGE_IMAGE(_ds_id, _d_id);
 
-#undef SPN_VK_TARGET_DS_EXPAND_X
-#define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds) _ds
+#undef SPN_VK_DS_EXPAND_X
+#define SPN_VK_DS_EXPAND_X(_ds_idx, _ds_id, _ds) _ds
 
-SPN_VK_TARGET_DS_EXPAND()
+SPN_VK_DS_EXPAND()
 
 //
 // Bind a pipeline-specific descriptor set to a command buffer
 //
 
-#define SPN_VK_TARGET_DS_BIND_FUNC(_p_id, _ds_id) spn_vk_ds_bind_##_p_id##_##_ds_id
+#define SPN_VK_DS_BIND_FUNC(_p_id, _ds_id) spn_vk_ds_bind_##_p_id##_##_ds_id
 
-#define SPN_VK_TARGET_DS_BIND_PROTO(_p_id, _ds_id)                                                 \
-  void SPN_VK_TARGET_DS_BIND_FUNC(_p_id, _ds_id)(struct spn_vk * const instance,                   \
-                                                 VkCommandBuffer       cb,                         \
-                                                 SPN_VK_TARGET_DS_TYPE(_ds_id) const ds)
+#define SPN_VK_DS_BIND_PROTO(_p_id, _ds_id)                                                        \
+  void SPN_VK_DS_BIND_FUNC(_p_id, _ds_id)(struct spn_vk * const instance,                          \
+                                          VkCommandBuffer       cb,                                \
+                                          SPN_VK_DS_TYPE(_ds_id) const ds)
 
-#undef SPN_VK_TARGET_VK_DS
-#define SPN_VK_TARGET_VK_DS(_p_id, _ds_idx, _ds_id) SPN_VK_TARGET_DS_BIND_PROTO(_p_id, _ds_id);
+#undef SPN_VK_HOST_DS
+#define SPN_VK_HOST_DS(_p_id, _ds_idx, _ds_id) SPN_VK_DS_BIND_PROTO(_p_id, _ds_id);
 
-#undef SPN_VK_TARGET_VK_PUSH
-#define SPN_VK_TARGET_VK_PUSH(_p_id, _p_pc)
+#undef SPN_VK_HOST_PUSH
+#define SPN_VK_HOST_PUSH(_p_id, _p_pc)
 
-#undef SPN_VK_TARGET_P_EXPAND_X
-#define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) _p_descs
+#undef SPN_VK_P_EXPAND_X
+#define SPN_VK_P_EXPAND_X(_p_idx, _p_id, _p_descs) _p_descs
 
-SPN_VK_TARGET_P_EXPAND()
+SPN_VK_P_EXPAND()
 
 //
 // Write push constants to command buffer
 //
 
-#define SPN_VK_TARGET_P_PUSH_FUNC(_p_id) spn_vk_p_push_##_p_id
+#define SPN_VK_P_PUSH_FUNC(_p_id) spn_vk_p_push_##_p_id
 
-#define SPN_VK_TARGET_P_PUSH_PROTO(_p_id)                                                          \
-  SPN_VK_TARGET_PUSH_NAME(_p_id);                                                                  \
-  void SPN_VK_TARGET_P_PUSH_FUNC(_p_id)(struct spn_vk * const                        instance,     \
-                                        VkCommandBuffer                              cb,           \
-                                        SPN_VK_TARGET_PUSH_NAME(_p_id) const * const push)
+#define SPN_VK_P_PUSH_PROTO(_p_id)                                                                 \
+  SPN_VK_PUSH_NAME(_p_id);                                                                         \
+  void SPN_VK_P_PUSH_FUNC(_p_id)(struct spn_vk * const                 instance,                   \
+                                 VkCommandBuffer                       cb,                         \
+                                 SPN_VK_PUSH_NAME(_p_id) const * const push)
 
-#undef SPN_VK_TARGET_P_EXPAND_X
-#define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) SPN_VK_TARGET_P_PUSH_PROTO(_p_id);
+#undef SPN_VK_P_EXPAND_X
+#define SPN_VK_P_EXPAND_X(_p_idx, _p_id, _p_descs) SPN_VK_P_PUSH_PROTO(_p_id);
 
-SPN_VK_TARGET_P_EXPAND()
+SPN_VK_P_EXPAND()
 
 //
 // Bind pipeline to command buffer
 //
 
-#define SPN_VK_TARGET_P_BIND_FUNC(_p_id) spn_vk_p_bind_##_p_id
+#define SPN_VK_P_BIND_FUNC(_p_id) spn_vk_p_bind_##_p_id
 
-#define SPN_VK_TARGET_P_BIND_PROTO(_p_id)                                                          \
-  void SPN_VK_TARGET_P_BIND_FUNC(_p_id)(struct spn_vk * const instance, VkCommandBuffer cb)
+#define SPN_VK_P_BIND_PROTO(_p_id)                                                                 \
+  void SPN_VK_P_BIND_FUNC(_p_id)(struct spn_vk * const instance, VkCommandBuffer cb)
 
-#undef SPN_VK_TARGET_P_EXPAND_X
-#define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) SPN_VK_TARGET_P_BIND_PROTO(_p_id);
+#undef SPN_VK_P_EXPAND_X
+#define SPN_VK_P_EXPAND_X(_p_idx, _p_id, _p_descs) SPN_VK_P_BIND_PROTO(_p_id);
 
-SPN_VK_TARGET_P_EXPAND()
+SPN_VK_P_EXPAND()
 
 //
 //

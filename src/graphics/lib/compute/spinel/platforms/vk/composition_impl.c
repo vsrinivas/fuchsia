@@ -715,7 +715,7 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   //
   // COPYBACK
   //
-  VkBufferCopy const bc = { .srcOffset = SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
+  VkBufferCopy const bc = { .srcOffset = SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_count),
                             .dstOffset = OFFSET_OF_MACRO(struct spn_ci_copyback, ttcks),
                             .size      = sizeof(impl->mapped.cb.extent->ttcks) };
 
@@ -747,8 +747,8 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
 #if 0
   hs_vk_sort_indirect(cb,
                       ttcks,
-                      SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks),
-                      SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks_count));
+                      SPN_VK_BUFFER_OFFSETOF(ttcks,ttcks,ttcks),
+                      SPN_VK_BUFFER_OFFSETOF(ttcks,ttcks,ttcks_count));
 #endif
 
   //
@@ -1272,7 +1272,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   //
   // allocate ttck descriptor
   //
-  size_t const ttcks_size = SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, ttcks) +
+  size_t const ttcks_size = SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, ttcks) +
                             config->composition.size.ttcks * sizeof(SPN_TYPE_UVEC2);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
@@ -1374,7 +1374,7 @@ spn_composition_impl_pre_render_dispatch(struct spn_composition * const composit
 
   vkCmdDispatchIndirect(cb,
                         impl->vk.ttcks.dbi.buffer,
-                        SPN_VK_TARGET_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count));
+                        SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count));
 }
 
 //

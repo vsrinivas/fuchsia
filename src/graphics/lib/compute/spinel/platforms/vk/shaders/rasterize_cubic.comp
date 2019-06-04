@@ -32,11 +32,11 @@
 // LOCAL DEFINITIONS
 //
 
-#define SPN_KERNEL_RASTERIZE_SUBGROUPS  (SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE / \
+#define SPN_KERNEL_RASTERIZE_SUBGROUPS  (SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE /  \
                                          SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE)
 
-#define SPN_RASTERIZE_SEGMENT(tb_id)    (SPN_TAGGED_BLOCK_ID_GET_ID(tb_id) * \
-                                         SPN_BLOCK_POOL_SUBBLOCK_DWORDS    + \
+#define SPN_RASTERIZE_SEGMENT(tb_id)    (SPN_TAGGED_BLOCK_ID_GET_ID(tb_id) *    \
+                                         SPN_BLOCK_POOL_SUBBLOCK_DWORDS    +    \
                                          gl_SubgroupInvocationID)
 
 //
@@ -58,7 +58,7 @@ layout(local_size_x = SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE) in;
 //           uniform uint  count);
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_RASTERIZE_CUBIC();
+SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_CUBIC();
 
 //
 //
@@ -374,15 +374,15 @@ void main()
 #if 0
 
 // encode { exc : src } into a uint
-#define SPN_RASTERIZE_MAKE_EXC_SRC(exc)                                     \
+#define SPN_RASTERIZE_MAKE_EXC_SRC(exc)                                                 \
   ((exc) | (gl_SubgroupInvocationID << (32-SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2)))
 
 // get exc_src.exc
-#define SPN_RASTERIZE_EXC_SRC_GET_EXC(exc_src)                              \
+#define SPN_RASTERIZE_EXC_SRC_GET_EXC(exc_src)                                  \
   bitfieldExtract(exc_src,0,(32-SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2))
 
 // get exc_src.src
-#define SPN_RASTERIZE_EXC_SRC_GET_SRC(exc_src)                              \
+#define SPN_RASTERIZE_EXC_SRC_GET_SRC(exc_src)                                                                  \
   bitfieldExtract(exc_src,(32-SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2),SPN_KERNEL_RASTERIZE_SUBGROUP_SIZE_LOG2)
 
   const uint exc_src = SPN_RASTERIZE_MAKE_EXC_SRC(y_exc);

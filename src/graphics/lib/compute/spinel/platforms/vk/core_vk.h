@@ -28,13 +28,13 @@
 //
 //
 
-#define SPN_VK_TARGET_GLSL_ALIGN()               ALIGN_MACRO(SPN_SUBGROUP_ALIGN_LIMIT)
+#define SPN_VK_GLSL_ALIGN()               ALIGN_MACRO(SPN_SUBGROUP_ALIGN_LIMIT)
 
-#define SPN_VK_TARGET_PUSH_UINT(name)            SPN_TYPE_UINT  name;
-#define SPN_VK_TARGET_PUSH_UVEC4(name)           SPN_TYPE_UVEC4 name;
-#define SPN_VK_TARGET_PUSH_IVEC4(name)           SPN_TYPE_IVEC4 name;
-#define SPN_VK_TARGET_PUSH_UINT_FARRAY(name,len) SPN_TYPE_UINT  name[len];
-#define SPN_VK_TARGET_PUSH_UINT_VARRAY(name,len) SPN_TYPE_UINT  name[];
+#define SPN_VK_PUSH_UINT(name)            SPN_TYPE_UINT  name;
+#define SPN_VK_PUSH_UVEC4(name)           SPN_TYPE_UVEC4 name;
+#define SPN_VK_PUSH_IVEC4(name)           SPN_TYPE_IVEC4 name;
+#define SPN_VK_PUSH_UINT_FARRAY(name,len) SPN_TYPE_UINT  name[len];
+#define SPN_VK_PUSH_UINT_VARRAY(name,len) SPN_TYPE_UINT  name[];
 
 //
 //

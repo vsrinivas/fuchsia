@@ -37,31 +37,31 @@
 //
 //
 
-#define SPN_VK_TARGET_GLSL_MQ_RW                 // read and write by shader
-#define SPN_VK_TARGET_GLSL_MQ_NOACCESS           // no access by shader
+#define SPN_VK_GLSL_MQ_RW                 // read and write by shader
+#define SPN_VK_GLSL_MQ_NOACCESS           // no access by shader
 
-#define SPN_VK_TARGET_GLSL_ALIGN()               layout(align = SPN_SUBGROUP_ALIGN_LIMIT)
+#define SPN_VK_GLSL_ALIGN()               layout(align = SPN_SUBGROUP_ALIGN_LIMIT)
 
-#define SPN_VK_TARGET_PUSH_UINT(name)            SPN_TYPE_UINT  name;
-#define SPN_VK_TARGET_PUSH_UVEC4(name)           SPN_TYPE_UVEC4 name;
-#define SPN_VK_TARGET_PUSH_IVEC4(name)           SPN_TYPE_IVEC4 name;
-#define SPN_VK_TARGET_PUSH_UINT_FARRAY(name,len) SPN_TYPE_UINT  name[len];
-#define SPN_VK_TARGET_PUSH_UINT_VARRAY(name,len) SPN_TYPE_UINT  name[len];
+#define SPN_VK_PUSH_UINT(name)            SPN_TYPE_UINT  name;
+#define SPN_VK_PUSH_UVEC4(name)           SPN_TYPE_UVEC4 name;
+#define SPN_VK_PUSH_IVEC4(name)           SPN_TYPE_IVEC4 name;
+#define SPN_VK_PUSH_UINT_FARRAY(name,len) SPN_TYPE_UINT  name[len];
+#define SPN_VK_PUSH_UINT_VARRAY(name,len) SPN_TYPE_UINT  name[len];
 
 //
 //
 //
 
-#define SPN_VK_TARGET_GLSL_PUSH(_push)                                             \
+#define SPN_VK_GLSL_PUSH(_push)                                             \
   layout(push_constant) uniform _pc { _push }
 
-#define SPN_VK_TARGET_GLSL_LAYOUT_BUFFER(_ds_id,_s_idx,_b_idx,_name)               \
+#define SPN_VK_GLSL_LAYOUT_BUFFER(_ds_id,_s_idx,_b_idx,_name)               \
   layout(set = _s_idx, binding = _b_idx, std430) buffer _##_name
 
-#define SPN_VK_TARGET_GLSL_LAYOUT_IMAGE2D(_ds_id,_s_idx,_b_idx,_img_type,_name)    \
+#define SPN_VK_GLSL_LAYOUT_IMAGE2D(_ds_id,_s_idx,_b_idx,_img_type,_name)    \
   layout(set = _s_idx, binding = _b_idx, _img_type) uniform image2D _##_name
 
-#define SPN_VK_TARGET_GLSL_BUFFER_INSTANCE(_name)                                  \
+#define SPN_VK_GLSL_BUFFER_INSTANCE(_name)                                  \
   _name
 
 //

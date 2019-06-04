@@ -642,7 +642,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   //
 #if 0
   hs_vk_merge(cb_3,
-              p_2.temp.rp.offset + SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
+              p_2.temp.rp.offset + SPN_VK_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
               impl->mapped.cb[p2.dispatch_idx], // copyback key count
               1,
               &p_2.semaphore.sort,
@@ -849,20 +849,19 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   VkDescriptorBufferInfo * const dbi_fill_scan =
     spn_vk_ds_get_rasterize_fill_scan(instance, p_1.ds.r);
 
-  spn_allocator_device_temp_alloc(
-    &device->allocator.device.temp.local,
-    device,
-    spn_device_wait,
-    SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_prefix) +
-      dispatch->cf.span * sizeof(SPN_TYPE_UVEC4),
-    &p_1.temp.r.fill_scan,
-    dbi_fill_scan);
+  spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
+                                  device,
+                                  spn_device_wait,
+                                  SPN_VK_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_prefix) +
+                                    dispatch->cf.span * sizeof(SPN_TYPE_UVEC4),
+                                  &p_1.temp.r.fill_scan,
+                                  dbi_fill_scan);
 
   // dbi: rast_cmds -- allocate a temporary buffer
   spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
                                   device,
                                   spn_device_wait,
-                                  SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize, rast_cmds, rast_cmds) +
+                                  SPN_VK_BUFFER_OFFSETOF(rasterize, rast_cmds, rast_cmds) +
                                     config->raster_builder.size.cmds * sizeof(SPN_TYPE_UVEC4),
                                   &p_1.temp.r.rast_cmds,
                                   spn_vk_ds_get_rasterize_rast_cmds(instance, p_1.ds.r));
@@ -885,7 +884,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
                                   device,
                                   spn_device_wait,
-                                  SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_keys) +
+                                  SPN_VK_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_keys) +
                                     config->raster_builder.size.ttrks * sizeof(SPN_TYPE_UVEC2),
                                   &p_1.p_2.temp.rp.ttrks,
                                   dbi_ttrks);
@@ -960,11 +959,11 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
-#define SPN_VK_TARGET_P_BIND_RASTERIZE_NAME(_p) spn_vk_p_bind_rasterize_##_p
+#define SPN_VK_P_BIND_RASTERIZE_NAME(_p) spn_vk_p_bind_rasterize_##_p
 
 #undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n)                                            \
-  SPN_VK_TARGET_P_BIND_RASTERIZE_NAME(_p)(instance, cb_1);                                         \
+  SPN_VK_P_BIND_RASTERIZE_NAME(_p)(instance, cb_1);                                                \
   vkCmdDispatchIndirect(cb_1, dbi_fill_scan->buffer, sizeof(SPN_TYPE_UVEC4) * _i);
 
   SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
@@ -980,9 +979,8 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   // COPYBACK
   //
-  VkBufferCopy const bc = { .srcOffset =
-                              p_1.p_2.temp.rp.offset +
-                              SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_count),
+  VkBufferCopy const bc = { .srcOffset = p_1.p_2.temp.rp.offset +
+                                         SPN_VK_BUFFER_OFFSETOF(rasterize_post, ttrks, ttrks_count),
                             .dstOffset = sizeof(*impl->mapped.cb.extent) * p_1.p_2.dispatch_idx,
                             .size      = sizeof(*impl->mapped.cb.extent) };
 
@@ -1024,7 +1022,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
 
     hs_vk_sort_indirect(cb_2,
                         dbi_ttrks->buffer,
-                        p_1.p_2.temp.rp.offset + SPN_VK_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
+                        p_1.p_2.temp.rp.offset + SPN_VK_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
                         ttrks_count_offset);
 
     VkFence const fence = spn_device_cb_end_fence_acquire(device,

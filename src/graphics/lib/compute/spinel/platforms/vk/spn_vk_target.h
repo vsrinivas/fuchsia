@@ -127,21 +127,21 @@ struct spn_vk_target_config
   //
   struct
   {
-#undef SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id) uint32_t _d_id;
+#undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id) uint32_t _d_id;
 
-#undef SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                       \
+#undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                              \
   uint32_t _d_id;  // do nothing for now
 
-#undef SPN_VK_TARGET_DS_EXPAND_X
-#define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                            \
+#undef SPN_VK_DS_EXPAND_X
+#define SPN_VK_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                                   \
   struct                                                                                           \
   {                                                                                                \
     uint32_t sets;                                                                                 \
   } _ds_id;
 
-    SPN_VK_TARGET_DS_EXPAND()
+    SPN_VK_DS_EXPAND()
 
   } ds;
 
@@ -150,8 +150,8 @@ struct spn_vk_target_config
   //
   struct
   {
-#undef SPN_VK_TARGET_DS_EXPAND_X
-#define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                            \
+#undef SPN_VK_DS_EXPAND_X
+#define SPN_VK_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                                   \
   struct                                                                                           \
   {                                                                                                \
     struct                                                                                         \
@@ -160,7 +160,7 @@ struct spn_vk_target_config
     } props;                                                                                       \
   } _ds_id;
 
-    SPN_VK_TARGET_DS_EXPAND()
+    SPN_VK_DS_EXPAND()
 
   } ds_extents;
 
@@ -175,12 +175,12 @@ struct spn_vk_target_config
     {
       struct
       {
-#undef SPN_VK_TARGET_P_EXPAND_X
-#define SPN_VK_TARGET_P_EXPAND_X(_p_idx, _p_id, _p_descs) uint32_t _p_id;
+#undef SPN_VK_P_EXPAND_X
+#define SPN_VK_P_EXPAND_X(_p_idx, _p_id, _p_descs) uint32_t _p_id;
 
-        SPN_VK_TARGET_P_EXPAND()
+        SPN_VK_P_EXPAND()
       } named;
-      uint32_t array[SPN_VK_TARGET_P_COUNT];
+      uint32_t array[SPN_VK_P_COUNT];
     } push_sizes;
   } p;
 };

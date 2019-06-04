@@ -52,7 +52,7 @@ layout(local_size_x = SPN_KERNEL_PLACE_WORKGROUP_SIZE) in;
 //      const   uint    cmd_count);
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_PLACE();
+SPN_VK_GLSL_DECL_KERNEL_PLACE();
 
 //
 //

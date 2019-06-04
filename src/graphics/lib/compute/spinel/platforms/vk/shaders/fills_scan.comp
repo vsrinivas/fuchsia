@@ -36,7 +36,7 @@ layout(local_size_x = SPN_KERNEL_FILLS_SCAN_WORKGROUP_SIZE) in;
 //      buffer uint  prim_prefix[])  // the raster command "base" for each primitive type
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_FILLS_SCAN();
+SPN_VK_GLSL_DECL_KERNEL_FILLS_SCAN();
 
 //
 // COMPILE-TIME CONSTANTS
@@ -75,7 +75,7 @@ void main()
       cmd_base + I * SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE;                       \
                                                                                 \
     if (cmd_idx < cmd_count) {                                                  \
-      path_id##I = bp_host_map[SPN_CMD_FILL_GET_PATH_H(fill_cmds[cmd_idx])];      \
+      path_id##I = bp_host_map[SPN_CMD_FILL_GET_PATH_H(fill_cmds[cmd_idx])];    \
     }                                                                           \
   }
 

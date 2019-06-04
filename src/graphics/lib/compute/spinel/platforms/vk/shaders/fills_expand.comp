@@ -47,7 +47,7 @@ layout(local_size_x = SPN_KERNEL_FILLS_EXPAND_WORKGROUP_SIZE) in;
 //      buffer uvec4 rast_cmds[])
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_FILLS_EXPAND();
+SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND();
 
 //
 //
@@ -174,7 +174,7 @@ void main()
   const uint h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
+#define SPN_EXPAND_X(I,N,P,L)                                                   \
   uint h##I = bp_blocks[h_idx + I * SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE];
 
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
@@ -185,9 +185,9 @@ void main()
   uint count_nodes;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_NODES,I)) { \
-    count_nodes = SPN_FILLS_EXPAND_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_NODES,I); \
+#define SPN_EXPAND_X(I,N,P,L)                                                                                   \
+  if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_NODES,I)) {        \
+    count_nodes = SPN_FILLS_EXPAND_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_NODES,I);                                \
   }
 
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
@@ -196,13 +196,13 @@ void main()
   // invalidate header components
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) { \
-    if (SPN_PATH_HEAD_PARTIALLY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) { \
-      if (SPN_PATH_HEAD_IS_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) { \
-        h##I = SPN_TAGGED_BLOCK_ID_INVALID;                             \
-      }                                                                 \
-    }                                                                   \
+#define SPN_EXPAND_X(I,N,P,L)                                                           \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {        \
+    if (SPN_PATH_HEAD_PARTIALLY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {      \
+      if (SPN_PATH_HEAD_IS_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {           \
+        h##I = SPN_TAGGED_BLOCK_ID_INVALID;                                             \
+      }                                                                                 \
+    }                                                                                   \
   }
 
   SPN_FILLS_EXPAND_BLOCK_EXPAND();
@@ -252,10 +252,10 @@ void main()
     SPN_FILLS_EXPAND_TAG_COUNT_INIT(tags_count);
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-    if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) { \
-      h##I = SPN_TAGGED_BLOCK_ID_GET_TAG(h##I);                         \
-      SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count,h##I);                  \
+#define SPN_EXPAND_X(I,N,P,L)                                                           \
+    if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {      \
+      h##I = SPN_TAGGED_BLOCK_ID_GET_TAG(h##I);                                         \
+      SPN_FILLS_EXPAND_TAG_COUNT_ADD(tags_count,h##I);                                  \
     }
 
     SPN_FILLS_EXPAND_BLOCK_EXPAND();
@@ -277,12 +277,12 @@ void main()
             uint       r_idx = subgroupShuffle(rast_base,ii) + r_off; // GLSL: ii has to be a compile-time constant
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-            if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) { \
-              if (h##I == ii) {                                         \
-                SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd,word_base + I);    \
-                rast_cmds[r_idx++] = cmd;                               \
-              }                                                         \
+#define SPN_EXPAND_X(I,N,P,L)                                                                   \
+            if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {      \
+              if (h##I == ii) {                                                                 \
+                SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd,word_base + I);                            \
+                rast_cmds[r_idx++] = cmd;                                                       \
+              }                                                                                 \
             }
 
             SPN_FILLS_EXPAND_BLOCK_EXPAND();
@@ -323,7 +323,7 @@ void main()
       const uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
+#define SPN_EXPAND_X(I,N,P,L)                                                   \
       uint n##I = bp_blocks[n_idx + I * SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE];
 
       SPN_FILLS_EXPAND_BLOCK_EXPAND();
@@ -358,12 +358,12 @@ void main()
               uint       r_idx = subgroupShuffle(rast_base,ii) + r_off; // GLSL: ii has to be a compile-time constant
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-              if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) { \
-                if (h##I == ii) {                                       \
-                  SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd,word_base + I);  \
-                  rast_cmds[r_idx++] = cmd;                             \
-                }                                                       \
+#define SPN_EXPAND_X(I,N,P,L)                                                                   \
+              if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_FILLS_EXPAND_SUBGROUP_SIZE,I)) {    \
+                if (h##I == ii) {                                                               \
+                  SPN_CMD_RASTERIZE_SET_NODE_DWORD(cmd,word_base + I);                          \
+                  rast_cmds[r_idx++] = cmd;                                                     \
+                }                                                                               \
               }
 
               SPN_FILLS_EXPAND_BLOCK_EXPAND();

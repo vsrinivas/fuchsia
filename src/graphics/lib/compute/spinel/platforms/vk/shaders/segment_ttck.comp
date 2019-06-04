@@ -78,7 +78,7 @@ layout(local_size_x = HS_SLAB_THREADS) in;
 // NOTE: THIS DESCRIPTOR MUST BE COMPATIBLE WITH 'SPN_DESC_TTRKS'
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_SEGMENT_TTCK();
+SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK();
 
 //
 //
@@ -176,7 +176,7 @@ void main()
   // FIND ALL DIFFERENCES IN SLAB
   //
 #if 1 // branchless
-#define SPN_YX_NEQ(row,prev) \
+#define SPN_YX_NEQ(row,prev)                                                                            \
   (min(1,((unpackUint2x32(r##row)[1] ^ unpackUint2x32(r##prev)[1]) & SPN_TTCK_HI_MASK_YX)) << prev)
 #else
 #define SPN_YX_NEQ(row,prev) \

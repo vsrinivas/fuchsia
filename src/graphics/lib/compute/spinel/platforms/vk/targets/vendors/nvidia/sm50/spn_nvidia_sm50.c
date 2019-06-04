@@ -25,12 +25,12 @@
 // clang-format off
 //
 
-#define SPN_VK_TARGET_EXTENT_PDRW         (SPN_VK_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-#define SPN_VK_TARGET_EXTENT_TDRW         (SPN_VK_TARGET_ALLOC_TEMP_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-#define SPN_VK_TARGET_EXTENT_PHW1G_TDR1S  (SPN_VK_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_VK_TARGET_EXTENT_PHW1G_TDRNS  (SPN_VK_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_VK_TARGET_EXTENT_PHWN_PDRN    (SPN_VK_TARGET_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) // bad
-#define SPN_VK_TARGET_EXTENT_IMAGE        0
+#define SPN_VK_EXTENT_PDRW         (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+#define SPN_VK_EXTENT_TDRW         (SPN_VK_ALLOC_TEMP_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+#define SPN_VK_EXTENT_PHW1G_TDR1S  (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+#define SPN_VK_EXTENT_PHW1G_TDRNS  (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+#define SPN_VK_EXTENT_PHWN_PDRN    (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) // bad
+#define SPN_VK_EXTENT_IMAGE        0
 
 //
 //
@@ -146,19 +146,19 @@ static struct spn_vk_target const target =
     //
     // capture target-specific extent types
     //
-#undef  SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_TARGET_DESC_TYPE_STORAGE_BUFFER(_ds_id,_d_idx,_d_ext,_d_id) ._d_id = _d_ext,
+#undef  SPN_VK_DESC_TYPE_STORAGE_BUFFER
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id,_d_idx,_d_ext,_d_id) ._d_id = _d_ext,
 
-#undef  SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_TARGET_DESC_TYPE_STORAGE_IMAGE(_ds_id,_d_idx,_d_ext,_d_id)  ._d_id = _d_ext,
+#undef  SPN_VK_DESC_TYPE_STORAGE_IMAGE
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id,_d_idx,_d_ext,_d_id)  ._d_id = _d_ext,
 
-#undef  SPN_VK_TARGET_DS_EXPAND_X
-#define SPN_VK_TARGET_DS_EXPAND_X(_ds_idx,_ds_id,_ds)   \
-    .ds_extents._ds_id.props = {                        \
-      _ds                                               \
+#undef  SPN_VK_DS_EXPAND_X
+#define SPN_VK_DS_EXPAND_X(_ds_idx,_ds_id,_ds)  \
+    .ds_extents._ds_id.props = {                \
+      _ds                                       \
     },
 
-    SPN_VK_TARGET_DS_EXPAND()
+    SPN_VK_DS_EXPAND()
 
     //
     // capture target-specific pipeline push constant sizes

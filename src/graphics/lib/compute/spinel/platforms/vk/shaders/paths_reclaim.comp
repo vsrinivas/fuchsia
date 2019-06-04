@@ -34,7 +34,7 @@ layout(local_size_x = SPN_KERNEL_PATHS_RECLAIM_WORKGROUP_SIZE) in;
 //      uniform uint path_ids[])
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_PATHS_RECLAIM();
+SPN_VK_GLSL_DECL_KERNEL_PATHS_RECLAIM();
 
 //
 // BLOCK EXPANSION
@@ -109,7 +109,7 @@ void main()
       const uint h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
+#define SPN_EXPAND_X(I,N,P,L)                                                           \
       uint h##I = bp_blocks[h_idx + I * SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE];
 
       SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();
@@ -120,12 +120,12 @@ void main()
       uint count_blocks, count_nodes;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-      if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_BLOCKS,I)) { \
-        count_blocks = SPN_PATHS_RECLAIM_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_BLOCKS,I); \
-      }                                                                 \
-      if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_NODES,I)) { \
-        count_nodes  = SPN_PATHS_RECLAIM_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_NODES,I); \
+#define SPN_EXPAND_X(I,N,P,L)                                                                                   \
+      if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_BLOCKS,I)) {  \
+        count_blocks = SPN_PATHS_RECLAIM_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_BLOCKS,I);                         \
+      }                                                                                                         \
+      if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,SPN_PATH_HEAD_OFFSET_NODES,I)) {   \
+        count_nodes  = SPN_PATHS_RECLAIM_BROADCAST(h##I,SPN_PATH_HEAD_OFFSET_NODES,I);                          \
       }
 
       SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();
@@ -145,13 +145,13 @@ void main()
       // invalidate all header components
       //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-      if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) { \
+#define SPN_EXPAND_X(I,N,P,L)                                                           \
+      if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) {   \
         if (SPN_PATH_HEAD_PARTIALLY_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) { \
-          if (SPN_PATH_HEAD_IS_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) { \
-            h##I = SPN_TAGGED_BLOCK_ID_INVALID;                         \
-          }                                                             \
-        }                                                               \
+          if (SPN_PATH_HEAD_IS_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) {      \
+            h##I = SPN_TAGGED_BLOCK_ID_INVALID;                                         \
+          }                                                                             \
+        }                                                                               \
       }
 
       SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();
@@ -160,9 +160,9 @@ void main()
       // shift away all tags
       //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-      if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) { \
-        h##I = h##I >> SPN_TAGGED_BLOCK_ID_BITS_TAG;                    \
+#define SPN_EXPAND_X(I,N,P,L)                                                           \
+      if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE,I)) {   \
+        h##I = h##I >> SPN_TAGGED_BLOCK_ID_BITS_TAG;                                    \
       }
 
       SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();
@@ -183,16 +183,16 @@ void main()
       // find ring index of all blocks and store -- FIXME -- NOT COALESCED
       //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-      {                                                                 \
-        const bool  is_block     = (h##I & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) == 0; \
-        const uvec4 block_ballot = subgroupBallot(is_block);            \
-        const uint  block_idx    = subgroupBallotExclusiveBitCount(block_ballot); \
-                                                                        \
-        if (is_block)                                                   \
-          bp_ids[(bp_ids_base + block_idx) & bp_mask] = h##I;           \
-                                                                        \
-        bp_ids_base += subgroupBallotBitCount(block_ballot);            \
+#define SPN_EXPAND_X(I,N,P,L)                                                                   \
+      {                                                                                         \
+        const bool  is_block     = (h##I & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) == 0;       \
+        const uvec4 block_ballot = subgroupBallot(is_block);                                    \
+        const uint  block_idx    = subgroupBallotExclusiveBitCount(block_ballot);               \
+                                                                                                \
+        if (is_block)                                                                           \
+          bp_ids[(bp_ids_base + block_idx) & bp_mask] = h##I;                                   \
+                                                                                                \
+        bp_ids_base += subgroupBallotBitCount(block_ballot);                                    \
       }
 
       SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();
@@ -211,7 +211,7 @@ void main()
           const uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
+#define SPN_EXPAND_X(I,N,P,L)                                                           \
           uint n##I = bp_blocks[n_idx + I * SPN_KERNEL_PATHS_RECLAIM_SUBGROUP_SIZE];
 
           SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();
@@ -241,16 +241,16 @@ void main()
           // find ring index of all blocks and store -- FIXME -- NOT COALESCED
           //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-          {                                                             \
-            const bool  is_block     = (n##I & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) == 0; \
-            const uvec4 block_ballot = subgroupBallot(is_block);        \
-            const uint  block_idx    = subgroupBallotExclusiveBitCount(block_ballot); \
-                                                                        \
-            if (is_block)                                               \
-              bp_ids[(bp_ids_base + block_idx) & bp_mask] = n##I;       \
-                                                                        \
-            bp_ids_base += subgroupBallotBitCount(block_ballot);        \
+#define SPN_EXPAND_X(I,N,P,L)                                                                   \
+          {                                                                                     \
+            const bool  is_block     = (n##I & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) == 0;   \
+            const uvec4 block_ballot = subgroupBallot(is_block);                                \
+            const uint  block_idx    = subgroupBallotExclusiveBitCount(block_ballot);           \
+                                                                                                \
+            if (is_block)                                                                       \
+              bp_ids[(bp_ids_base + block_idx) & bp_mask] = n##I;                               \
+                                                                                                \
+            bp_ids_base += subgroupBallotBitCount(block_ballot);                                \
           }
 
           SPN_KERNEL_PATHS_RECLAIM_BLOCK_EXPAND();

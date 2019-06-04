@@ -36,7 +36,7 @@ layout(local_size_x = SPN_KERNEL_RASTERS_ALLOC_WORKGROUP_SIZE) in;
 //      uniform uint  count)        // push constant
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_RASTERS_ALLOC();
+SPN_VK_GLSL_DECL_KERNEL_RASTERS_ALLOC();
 
 //
 // COHORT META DATA

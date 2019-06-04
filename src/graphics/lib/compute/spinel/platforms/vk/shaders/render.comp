@@ -139,11 +139,11 @@
 #define SPN_KERNEL_RENDER_TTS                  SPN_KERNEL_RENDER_TTX
 #define SPN_KERNEL_RENDER_TTP                  SPN_KERNEL_RENDER_TTX
 
-#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2  (SPN_TILE_HEIGHT_LOG2                 + \
-                                                SPN_TILE_WIDTH_LOG2                  - \
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2  (SPN_TILE_HEIGHT_LOG2                 +  \
+                                                SPN_TILE_WIDTH_LOG2                  -  \
                                                 SPN_KERNEL_RENDER_SUBGROUP_SIZE_LOG2)
 
-#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 (SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 - \
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 (SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 -         \
                                                 SPN_KERNEL_RENDER_SUBTILE_CHANNEL_SIZE_LOG2)
 
 
@@ -226,7 +226,7 @@ layout(local_size_x = SPN_KERNEL_RENDER_WORKGROUP_SIZE) in;
 //      uniform image2D surface);
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_RENDER();
+SPN_VK_GLSL_DECL_KERNEL_RENDER();
 
 //
 // SUBTILE HEIGHT EXPANSION
@@ -956,20 +956,20 @@ spn_tile_scatter_ttsb(const SPN_KERNEL_RENDER_TTS tts)
   const bool is_p0 = (gl_SubgroupInvocationID >= SPN_TILE_WIDTH);       \
   SPN_KERNEL_RENDER_PIXEL_AREA total
 
-#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                               \
-  {                                                                     \
-    total = area;                                                       \
-                                                                        \
-    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID); \
-    SPN_KERNEL_RENDER_PIXEL_AREA x0 = subgroupShuffleXor(pp,SPN_TILE_WIDTH); \
-    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                          \
-                                                                        \
-    total += rr;                                                        \
-                                                                        \
-    if (is_p0)                                                          \
-      pp = rr;                                                          \
-                                                                        \
-    area += pp;                                                         \
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                                               \
+  {                                                                                     \
+    total = area;                                                                       \
+                                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID);   \
+    SPN_KERNEL_RENDER_PIXEL_AREA x0 = subgroupShuffleXor(pp,SPN_TILE_WIDTH);            \
+    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                                          \
+                                                                                        \
+    total += rr;                                                                        \
+                                                                                        \
+    if (is_p0)                                                                          \
+      pp = rr;                                                                          \
+                                                                                        \
+    area += pp;                                                                         \
   }
 
 #define SPN_SUBTILE_AREA_SCAN_POST(area)        \
@@ -985,27 +985,27 @@ spn_tile_scatter_ttsb(const SPN_KERNEL_RENDER_TTS tts)
   const bool is_p1 = (gl_SubgroupInvocationID > SPN_TILE_WIDTH * 2);    \
   SPN_KERNEL_RENDER_PIXEL_AREA total
 
-#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                               \
-  {                                                                     \
-    total = area;                                                       \
-                                                                        \
-    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID); \
-    SPN_KERNEL_RENDER_PIXEL_AREA x0 = subgroupShuffleXor(pp,SPN_TILE_WIDTH); \
-    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                          \
-                                                                        \
-    total += rr;                                                        \
-                                                                        \
-    if (is_p0)                                                          \
-      pp = rr;                                                          \
-                                                                        \
-    SPN_KERNEL_RENDER_PIXEL_AREA x1 = subgroupShuffleXor(rr,SPN_TILE_WIDTH * 2); \
-                                                                        \
-    total += x1;                                                        \
-                                                                        \
-    if (is_p1)                                                          \
-      pp += x1;                                                         \
-                                                                        \
-    area += pp;                                                         \
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                                               \
+  {                                                                                     \
+    total = area;                                                                       \
+                                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID);   \
+    SPN_KERNEL_RENDER_PIXEL_AREA x0 = subgroupShuffleXor(pp,SPN_TILE_WIDTH);            \
+    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                                          \
+                                                                                        \
+    total += rr;                                                                        \
+                                                                                        \
+    if (is_p0)                                                                          \
+      pp = rr;                                                                          \
+                                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA x1 = subgroupShuffleXor(rr,SPN_TILE_WIDTH * 2);        \
+                                                                                        \
+    total += x1;                                                                        \
+                                                                                        \
+    if (is_p1)                                                                          \
+      pp += x1;                                                                         \
+                                                                                        \
+    area += pp;                                                                         \
   }
 
 #define SPN_SUBTILE_AREA_SCAN_POST(area)        \
@@ -1031,20 +1031,20 @@ spn_tile_scatter_ttsb(const SPN_KERNEL_RENDER_TTS tts)
   const uint iid_xor = gl_SubgroupInvocationID ^ SPN_TILE_WIDTH;        \
   SPN_KERNEL_RENDER_PIXEL_AREA total
 
-#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                               \
-  {                                                                     \
-    total = area;                                                       \
-                                                                        \
-    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID); \
-    SPN_KERNEL_RENDER_PIXEL_AREA x0 = SPN_PIXEL_SMEM_AREA(I,iid_xor);   \
-    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                          \
-                                                                        \
-    total += rr;                                                        \
-                                                                        \
-    if (is_p0)                                                          \
-      pp = rr;                                                          \
-                                                                        \
-    area += pp;                                                         \
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                                               \
+  {                                                                                     \
+    total = area;                                                                       \
+                                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID);   \
+    SPN_KERNEL_RENDER_PIXEL_AREA x0 = SPN_PIXEL_SMEM_AREA(I,iid_xor);                   \
+    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                                          \
+                                                                                        \
+    total += rr;                                                                        \
+                                                                                        \
+    if (is_p0)                                                                          \
+      pp = rr;                                                                          \
+                                                                                        \
+    area += pp;                                                                         \
   }
 
 #define SPN_SUBTILE_AREA_SCAN_POST(area)        \
@@ -1086,19 +1086,19 @@ spn_tile_cover_nonzero()
   subgroupMemoryBarrierShared();
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                         \
-                                                                        \
-    SPN_SUBTILE_AREA_SCAN_PRE(I,area);                                  \
-                                                                        \
-    const SPN_KERNEL_RENDER_PIXEL_AREA  trapabs = abs(area);            \
-    const SPN_KERNEL_RENDER_PIXEL_AREA  trapmin = min(trapabs,SPN_TTS_FILL_MAX_AREA); \
-    const SPN_KERNEL_RENDER_PIXEL_COVER nonzero = SPN_KERNEL_RENDER_PIXEL_COVER(trapmin); \
-                                                                        \
-    SPN_PIXEL_COVER_WIP(I) = nonzero * SPN_KERNEL_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32); \
-                                                                        \
-    if (!L) {                                                           \
-      SPN_SUBTILE_AREA_SCAN_POST(area);                                 \
-    }                                                                   \
+#define SPN_EXPAND_X(I,N,P,L) {                                                                         \
+                                                                                                        \
+    SPN_SUBTILE_AREA_SCAN_PRE(I,area);                                                                  \
+                                                                                                        \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  trapabs = abs(area);                                            \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  trapmin = min(trapabs,SPN_TTS_FILL_MAX_AREA);                   \
+    const SPN_KERNEL_RENDER_PIXEL_COVER nonzero = SPN_KERNEL_RENDER_PIXEL_COVER(trapmin);               \
+                                                                                                        \
+    SPN_PIXEL_COVER_WIP(I) = nonzero * SPN_KERNEL_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);    \
+                                                                                                        \
+    if (!L) {                                                                                           \
+      SPN_SUBTILE_AREA_SCAN_POST(area);                                                                 \
+    }                                                                                                   \
   }
 
   SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND();
@@ -1114,20 +1114,20 @@ spn_tile_cover_evenodd()
   subgroupMemoryBarrierShared();
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                         \
-                                                                        \
-    SPN_SUBTILE_AREA_SCAN_PRE(I,area);                                  \
-                                                                        \
-    const SPN_KERNEL_RENDER_PIXEL_AREA  trapabs = abs(area);            \
-    const SPN_KERNEL_RENDER_PIXEL_AREA  maskabs = trapabs & SPN_TTS_FILL_EVEN_ODD_MASK; \
-    const SPN_KERNEL_RENDER_PIXEL_AREA  reflect = abs(SPN_TTS_FILL_MAX_AREA - maskabs); \
-    const SPN_KERNEL_RENDER_PIXEL_COVER evenodd = SPN_KERNEL_RENDER_PIXEL_COVER(reflect); \
-                                                                        \
-    SPN_PIXEL_COVER_WIP(I) = evenodd * SPN_KERNEL_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32); \
-                                                                        \
-    if (!L) {                                                           \
-      SPN_SUBTILE_AREA_SCAN_POST(area);                                 \
-    }                                                                   \
+#define SPN_EXPAND_X(I,N,P,L) {                                                                         \
+                                                                                                        \
+    SPN_SUBTILE_AREA_SCAN_PRE(I,area);                                                                  \
+                                                                                                        \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  trapabs = abs(area);                                            \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  maskabs = trapabs & SPN_TTS_FILL_EVEN_ODD_MASK;                 \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  reflect = abs(SPN_TTS_FILL_MAX_AREA - maskabs);                 \
+    const SPN_KERNEL_RENDER_PIXEL_COVER evenodd = SPN_KERNEL_RENDER_PIXEL_COVER(reflect);               \
+                                                                                                        \
+    SPN_PIXEL_COVER_WIP(I) = evenodd * SPN_KERNEL_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32);    \
+                                                                                                        \
+    if (!L) {                                                                                           \
+      SPN_SUBTILE_AREA_SCAN_POST(area);                                                                 \
+    }                                                                                                   \
   }
 
   SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND();
@@ -1180,14 +1180,14 @@ spn_tile_blend_over()
   // acc.a    = -fralunco * wip.a + acc.a
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                         \
-    const SPN_KERNEL_RENDER_TILE_COVER fralunco =                       \
-      cover_wip[I] * SPN_COLOR_ACC_A(I);                                \
-                                                                        \
-    SPN_COLOR_ACC_R(I) = fma(+fralunco,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I)); \
-    SPN_COLOR_ACC_G(I) = fma(+fralunco,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I)); \
-    SPN_COLOR_ACC_B(I) = fma(+fralunco,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I)); \
-    SPN_COLOR_ACC_A(I) = fma(-fralunco,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I)); \
+#define SPN_EXPAND_X(I,N,P,L) {                                                 \
+    const SPN_KERNEL_RENDER_TILE_COVER fralunco =                               \
+      cover_wip[I] * SPN_COLOR_ACC_A(I);                                        \
+                                                                                \
+    SPN_COLOR_ACC_R(I) = fma(+fralunco,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I));  \
+    SPN_COLOR_ACC_G(I) = fma(+fralunco,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I));  \
+    SPN_COLOR_ACC_B(I) = fma(+fralunco,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I));  \
+    SPN_COLOR_ACC_A(I) = fma(-fralunco,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I));  \
   }
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1209,10 +1209,10 @@ spn_tile_blend_plus()
   // a.acc = -cover_min * a.wip + a.acc
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                         \
-    const SPN_KERNEL_RENDER_TILE_COVER cover_min =                      \
-      min(cover_wip[I],SPN_COLOR_ACC_A(I));                             \
-                                                                        \
+#define SPN_EXPAND_X(I,N,P,L) {                                                 \
+    const SPN_KERNEL_RENDER_TILE_COVER cover_min =                              \
+      min(cover_wip[I],SPN_COLOR_ACC_A(I));                                     \
+                                                                                \
     SPN_COLOR_ACC_R(I) = fma(+cover_min,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I)); \
     SPN_COLOR_ACC_G(I) = fma(+cover_min,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I)); \
     SPN_COLOR_ACC_B(I) = fma(+cover_min,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I)); \
@@ -1236,7 +1236,7 @@ spn_tile_blend_multiply()
   // a.acc = (cover.wip * a.wip) * (1.0 - a.acc) <-- a.acc is already (1.0 - alpha)
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                 \
+#define SPN_EXPAND_X(I,N,P,L) {                               \
     SPN_COLOR_ACC_R(I) *= cover_wip[I] * SPN_COLOR_WIP_R(I);  \
     SPN_COLOR_ACC_G(I) *= cover_wip[I] * SPN_COLOR_WIP_G(I);  \
     SPN_COLOR_ACC_B(I) *= cover_wip[I] * SPN_COLOR_WIP_B(I);  \
@@ -1316,16 +1316,16 @@ spn_tile_blend_knockout()
   // a.acc = -cover.wip.contrib * a.wip * a.acc
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                         \
-    const SPN_KERNEL_RENDER_TILE_COVER contrib = cover_wip[I] *         \
-      (SPN_KERNEL_RENDER_TILE_COVER(1) - cover_acc[I]);                 \
-                                                                        \
-    cover_acc[I] += contrib;                                            \
-                                                                        \
-    SPN_COLOR_ACC_R(I)  = fma(+contrib,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I)); \
-    SPN_COLOR_ACC_G(I)  = fma(+contrib,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I)); \
-    SPN_COLOR_ACC_B(I)  = fma(+contrib,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I)); \
-    SPN_COLOR_ACC_A(I)  = fma(-contrib,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I)); \
+#define SPN_EXPAND_X(I,N,P,L) {                                                 \
+    const SPN_KERNEL_RENDER_TILE_COVER contrib = cover_wip[I] *                 \
+      (SPN_KERNEL_RENDER_TILE_COVER(1) - cover_acc[I]);                         \
+                                                                                \
+    cover_acc[I] += contrib;                                                    \
+                                                                                \
+    SPN_COLOR_ACC_R(I)  = fma(+contrib,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I));  \
+    SPN_COLOR_ACC_G(I)  = fma(+contrib,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I));  \
+    SPN_COLOR_ACC_B(I)  = fma(+contrib,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I));  \
+    SPN_COLOR_ACC_A(I)  = fma(-contrib,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I));  \
   }
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1404,7 +1404,7 @@ void
 spn_tile_cover_wip_zero()
 {
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                   \
+#define SPN_EXPAND_X(I,N,P,L)                           \
   cover_wip[I] = SPN_KERNEL_RENDER_TILE_COVER(0);
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1414,7 +1414,7 @@ void
 spn_tile_cover_acc_zero()
 {
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                   \
+#define SPN_EXPAND_X(I,N,P,L)                           \
   cover_acc[I] = SPN_KERNEL_RENDER_TILE_COVER(0);
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1424,7 +1424,7 @@ void
 spn_tile_cover_msk_zero()
 {
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                   \
+#define SPN_EXPAND_X(I,N,P,L)                           \
   cover_msk[I] = SPN_KERNEL_RENDER_TILE_COVER(0);
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1438,7 +1438,7 @@ void
 spn_tile_cover_msk_one()
 {
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                   \
+#define SPN_EXPAND_X(I,N,P,L)                           \
   cover_msk[I] = SPN_KERNEL_RENDER_TILE_COVER(1);
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1452,7 +1452,7 @@ void
 spn_tile_cover_msk_invert()
 {
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                   \
+#define SPN_EXPAND_X(I,N,P,L)                                           \
   cover_msk[I] = SPN_KERNEL_RENDER_TILE_COVER(1) - cover_msk[I];
 
   SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
@@ -1564,7 +1564,7 @@ spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg_uint,
     SPN_KERNEL_RENDER_TILE_CHANNEL(ba[0]);
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                            \
+#define SPN_EXPAND_X(I,N,P,L)                                        \
   SPN_COLOR_ACC_R(I) = fma(SPN_COLOR_ACC_A(I),r,SPN_COLOR_ACC_R(I)); \
   SPN_COLOR_ACC_G(I) = fma(SPN_COLOR_ACC_A(I),g,SPN_COLOR_ACC_G(I)); \
   SPN_COLOR_ACC_B(I) = fma(SPN_COLOR_ACC_A(I),b,SPN_COLOR_ACC_B(I));

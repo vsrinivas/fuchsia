@@ -58,7 +58,7 @@ layout(local_size_x = SPN_KERNEL_RASTERIZE_WORKGROUP_SIZE) in;
 //           uniform uint  count);
 //
 
-SPN_VK_TARGET_GLSL_DECL_KERNEL_RASTERIZE_RAT_CUBIC();
+SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_RAT_CUBIC();
 
 //
 //

@@ -100,7 +100,7 @@ spn_device_block_pool_create(struct spn_device * const device,
 
   // allocate buffers
   size_t const bp_ids_size =
-    SPN_VK_TARGET_BUFFER_OFFSETOF(block_pool, bp_ids, bp_ids) + id_count * sizeof(spn_block_id_t);
+    SPN_VK_BUFFER_OFFSETOF(block_pool, bp_ids, bp_ids) + id_count * sizeof(spn_block_id_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
                                   device->environment,
@@ -111,7 +111,7 @@ spn_device_block_pool_create(struct spn_device * const device,
 
   uint32_t const bp_dwords = block_count * block_dwords;
   size_t const   bp_blocks_size =
-    SPN_VK_TARGET_BUFFER_OFFSETOF(block_pool, bp_blocks, bp_blocks) + bp_dwords * sizeof(uint32_t);
+    SPN_VK_BUFFER_OFFSETOF(block_pool, bp_blocks, bp_blocks) + bp_dwords * sizeof(uint32_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
                                   device->environment,
@@ -120,9 +120,8 @@ spn_device_block_pool_create(struct spn_device * const device,
                                   block_pool->bp_blocks.dbi,
                                   &block_pool->bp_blocks.dm);
 
-  size_t const bp_host_map_size =
-    SPN_VK_TARGET_BUFFER_OFFSETOF(block_pool, bp_host_map, bp_host_map) +
-    handle_count * sizeof(spn_handle_t);
+  size_t const bp_host_map_size = SPN_VK_BUFFER_OFFSETOF(block_pool, bp_host_map, bp_host_map) +
+                                  handle_count * sizeof(spn_handle_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
                                   device->environment,
