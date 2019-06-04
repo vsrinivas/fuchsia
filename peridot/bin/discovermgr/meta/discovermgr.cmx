@@ -6,6 +6,7 @@
         "features": [],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.modular.EntityResolver",
             "fuchsia.modular.PuppetMaster",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Launcher"

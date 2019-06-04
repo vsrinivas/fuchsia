@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::story_context_store::{ContextEntity, StoryContextStore},
-    crate::suggestions_manager::SuggestionsManager,
+    crate::{
+        story_context_store::{ContextEntity, StoryContextStore},
+        suggestions_manager::SuggestionsManager,
+    },
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{
         InteractionType, Suggestion, SuggestionsIteratorRequest, SuggestionsIteratorRequestStream,
@@ -66,9 +68,10 @@ impl SuggestionsService {
         query: String,
         mut stream: SuggestionsIteratorRequestStream,
     ) {
-        let context = self.context_store.lock().current().cloned().collect::<Vec<ContextEntity>>();
+        let context_store_lock = self.context_store.lock();
+        let context = context_store_lock.current().collect::<Vec<&ContextEntity>>();
         let mut manager = self.suggestions_manager.lock();
-        let suggestions = await!(manager.get_suggestions(&query, context))
+        let suggestions = await!(manager.get_suggestions(&query, &context))
             .map(|s| s.clone().into())
             .collect::<Vec<Suggestion>>();
         fasync::spawn(
@@ -95,13 +98,15 @@ mod tests {
         fidl_fuchsia_app_discover::{
             SuggestionsIteratorMarker, SuggestionsMarker, SuggestionsProxy,
         },
-        fidl_fuchsia_modular::PuppetMasterMarker,
+        fidl_fuchsia_modular::{EntityResolverMarker, PuppetMasterMarker},
     };
 
     fn setup() -> Result<SuggestionsProxy, Error> {
         let (puppet_master, _) = fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>()?;
+        let (entity_resolver, _) =
+            fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>()?;
 
-        let context_store = Arc::new(Mutex::new(StoryContextStore::new()));
+        let context_store = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
         let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master)));
         let suggestions_manager = Arc::new(Mutex::new(SuggestionsManager::new(mod_manager)));
 

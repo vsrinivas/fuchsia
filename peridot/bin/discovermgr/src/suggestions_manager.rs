@@ -19,7 +19,7 @@ pub trait SearchSuggestionsProvider: Send + Sync {
     fn request<'a>(
         &'a self,
         query: &'a str,
-        context: &'a Vec<ContextEntity>,
+        context: &'a Vec<&'a ContextEntity>,
     ) -> LocalFutureObj<'a, Result<Vec<Suggestion>, Error>>;
 }
 
@@ -45,12 +45,12 @@ impl SuggestionsManager {
     pub async fn get_suggestions<'a>(
         &'a mut self,
         query: &'a str,
-        context: Vec<ContextEntity>,
+        context: &'a Vec<&'a ContextEntity>,
     ) -> impl Iterator<Item = &'a Suggestion> {
         let futs = self
             .providers
             .iter()
-            .map(|p| p.request(query, &context))
+            .map(|p| p.request(query, context))
             .map(|fut| Pin::<Box<_>>::from(Box::new(fut)));
         let results = await!(join_all(futs));
         self.suggestions = results
@@ -126,7 +126,8 @@ mod tests {
         suggestions_manager.register_suggestions_provider(Box::new(TestSuggestionsProvider::new()));
 
         // Get suggestions and ensure the right ones are received.
-        let suggestions = await!(suggestions_manager.get_suggestions("garnet", vec![]))
+        let context = vec![];
+        let suggestions = await!(suggestions_manager.get_suggestions("garnet", &context))
             .collect::<Vec<&Suggestion>>();
         assert_eq!(suggestions.len(), 2);
         let titles = suggestions

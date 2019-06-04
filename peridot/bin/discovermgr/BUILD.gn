@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
     "//src/sys/component_index/fidl:index-rustc",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:glob",
@@ -32,6 +33,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:uuid",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

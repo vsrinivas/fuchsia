@@ -12,7 +12,7 @@ use {
     },
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{DiscoverRegistryRequestStream, SuggestionsRequestStream},
-    fidl_fuchsia_modular::PuppetMasterMarker,
+    fidl_fuchsia_modular::{EntityResolverMarker, PuppetMasterMarker},
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_syslog::{self as syslog, macros::*},
@@ -71,9 +71,11 @@ async fn main() -> Result<(), Error> {
 
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
-
     let suggestions_manager_ref = Arc::new(Mutex::new(suggestions_manager));
-    let story_context_store = Arc::new(Mutex::new(StoryContextStore::new()));
+
+    let entity_resolver = connect_to_service::<EntityResolverMarker>()
+        .context("failed to connect to entity resolver")?;
+    let story_context_store = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
 
     let mut fs = ServiceFs::new_local();
     fs.dir(SERVICE_DIRECTORY)

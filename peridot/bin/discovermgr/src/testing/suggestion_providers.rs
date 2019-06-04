@@ -46,7 +46,7 @@ impl SearchSuggestionsProvider for TestSuggestionsProvider {
     fn request<'a>(
         &'a self,
         _query: &'a str,
-        _context: &'a Vec<ContextEntity>,
+        _context: &'a Vec<&'a ContextEntity>,
     ) -> LocalFutureObj<'a, Result<Vec<Suggestion>, Error>> {
         LocalFutureObj::new(Box::new(async move { Ok(self.suggestions.clone()) }))
     }

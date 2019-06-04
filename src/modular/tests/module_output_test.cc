@@ -5,7 +5,9 @@
 #include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
+#include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 
@@ -14,15 +16,19 @@ namespace {
 constexpr char kModuleName[] = "mod_name";
 constexpr char kStoryName[] = "story";
 constexpr char kIntentAction[] = "action";
+constexpr char kTestData[] = "test-data";
+constexpr char kTestType[] = "test-type";
 
 constexpr zx::duration kTimeout = zx::sec(15);
 
 class ModuleOutputTest : public modular::testing::TestHarnessFixture {
  public:
   void SetUp() override {
+    test_module_ = std::make_unique<modular::testing::FakeModule>(
+        [this](fuchsia::modular::Intent intent) {});
     test_module_url_ = builder_.GenerateFakeUrl();
     builder_.InterceptComponent(
-        component_.GetOnCreateHandler(),
+        test_module_->GetOnCreateHandler(),
         {.url = test_module_url_,
          .sandbox_services = {"fuchsia.app.discover.ModuleOutputWriter",
                               "fuchsia.modular.ModuleContext"}});
@@ -32,9 +38,10 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
     test_harness()->Run(builder_.BuildSpec());
   }
 
-  modular::testing::FakeComponent component_;
+  std::unique_ptr<modular::testing::FakeModule> test_module_;
   modular::testing::TestHarnessBuilder builder_;
   std::string test_module_url_;
+  std::string test_entity_provider_agent_url_;
 };
 
 TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
@@ -43,13 +50,26 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
   intent.action = kIntentAction;
 
   AddModToStory(std::move(intent), kModuleName, kStoryName);
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return component_.is_running(); },
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return test_module_->is_running(); }, kTimeout));
+
+  fsl::SizedVmo vmo;
+  fsl::VmoFromString(kTestData, &vmo);
+  fuchsia::modular::EntityPtr entity;
+  fidl::StringPtr reference;
+  test_module_->module_context()->CreateEntity(
+      kTestType, std::move(vmo).ToTransport(), entity.NewRequest(),
+      [&reference](fidl::StringPtr entity_reference) {
+        reference = std::move(entity_reference);
+      });
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return !reference.is_null(); },
                                         kTimeout));
 
   fuchsia::app::discover::ModuleOutputWriterPtr module_output;
-  component_.component_context()->svc()->Connect(module_output.NewRequest());
+  test_module_->component_context()->svc()->Connect(module_output.NewRequest());
   bool output_written{false};
-  module_output->Write("output_name", "reference",
+  module_output->Write("output_name", reference,
                        [&output_written](auto result) {
                          // TODO: once the discover service generates
                          // suggestions, we should ensure they are generated

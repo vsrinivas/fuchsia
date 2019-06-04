@@ -42,11 +42,14 @@ pub async fn run_server(
 mod tests {
     use {
         super::*,
-        crate::story_context_store::{ContextEntity, Contributor},
+        crate::{
+            story_context_store::{ContextEntity, Contributor},
+            testing::{FakeEntityData, FakeEntityResolver},
+        },
         fidl_fuchsia_app_discover::{
             DiscoverRegistryMarker, ModuleIdentifier, ModuleOutputWriterMarker,
         },
-        fidl_fuchsia_modular::PuppetMasterMarker,
+        fidl_fuchsia_modular::{EntityResolverMarker, PuppetMasterMarker},
         fuchsia_async as fasync,
         maplit::hashset,
     };
@@ -57,11 +60,19 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
         let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master_client)));
 
+        // Initialize the fake entity resolver.
+        let (entity_resolver, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
+        let mut fake_entity_resolver = FakeEntityResolver::new();
+        fake_entity_resolver
+            .register_entity("foo", FakeEntityData::new(vec!["some-type".into()], ""));
+        fake_entity_resolver.spawn(request_stream);
+
         // Initialize service client and server.
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<DiscoverRegistryMarker>().unwrap();
 
-        let state = Arc::new(Mutex::new(StoryContextStore::new()));
+        let state = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
         let story_context = state.clone();
         fasync::spawn_local(
             async move { await!(run_server(story_context, mod_manager, request_stream)) }
@@ -81,12 +92,14 @@ mod tests {
         assert!(await!(module_output_proxy.write("param-foo", Some("foo"))).is_ok());
 
         // Verify state.
-        let context_store = state.lock();
-        let result = context_store.current().collect::<Vec<&ContextEntity>>();
-        let expected_entity = ContextEntity::new(
+        let expected_entity = ContextEntity::new_test(
             "foo",
+            hashset!["some-type".to_string()],
             hashset!(Contributor::module_new("story1", "mod-a", "param-foo")),
         );
+
+        let context_store = state.lock();
+        let result = context_store.current().collect::<Vec<&ContextEntity>>();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], &expected_entity);
         Ok(())

@@ -56,7 +56,7 @@ impl SearchSuggestionsProvider for PackageSuggestionsProvider {
     fn request<'a>(
         &'a self,
         query: &'a str,
-        _context: &'a Vec<ContextEntity>,
+        _context: &'a Vec<&'a ContextEntity>,
     ) -> LocalFutureObj<'a, Result<Vec<Suggestion>, Error>> {
         LocalFutureObj::new(Box::new(async move {
             if query.is_empty() {
