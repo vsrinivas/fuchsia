@@ -202,7 +202,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     fn f #trait_decl;
                 }
 
-                impl<I: crate::ip::#trait_ident> Ext for I {
+                impl<__SpecializeIpDummyTypeParam: crate::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
                     default fn f #trait_decl {
                         // It's important that we use the constant here to force
                         // evaluation.
