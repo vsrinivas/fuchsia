@@ -21,6 +21,7 @@ dart_library("client") {
     "src/scenic.dart",
     "src/setui.dart",
     "src/sl4f_client.dart",
+    "src/storage.dart",
     "src/traceutil.dart",
   ]
 
@@ -38,6 +39,7 @@ dart_test("sl4f_client_tests") {
     "inspect_test.dart",
     "performance_test.dart",
     "scenic_test.dart",
+    "storage_test.dart",
   ]
 
   deps = [

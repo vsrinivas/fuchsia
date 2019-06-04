@@ -14,4 +14,5 @@ export 'src/performance.dart';
 export 'src/scenic.dart';
 export 'src/setui.dart';
 export 'src/sl4f_client.dart';
+export 'src/storage.dart';
 export 'src/traceutil.dart';
