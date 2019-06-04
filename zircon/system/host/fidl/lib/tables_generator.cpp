@@ -82,7 +82,11 @@ void EmitArrayEnd(std::ostream* file) {
 }
 
 void Emit(std::ostream* file, uint32_t value) {
-    *file << value;
+    *file << value << "u";
+}
+
+void Emit(std::ostream* file, uint64_t value) {
+    *file << value << "ul";
 }
 
 void Emit(std::ostream* file, types::HandleSubtype handle_subtype) {
@@ -153,6 +157,8 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedBits(");
     Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
     Emit(&tables_file_, PrimitiveSubtypeToString(bits_type.subtype));
+    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, bits_type.mask);
     Emit(&tables_file_, "));\n\n");
 }
 

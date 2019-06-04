@@ -543,6 +543,7 @@ bits MyBits : uint8 {
     ASSERT_EQ(fidl::coded::Type::Kind::kBits, type_bits->kind);
     auto type_bits_bits = static_cast<const fidl::coded::BitsType*>(type_bits);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kUint8, type_bits_bits->subtype);
+    ASSERT_EQ(0x1u | 0x10u, type_bits_bits->mask);
 
     END_TEST;
 }

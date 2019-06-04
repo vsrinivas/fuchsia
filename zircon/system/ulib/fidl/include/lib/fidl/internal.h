@@ -132,9 +132,10 @@ struct FidlCodedEnum {
 
 struct FidlCodedBits {
     const FidlCodedPrimitive underlying_type;
+    const uint64_t mask;
 
-    constexpr explicit FidlCodedBits(FidlCodedPrimitive underlying_type)
-        : underlying_type(underlying_type) {}
+    constexpr explicit FidlCodedBits(FidlCodedPrimitive underlying_type, uint64_t mask)
+        : underlying_type(underlying_type), mask(mask) {}
 };
 
 // Though the |size| is implied by the fields, computing that information is not the purview of this

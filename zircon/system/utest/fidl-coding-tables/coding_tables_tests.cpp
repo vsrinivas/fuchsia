@@ -125,6 +125,7 @@ TEST(MyBits, CodingTable) {
     ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeBits, my_bits_type.type_tag);
     const fidl::FidlCodedBits& my_bits_table = my_bits_type.coded_bits;
     ASSERT_EQ(fidl::FidlCodedPrimitive::kUint8, my_bits_table.underlying_type);
+    ASSERT_EQ(0x1u | 0x10u, my_bits_table.mask);
 }
 
 TEST(MyEnum, CodingTable) {

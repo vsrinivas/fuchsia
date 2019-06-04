@@ -25,6 +25,11 @@ extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 
+extern const fidl_type_t fidl_test_coding_Int32BitsTable;
+extern const fidl_type_t fidl_test_coding_Int32BitsStructTable;
+extern const fidl_type_t fidl_test_coding_Int16BitsTable;
+extern const fidl_type_t fidl_test_coding_Int16BitsStructTable;
+
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
 
@@ -105,6 +110,16 @@ struct SampleXUnionStruct {
 struct SampleNullableXUnionStruct {
     FIDL_ALIGNDECL
     SampleXUnion opt_xu;
+};
+
+struct Int16Bits {
+    FIDL_ALIGNDECL
+    uint16_t bits;
+};
+
+struct Int32Bits {
+    FIDL_ALIGNDECL
+    uint32_t bits;
 };
 
 } // namespace fidl

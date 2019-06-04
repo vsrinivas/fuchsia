@@ -147,6 +147,7 @@ private:
             case fidl::kFidlTypeBits:
                 state = kStateBits;
                 bits_state.underlying_type = fidl_type->coded_bits.underlying_type;
+                bits_state.mask = fidl_type->coded_bits.mask;
                 break;
             case fidl::kFidlTypeStruct:
                 state = kStateStruct;
@@ -315,6 +316,7 @@ private:
             } enum_state;
             struct {
                 fidl::FidlCodedPrimitive underlying_type;
+                uint64_t mask;
             } bits_state;
             struct {
                 const fidl::FidlStructField* fields;
@@ -457,7 +459,27 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             continue;
         }
         case Frame::kStateBits: {
-            // TODO(FIDL-659): Validate bits
+            uint64_t value;
+            switch (frame->bits_state.underlying_type) {
+            case FidlCodedPrimitive::kUint8:
+                value = *PtrTo<uint8_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kUint16:
+                value = *PtrTo<uint16_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kUint32:
+                value = *PtrTo<uint32_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kUint64:
+                value = *PtrTo<uint64_t>(frame->position);
+                break;
+            default:
+                __builtin_unreachable();
+            }
+            if (value & ~frame->bits_state.mask) {
+                visitor.OnError("not a valid bits member");
+                FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+            }
             Pop();
             continue;
         }

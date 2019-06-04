@@ -154,11 +154,13 @@ struct EnumType : public Type {
 };
 
 struct BitsType : public Type {
-    BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
+    BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
+             uint64_t mask)
         : Type(Kind::kBits, std::move(name), size, CodingNeeded::kAlways),
-          subtype(subtype) {}
+          subtype(subtype), mask(mask) {}
 
     const types::PrimitiveSubtype subtype;
+    const uint64_t mask;
 };
 
 struct HandleType : public Type {

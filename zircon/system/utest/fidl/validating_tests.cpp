@@ -1764,6 +1764,95 @@ bool validate_nonempty_nullable_xunion_zero_ordinal() {
     END_TEST;
 }
 
+bool validate_zero_16bit_bits() {
+    BEGIN_TEST;
+
+    Int16Bits message { .bits = 0 };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message,
+                                sizeof(message), 0, &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    END_TEST;
+}
+
+bool validate_valid_16bit_bits() {
+    BEGIN_TEST;
+
+    Int16Bits message { .bits = 1u | 16u };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message,
+                                sizeof(message), 0, &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    END_TEST;
+}
+
+bool validate_invalid_16bit_bits() {
+    BEGIN_TEST;
+
+    Int16Bits message { .bits = 1u << 7u };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message,
+                                sizeof(message), 0, &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_STR_EQ(error, "not a valid bits member");
+
+    END_TEST;
+}
+
+
+bool validate_zero_32bit_bits() {
+    BEGIN_TEST;
+
+    Int32Bits message { .bits = 0 };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message,
+                                sizeof(message), 0, &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    END_TEST;
+}
+
+bool validate_valid_32bit_bits() {
+    BEGIN_TEST;
+
+    // The valid bits are position 7, 12, and 27.
+    Int32Bits message {
+        .bits = (1u << 6u) | (1u << 11u) | (1u << 26u)
+    };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message,
+                                sizeof(message), 0, &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    END_TEST;
+}
+
+bool validate_invalid_32bit_bits() {
+    BEGIN_TEST;
+
+    // The valid bits are position 7, 12, and 27.
+    Int32Bits message { .bits = 1u };
+
+    const char* error = nullptr;
+    auto status = fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message,
+                                sizeof(message), 0, &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_STR_EQ(error, "not a valid bits member");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(validate_null_validate_parameters)
 END_TEST_CASE(null_parameters)
@@ -1850,6 +1939,15 @@ RUN_TEST(validate_empty_nullable_xunion_nonzero_ordinal)
 RUN_TEST(validate_nonempty_xunion_zero_ordinal)
 RUN_TEST(validate_nonempty_nullable_xunion_zero_ordinal)
 END_TEST_CASE(xunions)
+
+BEGIN_TEST_CASE(bits)
+RUN_TEST(validate_zero_16bit_bits)
+RUN_TEST(validate_valid_16bit_bits)
+RUN_TEST(validate_invalid_16bit_bits)
+RUN_TEST(validate_zero_32bit_bits)
+RUN_TEST(validate_valid_32bit_bits)
+RUN_TEST(validate_invalid_32bit_bits)
+END_TEST_CASE(bits)
 
 } // namespace
 } // namespace fidl

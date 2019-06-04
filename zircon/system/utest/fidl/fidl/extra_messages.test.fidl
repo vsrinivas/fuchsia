@@ -75,3 +75,23 @@ struct SampleXUnionStruct {
 struct SampleNullableXUnionStruct {
     SampleXUnion? opt_xu;
 };
+
+bits Int16Bits : uint16 {
+    BIT_1= 1;
+    BIT_3 = 4;
+    BIT_5 = 16;
+};
+
+struct Int16BitsStruct {
+    Int16Bits bits;
+};
+
+bits Int32Bits : uint32 {
+    BIT_7 = 64;
+    BIT_12 = 2048;
+    BIT_27 = 67108864;
+};
+
+struct Int32BitsStruct {
+    Int32Bits bits;
+};

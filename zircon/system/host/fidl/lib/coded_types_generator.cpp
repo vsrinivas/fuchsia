@@ -343,7 +343,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         named_coded_types_.emplace(&bits_decl->name,
                                    std::make_unique<coded::BitsType>(
                                        std::move(bits_name), bits_subtype,
-                                       flat::PrimitiveType::SubtypeSize(bits_subtype)));
+                                       flat::PrimitiveType::SubtypeSize(bits_subtype),
+                                       bits_decl->mask));
         break;
     }
     case flat::Decl::Kind::kConst:
