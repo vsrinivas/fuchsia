@@ -16,9 +16,6 @@ astro_env = {
   dimensions = {
     device_type = "Astro"
   }
-
-  # TODO(IN-876): Delete after bring-up.
-  tags = [ "astro" ]
 }
 
 nuc_env = {

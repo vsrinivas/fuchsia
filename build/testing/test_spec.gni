@@ -62,10 +62,7 @@ template("test_spec") {
       environments = [ qemu_env ]
     }
 
-    if (board_name == "astro") {
-      # TODO(IN-876): Remove after astros are ready to be targeted.
-      environments += [ astro_env ]
-    } else if (board_name == "vim2" && !envs_specified) {
+    if (board_name == "vim2" && !envs_specified) {
       # TODO(IN-571): Remove after vim2s are ready to be targeted.
       environments += [ vim2_env ]
     }
@@ -223,12 +220,6 @@ template("test_spec") {
       # enforce the "mac" tag in that case to filter out other tests.
       assert(defined(env.tags) && [ "mac" ] + env.tags - env.tags == [],
              "Mac environments must have a tag of \"mac\"")
-    }
-
-    # TODO(IN-876): Delete this block once astros are ready to be targeted.
-    if (defined(dims.device_type) && dims.device_type == "Astro") {
-      assert(defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
-             "astros may not yet be targeted.")
     }
 
     # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
