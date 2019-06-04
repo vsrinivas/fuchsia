@@ -51,6 +51,7 @@ if (current_cpu != "") {
       "$zx/system/dev/input/bma253:bma253-test",
       "$zx/system/dev/input/hid-buttons:hid-buttons-test",
       "$zx/system/dev/lib/fake-bti/test:fake-bti",
+      "$zx/system/dev/lib/mt8167:mt8167-audio-lib-test",
       "$zx/system/dev/lib/scsi:scsilib-disk-test",
       "$zx/system/dev/lib/usb:usb-wrapper-test",
       "$zx/system/dev/light-sensor/lite-on:ltr-578als-test",

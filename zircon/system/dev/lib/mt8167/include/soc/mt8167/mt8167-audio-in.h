@@ -44,14 +44,10 @@ public:
 
     uint32_t fifo_depth() const { return fifo_depth_; }
     zx_status_t SetRate(uint32_t frames_per_second);
+    zx_status_t SetBitsPerSample(uint32_t bits_per_sample);
 
-private:
-    const uint32_t fifo_depth_; // in bytes.
-    uint32_t frames_per_second_;
-    ddk::MmioBuffer mmio_audio_;
-    ddk::MmioBuffer mmio_clk_;
-    ddk::MmioBuffer mmio_pll_;
-
+protected:
+    // Protected for unit tests.
     // TODO(andresoportus): Add more configuration options.
     MtAudioInDevice(ddk::MmioBuffer mmio_audio,
                     ddk::MmioBuffer mmio_clk,
@@ -60,7 +56,15 @@ private:
         : fifo_depth_(fifo_depth),
           mmio_audio_(std::move(mmio_audio)),
           mmio_clk_(std::move(mmio_clk)),
-          mmio_pll_(std::move(mmio_pll)){}
-
+          mmio_pll_(std::move(mmio_pll)) {}
     void InitRegs();
+
+private:
+    const uint32_t fifo_depth_; // in bytes.
+    uint32_t frames_per_second_;
+    uint32_t bits_per_sample_;
+    ddk::MmioBuffer mmio_audio_;
+    ddk::MmioBuffer mmio_clk_;
+    ddk::MmioBuffer mmio_pll_;
+
 };

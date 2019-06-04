@@ -149,7 +149,11 @@ zx_status_t Mt8167AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq
     fifo_depth_ = mt_audio_->fifo_depth();
     external_delay_nsec_ = 0;
 
-    return mt_audio_->SetRate(req.frames_per_second);
+    auto status = mt_audio_->SetRate(req.frames_per_second);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return mt_audio_->SetBitsPerSample(16);
 }
 
 zx_status_t Mt8167AudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,

@@ -46,10 +46,35 @@ void MtAudioInDevice::InitRegs() {
     AFE_CONN_TDMIN_CON::Get().FromValue(0).set_o_40_cfg(0).set_o_41_cfg(1).WriteTo(&mmio_audio_);
 
     // Audio Interface.
-    auto tdm_in = AFE_TDM_IN_CON1::Get().FromValue(0);
-    tdm_in.set_tdm_en(1).set_tdm_fmt(1).set_tdm_lrck_inv(1);                    // Enable, I2S, inv.
-    tdm_in.set_tdm_wlen(1).set_LRCK_TDM_WIDTH(15);                              // 16 bits, 16 bits.
-    tdm_in.set_fast_lrck_cycle_sel(0).set_tdm_channel(0).WriteTo(&mmio_audio_); // LRCK 16 BCK, 2ch.
+    SetBitsPerSample(16);
+}
+
+zx_status_t MtAudioInDevice::SetBitsPerSample(uint32_t bits_per_sample) {
+    if (bits_per_sample != 16 && bits_per_sample != 32 && bits_per_sample != 24) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    bits_per_sample_ = bits_per_sample;
+    auto con1 = AFE_TDM_IN_CON1::Get().FromValue(0).
+        set_tdm_en(1).
+        set_tdm_fmt(1). // I2S.
+        set_tdm_lrck_inv(1).
+        set_tdm_channel(0); // 2 ch.
+    if (bits_per_sample_ == 16) {
+        con1.set_tdm_wlen(1).
+            set_LRCK_TDM_WIDTH(15).
+            set_fast_lrck_cycle_sel(0); // LRCK.
+    } else if (bits_per_sample_ == 24) {
+        con1.set_tdm_wlen(2).
+            set_LRCK_TDM_WIDTH(23).
+            set_fast_lrck_cycle_sel(1); // LRCK.
+    } else { // bits_per_sample_ == 32
+        con1.set_tdm_wlen(3).
+            set_LRCK_TDM_WIDTH(31).
+            set_fast_lrck_cycle_sel(2); // LRCK.
+    }
+    con1.WriteTo(&mmio_audio_);
+    SetRate(frames_per_second_);
+    return ZX_OK;
 }
 
 zx_status_t MtAudioInDevice::SetRate(uint32_t frames_per_second) {
