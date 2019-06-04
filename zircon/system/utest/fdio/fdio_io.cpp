@@ -14,7 +14,7 @@ static bool wait_fd_test() {
 
     zx::socket pipe;
     int raw_fd = -1;
-    EXPECT_EQ(ZX_OK, fdio_pipe_half2(&raw_fd, pipe.reset_and_get_address()));
+    EXPECT_EQ(ZX_OK, fdio_pipe_half(&raw_fd, pipe.reset_and_get_address()));
     EXPECT_LE(0, raw_fd);
     fbl::unique_fd fd(raw_fd);
 

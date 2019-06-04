@@ -156,7 +156,7 @@ pub fn pipe_half() -> Result<(std::fs::File, zx::Socket), zx::Status> {
     unsafe {
         let mut fd = -1;
         let mut handle = zx::sys::ZX_HANDLE_INVALID;
-        let status = fdio_sys::fdio_pipe_half2(
+        let status = fdio_sys::fdio_pipe_half(
             &mut fd as *mut i32,
             &mut handle as *mut zx::sys::zx_handle_t,
         );

@@ -318,7 +318,7 @@ static bool spawn_actions_fd_test(void) {
     {
         zx_handle_t socket = ZX_HANDLE_INVALID;
         int fd;
-        status = fdio_pipe_half2(&fd, &socket);
+        status = fdio_pipe_half(&fd, &socket);
         ASSERT_GE(status, ZX_OK);
 
         fdio_spawn_action_t action;
@@ -340,7 +340,7 @@ static bool spawn_actions_fd_test(void) {
     {
         zx::socket socket;
         int fd;
-        status = fdio_pipe_half2(&fd, socket.reset_and_get_address());
+        status = fdio_pipe_half(&fd, socket.reset_and_get_address());
         ASSERT_GE(status, ZX_OK);
 
         fdio_spawn_action_t action;
@@ -360,7 +360,7 @@ static bool spawn_actions_fd_test(void) {
     {
         zx::socket socket;
         int fd;
-        status = fdio_pipe_half2(&fd, socket.reset_and_get_address());
+        status = fdio_pipe_half(&fd, socket.reset_and_get_address());
         ASSERT_GE(status, ZX_OK);
 
         fdio_spawn_action_t actions[2];
