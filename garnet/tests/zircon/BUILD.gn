@@ -17,3 +17,29 @@ package("zircon_tests") {
   ]
   extra = get_target_outputs(":zircon-test-manifest")
 }
+
+zircon_extras_manifest("zircon-fuzzers-manifest") {
+  manifest = "tests"
+  patterns = [
+    "bin/*-fuzzer.*",
+    "meta/*-fuzzer.*.cmx",
+  ]
+}
+
+package("zircon_fuzzers") {
+  deps = [
+    ":zircon-fuzzers-manifest",
+  ]
+  extra = get_target_outputs(":zircon-fuzzers-manifest")
+  metadata = {
+    fuzz_spec = [
+      {
+        fuzzers_package = target_name
+        fuzzers =
+            read_file("$zircon_root_build_dir/legacy_fuzzers-$target_cpu.json",
+                      "json")
+        fuzz_host = false
+      },
+    ]
+  }
+}

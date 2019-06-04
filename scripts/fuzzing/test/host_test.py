@@ -3,9 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import os
-import unittest
 import tempfile
+import unittest
 
 import test_env
 from lib.host import Host
@@ -101,10 +102,29 @@ class TestHost(unittest.TestCase):
       return
     build_dir = host.find_build_dir()
     json_file = Host.join(build_dir, 'fuzzers.json')
-    if not os.path.exists(json_file):
-      return
-    # No guarantee of contents; just ensure it parses without crashing
-    host.set_fuzzers_json(json_file)
+    # No guarantee of contents; just ensure it parses without crashing.
+    if os.path.exists(json_file):
+      host.set_fuzzers_json(json_file)
+    # Construct and parse both fuchisa and zircon style fuzzer metadata.
+    data = [
+        {
+            'fuzz_host': False,
+            'fuzzers': ['foo_fuzzer'],
+            'fuzzers_package': 'foo_fuzzers'
+        },
+        {
+            'fuzz_host': False,
+            'fuzzers': ['zx_fuzzer.asan', 'zx_fuzzer.ubsan'],
+            'fuzzers_package': 'zircon_fuzzers'
+        },
+    ]
+    with tempfile.NamedTemporaryFile() as f:
+      f.write(json.dumps(data))
+      f.seek(0)
+      host.set_fuzzers_json(f.name)
+      self.assertIn(('foo_fuzzers', 'foo_fuzzer'), host.fuzzers)
+      self.assertIn(('zircon_fuzzers', 'zx_fuzzer.asan'), host.fuzzers)
+      self.assertIn(('zircon_fuzzers', 'zx_fuzzer.ubsan'), host.fuzzers)
 
   def test_set_build_dir(self):
     host = Host()

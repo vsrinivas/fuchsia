@@ -11,13 +11,41 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 # e.g. $standard_sanitizer_variants.  If at some point the fuuzers should be
 # built with a different set of default variants, the set of named lists should
 # be changed there to minimize duplication of individual items here.
-fuzzer_default_variants = []
+_fuzzer_default_variants = []
 foreach(sanitizer, standard_sanitizer_variants) {
   # Clear from last iteration.
   _sanitizer_variant = {
   }
   _sanitizer_variant = sanitizer.variant
-  fuzzer_default_variants += [ _sanitizer_variant.name ]
+  _fuzzer_default_variants += [ _sanitizer_variant.name ]
+}
+
+# Produces a component manifest similar to that produces by the $cmx()
+# invocation in //build/fuzzing/fuzzer.gni.  These manifests don't have
+# much meaning in a standalone Zircon, but are most easily generated alongside
+# the fuzzers.
+template("_fuzzer_cmx") {
+  assert(defined(invoker.name), "$target_name must define 'name'.")
+  fuzzer_name = "${invoker.name}.${toolchain.variant}"
+  generated_file(target_name) {
+    contents = {
+      program = {
+        binary = "bin/$fuzzer_name"
+      }
+      sandbox = {
+        services = [ "fuchsia.process.Launcher" ]
+        features = [ "isolated-persistent-storage" ]
+      }
+    }
+    outputs = [
+      "$target_gen_dir/$fuzzer_name.cmx",
+    ]
+    output_conversion = "json"
+    source = rebase_path(outputs[0], root_build_dir)
+    metadata = {
+      manifest_lines = [ "meta/$fuzzer_name.cmx=$source" ]
+    }
+  }
 }
 
 # Builds fuzzer binaries using the libFuzzer fuzzing engine.
@@ -50,10 +78,12 @@ foreach(sanitizer, standard_sanitizer_variants) {
 template("fuzzer") {
   # Match any "*.fuzzer" environment ("*" is ${toolchain.base_environment}).
   if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
+    fuzzer_name = target_name
+
     # The test() template is used for programs that verify proper operation of
     # associated code if the tests passes. This isn't an appropriate choice for
     # fuzzers as they run indefinitely and never "pass".
-    executable(target_name) {
+    executable(fuzzer_name) {
       testonly = true
 
       # Explicitly forward visibility for nested scope, and ensure the redirect
@@ -66,8 +96,17 @@ template("fuzzer") {
                              ])
       forward_variables_from(invoker, [ "visibility" ])
       if (defined(visibility)) {
-        visibility += [ ":$target_name" ]
+        visibility += [ ":$fuzzer_name" ]
       }
+      data_deps = [
+        ":$fuzzer_name.cmx",
+      ]
+      metadata = {
+        fuzzer = [ "$fuzzer_name.${toolchain.variant}" ]
+      }
+    }
+    _fuzzer_cmx("$fuzzer_name.cmx") {
+      name = fuzzer_name
     }
     if (defined(invoker.sanitizers)) {
       not_needed(invoker.sanitizers)
@@ -77,7 +116,7 @@ template("fuzzer") {
     if (defined(invoker.sanitizers)) {
       sanitizer_names = invoker.sanitizers
     } else {
-      sanitizer_names = fuzzer_default_variants
+      sanitizer_names = _fuzzer_default_variants
     }
     environment_redirect(target_name) {
       testonly = true

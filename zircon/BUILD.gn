@@ -196,6 +196,14 @@ if (current_toolchain == default_toolchain) {
         ":all-ulib-$cpu",
       ]
     }
+
+    build_api_module("legacy_fuzzers-$cpu") {
+      testonly = true
+      data_keys = [ "fuzzer" ]
+      deps = [
+        ":legacy-tests-$cpu",
+      ]
+    }
   }
 }
 
