@@ -285,7 +285,7 @@ int UsbHci::IrqThread() {
         .set_conn_e(1)
         .WriteTo(usb_mmio());
 
-    // Based on the PHY's cbnfig, the device will begin life in the A-role (i.e. host) and always
+    // Based on the PHY's config, the device will begin life in the A-role (i.e. host) and always
     // negotiate as the host with any connected device.
     StartSession();
 
@@ -305,20 +305,41 @@ int UsbHci::IrqThread() {
 
 zx_status_t UsbHci::InitPhy() {
     // Statically configure USB Macrocell PHY for USB-A cabling and USB-Host role.
-    regs::U2PHYDTM0_1P::Get().ReadFrom(phy_mmio())
-        .set_force_dm_pulldown(1)
-        .set_force_dp_pulldown(1)
-        .set_rg_dmpulldown(1)
-        .set_rg_dppulldown(1)
+    regs::U2PHYDTM0_1P::Get().ReadFrom(phy_mmio()).set_force_uart_en(0).WriteTo(phy_mmio());
+    regs::U2PHYDTM1_1P::Get().ReadFrom(phy_mmio()).set_rg_uart_en(0).WriteTo(phy_mmio());
+    regs::USBPHYACR6_1P::Get().ReadFrom(phy_mmio()).set_rg_usb20_bc11_sw_en(0).WriteTo(phy_mmio());
+    regs::U2PHYACR4_1P::Get().ReadFrom(phy_mmio())
+        .set_usb20_dp_100k_en(0)
+        .set_rg_usb20_dm_100k_en(0)
         .WriteTo(phy_mmio());
+    regs::U2PHYDTM0_1P::Get().ReadFrom(phy_mmio()).set_force_suspendm(0).WriteTo(phy_mmio());
+
+    zx::nanosleep(zx::deadline_after(zx::usec(800)));
 
     regs::U2PHYDTM1_1P::Get().ReadFrom(phy_mmio())
-        .set_rg_usb20_clk60m_en(1)
+        .set_force_vbusvalid(1)
+        .set_force_sessend(1)
+        .set_force_bvalid(1)
+        .set_force_avalid(1)
         .set_force_iddig(1)
+        .set_rg_vbusvalid(0)
+        .set_rg_sessend(0)
+        .set_rg_bvalid(0)
+        .set_rg_avalid(0)
         .set_rg_iddig(0)
         .WriteTo(phy_mmio());
 
-    zx::nanosleep(zx::deadline_after(zx::usec(500))); // Allow time for the PHY to settle.
+    zx::nanosleep(zx::deadline_after(zx::usec(5)));
+
+    regs::U2PHYDTM1_1P::Get().ReadFrom(phy_mmio())
+        .set_rg_vbusvalid(1)
+        .set_rg_sessend(0)
+        .set_rg_bvalid(1)
+        .set_rg_avalid(1)
+        .WriteTo(phy_mmio());
+
+    zx::nanosleep(zx::deadline_after(zx::usec(800)));
+
     return ZX_OK;
 }
 

@@ -7,12 +7,12 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/clockimpl.h>
+#include <ddktl/protocol/power.h>
+#include <ddktl/protocol/powerimpl.h>
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/handle.h>
-#include <lib/zx/resource.h>
-#include <optional>
+#include <soc/mt8167/mt8167-clk.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <string.h>
 #include <zircon/device/usb-peripheral.h>
@@ -112,12 +112,8 @@ const pbus_dev_t usb_hci_dev = [](){
 
 } // namespace
 
-#define CLK_GATING_CTRL1_CLR (0x084)
-#define CLK_GATING_CTRL2_CLR (0x09c)
-#define SET_USB_SW_CG (1U << 13)
-#define SET_USB_1P_SW_CG (1U << 14)
-
 zx_status_t Mt8167::UsbInit() {
+    zx_status_t status;
     constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
                                      ? alignof(UsbConfig)
                                      : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
@@ -142,19 +138,57 @@ zx_status_t Mt8167::UsbInit() {
     usb_metadata[0].data_buffer = config;
     usb_config_ = config;
 
-    // TODO: move to clock driver when we have one
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    zx::unowned_resource root_resource(get_root_resource());
-    std::optional<ddk::MmioBuffer> xo_base;
-    auto status = ddk::MmioBuffer::Create(MT8167_XO_BASE, MT8167_XO_SIZE, *root_resource,
-                                          ZX_CACHE_POLICY_UNCACHED_DEVICE, &xo_base);
+    // Make sure the USB3v3 LDO voltage regulator is turned on.
+    power_domain_status_t pwr_status;
+    ddk::PowerImplProtocolClient power(parent());
+    if (!power.is_valid()) {
+        zxlogf(ERROR, "%s: could not get power protocol\n", __func__);
+        return ZX_ERR_INTERNAL;
+    }
+
+    status = power.GetPowerDomainStatus(kVDLdoVUsb33, &pwr_status);
     if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not read usb power domain: %d\n", __func__, status);
         return status;
     }
 
-    xo_base->Write32(SET_USB_SW_CG, CLK_GATING_CTRL1_CLR);
-    xo_base->Write32(SET_USB_1P_SW_CG, CLK_GATING_CTRL2_CLR);
-    xo_base.reset();
+    if (pwr_status == POWER_DOMAIN_STATUS_DISABLED) {
+        zxlogf(INFO, "%s: enabling usb power domain...\n", __func__);
+        status = power.EnablePowerDomain(kVDLdoVUsb33);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not enable usb power domain: %d\n", __func__, status);
+            return status;
+        }
+
+        status = power.GetPowerDomainStatus(kVDLdoVUsb33, &pwr_status);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: could not read usb power domain: %d\n", __func__, status);
+            return status;
+        }
+
+        if (pwr_status != POWER_DOMAIN_STATUS_ENABLED) {
+            zxlogf(ERROR, "%s: usb power domain could not be enabled\n", __func__);
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    ddk::ClockImplProtocolClient clk(parent());
+    if (!clk.is_valid()) {
+        zxlogf(ERROR, "%s: could not get clock protocol\n", __func__);
+        return ZX_ERR_INTERNAL;
+    }
+
+    status = clk.Enable(kClkUsb);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not enable USB-P0 clock: %d\n", __func__, status);
+        return status;
+    }
+
+    status = clk.Enable(kClkUsb1p);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not enable USB-P1 clock: %d\n", __func__, status);
+        return status;
+    }
 
     status = pbus_.DeviceAdd(&usb_dci_dev);
     if (status != ZX_OK) {
