@@ -132,14 +132,19 @@ void InterruptDispatcher::InterruptHandler() {
 }
 
 zx_status_t InterruptDispatcher::Destroy() {
+    // The interrupt may presently have been fired and we could already be about to acquire the
+    // spinlock_ in InterruptHandler. If we were to call UnregisterInterruptHandler whilst holding
+    // the spinlock_ then we risk a deadlock scenario where the platform interrupt code may have
+    // taken a lock to call InterruptHandler, and it might take the same lock when we call
+    // UnregisterInterruptHandler.
+    MaskInterrupt();
+    UnregisterInterruptHandler();
+
     // Using AutoReschedDisable is necessary for correctness to prevent
     // context-switching to the woken thread while holding spinlock_.
     AutoReschedDisable resched_disable;
     resched_disable.Disable();
     Guard<SpinLock, IrqSave> guard{&spinlock_};
-
-    MaskInterrupt();
-    UnregisterInterruptHandler();
 
     if (port_dispatcher_) {
         bool packet_was_in_queue = port_dispatcher_->RemoveInterruptPacket(&port_packet_);

@@ -90,6 +90,7 @@ source_set("tests") {
     "buffer_chain_tests.cpp",
     "exceptionate_tests.cpp",
     "handle_tests.cpp",
+    "interrupt_event_dispatcher_tests.cpp",
     "job_policy_tests.cpp",
     "mbuf_tests.cpp",
     "message_packet_tests.cpp",
