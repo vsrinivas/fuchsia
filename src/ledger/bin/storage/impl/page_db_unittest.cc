@@ -173,8 +173,8 @@ TEST_F(PageDbTest, Commits) {
         std::make_unique<CommitRandomImpl>(environment_.random()));
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        environment_.clock(), &page_storage_,
-        RandomObjectIdentifier(environment_.random()), std::move(parents));
+        environment_.clock(), RandomObjectIdentifier(environment_.random()),
+        std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,

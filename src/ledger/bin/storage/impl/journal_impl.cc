@@ -150,9 +150,8 @@ void JournalImpl::CreateCommitFromChanges(
           return;
         }
         std::unique_ptr<const storage::Commit> commit =
-            CommitImpl::FromContentAndParents(environment_->clock(),
-                                              page_storage_, object_identifier,
-                                              std::move(parents));
+            CommitImpl::FromContentAndParents(
+                environment_->clock(), object_identifier, std::move(parents));
         GetObjectsToSync(
             [this, new_nodes = std::move(new_nodes), commit = std::move(commit),
              callback = std::move(callback)](

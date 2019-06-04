@@ -22,9 +22,8 @@ class CommitImpl : public Commit {
 
  public:
   // Creates a new |CommitImpl| object with the given contents.
-  CommitImpl(Token token, PageStorage* page_storage, CommitId id,
-             zx::time_utc timestamp, uint64_t generation,
-             ObjectIdentifier root_node_identifier,
+  CommitImpl(Token token, CommitId id, zx::time_utc timestamp,
+             uint64_t generation, ObjectIdentifier root_node_identifier,
              std::vector<CommitIdView> parent_ids,
              fxl::RefPtr<SharedStorageBytes> storage_bytes);
 
@@ -32,13 +31,11 @@ class CommitImpl : public Commit {
 
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, |nullptr| will be returned.
-  static Status FromStorageBytes(PageStorage* page_storage, CommitId id,
-                                 std::string storage_bytes,
+  static Status FromStorageBytes(CommitId id, std::string storage_bytes,
                                  std::unique_ptr<const Commit>* commit);
 
   static std::unique_ptr<const Commit> FromContentAndParents(
-      timekeeper::Clock* clock, PageStorage* page_storage,
-      ObjectIdentifier root_node_identifier,
+      timekeeper::Clock* clock, ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
@@ -63,7 +60,6 @@ class CommitImpl : public Commit {
     friend CommitImpl;
   };
 
-  PageStorage* page_storage_;
   const CommitId id_;
   const zx::time_utc timestamp_;
   const uint64_t generation_;
