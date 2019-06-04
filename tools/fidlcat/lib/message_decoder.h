@@ -60,7 +60,8 @@ class MessageDecoder {
         FXL_LOG(ERROR) << "not enough data to decode (needs " << size
                        << " at offset "
                        << ((byte_pos_ - start_byte_pos_) + offset)
-                       << ", remains " << (end_byte_pos_ - byte_pos_) << ")";
+                       << ", remains " << (end_byte_pos_ - byte_pos_ - offset)
+                       << ")";
       }
       ++error_count_;
       return nullptr;
@@ -147,7 +148,7 @@ bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
       FXL_LOG(ERROR) << "not enough data to decode (needs " << sizeof(T)
                      << " at offset "
                      << ((byte_pos_ - start_byte_pos_) + offset) << ", remains "
-                     << (end_byte_pos_ - byte_pos_) << ")";
+                     << (end_byte_pos_ - byte_pos_ - offset) << ")";
     }
     ++error_count_;
     return false;
