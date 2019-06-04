@@ -13,7 +13,7 @@
 
 #include "logger.h"
 
-static constexpr zx::duration kTestTimeout = zx::sec(15);
+static constexpr zx::duration kTestTimeout = zx::sec(300);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 
 // This is the maximum line length of dash in both zircon_guest and

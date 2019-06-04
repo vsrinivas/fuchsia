@@ -8,7 +8,7 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-static constexpr zx::duration kTestTimeout = zx::sec(15);
+static constexpr zx::duration kTestTimeout = zx::sec(300);
 
 class MockNetstack : public fuchsia::netstack::Netstack {
  public:
