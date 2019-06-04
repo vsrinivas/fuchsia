@@ -35,13 +35,6 @@ group("system_monitor") {
   ]
 }
 
-group("zxdb") {
-  testonly = true
-  public_deps = [
-    "//src/developer/debug/zxdb:zxdb_host",
-  ]
-}
-
 group("fidl_tools") {
   testonly = true
   public_deps = [
@@ -62,7 +55,6 @@ group("all") {
     "//garnet/packages/tools:cs",
     "//garnet/packages/tools:curl",
     "//garnet/packages/tools:fidl_tools",
-    "//garnet/packages/tools:fidlcat",
     "//garnet/packages/tools:fidlmerge",
     "//garnet/packages/tools:iperf",
     "//garnet/packages/tools:magma",
@@ -76,7 +68,6 @@ group("all") {
     "//garnet/packages/tools:system_monitor",
     "//garnet/packages/tools:tiles",
     "//garnet/packages/tools:whereiscl",
-    "//garnet/packages/tools:zxdb",
     "//src/connectivity/wlan:tools",
     "//src/sys/locate",
   ]
@@ -193,13 +184,6 @@ group("gidl") {
   testonly = true
   public_deps = [
     "//tools/fidl/gidl:host",
-  ]
-}
-
-group("fidlcat") {
-  testonly = true
-  public_deps = [
-    "//tools/fidlcat:fidlcat_host",
   ]
 }
 
