@@ -65,8 +65,10 @@ public:
 
     zx_status_t QueryActiveConfiguration(fidl_txn_t* txn) {
         last_command_ = Command::kQueryActiveConfiguration;
-        return fuchsia_paver_PaverQueryActiveConfiguration_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                                 nullptr);
+        fuchsia_paver_Paver_QueryActiveConfiguration_Result result;
+        result.tag = fuchsia_paver_Paver_QueryActiveConfiguration_ResultTag_err;
+        result.err = ZX_ERR_NOT_SUPPORTED;
+        return fuchsia_paver_PaverQueryActiveConfiguration_reply(txn, &result);
     }
 
     zx_status_t SetActiveConfiguration(fuchsia_paver_Configuration configuration,

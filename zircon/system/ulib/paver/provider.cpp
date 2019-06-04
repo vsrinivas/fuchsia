@@ -13,7 +13,10 @@
 namespace {
 
 zx_status_t QueryActiveConfiguration(void* ctx, fidl_txn_t* txn) {
-    return fuchsia_paver_PaverQueryActiveConfiguration_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+    fuchsia_paver_Paver_QueryActiveConfiguration_Result result;
+    result.tag = fuchsia_paver_Paver_QueryActiveConfiguration_ResultTag_err;
+    result.err = ZX_ERR_NOT_SUPPORTED;
+    return fuchsia_paver_PaverQueryActiveConfiguration_reply(txn, &result);
 }
 
 zx_status_t SetActiveConfiguration(void* ctx, fuchsia_paver_Configuration configuration,

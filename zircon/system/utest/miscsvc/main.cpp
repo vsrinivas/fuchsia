@@ -25,9 +25,8 @@ TEST(MiscSvcTest, PaverSvccEnumeratesSuccessfully) {
     ASSERT_OK(zx::channel::create(0, &local, &remote));
     ASSERT_OK(fdio_service_connect_at(svc_local.get(), fuchsia_paver_Paver_Name, remote.release()));
 
-    zx_status_t status;
-    fuchsia_paver_Configuration* configuration;
-    ASSERT_OK(fuchsia_paver_PaverQueryActiveConfiguration(local.get(), &status, &configuration));
+    fuchsia_paver_Paver_QueryActiveConfiguration_Result result;
+    ASSERT_OK(fuchsia_paver_PaverQueryActiveConfiguration(local.get(), &result));
 }
 
 } // namespace
