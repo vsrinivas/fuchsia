@@ -68,23 +68,14 @@ void do_one_test(const IsolatedDevmgr& devmgr, const zx::channel& test_root,
 
     const char* relative_devpath = devpath + strlen(kDevPrefix);
 
-    // TODO some waiting needed before opening..,
-    usleep(1000);
-
     fbl::unique_fd fd;
-    int retry = 0;
-    do {
-        fd.reset(openat(devmgr.devfs_root().get(), relative_devpath, O_RDWR));
-        if (fd.is_valid()) {
-            break;
-        }
-        usleep(1000);
-    } while (++retry < 100);
-
-    if (retry == 100) {
+    status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), relative_devpath,
+                                                           &fd);
+    if (status != ZX_OK) {
         printf("driver-tests: failed to open %s\n", devpath);
         return;
     }
+
 
     zx::channel test_channel;
     status = fdio_get_service_handle(fd.release(), test_channel.reset_and_get_address());
