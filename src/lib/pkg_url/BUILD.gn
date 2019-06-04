@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -45,4 +46,22 @@ test_package("pkg_url_unittests") {
       environments = basic_envs
     },
   ]
+}
+
+fuzz_package("pkg_url_fuzzers") {
+  targets = [
+    ":fuchsia_pkg_url_fuzzer",
+    ":url_resolver_fuzzer",
+  ]
+  sanitizers = [ "asan", "ubsan" ]
+}
+
+fuzz_target("fuchsia_pkg_url_fuzzer") {
+  sources = [ "fuchsia_pkg_url_fuzztest.cc" ]
+  deps = [ ":pkg_url" ]
+}
+
+fuzz_target("url_resolver_fuzzer") {
+  sources = [ "url_resolver_fuzztest.cc" ]
+  deps = [ ":pkg_url" ]
 }
