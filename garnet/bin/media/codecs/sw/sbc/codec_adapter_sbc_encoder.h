@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 #include <src/lib/fxl/logging.h>
 
+#include "chunk_input_stream.h"
 #include "codec_adapter_sw.h"
 #include "timestamp_extrapolator.h"
 
@@ -46,29 +47,10 @@ class CodecAdapterSbcEncoder
       override;
 
  private:
-  // A block of PCM data for holding leftovers from unaligned input packets from
-  // clients. Data always starts at byte 0.
-  struct ScratchBlock {
-    uint8_t buffer[SBC_MAX_PCM_BUFFER_SIZE];
-    size_t len = 0;
-  };
-
   struct Context {
     fuchsia::media::SbcEncoderSettings settings;
     fuchsia::media::PcmFormat input_format;
     SBC_ENC_PARAMS params;
-    // The output packet we are currently encoding into.
-    CodecPacket* output_packet = nullptr;
-    // The input packet we are currently encoding.
-    CodecPacket* input_packet = nullptr;
-    // Number of bytes we've already read from the input packet.
-    size_t input_offset = 0;
-    // Space for buffering PCM frames when the client sends frames that don't
-    // line up with SBC batch sizes.
-    ScratchBlock scratch_block;
-    // Next byte in the uncompressed stream we will output.
-    size_t input_stream_index = 0;
-    TimestampExtrapolator timestamp_extrapolator;
 
     size_t sbc_frame_length() const {
       const size_t part = 4 + params.s16NumOfSubBands * channel_count() / 2;
@@ -125,23 +107,16 @@ class CodecAdapterSbcEncoder
 
   void SendOutputPacket(CodecPacket* output_packet);
 
-  // Saves the leftovers of the input packet to our scratch space.
-  void SaveLeftovers();
-
-  // Sets the input packet for the encode state.
-  void SetInputPacket(CodecPacket* input_packet);
-
-  // Ensures we have an output packet to encode into if there are any input
-  // bytes at all, whether there is enough to encode or not.
-  InputLoopStatus EnsureOutputPacketIsSetIfAnyInputBytesRemain();
-
-  // Advances the encoder context to the next input block, returning a pointer
-  // to the block so it can fed to the encoder. The returned pointer may become
-  // invalid next time SetInputPacket() is called.
-  std::pair<uint8_t*, InputLoopStatus>
-  EnsureOutputPacketIsFineAndGetNextInputBlock();
+  uint8_t* NextOutputBlock();
 
   std::optional<Context> context_;
+  // The output packet we are currently encoding into.
+  CodecPacket* output_packet_ = nullptr;
+  // The output buffer we are currently encoding into.
+  const CodecBuffer* output_buffer_ = nullptr;
+  // Offset into the output buffer we're encoding into.
+  size_t output_offset_ = 0;
+  std::optional<ChunkInputStream> chunk_input_stream_;
 };
 
 #endif  // GARNET_BIN_MEDIA_CODECS_SW_SBC_CODEC_ADAPTER_SBC_ENCODER_H_

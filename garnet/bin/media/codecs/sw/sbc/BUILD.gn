@@ -26,6 +26,7 @@ executable("codec_runner_sw_sbc") {
   ]
 
   deps = [
+    "//garnet/bin/media/codecs:chunk_input_stream",
     "//garnet/bin/media/codecs:timestamp_extrapolator",
     "//garnet/bin/media/codecs/sw:codec_adapter_sw",
     "//garnet/bin/media/codecs/sw:codec_runner_sw",

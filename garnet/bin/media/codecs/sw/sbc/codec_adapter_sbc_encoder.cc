@@ -242,15 +242,63 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
   const uint64_t bytes_per_second = input_format.frames_per_second *
                                     sizeof(uint16_t) *
                                     input_format.channel_map.size();
-  context_.emplace(
-      Context{.input_format = std::move(input_format),
-              .settings = std::move(settings),
-              .params = params,
-              .timestamp_extrapolator =
-                  format_details.has_timebase()
-                      ? TimestampExtrapolator(format_details.timebase(),
-                                              bytes_per_second)
-                      : TimestampExtrapolator()});
+  context_ = {{.input_format = std::move(input_format),
+               .settings = std::move(settings),
+               .params = params}};
+  chunk_input_stream_.emplace(
+      context_->pcm_batch_size(),
+      format_details.has_timebase()
+          ? TimestampExtrapolator(format_details.timebase(), bytes_per_second)
+          : TimestampExtrapolator(),
+      [this](ChunkInputStream::InputBlock input_block) {
+        if (input_block.non_padding_len == 0) {
+          return ChunkInputStream::kContinue;
+        }
+
+        if (output_packet_ == nullptr) {
+          std::optional<CodecPacket*> maybe_output_packet =
+              free_output_packets_.WaitForElement();
+          if (!maybe_output_packet) {
+            // The stream is ending.
+            return ChunkInputStream::kTerminate;
+          }
+          FXL_DCHECK(*maybe_output_packet != nullptr);
+
+          output_packet_ = *maybe_output_packet;
+          if (input_block.timestamp_ish) {
+            output_packet_->SetTimstampIsh(*input_block.timestamp_ish);
+          }
+        }
+
+        uint8_t* output = NextOutputBlock();
+        if (output == nullptr) {
+          // The stream is ending.
+          return ChunkInputStream::kTerminate;
+        }
+        FXL_DCHECK(output_buffer_);
+
+        SBC_Encode(
+            &context_->params,
+            reinterpret_cast<int16_t*>(const_cast<uint8_t*>(input_block.data)),
+            output);
+
+        if (output_offset_ + context_->sbc_frame_length() >
+                output_buffer_->buffer_size() ||
+            input_block.is_end_of_stream) {
+          FXL_DCHECK(output_packet_ != nullptr);
+
+          output_packet_->SetBuffer(output_buffer_);
+          output_packet_->SetValidLengthBytes(output_offset_);
+          output_packet_->SetStartOffset(0);
+
+          SendOutputPacket(output_packet_);
+          output_packet_ = nullptr;
+          output_buffer_ = nullptr;
+          output_offset_ = 0;
+        }
+
+        return ChunkInputStream::kContinue;
+      });
 
   return kOk;
 }
@@ -260,7 +308,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
 CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
     CodecPacket* input_packet) {
   FXL_DCHECK(context_);
-  FXL_DCHECK(context_->scratch_block.len < context_->pcm_batch_size());
+  FXL_DCHECK(chunk_input_stream_);
 
   auto return_to_client = fit::defer([this, input_packet]() {
     if (input_packet) {
@@ -268,73 +316,23 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
     }
   });
 
-  SetInputPacket(input_packet);
+  ChunkInputStream::Status status;
+  if (input_packet == nullptr) {
+    status = chunk_input_stream_->Flush();
+  } else {
+    status = chunk_input_stream_->ProcessInputPacket(input_packet);
+  }
 
-  const CodecBuffer* output_buffer = nullptr;
-  size_t output_offset = 0;
-  auto next_output_block = [this, &output_buffer,
-                            &output_offset]() -> uint8_t* {
-    if (!output_buffer) {
-      output_buffer = output_buffer_pool_.AllocateBuffer();
-      output_offset = 0;
-    }
-
-    if (!output_buffer) {
-      return nullptr;
-    }
-
-    // We assume sysmem has enforced our minimum requested buffer size of at
-    // least one sbc frame length.
-    FXL_DCHECK(output_buffer->buffer_size() >= context_->sbc_frame_length());
-
-    // Caller must set `output_buffer` to `nullptr` when space is insufficient.
-    uint8_t* output = output_buffer->buffer_base() + output_offset;
-    output_offset += context_->sbc_frame_length();
-    return output;
-  };
-
-  std::pair<uint8_t*, InputLoopStatus> input_and_status;
-  while ((input_and_status = EnsureOutputPacketIsFineAndGetNextInputBlock())
-                 .second == kOk &&
-         input_and_status.first != nullptr) {
-    auto [input, status] = input_and_status;
-    uint8_t* output = output = next_output_block();
-    if (output == nullptr) {
-      // The stream is ending.
+  switch (status) {
+    case ChunkInputStream::kExtrapolationFailedWithoutTimebase:
+      events_->onCoreCodecFailCodec(
+          "Extrapolation was required for a timestamp because the input "
+          "was unaligned, but no timebase is set.");
+    case ChunkInputStream::kUserTerminated:
       return kShouldTerminate;
-    }
-    FXL_DCHECK(output_buffer);
-
-    SBC_Encode(&context_->params, reinterpret_cast<int16_t*>(input), output);
-
-    if (output_offset + context_->sbc_frame_length() >
-        output_buffer->buffer_size()) {
-      FXL_DCHECK(context_->output_packet != nullptr);
-
-      context_->output_packet->SetBuffer(output_buffer);
-      context_->output_packet->SetValidLengthBytes(output_offset);
-      context_->output_packet->SetStartOffset(0);
-      SendOutputPacket(context_->output_packet);
-
-      context_->output_packet = nullptr;
-      output_buffer = nullptr;
-    }
-  }
-
-  if (input_and_status.second != kOk) {
-    return input_and_status.second;
-  }
-
-  // Flush the output if we didn't already by exceeding the output buffer size.
-  if (output_buffer) {
-    FXL_DCHECK(context_->output_packet != nullptr)
-        << "If there are any bytes written, we should have already gotten an "
-           "output packet.";
-    SendOutputPacket(context_->output_packet);
-    context_->output_packet = nullptr;
-  }
-
-  return kOk;
+    default:
+      return kOk;
+  };
 }
 
 void CodecAdapterSbcEncoder::SendOutputPacket(CodecPacket* output_packet) {
@@ -352,140 +350,24 @@ void CodecAdapterSbcEncoder::SendOutputPacket(CodecPacket* output_packet) {
                                    /*error_detected_during=*/false);
 }
 
-void CodecAdapterSbcEncoder::SaveLeftovers() {
-  FXL_DCHECK(context_->input_packet);
-  FXL_DCHECK(context_->input_offset <=
-             context_->input_packet->valid_length_bytes());
-  if (context_->input_offset < context_->input_packet->valid_length_bytes()) {
-    const size_t leftover =
-        context_->input_packet->valid_length_bytes() - context_->input_offset;
-    FXL_DCHECK(context_->scratch_block.len + leftover <
-               context_->pcm_batch_size());
-
-    memcpy(context_->scratch_block.buffer + context_->scratch_block.len,
-           context_->input_packet->buffer()->buffer_base() +
-               context_->input_packet->start_offset() + context_->input_offset,
-           leftover);
-
-    context_->scratch_block.len += leftover;
-  }
-}
-
-void CodecAdapterSbcEncoder::SetInputPacket(CodecPacket* input_packet) {
-  FXL_DCHECK(context_);
-  FXL_DCHECK(context_->input_packet == nullptr);
-
-  context_->input_packet = input_packet;
-  context_->input_offset = 0;
-
-  if (input_packet && input_packet->has_timestamp_ish()) {
-    context_->timestamp_extrapolator.Inform(
-        context_->input_stream_index + context_->scratch_block.len,
-        input_packet->timestamp_ish());
+uint8_t* CodecAdapterSbcEncoder::NextOutputBlock() {
+  if (!output_buffer_) {
+    output_buffer_ = output_buffer_pool_.AllocateBuffer();
+    output_offset_ = 0;
   }
 
-  if (context_->scratch_block.len > 0) {
-    FXL_DCHECK(context_->output_packet != nullptr)
-        << "If there are any bytes in the scratch block, we should already "
-           "have gotten an output packet.";
-    const uint32_t empty_scratch =
-        context_->pcm_batch_size() - context_->scratch_block.len;
-
-    if (input_packet) {
-      const size_t n =
-          std::min(input_packet->valid_length_bytes(), empty_scratch);
-      memcpy(
-          context_->scratch_block.buffer + context_->scratch_block.len,
-          input_packet->buffer()->buffer_base() + input_packet->start_offset(),
-          n);
-      context_->scratch_block.len += n;
-      context_->input_offset = n;
-    } else {
-      // There is no input; the stream is ending and we should flush what
-      // we've got.
-      memset(context_->scratch_block.buffer + context_->scratch_block.len, 0,
-             empty_scratch);
-      context_->scratch_block.len = context_->pcm_batch_size();
-    }
-  }
-}
-
-CodecAdapterSbcEncoder::InputLoopStatus
-CodecAdapterSbcEncoder::EnsureOutputPacketIsSetIfAnyInputBytesRemain() {
-  FXL_DCHECK(context_->output_packet || context_->scratch_block.len == 0)
-      << "If there are any bytes in the scratch block, we should already "
-         "have gotten an output packet.";
-  if (!context_->output_packet && context_->input_packet &&
-      context_->input_offset < context_->input_packet->valid_length_bytes()) {
-    FXL_DCHECK(context_->scratch_block.len == 0);
-
-    std::optional<CodecPacket*> maybe_output_packet =
-        free_output_packets_.WaitForElement();
-    if (!maybe_output_packet) {
-      // The stream is ending.
-      return kShouldTerminate;
-    }
-    FXL_DCHECK(*maybe_output_packet != nullptr);
-    context_->output_packet = *maybe_output_packet;
-
-    std::optional<uint64_t> maybe_timestamp;
-    if (context_->timestamp_extrapolator.has_information() &&
-        !(maybe_timestamp = context_->timestamp_extrapolator.Extrapolate(
-              context_->input_stream_index))) {
-      events_->onCoreCodecFailCodec(
-          "Extrapolation was required for a timestamp because the input "
-          "was unaligned, but no timebase is set.");
-      return kShouldTerminate;
-    }
-
-    if (maybe_timestamp) {
-      context_->output_packet->SetTimstampIsh(*maybe_timestamp);
-    }
+  if (!output_buffer_) {
+    return nullptr;
   }
 
-  return kOk;
-}
+  // We assume sysmem has enforced our minimum requested buffer size of at
+  // least one sbc frame length.
+  FXL_DCHECK(output_buffer_->buffer_size() >= context_->sbc_frame_length());
 
-std::pair<uint8_t*, CodecAdapterSbcEncoder::InputLoopStatus>
-CodecAdapterSbcEncoder::EnsureOutputPacketIsFineAndGetNextInputBlock() {
-  FXL_DCHECK(context_);
-
-  if (context_->scratch_block.len == context_->pcm_batch_size()) {
-    FXL_DCHECK(context_->output_packet != nullptr);
-
-    context_->scratch_block.len = 0;
-    context_->input_stream_index += context_->pcm_batch_size();
-    return {context_->scratch_block.buffer, kOk};
-  }
-
-  if (!context_->input_packet) {
-    return {nullptr, kOk};
-  }
-
-  InputLoopStatus ensure_output_packet_status =
-      EnsureOutputPacketIsSetIfAnyInputBytesRemain();
-  if (ensure_output_packet_status != kOk) {
-    return {nullptr, ensure_output_packet_status};
-  }
-
-  if (context_->input_offset + context_->pcm_batch_size() <=
-      context_->input_packet->valid_length_bytes()) {
-    uint8_t* block = context_->input_packet->buffer()->buffer_base() +
-                     context_->input_packet->start_offset() +
-                     context_->input_offset;
-    context_->input_offset += context_->pcm_batch_size();
-    context_->input_stream_index += context_->pcm_batch_size();
-    return {block, kOk};
-  }
-
-  SaveLeftovers();
-  FXL_DCHECK(context_->output_packet || context_->scratch_block.len == 0)
-      << "If there are any bytes in the scratch block, we should already "
-         "have gotten an output packet.";
-  context_->input_packet = nullptr;
-  context_->input_offset = 0;
-
-  return {nullptr, kOk};
+  // Caller must set `output_buffer` to `nullptr` when space is insufficient.
+  uint8_t* output = output_buffer_->buffer_base() + output_offset_;
+  output_offset_ += context_->sbc_frame_length();
+  return output;
 }
 
 void CodecAdapterSbcEncoder::CoreCodecSetBufferCollectionInfo(
