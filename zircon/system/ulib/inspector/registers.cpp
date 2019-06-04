@@ -40,6 +40,8 @@
             regs->r8, regs->r9, regs->r10, regs->r11);
     fprintf(f, " R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
             regs->r12, regs->r13, regs->r14, regs->r15);
+    fprintf(f, " fs.base: %#18" PRIx64 " gs.base: %#18" PRIx64 "\n",
+            regs->fs_base, regs->gs_base);
     if (excp_data) {
         // errc value is 17 on purpose, errc is 4 characters
         fprintf(f, " errc: %#17" PRIx64 "\n", excp_data->err_code);
