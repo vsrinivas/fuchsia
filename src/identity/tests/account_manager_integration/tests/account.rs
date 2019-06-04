@@ -94,13 +94,19 @@ impl Deref for NestedAccountManagerProxy {
     }
 }
 
-/// Start account manager in an isolated environment and return a proxy to it.
-fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
+/// Start account manager in an isolated environment and return a proxy to it. An optional
+/// environment label can be provided in order to test state preservation across component
+/// termination and restart. If env is None a randomized environment label will be picked
+/// to provide isolation across tests.
+/// NOTE: Do not reuse environment labels across tests. A NestedAccountManagerProxy should be
+/// destroyed before a new one referencing the same enviroment is created.
+fn create_account_manager(env: Option<String>) -> Result<NestedAccountManagerProxy, Error> {
     let mut service_fs = ServiceFs::new();
 
-    // Use a salted environment name to ensure the environment is unique across
-    // calls.
-    let nested_environment = service_fs.create_salted_nested_environment("account_test_env")?;
+    let nested_environment = match env {
+        None => service_fs.create_salted_nested_environment("account_test_env")?,
+        Some(label) => service_fs.create_nested_environment(&label)?,
+    };
 
     let app = launch(
         nested_environment.launcher(),
@@ -123,8 +129,8 @@ fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
 // themselves run in a single environment.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_provision_new_account() -> Result<(), Error> {
-    let account_manager =
-        create_account_manager().expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)
+        .expect("Failed to launch account manager in nested environment.");
 
     // Verify we initially have no accounts.
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
@@ -156,8 +162,8 @@ async fn test_provision_new_account() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
-    let account_manager =
-        create_account_manager().expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)
+        .expect("Failed to launch account manager in nested environment.");
 
     // Verify we initially have no accounts.
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
@@ -189,8 +195,8 @@ async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_get_account_and_persona() -> Result<(), Error> {
-    let account_manager =
-        create_account_manager().expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)
+        .expect("Failed to launch account manager in nested environment.");
 
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
 
@@ -224,8 +230,8 @@ async fn test_get_account_and_persona() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_account_deletion() -> Result<(), Error> {
-    let account_manager =
-        create_account_manager().expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)
+        .expect("Failed to launch account manager in nested environment.");
 
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
 
@@ -248,6 +254,44 @@ async fn test_account_deletion() -> Result<(), Error> {
     assert_eq!(
         await!(account_manager.get_account(&mut account_1, acp_client_end, account_server_end))?,
         Status::NotFound
+    );
+
+    Ok(())
+}
+
+/// Ensure that an account manager created in a specific environment picks up the state of
+/// previous instances that ran in that environment. Also check that some basic operations work on
+/// accounts created in that previous lifetime.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_lifecycle() -> Result<(), Error> {
+    let account_manager = create_account_manager(Some("test_account_deletion".to_string()))
+        .expect("Failed to launch account manager in nested environment.");
+
+    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+
+    let mut account_1 = await!(provision_new_account(&account_manager))?;
+    let mut account_2 = await!(provision_new_account(&account_manager))?;
+    let existing_accounts = await!(account_manager.get_account_ids())?;
+    assert_eq!(existing_accounts.len(), 2);
+
+    // Kill and restart account manager in the same environment
+    std::mem::drop(account_manager);
+    let account_manager = create_account_manager(Some("test_account_deletion".to_string()))
+        .expect("Failed to launch account manager in nested environment.");
+
+    // Retrieve an account that was created in the earlier lifetime
+    let (acp_client_end, _) = create_endpoints()?;
+    let (_account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        await!(account_manager.get_account(&mut account_1, acp_client_end, account_server_end))?,
+        Status::Ok
+    );
+
+    // Delete an account and verify it is removed.
+    assert_eq!(await!(account_manager.remove_account(&mut account_2))?, Status::Ok);
+    assert_eq!(
+        await!(account_manager.get_account_ids())?,
+        vec![LocalAccountId { id: account_1.id }]
     );
 
     Ok(())
