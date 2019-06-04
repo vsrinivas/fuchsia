@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
+#include <lib/modular_test_harness/cpp/fake_story_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
@@ -113,59 +114,6 @@ class TestSessionShell : public modular::testing::FakeComponent {
   std::unique_ptr<TestStoryShellFactory> story_shell_factory_;
 };
 
-// An implementation of the fuchsia.modular.StoryShell FIDL service.
-class TestStoryShell : fuchsia::modular::StoryShell {
- public:
-  TestStoryShell() = default;
-  ~TestStoryShell() override = default;
-
-  // Produces a handler function that can be used in the outgoing service
-  // provider.
-  fidl::InterfaceRequestHandler<fuchsia::modular::StoryShell> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
-
- private:
-  // |fuchsia::modular::StoryShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
-                      story_shell_context) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo surface_info) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void FocusSurface(std::string /* surface_id */) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void DefocusSurface(std::string /* surface_id */,
-                      DefocusSurfaceCallback callback) override {
-    callback();
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddContainer(
-      std::string /* container_name */, fidl::StringPtr /* parent_id */,
-      fuchsia::modular::SurfaceRelation /* relation */,
-      std::vector<fuchsia::modular::ContainerLayout> /* layout */,
-      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      std::vector<fuchsia::modular::ContainerView> /* views */) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void RemoveSurface(std::string /* surface_id */) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void ReconnectView(
-      fuchsia::modular::ViewConnection view_connection) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void UpdateSurface(
-      fuchsia::modular::ViewConnection view_connection,
-      fuchsia::modular::SurfaceInfo /* surface_info */) override {}
-
-  fidl::BindingSet<fuchsia::modular::StoryShell> bindings_;
-};
-
 class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
  public:
   const std::string story_name = "story1";
@@ -264,7 +212,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
 TEST_F(StoryShellFactoryTest, AttachCalledOnStoryStart) {
   InitSession();
 
-  TestStoryShell test_story_shell;
+  modular::testing::FakeStoryShell fake_story_shell;
 
   // The StoryShellFactory will be asked to attach a StoryShell when the story
   // is started.
@@ -273,7 +221,7 @@ TEST_F(StoryShellFactoryTest, AttachCalledOnStoryStart) {
       [&](std::string,
           fidl::InterfaceRequest<fuchsia::modular::StoryShell> request) {
         is_attached = true;
-        test_story_shell.GetHandler()(std::move(request));
+        fake_story_shell.GetHandler()(std::move(request));
       });
 
   CreateStory();

@@ -6,6 +6,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
+#include <lib/modular_test_harness/cpp/fake_story_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <sdk/lib/sys/cpp/service_directory.h>
@@ -46,102 +47,6 @@ class FakeSessionShell : public modular::testing::FakeComponent {
   modular::testing::SessionShellImpl session_shell_impl_;
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
-};
-
-class FakeStoryShell : public modular::testing::FakeComponent,
-                       fuchsia::modular::StoryShell {
- public:
-  ~FakeStoryShell() override = default;
-
-  bool is_initialized() const { return !!story_shell_context_; }
-
-  fuchsia::modular::StoryShellContext* story_shell_context() {
-    return story_shell_context_.get();
-  }
-
-  void set_on_destroy(fit::function<void()> on_destroy) {
-    on_destroy_ = std::move(on_destroy);
-  }
-
-  void set_on_add_surface(fit::function<void(fuchsia::modular::ViewConnection,
-                                             fuchsia::modular::SurfaceInfo)>
-                              on_add_surface) {
-    on_add_surface_ = std::move(on_add_surface);
-  }
-
- private:
-  // |modular::testing::FakeComponent|
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
-    component_context()->outgoing()->AddPublicService(
-        bindings_.GetHandler(this));
-  }
-
-  // |modular::testing::FakeComponent|
-  void OnDestroy() {
-    if (on_destroy_) on_destroy_();
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryShellContext>
-                      story_shell_context) override {
-    story_shell_context_ = story_shell_context.Bind();
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface(fuchsia::modular::ViewConnection view_connection,
-                  fuchsia::modular::SurfaceInfo surface_info) override {
-    if (!on_add_surface_)
-      return;
-    on_add_surface_(std::move(view_connection), std::move(surface_info));
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddSurface2(fuchsia::modular::ViewConnection2 view_connection,
-                   fuchsia::modular::SurfaceInfo surface_info) override {
-    AddSurface(
-        fuchsia::modular::ViewConnection{
-            .surface_id = view_connection.surface_id,
-            .view_holder_token = std::move(view_connection.view_holder_token),
-        },
-        std::move(surface_info));
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void FocusSurface(std::string /*surface_id*/) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void DefocusSurface(std::string /*surface_id*/,
-                      DefocusSurfaceCallback callback) override {
-    callback();
-  }
-
-  // |fuchsia::modular::StoryShell|
-  void AddContainer(
-      std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
-      fuchsia::modular::SurfaceRelation /*relation*/,
-      std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
-      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
-      std::vector<fuchsia::modular::ContainerView> /* views */) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void RemoveSurface(std::string /*surface_id*/) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void ReconnectView(
-      fuchsia::modular::ViewConnection view_connection) override {}
-
-  // |fuchsia::modular::StoryShell|
-  void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
-                     fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
-
-  fuchsia::modular::StoryShellContextPtr story_shell_context_;
-  fidl::BindingSet<fuchsia::modular::StoryShell> bindings_;
-
-  fit::function<void(fuchsia::modular::ViewConnection,
-                     fuchsia::modular::SurfaceInfo)>
-      on_add_surface_;
-
-  fit::function<void()> on_destroy_;
 };
 
 class StoryShellTest : public modular::testing::TestHarnessFixture {
@@ -218,7 +123,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
 
   fuchsia::modular::PuppetMasterPtr puppet_master_;
   FakeSessionShell session_shell_;
-  FakeStoryShell story_shell_;
+  modular::testing::FakeStoryShell story_shell_;
 
   // Stories must have modules in them so the stories created above
   // contain fake intercepted modules. This list holds onto them so that
@@ -265,8 +170,8 @@ TEST_F(StoryShellTest, LinkIsPersistent) {
   RestartStory("story1");
 
   // Wait for it to die and then restart again.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&] { return story_shell_destroyed; }, kTimeout));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return story_shell_destroyed; },
+                                        kTimeout));
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return story_shell_.is_running(); }, kTimeout));
 

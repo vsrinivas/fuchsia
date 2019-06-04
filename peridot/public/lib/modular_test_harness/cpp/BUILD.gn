@@ -33,6 +33,8 @@ sdk_source_set("test_harness_fixture") {
     "fake_module.h",
     "fake_session_shell.cc",
     "fake_session_shell.h",
+    "fake_story_shell.cc",
+    "fake_story_shell.h",
     "test_harness_fixture.cc",
     "test_harness_fixture.h",
   ]
