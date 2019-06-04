@@ -101,9 +101,9 @@ also provides core drivers and Fuchsia's libc implementation.
 [zircon-vdso]: /zircon/docs/vdso.md
 [zircon-ddk]: /zircon/docs/ddk/overview.md
 [FIDL]: ../development/languages/fidl/README.md
-[framework-story]: /peridot/docs/modular/story.md
-[framework-module]: /peridot/docs/modular/module.md
-[framework-agent]: /peridot/docs/modular/agent.md
+[framework-story]: modular/story.md
+[framework-module]: modular/module.md
+[framework-agent]: modular/agent.md
 [ledger]: /src/ledger/docs/README.md
 [bluetooth]: /garnet/bin/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/

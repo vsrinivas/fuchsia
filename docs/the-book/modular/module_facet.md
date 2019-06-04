@@ -116,4 +116,4 @@ acceptable type.
 
 See [example](#example).
 
-[component-manifest]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_metadata.md#Component-manifest
+[component-manifest]: /docs/the-book/package_metadata.md#Component-manifest

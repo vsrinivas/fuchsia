@@ -148,7 +148,7 @@ A working example of capability routing can be found at
 
 *Facets* are metadata that is ignored by the component framework itself, but may
 be interpreted by interested components. For example, a module component might
-contain [module facets](/peridot/docs/modular/module_facet.md) declaring intents
+contain [module facets](/docs/the-book/modular/module_facet.md) declaring intents
 the module subscribes to.
 
 ## Syntax
