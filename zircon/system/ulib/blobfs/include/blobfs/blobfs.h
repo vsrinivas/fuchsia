@@ -16,6 +16,7 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <block-client/cpp/client.h>
+#include <block-client/cpp/block-device.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
@@ -46,7 +47,6 @@
 #include <blobfs/allocator.h>
 #include <blobfs/blob-cache.h>
 #include <blobfs/blob.h>
-#include <blobfs/block-device.h>
 #include <blobfs/common.h>
 #include <blobfs/directory.h>
 #include <blobfs/extent-reserver.h>
@@ -63,6 +63,7 @@
 
 namespace blobfs {
 
+using block_client::BlockDevice;
 using digest::Digest;
 
 enum class Writability {

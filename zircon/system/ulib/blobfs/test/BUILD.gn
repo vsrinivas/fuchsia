@@ -21,7 +21,6 @@ test("blobfs-unit") {
     "journal-test.cpp",
     "node-populator-test.cpp",
     "node-reserver-test.cpp",
-    "remote-block-device-test.cpp",
     "ring-buffer-test.cpp",
     "unbuffered-operations-builder-test.cpp",
     "utils.cpp",

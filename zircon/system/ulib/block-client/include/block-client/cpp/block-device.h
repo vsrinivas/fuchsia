@@ -10,10 +10,11 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
+#include <lib/zx/vmo.h>
 
 #include <memory>
 
-namespace blobfs {
+namespace block_client {
 
 // An interface which virtualizes the connection to the underlying block device.
 class BlockDevice {
@@ -36,6 +37,9 @@ public:
     virtual zx_status_t BlockAttachVmo(zx::vmo vmo, fuchsia_hardware_block_VmoID* out_vmoid) = 0;
 
     // Volume IPC.
+    //
+    // VolumeQuery is safe to invoke, even for devices which do not necessarily speak
+    // the Volume protocol.
     virtual zx_status_t VolumeQuery(fuchsia_hardware_block_volume_VolumeInfo* out_info) const = 0;
     virtual zx_status_t VolumeQuerySlices(const uint64_t* slices, size_t slices_count,
                                           fuchsia_hardware_block_volume_VsliceRange* out_ranges,
@@ -75,4 +79,4 @@ private:
     block_client::Client fifo_client_;
 };
 
-} // namespace blobfs
+} // namespace block_client

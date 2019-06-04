@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/block-device.h>
+#include <block-client/cpp/block-device.h>
 
 #include <thread>
 
+#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl-utils/bind.h>
@@ -13,7 +14,7 @@
 #include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace block_client {
 namespace {
 
 constexpr uint16_t kGoldenVmoid = 2;
@@ -22,8 +23,8 @@ class MockBlockDevice {
 public:
     using Binder = fidl::Binder<MockBlockDevice>;
     zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
-        return Binder::BindOps<fuchsia_hardware_block_Block_dispatch>(
-                dispatcher, std::move(channel), this, BlockOps());
+        dispatcher_  = dispatcher;
+        return fidl_bind(dispatcher_, channel.release(), FidlDispatch, this, nullptr);
     }
 
     zx_status_t ReadFifoRequests(block_fifo_request_t* requests, size_t* count) {
@@ -45,6 +46,21 @@ public:
     }
 
 private:
+    // Manually dispatch to emulate the non-standard behavior of the block device,
+    // which implements both the block device APIs, the Node API, and (optionally)
+    // the FVM API.
+    static zx_status_t FidlDispatch(void* context, fidl_txn_t* txn, fidl_msg_t* msg, const void*) {
+        return reinterpret_cast<MockBlockDevice*>(context)->HandleMessage(txn, msg);
+    }
+
+    zx_status_t HandleMessage(fidl_txn_t* txn, fidl_msg_t* msg) {
+        zx_status_t status = fuchsia_hardware_block_Block_try_dispatch(this, txn, msg, BlockOps());
+        if (status != ZX_ERR_NOT_SUPPORTED) {
+            return status;
+        }
+        return fuchsia_io_Node_dispatch(this, txn, msg, NodeOps());
+    }
+
     static const fuchsia_hardware_block_Block_ops* BlockOps() {
         static const fuchsia_hardware_block_Block_ops kOps = {
             .GetInfo = Binder::BindMember<&MockBlockDevice::BlockGetInfo>,
@@ -57,8 +73,29 @@ private:
         return &kOps;
     }
 
+    // This implementation of Node is decidedly non-standard and incomplete, but it is
+    // sufficient to test the cloning behavior used below.
+    static const fuchsia_io_Node_ops* NodeOps() {
+        static const fuchsia_io_Node_ops kOps = {
+            .Clone = Binder::BindMember<&MockBlockDevice::NodeClone>,
+            .Close = nullptr,
+            .Describe = nullptr,
+            .Sync = nullptr,
+            .GetAttr = nullptr,
+            .SetAttr = nullptr,
+            .Ioctl = nullptr,
+        };
+        return &kOps;
+    }
+
+    zx_status_t NodeClone(uint32_t flags, zx_handle_t object) {
+        Bind(dispatcher_, zx::channel(object));
+        return ZX_OK;
+    }
+
     zx_status_t BlockGetInfo(fidl_txn_t* txn) {
-        return ZX_ERR_NOT_SUPPORTED;
+        fuchsia_hardware_block_BlockInfo info = {};
+        return fuchsia_hardware_block_BlockGetInfo_reply(txn, ZX_OK, &info);
     }
 
     zx_status_t BlockGetStats(bool clear, fidl_txn_t* txn) {
@@ -85,6 +122,7 @@ private:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    async_dispatcher_t* dispatcher_ = nullptr;
     fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
 };
 
@@ -176,5 +214,36 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
     server_thread.join();
 }
 
+TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    ASSERT_OK(loop.StartThread());
+
+    MockBlockDevice mock_device;
+    ASSERT_OK(mock_device.Bind(loop.dispatcher(), std::move(server)));
+
+    std::unique_ptr<RemoteBlockDevice> device;
+    ASSERT_OK(RemoteBlockDevice::Create(std::move(client), &device));
+
+    // Querying the volume returns an error; the device doesn't implement
+    // any FVM protocols. However, VolumeQuery utilizes a distinct
+    // channel, so the connection should remain open.
+    fuchsia_hardware_block_volume_VolumeInfo volume_info;
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->VolumeQuery(&volume_info));
+
+    // Other block functions still function correctly.
+    fuchsia_hardware_block_BlockInfo block_info;
+    EXPECT_EQ(ZX_OK, device->BlockGetInfo(&block_info));
+
+    // Sending any FVM method other than "VolumeQuery" also returns an error.
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->VolumeExtend(0, 0));
+
+    // But now, other (previously valid) block methods fail, because FIDL has
+    // closed the channel.
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, device->BlockGetInfo(&block_info));
+}
+
 } // namespace
-} // namespace blobfs
+} // namespace block_client

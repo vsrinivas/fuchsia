@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":block-client-unit",
+  ]
+}
+
+test("block-client-unit") {
+  test_group = "fs"
+  sources = [
+    "remote-block-device-test.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -14,7 +14,6 @@
 #include <unistd.h>
 
 #include <blobfs/blobfs.h>
-#include <blobfs/block-device.h>
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
@@ -42,12 +41,13 @@
 
 #include <utility>
 
+namespace blobfs {
+namespace {
+
+using block_client::RemoteBlockDevice;
 using digest::Digest;
 using digest::MerkleTree;
 using id_allocator::IdAllocator;
-
-namespace blobfs {
-namespace {
 
 // Time between each Cobalt flush.
 constexpr zx::duration kCobaltFlushTimer = zx::min(5);

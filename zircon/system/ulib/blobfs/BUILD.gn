@@ -61,7 +61,6 @@ library("blobfs") {
       "journal.cpp",
       "metrics.cpp",
       "operation.cpp",
-      "remote-block-device.cpp",
       "ring-buffer.cpp",
       "unbuffered-operations-builder.cpp",
       "vmo-buffer.cpp",

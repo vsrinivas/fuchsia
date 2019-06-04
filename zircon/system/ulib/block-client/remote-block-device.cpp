@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/block-device.h>
+#include <block-client/cpp/block-device.h>
 
-#include <blobfs/common.h>
 #include <fs/trace.h>
 #include <fuchsia/io/c/fidl.h>
+#include <zircon/device/vfs.h>
 
-namespace blobfs {
+namespace block_client {
 namespace {
 
 zx_status_t BlockGetFifo(const zx::channel& device, zx::fifo* out_fifo) {
@@ -100,9 +100,22 @@ zx_status_t RemoteBlockDevice::BlockAttachVmo(zx::vmo vmo,
 
 zx_status_t RemoteBlockDevice::VolumeQuery(
         fuchsia_hardware_block_volume_VolumeInfo* out_info) const {
-    zx_status_t status, io_status;
-    io_status = fuchsia_hardware_block_volume_VolumeQuery(device_.get(), &status,
-                                                          out_info);
+    // Querying may be used to confirm if the underlying connection is capable of
+    // communicating the FVM protocol. Clone the connection, since if the block
+    // device does NOT speak the Volume protocol, the connection is terminated.
+    zx::channel connection, server;
+    zx_status_t status = zx::channel::create(0, &connection, &server);
+    if (status != ZX_OK) {
+        return status;
+    }
+    uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
+    status = fuchsia_io_NodeClone(device_.get(), flags, server.release());
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeQuery(connection.get(), &status,
+                                                                      out_info);
     if (io_status != ZX_OK) {
         return io_status;
     }
@@ -146,7 +159,7 @@ zx_status_t RemoteBlockDevice::Create(zx::channel device,
     zx::fifo fifo;
     zx_status_t status = BlockGetFifo(device, &fifo);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Could not acquire block fifo: %d\n", status);
+        FS_TRACE_ERROR("Could not acquire block fifo: %d\n", status);
         return status;
     }
     block_client::Client fifo_client;
@@ -166,4 +179,4 @@ RemoteBlockDevice::~RemoteBlockDevice() {
     BlockCloseFifo(device_);
 }
 
-} // namespace blobfs
+} // namespace block_client
