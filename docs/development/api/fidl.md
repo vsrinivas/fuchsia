@@ -120,6 +120,8 @@ enum members               | _upper snake case_ | `RGB_888`
 
 ### Libraries
 
+#### Syntax
+
 Library names are period-separated lists of identifiers. Portions of the library
 name other than the last are also referred to as namespaces.  Each component of
 the name is in lowercase and must match the following regular expression:
@@ -131,6 +133,8 @@ selected a conservative least common denominator in order for FIDL to work well
 with our current set of target languages and with potential future target
 languages.
 
+#### Identifier Names: Prefer Functional Roles with Meaning
+
 Prefer functional names (e.g., `fuchsia.media`) over product or code names
 (e.g., `fuchsia.amber` or `fuchsia.scenic`).  Product names are appropriate
 when the product has some external existence beyond Fuchsia and when the
@@ -138,6 +142,29 @@ protocol is specific to that product.  For example, `fuchsia.cobalt` is a
 better name for the Cobalt interface protocol than `fuchsia.metrics` because
 other metrics implementations (e.g., Firebase) are unlikely to implement the same
 protocol.
+
+Identifier names should relate to the specific *role* that participants play;
+avoid encoding access control into the name. Names based on roles are
+descriptive and won't outdate as quickly as names based on access control, which
+prescribe an externally-defined relationship that is subject to change as the
+platform evolves. For example, for an API involving `FocusChain` objects, an
+appropriate name would be `fuchsia.ui.focus`, instead of
+`fuchsia.ui.privileged`; if we decide to make `FocusChain` objects more widely
+accessible, then `fuchsia.ui.focus` isn't a problematic name.  The following
+example words should be avoided:
+
+* `constrained`, `limited`, `oem`,  `private`, `privileged`, `protected`,
+  `special`, `vendor`.
+
+Identifier names should have meaning; avoid meaningless names.  If
+`fuchsia.foo.bar` and `fuchsia.foo.baz` share a number of concepts that you
+wish to factor out into a separate library, consider defining those concepts in
+`fuchsia.foo` rather than in `fuchsia.foo.common`.  The following example words
+should be avoided:
+
+* `common`, `service`, `util`, `base`, `f<letter>l`, `zx<word>`.
+
+#### Fuchsia Libraries
 
 FIDL libraries defined in the Platform Source Tree (i.e., defined in
 fuchsia.googlesource.com) must be in the `fuchsia` top-level namespace (e.g.,
@@ -155,12 +182,16 @@ on top of these FIDL protocols does not belong in the `fuchsia.hardware` namespa
 For example, it is more appropriate for network protocols to be under
 `fuchsia.net` than `fuchsia.hardware`.
 
+#### Namespace Nesting: Not Too Deeply
+
 Avoid library names with more than two dots (e.g., `fuchsia.foo.bar.baz`).
 There are some cases when a third dot is appropriate, but those cases are rare.
 If you use more than two dots, you should have a specific reason for that
 choice.  For the case of the `fuchsia.hardware` namespace described above, this
 is relaxed to "three" and "four" dots, instead of "two" and "three", to
 accomodate the longer namespace.
+
+#### Library Dependencies
 
 Prefer to introduce dependencies from libraries with more specific names to
 libraries with less specific names rather than the reverse.  For example,
@@ -170,12 +201,6 @@ over time we can add more libraries with more specific names but there are only
 a finite number of libraries with less specific names.  Having libraries with
 less specific names know about libraries with more specific names privileges the
 current status quo relative to the future.
-
-Library names must not contain the following components: `common`, `service`,
-`util`, `base`, `f<letter>l`, `zx<word>`.  Avoid these (and other) meaningless
-names.  If `fuchsia.foo.bar` and `fuchsia.foo.baz` share a number of concepts
-that you wish to factor out into a separate library, consider defining those
-concepts in `fuchsia.foo` rather than in `fuchsia.foo.common`.
 
 ### Top-level
 
