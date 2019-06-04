@@ -24,8 +24,6 @@
 
 static const char kThreadName[] = "test-thread";
 
-static const unsigned kExceptionPortKey = 42u;
-
 // We have to poll a thread's state as there is no way to wait for it to
 // transition states. Wait this amount of time. Generally the thread won't
 // take very long so this is a compromise between polling too frequently and
@@ -41,19 +39,6 @@ static bool get_koid(zx_handle_t handle, zx_koid_t* koid) {
               ZX_OK);
     ASSERT_EQ(records_read, 1u);
     *koid = info.koid;
-    return true;
-}
-
-static bool check_reported_pid_and_tid(zx_handle_t thread,
-                                       zx_port_packet_t* packet) {
-    zx_koid_t pid;
-    zx_koid_t tid;
-    if (!get_koid(zx_process_self(), &pid))
-        return false;
-    if (!get_koid(thread, &tid))
-        return false;
-    EXPECT_EQ(packet->exception.pid, pid);
-    EXPECT_EQ(packet->exception.tid, tid);
     return true;
 }
 
@@ -103,27 +88,40 @@ static bool advance_over_breakpoint(zx_handle_t thread) {
 
 // Waits for the exception type excp_type, ignoring exceptions of type ignore_type (these will
 // just resume the thread), and issues errors for anything else.
-static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_t excp_type,
-                                  uint32_t ignore_type) {
+//
+// Fills |exception_out| with the resulting exception object.
+static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t exception_channel,
+                                  uint32_t excp_type, uint32_t ignore_type,
+                                  zx_handle_t* exception_out) {
     BEGIN_HELPER;
 
-    zx_port_packet_t packet;
     while (true) {
-        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet), ZX_OK);
+        ASSERT_EQ(zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE,
+                                     nullptr),
+                  ZX_OK);
+
+        zx_exception_info_t info;
+        zx_handle_t exception;
+        ASSERT_EQ(zx_channel_read(exception_channel, 0, &info, &exception, sizeof(info), 1,
+                                  nullptr, nullptr),
+                  ZX_OK);
 
         // Use EXPECTs rather than ASSERTs here so that if something fails
         // we log all the relevant information about the packet contents.
-        EXPECT_EQ(packet.key, kExceptionPortKey);
-
         zx_koid_t koid = ZX_KOID_INVALID;
         EXPECT_TRUE(get_koid(thread, &koid));
-        EXPECT_EQ(packet.exception.tid, koid);
+        EXPECT_EQ(info.tid, koid);
 
-        if (packet.type != ignore_type) {
-            EXPECT_EQ(packet.type, excp_type);
+        if (info.type != ignore_type) {
+            EXPECT_EQ(info.type, excp_type);
+            *exception_out = exception;
             break;
         } else {
-            EXPECT_EQ(zx_task_resume_from_exception(thread, eport, 0), ZX_OK);
+            uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+            ASSERT_EQ(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE, &state,
+                                             sizeof(state)),
+                      ZX_OK);
+            zx_handle_close(exception);
         }
     }
 
@@ -203,21 +201,6 @@ static bool start_and_kill_thread(zxr_thread_entry_t entry, void* arg) {
     zxr_thread_destroy(&thread);
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
     return true;
-}
-
-static bool set_debugger_exception_port(zx_handle_t* eport_out) {
-    ASSERT_EQ(zx_port_create(0, eport_out), ZX_OK);
-    zx_handle_t self = zx_process_self();
-    ASSERT_EQ(zx_task_bind_exception_port(self, *eport_out, kExceptionPortKey,
-                                          ZX_EXCEPTION_PORT_DEBUGGER),
-              ZX_OK);
-    return true;
-}
-
-static void clear_debugger_exception_port() {
-    zx_handle_t self = zx_process_self();
-    zx_task_bind_exception_port(self, ZX_HANDLE_INVALID, kExceptionPortKey,
-                                ZX_EXCEPTION_PORT_DEBUGGER);
 }
 
 // Wait for |thread| to enter blocked state |reason|.
@@ -491,7 +474,7 @@ static bool TestResumeSuspended() {
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread_h, &info));
     ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
-    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
+    ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
     // Resuming the thread should mark the thread as blocked again.
     ASSERT_TRUE(resume_thread_synchronous(thread_h, suspend_token));
@@ -703,7 +686,7 @@ static bool TestSuspendStopsThread() {
     // Clean up.
     ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
     // Wait for the thread termination to complete.  We should do this so
-    // that any later tests which use set_debugger_exception_port() do not
+    // that any later tests which handle process debug exceptions do not
     // receive an ZX_EXCP_THREAD_EXITING event.
     ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED,
                                  ZX_TIME_INFINITE, NULL),
@@ -726,17 +709,19 @@ static bool TestSuspendMultiple() {
 
     // The thread will now be blocked on the event. Wake it up and catch the trap (undefined
     // exception).
-    zx_handle_t exception_port = ZX_HANDLE_INVALID;
-    ASSERT_TRUE(set_debugger_exception_port(&exception_port));
+    zx_handle_t exception_channel, exception;
+    ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                               &exception_channel),
+              ZX_OK);
     ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK);
-    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_port, ZX_EXCP_SW_BREAKPOINT,
-                                      ZX_EXCP_THREAD_STARTING));
+    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_SW_BREAKPOINT,
+                                      ZX_EXCP_THREAD_STARTING, &exception));
 
     // The thread should now be blocked on a debugger exception.
     ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_EXCEPTION));
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread_h, &info));
-    ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_DEBUGGER);
+    ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
 
     advance_over_breakpoint(thread_h);
 
@@ -756,13 +741,14 @@ static bool TestSuspendMultiple() {
     // nondeterministic failures.
     ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION);
 
-    // Resume from the exception with invalid options.
-    ASSERT_EQ(zx_task_resume_from_exception(thread_h, exception_port, 23), ZX_ERR_INVALID_ARGS);
-
     // Resume the exception. It should be SUSPENDED now that the exception is complete (one could
     // argue that it could still be BLOCKED also, but it's not in the current implementation).
     // The transition to SUSPENDED happens asynchronously unlike some of the exception states.
-    ASSERT_EQ(zx_task_resume_from_exception(thread_h, exception_port, 0), ZX_OK);
+    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+    ASSERT_EQ(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE, &state,
+                                     sizeof(state)),
+              ZX_OK);
+    ASSERT_EQ(zx_handle_close(exception), ZX_OK);
     zx_signals_t observed = 0u;
     ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed),
               ZX_OK);
@@ -776,9 +762,9 @@ static bool TestSuspendMultiple() {
     ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING || info.state == ZX_THREAD_STATE_BLOCKED_SLEEPING);
 
     // Clean up.
-    clear_debugger_exception_port();
     ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
     EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
+    ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
     END_TEST;
@@ -830,9 +816,11 @@ static bool TestKillSuspendedThread() {
     zx_handle_t suspend_token = ZX_HANDLE_INVALID;
     ASSERT_TRUE(suspend_thread_synchronous(thread_h, &suspend_token));
 
-    // Attach to debugger port so we can see ZX_EXCP_THREAD_EXITING.
-    zx_handle_t eport;
-    ASSERT_TRUE(set_debugger_exception_port(&eport));
+    // Attach to debugger channel so we can see ZX_EXCP_THREAD_EXITING.
+    zx_handle_t exception_channel;
+    ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                               &exception_channel),
+              ZX_OK);
 
     // Reset the test memory location.
     arg.v = 100;
@@ -846,12 +834,14 @@ static bool TestKillSuspendedThread() {
     EXPECT_EQ(arg.v.load(), 100);
 
     // Check that the thread is reported as exiting and not as resumed.
-    ASSERT_TRUE(wait_thread_excp_type(thread_h, eport, ZX_EXCP_THREAD_EXITING, 0));
+    zx_handle_t exception;
+    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_THREAD_EXITING, 0,
+                                      &exception));
 
     // Clean up.
-    clear_debugger_exception_port();
     ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
-    ASSERT_EQ(zx_handle_close(eport), ZX_OK);
+    ASSERT_EQ(zx_handle_close(exception), ZX_OK);
+    ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 
     END_TEST;
