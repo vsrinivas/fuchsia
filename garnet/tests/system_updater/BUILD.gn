@@ -47,6 +47,11 @@ test_package("systemupdater-tests") {
       name = "system_updater"
       source = "grand_unified_binary"
     },
+    {
+      name = "install-disk-image"
+      source =
+          rebase_path("//garnet/tests/system_updater/install-disk-image.sh")
+    },
   ]
 
   resources = [

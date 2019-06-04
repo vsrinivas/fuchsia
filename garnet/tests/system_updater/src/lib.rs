@@ -16,6 +16,7 @@ use {
     fuchsia_zircon::Status,
     futures::prelude::*,
     parking_lot::Mutex,
+    std::collections::HashMap,
     std::{fs::create_dir, fs::File, path::PathBuf, sync::Arc},
     tempfile::TempDir,
 };
@@ -28,6 +29,7 @@ struct TestEnv {
     _test_dir: TempDir,
     update_path: PathBuf,
     blobfs_path: PathBuf,
+    fake_path: PathBuf,
 }
 
 impl TestEnv {
@@ -80,6 +82,9 @@ impl TestEnv {
         let update_path = test_dir.path().join("update");
         create_dir(&update_path).expect("create update pkg dir");
 
+        let fake_path = test_dir.path().join("fake");
+        create_dir(&fake_path).expect("create fake stimulus dir");
+
         Self {
             env,
             resolver,
@@ -88,14 +93,19 @@ impl TestEnv {
             _test_dir: test_dir,
             update_path,
             blobfs_path,
+            fake_path,
         }
     }
 
-    async fn run_system_updater<'a>(&'a self, args: SystemUpdaterArgs<'a>) {
+    async fn run_system_updater<'a>(
+        &'a self,
+        args: SystemUpdaterArgs<'a>,
+    ) -> Result<(), fuchsia_component::client::OutputError> {
         let launcher = self.launcher();
         let argv = ["-initiator", args.initiator, "-target", args.target];
         let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
         let update_dir = File::open(&self.update_path).expect("open update pkg dir");
+        let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
 
         let system_updater = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/systemupdater-tests#meta/system_updater_isolated.cmx",
@@ -105,6 +115,9 @@ impl TestEnv {
         .expect("/blob to mount")
         .add_dir_to_namespace("/pkgfs/packages/update/0".to_string(), update_dir)
         .expect("/pkgfs/packages/update/0 to mount")
+        .add_dir_to_namespace("/fake".to_string(), fake_dir)
+        .expect("/fake to mount")
+        .stdout(Stdio::MakePipe)
         .stderr(Stdio::MakePipe)
         .spawn(launcher)
         .expect("system_updater to launch");
@@ -113,18 +126,7 @@ impl TestEnv {
             await!(system_updater.wait_with_output()).expect("no errors while waiting for exit");
 
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
-        println!(
-            "system_updater {:?} exited with {}. logs:\n{}\n",
-            argv,
-            output.exit_status.code(),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert!(
-            output.exit_status.success(),
-            "system_updater {:?} exited with {}",
-            argv,
-            output.exit_status.code(),
-        );
+        output.ok()
     }
 }
 
@@ -135,11 +137,12 @@ struct SystemUpdaterArgs<'a> {
 
 struct MockResolverService {
     resolved_uris: Mutex<Vec<String>>,
+    expectations: Mutex<HashMap<String, Status>>,
 }
 
 impl MockResolverService {
     fn new() -> Self {
-        Self { resolved_uris: Mutex::new(vec![]) }
+        Self { resolved_uris: Mutex::new(vec![]), expectations: Mutex::new(HashMap::new()) }
     }
     async fn run_resolver_service(
         self: Arc<Self>,
@@ -154,11 +157,17 @@ impl MockResolverService {
                 responder,
             } = event;
             eprintln!("TEST: Got resolve request for {:?}", package_uri);
+            let response =
+                self.expectations.lock().get(&package_uri).cloned().unwrap_or(Status::OK);
             self.resolved_uris.lock().push(package_uri);
-            responder.send(Status::OK.into_raw())?;
+            responder.send(response.into_raw())?;
         }
 
         Ok(())
+    }
+
+    fn mock_package_result(&self, uri: impl Into<String>, response_code: Status) {
+        self.expectations.lock().insert(uri.into(), response_code);
     }
 }
 
@@ -276,7 +285,8 @@ async fn test_system_update() {
     )
     .expect("create update/packages");
 
-    await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }));
+    await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }))
+        .expect("run system_updater");
 
     assert_eq!(*env.resolver.resolved_uris.lock(), vec![
         "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
@@ -289,4 +299,77 @@ async fn test_system_update() {
     assert_eq!(loggers.len(), 0);
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_failing_package_fetch() {
+    let env = TestEnv::new();
+
+    std::fs::write(
+        env.update_path.join("packages"),
+        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+    )
+    .expect("create update/packages");
+
+    env.resolver.mock_package_result("fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296", Status::NOT_FOUND);
+
+    let result =
+        await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }));
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    assert_eq!(*env.resolver.resolved_uris.lock(), vec![
+        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
+    ]);
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
+    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
+    // is landed. This is being tracked by PKG-723.
+    assert_eq!(loggers.len(), 0);
+
+    assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_working_image_write() {
+    let env = TestEnv::new();
+
+    std::fs::write(env.update_path.join("packages"), "").expect("create update/packages");
+
+    std::fs::write(env.update_path.join("zbi"), "fake_zbi").expect("create update/zbi");
+
+    await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }))
+        .expect("success");
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
+    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
+    // is landed. This is being tracked by PKG-723.
+    assert_eq!(loggers.len(), 0);
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_failing_image_write() {
+    let env = TestEnv::new();
+
+    std::fs::write(env.update_path.join("packages"), "").expect("create update/packages");
+
+    std::fs::write(env.update_path.join("zbi"), "fake_zbi").expect("create update/zbi");
+
+    std::fs::write(env.fake_path.join("install-disk-image-should-fail"), "for sure")
+        .expect("create fake/install-disk-image-should-fail");
+
+    let result =
+        await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }));
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
+    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
+    // is landed. This is being tracked by PKG-723.
+    assert_eq!(loggers.len(), 0);
+
+    assert_eq!(*env.reboot_service.called.lock(), 0);
 }
