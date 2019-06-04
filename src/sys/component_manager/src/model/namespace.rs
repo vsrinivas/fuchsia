@@ -87,6 +87,10 @@ impl IncomingNamespace {
                 cm_rust::UseDecl::Service(s) => {
                     Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
                 }
+                cm_rust::UseDecl::Storage(_) => {
+                    error!("storage capabilities are not supported");
+                    return Err(ModelError::ComponentInvalid);
+                }
             }
         }
 

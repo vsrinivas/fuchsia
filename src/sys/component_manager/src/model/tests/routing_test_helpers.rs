@@ -44,6 +44,7 @@ pub fn default_component_decl() -> ComponentDecl {
         children: Vec::new(),
         collections: Vec::new(),
         facets: None,
+        storage: Vec::new(),
     }
 }
 
@@ -145,6 +146,7 @@ fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
     match capability {
         Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
         Capability::Directory(_) => out_dir.get_or_insert(OutDir::new()).add_directory(),
+        Capability::Storage(_) => panic!("storage capabilities are not supported"),
     }
 }
 
@@ -288,6 +290,7 @@ async fn check_namespace(
         .map(|u| match u {
             UseDecl::Directory(d) => d.target_path.to_string(),
             UseDecl::Service(s) => s.target_path.dirname,
+            UseDecl::Storage(_) => panic!("storage capabilites are not supported"),
         })
         .collect();
     let mut expected_paths = vec![];
@@ -358,6 +361,7 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
             let source = match offer {
                 OfferDecl::Service(s) => &s.source,
                 OfferDecl::Directory(d) => &d.source,
+                OfferDecl::Storage(_) => panic!("storage capabilities are not supported"),
             };
             if *source == OfferSource::Myself {
                 host_capability(&mut out_dir, &offer.clone().into());
@@ -411,6 +415,7 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
             Capability::Directory(path) => {
                 await!(read_data(path, component_resolved_url, namespaces.clone(), should_succeed))
             }
+            Capability::Storage(_) => panic!("storage capabilities are not supported"),
         };
     }
 }

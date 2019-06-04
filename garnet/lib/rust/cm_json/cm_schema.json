@@ -28,6 +28,14 @@
       "minLength": 1,
       "maxLength": 100
     },
+    "storage-type-clause": {
+      "type": "string",
+      "enum": [
+        "data",
+        "cache",
+        "meta"
+      ]
+    },
     "expose-source-clause": {
       "title": "Exposed capability source component",
       "type": "object",
@@ -93,6 +101,71 @@
         }
       }
     },
+    "offer-storage-source-clause": {
+      "title": "Offered storage capability source component",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [ "realm" ]
+        },
+        {
+          "required": [ "storage" ]
+        }
+      ],
+      "properties": {
+        "realm": {
+          "type": "object",
+          "title": "Component's containing realm (parent component)"
+        },
+        "storage": {
+          "type": "object",
+          "title": "Component's storage section",
+          "required": [ "name" ],
+          "properties": {
+            "name": {
+              "title": "Storage section name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
+            }
+          }
+        }
+      }
+    },
+    "offer-dest-clause": {
+      "title": "Offered capability target component",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [ "child" ]
+        },
+        {
+          "required": [ "collection" ]
+        }
+      ],
+      "properties": {
+        "child": {
+          "type": "object",
+          "title": "Offered target component's child",
+          "required": [ "name" ],
+          "properties": {
+            "name": {
+              "title": "Child name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
+            }
+          }
+        },
+        "collection": {
+          "type": "object",
+          "title": "Offered target component's collection",
+          "required": [ "name" ],
+          "properties": {
+            "name": {
+              "title": "Collection name",
+              "allOf": [{ "$ref": "#/definitions/name-clause" }]
+            }
+          }
+        }
+      }
+    },
     "offer-targets-clause": {
       "title": "Offered capability targets",
       "type": "array",
@@ -111,40 +184,7 @@
             "allOf": [{ "$ref": "#/definitions/path-clause" }]
           },
           "dest": {
-            "title": "Offered capability target component",
-            "type": "object",
-            "oneOf": [
-              {
-                "required": [ "child" ]
-              },
-              {
-                "required": [ "collection" ]
-              }
-            ],
-            "properties": {
-              "child": {
-                "type": "object",
-                "title": "Offered target component's child",
-                "required": [ "name" ],
-                "properties": {
-                  "name": {
-                    "title": "Child name",
-                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
-                  }
-                }
-              },
-              "collection": {
-                "type": "object",
-                "title": "Offered target component's collection",
-                "required": [ "name" ],
-                "properties": {
-                  "name": {
-                    "title": "Collection name",
-                    "allOf": [{ "$ref": "#/definitions/name-clause" }]
-                  }
-                }
-              }
-            }
+            "allOf": [{ "$ref": "#/definitions/offer-dest-clause" }]
           }
         }
       }
@@ -167,6 +207,9 @@
           },
           {
             "required": [ "directory" ]
+          },
+          {
+            "required": [ "storage" ]
           }
         ],
         "properties": {
@@ -190,7 +233,7 @@
           },
           "directory": {
             "type": "object",
-            "title": "Used service capability",
+            "title": "Used directory capability",
             "required": [
               "source_path",
               "target_path"
@@ -199,6 +242,24 @@
               "source_path": {
                 "title": "Used service source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
+              },
+              "target_path": {
+                "allOf": [{ "$ref": "#/definitions/path-clause" }],
+                "title": "Used service target path"
+              }
+            }
+          },
+          "storage": {
+            "type": "object",
+            "title": "Used storage capability",
+            "required": [
+              "type",
+              "target_path"
+            ],
+            "properties": {
+              "type": {
+                "title": "Used storage type",
+                "allOf": [{ "$ref": "#/definitions/storage-type-clause" }]
               },
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
@@ -285,6 +346,9 @@
           },
           {
             "required": [ "directory" ]
+          },
+          {
+            "required": [ "storage" ]
           }
         ],
         "properties": {
@@ -329,6 +393,32 @@
                 "allOf": [{ "$ref": "#/definitions/offer-targets-clause" }]
               }
             }
+          },
+          "storage": {
+            "required": [
+              "type",
+              "source",
+              "dests"
+            ],
+            "properties": {
+              "type": {
+                "title": "Offered storage type",
+                "allOf": [{ "$ref": "#/definitions/storage-type-clause" }]
+              },
+              "source": {
+                "title": "Offered storage source component",
+                "allOf": [{ "$ref": "#/definitions/offer-storage-source-clause" }]
+              },
+              "dests": {
+                "title": "Offered storage targets",
+                "type": "array",
+                "uniqueItems": true,
+                "minItems": 1,
+                "items": {
+                  "allOf": [{ "$ref": "#/definitions/offer-dest-clause" }]
+                }
+              }
+            }
           }
         }
       }
@@ -356,6 +446,33 @@
           "startup": {
             "allOf": [{ "$ref": "#/definitions/startup-clause" }],
             "title": "Startup mode"
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "array",
+      "title": "Storage capability declarations",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "source_path",
+          "source"
+        ],
+        "properties": {
+          "name": {
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "title": "Child component name"
+          },
+          "source_path": {
+            "title": "Backing directory source path",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }]
+          },
+          "source": {
+            "title": "Backing directory source component",
+            "allOf": [{ "$ref": "#/definitions/offer-source-clause" }]
           }
         }
       }
@@ -389,4 +506,3 @@
     }
   }
 }
-

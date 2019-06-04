@@ -31,6 +31,7 @@ pub enum Error {
     OfferTargetEqualsSource(String),
     InvalidChild(String, String),
     InvalidCollection(String, String),
+    InvalidStorage(String, String),
 }
 
 impl Error {
@@ -80,6 +81,10 @@ impl Error {
     pub fn invalid_collection(decl_type: impl Into<String>, collection: impl Into<String>) -> Self {
         Error::InvalidCollection(decl_type.into(), collection.into())
     }
+
+    pub fn invalid_storage(decl_type: impl Into<String>, storage: impl Into<String>) -> Self {
+        Error::InvalidStorage(decl_type.into(), storage.into())
+    }
 }
 
 impl error::Error for Error {}
@@ -104,6 +109,9 @@ impl fmt::Display for Error {
             }
             Error::InvalidCollection(d, c) => {
                 write!(f, "\"{}\" is referenced in {} but it does not appear in collections", c, d)
+            }
+            Error::InvalidStorage(d, s) => {
+                write!(f, "\"{}\" is referenced in {} but it does not appear in storage", s, d)
             }
         }
     }
@@ -142,6 +150,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         decl,
         all_children: HashSet::new(),
         all_collections: HashSet::new(),
+        all_storage: HashSet::new(),
         child_target_paths: HashMap::new(),
         collection_target_paths: HashMap::new(),
         errors: vec![],
@@ -153,6 +162,7 @@ struct ValidationContext<'a> {
     decl: &'a fsys::ComponentDecl,
     all_children: HashSet<&'a str>,
     all_collections: HashSet<&'a str>,
+    all_storage: HashSet<&'a str>,
     child_target_paths: PathMap<'a>,
     collection_target_paths: PathMap<'a>,
     errors: Vec<Error>,
@@ -173,6 +183,13 @@ impl<'a> ValidationContext<'a> {
         if let Some(collections) = self.decl.collections.as_ref() {
             for collection in collections.iter() {
                 self.validate_collection_decl(&collection);
+            }
+        }
+
+        // Validate "storage" and build the set of all storage sections.
+        if let Some(storage) = self.decl.storage.as_ref() {
+            for storage in storage.iter() {
+                self.validate_storage_decl(&storage);
             }
         }
 
@@ -221,6 +238,22 @@ impl<'a> ValidationContext<'a> {
                     u.target_path.as_ref(),
                 );
             }
+            fsys::UseDecl::Storage(u) => match u.type_ {
+                None => self.errors.push(Error::missing_field("UseStorageDecl", "type")),
+                Some(fsys::StorageType::Meta) => {
+                    if u.target_path.is_some() {
+                        self.errors.push(Error::invalid_field("UseStorageDecl", "target_path"));
+                    }
+                }
+                _ => {
+                    PATH.check(
+                        u.target_path.as_ref(),
+                        "UseStorageDecl",
+                        "target_path",
+                        &mut self.errors,
+                    );
+                }
+            },
             fsys::UseDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
             }
@@ -264,6 +297,27 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
+        if NAME.check(storage.name.as_ref(), "StorageDecl", "name", &mut self.errors) {
+            let name = storage.name.as_ref().unwrap();
+            if !self.all_storage.insert(name) {
+                self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
+            }
+        }
+        PATH.check(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
+        match storage.source.as_ref() {
+            Some(fsys::OfferSource::Realm(_)) => {}
+            Some(fsys::OfferSource::Myself(_)) => {}
+            Some(fsys::OfferSource::Child(child)) => {
+                self.validate_source_child(child, "StorageDecl")
+            }
+            Some(fsys::OfferSource::__UnknownVariant { .. }) => {
+                self.errors.push(Error::invalid_field("StorageDecl", "source"))
+            }
+            None => self.errors.push(Error::missing_field("StorageDecl", "source")),
+        }
+    }
+
     fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
         let mut valid = true;
         valid &= NAME.check(child.name.as_ref(), decl_type, "source.child.name", &mut self.errors);
@@ -285,6 +339,21 @@ impl<'a> ValidationContext<'a> {
             }
         } else {
             self.errors.push(Error::missing_field(decl_type, "source.child.name"));
+        }
+    }
+
+    fn validate_storage_source(&mut self, source: &fsys::StorageRef, decl_type: &str) {
+        if NAME.check(source.name.as_ref(), decl_type, "source.storage.name", &mut self.errors) {
+            if let Some(storage_name) = &source.name {
+                if !self.all_storage.contains(storage_name as &str) {
+                    self.errors.push(Error::invalid_storage(
+                        format!("{} source", decl_type),
+                        storage_name as &str,
+                    ));
+                }
+            } else {
+                self.errors.push(Error::missing_field(decl_type, "source.storage.name"));
+            }
         }
     }
 
@@ -370,6 +439,14 @@ impl<'a> ValidationContext<'a> {
                     o.targets.as_ref(),
                 );
             }
+            fsys::OfferDecl::Storage(o) => {
+                self.validate_storage_offer_fields(
+                    "OfferStorageDecl",
+                    o.type_.as_ref(),
+                    o.source.as_ref(),
+                    o.dests.as_ref(),
+                );
+            }
             fsys::OfferDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
             }
@@ -384,25 +461,44 @@ impl<'a> ValidationContext<'a> {
         targets: Option<&'a Vec<fsys::OfferTarget>>,
     ) {
         match source {
-            Some(r) => match r {
-                fsys::OfferSource::Realm(_) => {}
-                fsys::OfferSource::Myself(_) => {}
-                fsys::OfferSource::Child(child) => {
-                    self.validate_source_child(child, decl);
-                }
-                fsys::OfferSource::__UnknownVariant { .. } => {
-                    self.errors.push(Error::invalid_field(decl, "source"));
-                }
-            },
-            None => {
-                self.errors.push(Error::missing_field(decl, "source"));
+            Some(fsys::OfferSource::Realm(_)) => {}
+            Some(fsys::OfferSource::Myself(_)) => {}
+            Some(fsys::OfferSource::Child(child)) => self.validate_source_child(child, decl),
+            Some(fsys::OfferSource::__UnknownVariant { .. }) => {
+                self.errors.push(Error::invalid_field(decl, "source"))
             }
+            None => self.errors.push(Error::missing_field(decl, "source")),
         }
         PATH.check(source_path, decl, "source_path", &mut self.errors);
         if let Some(targets) = targets {
             self.validate_targets(decl, source, targets);
         } else {
             self.errors.push(Error::missing_field(decl, "targets"));
+        }
+    }
+
+    fn validate_storage_offer_fields(
+        &mut self,
+        decl: &str,
+        type_: Option<&fsys::StorageType>,
+        source: Option<&fsys::OfferStorageSource>,
+        dests: Option<&'a Vec<fsys::OfferDest>>,
+    ) {
+        if type_.is_none() {
+            self.errors.push(Error::missing_field(decl, "type"));
+        }
+        match source {
+            Some(fsys::OfferStorageSource::Realm(_)) => {}
+            Some(fsys::OfferStorageSource::Storage(s)) => self.validate_storage_source(s, decl),
+            Some(fsys::OfferStorageSource::__UnknownVariant { .. }) => {
+                self.errors.push(Error::invalid_field(decl, "source"))
+            }
+            None => self.errors.push(Error::missing_field(decl, "source")),
+        }
+        if let Some(dests) = dests {
+            self.validate_dests(decl, dests);
+        } else {
+            self.errors.push(Error::missing_field(decl, "dests"));
         }
     }
 
@@ -457,6 +553,52 @@ impl<'a> ValidationContext<'a> {
                 },
                 None => {
                     errors.push(Error::missing_field("OfferTarget", "dest"));
+                }
+            }
+        }
+    }
+
+    fn validate_dests(&mut self, decl: &str, dests: &'a Vec<fsys::OfferDest>) {
+        if dests.is_empty() {
+            self.errors.push(Error::empty_field(decl, "dests"));
+        }
+        for dest in dests {
+            match dest {
+                fsys::OfferDest::Child(c) => {
+                    if !NAME.check(
+                        c.name.as_ref(),
+                        "OfferDest",
+                        "dest.child.name",
+                        &mut self.errors,
+                    ) {
+                        continue;
+                    }
+                    if c.collection.is_some() {
+                        self.errors
+                            .push(Error::extraneous_field("OfferDest", "dest.child.collection"));
+                        continue;
+                    }
+                    let name: &str = c.name.as_ref().unwrap();
+                    if !self.all_children.contains(name) {
+                        self.errors.push(Error::invalid_child("OfferDest", name));
+                    }
+                }
+                fsys::OfferDest::Collection(c) => {
+                    if !NAME.check(
+                        c.name.as_ref(),
+                        "OfferDest",
+                        "dest.collection.name",
+                        &mut self.errors,
+                    ) {
+                        continue;
+                    }
+                    let name: &str = c.name.as_ref().unwrap();
+                    if !self.all_collections.contains(name) {
+                        self.errors.push(Error::invalid_collection("OfferDest", name));
+                    }
+                }
+                fsys::OfferDest::__UnknownVariant { .. } => {
+                    self.errors.push(Error::invalid_field(decl, "dest"))
                 }
             }
         }
@@ -578,8 +720,9 @@ mod tests {
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDest,
-            OfferDirectoryDecl, OfferServiceDecl, OfferSource, OfferTarget, RealmRef, SelfRef,
-            StartupMode, UseDecl, UseDirectoryDecl, UseServiceDecl,
+            OfferDirectoryDecl, OfferServiceDecl, OfferSource, OfferStorageDecl,
+            OfferStorageSource, OfferTarget, RealmRef, SelfRef, StartupMode, StorageDecl,
+            StorageType, UseDecl, UseDirectoryDecl, UseServiceDecl, UseStorageDecl,
         },
     };
 
@@ -634,6 +777,10 @@ mod tests {
         assert_eq!(
             format!("{}", Error::invalid_collection("Decl", "child")),
             "\"child\" is referenced in Decl but it does not appear in collections"
+        );
+        assert_eq!(
+            format!("{}", Error::invalid_storage("Decl", "name")),
+            "\"name\" is referenced in Decl but it does not appear in storage"
         );
     }
 
@@ -756,6 +903,14 @@ mod tests {
                         source_path: None,
                         target_path: None,
                     }),
+                    UseDecl::Storage(UseStorageDecl {
+                        type_: None,
+                        target_path: None,
+                    }),
+                    UseDecl::Storage(UseStorageDecl {
+                        type_: Some(StorageType::Cache),
+                        target_path: None,
+                    }),
                 ]);
                 decl
             },
@@ -764,6 +919,8 @@ mod tests {
                 Error::missing_field("UseServiceDecl", "target_path"),
                 Error::missing_field("UseDirectoryDecl", "source_path"),
                 Error::missing_field("UseDirectoryDecl", "target_path"),
+                Error::missing_field("UseStorageDecl", "type"),
+                Error::missing_field("UseStorageDecl", "target_path"),
             ])),
         },
         test_validate_uses_invalid_identifiers => {
@@ -778,6 +935,14 @@ mod tests {
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
+                    UseDecl::Storage(UseStorageDecl {
+                        type_: Some(StorageType::Cache),
+                        target_path: Some("/".to_string()),
+                    }),
+                    UseDecl::Storage(UseStorageDecl {
+                        type_: Some(StorageType::Meta),
+                        target_path: Some("/meta".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -786,6 +951,8 @@ mod tests {
                 Error::invalid_field("UseServiceDecl", "target_path"),
                 Error::invalid_field("UseDirectoryDecl", "source_path"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
+                Error::invalid_field("UseStorageDecl", "target_path"),
+                Error::invalid_field("UseStorageDecl", "target_path"),
             ])),
         },
         test_validate_uses_long_identifiers => {
@@ -800,6 +967,10 @@ mod tests {
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
+                    UseDecl::Storage(UseStorageDecl {
+                        type_: Some(StorageType::Cache),
+                        target_path: Some(format!("/{}", "b".repeat(1024))),
+                    }),
                 ]);
                 decl
             },
@@ -808,6 +979,7 @@ mod tests {
                 Error::field_too_long("UseServiceDecl", "target_path"),
                 Error::field_too_long("UseDirectoryDecl", "source_path"),
                 Error::field_too_long("UseDirectoryDecl", "target_path"),
+                Error::field_too_long("UseStorageDecl", "target_path"),
             ])),
         },
 
@@ -1019,6 +1191,11 @@ mod tests {
                         source: None,
                         source_path: None,
                         targets: None,
+                    }),
+                    OfferDecl::Storage(OfferStorageDecl {
+                        type_: None,
+                        source: None,
+                        dests: None,
                     })
                 ]);
                 decl
@@ -1030,6 +1207,9 @@ mod tests {
                 Error::missing_field("OfferDirectoryDecl", "source"),
                 Error::missing_field("OfferDirectoryDecl", "source_path"),
                 Error::missing_field("OfferDirectoryDecl", "targets"),
+                Error::missing_field("OfferStorageDecl", "type"),
+                Error::missing_field("OfferStorageDecl", "source"),
+                Error::missing_field("OfferStorageDecl", "dests"),
             ])),
         },
         test_validate_offers_long_identifiers => {
@@ -1084,6 +1264,21 @@ mod tests {
                             },
                         ]),
                     }),
+                    OfferDecl::Storage(OfferStorageDecl {
+                        type_: Some(StorageType::Data),
+                        source: Some(OfferStorageSource::Realm(RealmRef { })),
+                        dests: Some(vec![
+                            OfferDest::Child(
+                               ChildRef {
+                                   name: Some("b".repeat(101)),
+                                   collection: None,
+                               }
+                            ),
+                            OfferDest::Collection(
+                               CollectionRef { name: Some("b".repeat(101)) }
+                            )
+                        ]),
+                    }),
                 ]);
                 decl
             },
@@ -1100,6 +1295,8 @@ mod tests {
                 Error::field_too_long("OfferTarget", "dest.child.name"),
                 Error::field_too_long("OfferTarget", "target_path"),
                 Error::field_too_long("OfferTarget", "dest.collection.name"),
+                Error::field_too_long("OfferDest", "dest.child.name"),
+                Error::field_too_long("OfferDest", "dest.collection.name"),
             ])),
         },
         test_validate_offers_extraneous => {
@@ -1142,6 +1339,18 @@ mod tests {
                             },
                         ]),
                     }),
+                    OfferDecl::Storage(OfferStorageDecl {
+                        type_: Some(StorageType::Data),
+                        source: Some(OfferStorageSource::Realm(RealmRef{ })),
+                        dests: Some(vec![
+                            OfferDest::Child(
+                               ChildRef {
+                                   name: Some("netstack".to_string()),
+                                   collection: Some("modular".to_string()),
+                               }
+                            ),
+                        ]),
+                    }),
                 ]);
                 decl
             },
@@ -1150,6 +1359,7 @@ mod tests {
                 Error::extraneous_field("OfferTarget", "dest.child.collection"),
                 Error::extraneous_field("OfferDirectoryDecl", "source.child.collection"),
                 Error::extraneous_field("OfferTarget", "dest.child.collection"),
+                Error::extraneous_field("OfferDest", "dest.child.collection"),
             ])),
         },
         test_validate_offers_invalid_child => {
@@ -1190,6 +1400,16 @@ mod tests {
                         ]),
                     }),
                 ]);
+                decl.storage = Some(vec![
+                    StorageDecl {
+                        name: Some("memfs".to_string()),
+                        source_path: Some("/memfs".to_string()),
+                        source: Some(OfferSource::Child(ChildRef {
+                            name: Some("logger".to_string()),
+                            collection: None,
+                        })),
+                    },
+                ]);
                 decl.children = Some(vec![
                     ChildDecl{
                         name: Some("netstack".to_string()),
@@ -1206,6 +1426,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_child("StorageDecl source", "logger"),
                 Error::invalid_child("OfferServiceDecl source", "logger"),
                 Error::invalid_child("OfferDirectoryDecl source", "logger"),
             ])),
@@ -1248,12 +1469,18 @@ mod tests {
                         source_path: Some("/data/assets".to_string()),
                         targets: Some(vec![]),
                     }),
+                    OfferDecl::Storage(OfferStorageDecl {
+                        type_: Some(StorageType::Data),
+                        source: Some(OfferStorageSource::Realm(RealmRef{})),
+                        dests: Some(vec![]),
+                    }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::empty_field("OfferServiceDecl", "targets"),
                 Error::empty_field("OfferDirectoryDecl", "targets"),
+                Error::empty_field("OfferStorageDecl", "dests"),
             ])),
         },
         test_validate_offers_target_equals_from => {
@@ -1442,6 +1669,30 @@ mod tests {
                             },
                         ]),
                     }),
+                    OfferDecl::Storage(OfferStorageDecl {
+                        type_: Some(StorageType::Data),
+                        source: Some(OfferStorageSource::Realm(RealmRef{})),
+                        dests: Some(vec![
+                            OfferDest::Child(
+                               ChildRef {
+                                   name: Some("netstack".to_string()),
+                                   collection: None,
+                               }
+                            ),
+                            OfferDest::Collection(
+                               CollectionRef { name: Some("modular".to_string()) }
+                            ),
+                            OfferDest::Child(
+                               ChildRef {
+                                   name: None,
+                                   collection: None,
+                               }
+                            ),
+                            OfferDest::Collection(
+                               CollectionRef { name: None }
+                            ),
+                        ]),
+                    }),
                 ]);
                 decl
             },
@@ -1450,6 +1701,10 @@ mod tests {
                 Error::invalid_collection("OfferTarget dest", "modular"),
                 Error::missing_field("OfferTarget", "dest.child.name"),
                 Error::missing_field("OfferTarget", "dest.collection.name"),
+                Error::invalid_child("OfferDest", "netstack"),
+                Error::invalid_collection("OfferDest", "modular"),
+                Error::missing_field("OfferDest", "dest.child.name"),
+                Error::missing_field("OfferDest", "dest.collection.name"),
             ])),
         },
 
@@ -1540,6 +1795,21 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("CollectionDecl", "name"),
+            ])),
+        },
+        test_validate_storage_long_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.storage = Some(vec![StorageDecl{
+                    name: Some("a".repeat(101)),
+                    source_path: Some(format!("/{}", "a".repeat(1024))),
+                    source: Some(OfferSource::Myself(SelfRef{})),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::field_too_long("StorageDecl", "name"),
+                Error::field_too_long("StorageDecl", "source_path"),
             ])),
         },
     }

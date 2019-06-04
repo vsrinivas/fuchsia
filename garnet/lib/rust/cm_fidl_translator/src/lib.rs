@@ -68,7 +68,9 @@ cm_into_opt_vec!(fsys::ExposeDecl, cm::Expose);
 cm_into_opt_vec!(fsys::OfferDecl, cm::Offer);
 cm_into_opt_vec!(fsys::ChildDecl, cm::Child);
 cm_into_opt_vec!(fsys::CollectionDecl, cm::Collection);
+cm_into_opt_vec!(fsys::StorageDecl, cm::Storage);
 cm_into_vec!(fsys::OfferTarget, cm::Target);
+cm_into_vec!(fsys::OfferDest, cm::OfferDest);
 
 impl CmInto<fsys::ComponentDecl> for cm::Document {
     fn cm_into(self) -> Result<fsys::ComponentDecl, Error> {
@@ -80,7 +82,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             children: self.children.cm_into()?,
             collections: self.collections.cm_into()?,
             facets: self.facets.cm_into()?,
-            storage: None,
+            storage: self.storage.cm_into()?,
         })
     }
 }
@@ -90,6 +92,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
         Ok(match self {
             cm::Use::Service(s) => fsys::UseDecl::Service(s.cm_into()?),
             cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
+            cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
         })
     }
 }
@@ -108,6 +111,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
         Ok(match self {
             cm::Offer::Service(s) => fsys::OfferDecl::Service(s.cm_into()?),
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
+            cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
         })
     }
 }
@@ -125,6 +129,15 @@ impl CmInto<fsys::UseDirectoryDecl> for cm::UseDirectory {
     fn cm_into(self) -> Result<fsys::UseDirectoryDecl, Error> {
         Ok(fsys::UseDirectoryDecl {
             source_path: Some(self.source_path),
+            target_path: Some(self.target_path),
+        })
+    }
+}
+
+impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
+    fn cm_into(self) -> Result<fsys::UseStorageDecl, Error> {
+        Ok(fsys::UseStorageDecl {
+            type_: Some(self.type_.cm_into()?),
             target_path: Some(self.target_path),
         })
     }
@@ -170,6 +183,37 @@ impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
     }
 }
 
+impl CmInto<fsys::OfferStorageDecl> for cm::OfferStorage {
+    fn cm_into(self) -> Result<fsys::OfferStorageDecl, Error> {
+        Ok(fsys::OfferStorageDecl {
+            type_: Some(self.type_.cm_into()?),
+            source: Some(self.source.cm_into()?),
+            dests: Some(self.dests.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::StorageType> for cm::StorageType {
+    fn cm_into(self) -> Result<fsys::StorageType, Error> {
+        match self {
+            cm::StorageType::Data => Ok(fsys::StorageType::Data),
+            cm::StorageType::Cache => Ok(fsys::StorageType::Cache),
+            cm::StorageType::Meta => Ok(fsys::StorageType::Meta),
+        }
+    }
+}
+
+impl CmInto<fsys::OfferStorageSource> for cm::OfferStorageSource {
+    fn cm_into(self) -> Result<fsys::OfferStorageSource, Error> {
+        match self {
+            cm::OfferStorageSource::Realm(r) => Ok(fsys::OfferStorageSource::Realm(r.cm_into()?)),
+            cm::OfferStorageSource::Storage(s) => {
+                Ok(fsys::OfferStorageSource::Storage(s.cm_into()?))
+            }
+        }
+    }
+}
+
 impl CmInto<fsys::ChildDecl> for cm::Child {
     fn cm_into(self) -> Result<fsys::ChildDecl, Error> {
         Ok(fsys::ChildDecl {
@@ -185,6 +229,16 @@ impl CmInto<fsys::CollectionDecl> for cm::Collection {
         Ok(fsys::CollectionDecl {
             name: Some(self.name),
             durability: Some(durability_from_str(&self.durability)?),
+        })
+    }
+}
+
+impl CmInto<fsys::StorageDecl> for cm::Storage {
+    fn cm_into(self) -> Result<fsys::StorageDecl, Error> {
+        Ok(fsys::StorageDecl {
+            name: Some(self.name),
+            source_path: Some(self.source_path),
+            source: Some(self.source.cm_into()?),
         })
     }
 }
@@ -229,6 +283,12 @@ impl CmInto<fsys::ChildRef> for cm::ChildRef {
 impl CmInto<fsys::CollectionRef> for cm::CollectionRef {
     fn cm_into(self) -> Result<fsys::CollectionRef, Error> {
         Ok(fsys::CollectionRef { name: Some(self.name) })
+    }
+}
+
+impl CmInto<fsys::StorageRef> for cm::StorageRef {
+    fn cm_into(self) -> Result<fsys::StorageRef, Error> {
+        Ok(fsys::StorageRef { name: Some(self.name) })
     }
 }
 
@@ -499,6 +559,12 @@ mod tests {
                             "source_path": "/data/assets",
                             "target_path": "/data"
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "cache",
+                            "target_path": "/cache"
+                        }
                     }
                 ]
             }),
@@ -515,6 +581,10 @@ mod tests {
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source_path: Some("/data/assets".to_string()),
                         target_path: Some("/data".to_string()),
+                    }),
+                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
+                        type_: Some(fsys::StorageType::Cache),
+                        target_path: Some("/cache".to_string()),
                     }),
                 ];
                 let mut decl = new_component_decl();
@@ -649,6 +719,48 @@ mod tests {
                                 }
                             ]
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "source": {
+                                "storage": {
+                                    "name": "memfs"
+                                }
+                            },
+                            "dests": [
+                                {
+                                    "collection": {
+                                        "name": "modular"
+                                    }
+                                },
+                                {
+                                    "child": {
+                                        "name": "logger"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "meta",
+                            "source": {
+                                "realm": {}
+                            },
+                            "dests": [
+                                {
+                                    "collection": {
+                                        "name": "modular"
+                                    }
+                                },
+                                {
+                                    "child": {
+                                        "name": "logger"
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ],
                 "children": [
@@ -667,6 +779,15 @@ mod tests {
                     {
                         "name": "modular",
                         "durability": "persistent"
+                    }
+                ],
+                "storage": [
+                    {
+                        "name": "memfs",
+                        "source_path": "/memfs",
+                        "source": {
+                            "myself": {}
+                        }
                     }
                 ],
             }),
@@ -723,6 +844,32 @@ mod tests {
                             },
                         ]),
                     }),
+                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                        type_: Some(fsys::StorageType::Data),
+                        source: Some(fsys::OfferStorageSource::Storage(fsys::StorageRef {
+                            name: Some("memfs".to_string()),
+                        })),
+                        dests: Some(vec![
+                            fsys::OfferDest::Collection(
+                               fsys::CollectionRef { name: Some("modular".to_string()) }
+                            ),
+                            fsys::OfferDest::Child(
+                               fsys::ChildRef { name: Some("logger".to_string()), collection: None }
+                            ),
+                        ]),
+                    }),
+                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                        type_: Some(fsys::StorageType::Meta),
+                        source: Some(fsys::OfferStorageSource::Realm(fsys::RealmRef { })),
+                        dests: Some(vec![
+                            fsys::OfferDest::Collection(
+                               fsys::CollectionRef { name: Some("modular".to_string()) }
+                            ),
+                            fsys::OfferDest::Child(
+                               fsys::ChildRef { name: Some("logger".to_string()), collection: None }
+                            ),
+                        ]),
+                    }),
                 ];
                 let children = vec![
                     fsys::ChildDecl{
@@ -742,10 +889,18 @@ mod tests {
                         durability: Some(fsys::Durability::Persistent),
                     },
                 ];
+                let storages = vec![
+                    fsys::StorageDecl {
+                        name: Some("memfs".to_string()),
+                        source_path: Some("/memfs".to_string()),
+                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                    },
+                ];
                 let mut decl = new_component_decl();
                 decl.offers = Some(offers);
                 decl.children = Some(children);
                 decl.collections = Some(collections);
+                decl.storage = Some(storages);
                 decl
             },
         },
@@ -846,6 +1001,32 @@ mod tests {
                 decl
             },
         },
+        test_translate_storage => {
+            input = json!({
+                "storage": [
+                    {
+                        "name": "memfs",
+                        "source_path": "/memfs",
+                        "source": {
+                            "myself": {}
+                        }
+                    }
+                ]
+            }),
+            output = {
+                let storages = vec![
+                    fsys::StorageDecl {
+                        name: Some("memfs".to_string()),
+                        source_path: Some("/memfs".to_string()),
+                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                    },
+                ];
+                let mut decl = new_component_decl();
+                decl.storage = Some(storages);
+                decl
+
+            },
+        },
         test_translate_all_sections => {
             input = json!({
                 "program": {
@@ -921,7 +1102,16 @@ mod tests {
                 "facets": {
                     "author": "Fuchsia",
                     "year": 2018
-                }
+                },
+                "storage": [
+                    {
+                        "name": "memfs",
+                        "source_path": "/memfs",
+                        "source": {
+                            "myself": {}
+                        }
+                    }
+                ]
             }),
             output = {
                 let program = fdata::Dictionary {entries: vec![
@@ -997,6 +1187,13 @@ mod tests {
                         value: Some(Box::new(fdata::Value::Inum(2018))),
                     },
                 ]};
+                let storages = vec![
+                    fsys::StorageDecl {
+                        name: Some("memfs".to_string()),
+                        source_path: Some("/memfs".to_string()),
+                        source: Some(fsys::OfferSource::Myself(fsys::SelfRef{})),
+                    },
+                ];
                 fsys::ComponentDecl {
                     program: Some(program),
                     uses: Some(uses),
@@ -1005,7 +1202,7 @@ mod tests {
                     children: Some(children),
                     collections: Some(collections),
                     facets: Some(facets),
-                    storage: None,
+                    storage: Some(storages),
                 }
             },
         },

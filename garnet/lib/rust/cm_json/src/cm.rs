@@ -23,6 +23,8 @@ pub struct Document {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collections: Option<Vec<Collection>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage: Option<Vec<Storage>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub facets: Option<Map<String, Value>>,
 }
 
@@ -40,11 +42,20 @@ pub struct Collection {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Storage {
+    pub name: String,
+    pub source_path: String,
+    pub source: OfferSource,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Use {
     #[serde(rename = "service")]
     Service(UseService),
     #[serde(rename = "directory")]
     Directory(UseDirectory),
+    #[serde(rename = "storage")]
+    Storage(UseStorage),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,6 +67,13 @@ pub struct UseService {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UseDirectory {
     pub source_path: String,
+    pub target_path: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseStorage {
+    #[serde(rename = "type")]
+    pub type_: StorageType,
     pub target_path: String,
 }
 
@@ -87,6 +105,8 @@ pub enum Offer {
     Service(OfferService),
     #[serde(rename = "directory")]
     Directory(OfferDirectory),
+    #[serde(rename = "storage")]
+    Storage(OfferStorage),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -101,6 +121,14 @@ pub struct OfferDirectory {
     pub source: OfferSource,
     pub source_path: String,
     pub targets: Vec<Target>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferStorage {
+    #[serde(rename = "type")]
+    pub type_: StorageType,
+    pub source: OfferStorageSource,
+    pub dests: Vec<OfferDest>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -119,6 +147,24 @@ pub enum OfferSource {
     Myself(SelfRef),
     #[serde(rename = "child")]
     Child(ChildRef),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum OfferStorageSource {
+    #[serde(rename = "realm")]
+    Realm(RealmRef),
+    #[serde(rename = "storage")]
+    Storage(StorageRef),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum StorageType {
+    #[serde(rename = "data")]
+    Data,
+    #[serde(rename = "cache")]
+    Cache,
+    #[serde(rename = "meta")]
+    Meta,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -148,5 +194,10 @@ pub struct ChildRef {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CollectionRef {
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StorageRef {
     pub name: String,
 }

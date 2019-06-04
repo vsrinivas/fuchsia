@@ -165,6 +165,7 @@ pub struct ComponentDecl {
     pub offers: Vec<OfferDecl>,
     pub children: Vec<ChildDecl>,
     pub collections: Vec<CollectionDecl>,
+    pub storage: Vec<StorageDecl>,
     pub facets: Option<fdata::Dictionary>,
 }
 
@@ -177,6 +178,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             offers: self.offers.fidl_into_native(),
             children: self.children.fidl_into_native(),
             collections: self.collections.fidl_into_native(),
+            storage: self.storage.fidl_into_native(),
             facets: self.facets.fidl_into_native(),
         }
     }
@@ -191,8 +193,8 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             offers: self.offers.native_into_fidl(),
             children: self.children.native_into_fidl(),
             collections: self.collections.native_into_fidl(),
+            storage: self.storage.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
-            storage: None,
         }
     }
 }
@@ -206,6 +208,7 @@ impl Clone for ComponentDecl {
             offers: self.offers.clone(),
             children: self.children.clone(),
             collections: self.collections.clone(),
+            storage: self.storage.clone(),
             facets: data::clone_option_dictionary(&self.facets),
         }
     }
@@ -259,6 +262,7 @@ fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
                 {
                     Service(UseServiceDecl),
                     Directory(UseDirectoryDecl),
+                    Storage(UseStorageDecl),
                 });
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
                   {
@@ -292,10 +296,18 @@ fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirector
                       target_path: CapabilityPath,
                   });
 
+fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
+                  fsys::StorageDecl,
+                  {
+                      name: String,
+                      source_path: CapabilityPath,
+                      source: OfferSource,
+                  });
 fidl_into_enum!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
                 {
                     Service(OfferServiceDecl),
                     Directory(OfferDirectoryDecl),
+                    Storage(OfferStorageDecl),
                 });
 fidl_into_struct!(OfferServiceDecl, OfferServiceDecl, fsys::OfferServiceDecl,
                   fsys::OfferServiceDecl,
@@ -335,7 +347,9 @@ fidl_into_vec!(ExposeDecl, fsys::ExposeDecl);
 fidl_into_vec!(OfferDecl, fsys::OfferDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
+fidl_into_vec!(StorageDecl, fsys::StorageDecl);
 fidl_into_vec!(OfferTarget, fsys::OfferTarget);
+fidl_into_vec!(OfferDest, fsys::OfferDest);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
@@ -454,13 +468,15 @@ fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
 pub enum Capability {
     Service(CapabilityPath),
     Directory(CapabilityPath),
+    Storage(fsys::StorageType),
 }
 
 impl Capability {
-    pub fn path(&self) -> &CapabilityPath {
+    pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
-            Capability::Service(s) => s,
-            Capability::Directory(d) => d,
+            Capability::Service(s) => Some(s),
+            Capability::Directory(d) => Some(d),
+            Capability::Storage(_) => None,
         }
     }
 }
@@ -470,6 +486,9 @@ impl fmt::Display for Capability {
         match self {
             Capability::Service(s) => write!(f, "service at {}", s),
             Capability::Directory(d) => write!(f, "directory at {}", d),
+            Capability::Storage(fsys::StorageType::Data) => write!(f, "data storage"),
+            Capability::Storage(fsys::StorageType::Cache) => write!(f, "cache storage"),
+            Capability::Storage(fsys::StorageType::Meta) => write!(f, "meta storage"),
         }
     }
 }
@@ -479,6 +498,7 @@ impl From<UseDecl> for Capability {
         match d {
             UseDecl::Service(d) => d.into(),
             UseDecl::Directory(d) => d.into(),
+            UseDecl::Storage(s) => s.into(),
         }
     }
 }
@@ -492,6 +512,12 @@ impl From<UseServiceDecl> for Capability {
 impl From<UseDirectoryDecl> for Capability {
     fn from(d: UseDirectoryDecl) -> Self {
         Capability::Directory(d.source_path)
+    }
+}
+
+impl From<UseStorageDecl> for Capability {
+    fn from(d: UseStorageDecl) -> Self {
+        Capability::Storage(d.type_())
     }
 }
 
@@ -521,6 +547,7 @@ impl From<OfferDecl> for Capability {
         match d {
             OfferDecl::Service(d) => d.into(),
             OfferDecl::Directory(d) => d.into(),
+            OfferDecl::Storage(d) => d.into(),
         }
     }
 }
@@ -534,6 +561,119 @@ impl From<OfferServiceDecl> for Capability {
 impl From<OfferDirectoryDecl> for Capability {
     fn from(d: OfferDirectoryDecl) -> Self {
         Capability::Directory(d.source_path)
+    }
+}
+
+impl From<OfferStorageDecl> for Capability {
+    fn from(d: OfferStorageDecl) -> Self {
+        Capability::Storage(d.type_())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UseStorageDecl {
+    Data(CapabilityPath),
+    Cache(CapabilityPath),
+    Meta,
+}
+
+impl FidlIntoNative<UseStorageDecl> for fsys::UseStorageDecl {
+    fn fidl_into_native(self) -> UseStorageDecl {
+        match self.type_.unwrap() {
+            fsys::StorageType::Data => {
+                UseStorageDecl::Data(self.target_path.unwrap().as_str().try_into().unwrap())
+            }
+            fsys::StorageType::Cache => {
+                UseStorageDecl::Cache(self.target_path.unwrap().as_str().try_into().unwrap())
+            }
+            fsys::StorageType::Meta => UseStorageDecl::Meta,
+        }
+    }
+}
+
+impl NativeIntoFidl<fsys::UseStorageDecl> for UseStorageDecl {
+    fn native_into_fidl(self) -> fsys::UseStorageDecl {
+        match self {
+            UseStorageDecl::Data(p) => fsys::UseStorageDecl {
+                type_: Some(fsys::StorageType::Data),
+                target_path: p.native_into_fidl(),
+            },
+            UseStorageDecl::Cache(p) => fsys::UseStorageDecl {
+                type_: Some(fsys::StorageType::Cache),
+                target_path: p.native_into_fidl(),
+            },
+            UseStorageDecl::Meta => {
+                fsys::UseStorageDecl { type_: Some(fsys::StorageType::Meta), target_path: None }
+            }
+        }
+    }
+}
+
+impl UseStorageDecl {
+    fn type_(&self) -> fsys::StorageType {
+        match self {
+            UseStorageDecl::Data(_) => fsys::StorageType::Data,
+            UseStorageDecl::Cache(_) => fsys::StorageType::Cache,
+            UseStorageDecl::Meta => fsys::StorageType::Meta,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum OfferStorageDecl {
+    Data(OfferStorage),
+    Cache(OfferStorage),
+    Meta(OfferStorage),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct OfferStorage {
+    source: OfferStorageSource,
+    dests: Vec<OfferDest>,
+}
+
+impl FidlIntoNative<OfferStorageDecl> for fsys::OfferStorageDecl {
+    fn fidl_into_native(self) -> OfferStorageDecl {
+        match self.type_.unwrap() {
+            fsys::StorageType::Data => OfferStorageDecl::Data(OfferStorage {
+                source: self.source.fidl_into_native(),
+                dests: self.dests.fidl_into_native(),
+            }),
+            fsys::StorageType::Cache => OfferStorageDecl::Cache(OfferStorage {
+                source: self.source.fidl_into_native(),
+                dests: self.dests.fidl_into_native(),
+            }),
+            fsys::StorageType::Meta => OfferStorageDecl::Meta(OfferStorage {
+                source: self.source.fidl_into_native(),
+                dests: self.dests.fidl_into_native(),
+            }),
+        }
+    }
+}
+
+impl NativeIntoFidl<fsys::OfferStorageDecl> for OfferStorageDecl {
+    fn native_into_fidl(self) -> fsys::OfferStorageDecl {
+        let type_ = self.type_();
+        let (source, dests) = match self {
+            OfferStorageDecl::Data(OfferStorage { source, dests }) => (source, dests),
+            OfferStorageDecl::Cache(OfferStorage { source, dests }) => (source, dests),
+            OfferStorageDecl::Meta(OfferStorage { source, dests }) => (source, dests),
+        };
+        fsys::OfferStorageDecl {
+            type_: Some(type_),
+            source: source.native_into_fidl(),
+            dests: dests.native_into_fidl(),
+        }
+    }
+}
+
+impl OfferStorageDecl {
+    fn type_(&self) -> fsys::StorageType {
+        match self {
+            OfferStorageDecl::Data(..) => fsys::StorageType::Data,
+            OfferStorageDecl::Cache(..) => fsys::StorageType::Cache,
+            OfferStorageDecl::Meta(..) => fsys::StorageType::Meta,
+        }
     }
 }
 
@@ -602,9 +742,9 @@ pub enum OfferDest {
     Collection(String),
 }
 
-impl FidlIntoNative<OfferDest> for Option<fsys::OfferDest> {
+impl FidlIntoNative<OfferDest> for fsys::OfferDest {
     fn fidl_into_native(self) -> OfferDest {
-        match self.unwrap() {
+        match self {
             fsys::OfferDest::Child(c) => OfferDest::Child(c.name.unwrap()),
             fsys::OfferDest::Collection(c) => OfferDest::Collection(c.name.unwrap()),
             fsys::OfferDest::__UnknownVariant { .. } => panic!("unknown OfferDest variant"),
@@ -612,14 +752,55 @@ impl FidlIntoNative<OfferDest> for Option<fsys::OfferDest> {
     }
 }
 
-impl NativeIntoFidl<Option<fsys::OfferDest>> for OfferDest {
-    fn native_into_fidl(self) -> Option<fsys::OfferDest> {
-        Some(match self {
+impl NativeIntoFidl<fsys::OfferDest> for OfferDest {
+    fn native_into_fidl(self) -> fsys::OfferDest {
+        match self {
             OfferDest::Child(child_name) => {
                 fsys::OfferDest::Child(fsys::ChildRef { name: Some(child_name), collection: None })
             }
             OfferDest::Collection(collection_name) => {
                 fsys::OfferDest::Collection(fsys::CollectionRef { name: Some(collection_name) })
+            }
+        }
+    }
+}
+
+impl FidlIntoNative<OfferDest> for Option<fsys::OfferDest> {
+    fn fidl_into_native(self) -> OfferDest {
+        self.unwrap().fidl_into_native()
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::OfferDest>> for OfferDest {
+    fn native_into_fidl(self) -> Option<fsys::OfferDest> {
+        Some(self.native_into_fidl())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum OfferStorageSource {
+    Realm,
+    Storage(String),
+}
+
+impl FidlIntoNative<OfferStorageSource> for Option<fsys::OfferStorageSource> {
+    fn fidl_into_native(self) -> OfferStorageSource {
+        match self.unwrap() {
+            fsys::OfferStorageSource::Realm(_) => OfferStorageSource::Realm,
+            fsys::OfferStorageSource::Storage(c) => OfferStorageSource::Storage(c.name.unwrap()),
+            fsys::OfferStorageSource::__UnknownVariant { .. } => {
+                panic!("unknown OfferStorageSource variant")
+            }
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::OfferStorageSource>> for OfferStorageSource {
+    fn native_into_fidl(self) -> Option<fsys::OfferStorageSource> {
+        Some(match self {
+            OfferStorageSource::Realm => fsys::OfferStorageSource::Realm(fsys::RealmRef {}),
+            OfferStorageSource::Storage(name) => {
+                fsys::OfferStorageSource::Storage(fsys::StorageRef { name: Some(name) })
             }
         })
     }
@@ -811,6 +992,7 @@ mod tests {
                 offers: vec![],
                 children: vec![],
                 collections: vec![],
+                storage: vec![],
                 facets: None,
             },
         },
@@ -830,6 +1012,14 @@ mod tests {
                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
+                   }),
+                   fsys::UseDecl::Storage(fsys::UseStorageDecl {
+                       type_: Some(fsys::StorageType::Cache),
+                       target_path: Some("/cache".to_string()),
+                   }),
+                   fsys::UseDecl::Storage(fsys::UseStorageDecl {
+                       type_: Some(fsys::StorageType::Meta),
+                       target_path: None,
                    }),
                ]),
                exposes: Some(vec![
@@ -878,6 +1068,17 @@ mod tests {
                            },
                        ]),
                    }),
+                   fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                       type_: Some(fsys::StorageType::Cache),
+                       source: Some(fsys::OfferStorageSource::Storage(fsys::StorageRef {
+                           name: Some("memfs".to_string()),
+                       })),
+                       dests: Some(vec![
+                           fsys::OfferDest::Collection(
+                               fsys::CollectionRef { name: Some("modular".to_string()) }
+                           ),
+                       ]),
+                   }),
                ]),
                children: Some(vec![
                     fsys::ChildDecl {
@@ -909,7 +1110,13 @@ mod tests {
                        value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
                    },
                ]}),
-               storage: None,
+               storage: Some(vec![
+                   fsys::StorageDecl {
+                       name: Some("memfs".to_string()),
+                       source_path: Some("/memfs".to_string()),
+                       source: Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
+                   }
+               ])
             },
             result = {
                 ComponentDecl {
@@ -928,6 +1135,8 @@ mod tests {
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
                         }),
+                        UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
+                        UseDecl::Storage(UseStorageDecl::Meta),
                     ],
                     exposes: vec![
                         ExposeDecl::Service(ExposeServiceDecl {
@@ -962,6 +1171,12 @@ mod tests {
                                 },
                             ],
                         }),
+                        OfferDecl::Storage(OfferStorageDecl::Cache(
+                            OfferStorage {
+                                source: OfferStorageSource::Storage("memfs".to_string()),
+                                dests: vec![OfferDest::Collection("modular".to_string())],
+                            }
+                        )),
                     ],
                     children: vec![
                         ChildDecl {
@@ -991,6 +1206,13 @@ mod tests {
                            value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
                        },
                     ]}),
+                    storage: vec![
+                        StorageDecl {
+                            name: "memfs".to_string(),
+                            source_path: "/memfs".try_into().unwrap(),
+                            source: OfferSource::Realm,
+                        },
+                    ],
                 }
             },
         },
@@ -1045,10 +1267,12 @@ mod tests {
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),
+                UseDecl::Storage(UseStorageDecl::Cache(CapabilityPath::try_from("/blah").unwrap())),
             ],
             result = vec![
                 Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
                 Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
+                Capability::Storage(fsys::StorageType::Cache),
             ],
         },
         from_expose_capability => {
@@ -1091,10 +1315,17 @@ mod tests {
                         }
                     ],
                 }),
+                OfferDecl::Storage(OfferStorageDecl::Cache(
+                    OfferStorage{
+                        source: OfferStorageSource::Realm,
+                        dests: vec![OfferDest::Child("child".to_string())],
+                    }
+                )),
             ],
             result = vec![
                 Capability::Service(CapabilityPath::try_from("/foo/bar").unwrap()),
                 Capability::Directory(CapabilityPath::try_from("/foo/bar").unwrap()),
+                Capability::Storage(fsys::StorageType::Cache),
             ],
         },
     }
@@ -1126,6 +1357,47 @@ mod tests {
                 OfferSource::Realm,
                 OfferSource::Myself,
                 OfferSource::Child("foo".to_string()),
+            ],
+        },
+        fidl_into_and_from_offer_storage_source => {
+            input = vec![
+                Some(fsys::OfferStorageSource::Realm(fsys::RealmRef {})),
+                Some(fsys::OfferStorageSource::Storage(fsys::StorageRef {
+                    name: Some("foo".to_string()),
+                })),
+            ],
+            result = vec![
+                OfferStorageSource::Realm,
+                OfferStorageSource::Storage("foo".to_string()),
+            ],
+        },
+        fidl_into_and_from_storage_capability => {
+            input = vec![
+                fsys::StorageDecl {
+                    name: Some("minfs".to_string()),
+                    source_path: Some("/minfs".to_string()),
+                    source: Some(fsys::OfferSource::Realm(fsys::RealmRef {})),
+                },
+                fsys::StorageDecl {
+                    name: Some("minfs".to_string()),
+                    source_path: Some("/minfs".to_string()),
+                    source: Some(fsys::OfferSource::Child(fsys::ChildRef {
+                        name: Some("foo".to_string()),
+                        collection: None,
+                    })),
+                },
+            ],
+            result = vec![
+                StorageDecl {
+                    name: "minfs".to_string(),
+                    source_path: CapabilityPath::try_from("/minfs").unwrap(),
+                    source: OfferSource::Realm,
+                },
+                StorageDecl {
+                    name: "minfs".to_string(),
+                    source_path: CapabilityPath::try_from("/minfs").unwrap(),
+                    source: OfferSource::Child("foo".to_string()),
+                },
             ],
         },
     }

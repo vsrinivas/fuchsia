@@ -62,18 +62,30 @@ async fn route_capability<'a>(
     let flags = OPEN_RIGHT_READABLE;
     match source {
         CapabilitySource::ComponentMgrNamespace(source_capability) => {
-            io_util::connect_in_namespace(&source_capability.path().to_string(), server_chan)
-                .map_err(|e| ModelError::capability_discovery_error(e))?
+            if let Some(path) = source_capability.path() {
+                io_util::connect_in_namespace(&path.to_string(), server_chan)
+                    .map_err(|e| ModelError::capability_discovery_error(e))?;
+            } else {
+                return Err(ModelError::capability_discovery_error(format_err!(
+                    "storage capabilities are not supported"
+                )));
+            }
         }
         CapabilitySource::Component(source_capability, realm) => {
-            await!(Model::bind_instance_and_open(
-                &model,
-                realm,
-                flags,
-                open_mode,
-                source_capability.path(),
-                server_chan
-            ))?;
+            if let Some(path) = source_capability.path() {
+                await!(Model::bind_instance_and_open(
+                    &model,
+                    realm,
+                    flags,
+                    open_mode,
+                    path,
+                    server_chan
+                ))?;
+            } else {
+                return Err(ModelError::capability_discovery_error(format_err!(
+                    "storage capabilities are not supported"
+                )));
+            }
         }
         CapabilitySource::AmbientService(source_capability_path, realm) => {
             await!(AmbientEnvironment::serve(
@@ -150,6 +162,11 @@ async fn find_capability_source<'a>(
             let source = match offer {
                 OfferDecl::Service(s) => &s.source,
                 OfferDecl::Directory(d) => &d.source,
+                OfferDecl::Storage(_) => {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "storage capabilities are not supported"
+                    )))
+                }
             };
             match source {
                 OfferSource::Realm => {

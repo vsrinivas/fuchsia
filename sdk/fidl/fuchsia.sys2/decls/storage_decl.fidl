@@ -4,6 +4,19 @@
 
 library fuchsia.sys2;
 
+/// The type of storage offered by this component.
+enum StorageType {
+    /// General data storage.
+    DATA = 1;
+
+    /// Cache storage that may be deleted at any time by the system.
+    CACHE = 2;
+
+    /// Meta storage that will be used by component manager to persist metadata
+    /// and other information about the component
+    META = 3;
+};
+
 /// Declares a storage capability backed by a directory from which data, cache,
 /// or meta storage can be offered.
 table StorageDecl {

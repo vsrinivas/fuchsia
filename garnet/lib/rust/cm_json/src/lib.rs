@@ -140,6 +140,11 @@ pub fn validate_json(json: &Value, schema: &JsonSchema) -> Result<(), Error> {
         for e in &res.errors {
             err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
         }
+        for u in &res.missing {
+            err_msgs.push(
+                format!("internal error: schema definition is missing URL {}", u).into_boxed_str(),
+            );
+        }
         // The ordering in which valico emits these errors is unstable.
         // Sort error messages so that the resulting message is predictable.
         err_msgs.sort_unstable();

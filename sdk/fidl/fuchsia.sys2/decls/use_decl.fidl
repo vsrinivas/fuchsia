@@ -9,6 +9,7 @@ library fuchsia.sys2;
 xunion UseDecl {
     UseServiceDecl service;
     UseDirectoryDecl directory;
+    UseStorageDecl storage;
 };
 
 /// Declares a service used by a component, which was offered to the component's
@@ -34,6 +35,19 @@ table UseDirectoryDecl {
 
     /// The path where the capability should be installed in the component's
     /// namespace.
+    ///
+    /// Must be an absolute path starting with /.
+    2: string:MAX_PATH_LENGTH target_path;
+};
+
+/// Declares storage used by a component, which was offered to the component's
+/// environment.
+table UseStorageDecl {
+    /// Type of storage used by the component.
+    1: StorageType type;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace. Must not be set if `type` is `META`.
     ///
     /// Must be an absolute path starting with /.
     2: string:MAX_PATH_LENGTH target_path;
