@@ -51,6 +51,8 @@ public:
     IntegrationTest();
     ~IntegrationTest();
 
+    void SetUp() override;
+
     using Error = std::string;
     template <class T> using Result = fit::result<T, Error>;
     template <class T> using Promise = fit::promise<T, Error>;

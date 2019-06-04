@@ -59,10 +59,7 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
     };
 
     zx_status_t status = IsolatedDevmgr::Create(std::move(args), &IntegrationTest::devmgr_);
-    if (status != ZX_OK) {
-        printf("libdriver-integration-tests: failed to create isolated devmgr\n");
-        return;
-    }
+    ASSERT_EQ(status, ZX_OK) << "failed to create IsolatedDevmgr";
 }
 
 void IntegrationTest::TearDownTestCase() {
@@ -72,22 +69,20 @@ void IntegrationTest::TearDownTestCase() {
 IntegrationTest::IntegrationTest()
     : loop_(&kAsyncLoopConfigNoAttachToThread),
       devmgr_exception_(this, devmgr_.containing_job().get(), 0) {
+}
 
+void IntegrationTest::SetUp() {
+    // We do this in SetUp() rather than the ctor, since gtest cannot assert in
+    // ctors.
     zx_status_t status = devmgr_exception_.Bind(loop_.dispatcher());
-    if (status != ZX_OK) {
-        printf("libdriver-integration-tests: failed to watch isolated devmgr for crashes: %s\n",
-               zx_status_get_string(status));
-        return;
-    }
+    ASSERT_EQ(status, ZX_OK) << "failed to watch isolated devmgr for crashes: " <<
+               zx_status_get_string(status);
 
     fdio_t* io = fdio_unsafe_fd_to_io(IntegrationTest::devmgr_.devfs_root().get());
     status = devfs_.Bind(zx::channel(fdio_service_clone(fdio_unsafe_borrow_channel(io))),
                          loop_.dispatcher());
     fdio_unsafe_release(io);
-    if (status != ZX_OK) {
-        printf("libdriver-integration-tests: failed to connect to devfs\n");
-        return;
-    }
+    ASSERT_EQ(status, ZX_OK) << "failed to connect to devfs";
 }
 
 IntegrationTest::~IntegrationTest() = default;
