@@ -39,6 +39,12 @@ test_package("feedback_agent_tests") {
 
     # needed for data_provider_config_unittest
     {
+      path = "configs/valid_empty_list.json"
+      dest = "valid_config_empty_list.json"
+    },
+
+    # needed for data_provider_config_unittest
+    {
       path = "configs/bad_schema_duplicated_attachment_key.json"
       dest = "bad_schema_duplicated_attachment_key_config.json"
     },

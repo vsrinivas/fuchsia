@@ -20,7 +20,14 @@ namespace {
 const char kSchema[] = R"({
   "type": "object",
   "properties": {
-    "attachment_whitelist": {
+    "annotation_allowlist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "attachment_allowlist": {
       "type": "array",
       "items": {
         "type": "string"
@@ -29,12 +36,14 @@ const char kSchema[] = R"({
     }
   },
   "required": [
-    "attachment_whitelist"
+    "annotation_allowlist",
+    "attachment_allowlist"
   ],
   "additionalProperties": false
 })";
 
-const char kAttachmentWhitelistKey[] = "attachment_whitelist";
+const char kAnnotationWhitelistKey[] = "annotation_allowlist";
+const char kAttachmentWhitelistKey[] = "attachment_allowlist";
 
 bool CheckAgainstSchema(rapidjson::Document& doc) {
   // Check that the schema is actually valid.
@@ -84,9 +93,13 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   Config local_config = {};
   // It is safe to directly access the field as the keys are marked as
   // required and we have checked the config against the schema.
+  for (const auto& annotation_key : doc[kAnnotationWhitelistKey].GetArray()) {
+    // No need to warn on duplicates as the schema enforces "uniqueItems".
+    local_config.annotation_allowlist.insert(annotation_key.GetString());
+  }
   for (const auto& attachment_key : doc[kAttachmentWhitelistKey].GetArray()) {
     // No need to warn on duplicates as the schema enforces "uniqueItems".
-    local_config.attachment_whitelist.insert(attachment_key.GetString());
+    local_config.attachment_allowlist.insert(attachment_key.GetString());
   }
 
   *config = local_config;

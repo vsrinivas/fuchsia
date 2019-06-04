@@ -19,10 +19,10 @@ namespace feedback {
 // Returns attachments useful to attach in feedback reports (crash or user
 // feedback).
 //
-// Only attachments which keys are in the |whitelist| will be returned.
+// Only attachments which keys are in the |allowlist| will be returned.
 std::vector<fit::promise<Attachment>> GetAttachments(
     std::shared_ptr<::sys::ServiceDirectory> services,
-    const std::set<std::string>& whitelist);
+    const std::set<std::string>& allowlist);
 
 }  // namespace feedback
 }  // namespace fuchsia

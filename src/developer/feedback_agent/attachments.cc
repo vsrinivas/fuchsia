@@ -113,14 +113,14 @@ fit::promise<Attachment> BuildAttachment(
 
 std::vector<fit::promise<Attachment>> GetAttachments(
     std::shared_ptr<::sys::ServiceDirectory> services,
-    const std::set<std::string>& whitelist) {
-  if (whitelist.empty()) {
-    FX_LOGS(WARNING) << "Attachment whitelist is empty, nothing to retrieve";
+    const std::set<std::string>& allowlist) {
+  if (allowlist.empty()) {
+    FX_LOGS(WARNING) << "Attachment allowlist is empty, nothing to retrieve";
     return {};
   }
 
   std::vector<fit::promise<Attachment>> attachments;
-  for (const auto& key : whitelist) {
+  for (const auto& key : allowlist) {
     attachments.push_back(BuildAttachment(key, services));
   }
   return attachments;

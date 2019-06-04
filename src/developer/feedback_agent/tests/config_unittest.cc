@@ -16,16 +16,30 @@ namespace feedback {
 namespace {
 
 void CheckEmptyConfig(const Config& config) {
-  EXPECT_TRUE(config.attachment_whitelist.empty());
+  EXPECT_TRUE(config.annotation_allowlist.empty());
+  EXPECT_TRUE(config.attachment_allowlist.empty());
 }
 
 TEST(ConfigTest, ParseConfig_ValidConfig) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config.json", &config), ZX_OK);
-  EXPECT_THAT(config.attachment_whitelist, testing::UnorderedElementsAreArray({
+  EXPECT_THAT(config.annotation_allowlist, testing::UnorderedElementsAreArray({
+                                               "foo",
+                                           }));
+  EXPECT_THAT(config.attachment_allowlist, testing::UnorderedElementsAreArray({
                                                "log.kernel",
                                                "log.syslog",
                                            }));
+}
+
+TEST(ConfigTest, ParseConfig_ValidConfigEmptyList) {
+  Config config;
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_empty_list.json", &config),
+            ZX_OK);
+  EXPECT_THAT(config.annotation_allowlist, testing::UnorderedElementsAreArray({
+                                               "foo",
+                                           }));
+  EXPECT_TRUE(config.attachment_allowlist.empty());
 }
 
 TEST(ConfigTest, ParseConfig_MissingConfig) {

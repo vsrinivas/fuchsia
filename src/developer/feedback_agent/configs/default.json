@@ -1,5 +1,12 @@
 {
-    "attachment_whitelist": [
+    "annotation_allowlist": [
+        "build.board",
+        "build.latest-commit-date",
+        "build.product",
+        "build.version",
+        "device.board-name"
+    ],
+    "attachment_allowlist": [
         "build.snapshot",
         "inspect",
         "log.kernel",

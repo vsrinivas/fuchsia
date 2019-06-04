@@ -22,6 +22,8 @@
 
 #include <memory>
 #include <ostream>
+#include <set>
+#include <string>
 #include <vector>
 
 #include "src/developer/feedback_agent/config.h"
@@ -37,11 +39,16 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-const Config kDefaultConfig = Config{/*attachment_whitelist=*/{
+const std::set<std::string> kDefaultAnnotations = {
+    "build.board",   "build.latest-commit-date", "build.product",
+    "build.version", "device.board-name",
+};
+const std::set<std::string> kDefaultAttachments = {
     "build.snapshot",
     "log.kernel",
     "log.system",
-}};
+};
+const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
@@ -322,9 +329,8 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
           feedback_responses.push_back({std::move(screenshot)});
         });
   }
-  RunLoopUntil([&feedback_responses] {
-    return feedback_responses.size() == num_calls;
-  });
+  RunLoopUntil(
+      [&feedback_responses] { return feedback_responses.size() == num_calls; });
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -403,16 +409,34 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   // attachment is fatal.
 }
 
+TEST_F(DataProviderImplTest, GetData_EmptyAnnotationWhitelist) {
+  ResetDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
+
+  DataProvider_GetData_Result result = GetData();
+  ASSERT_TRUE(result.is_response());
+  EXPECT_FALSE(result.response().data.has_annotations());
+}
+
 TEST_F(DataProviderImplTest, GetData_EmptyAttachmentWhitelist) {
-  ResetDataProvider(Config{/*attachment_whitelist=*/{}});
+  ResetDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());
   EXPECT_FALSE(result.response().data.has_attachments());
 }
 
+TEST_F(DataProviderImplTest, GetData_UnknownWhitelistedAnnotation) {
+  ResetDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"},
+                           kDefaultAttachments});
+
+  DataProvider_GetData_Result result = GetData();
+  ASSERT_TRUE(result.is_response());
+  EXPECT_FALSE(result.response().data.has_annotations());
+}
+
 TEST_F(DataProviderImplTest, GetData_UnknownWhitelistedAttachment) {
-  ResetDataProvider(Config{/*attachment_whitelist=*/{"unknown.attachment"}});
+  ResetDataProvider(Config{kDefaultAnnotations,
+                           /*attachment_allowlist=*/{"unknown.attachment"}});
 
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());

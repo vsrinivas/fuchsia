@@ -7,6 +7,8 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
+#include <set>
+#include <string>
 #include <vector>
 
 namespace fuchsia {
@@ -14,7 +16,9 @@ namespace feedback {
 
 // Returns annotations useful to attach in feedback reports (crash or user
 // feedback).
-std::vector<Annotation> GetAnnotations();
+//
+// Only annotations which keys are in the |allowlist| will be returned.
+std::vector<Annotation> GetAnnotations(const std::set<std::string>& allowlist);
 
 }  // namespace feedback
 }  // namespace fuchsia

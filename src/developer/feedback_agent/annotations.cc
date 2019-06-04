@@ -77,9 +77,26 @@ std::optional<std::string> ReadStringFromFile(const std::string& filepath) {
   return fxl::TrimString(content, "\r\n").ToString();
 }
 
+std::optional<std::string> BuildValue(const std::string& key) {
+  if (key == "device.board-name") {
+    return GetDeviceBoardName();
+  } else if (key == "build.board") {
+    return ReadStringFromFile("/config/build-info/board");
+  } else if (key == "build.product") {
+    return ReadStringFromFile("/config/build-info/product");
+  } else if (key == "build.latest-commit-date") {
+    return ReadStringFromFile("/config/build-info/latest-commit-date");
+  } else if (key == "build.version") {
+    return ReadStringFromFile("/config/build-info/version");
+  } else {
+    FX_LOGS(WARNING) << "Unknown annotation " << key;
+    return std::nullopt;
+  }
+}
+
 void PushBackIfValuePresent(const std::string& key,
-                            const std::optional<std::string> value,
                             std::vector<Annotation>* annotations) {
+  const auto value = BuildValue(key);
   if (value.has_value()) {
     annotations->push_back(BuildAnnotation(key, value.value()));
   } else {
@@ -89,23 +106,16 @@ void PushBackIfValuePresent(const std::string& key,
 
 }  // namespace
 
-std::vector<Annotation> GetAnnotations() {
+std::vector<Annotation> GetAnnotations(const std::set<std::string>& allowlist) {
+  if (allowlist.empty()) {
+    FX_LOGS(WARNING) << "Annotation allowlist is empty, nothing to retrieve";
+    return {};
+  }
+
   std::vector<Annotation> annotations;
-  PushBackIfValuePresent("device.board-name", GetDeviceBoardName(),
-                         &annotations);
-  PushBackIfValuePresent("build.board",
-                         ReadStringFromFile("/config/build-info/board"),
-                         &annotations);
-  PushBackIfValuePresent("build.product",
-                         ReadStringFromFile("/config/build-info/product"),
-                         &annotations);
-  PushBackIfValuePresent(
-      "build.latest-commit-date",
-      ReadStringFromFile("/config/build-info/latest-commit-date"),
-      &annotations);
-  PushBackIfValuePresent("build.version",
-                         ReadStringFromFile("/config/build-info/version"),
-                         &annotations);
+  for (const auto& key : allowlist) {
+    PushBackIfValuePresent(key, &annotations);
+  }
   return annotations;
 }
 

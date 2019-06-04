@@ -50,14 +50,19 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
   // Today attachments are fetched asynchronously, but annotations are not.
   // In the future, we can use fit::join_promises() if annotations need to be
   // fetched asynchronously as well.
+  const auto annotations = GetAnnotations(config_.annotation_allowlist);
+
   auto promise =
       fit::join_promise_vector(
-          GetAttachments(services_, config_.attachment_whitelist))
-          .then([callback = std::move(callback)](
+          GetAttachments(services_, config_.attachment_allowlist))
+          .then([annotations = std::move(annotations),
+                 callback = std::move(callback)](
                     fit::result<std::vector<fit::result<Attachment>>>&
                         attachments) {
             DataProvider_GetData_Response response;
-            response.data.set_annotations(GetAnnotations());
+            if (!annotations.empty()) {
+              response.data.set_annotations(annotations);
+            }
 
             if (attachments.is_ok()) {
               std::vector<Attachment> ok_attachments;
