@@ -9,13 +9,9 @@ use std::marker::PhantomData;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::BufferView;
-use zerocopy::LayoutVerified;
 
-use crate::ip::{IpProto, Ipv6Addr, Ipv6ExtHdrType};
-use crate::wire::util::records::{
-    LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout, Records, RecordsContext,
-    RecordsImpl, RecordsImplLayout,
-};
+use crate::ip::{IpProto, Ipv6ExtHdrType};
+use crate::wire::util::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout};
 
 /// An IPv6 Extension Header.
 #[derive(Debug)]
@@ -222,97 +218,41 @@ impl Ipv6ExtensionHeaderImpl {
         let routing_type = routing_data[0];
         let segments_left = routing_data[1];
 
-        // RFC2460 section 4.4 only defines a routing type of 0
-        if routing_type != 0 {
-            // If we receive a routing header with a non 0 router type,
-            // what we do depends on the segments left. If segments left is
-            // 0, we must ignore the routing header and continue processing
-            // other headers. If segments left is not 0, we need to discard
-            // this packet and send an ICMP Parameter Problem, Code 0 with a
-            // pointer to this unrecognized routing type.
-            if segments_left == 0 {
-                return Ok(Some(None));
-            } else {
-                // As per RFC 8200, if we encounter a routing header with an unrecognized
-                // routing type, and segments left is non-zero, we MUST discard the packet
-                // and send and ICMP Parameter Problem response.
-                return Err(Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
-                    pointer: (context.bytes_parsed as u32) + 2,
-                    must_send_icmp: true,
-                    header_len: context.bytes_parsed,
-                });
-            }
-        }
-
-        // Parse Routing Type 0 specific data
-
-        // Each address takes up 16 bytes.
-        // As per RFC 8200 section 4.4, Hdr Ext Len is the length of this extension
-        // header in  8-octet units, not including the first 8 octets.
+        // Currently we do not support any routing type.
         //
-        // Given this information, we know that to find the number of addresses,
-        // we can simply divide the HdrExtLen by 2 to get the number of addresses.
+        // Note, this includes routing type 0 which is defined in RFC 2460 as it has been
+        // deprecated as of RFC 5095 for security reasons.
 
-        // First check to make sure we have enough data. Note, routing type 0 headers
-        // have a 4 byte reserved field immediately after the first 4 bytes (before
-        // the first address) so we account for that when we do our check as well.
-        let expected_len = (hdr_ext_len as usize) * 8 + 4;
+        // If we receive a routing header with an unrecognized routing type,
+        // what we do depends on the segments left. If segments left is
+        // 0, we must ignore the routing header and continue processing
+        // other headers. If segments left is not 0, we need to discard
+        // this packet and send an ICMP Parameter Problem, Code 0 with a
+        // pointer to this unrecognized routing type.
+        if segments_left == 0 {
+            // Take the next 4 and 8 * `hdr_ext_len` bytes to exhaust this extension header's
+            // data so that that `data` will be at the front of the next header when this
+            // function returns.
+            let expected_len = (hdr_ext_len as usize) * 8 + 4;
+            data.take_front(expected_len)
+                .ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
 
-        if expected_len > data.len() {
-            return Err(Ipv6ExtensionHeaderParsingError::BufferExhausted);
-        }
+            // Update context
+            context.next_header = next_header;
+            context.headers_parsed += 1;
+            context.bytes_parsed += expected_len;
 
-        // If HdrExtLen is an odd number, send an ICMP Parameter Problem, code 0,
-        // pointing to the HdrExtLen field.
-        if (hdr_ext_len & 0x1) == 0x1 {
+            return Ok(Some(None));
+        } else {
+            // As per RFC 8200, if we encounter a routing header with an unrecognized
+            // routing type, and segments left is non-zero, we MUST discard the packet
+            // and send and ICMP Parameter Problem response.
             return Err(Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
-                pointer: (context.bytes_parsed as u32) + 1,
+                pointer: (context.bytes_parsed as u32) + 2,
                 must_send_icmp: true,
                 header_len: context.bytes_parsed,
             });
         }
-
-        // Discard 4 reserved bytes, but because of our earlier check to make sure
-        // `data` contains at least `expected_len` bytes, we assert that we actually
-        // get some bytes back.
-        assert!(data.take_front(4).is_some());
-
-        let num_addresses = (hdr_ext_len as usize) / 2;
-
-        if (segments_left as usize) > num_addresses {
-            // Segments Left cannot be greater than the number of addresses.
-            // If it is, we need to send an ICMP Parameter Problem, Code 0,
-            // pointing to the Segments Left field.
-            return Err(Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
-                pointer: (context.bytes_parsed as u32) + 3,
-                must_send_icmp: true,
-                header_len: context.bytes_parsed,
-            });
-        }
-
-        // Each address is an IPv6 Address which requires 16 bytes.
-        // The below call to `take_front` is guaranteed to succeed because
-        // we have already cheked to make sure we have enough bytes
-        // in `data` to handle the total number of addresses, `num_addresses`.
-        let addresses = data.take_front(num_addresses * 16).unwrap();
-
-        // This is also guranteed to succeed because of the same comments as above.
-        let addresses = LimitedRecords::parse_with_context(addresses, num_addresses).unwrap();
-
-        // Update context
-        context.next_header = next_header;
-        context.headers_parsed += 1;
-        context.bytes_parsed += 4 + expected_len;
-
-        return Ok(Some(Some(Ipv6ExtensionHeader {
-            next_header,
-            data: Ipv6ExtensionHeaderData::Routing {
-                routing_data: RoutingData {
-                    bytes: routing_data,
-                    type_specific_data: RoutingTypeSpecificData::RoutingType0 { addresses },
-                },
-            },
-        })));
     }
 
     /// Parse Fragment Extension Header.
@@ -504,28 +444,7 @@ impl<'a> RoutingData<'a> {
 /// Routing Type specific data.
 #[derive(Debug)]
 pub(crate) enum RoutingTypeSpecificData<'a> {
-    RoutingType0 { addresses: LimitedRecords<&'a [u8], RoutingType0Impl> },
-}
-
-#[derive(Debug)]
-pub(crate) struct RoutingType0Impl;
-
-impl LimitedRecordsImplLayout for RoutingType0Impl {
-    type Error = ();
-    const EXACT_LIMIT_ERROR: Option<()> = Some(());
-}
-
-impl<'a> LimitedRecordsImpl<'a> for RoutingType0Impl {
-    type Record = LayoutVerified<&'a [u8], Ipv6Addr>;
-
-    fn parse<BV: BufferView<&'a [u8]>>(
-        data: &mut BV,
-    ) -> Result<Option<Option<Self::Record>>, Self::Error> {
-        match data.take_obj_front() {
-            None => Err(()),
-            Some(i) => Ok(Some(Some(i))),
-        }
-    }
+    Other(&'a u8),
 }
 
 //
@@ -1110,72 +1029,6 @@ mod tests {
     }
 
     #[test]
-    fn test_routing_type0_limited_records() {
-        // Test empty buffer
-        let buffer = [0; 0];
-        let addresses =
-            LimitedRecords::<_, RoutingType0Impl>::parse_with_context(&buffer[..], 0).unwrap();
-        assert_eq!(addresses.iter().count(), 0);
-
-        // Test single address
-        let buffer = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        let addresses =
-            LimitedRecords::<_, RoutingType0Impl>::parse_with_context(&buffer[..], 1).unwrap();
-        let addresses: Vec<LayoutVerified<_, Ipv6Addr>> = addresses.iter().collect();
-        assert_eq!(addresses.len(), 1);
-        assert_eq!(addresses[0].bytes(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,]);
-
-        // Test multiple address
-        #[rustfmt::skip]
-        let buffer = [
-            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
-            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-            32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        ];
-        let addresses =
-            LimitedRecords::<_, RoutingType0Impl>::parse_with_context(&buffer[..], 3).unwrap();
-        let addresses: Vec<LayoutVerified<_, Ipv6Addr>> = addresses.iter().collect();
-        assert_eq!(addresses.len(), 3);
-        assert_eq!(addresses[0].bytes(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,]);
-        assert_eq!(
-            addresses[1].bytes(),
-            [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,]
-        );
-        assert_eq!(
-            addresses[2].bytes(),
-            [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,]
-        );
-    }
-
-    #[test]
-    fn test_routing_type0_limited_records_err() {
-        // Test single address with not enough bytes
-        let buffer = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
-        LimitedRecords::<_, RoutingType0Impl>::parse_with_context(&buffer[..], 1)
-            .expect_err("Parsed successfully when we were misisng 2 bytes");
-
-        // Test multiple addresses but not enough bytes for last one
-        #[rustfmt::skip]
-        let buffer = [
-            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
-            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-            32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-        ];
-        LimitedRecords::<_, RoutingType0Impl>::parse_with_context(&buffer[..], 3)
-            .expect_err("Parsed successfully when we were misisng 2 bytes");
-
-        // Test multiple addresses but limit is more than what we expected
-        #[rustfmt::skip]
-        let buffer = [
-            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
-            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-            32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47
-        ];
-        LimitedRecords::<_, RoutingType0Impl>::parse_with_context(&buffer[..], 4)
-            .expect_err("Parsed 3 addresses succesfully when exact limit was set to 4");
-    }
-
-    #[test]
     fn test_destination_options() {
         // Test parsing of Pad1 (marked as NOP)
         let buffer = [0; 10];
@@ -1451,7 +1304,7 @@ mod tests {
             IpProto::Tcp.into(), // Next Header
             4,                   // Hdr Ext Len (In 8-octet units, not including first 8 octets)
             0,                   // Routing Type
-            1,                   // Segments Left
+            0,                   // Segments Left (0 so no error)
             0, 0, 0, 0,          // Reserved
             // Addresses for Routing Header w/ Type 0
             0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
@@ -1461,33 +1314,41 @@ mod tests {
         let ext_hdrs =
             Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
                 .unwrap();
-        let ext_hdrs: Vec<Ipv6ExtensionHeader> = ext_hdrs.iter().collect();
-        assert_eq!(ext_hdrs.len(), 1);
-        assert_eq!(ext_hdrs[0].next_header, IpProto::Tcp.into());
-        if let Ipv6ExtensionHeaderData::Routing { routing_data } = ext_hdrs[0].data() {
-            assert_eq!(routing_data.routing_type(), 0);
-            assert_eq!(routing_data.segments_left(), 1);
-
-            let RoutingTypeSpecificData::RoutingType0 { addresses } =
-                routing_data.type_specific_data();
-            let addresses: Vec<LayoutVerified<_, Ipv6Addr>> = addresses.iter().collect();
-            assert_eq!(addresses.len(), 2);
-            assert_eq!(
-                addresses[0].bytes(),
-                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,]
-            );
-            assert_eq!(
-                addresses[1].bytes(),
-                [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,]
-            );
-        } else {
-            panic!("Should have matched Routing: {:?}", ext_hdrs[0].data());
-        }
+        assert_eq!(ext_hdrs.iter().count(), 0);
     }
 
     #[test]
     fn test_routing_ext_hdr_err() {
         // Test parsing of just a single Routing Extension Header with errors.
+
+        // Explicitly test to make sure we do not support routing type 0 as per RFC 5095
+        let context = Ipv6ExtensionHeaderParsingContext::new(Ipv6ExtHdrType::Routing.into());
+        #[rustfmt::skip]
+        let buffer = [
+            IpProto::Tcp.into(), // Next Header
+            4,                   // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                   // Routing Type (0 which we should not support)
+            1,                   // Segments Left
+            0, 0, 0, 0,          // Reserved
+            // Addresses for Routing Header w/ Type 0
+            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+        ];
+        let error =
+            Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
+                .expect_err("Parsed succesfully when the routing type was set to 0");
+        if let Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
+            pointer,
+            must_send_icmp,
+            header_len,
+        } = error
+        {
+            assert_eq!(pointer, 2);
+            assert!(must_send_icmp);
+            assert_eq!(header_len, 0);
+        } else {
+            panic!("Should have matched with ErroneousHeaderField: {:?}", error);
+        }
 
         // Test Invalid Next Header
         let context = Ipv6ExtensionHeaderParsingContext::new(Ipv6ExtHdrType::Routing.into());
@@ -1544,39 +1405,6 @@ mod tests {
         {
             // Should point to the location of the routing type.
             assert_eq!(pointer, 2);
-            assert!(must_send_icmp);
-            assert_eq!(header_len, 0);
-        } else {
-            panic!("Should have matched with ErroneousHeaderField: {:?}", error);
-        }
-
-        // Test more Segments Left than addresses available
-        let context = Ipv6ExtensionHeaderParsingContext::new(Ipv6ExtHdrType::Routing.into());
-        #[rustfmt::skip]
-        let buffer = [
-            IpProto::Tcp.into(), // Next Header
-            4,                   // Hdr Ext Len (In 8-octet units, not including first 8 octets)
-            0,                   // Routing Type
-            3,                   // Segments Left
-            0, 0, 0, 0,          // Reserved
-            // Addresses for Routing Header w/ Type 0
-            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
-            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-
-        ];
-        let error =
-            Records::<&[u8], Ipv6ExtensionHeaderImpl>::parse_with_context(&buffer[..], context)
-                .expect_err(
-                "Parsed succesfully when segments left was greater than the number of addresses",
-            );
-        if let Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
-            pointer,
-            must_send_icmp,
-            header_len,
-        } = error
-        {
-            // Should point to the location of the routing type.
-            assert_eq!(pointer, 3);
             assert!(must_send_icmp);
             assert_eq!(header_len, 0);
         } else {
@@ -1829,7 +1657,7 @@ mod tests {
             Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
             4,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
             0,                                  // Routing Type
-            1,                                  // Segments Left
+            0,                                  // Segments Left
             0, 0, 0, 0,                         // Reserved
             // Addresses for Routing Header w/ Type 0
             0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
@@ -1848,7 +1676,7 @@ mod tests {
                 .unwrap();
 
         let ext_hdrs: Vec<Ipv6ExtensionHeader> = ext_hdrs.iter().collect();
-        assert_eq!(ext_hdrs.len(), 3);
+        assert_eq!(ext_hdrs.len(), 2);
 
         // Check first extension header (hop-by-hop options)
         assert_eq!(ext_hdrs[0].next_header, Ipv6ExtHdrType::Routing.into());
@@ -1859,31 +1687,12 @@ mod tests {
             panic!("Should have matched HopByHopOptions: {:?}", ext_hdrs[0].data());
         }
 
-        // Check the second extension header (routing options)
-        assert_eq!(ext_hdrs[1].next_header, Ipv6ExtHdrType::DestinationOptions.into());
-        if let Ipv6ExtensionHeaderData::Routing { routing_data } = ext_hdrs[1].data() {
-            assert_eq!(routing_data.routing_type(), 0);
-            assert_eq!(routing_data.segments_left(), 1);
-
-            let RoutingTypeSpecificData::RoutingType0 { addresses } =
-                routing_data.type_specific_data();
-            let addresses: Vec<LayoutVerified<_, Ipv6Addr>> = addresses.iter().collect();
-            assert_eq!(addresses.len(), 2);
-            assert_eq!(
-                addresses[0].bytes(),
-                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,]
-            );
-            assert_eq!(
-                addresses[1].bytes(),
-                [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,]
-            );
-        } else {
-            panic!("Should have matched Routing: {:?}", ext_hdrs[1].data());
-        }
+        // Note the second extension header (routing) should have been skipped because
+        // its routing type is unrecognized, but segments left is 0.
 
         // Check the third extension header (destination options)
-        assert_eq!(ext_hdrs[2].next_header, IpProto::Tcp.into());
-        if let Ipv6ExtensionHeaderData::DestinationOptions { options } = ext_hdrs[2].data() {
+        assert_eq!(ext_hdrs[1].next_header, IpProto::Tcp.into());
+        if let Ipv6ExtensionHeaderData::DestinationOptions { options } = ext_hdrs[1].data() {
             // Everything should have been a NOP/ignore except for the unrecognized type
             let options: Vec<DestinationOption> = options.iter().collect();
             assert_eq!(options.len(), 1);

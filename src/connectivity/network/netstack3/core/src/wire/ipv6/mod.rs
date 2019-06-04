@@ -567,8 +567,8 @@ mod tests {
             // Routing Extension Header
             Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
             4,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
-            0,                                  // Routing Type
-            1,                                  // Segments Left
+            0,                                  // Routing Type (Deprecated as per RFC 5095)
+            0,                                  // Segments Left
             0, 0, 0, 0,                         // Reserved
             // Addresses for Routing Header w/ Type 0
             0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
@@ -605,7 +605,7 @@ mod tests {
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), [1, 2, 3, 4, 5]);
         let ext_hdrs: Vec<Ipv6ExtensionHeader> = packet.iter_extension_hdrs().collect();
-        assert_eq!(ext_hdrs.len(), 3);
+        assert_eq!(ext_hdrs.len(), 2);
         // Check first extension header (hop-by-hop options)
         assert_eq!(ext_hdrs[0].next_header, Ipv6ExtHdrType::Routing.into());
         if let Ipv6ExtensionHeaderData::HopByHopOptions { options } = ext_hdrs[0].data() {
@@ -615,31 +615,12 @@ mod tests {
             panic!("Should have matched HopByHopOptions!");
         }
 
-        // Check the second extension header (routing options)
-        assert_eq!(ext_hdrs[1].next_header, Ipv6ExtHdrType::DestinationOptions.into());
-        if let Ipv6ExtensionHeaderData::Routing { routing_data } = ext_hdrs[1].data() {
-            assert_eq!(routing_data.routing_type(), 0);
-            assert_eq!(routing_data.segments_left(), 1);
-
-            let RoutingTypeSpecificData::RoutingType0 { addresses } =
-                routing_data.type_specific_data();
-            let addresses: Vec<LayoutVerified<_, Ipv6Addr>> = addresses.iter().collect();
-            assert_eq!(addresses.len(), 2);
-            assert_eq!(
-                addresses[0].bytes(),
-                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,]
-            );
-            assert_eq!(
-                addresses[1].bytes(),
-                [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,]
-            );
-        } else {
-            panic!("Should have matched Routing!");
-        }
+        // Note the second extension header (routing) should have been skipped because
+        // it's routing type is unrecognized, but segments left is 0.
 
         // Check the third extension header (destination options)
-        assert_eq!(ext_hdrs[2].next_header, IpProto::Tcp.into());
-        if let Ipv6ExtensionHeaderData::DestinationOptions { options } = ext_hdrs[2].data() {
+        assert_eq!(ext_hdrs[1].next_header, IpProto::Tcp.into());
+        if let Ipv6ExtensionHeaderData::DestinationOptions { options } = ext_hdrs[1].data() {
             // Everything should have been a NOP/ignore
             assert_eq!(options.iter().count(), 0);
         } else {
@@ -755,7 +736,7 @@ mod tests {
             Ipv6ExtHdrType::HopByHopOptions.into(),    // Next Header (Valid but HopByHop restricted to first extension header)
             4,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
             0,                                  // Routing Type
-            1,                                  // Segments Left
+            0,                                  // Segments Left
             0, 0, 0, 0,                         // Reserved
             // Addresses for Routing Header w/ Type 0
             0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
