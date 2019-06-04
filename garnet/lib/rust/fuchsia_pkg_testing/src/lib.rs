@@ -9,3 +9,6 @@
 
 mod package;
 pub use crate::package::{Package, PackageBuilder, PackageDir, PackageSigningKey};
+
+mod repo;
+pub use crate::repo::{BlobEncryptionKey, PackageEntry, Repository, RepositoryBuilder};
