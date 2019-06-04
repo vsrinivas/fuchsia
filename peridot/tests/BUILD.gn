@@ -62,7 +62,6 @@ group("tests") {
     "modular_login_tests",
     "module_context",
     "parent_child",
-    "queue_persistence",
     "sessionctl",
     "story_shell",
     "trigger",

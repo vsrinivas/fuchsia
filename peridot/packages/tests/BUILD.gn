@@ -95,8 +95,6 @@ group("modular_integration_tests") {
     "//peridot/tests/parent_child:parent_child_test_child_module1",
     "//peridot/tests/parent_child:parent_child_test_child_module2",
     "//peridot/tests/parent_child:parent_child_test_parent_module",
-    "//peridot/tests/queue_persistence:queue_persistence_test_agent",
-    "//peridot/tests/queue_persistence:queue_persistence_test_module",
     "//peridot/tests/sessionctl:sessionctl_integration_tests",
     "//peridot/tests/story_shell:story_shell_test_session_shell",
     "//peridot/tests/story_shell:story_shell_test_story_shell",
