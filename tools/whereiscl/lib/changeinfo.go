@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os/exec"
 	"regexp"
+	"strings"
 
 	"fuchsia.googlesource.com/fuchsia/tools/whereiscl/netutil"
 )
@@ -43,41 +45,62 @@ type ChangeInfo struct {
 	Project         string   `json:"project"`
 	Status          CLStatus `json:"status"`
 	CurrentRevision string   `json:"current_revision"`
+	Number          int      `json:"_number"`
 }
 
 // QueryInfo stores information for querying the Gerrit server.
-type QueryInfo struct{ APIEndpoint, CL string }
+type QueryInfo struct{ APIEndpoint, Query string }
 
 // ParseReviewURL parses the given string and returns QueryInfo.
-func ParseReviewURL(str string) (QueryInfo, error) {
+func ParseReviewURL(str string) (*QueryInfo, error) {
 	for _, re := range []*regexp.Regexp{fuchsiaCLNumRE, fuchsiaChangeIdRE, rawCLOrChangeIdRE} {
 		match := re.FindStringSubmatch(str)
 		if match != nil {
-			return QueryInfo{
+			return &QueryInfo{
 				APIEndpoint: fuchsiaReviewURL,
-				CL:          match[1],
+				Query:       match[1],
 			}, nil
 		}
 	}
 
-	return QueryInfo{}, errors.New("not a valid review URL")
+	return nil, errors.New("not a valid review URL")
 }
 
-func makeQueryURL(qi QueryInfo) (*url.URL, error) {
+// ParseGitRevision parses the given git revision and returns QueryInfo.
+// `str` is any string that can be parsed by `git rev-parse`.
+func ParseGitRevision(str string) (*QueryInfo, error) {
+	cmd := exec.Command("git", "rev-parse", str)
+	cmd.Stderr = nil
+	out, err := cmd.Output()
+	if err != nil {
+		switch v := err.(type) {
+		case *exec.ExitError:
+			return nil, fmt.Errorf("%v: %s", err, v.Stderr)
+		default:
+			return nil, err
+		}
+	}
+	return &QueryInfo{
+		APIEndpoint: fuchsiaReviewURL,
+		Query:       strings.TrimSpace(string(out)),
+	}, nil
+}
+
+func makeQueryURL(qi *QueryInfo) (*url.URL, error) {
 	u, err := url.Parse(qi.APIEndpoint)
 	if err != nil {
 		return nil, err
 	}
 	u.Path = "/changes/"
 	q := u.Query()
-	q.Set("q", qi.CL)
+	q.Set("q", qi.Query)
 	q.Add("o", "CURRENT_REVISION")
 	u.RawQuery = q.Encode()
 	return u, nil
 }
 
-// GetChangeInfo retrieves a ChangeInfo from Gerrit about a given CL.
-func GetChangeInfo(qi QueryInfo) (*ChangeInfo, error) {
+// GetChangeInfo retrieves a ChangeInfo from Gerrit about a given query.
+func GetChangeInfo(qi *QueryInfo) (*ChangeInfo, error) {
 	q, err := makeQueryURL(qi)
 	if err != nil {
 		return nil, err

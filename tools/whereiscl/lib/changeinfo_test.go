@@ -32,11 +32,11 @@ func TestParseReviewURL(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ParseReviewURL(%q): %v", url, err)
 		}
-		want := QueryInfo{
+		want := &QueryInfo{
 			APIEndpoint: "https://fuchsia-review.googlesource.com",
-			CL:          "123456789",
+			Query:       "123456789",
 		}
-		if d := cmp.Diff(want, got, cmp.AllowUnexported(want)); d != "" {
+		if d := cmp.Diff(want, got, cmp.AllowUnexported(*want)); d != "" {
 			t.Errorf("ParseReviewURL(%q): mismatch (-want +got):\n%s", url, d)
 		}
 	}
@@ -52,11 +52,11 @@ func TestParseReviewURL_ChangeId(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ParseReviewURL(%q): %v", url, err)
 		}
-		want := QueryInfo{
+		want := &QueryInfo{
 			APIEndpoint: "https://fuchsia-review.googlesource.com",
-			CL:          "Ie8dddbce1eeb01a561f3b36e1685f4136fb61378",
+			Query:       "Ie8dddbce1eeb01a561f3b36e1685f4136fb61378",
 		}
-		if d := cmp.Diff(want, got, cmp.AllowUnexported(want)); d != "" {
+		if d := cmp.Diff(want, got, cmp.AllowUnexported(*want)); d != "" {
 			t.Errorf("ParseReviewURL(%q): mismatch (-want +got):\n%s", url, d)
 		}
 	}
@@ -83,22 +83,26 @@ func TestGetChangeInfo(t *testing.T) {
   {
     "foo": 42,
     "status": "MERGED",
-    "current_revision": "abcdefg"
+    "current_revision": "abcdefg",
+    "project": "my_project",
+    "_number": 12345
   }
 ]`,
 	)
 
 	http.DefaultClient.Transport = &transport
-	got, err := GetChangeInfo(QueryInfo{
+	got, err := GetChangeInfo(&QueryInfo{
 		APIEndpoint: "https://fuchsia-review.googlesource.com",
-		CL:          "987654321",
+		Query:       "987654321",
 	})
 	if err != nil {
 		t.Fatalf("GetChangeInfo: %v", err)
 	}
 	want := &ChangeInfo{
+		Project:         "my_project",
 		Status:          CLStatusMerged,
 		CurrentRevision: "abcdefg",
+		Number:          12345,
 	}
 	if d := cmp.Diff(want, got); d != "" {
 		t.Errorf("GetChangeInfo: mismatch (-want +got):\n%s", d)
@@ -113,9 +117,9 @@ func TestGetChangeInfo_clNotFound(t *testing.T) {
 []`,
 	)
 	http.DefaultClient.Transport = &transport
-	_, err := GetChangeInfo(QueryInfo{
+	_, err := GetChangeInfo(&QueryInfo{
 		APIEndpoint: "https://fuchsia-review.googlesource.com",
-		CL:          "987654321",
+		Query:       "987654321",
 	})
 	if err == nil {
 		t.Error("GetChangeInfo: error expected; got nil")
@@ -139,9 +143,9 @@ func TestGetChangeInfo_tooManyCLs(t *testing.T) {
 ]`,
 	)
 	http.DefaultClient.Transport = &transport
-	_, err := GetChangeInfo(QueryInfo{
+	_, err := GetChangeInfo(&QueryInfo{
 		APIEndpoint: "https://fuchsia-review.googlesource.com",
-		CL:          "987654321",
+		Query:       "987654321",
 	})
 	if err == nil {
 		t.Error("GetChangeInfo: error expected; got nil")
