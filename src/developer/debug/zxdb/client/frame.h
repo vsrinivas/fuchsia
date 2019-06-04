@@ -66,8 +66,8 @@ class Frame : public ClientObject {
   //
   // This is not necessarily the "BP" register. The symbols can specify
   // an arbitrary frame base for a location and this value will reflect that.
-  // For unsymbolized code or if the symbols do not declare a frame base, this
-  // will default to the CPU register.
+  // If the base pointer is known-unknown, it will be reported as 0 rather than
+  // nullopt (nullopt from GetBasePointer() indicates it needs an async call).
   //
   // In most cases the frame base is available synchronously (when it's in
   // a register which is the common case), but symbols can declare any DWARF
