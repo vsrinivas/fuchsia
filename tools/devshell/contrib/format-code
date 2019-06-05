@@ -154,7 +154,7 @@ esac
 declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
 
 declare CLANG_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
-declare DART_CMD="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dartfmt -w"
+declare DART_CMD="${FUCHSIA_DIR}/prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dartfmt -w"
 declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
 declare FIDL_CMD="${FIDL_BIN} -i"
 declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"

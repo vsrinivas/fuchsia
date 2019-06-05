@@ -41,11 +41,11 @@ done
 
 case "$(uname -s)" in
     Linux)
-        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dart"
         DEV_FINDER="${FUCHSIA_DIR}/buildtools/linux-x64/dev_finder"
         ;;
     Darwin)
-        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/prebuilt/third_party/dart/mac-x64/bin/dart"
         DEV_FINDER="${FUCHSIA_DIR}/buildtools/mac-x64/dev_finder"
         ;;
 esac

@@ -6,7 +6,7 @@ declare_args() {
   # Directory containing prebuilt Dart SDK.
   # This must have in its `bin/` subdirectory `gen_snapshot.OS-CPU` binaries.
   # Set to empty for a local build.
-  prebuilt_dart_sdk = "//topaz/tools/prebuilt-dart-sdk/${host_platform}"
+  prebuilt_dart_sdk = "//prebuilt/third_party/dart/${host_platform}"
 
   # Whether to use the prebuilt Dart SDK for everything.
   # When setting this to false, the preubilt Dart SDK will not be used in
