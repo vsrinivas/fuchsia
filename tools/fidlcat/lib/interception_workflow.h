@@ -149,6 +149,11 @@ class InterceptionWorkflow {
   void Launch(const std::vector<std::string>& command,
               SimpleErrorFunction and_then);
 
+  // Run when a process matching the given |filter| regexp is started.  Must be
+  // connected.  |and_then| is posted to the loop on completion.
+  void Filter(const std::vector<std::string>& filter,
+              SimpleErrorFunction and_then);
+
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |target|
   void SetBreakpoints(zxdb::Target* target = nullptr);

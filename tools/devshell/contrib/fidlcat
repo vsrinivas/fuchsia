@@ -22,12 +22,16 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [(--port|-p) <PORT>] [--remote-pid <pid>|run <component URL>]
+## Usage: fx fidlcat [(--port|-p) <PORT>] [--remote-pid <pid>|--filter <filters>|run <component URL>]
 ##
 ##    --port            Port the debug agent will be listening on. Will use 2345
 ##                      by default.
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##    --remote-pid      The koid of the remote process to trace
+##    --filter          A set of comma-separated regexes.  When a process
+##                      whose name matches one of the regexes starts, fidlcat
+##                      will trace it.  Can be provided multiple times for
+##                      multiple regexes.
 ##    run               a token indicating that you want to invoke and trace the
 ##                      following component URL.
 ##
@@ -38,6 +42,9 @@
 ##
 ## # Launches the echo client, and monitors its FIDL chatter:
 ## fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
+##
+## # Will trace the next process that starts whose name contains "echo_client"
+## fx fidlcat --filter echo_client
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug.sh || exit $?
@@ -58,6 +65,9 @@ while [[ $# -gt 0 ]]; do
       agent_out="/dev/stdout"
       ;;
     --remote-pid)
+      break # Remaining flags are passed to fidlcat
+      ;;
+    --filter)
       break # Remaining flags are passed to fidlcat
       ;;
     run)

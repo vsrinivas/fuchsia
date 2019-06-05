@@ -14,6 +14,7 @@ namespace fidlcat {
 struct CommandLineOptions {
   std::optional<std::string> connect;
   std::optional<std::string> remote_pid;
+  std::vector<std::string> filter;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> fidl_ir_paths;
   bool pretty_print = false;

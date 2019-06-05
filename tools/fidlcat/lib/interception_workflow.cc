@@ -239,6 +239,35 @@ void InterceptionWorkflow::Detach() {
   }
 }
 
+class SetupTargetObserver : public zxdb::TargetObserver {
+ public:
+  explicit SetupTargetObserver(SimpleErrorFunction&& fn) : fn_(std::move(fn)) {}
+  virtual ~SetupTargetObserver() {}
+
+  virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
+                                bool autoattached_to_new_process) override {
+    fn_(zxdb::Err());
+    target->RemoveObserver(this);
+    delete this;
+  }
+
+ private:
+  SimpleErrorFunction fn_;
+};
+
+void InterceptionWorkflow::Filter(const std::vector<std::string>& filter,
+                                  SimpleErrorFunction and_then) {
+  zxdb::JobContext* default_job = session_->system().GetJobContexts()[0];
+  zxdb::Err err = default_job->settings().SetList(
+      zxdb::ClientSettings::Job::kFilters, filter);
+
+  // The filters aren't currently validated when setting the list so an error
+  // here means we used the API wrong.
+  FXL_DCHECK(err.ok()) << err.msg();
+  GetTarget()->AddObserver(new SetupTargetObserver(std::move(and_then)));
+  AddObserver(GetTarget());
+}
+
 void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
                                   SimpleErrorFunction and_then) {
   zxdb::Target* target = GetTarget();

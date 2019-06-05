@@ -51,6 +51,15 @@ Alternatively, you can launch a component directly using its URL:
 fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_rust#meta/echo_client_rust.cmx
 ```
 
+You can also attach to programs that have not started yet by passing a regex to
+match their names.  If you issue the following command, fidlcat will connect to
+the system, wait for a program with the substring "echo_client" to start, and
+automatically attach to it.
+
+```sh
+fx fidlcat --filter echo_client
+```
+
 Note that fidlcat needs two sources of information to work:
 
  * First, it needs the symbols for the executable.  In practice, if you are

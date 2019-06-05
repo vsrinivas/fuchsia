@@ -123,7 +123,7 @@ void EnqueueStartup(
     workflow.SetBreakpoints(process_koid);
   };
 
-  auto attach = [&workflow, process_koid, params,
+  auto attach = [&workflow, process_koid, filter = options.filter, params,
                  set_breakpoints =
                      std::move(set_breakpoints)](const zxdb::Err& err) {
     if (!err.ok()) {
@@ -133,6 +133,8 @@ void EnqueueStartup(
     FXL_LOG(INFO) << "Connected!";
     if (process_koid != ULLONG_MAX) {
       workflow.Attach(process_koid, set_breakpoints);
+    } else if (!filter.empty()) {
+      workflow.Filter(filter, set_breakpoints);
     } else {
       workflow.Launch(params, set_breakpoints);
     }

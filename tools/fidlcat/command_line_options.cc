@@ -36,6 +36,14 @@ const char kRemoteHostHelp[] = R"(  --connect
 const char kRemotePidHelp[] = R"(  --remote-pid
       The koid of the remote process.)";
 
+const char kFilterHelp[] = R"(  --filter=<regexp>
+  -f <regexp>
+      Adds a job filter to the default job. This will automatically attach
+      to processes whose name matches this regexp that are launched in the
+      job (e.g., "--filter echo_client.*.cmx", or even just "--filter
+      echo_client).  Multiple filters can be specified to match more than one
+      process.)";
+
 const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>|@argfile
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json
       files.  Passing a file adds the given file.  Passing a directory adds all
@@ -84,6 +92,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
                    &CommandLineOptions::connect);
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp,
                    &CommandLineOptions::remote_pid);
+  parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp,
                    &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
@@ -103,6 +112,11 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
 
   if (requested_help) {
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+  }
+
+  if (!options->filter.empty() && options->remote_pid) {
+    return cmdline::Status::Error(
+        "Cannot specify both a remote pid and filters.");
   }
 
   display_options->pretty_print = options->pretty_print;

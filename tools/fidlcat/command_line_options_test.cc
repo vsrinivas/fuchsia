@@ -152,4 +152,19 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_TRUE(std::find(params.begin(), params.end(), "args") != params.end());
 }
 
+TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
+  std::string remote_pid = "3141";
+  std::string filter = "echo_client";
+  const char* argv[] = {"fakebinary",   "--filter",         filter.c_str(),
+                        "--remote-pid", remote_pid.c_str(), "leftover",
+                        "args"};
+  int argc = sizeof(argv) / sizeof(argv[0]);
+  CommandLineOptions options;
+  DisplayOptions display_options;
+  std::vector<std::string> params;
+  auto status =
+      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  ASSERT_TRUE(!status.ok());
+}
+
 }  // namespace fidlcat
