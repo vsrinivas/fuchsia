@@ -23,6 +23,41 @@ func newGenerator() *generator {
 	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
 		"Kinds": func() interface{} { return ir.Kinds },
 		"Eq": func(a interface{}, b interface{}) bool { return a == b },
+		"MethodsHaveReqOrResp": func(ms []ir.Method) string {
+			for _, m := range ms {
+				if (m.HasRequest && len(m.Request) != 0) || (m.HasResponse && len(m.Response) != 0) {
+					return "\n"
+				}
+			}
+			return ""
+		},
+		"FilterMethodsWithReqs": func (ms []ir.Method) []ir.Method {
+			var out []ir.Method
+			for _, m := range ms {
+				if !m.HasRequest {
+					out = append(out, m)
+				}
+			}
+			return out
+		},
+		"FilterMethodsWithoutReqs": func (ms []ir.Method) []ir.Method {
+			var out []ir.Method
+			for _, m := range ms {
+				if m.HasRequest {
+					out = append(out, m)
+				}
+			}
+			return out
+		},
+		"FilterMethodsWithoutResps": func (ms []ir.Method) []ir.Method {
+			var out []ir.Method
+			for _, m := range ms {
+				if m.HasResponse {
+					out = append(out, m)
+				}
+			}
+			return out
+		},
 	})
 	templates := []string {
 		fragments.Bits,

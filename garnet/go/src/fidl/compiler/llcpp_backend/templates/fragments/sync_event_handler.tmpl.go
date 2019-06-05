@@ -36,8 +36,7 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
   }
   constexpr uint32_t kReadAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    {{- range .Methods }}
-      {{- if .HasRequest -}} {{ continue }} {{- end }}
+    {{- range FilterMethodsWithReqs .Methods }}
     if (::fidl::internal::ClampedMessageSize<{{ .Name }}Response>() >= x) {
       x = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response>();
     }
@@ -46,8 +45,7 @@ zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end,
   })();
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    {{- range .Methods }}
-      {{- if .HasRequest -}} {{ continue }} {{- end }}
+    {{- range FilterMethodsWithReqs .Methods }}
     if ({{ .Name }}Response::MaxNumHandles >= x) {
       x = {{ .Name }}Response::MaxNumHandles;
     }

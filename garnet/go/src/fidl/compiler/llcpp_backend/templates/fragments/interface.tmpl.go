@@ -44,15 +44,8 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- end }}
 
   {{- /* Trailing line feed after encoding tables. */}}
-  {{- range .Methods }}
-    {{- if and .HasRequest .Request -}}
+  {{- if MethodsHaveReqOrResp .Methods }}
 {{ "" }}
-{{ break }}
-    {{- end }}
-    {{- if and .HasResponse .Response -}}
-{{ "" }}
-{{ break }}
-    {{- end }}
   {{- end }}
   {{- /* End trailing line feed after encoding tables. */}}
 
@@ -115,8 +108,7 @@ class {{ .Name }} final {
   {{- if .HasEvents }}
 {{ "" }}
   struct EventHandlers {
-    {{- range .Methods }}
-      {{- if .HasRequest -}} {{ continue }} {{- end }}
+    {{- range FilterMethodsWithReqs .Methods -}}
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
@@ -135,9 +127,8 @@ class {{ .Name }} final {
 
     ~SyncClient() {}
 {{ "" }}
-    {{- range .Methods }}
-      {{- /* Client-calling functions do not apply to events. */}}
-      {{- if not .HasRequest -}} {{ continue }} {{- end -}}
+    {{- /* Client-calling functions do not apply to events. */}}
+    {{- range FilterMethodsWithoutReqs .Methods -}}
       {{- if .LLProps.CBindingCompatible }}
         {{- range .DocComments }}
     //{{ . }}
@@ -184,9 +175,8 @@ class {{ .Name }} final {
   class Call final {
    public:
 {{ "" }}
-    {{- range .Methods }}
-      {{- /* Client-calling functions do not apply to events. */}}
-      {{- if not .HasRequest -}} {{ continue }} {{- end -}}
+    {{- /* Client-calling functions do not apply to events. */}}
+    {{- range FilterMethodsWithoutReqs .Methods -}}
       {{- if .LLProps.CBindingCompatible }}
         {{- range .DocComments }}
     //{{ . }}
@@ -287,10 +277,8 @@ class {{ .Name }} final {
   {{- /* Events */}}
   {{- if .Methods }}
 {{ "" }}
-    {{- range .Methods }}
-      {{- /* Events have no "request" part of the call; they are unsolicited. */}}
-      {{- if .HasRequest -}} {{ continue }} {{- end }}
-      {{- if not .HasResponse -}} {{ continue }} {{- end -}}
+    {{- /* Events have no "request" part of the call; they are unsolicited. */}}
+    {{- range FilterMethodsWithReqs .Methods | FilterMethodsWithoutResps -}}
 {{ "" }}
       {{- range .DocComments }}
   //{{ . }}
@@ -385,9 +373,8 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 
 }  // namespace
 
-{{- range .Methods }}
-  {{- /* Client-calling functions do not apply to events. */}}
-  {{- if not .HasRequest -}} {{ continue }} {{- end }}
+{{- /* Client-calling functions do not apply to events. */}}
+{{- range FilterMethodsWithoutReqs .Methods -}}
   {{- if .LLProps.CBindingCompatible }}
 {{ "" }}
     {{- template "SyncRequestCFlavorMethodDefinition" . }}
@@ -423,8 +410,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 
 {{- if .Methods }}
 {{ "" }}
-  {{- range .Methods }}
-    {{- if not .HasResponse -}} {{ continue }} {{- end }}
+  {{- range FilterMethodsWithoutResps .Methods -}}
     {{- if not .HasRequest }}
 {{ "" }}
       {{- template "SendEventCFlavorMethodDefinition" . }}
