@@ -9,6 +9,10 @@
 namespace zxdb {
 
 Namespace::Namespace() : Symbol(DwarfTag::kNamespace) {}
+
+Namespace::Namespace(std::string n)
+    : Symbol(DwarfTag::kNamespace), assigned_name_(std::move(n)) {}
+
 Namespace::~Namespace() = default;
 
 const Namespace* Namespace::AsNamespace() const { return this; }

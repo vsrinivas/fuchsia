@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/symbols/member_ptr.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
@@ -526,9 +527,9 @@ TEST_F(FormatValueTest, Union) {
   // Define a union type with two int32 values.
   auto int32_type = MakeInt32Type();
 
-  auto union_type = fxl::MakeRefCounted<Collection>(DwarfTag::kUnionType);
+  auto union_type =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kUnionType, "MyUnion");
   union_type->set_byte_size(int32_type->byte_size());
-  union_type->set_assigned_name("MyUnion");
 
   std::vector<LazySymbol> data_members;
 
@@ -557,8 +558,8 @@ TEST_F(FormatValueTest, DerivedClasses) {
                                  {{"a", int32_type}, {"b", int32_type}});
 
   // This second base class is empty, it should be omitted from the output.
-  auto empty_base = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-  empty_base->set_assigned_name("EmptyBase");
+  auto empty_base =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "EmptyBase");
 
   // Derived class, leave enough room to hold |Base|.
   auto derived = MakeCollectionTypeWithOffset(
@@ -714,8 +715,8 @@ TEST_F(FormatValueTest, FunctionPtr) {
   // Member function pointer. The type naming of function pointers is tested by
   // the MemberPtr class, and otherwise the code paths are the same, so here
   // we only need to verify things are hooked up.
-  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-  containing->set_assigned_name("MyClass");
+  auto containing =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
 
   auto member_func = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing),
                                                     LazySymbol(func_type));
@@ -735,8 +736,8 @@ TEST_F(FormatValueTest, FunctionPtr) {
 // This tests pointers to member data. Pointers to member functions were tested
 // by the FunctionPtr test.
 TEST_F(FormatValueTest, MemberPtr) {
-  auto containing = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-  containing->set_assigned_name("MyClass");
+  auto containing =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "MyClass");
 
   auto int32_type = GetInt32Type();
   auto member_int32 = fxl::MakeRefCounted<MemberPtr>(LazySymbol(containing),
@@ -809,6 +810,38 @@ TEST_F(FormatValueTest, ZxStatusT) {
   opts.num_format = FormatExprValueOptions::NumFormat::kHex;
   EXPECT_EQ("0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)",
             SyncFormatValue(status_too_small, opts));
+}
+
+// Tests that printing values with a forward-declared-struct type finds the
+// definition and uses it.
+TEST_F(FormatValueTest, ForwardDecl) {
+  // Definition of "ns::Foo".
+  auto int32_type = GetInt32Type();
+  auto def = MakeCollectionType(DwarfTag::kStructureType, "Foo",
+                                {{"a", int32_type}, {"b", int32_type}});
+  auto ns = fxl::MakeRefCounted<Namespace>("ns");
+  def->set_parent(LazySymbol(ns));
+  EXPECT_EQ("ns::Foo", def->GetFullName());
+
+  // Forward-declaration of "ns::Foo".
+  auto decl = fxl::MakeRefCounted<Collection>(def->tag(), "Foo");
+  decl->set_parent(LazySymbol(ns));
+  decl->set_is_declaration(true);
+  EXPECT_EQ("ns::Foo", decl->GetFullName());
+
+  // A value referencing the forward declaration.
+  ExprValue decl_value(decl, {1, 0, 0, 0,    // (int32) a = 1
+                              2, 0, 0, 0});  // (int32) b = 2
+
+  // Printing the forward-declaration without giving the definition will
+  // report an error.
+  EXPECT_EQ("<No definition>",
+            SyncFormatValue(decl_value, FormatExprValueOptions()));
+
+  // Add a definition, the formatter should find and use it.
+  eval_context()->AddType(def);
+  EXPECT_EQ("{a = 1, b = 2}",
+            SyncFormatValue(decl_value, FormatExprValueOptions()));
 }
 
 }  // namespace zxdb

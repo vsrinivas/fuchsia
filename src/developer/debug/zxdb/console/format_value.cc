@@ -352,6 +352,14 @@ void FormatValue::FormatCollection(fxl::RefPtr<ExprEvalContext> eval_context,
                                    const ExprValue& value,
                                    const FormatExprValueOptions& options,
                                    OutputKey output_key) {
+  if (coll->is_declaration()) {
+    // Sometimes a value will have a type that's a forward declaration and we
+    // couldn't resolve its concrete type. Print an error instead of "{}".
+    OutputKeyComplete(
+        output_key, OutputBuffer(Syntax::kComment, "<No definition>"));
+    return;
+  }
+
   AppendToOutputKey(output_key, OutputBuffer("{"));
 
   // True after printing the first item.

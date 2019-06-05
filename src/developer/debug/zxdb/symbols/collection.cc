@@ -8,7 +8,10 @@
 
 namespace zxdb {
 
-Collection::Collection(DwarfTag tag) : Type(tag) {}
+Collection::Collection(DwarfTag tag, std::string name) : Type(tag) {
+  set_assigned_name(std::move(name));
+}
+
 Collection::~Collection() = default;
 
 const Collection* Collection::AsCollection() const { return this; }

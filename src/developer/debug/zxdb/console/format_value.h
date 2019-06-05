@@ -54,6 +54,9 @@ class Variable;
 class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
  public:
   // Abstract interface for looking up information about a process.
+  //
+  // It may be this can be folded into the ExprEvalContext and this class
+  // removed.
   class ProcessContext {
    public:
     virtual ~ProcessContext() = default;

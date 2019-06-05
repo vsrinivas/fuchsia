@@ -43,8 +43,7 @@ fxl::RefPtr<Collection> MakeCollectionType(
 fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(
     DwarfTag type_tag, const std::string& type_name,
     uint32_t first_member_offset, std::initializer_list<NameAndType> members) {
-  auto result = fxl::MakeRefCounted<Collection>(type_tag);
-  result->set_assigned_name(type_name);
+  auto result = fxl::MakeRefCounted<Collection>(type_tag, type_name);
 
   uint32_t offset = first_member_offset;
   std::vector<LazySymbol> data_members;

@@ -20,6 +20,10 @@ void MockExprEvalContext::AddVariable(const std::string& name, ExprValue v) {
   values_[name] = v;
 }
 
+void MockExprEvalContext::AddType(fxl::RefPtr<Type> type) {
+  types_[type->GetFullName()] = type;
+}
+
 // ExprEvalContext implementation.
 void MockExprEvalContext::GetNamedValue(const ParsedIdentifier& ident,
                                         ValueCallback cb) const {
@@ -39,16 +43,16 @@ void MockExprEvalContext::GetVariableValue(fxl::RefPtr<Variable> variable,
 
 fxl::RefPtr<Type> MockExprEvalContext::ResolveForwardDefinition(
     const Type* type) const {
-  // Just return the input for mock purposes.
-  return fxl::RefPtr<Type>(const_cast<Type*>(type));
+  auto found = types_.find(type->GetFullName());
+  if (found == types_.end())  // Not found, return the input.
+    return fxl::RefPtr<Type>(const_cast<Type*>(type));
+  return found->second;
 }
 
 fxl::RefPtr<Type> MockExprEvalContext::GetConcreteType(const Type* type) const {
-  // Just strip C-V qualifications, don't bother with the forward definitions
-  // for mock purposes.
   if (!type)
     return nullptr;
-  return fxl::RefPtr<Type>(const_cast<Type*>(type->StripCVT()));
+  return ResolveForwardDefinition(type->StripCVT());
 }
 
 fxl::RefPtr<SymbolDataProvider> MockExprEvalContext::GetDataProvider() {

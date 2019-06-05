@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_COLLECTION_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_COLLECTION_H_
 
 #include "src/developer/debug/zxdb/symbols/type.h"
 
@@ -45,7 +46,7 @@ class Collection final : public Type {
   FRIEND_REF_COUNTED_THREAD_SAFE(Collection);
   FRIEND_MAKE_REF_COUNTED(Collection);
 
-  explicit Collection(DwarfTag kind);
+  Collection(DwarfTag kind, std::string name = std::string());
   virtual ~Collection();
 
   // Symbol protected overrides.
@@ -56,3 +57,5 @@ class Collection final : public Type {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_COLLECTION_H_

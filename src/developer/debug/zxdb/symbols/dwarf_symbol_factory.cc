@@ -493,6 +493,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
   llvm::Optional<uint64_t> byte_size;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
 
+  llvm::Optional<bool> is_declaration;
+  decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -520,6 +523,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
   }
   result->set_data_members(std::move(data));
   result->set_inherited_from(std::move(inheritance));
+  if (is_declaration)
+    result->set_is_declaration(*is_declaration);
 
   if (parent)
     result->set_parent(MakeLazy(parent));

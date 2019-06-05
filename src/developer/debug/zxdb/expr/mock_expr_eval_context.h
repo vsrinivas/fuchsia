@@ -23,6 +23,10 @@ class MockExprEvalContext : public ExprEvalContext {
   // Adds the given mocked variable with the given name and value.
   void AddVariable(const std::string& name, ExprValue v);
 
+  // Adds a definition for the given mocked type for returning from
+  // ResolveForwardDefinition() and GetConcreteType().
+  void AddType(fxl::RefPtr<Type> type);
+
   // ExprEvalContext implementation.
   void GetNamedValue(const ParsedIdentifier& ident,
                      ValueCallback cb) const override;
@@ -36,6 +40,7 @@ class MockExprEvalContext : public ExprEvalContext {
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
   std::map<std::string, ExprValue> values_;
+  std::map<std::string, fxl::RefPtr<Type>> types_;
 };
 
 }  // namespace zxdb

@@ -29,6 +29,7 @@ class Namespace final : public Symbol {
   FRIEND_MAKE_REF_COUNTED(Namespace);
 
   Namespace();
+  explicit Namespace(std::string n);
   virtual ~Namespace();
 
   // Symbol protected overrides.
