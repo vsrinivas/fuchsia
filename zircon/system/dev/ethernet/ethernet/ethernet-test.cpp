@@ -338,6 +338,8 @@ TEST(EthernetTest, GetStatusTest) {
     EXPECT_TRUE(device_status == 1);
 }
 
+#if 0
+// TODO(CONN-135)
 TEST(EthernetTest, SendTest) {
     EthernetDeviceTest test;
 
@@ -361,6 +363,7 @@ TEST(EthernetTest, SendTest) {
     //check mock ethmac if packet was received
     EXPECT_TRUE(test.tester.ethmac().TestQueueTx());
 }
+#endif
 
 TEST(EthernetTest, ReceiveTest) {
     EthernetDeviceTest test;
