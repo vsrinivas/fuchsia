@@ -239,10 +239,13 @@ static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
             return DRETF(false, "Attempting to use cache coherency while disabled.");
         access_flags |= kAccessFlagShareBoth;
     }
+
+    // Protected memory doesn't affect the access flags - instead sysmem should set up the memory
+    // controller to ensure everything can be accessed correctly from protected mode.
     if (mapping_flags &
         ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
           MAGMA_GPU_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable |
-          kMagmaArmMaliGpuMapFlagBothShareable))
+          kMagmaArmMaliGpuMapFlagBothShareable | kMagmaArmMaliGpuMapFlagProtected))
         return DRETF(false, "Unsupported map flags %lx\n", mapping_flags);
 
     if (flags_out)

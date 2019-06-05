@@ -16,6 +16,9 @@ enum MagmaArmMaliGpuMapFlags {
 
     // Accesses to this data should be coherent with the CPU
     kMagmaArmMaliGpuMapFlagBothShareable = (1 << (MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT + 1)),
+
+    // Only protected atoms can access this data.
+    kMagmaArmMaliGpuMapFlagProtected = (1 << (MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT + 2)),
 };
 
 enum AtomFlags {
