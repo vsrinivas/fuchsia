@@ -220,11 +220,6 @@ class OperationBase {
     auto container = std::move(container_);
     container_.reset();  // just make sure
     if (container) {
-      // TODO(MF-399): Delete this log line.
-      FXL_LOG(INFO) << "Dropping operation from queue: "
-                    << (trace_name_ == nullptr ? "NO_NAME" : trace_name_)
-                    << ". See MF-399 for explanation of this log message, and when "
-                       "it will be removed.";
       // Deletes |this|.
       container->Drop(this);
 

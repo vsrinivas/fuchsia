@@ -25,21 +25,11 @@ OperationContainer::~OperationContainer() = default;
 void OperationContainer::Add(std::unique_ptr<OperationBase> o) {
   FXL_DCHECK(o != nullptr);
 
-  // TODO(MF-399): Delete this log line.
-  FXL_LOG(INFO) << "Adding operation to queue: "
-                << (o->trace_name() == nullptr ? "NO_NAME" : o->trace_name())
-                << ". See MF-399 for explanation of this log message, and when "
-                   "it will be removed.";
   o->SetOwner(this);
   Hold(std::move(o));  // Takes ownership.
 }
 
 void OperationContainer::Schedule(OperationBase* const o) {
-  // TODO(MF-399): Delete this log line.
-  FXL_LOG(INFO) << "Scheduling operation from queue: "
-                << (o->trace_name() == nullptr ? "NO_NAME" : o->trace_name())
-                << ". See MF-399 for explanation of this log message, and when "
-                   "it will be removed.";
   o->Schedule();
 }
 
