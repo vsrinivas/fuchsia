@@ -57,7 +57,6 @@ group("tests") {
     "clipboard",
     "common",
     "component_context",
-    "embed_shell",
     "modular_config",
     "modular_login_tests",
     "module_context",

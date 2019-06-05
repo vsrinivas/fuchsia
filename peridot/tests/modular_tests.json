@@ -25,17 +25,6 @@
       ]
     },
     {
-      "name": "embed_shell",
-      "exec": [
-        "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
-        "--test",
-        "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
-        "--session_shell=fuchsia-pkg://fuchsia.com/embed_shell_test_session_shell#meta/embed_shell_test_session_shell.cmx",
-        "--story_shell=fuchsia-pkg://fuchsia.com/embed_shell_test_story_shell#meta/embed_shell_test_story_shell.cmx",
-        "--sessionmgr_args=--use_memfs_for_ledger,--no_cloud_provider_for_ledger"
-      ]
-    },
-    {
       "name": "parent_child",
       "exec": [
         "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
