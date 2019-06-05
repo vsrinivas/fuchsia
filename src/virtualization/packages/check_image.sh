@@ -25,7 +25,7 @@ declare -r DEPFILE=${3}
 mkdir -p $(dirname ${SOURCE_IMAGE})
 if [ ! -f "${SOURCE_IMAGE}" ]; then
   echo "WARNING: ${SOURCE_IMAGE} not found, using a dummy image. See" \
-       "garnet/bin/guest/README.md for manual build instructions."
+       "src/virtualization/docs/README.md for manual build instructions."
   touch "${SOURCE_IMAGE}"
 fi
 

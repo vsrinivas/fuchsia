@@ -52,6 +52,6 @@ All of the images constructed by `build.sh` (see above) are available on CIPD. T
 
 ```
 $ cd $FUCHSIA_DIR
-$ ./garnet/bin/guest/pkg/debian_guest/mkcipd.sh x64
-$ ./garnet/bin/guest/pkg/debian_guest/mkcipd.sh arm64
+$ ./src/virtualization/packages/debian_guest/mkcipd.sh x64
+$ ./src/virtualization/packages/debian_guest/mkcipd.sh arm64
 ```

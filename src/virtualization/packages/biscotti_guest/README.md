@@ -6,7 +6,7 @@ The `biscotti_guest` is a guest system based off the
 ## Building the Kernel
 
 This will build a kernel and deposit the image at
-`//garnet/bin/guest/pkg/biscotti_guest/images/x64/Image`.
+`//prebuilt/virtualization/ garnet/bin/guest/pkg/biscotti_guest/images/x64/Image`.
 
 ```
  (host) $ cd $BISCOTTI_GUEST_DIR
