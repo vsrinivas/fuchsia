@@ -137,7 +137,7 @@ TEST_F(LinkImplTest, WatchDefaultBehavior) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return notified_count == 2; }));
 }
 
-TEST_F(LinkImplTest, SetAndWatch) {
+TEST_F(LinkImplTest, DISABLED_SetAndWatch) {
   auto storage = MakeStorage("page");
   auto link = MakeLink(storage.get(), "mylink");
 
@@ -206,7 +206,7 @@ TEST_F(LinkImplTest, SetAndWatchAndGet) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return get_done; }));
 }
 
-TEST_F(LinkImplTest, SetNonJsonAndGetJsonPointer) {
+TEST_F(LinkImplTest, DISABLED_SetNonJsonAndGetJsonPointer) {
   auto storage = MakeStorage("page");
   auto link = MakeLink(storage.get(), "mylink");
 
