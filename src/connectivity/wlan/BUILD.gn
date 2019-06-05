@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-
 group("wlan") {
   testonly = true
   deps = [
@@ -16,7 +14,15 @@ group("service") {
   testonly = true
   deps = [
     ":bin",
-    ":config",
+    "config:default",
+  ]
+}
+
+group("service-wep") {
+  testonly = true
+  deps = [
+    ":bin",
+    "config:wep",
   ]
 }
 
@@ -61,20 +67,5 @@ group("tests") {
 group("tools") {
   public_deps = [
     "//src/connectivity/wlan/tools/wlantool:wlan",
-  ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  outputs = [
-    "wlan.config",
-  ]
-
-  sources = [
-    "service.config",
-  ]
-
-  deps = [
-    "//src/connectivity/wlan/wlancfg:config",
   ]
 }

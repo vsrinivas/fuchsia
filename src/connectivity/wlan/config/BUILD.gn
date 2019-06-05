@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+template("wlan_service_config") {
+  config_data(target_name) {
+    for_pkg = "sysmgr"
+    outputs = [
+      "wlan_${invoker.config}.config",
+    ]
+    sources = [
+      rebase_path("${invoker.config}"),
+    ]
+
+    deps = [
+      "//src/connectivity/wlan/wlancfg:config",
+    ]
+  }
+}
+
+wlan_service_config("default") {
+  config = "default.config"
+}
+
+wlan_service_config("wep") {
+  config = "wep.config"
+}
