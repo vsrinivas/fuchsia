@@ -455,4 +455,19 @@ mod tests {
         assert!(headers.program_headers_with_type(SegmentType::Load).count() > 1);
         Ok(())
     }
+
+    #[test]
+    fn test_parse_static_pie() -> Result<(), Error> {
+        // Parse the statically linked PIE test binary.
+        let file = File::open("/pkg/bin/static_pie_test_util")?;
+        let vmo = fdio::get_vmo_copy_from_file(&file)?;
+
+        // Should have no PT_INTERP header, but should have PT_DYNAMIC and 1+ PT_LOAD.
+        let headers = Elf64Headers::from_vmo(&vmo)?;
+        assert!(headers.program_headers().len() > 0);
+        assert!(headers.program_header_with_type(SegmentType::Interp)?.is_none());
+        assert!(headers.program_headers_with_type(SegmentType::Dynamic).count() == 1);
+        assert!(headers.program_headers_with_type(SegmentType::Load).count() > 1);
+        Ok(())
+    }
 }

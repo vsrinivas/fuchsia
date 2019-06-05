@@ -437,9 +437,6 @@ impl ProcessBuilder {
             msg.write(&bootstrap_wr).map_err(ProcessBuilderError::WriteBootstrapMessage)?;
         } else {
             // Statically linked but still position-independent (ET_DYN) ELF, load directly.
-            // TODO: No test coverage for this path currently. Not sure how to create such an
-            // executable that could interact with the test (to confirm that it was started
-            // correctly) without implementing a mini dynamic linker to link at least the vDSO.
             dynamic = false;
 
             loaded_elf = elf_load::load_elf(&self.executable, &self.inner.root_vmar, &elf_headers)?;
@@ -1044,6 +1041,46 @@ mod tests {
         let dir2_contents =
             await!(proxy.read_file("/dir2/test_file2")).context("failed to read file via util")?;
         assert_eq!(dir2_contents, test_content2);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn start_static_pie_binary() -> Result<(), Error> {
+        const TEST_BIN: &'static str = "/pkg/bin/static_pie_test_util";
+        let binpath = Path::new(TEST_BIN);
+        let vmo = fdio::get_vmo_copy_from_file(&File::open(binpath)?)?.replace_as_executable()?;
+        let job = fuchsia_runtime::job_default();
+
+        let procname = CString::new(TEST_BIN.to_owned())?;
+        let mut builder = ProcessBuilder::new(&procname, &job, vmo)?;
+
+        // We pass the program a channel with handle type User0 which we send a message on and
+        // expect it to echo back the message on the same channel.
+        let (local, remote) = zx::Channel::create()?;
+        builder.add_handles(vec![StartupHandle {
+            handle: remote.into_handle(),
+            info: HandleInfo::new(HandleType::User0, 0),
+        }])?;
+
+        let mut randbuf = [0; 8];
+        zx::cprng_draw(&mut randbuf)?;
+        let test_message = format!("test content 1 {}", u64::from_le_bytes(randbuf)).into_bytes();
+        local.write(&test_message, &mut vec![])?;
+
+        // Start process and wait for channel to have a message to read or be closed.
+        await!(builder.build())?.start()?;
+        let signals = await!(fasync::OnSignals::new(
+            &local,
+            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED
+        ))?;
+        assert!(signals.contains(zx::Signals::CHANNEL_READABLE));
+
+        let mut echoed = zx::MessageBuf::new();
+        local.read(&mut echoed)?;
+        assert_eq!(echoed.bytes(), test_message.as_slice());
+        assert_eq!(echoed.n_handles(), 0);
+
         Ok(())
     }
 }

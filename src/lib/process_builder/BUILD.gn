@@ -86,10 +86,31 @@ rustc_binary("test_util") {
   ]
 }
 
+config("no-dynamic-linker") {
+  ldflags = [ "-Wl,-no-dynamic-linker" ]
+}
+
+# This is used to test the library's handling of statically linked PIE executables.
+# Warning: Don't copy this unless you know what you're doing.
+executable("static_pie_test_util") {
+  testonly = true
+  sources = [
+    "test/static_pie_test_util.c",
+  ]
+
+  cflags = [
+    "-fno-sanitize=safe-stack",
+    "-fno-stack-protector",
+  ]
+  ldflags = [ "-nostdlib" ]
+  configs += [ ":no-dynamic-linker" ]
+}
+
 test_package("process_builder_tests") {
   deps = [
     ":process_builder",
     ":root_job_test_runner",
+    ":static_pie_test_util",
     ":test_util",
   ]
 
@@ -99,6 +120,9 @@ test_package("process_builder_tests") {
     },
     {
       name = "process_builder_test_util"
+    },
+    {
+      name = "static_pie_test_util"
     },
   ]
 
