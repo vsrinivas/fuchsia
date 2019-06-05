@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_ENV_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_ENV_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
+#include <sdk/lib/sys/cpp/component_context.h>
 #include <src/connectivity/network/testing/netemul/lib/network/network_context.h>
 #include <src/connectivity/network/testing/netemul/lib/sync/sync_manager.h>
 #include <src/lib/fxl/macros.h>
@@ -15,6 +17,8 @@
 #include "src/lib/files/unique_fd.h"
 
 namespace netemul {
+
+class DevfsHolder;
 class SandboxEnv {
  public:
   using Ptr = std::shared_ptr<SandboxEnv>;
@@ -27,16 +31,23 @@ class SandboxEnv {
     fit::function<void(const std::string&, int64_t,
                        fuchsia::sys::TerminationReason)>
         service_terminated;
+
+    fit::function<void()> devfs_terminated;
+
     FXL_DISALLOW_COPY_AND_ASSIGN(Events);
   };
 
   // Creates a sandbox environment
-  explicit SandboxEnv(Events events = Events()) : events_(std::move(events)) {}
+  SandboxEnv(std::shared_ptr<sys::ServiceDirectory> env_services,
+             Events events = Events());
+  ~SandboxEnv();
 
   const std::string& default_name() const { return default_name_; }
   void set_default_name(std::string default_name) {
     default_name_ = std::move(default_name);
   }
+
+  void set_devfs_enabled(bool enabled);
 
   const Events& events() const { return events_; }
 
@@ -44,7 +55,10 @@ class SandboxEnv {
   SyncManager& sync_manager() { return sync_manager_; }
 
  private:
+  void ConnectDevfs(zx::channel req);
   std::string default_name_;
+  std::shared_ptr<sys::ServiceDirectory> env_services_;
+  std::unique_ptr<DevfsHolder> devfs_;
   Events events_;
   NetworkContext net_context_;
   SyncManager sync_manager_;

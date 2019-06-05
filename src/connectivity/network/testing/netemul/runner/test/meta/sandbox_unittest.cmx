@@ -3,10 +3,6 @@
         "binary": "test/sandbox_unittest"
     },
     "sandbox": {
-        "dev": [
-            "misc",
-            "class/ethernet"
-        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

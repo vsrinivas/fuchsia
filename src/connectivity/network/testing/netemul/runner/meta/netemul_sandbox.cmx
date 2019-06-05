@@ -3,10 +3,6 @@
         "binary": "bin/netemul_sandbox"
     },
     "sandbox": {
-        "dev": [
-            "misc",
-            "class/ethernet"
-        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

@@ -7,20 +7,16 @@
 use {
     ethernet,
     failure::{bail, format_err, Error, ResultExt},
-    fidl_fuchsia_hardware_ethernet::{DeviceMarker, DeviceProxy},
-    fidl_fuchsia_hardware_ethertap::{
-        TapControlMarker, TapDeviceEvent, TapDeviceMarker, TapDeviceProxy,
+    fidl_fuchsia_netemul_network::{
+        EndpointManagerMarker, FakeEndpointEvent, FakeEndpointMarker, NetworkContextMarker,
+        NetworkManagerMarker,
     },
-    fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
     futures::TryStreamExt,
-    std::fs::File,
-    std::path::Path,
     std::str,
     structopt::StructOpt,
 };
@@ -36,9 +32,6 @@ struct Opt {
 }
 
 const DEFAULT_METRIC: u32 = 100;
-const ETHERTAP_PATH: &'static str = "/dev/misc/tapctl";
-const ETHERNET_DIR: &'static str = "/dev/class/ethernet";
-const TAP_MAC: [u8; 6] = [12, 1, 2, 3, 4, 5];
 const BUS_NAME: &'static str = "netstack-itm-bus";
 const SRV_NAME: &'static str = "echo_server";
 
@@ -49,62 +42,20 @@ fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
     Ok(bus)
 }
 
-async fn open_ethertap() -> Result<TapDeviceProxy, Error> {
-    let (tapctl, tapctl_server) = fidl::endpoints::create_proxy::<TapControlMarker>()?;
-    fdio::service_connect(ETHERTAP_PATH, tapctl_server.into_channel())?;
-
-    let (tap, tap_server) = fidl::endpoints::create_proxy::<TapDeviceMarker>()?;
-    let status = await!(tapctl.open_device(
-        "benchmarks",
-        &mut fidl_fuchsia_hardware_ethertap::Config {
-            options: fidl_fuchsia_hardware_ethertap::OPT_ONLINE
-                | fidl_fuchsia_hardware_ethertap::OPT_TRACE,
-            features: 0,
-            mtu: 1500,
-            mac: fidl_fuchsia_hardware_ethernet::MacAddress { octets: TAP_MAC },
-        },
-        tap_server,
-    ))?;
-    let status = zx::Status::from_raw(status);
-
-    if status != zx::Status::OK {
-        return Err(format_err!("Open device failed with {}", status));
-    }
-    Ok(tap)
-}
-
-async fn open_ethernet() -> Result<(DeviceProxy, String), Error> {
-    let root = Path::new(ETHERNET_DIR);
-    let mut watcher = Watcher::new(&File::open(root)?)?;
-    while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
-        await!(watcher.try_next()).context("watching ethernet dir")?
-    {
-        match event {
-            WatchEvent::ADD_FILE | WatchEvent::EXISTING => {
-                let (eth, eth_server) = fidl::endpoints::create_proxy::<DeviceMarker>()?;
-                let eth_path = root.join(filename);
-                let eth_path = eth_path.as_path().to_str().unwrap();
-                let () = fdio::service_connect(eth_path, eth_server.into_channel())?;
-                let info = await!(eth.get_info())?;
-                if info.mac.octets == TAP_MAC {
-                    return Ok((eth, eth_path.to_string()));
-                }
-            }
-            _ => {}
-        }
-    }
-    Err(format_err!("Directory watch ended unexpectedly"))
-}
-
 async fn run_mock_guest() -> Result<(), Error> {
     // Create an ethertap client and an associated ethernet device.
-    let tap = await!(open_ethertap())?;
-    let (eth_device, device_path) = await!(open_ethernet())?;
+    let ctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
+    ctx.get_endpoint_manager(epm_server_end)?;
+    let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
+    ctx.get_network_manager(netm_server_end)?;
 
-    // eth_device is a DeviceProxy which needs to be converted into a
-    // ClientEnd<DeviceMarker> for add_ethernet_device.
-    let eth_marker =
-        fidl::endpoints::ClientEnd::new(eth_device.into_channel().unwrap().into_zx_channel());
+    let ep = await!(epm.get_endpoint("mock-ep"))?.unwrap().into_proxy()?;
+    let net = await!(netm.get_network("mock_guest"))?.unwrap().into_proxy()?;
+    let (fake_ep, fake_ep_server_end) = fidl::endpoints::create_proxy::<FakeEndpointMarker>()?;
+    net.create_fake_endpoint(fake_ep_server_end)?;
+
+    let eth_device = await!(ep.get_ethernet_device())?;
 
     let netstack = client::connect_to_service::<NetstackMarker>()?;
     let ip_addr_config = IpAddressConfig::Dhcp(true);
@@ -114,24 +65,22 @@ async fn run_mock_guest() -> Result<(), Error> {
         metric: DEFAULT_METRIC,
     };
 
-    let _nicid = await!(netstack.add_ethernet_device(device_path.as_str(), &mut cfg, eth_marker))?;
+    let _nicid = await!(netstack.add_ethernet_device("/mock_device", &mut cfg, eth_device))?;
 
     // Send a message to the server and expect it to be echoed back.
     let echo_string = String::from("hello");
 
-    tap.set_online(true)?;
-
     let bus = open_bus("mock_guest")?;
     await!(bus.wait_for_clients(&mut vec!(SRV_NAME).drain(..), 0))?;
 
-    tap.write_frame(&mut echo_string.clone().into_bytes().drain(0..))?;
+    fake_ep.write(&mut echo_string.clone().into_bytes().drain(0..))?;
 
     println!("To Server: {}", echo_string);
 
-    let mut tap_events = tap.take_event_stream();
-    while let Some(event) = await!(tap_events.try_next())? {
+    let mut ep_events = fake_ep.take_event_stream();
+    while let Some(event) = await!(ep_events.try_next())? {
         match event {
-            TapDeviceEvent::OnFrame { data } => {
+            FakeEndpointEvent::OnData { data } => {
                 let server_string = str::from_utf8(&data)?;
                 assert!(
                     echo_string == server_string,
@@ -142,7 +91,6 @@ async fn run_mock_guest() -> Result<(), Error> {
                 println!("From Server: {}", server_string);
                 break;
             }
-            _ => continue,
         }
     }
 

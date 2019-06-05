@@ -3,10 +3,6 @@
         "binary": "bin/netstack_intermediary"
     },
     "sandbox": {
-        "dev": [
-            "class/ethernet",
-            "misc/tapctl"
-        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.netstack.Netstack",

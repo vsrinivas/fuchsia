@@ -104,8 +104,21 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
       });
     }
   };
-  sandbox_env_ = std::make_shared<SandboxEnv>(std::move(global_events));
+
+  global_events.devfs_terminated = [this]() {
+    if (helper_loop_) {
+      async::PostTask(helper_loop_->dispatcher(), [this]() {
+        std::stringstream ss;
+        ss << "Isolated devmgr terminated prematurely";
+        PostTerminate(SandboxResult::Status::INTERNAL_ERROR, ss.str());
+      });
+    }
+  };
+
+  sandbox_env_ = std::make_shared<SandboxEnv>(
+      sys::ServiceDirectory::CreateFromNamespace(), std::move(global_events));
   sandbox_env_->set_default_name(env_config_.default_url());
+  sandbox_env_->set_devfs_enabled(true);
 
   if (services_created_callback_) {
     services_created_callback_();

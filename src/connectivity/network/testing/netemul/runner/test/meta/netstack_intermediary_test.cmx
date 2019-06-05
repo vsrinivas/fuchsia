@@ -47,6 +47,14 @@
                         }
                     ],
                     "name": "net"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "mock-ep"
+                        }
+                    ],
+                    "name": "mock_guest"
                 }
             ]
         }

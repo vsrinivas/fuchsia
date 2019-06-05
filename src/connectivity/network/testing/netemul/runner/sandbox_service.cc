@@ -90,7 +90,9 @@ class SandboxBinding : public fuchsia::netemul::sandbox::Sandbox {
   std::shared_ptr<SandboxEnv>& shared_env() {
     ZX_ASSERT(async_get_default_dispatcher() == loop_->dispatcher());
     if (!shared_env_) {
-      shared_env_ = std::make_shared<SandboxEnv>();
+      shared_env_ = std::make_shared<SandboxEnv>(
+          sys::ServiceDirectory::CreateFromNamespace());
+      shared_env_->set_devfs_enabled(true);
     }
     return shared_env_;
   }
