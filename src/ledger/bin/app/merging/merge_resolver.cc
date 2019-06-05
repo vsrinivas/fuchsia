@@ -16,10 +16,10 @@
 #include <set>
 #include <utility>
 
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/merging/common_ancestor.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/merging/merge_strategy.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -164,9 +164,10 @@ void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   }
 }
 
-void MergeResolver::SetPageManager(PageManager* page_manager) {
-  FXL_DCHECK(page_manager_ == nullptr);
-  page_manager_ = page_manager;
+void MergeResolver::SetActivePageManager(
+    ActivePageManager* active_page_manager) {
+  FXL_DCHECK(active_page_manager_ == nullptr);
+  active_page_manager_ = active_page_manager;
 }
 
 void MergeResolver::RegisterNoConflictCallback(
@@ -550,7 +551,7 @@ Status MergeResolver::RecursiveMergeSync(
       [this, left = std::move(left), right = std::move(right),
        merge_base = std::move(merge_base)](
           fit::function<void(Status)> callback) mutable {
-        strategy_->Merge(storage_, page_manager_, std::move(left),
+        strategy_->Merge(storage_, active_page_manager_, std::move(left),
                          std::move(right), std::move(merge_base),
                          TRACE_CALLBACK(std::move(callback), "ledger",
                                         "merge_strategy_merge"));

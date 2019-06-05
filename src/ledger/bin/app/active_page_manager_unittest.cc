@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/app/page_manager.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -96,10 +96,10 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   bool on_empty_called = false;
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
-  PageManager page_manager(&environment_, std::move(storage), nullptr,
-                           std::move(merger),
-                           PageManager::PageStorageState::NEEDS_SYNC);
-  page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  ActivePageManager active_page_manager(
+      &environment_, std::move(storage), nullptr, std::move(merger),
+      ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   DrainLoop();
   EXPECT_FALSE(on_empty_called);
 
@@ -109,7 +109,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   PagePtr page2;
 
   auto page_impl1 = std::make_unique<PageImpl>(page_id_, page1.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl1),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -117,7 +117,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   ASSERT_EQ(Status::OK, status);
 
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl2),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -128,31 +128,31 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page2.Unbind();
   DrainLoop();
   EXPECT_TRUE(on_empty_called);
-  EXPECT_TRUE(page_manager.IsEmpty());
+  EXPECT_TRUE(active_page_manager.IsEmpty());
 
   on_empty_called = false;
   PagePtr page3;
   auto page_impl3 = std::make_unique<PageImpl>(page_id_, page3.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl3),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
-  EXPECT_FALSE(page_manager.IsEmpty());
+  EXPECT_FALSE(active_page_manager.IsEmpty());
 
   page3.Unbind();
   DrainLoop();
   EXPECT_TRUE(on_empty_called);
-  EXPECT_TRUE(page_manager.IsEmpty());
+  EXPECT_TRUE(active_page_manager.IsEmpty());
 
   on_empty_called = false;
   PageSnapshotPtr snapshot;
-  page_manager.BindPageSnapshot(
+  active_page_manager.BindPageSnapshot(
       std::make_unique<const storage::CommitEmptyImpl>(), snapshot.NewRequest(),
       "");
   DrainLoop();
-  EXPECT_FALSE(page_manager.IsEmpty());
+  EXPECT_FALSE(active_page_manager.IsEmpty());
   snapshot.Unbind();
   DrainLoop();
   EXPECT_TRUE(on_empty_called);
@@ -161,15 +161,15 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
 TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
-  auto page_manager = std::make_unique<PageManager>(
+  auto active_page_manager = std::make_unique<ActivePageManager>(
       &environment_, std::move(storage), nullptr, std::move(merger),
-      PageManager::PageStorageState::NEEDS_SYNC);
+      ActivePageManager::PageStorageState::NEEDS_SYNC);
 
   bool called;
   Status status;
   PagePtr page;
   auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
-  page_manager->AddPageImpl(
+  active_page_manager->AddPageImpl(
       std::move(page_impl),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -179,7 +179,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   page.set_error_handler([callback = callback::SetWhenCalled(&page_closed)](
                              zx_status_t status) { callback(); });
 
-  page_manager.reset();
+  active_page_manager.reset();
   DrainLoop();
   EXPECT_TRUE(page_closed);
 }
@@ -188,21 +188,21 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   bool on_empty_called = false;
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
-  PageManager page_manager(&environment_, std::move(storage), nullptr,
-                           std::move(merger),
-                           PageManager::PageStorageState::NEEDS_SYNC);
-  page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  ActivePageManager active_page_manager(
+      &environment_, std::move(storage), nullptr, std::move(merger),
+      ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   DrainLoop();
   // PageManager is empty, but on_empty should not have be called, yet.
   EXPECT_FALSE(on_empty_called);
-  EXPECT_TRUE(page_manager.IsEmpty());
+  EXPECT_TRUE(active_page_manager.IsEmpty());
 
   bool called;
   Status internal_status;
   PagePtr page1;
   PagePtr page2;
   auto page_impl1 = std::make_unique<PageImpl>(page_id_, page1.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl1),
       callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
@@ -210,7 +210,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   ASSERT_EQ(Status::OK, internal_status);
 
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl2),
       callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
@@ -229,12 +229,12 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   page2.Unbind();
   snapshot.Unbind();
   DrainLoop();
-  EXPECT_FALSE(page_manager.IsEmpty());
+  EXPECT_FALSE(active_page_manager.IsEmpty());
   EXPECT_FALSE(on_empty_called);
 
   watcher_request.TakeChannel();
   DrainLoop();
-  EXPECT_TRUE(page_manager.IsEmpty());
+  EXPECT_TRUE(active_page_manager.IsEmpty());
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -248,9 +248,9 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(&environment_, std::move(storage),
-                           std::move(fake_page_sync), std::move(merger),
-                           PageManager::PageStorageState::NEEDS_SYNC);
+  ActivePageManager active_page_manager(
+      &environment_, std::move(storage), std::move(fake_page_sync),
+      std::move(merger), ActivePageManager::PageStorageState::NEEDS_SYNC);
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
@@ -260,7 +260,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   Status internal_status;
   PagePtr page;
   auto page_impl1 = std::make_unique<PageImpl>(page_id_, page.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl1),
       callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   // The page should be bound, but except from GetId, no other method should
@@ -289,7 +289,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   // Check that a second call on the same manager is not delayed.
   page.Unbind();
   auto page_impl2 = std::make_unique<PageImpl>(page_id_, page.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl2),
       callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
@@ -312,9 +312,10 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(
+  ActivePageManager active_page_manager(
       &environment_, std::move(storage), std::move(fake_page_sync),
-      std::move(merger), PageManager::PageStorageState::NEEDS_SYNC, zx::sec(0));
+      std::move(merger), ActivePageManager::PageStorageState::NEEDS_SYNC,
+      zx::sec(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
@@ -324,7 +325,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   Status status;
   PagePtr page;
   auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -347,21 +348,22 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(
+  ActivePageManager active_page_manager(
       &environment_, std::move(storage), std::move(fake_page_sync),
-      std::move(merger), PageManager::PageStorageState::NEEDS_SYNC, zx::sec(0));
+      std::move(merger), ActivePageManager::PageStorageState::NEEDS_SYNC,
+      zx::sec(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 
   bool called;
-  page_manager.set_on_empty(callback::SetWhenCalled(&called));
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&called));
 
   async::PostTask(dispatcher(),
                   [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
 
   DrainLoop();
   EXPECT_TRUE(called);
-  EXPECT_TRUE(page_manager.IsEmpty());
+  EXPECT_TRUE(active_page_manager.IsEmpty());
 }
 
 TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
@@ -374,9 +376,9 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(
+  ActivePageManager active_page_manager(
       &environment_, std::move(storage), std::move(fake_page_sync),
-      std::move(merger), PageManager::PageStorageState::AVAILABLE,
+      std::move(merger), ActivePageManager::PageStorageState::AVAILABLE,
       // Use a long timeout to ensure the test does not hit it.
       zx::sec(3600));
 
@@ -388,7 +390,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   Status status;
   PagePtr page;
   auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
-  page_manager.AddPageImpl(
+  active_page_manager.AddPageImpl(
       std::move(page_impl),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   // The page should be bound immediately.

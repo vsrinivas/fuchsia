@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include "src/ledger/bin/app/page_manager.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 
 namespace ledger {
 CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
@@ -35,7 +35,7 @@ void CustomMergeStrategy::SetOnError(fit::closure on_error) {
 }
 
 void CustomMergeStrategy::Merge(storage::PageStorage* storage,
-                                PageManager* page_manager,
+                                ActivePageManager* active_page_manager,
                                 std::unique_ptr<const storage::Commit> head_1,
                                 std::unique_ptr<const storage::Commit> head_2,
                                 std::unique_ptr<const storage::Commit> ancestor,
@@ -44,7 +44,7 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
   FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<ConflictResolverClient>(
-      storage, page_manager, conflict_resolver_.get(), std::move(head_2),
+      storage, active_page_manager, conflict_resolver_.get(), std::move(head_2),
       std::move(head_1), std::move(ancestor),
       [this, callback = std::move(callback)](Status status) {
         in_progress_merge_.reset();

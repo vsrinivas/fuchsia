@@ -15,9 +15,9 @@
 #include <vector>
 
 #include "peridot/lib/util/ptr.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -25,14 +25,14 @@
 
 namespace ledger {
 ConflictResolverClient::ConflictResolverClient(
-    storage::PageStorage* storage, PageManager* page_manager,
+    storage::PageStorage* storage, ActivePageManager* active_page_manager,
     ConflictResolver* conflict_resolver,
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
     fit::function<void(Status)> callback)
     : storage_(storage),
-      manager_(page_manager),
+      manager_(active_page_manager),
       conflict_resolver_(conflict_resolver),
       left_(std::move(left)),
       right_(std::move(right)),

@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/app/page_manager.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"

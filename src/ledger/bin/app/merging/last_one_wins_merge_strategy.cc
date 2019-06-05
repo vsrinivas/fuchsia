@@ -11,7 +11,7 @@
 #include <memory>
 #include <string>
 
-#include "src/ledger/bin/app/page_manager.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -136,7 +136,7 @@ LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() {}
 void LastOneWinsMergeStrategy::SetOnError(fit::function<void()> /*on_error*/) {}
 
 void LastOneWinsMergeStrategy::Merge(
-    storage::PageStorage* storage, PageManager* /*page_manager*/,
+    storage::PageStorage* storage, ActivePageManager* /*page_manager*/,
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor,

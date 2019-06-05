@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -20,7 +20,8 @@
 namespace ledger {
 class AutoMergeStrategy::AutoMerger {
  public:
-  AutoMerger(storage::PageStorage* storage, PageManager* page_manager,
+  AutoMerger(storage::PageStorage* storage,
+             ActivePageManager* active_page_manager,
              ConflictResolver* conflict_resolver,
              std::unique_ptr<const storage::Commit> left,
              std::unique_ptr<const storage::Commit> right,
@@ -45,7 +46,7 @@ class AutoMergeStrategy::AutoMerger {
       std::unique_ptr<std::vector<storage::EntryChange>> diff);
 
   storage::PageStorage* const storage_;
-  PageManager* const manager_;
+  ActivePageManager* const manager_;
   ConflictResolver* const conflict_resolver_;
 
   std::unique_ptr<const storage::Commit> left_;
@@ -63,14 +64,14 @@ class AutoMergeStrategy::AutoMerger {
 };
 
 AutoMergeStrategy::AutoMerger::AutoMerger(
-    storage::PageStorage* storage, PageManager* page_manager,
+    storage::PageStorage* storage, ActivePageManager* active_page_manager,
     ConflictResolver* conflict_resolver,
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
     fit::function<void(Status)> callback)
     : storage_(storage),
-      manager_(page_manager),
+      manager_(active_page_manager),
       conflict_resolver_(conflict_resolver),
       left_(std::move(left)),
       right_(std::move(right)),
@@ -284,7 +285,7 @@ void AutoMergeStrategy::SetOnError(fit::closure on_error) {
 }
 
 void AutoMergeStrategy::Merge(storage::PageStorage* storage,
-                              PageManager* page_manager,
+                              ActivePageManager* active_page_manager,
                               std::unique_ptr<const storage::Commit> head_1,
                               std::unique_ptr<const storage::Commit> head_2,
                               std::unique_ptr<const storage::Commit> ancestor,
@@ -293,7 +294,7 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage,
   FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<AutoMergeStrategy::AutoMerger>(
-      storage, page_manager, conflict_resolver_.get(), std::move(head_2),
+      storage, active_page_manager, conflict_resolver_.get(), std::move(head_2),
       std::move(head_1), std::move(ancestor),
       [this, callback = std::move(callback)](Status status) {
         in_progress_merge_.reset();

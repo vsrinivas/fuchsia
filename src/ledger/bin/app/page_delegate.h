@@ -28,7 +28,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
-class PageManager;
+class ActivePageManager;
 
 // A delegate for the implementation of the |Page| interface.
 //
@@ -40,7 +40,7 @@ class PageManager;
 class PageDelegate {
  public:
   PageDelegate(coroutine::CoroutineService* coroutine_service,
-               PageManager* manager, storage::PageStorage* storage,
+               ActivePageManager* manager, storage::PageStorage* storage,
                MergeResolver* merge_resolver, SyncWatcherSet* watchers,
                std::unique_ptr<PageImpl> page_impl);
   ~PageDelegate();
@@ -109,7 +109,7 @@ class PageDelegate {
 
   void CheckEmpty();
 
-  PageManager* manager_;
+  ActivePageManager* manager_;
   storage::PageStorage* storage_;
   MergeResolver* merge_resolver_;
 

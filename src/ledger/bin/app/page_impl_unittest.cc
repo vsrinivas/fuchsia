@@ -23,10 +23,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/fake/fake_journal.h"
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
@@ -75,9 +75,9 @@ class PageImplTest : public TestWithEnvironment {
             environment_.random()->NewBitGenerator<uint64_t>()));
     resolver_ = resolver.get();
 
-    manager_ = std::make_unique<PageManager>(
+    manager_ = std::make_unique<ActivePageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver),
-        PageManager::PageStorageState::NEEDS_SYNC);
+        ActivePageManager::PageStorageState::NEEDS_SYNC);
     bool called;
     Status status;
     auto page_impl =
@@ -171,7 +171,7 @@ class PageImplTest : public TestWithEnvironment {
 
   storage::PageId page_id1_;
   storage::fake::FakePageStorage* fake_storage_;
-  std::unique_ptr<PageManager> manager_;
+  std::unique_ptr<ActivePageManager> manager_;
   MergeResolver* resolver_;
 
   PagePtr page_ptr_;

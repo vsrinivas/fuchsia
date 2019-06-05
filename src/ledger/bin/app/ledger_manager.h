@@ -17,11 +17,11 @@
 #include <type_traits>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/app/active_page_manager.h"
+#include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
-#include "src/ledger/bin/app/page_manager.h"
-#include "src/ledger/bin/app/page_manager_container.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
@@ -93,24 +93,26 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   // Requests a PageStorage object for the given |container|. If the page is not
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
-  void InitPageManagerContainer(PageManagerContainer* container,
+  void InitPageManagerContainer(ActivePageManagerContainer* container,
                                 convert::ExtendedStringView page_id,
                                 fit::function<void(Status)> callback);
 
   // Creates a page storage for the given |page_id| and completes the
-  // PageManagerContainer.
+  // ActivePageManagerContainer.
   void CreatePageStorage(storage::PageId page_id, PageState page_state,
-                         PageManagerContainer* container);
+                         ActivePageManagerContainer* container);
 
-  // Adds a new PageManagerContainer for |page_id| and configures it so that it
-  // is automatically deleted from |page_managers_| when the last local client
-  // disconnects from the page. Returns the container.
-  PageManagerContainer* AddPageManagerContainer(storage::PageIdView page_id);
+  // Adds a new ActivePageManagerContainer for |page_id| and configures it so
+  // that it is automatically deleted from |active_page_manager_containers_|
+  // when the last local client disconnects from the page. Returns the
+  // container.
+  ActivePageManagerContainer* AddPageManagerContainer(
+      storage::PageIdView page_id);
 
   // Creates a new page manager for the given storage.
-  std::unique_ptr<PageManager> NewPageManager(
+  std::unique_ptr<ActivePageManager> NewPageManager(
       std::unique_ptr<storage::PageStorage> page_storage,
-      PageManager::PageStorageState state);
+      ActivePageManager::PageStorageState state);
 
   // Checks whether the given page is closed and staisfies the given
   // |predicate|. The result returned in the callback will be |PAGE_OPENED| if
@@ -119,7 +121,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   // predicate is satisfied.
   void PageIsClosedAndSatisfiesPredicate(
       storage::PageIdView page_id,
-      fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
+      fit::function<void(ActivePageManager*, fit::function<void(Status, bool)>)>
           predicate,
       fit::function<void(Status, PagePredicateResult)> callback);
 
@@ -138,21 +140,21 @@ class LedgerManager : public LedgerImpl::Delegate {
   std::string ledger_name_;
   std::unique_ptr<encryption::EncryptionService> encryption_service_;
   // |storage_| must outlive objects containing CommitWatchers, which includes
-  // |ledger_sync_| and |page_managers_|.
+  // |ledger_sync_| and |active_page_manager_containers_|.
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync_;
   LedgerImpl ledger_impl_;
-  // |merge_manager_| must be destructed after |page_managers_| to ensure it
-  // outlives any page-specific merge resolver.
+  // |merge_manager_| must be destructed after |active_page_manager_containers_|
+  // to ensure it outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
   callback::AutoCleanableSet<
       ErrorNotifierBinding<fuchsia::ledger::LedgerErrorNotifierDelegate>>
       bindings_;
 
   // Mapping from each page id to the manager of that page.
-  callback::AutoCleanableMap<storage::PageId, PageManagerContainer,
+  callback::AutoCleanableMap<storage::PageId, ActivePageManagerContainer,
                              convert::StringViewComparator>
-      page_managers_;
+      active_page_manager_containers_;
   PageUsageListener* page_usage_listener_;
   fit::closure on_empty_callback_;
 

@@ -19,7 +19,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
-class PageManager;
+class ActivePageManager;
 class MergeStrategy;
 
 // MergeResolver watches a page and resolves conflicts as they appear using the
@@ -45,7 +45,7 @@ class MergeResolver : public storage::CommitWatcher {
   // Changes the current merge strategy. Any pending merge will be cancelled.
   void SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy);
 
-  void SetPageManager(PageManager* page_manager);
+  void SetActivePageManager(ActivePageManager* active_page_manager);
 
   // Adds an action to perform when all the pending conflicts are resolved
   // (once).
@@ -133,7 +133,7 @@ class MergeResolver : public storage::CommitWatcher {
   coroutine::CoroutineService* coroutine_service_;
   storage::PageStorage* const storage_;
   std::unique_ptr<backoff::Backoff> backoff_;
-  PageManager* page_manager_ = nullptr;
+  ActivePageManager* active_page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;
   bool has_next_strategy_ = false;

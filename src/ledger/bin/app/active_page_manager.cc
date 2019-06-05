@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/app/page_manager.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
@@ -17,12 +17,12 @@
 
 namespace ledger {
 
-PageManager::PageManager(Environment* environment,
-                         std::unique_ptr<storage::PageStorage> page_storage,
-                         std::unique_ptr<sync_coordinator::PageSync> page_sync,
-                         std::unique_ptr<MergeResolver> merge_resolver,
-                         PageManager::PageStorageState state,
-                         zx::duration sync_timeout)
+ActivePageManager::ActivePageManager(
+    Environment* environment,
+    std::unique_ptr<storage::PageStorage> page_storage,
+    std::unique_ptr<sync_coordinator::PageSync> page_sync,
+    std::unique_ptr<MergeResolver> merge_resolver,
+    ActivePageManager::PageStorageState state, zx::duration sync_timeout)
     : environment_(environment),
       page_storage_(std::move(page_storage)),
       page_sync_(std::move(page_sync)),
@@ -37,7 +37,7 @@ PageManager::PageManager(Environment* environment,
     page_sync_->SetOnIdle([this] { CheckEmpty(); });
     page_sync_->SetOnBacklogDownloaded([this] { OnSyncBacklogDownloaded(); });
     page_sync_->Start();
-    if (state == PageManager::PageStorageState::NEEDS_SYNC) {
+    if (state == ActivePageManager::PageStorageState::NEEDS_SYNC) {
       // The page storage was created locally. We wait a bit in order to get the
       // initial state from the network before accepting requests.
       task_runner_.PostDelayedTask(
@@ -57,18 +57,18 @@ PageManager::PageManager(Environment* environment,
     sync_backlog_downloaded_ = true;
   }
   merge_resolver_->set_on_empty([this] { CheckEmpty(); });
-  merge_resolver_->SetPageManager(this);
+  merge_resolver_->SetActivePageManager(this);
 }
 
-PageManager::~PageManager() {
+ActivePageManager::~ActivePageManager() {
   for (const auto& [page_impl, on_done] : page_impls_) {
     on_done(Status::INTERNAL_ERROR);
   }
   page_impls_.clear();
 }
 
-void PageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
-                              fit::function<void(Status)> on_done) {
+void ActivePageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
+                                    fit::function<void(Status)> on_done) {
   auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger",
                                        "page_manager_add_page_impl");
   if (!sync_backlog_downloaded_) {
@@ -81,7 +81,7 @@ void PageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
       .Init(std::move(traced_on_done));
 }
 
-void PageManager::BindPageSnapshot(
+void ActivePageManager::BindPageSnapshot(
     std::unique_ptr<const storage::Commit> commit,
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     std::string key_prefix) {
@@ -89,7 +89,7 @@ void PageManager::BindPageSnapshot(
                      std::move(commit), std::move(key_prefix));
 }
 
-Reference PageManager::CreateReference(
+Reference ActivePageManager::CreateReference(
     storage::ObjectIdentifier object_identifier) {
   uint64_t index = environment_->random()->Draw<uint64_t>();
   FXL_DCHECK(references_.find(index) == references_.end());
@@ -99,7 +99,7 @@ Reference PageManager::CreateReference(
   return reference;
 }
 
-Status PageManager::ResolveReference(
+Status ActivePageManager::ResolveReference(
     Reference reference, storage::ObjectIdentifier* object_identifier) {
   if (reference.opaque_id.size() != sizeof(uint64_t)) {
     return Status::INVALID_ARGUMENT;
@@ -114,14 +114,14 @@ Status PageManager::ResolveReference(
   return Status::OK;
 }
 
-void PageManager::IsSynced(fit::function<void(Status, bool)> callback) {
+void ActivePageManager::IsSynced(fit::function<void(Status, bool)> callback) {
   page_storage_->IsSynced(
       [callback = std::move(callback)](Status status, bool is_synced) {
         callback(status, is_synced);
       });
 }
 
-void PageManager::IsOfflineAndEmpty(
+void ActivePageManager::IsOfflineAndEmpty(
     fit::function<void(Status, bool)> callback) {
   if (page_storage_->IsOnline()) {
     callback(Status::OK, false);
@@ -134,18 +134,18 @@ void PageManager::IsOfflineAndEmpty(
       });
 }
 
-bool PageManager::IsEmpty() {
+bool ActivePageManager::IsEmpty() {
   return page_delegates_.empty() && snapshots_.empty() && page_impls_.empty() &&
          merge_resolver_->IsEmpty() && (!page_sync_ || page_sync_->IsIdle());
 }
 
-void PageManager::CheckEmpty() {
+void ActivePageManager::CheckEmpty() {
   if (on_empty_callback_ && IsEmpty()) {
     on_empty_callback_();
   }
 }
 
-void PageManager::OnSyncBacklogDownloaded() {
+void ActivePageManager::OnSyncBacklogDownloaded() {
   if (sync_backlog_downloaded_) {
     FXL_LOG(INFO) << "Initial sync in background finished. "
                   << "Clients will receive a change notification.";

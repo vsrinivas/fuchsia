@@ -47,9 +47,9 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     resolver->set_on_empty(QuitLoopClosure());
     merge_resolver_ = resolver.get();
 
-    page_manager_ = std::make_unique<PageManager>(
+    active_page_manager_ = std::make_unique<ActivePageManager>(
         &environment_, std::move(page_storage), nullptr, std::move(resolver),
-        PageManager::PageStorageState::NEEDS_SYNC);
+        ActivePageManager::PageStorageState::NEEDS_SYNC);
   }
 
   storage::CommitId CreateCommit(
@@ -83,7 +83,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
   MergeResolver* merge_resolver_;
 
  private:
-  std::unique_ptr<PageManager> page_manager_;
+  std::unique_ptr<ActivePageManager> active_page_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClientTest);
 };

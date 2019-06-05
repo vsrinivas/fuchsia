@@ -12,8 +12,8 @@
 #include <memory>
 #include <vector>
 
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/diff_utils.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
@@ -29,7 +29,7 @@ class ConflictResolverClient
     : public fuchsia::ledger::MergeResultProviderErrorNotifierDelegate {
  public:
   explicit ConflictResolverClient(
-      storage::PageStorage* storage, PageManager* page_manager,
+      storage::PageStorage* storage, ActivePageManager* active_page_manager,
       ConflictResolver* conflict_resolver,
       std::unique_ptr<const storage::Commit> left,
       std::unique_ptr<const storage::Commit> right,
@@ -82,7 +82,7 @@ class ConflictResolverClient
       const fit::function<void(Status)>& callback, Status status = Status::OK);
 
   storage::PageStorage* const storage_;
-  PageManager* const manager_;
+  ActivePageManager* const manager_;
   ConflictResolver* const conflict_resolver_;
 
   std::unique_ptr<const storage::Commit> const left_;

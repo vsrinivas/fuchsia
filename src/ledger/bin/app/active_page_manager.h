@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_APP_PAGE_MANAGER_H_
-#define SRC_LEDGER_BIN_APP_PAGE_MANAGER_H_
+#ifndef SRC_LEDGER_BIN_APP_ACTIVE_PAGE_MANAGER_H_
+#define SRC_LEDGER_BIN_APP_ACTIVE_PAGE_MANAGER_H_
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
@@ -31,14 +31,14 @@
 namespace ledger {
 // Manages a ledger page.
 //
-// PageManager owns all page-level objects related to a single page: page
+// ActivePageManager owns all page-level objects related to a single page: page
 // storage, and a set of FIDL PageImpls backed by the page storage. It is safe
 // to delete it at any point - this closes all channels, deletes PageImpls and
 // tears down the storage.
 //
 // When the set of PageImpls becomes empty, client is notified through
 // |on_empty_callback|.
-class PageManager {
+class ActivePageManager {
  public:
   // Whether the page storage needs to sync with the cloud provider before
   // binding new pages (|NEEDS_SYNC|) or whether it is immediately available
@@ -48,23 +48,23 @@ class PageManager {
     NEEDS_SYNC,
   };
 
-  // Both |page_storage| and |page_sync| are owned by PageManager and are
+  // Both |page_storage| and |page_sync| are owned by ActivePageManager and are
   // deleted when it goes away.
-  PageManager(Environment* environment,
-              std::unique_ptr<storage::PageStorage> page_storage,
-              std::unique_ptr<sync_coordinator::PageSync> page_sync,
-              std::unique_ptr<MergeResolver> merge_resolver,
-              PageManager::PageStorageState state,
-              zx::duration sync_timeout = zx::sec(5));
-  ~PageManager();
+  ActivePageManager(Environment* environment,
+                    std::unique_ptr<storage::PageStorage> page_storage,
+                    std::unique_ptr<sync_coordinator::PageSync> page_sync,
+                    std::unique_ptr<MergeResolver> merge_resolver,
+                    ActivePageManager::PageStorageState state,
+                    zx::duration sync_timeout = zx::sec(5));
+  ~ActivePageManager();
 
-  // Creates a new PageDelegate managed by this PageManager, and binds it to the
-  // given PageImpl.
+  // Creates a new PageDelegate managed by this ActivePageManager, and binds it
+  // to the given PageImpl.
   void AddPageImpl(std::unique_ptr<PageImpl> page_impl,
                    fit::function<void(Status)> on_done);
 
-  // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
-  // the request.
+  // Creates a new PageSnapshotImpl managed by this ActivePageManager, and binds
+  // it to the request.
   void BindPageSnapshot(std::unique_ptr<const storage::Commit> commit,
                         fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                         std::string key_prefix);
@@ -82,7 +82,7 @@ class PageManager {
   // Checks whether the page is offline and has no entries.
   void IsOfflineAndEmpty(fit::function<void(Status, bool)> callback);
 
-  // Returns true if this PageManager can be deleted without interrupting
+  // Returns true if this ActivePageManager can be deleted without interrupting
   // syncing, merging, or requests related to this page.
   bool IsEmpty();
 
@@ -118,9 +118,9 @@ class PageManager {
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageManager);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManager);
 };
 
 }  // namespace ledger
 
-#endif  // SRC_LEDGER_BIN_APP_PAGE_MANAGER_H_
+#endif  // SRC_LEDGER_BIN_APP_ACTIVE_PAGE_MANAGER_H_

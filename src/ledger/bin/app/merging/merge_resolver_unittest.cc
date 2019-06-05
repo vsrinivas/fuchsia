@@ -158,14 +158,15 @@ class RecordingTestStrategy : public MergeStrategy {
 
   void SetOnMerge(fit::closure on_merge) { on_merge_ = std::move(on_merge); }
 
-  void Merge(storage::PageStorage* storage, PageManager* page_manager,
+  void Merge(storage::PageStorage* storage,
+             ActivePageManager* active_page_manager,
              std::unique_ptr<const storage::Commit> merge_head_1,
              std::unique_ptr<const storage::Commit> merge_head_2,
              std::unique_ptr<const storage::Commit> merge_ancestor,
              fit::function<void(Status)> merge_callback) override {
     EXPECT_TRUE(storage::Commit::TimestampOrdered(merge_head_1, merge_head_2));
     storage_ = storage;
-    page_manager_ = page_manager;
+    active_page_manager_ = active_page_manager;
     callback = std::move(merge_callback);
     head_1 = std::move(merge_head_1);
     head_2 = std::move(merge_head_2);
@@ -177,7 +178,7 @@ class RecordingTestStrategy : public MergeStrategy {
   }
 
   void Forward(MergeStrategy* strategy) {
-    strategy->Merge(storage_, page_manager_, std::move(head_1),
+    strategy->Merge(storage_, active_page_manager_, std::move(head_1),
                     std::move(head_2), std::move(ancestor),
                     std::move(callback));
   }
@@ -196,7 +197,7 @@ class RecordingTestStrategy : public MergeStrategy {
 
  private:
   storage::PageStorage* storage_;
-  PageManager* page_manager_;
+  ActivePageManager* active_page_manager_;
   fit::closure on_merge_;
 };
 

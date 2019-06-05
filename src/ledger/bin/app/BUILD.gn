@@ -40,6 +40,10 @@ executable("app") {
 
 source_set("lib") {
   sources = [
+    "active_page_manager.cc",
+    "active_page_manager.h",
+    "active_page_manager_container.cc",
+    "active_page_manager_container.h",
     "branch_tracker.cc",
     "branch_tracker.h",
     "constants.cc",
@@ -88,10 +92,6 @@ source_set("lib") {
     "page_eviction_policies.h",
     "page_impl.cc",
     "page_impl.h",
-    "page_manager.cc",
-    "page_manager.h",
-    "page_manager_container.cc",
-    "page_manager_container.h",
     "page_snapshot_impl.cc",
     "page_snapshot_impl.h",
     "page_usage_db.cc",
@@ -162,6 +162,8 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "active_page_manager_container_unittest.cc",
+    "active_page_manager_unittest.cc",
     "delaying_facade_unittest.cc",
     "disk_cleanup_manager_unittest.cc",
     "fidl/serialization_size_unittest.cc",
@@ -178,8 +180,6 @@ source_set("unittests") {
     "page_eviction_manager_impl_unittest.cc",
     "page_eviction_policies_unittest.cc",
     "page_impl_unittest.cc",
-    "page_manager_container_unittest.cc",
-    "page_manager_unittest.cc",
     "page_usage_db_unittest.cc",
     "sync_watcher_set_unittest.cc",
   ]

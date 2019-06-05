@@ -11,9 +11,9 @@
 
 #include <vector>
 
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -21,7 +21,8 @@ namespace ledger {
 class BranchTracker::PageWatcherContainer {
  public:
   PageWatcherContainer(coroutine::CoroutineService* coroutine_service,
-                       PageWatcherPtr watcher, PageManager* page_manager,
+                       PageWatcherPtr watcher,
+                       ActivePageManager* active_page_manager,
                        storage::PageStorage* storage,
                        std::unique_ptr<const storage::Commit> base_commit,
                        std::string key_prefix)
@@ -29,7 +30,7 @@ class BranchTracker::PageWatcherContainer {
         last_commit_(std::move(base_commit)),
         coroutine_service_(coroutine_service),
         key_prefix_(std::move(key_prefix)),
-        manager_(page_manager),
+        active_page_manager_(active_page_manager),
         storage_(storage),
         interface_(std::move(watcher)),
         weak_factory_(this) {
@@ -147,7 +148,7 @@ class BranchTracker::PageWatcherContainer {
          on_done = std::move(on_done)](
             fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
           if (snapshot_request) {
-            manager_->BindPageSnapshot(
+            active_page_manager_->BindPageSnapshot(
                 new_commit->Clone(), std::move(snapshot_request), key_prefix_);
           }
           if (state != ResultState::COMPLETED &&
@@ -254,7 +255,7 @@ class BranchTracker::PageWatcherContainer {
   coroutine::CoroutineService* coroutine_service_;
   coroutine::CoroutineHandler* handler_ = nullptr;
   const std::string key_prefix_;
-  PageManager* manager_;
+  ActivePageManager* active_page_manager_;
   storage::PageStorage* storage_;
   PageWatcherPtr interface_;
 
@@ -265,7 +266,7 @@ class BranchTracker::PageWatcherContainer {
 };
 
 BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
-                             PageManager* manager,
+                             ActivePageManager* manager,
                              storage::PageStorage* storage)
     : coroutine_service_(coroutine_service),
       manager_(manager),

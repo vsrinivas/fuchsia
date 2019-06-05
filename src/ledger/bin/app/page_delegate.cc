@@ -17,8 +17,8 @@
 #include <vector>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/constants.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -27,7 +27,8 @@
 namespace ledger {
 
 PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
-                           PageManager* manager, storage::PageStorage* storage,
+                           ActivePageManager* manager,
+                           storage::PageStorage* storage,
                            MergeResolver* merge_resolver,
                            SyncWatcherSet* watchers,
                            std::unique_ptr<PageImpl> page_impl)

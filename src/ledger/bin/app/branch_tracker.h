@@ -18,7 +18,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
-class PageManager;
+class ActivePageManager;
 
 // Tracks the head of a commit "branch". A commit is chosen arbitrarily from the
 // page's head commits at construction. Subsequently, this object will track the
@@ -27,7 +27,7 @@ class PageManager;
 class BranchTracker : public storage::CommitWatcher {
  public:
   BranchTracker(coroutine::CoroutineService* coroutine_service,
-                PageManager* manager, storage::PageStorage* storage);
+                ActivePageManager* manager, storage::PageStorage* storage);
   ~BranchTracker() override;
 
   Status Init();
@@ -70,7 +70,7 @@ class BranchTracker : public storage::CommitWatcher {
   void CheckEmpty();
 
   coroutine::CoroutineService* coroutine_service_;
-  PageManager* manager_;
+  ActivePageManager* manager_;
   storage::PageStorage* storage_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;
   fit::closure on_empty_callback_;
