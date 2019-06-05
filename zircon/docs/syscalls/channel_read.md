@@ -28,8 +28,14 @@ zx_status_t zx_channel_read(zx_handle_t handle,
 `zx_channel_read()` attempts to read the first message from the channel
 specified by *handle* into the provided *bytes* and/or *handles* buffers.
 
-The parameters *num_bytes* and *num_handles* are used to specify the
-size of the respective read buffers.
+The parameters *num_bytes* and *num_handles* are used to specify the size of the
+respective read buffers. *num_bytes* is a count of bytes, and
+*num_handles* is a count of elements of type `zx_handle_t`.
+
+The length of *bytes*, in bytes, is stored in the location pointed to by
+*actual_bytes*.  The number of handles is stored in the location pointed to by
+*actual_handles*.  Either *actual_bytes* or *actual_handles* may be NULL, in
+which case they will be ignored.
 
 Channel messages may contain both byte data and handle payloads and may
 only be read in their entirety.  Partial reads are not possible.
@@ -50,9 +56,9 @@ and rights are validated against the expected values.
 
 ## RETURN VALUE
 
-Both forms of read return **ZX_OK** on success, if *actual_bytes*
-and *actual_handles* (if non-NULL), contain the exact number of bytes
-and count of handles read.
+Returns **ZX_OK** on success. If non-NULL, the locations pointed to by
+*actual_bytes* and *actual_handles* contain the exact number of bytes and count
+of handles read.
 
 ## ERRORS
 
@@ -78,11 +84,6 @@ are too small (in which case, the minimum sizes necessary to receive
 the message will be written to *actual_bytes* and *actual_handles*,
 provided they are non-NULL). If *options* has **ZX_CHANNEL_READ_MAY_DISCARD**
 set, then the message is discarded.
-
-## NOTES
-
-*num_handles* and *actual_handles* are counts of the number of elements
-in the *handles* array, not its size in bytes.
 
 ## SEE ALSO
 
