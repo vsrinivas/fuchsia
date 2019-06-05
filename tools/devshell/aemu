@@ -5,8 +5,9 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-k] [-N] [-u <path>] [-e <directory>]
+## usage: fx aemu [-k] [-l] [-N] [-u <path>] [-e <directory>]
 ##   -k use KVM
+##   -l run headless
 ##   -N run with emulated nic via tun/tap
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
@@ -18,6 +19,7 @@ source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 KVM=""
 NET=""
+HEADLESS=""
 AEMU_DIR=""
 UPSCRIPT=no
 
@@ -29,6 +31,9 @@ while [[ $# -ge 1 ]]; do
     ;;
   -k)
     KVM=1
+    ;;
+  -l)
+    HEADLESS="-headless"
     ;;
   -N)
     NET=1
@@ -163,5 +168,5 @@ CMDLINE+="kernel.halt-on-panic=true "
 
 # run aemu
 set -x
-exec "${AEMU_DIR}"emulator -fuchsia -kernel "$KERNEL" -initrd "$kernelzbi" "${ARGS[@]}" \
+exec "${AEMU_DIR}"emulator"$HEADLESS" -fuchsia -kernel "$KERNEL" -initrd "$kernelzbi" "${ARGS[@]}" \
      -append "$CMDLINE" "$@"
