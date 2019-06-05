@@ -12,6 +12,10 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#ifndef _KERNEL
+#include <optional>
+#endif
+
 #define SMBIOS2_ANCHOR "_SM_"
 #define SMBIOS2_INTERMEDIATE_ANCHOR "_DMI_"
 #define SMBIOS3_ANCHOR "_SM3_"
@@ -218,5 +222,70 @@ struct SystemInformationStruct2_4 {
     void Dump(const StringTable& st) const;
 } __PACKED;
 static_assert(sizeof(SystemInformationStruct2_4) == 0x1b, "");
+
+#ifndef _KERNEL
+
+// Safe accessor for fields which may be out of the bounds of a structure.
+// Some SMBIOS structures can be truncated at several different points, and
+// this allows users to safetly read them.
+//
+// StructType must refer to a structure with a member "hdr" of type "Header".
+template <typename StructType, typename FieldType>
+std::optional<FieldType> ReadOptionalField(const StructType* s, FieldType StructType::* field) {
+    const auto end = reinterpret_cast<const std::byte*>(s) + s->hdr.length;
+    const auto field_end = reinterpret_cast<const std::byte*>(&(s->*field) + 1);
+    if (field_end > end) {
+        return {};
+    }
+    return s->*field;
+}
+
+struct BaseboardInformationStruct {
+    Header hdr;
+    uint8_t manufacturer_str_idx;
+    uint8_t product_name_str_idx;
+    uint8_t version_str_idx;
+    uint8_t serial_number_str_idx;
+
+    // All of these "unsafe" fields should be accessed using the accesor methods
+    // below.  The fields are not marked private, since that would make this
+    // struct not standard layout.
+    uint8_t unsafe_asset_tag_str_idx;
+    uint8_t unsafe_feature_flags;
+    uint8_t unsafe_location_in_chassis_str_idx;
+    uint16_t unsafe_chassis_handle;
+
+    uint8_t unsafe_board_type;
+    uint8_t unsafe_contained_object_handles_count;
+    uint16_t contained_object_handles[];
+
+    std::optional<uint8_t> asset_tag_str_idx() const {
+        return ReadOptionalField(this, &BaseboardInformationStruct::unsafe_asset_tag_str_idx);
+    }
+
+    std::optional<uint8_t> feature_flags() const {
+        return ReadOptionalField(this, &BaseboardInformationStruct::unsafe_feature_flags);
+    }
+    std::optional<uint8_t> location_in_chassis_str_idx() const {
+        return ReadOptionalField(
+                this, &BaseboardInformationStruct::unsafe_location_in_chassis_str_idx);
+    }
+    std::optional<uint16_t> chassis_handle() const {
+        return ReadOptionalField(this, &BaseboardInformationStruct::unsafe_chassis_handle);
+    }
+    std::optional<uint8_t> board_type() const {
+        return ReadOptionalField(this, &BaseboardInformationStruct::unsafe_board_type);
+    }
+    std::optional<uint8_t> contained_object_handles_count() const {
+        return ReadOptionalField(
+                this, &BaseboardInformationStruct::unsafe_contained_object_handles_count);
+    }
+
+    void Dump(const StringTable& st) const;
+} __PACKED;
+static_assert(sizeof(BaseboardInformationStruct) == 0xf);
+static_assert(std::is_standard_layout_v<BaseboardInformationStruct>);
+
+#endif
 
 } // namespace smbios

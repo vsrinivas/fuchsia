@@ -170,4 +170,67 @@ TEST(SmbiosTestCase, GetString) {
     ASSERT_OK(ep.WalkStructs(reinterpret_cast<uintptr_t>(structs.get()), walk_cb));
 }
 
+TEST(SmbiosTestCase, BaseboardInformationTruncations) {
+    static_assert(alignof(smbios::BaseboardInformationStruct) == 1);
+    uint8_t raw[23] = {};
+    auto baseboard = reinterpret_cast<smbios::BaseboardInformationStruct*>(raw);
+
+    baseboard->hdr.type = smbios::StructType::Baseboard;
+    baseboard->hdr.length = 8;
+    ASSERT_FALSE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_FALSE(baseboard->feature_flags().has_value());
+    ASSERT_FALSE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_FALSE(baseboard->chassis_handle().has_value());
+    ASSERT_FALSE(baseboard->board_type().has_value());
+    ASSERT_FALSE(baseboard->contained_object_handles_count().has_value());
+
+    baseboard->hdr.length = 9;
+    ASSERT_TRUE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_FALSE(baseboard->feature_flags().has_value());
+    ASSERT_FALSE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_FALSE(baseboard->chassis_handle().has_value());
+    ASSERT_FALSE(baseboard->board_type().has_value());
+    ASSERT_FALSE(baseboard->contained_object_handles_count().has_value());
+
+    baseboard->hdr.length = 10;
+    ASSERT_TRUE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_TRUE(baseboard->feature_flags().has_value());
+    ASSERT_FALSE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_FALSE(baseboard->chassis_handle().has_value());
+    ASSERT_FALSE(baseboard->board_type().has_value());
+    ASSERT_FALSE(baseboard->contained_object_handles_count().has_value());
+
+    baseboard->hdr.length = 11;
+    ASSERT_TRUE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_TRUE(baseboard->feature_flags().has_value());
+    ASSERT_TRUE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_FALSE(baseboard->chassis_handle().has_value());
+    ASSERT_FALSE(baseboard->board_type().has_value());
+    ASSERT_FALSE(baseboard->contained_object_handles_count().has_value());
+
+    baseboard->hdr.length = 13;
+    ASSERT_TRUE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_TRUE(baseboard->feature_flags().has_value());
+    ASSERT_TRUE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_TRUE(baseboard->chassis_handle().has_value());
+    ASSERT_FALSE(baseboard->board_type().has_value());
+    ASSERT_FALSE(baseboard->contained_object_handles_count().has_value());
+
+    baseboard->hdr.length = 14;
+    ASSERT_TRUE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_TRUE(baseboard->feature_flags().has_value());
+    ASSERT_TRUE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_TRUE(baseboard->chassis_handle().has_value());
+    ASSERT_TRUE(baseboard->board_type().has_value());
+    ASSERT_FALSE(baseboard->contained_object_handles_count().has_value());
+
+    baseboard->hdr.length = 15;
+    ASSERT_TRUE(baseboard->asset_tag_str_idx().has_value());
+    ASSERT_TRUE(baseboard->feature_flags().has_value());
+    ASSERT_TRUE(baseboard->location_in_chassis_str_idx().has_value());
+    ASSERT_TRUE(baseboard->chassis_handle().has_value());
+    ASSERT_TRUE(baseboard->board_type().has_value());
+    ASSERT_TRUE(baseboard->contained_object_handles_count().has_value());
+}
+
 } // namespace

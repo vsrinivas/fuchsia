@@ -248,6 +248,20 @@ void SystemInformationStruct2_4::Dump(const StringTable& st) const {
     }
 }
 
+#ifndef _KERNEL
+void BaseboardInformationStruct::Dump(const StringTable& st) const {
+    printf("SMBIOS Baseboard Information Struct:\n");
+    printf("  manufacturer: %s\n", st.GetString(manufacturer_str_idx));
+    printf("  product: %s\n", st.GetString(product_name_str_idx));
+    printf("  version: %s\n", st.GetString(version_str_idx));
+    printf("  feature flags (%spresent): 0x%02x\n", feature_flags().has_value() ? "" : "not ",
+           feature_flags().value_or(0));
+    printf("  location: %s\n", st.GetString(location_in_chassis_str_idx().value_or(0)));
+    printf("  board_type (%spresent): 0x%02x\n", board_type().has_value() ? "" : "not ",
+           board_type().value_or(0));
+}
+#endif
+
 zx_status_t EntryPoint2_1::WalkStructs(uintptr_t struct_table_virt, StructWalkCallback cb) const {
     size_t idx = 0;
     uintptr_t curr_addr = struct_table_virt;
