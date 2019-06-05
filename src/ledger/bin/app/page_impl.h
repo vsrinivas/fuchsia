@@ -11,8 +11,8 @@
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "src/ledger/bin/app/delaying_facade.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/macros.h"
 
@@ -20,7 +20,7 @@ namespace ledger {
 class PageDelegate;
 
 // An implementation of the |Page| FIDL interface.
-class PageImpl : public fuchsia::ledger::PageErrorNotifierDelegate {
+class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
  public:
   explicit PageImpl(storage::PageIdView page_id,
                     fidl::InterfaceRequest<Page> request);
@@ -74,7 +74,7 @@ class PageImpl : public fuchsia::ledger::PageErrorNotifierDelegate {
 
   fit::closure on_binding_unbound_callback_;
 
-  ErrorNotifierBinding<fuchsia::ledger::PageErrorNotifierDelegate> binding_;
+  SyncableBinding<fuchsia::ledger::PageSyncableDelegate> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };

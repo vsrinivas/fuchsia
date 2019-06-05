@@ -14,8 +14,8 @@
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/diff_utils.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/macros.h"
@@ -26,7 +26,7 @@ namespace ledger {
 // merge conflicting commit branches. It is used both by AutoMergeStrategy and
 // CustomMergeStrategy.
 class ConflictResolverClient
-    : public fuchsia::ledger::MergeResultProviderErrorNotifierDelegate {
+    : public fuchsia::ledger::MergeResultProviderSyncableDelegate {
  public:
   explicit ConflictResolverClient(
       storage::PageStorage* storage, ActivePageManager* active_page_manager,
@@ -108,8 +108,7 @@ class ConflictResolverClient
   // serialized.
   callback::OperationSerializer operation_serializer_;
 
-  ledger::ErrorNotifierBinding<
-      fuchsia::ledger::MergeResultProviderErrorNotifierDelegate>
+  ledger::SyncableBinding<fuchsia::ledger::MergeResultProviderSyncableDelegate>
       merge_result_provider_binding_;
 
   // This must be the last member of the class.

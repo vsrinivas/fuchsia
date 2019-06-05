@@ -5,7 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/cpp/fidlmerge_cpp.gni")
 
-# Declares a error_notifier library that contains C++ delegate allowing to
+# Declares a syncable library that contains C++ delegate allowing to
 # send errors.
 #
 # Parameters
@@ -15,14 +15,14 @@ import("//build/cpp/fidlmerge_cpp.gni")
 #
 #   deps, public_deps, test_only, visibility (optional)
 #     These parameters are forwarded to the source_set. This template lists
-#     //garnet/public/lib/error_notifier and the value of fidl_target as public_deps.
+#     //garnet/public/lib/syncable and the value of fidl_target as public_deps.
 #
 
-template("error_notifier_fidl") {
+template("syncable_fidl") {
   assert(is_fuchsia, "This template can only be used in $target_toolchain.")
 
   assert(defined(invoker.fidl_target),
-         "error_notifier_fidl requires parameter fidl_target.")
+         "syncable_fidl requires parameter fidl_target.")
 
   fidl_target = invoker.fidl_target
 
@@ -38,8 +38,7 @@ template("error_notifier_fidl") {
 
     fidl_target = "$fidl_target"
 
-    template_path =
-        "//src/ledger/bin/fidl/error_notifier/error_notifier.fidlmerge"
+    template_path = "//src/ledger/bin/fidl/syncable/syncable.fidlmerge"
 
     generated_source_base = name
 
@@ -48,7 +47,7 @@ template("error_notifier_fidl") {
     public_deps = [
       "$fidl_target",
       "//sdk/lib/fidl/cpp",
-      "//src/ledger/bin/fidl/error_notifier",
+      "//src/ledger/bin/fidl/syncable",
       "//src/ledger/bin/public",
     ]
 

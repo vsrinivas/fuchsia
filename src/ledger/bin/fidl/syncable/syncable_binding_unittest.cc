@@ -7,14 +7,13 @@
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "src/ledger/bin/fidl/error_notifier/error_notifier_fidl_test.h"
+#include "src/ledger/bin/fidl/syncable/syncable_fidl_test.h"
 
 namespace ledger {
 namespace {
 
-class ErrorNotifierTestErrorNotifierDelegateImpl
-    : public fuchsia::ledger::errornotifiertest::
-          ErrorNotifierTestErrorNotifierDelegate {
+class SyncableTestSyncableDelegateImpl
+    : public fuchsia::ledger::syncabletest::SyncableTestSyncableDelegate {
  public:
   int no_reponse_count() { return no_reponse_count_; }
   int empty_reponse_count() { return empty_reponse_count_; }
@@ -25,7 +24,7 @@ class ErrorNotifierTestErrorNotifierDelegateImpl
   void RunDelayedCallback() { delayed_callback_(); }
 
  private:
-  // ErrorNotifierTestErrorNotifierDelegate implementation.
+  // SyncableTestSyncableDelegate implementation.
   void NoResponse(fit::function<void(Status)> callback) override {
     NoResponseWithParameter(1, std::move(callback));
   }
@@ -83,18 +82,17 @@ class ErrorNotifierTestErrorNotifierDelegateImpl
   fit::closure delayed_callback_;
 };
 
-class ErrorNotifierTest : public gtest::TestLoopFixture {
+class SyncableTest : public gtest::TestLoopFixture {
  protected:
-  ErrorNotifierTest() : binding_(&impl_, ptr_.NewRequest()) {}
+  SyncableTest() : binding_(&impl_, ptr_.NewRequest()) {}
 
-  ErrorNotifierTestErrorNotifierDelegateImpl impl_;
-  fuchsia::ledger::errornotifiertest::ErrorNotifierTestPtr ptr_;
-  ErrorNotifierBinding<fuchsia::ledger::errornotifiertest::
-                           ErrorNotifierTestErrorNotifierDelegate>
+  SyncableTestSyncableDelegateImpl impl_;
+  fuchsia::ledger::syncabletest::SyncableTestPtr ptr_;
+  SyncableBinding<fuchsia::ledger::syncabletest::SyncableTestSyncableDelegate>
       binding_;
 };
 
-TEST_F(ErrorNotifierTest, NoResponse) {
+TEST_F(SyncableTest, NoResponse) {
   zx_status_t status;
   bool error_called;
 
@@ -116,14 +114,14 @@ TEST_F(ErrorNotifierTest, NoResponse) {
   EXPECT_EQ(ZX_ERR_IO, status);
 }
 
-TEST_F(ErrorNotifierTest, NoResponseWithParameter) {
+TEST_F(SyncableTest, NoResponseWithParameter) {
   ptr_->NoResponseWithParameter(42);
   RunLoopUntilIdle();
   EXPECT_EQ(1, impl_.no_reponse_count());
   EXPECT_EQ(42, impl_.parameter_received());
 }
 
-TEST_F(ErrorNotifierTest, NoResponseSync) {
+TEST_F(SyncableTest, NoResponseSync) {
   impl_.delay_callback() = true;
 
   bool sync_called;
@@ -138,7 +136,7 @@ TEST_F(ErrorNotifierTest, NoResponseSync) {
   EXPECT_TRUE(sync_called);
 }
 
-TEST_F(ErrorNotifierTest, EmptyResponse) {
+TEST_F(SyncableTest, EmptyResponse) {
   zx_status_t status;
   bool error_called;
   bool callback_called;
@@ -163,7 +161,7 @@ TEST_F(ErrorNotifierTest, EmptyResponse) {
   EXPECT_EQ(ZX_ERR_IO, status);
 }
 
-TEST_F(ErrorNotifierTest, EmptyResponseWithParameter) {
+TEST_F(SyncableTest, EmptyResponseWithParameter) {
   bool callback_called;
 
   ptr_->EmptyResponseWithParameter(42,
@@ -174,7 +172,7 @@ TEST_F(ErrorNotifierTest, EmptyResponseWithParameter) {
   EXPECT_TRUE(callback_called);
 }
 
-TEST_F(ErrorNotifierTest, EmptyResponseSync) {
+TEST_F(SyncableTest, EmptyResponseSync) {
   impl_.delay_callback() = true;
 
   bool callback_called;
@@ -192,7 +190,7 @@ TEST_F(ErrorNotifierTest, EmptyResponseSync) {
   EXPECT_TRUE(sync_called);
 }
 
-TEST_F(ErrorNotifierTest, NotEmptyResponse) {
+TEST_F(SyncableTest, NotEmptyResponse) {
   zx_status_t status;
   bool error_called;
   bool callback_called;
@@ -221,7 +219,7 @@ TEST_F(ErrorNotifierTest, NotEmptyResponse) {
   EXPECT_EQ(ZX_ERR_IO, status);
 }
 
-TEST_F(ErrorNotifierTest, NotEmptyResponseWithParameter) {
+TEST_F(SyncableTest, NotEmptyResponseWithParameter) {
   bool callback_called;
   int callback_value;
 
@@ -235,7 +233,7 @@ TEST_F(ErrorNotifierTest, NotEmptyResponseWithParameter) {
   EXPECT_EQ(1, callback_value);
 }
 
-TEST_F(ErrorNotifierTest, NotEmptyResponseSync) {
+TEST_F(SyncableTest, NotEmptyResponseSync) {
   impl_.delay_callback() = true;
 
   bool callback_called;
@@ -254,7 +252,7 @@ TEST_F(ErrorNotifierTest, NotEmptyResponseSync) {
   EXPECT_TRUE(sync_called);
 }
 
-TEST_F(ErrorNotifierTest, OnEmpty) {
+TEST_F(SyncableTest, OnEmpty) {
   bool called;
   binding_.set_on_empty(callback::SetWhenCalled(&called));
   RunLoopUntilIdle();
@@ -264,7 +262,7 @@ TEST_F(ErrorNotifierTest, OnEmpty) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(ErrorNotifierTest, OnEmptyWithRunningOperation) {
+TEST_F(SyncableTest, OnEmptyWithRunningOperation) {
   impl_.delay_callback() = true;
   bool called;
   binding_.set_on_empty(callback::SetWhenCalled(&called));

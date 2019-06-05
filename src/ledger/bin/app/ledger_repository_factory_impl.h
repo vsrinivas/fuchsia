@@ -22,8 +22,8 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/lib/files/unique_fd.h"
@@ -33,7 +33,7 @@ namespace ledger {
 
 class LedgerRepositoryFactoryImpl
     : public ::fuchsia::ledger::internal::
-          LedgerRepositoryFactoryErrorNotifierDelegate {
+          LedgerRepositoryFactorySyncableDelegate {
  public:
   explicit LedgerRepositoryFactoryImpl(
       Environment* environment,
@@ -42,7 +42,7 @@ class LedgerRepositoryFactoryImpl
       inspect::Node inspect_node);
   ~LedgerRepositoryFactoryImpl() override;
 
-  // LedgerRepositoryFactoryErrorNotifierDelegate:
+  // LedgerRepositoryFactorySyncableDelegate:
   void GetRepository(
       zx::channel repository_handle,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,

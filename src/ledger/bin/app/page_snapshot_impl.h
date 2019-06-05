@@ -7,16 +7,15 @@
 
 #include <memory>
 
-#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 
 namespace ledger {
 
 // An implementation of the |PageSnapshot| FIDL interface.
-class PageSnapshotImpl
-    : public fuchsia::ledger::PageSnapshotErrorNotifierDelegate {
+class PageSnapshotImpl : public fuchsia::ledger::PageSnapshotSyncableDelegate {
  public:
   PageSnapshotImpl(storage::PageStorage* page_storage,
                    std::unique_ptr<const storage::Commit> commit,

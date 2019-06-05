@@ -22,8 +22,8 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
@@ -154,8 +154,8 @@ class App : public ledger_internal::LedgerController {
   fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  callback::AutoCleanableSet<ErrorNotifierBinding<
-      fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierDelegate>>
+  callback::AutoCleanableSet<SyncableBinding<
+      fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate>>
       factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
 

@@ -21,7 +21,7 @@
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
@@ -114,8 +114,8 @@ class LedgerAppInstanceImpl final
     sys::testing::ComponentContextProvider component_context_provider_;
     Environment environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
-    ErrorNotifierBinding<
-        fuchsia::ledger::internal::LedgerRepositoryFactoryErrorNotifierDelegate>
+    SyncableBinding<
+        fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate>
         binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);

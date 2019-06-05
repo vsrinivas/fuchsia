@@ -31,13 +31,13 @@ struct PageId {
 /// all request started before the |Sync| request has been processed by the
 /// service.
 [FragileBase]
-protocol ErrorNotifier {
+protocol Syncable {
     Sync() -> ();
 };
 
 [Discoverable]
 protocol Ledger {
-    compose ErrorNotifier;
+    compose Syncable;
 
     /// Retrieves the page with the given identifier, creating it if needed, and binds
     /// |page_request| to it. A |null| identifier can be passed to create a new page with a random
@@ -87,7 +87,7 @@ enum ConflictResolutionWaitStatus {
 
 /// A page is the smallest unit of syncable data.
 protocol Page {
-    compose ErrorNotifier;
+    compose Syncable;
 
     /// Returns the identifier for the page.
     GetId() -> (PageId id);
@@ -250,7 +250,7 @@ enum Error {
 /// provided by this interface are limited to the prefix provided to the
 /// Page.GetSnapshot() call.
 protocol PageSnapshot {
-    compose ErrorNotifier;
+    compose Syncable;
 
     /// Returns the entries in the page with keys greater or equal to |key_start|
     /// using the lexicographic order. If |key_start| is empty, all entries are
@@ -443,7 +443,7 @@ struct Value {
 /// all changes have been sent, |Done()| should be called to mark the end of
 /// incoming merge changes.
 protocol MergeResultProvider {
-    compose ErrorNotifier;
+    compose Syncable;
 
     /// |GetFullDiff| returns the set of all key/value pairs (entries) that
     /// have been modified between the common ancestor (see

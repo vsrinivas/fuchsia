@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//garnet/public/build/fostr/fostr_fidl.gni")
-import("//src/ledger/bin/fidl/error_notifier/error_notifier.gni")
+import("//src/ledger/bin/fidl/syncable/syncable.gni")
 
 fidl("fidl") {
   name = "fuchsia.ledger.internal"
@@ -19,22 +19,22 @@ fidl("fidl") {
   ]
 }
 
-error_notifier_fidl("error_notifier_internal") {
+syncable_fidl("syncable_internal") {
   fidl_target = ":fidl"
 }
 
-error_notifier_fidl("error_notifier_public") {
+syncable_fidl("syncable_public") {
   fidl_target = "//sdk/fidl/fuchsia.ledger"
 }
 
-source_set("error_notifier") {
+source_set("syncable") {
   sources = [
-    "error_notifier.h",
+    "syncable.h",
   ]
 
   public_deps = [
-    ":error_notifier_internal",
-    ":error_notifier_public",
+    ":syncable_internal",
+    ":syncable_public",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

@@ -21,8 +21,8 @@
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/encryption/impl/encryption_service_factory_impl.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
@@ -33,7 +33,7 @@
 namespace ledger {
 
 class LedgerRepositoryImpl
-    : public fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate,
+    : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
       public PageEvictionManager::Delegate {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
@@ -102,8 +102,8 @@ class LedgerRepositoryImpl
       ledger_managers_;
   // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
-  callback::AutoCleanableSet<ErrorNotifierBinding<
-      fuchsia::ledger::internal::LedgerRepositoryErrorNotifierDelegate>>
+  callback::AutoCleanableSet<SyncableBinding<
+      fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;
   fit::closure on_empty_callback_;
 

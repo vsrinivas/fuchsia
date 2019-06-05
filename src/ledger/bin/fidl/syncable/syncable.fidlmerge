@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// fidlmerge template for ErrorNotifier support. It generates a .h cc file for
+// fidlmerge template for Syncable support. It generates a .h cc file for
 // the proxy and delegate handling error reporting for the ledger.
 //
 // NOTE: This template generates a "#pragma once", which should be replaced by
@@ -133,7 +133,7 @@
 {{ end -}}
 
 // Produces the signature of the NotifierDelegate method associated with the FIDL interface method.
-{{- define "RequestMethodSignatureErrorNotifierDelegate" -}}
+{{- define "RequestMethodSignatureSyncableDelegate" -}}
   {{- if .HasResponse -}}
 {{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "CallbackTypeWithStatus" . }} callback)
   {{- else -}}
@@ -159,7 +159,7 @@
 {{ template "ThisFidlInclude" . }}
 #include <lib/fidl/cpp/interface_request.h>
 
-#include "src/ledger/bin/fidl/error_notifier/error_notifier_binding.h"
+#include "src/ledger/bin/fidl/syncable/syncable_binding.h"
 #include "src/ledger/bin/public/status.h"
 
 {{/* keep the newline */}}
@@ -181,24 +181,24 @@ namespace {{ . }} {
 
 // Define the generated classes for the given FIDL interface.
 {{- define "InterfaceDeclaration" }}
-class {{ .Name.Parts.Name }}ErrorNotifierDelegate {
+class {{ .Name.Parts.Name }}SyncableDelegate {
  public:
   using FidlInterface = {{ .Name.Parts.Name }};
   class Impl;
 
-  virtual ~{{ .Name.Parts.Name }}ErrorNotifierDelegate() = default;
+  virtual ~{{ .Name.Parts.Name }}SyncableDelegate() = default;
     {{- range .Methods }}
         {{- if (and .HasRequest (not (eq .Name "Sync" ))) }}
-  virtual void {{ template "RequestMethodSignatureErrorNotifierDelegate" . }} = 0;
+  virtual void {{ template "RequestMethodSignatureSyncableDelegate" . }} = 0;
         {{- end }}
     {{- end }}
 };
 
-class {{ .Name.Parts.Name }}ErrorNotifierDelegate::Impl : public {{ .Name.Parts.Name }} {
+class {{ .Name.Parts.Name }}SyncableDelegate::Impl : public {{ .Name.Parts.Name }} {
  public:
   static constexpr char kInterfaceName[] = "{{ .Name.Parts.Name }}";
-  Impl({{ .Name.Parts.Name }}ErrorNotifierDelegate* delegate,
-       ::ledger::ErrorNotifierBinding<{{ .Name.Parts.Name }}ErrorNotifierDelegate>* binding)
+  Impl({{ .Name.Parts.Name }}SyncableDelegate* delegate,
+       ::ledger::SyncableBinding<{{ .Name.Parts.Name }}SyncableDelegate>* binding)
        : delegate_(delegate), binding_(binding) {}
 
  private:
@@ -213,8 +213,8 @@ class {{ .Name.Parts.Name }}ErrorNotifierDelegate::Impl : public {{ .Name.Parts.
     binding_->Sync(::std::move(callback));
   }
 
-  {{ .Name.Parts.Name }}ErrorNotifierDelegate* delegate_;
-  ::ledger::ErrorNotifierBinding<{{ .Name.Parts.Name }}ErrorNotifierDelegate>* binding_;
+  {{ .Name.Parts.Name }}SyncableDelegate* delegate_;
+  ::ledger::SyncableBinding<{{ .Name.Parts.Name }}SyncableDelegate>* binding_;
 };
 
 {{/* keep the newline */}}
@@ -223,16 +223,16 @@ class {{ .Name.Parts.Name }}ErrorNotifierDelegate::Impl : public {{ .Name.Parts.
 // Define the generated classed for the FIDL library.
 {{- define "InterfaceWriterDecls" }}
     {{/*
-       * Find the interfaces that extends ErrorNotifier.
+       * Find the interfaces that extends Syncable.
        *
-       * To do this, range over all interfaces that are not ErrorNotifier, and find a method call "Sync".
+       * To do this, range over all interfaces that are not Syncable, and find a method call "Sync".
        */}}
     {{- range $interface := .Interfaces }}
-        {{- /* Do not generate anything for the ErrorNotifier interface */ -}}
-        {{- if not (eq .Name.Parts.Name "ErrorNotifier") -}}
+        {{- /* Do not generate anything for the Syncable interface */ -}}
+        {{- if not (eq .Name.Parts.Name "Syncable") -}}
             {{- range .Methods }}
                 {{- if .HasRequest }}
-                    {{- /* Use the "Sync" method has a marker to detect interfaces extending ErrorNotifier */ -}}
+                    {{- /* Use the "Sync" method has a marker to detect interfaces extending Syncable */ -}}
                     {{- if eq .Name "Sync" }}
                         {{- template "InterfaceDeclaration" $interface }}
                     {{- end }}

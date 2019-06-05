@@ -3,11 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//src/ledger/bin/fidl/error_notifier/error_notifier.gni")
+import("//src/ledger/bin/fidl/syncable/syncable.gni")
 
-source_set("error_notifier") {
+source_set("syncable") {
   sources = [
-    "error_notifier_binding.h",
+    "syncable_binding.h",
   ]
 
   public_deps = [
@@ -21,24 +21,24 @@ source_set("error_notifier") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
-error_notifier_fidl("error_notifier_fidl_test") {
+syncable_fidl("syncable_fidl_test") {
   testonly = true
 
-  fidl_target = "//src/ledger/bin/fidl/error_notifier/fidl"
+  fidl_target = "//src/ledger/bin/fidl/syncable/fidl"
 }
 
 source_set("unittests") {
   testonly = true
 
   sources = [
-    "error_notifier_binding_unittest.cc",
+    "syncable_binding_unittest.cc",
   ]
 
   deps = [
-    ":error_notifier",
-    ":error_notifier_fidl_test",
+    ":syncable",
+    ":syncable_fidl_test",
     "//garnet/public/lib/callback",
-    "//src/ledger/bin/fidl/error_notifier/fidl",
+    "//src/ledger/bin/fidl/syncable/fidl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testutils",
   ]

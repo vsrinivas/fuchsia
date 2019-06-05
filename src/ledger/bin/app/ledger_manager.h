@@ -26,8 +26,8 @@
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/fidl/error_notifier.h"
-#include "src/ledger/bin/fidl/error_notifier/error_notifier_binding.h"
+#include "src/ledger/bin/fidl/syncable.h"
+#include "src/ledger/bin/fidl/syncable/syncable_binding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/lib/fxl/macros.h"
@@ -148,7 +148,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   // to ensure it outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
   callback::AutoCleanableSet<
-      ErrorNotifierBinding<fuchsia::ledger::LedgerErrorNotifierDelegate>>
+      SyncableBinding<fuchsia::ledger::LedgerSyncableDelegate>>
       bindings_;
 
   // Mapping from each page id to the manager of that page.

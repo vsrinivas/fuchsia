@@ -12,7 +12,7 @@ using fuchsia.ledger.cloud;
 // individual users.
 [Discoverable]
 protocol LedgerRepositoryFactory {
-    compose fuchsia.ledger.ErrorNotifier;
+    compose fuchsia.ledger.Syncable;
 
     // Binds to the directory referenced by |repository|. If this is called
     // multiple times for the same directory, only the first instance of
@@ -47,7 +47,7 @@ protocol LedgerController {
 };
 
 protocol LedgerRepository {
-    compose fuchsia.ledger.ErrorNotifier;
+    compose fuchsia.ledger.Syncable;
 
     // Creates a new Ledger for the given |ledger_name| if it doesn't already
     // exist.

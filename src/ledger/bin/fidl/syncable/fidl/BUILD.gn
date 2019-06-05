@@ -5,10 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "fuchsia.ledger.errornotifiertest"
+  name = "fuchsia.ledger.syncabletest"
 
   sources = [
-    "error_notifier_test.fidl",
+    "syncable_test.fidl",
   ]
 
   deps = [

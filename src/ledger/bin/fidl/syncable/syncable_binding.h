@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
-#define SRC_LEDGER_BIN_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
+#ifndef SRC_LEDGER_BIN_FIDL_SYNCABLE_SYNCABLE_BINDING_H_
+#define SRC_LEDGER_BIN_FIDL_SYNCABLE_SYNCABLE_BINDING_H_
 
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/enum.h>
@@ -20,10 +20,10 @@
 
 namespace ledger {
 
-// Class for binding of FIDL interface  implementing the ErrorNotifier interface
-// and using the error notifier delegate interface |D|.
-// For a FIDL interface Foo, |D| is an interface named FooErrorNotifierDelegate
-// that needs to be implemented by the user and passed to ErrorNotifierBinding.
+// Class for binding of FIDL interface  implementing the Syncable interface
+// and using the syncable delegate interface |D|.
+// For a FIDL interface Foo, |D| is an interface named FooSyncableDelegate
+// that needs to be implemented by the user and passed to SyncableBinding.
 //
 // This class internally handles the following features:
 // - Implement the |Sync| method.
@@ -37,9 +37,9 @@ namespace ledger {
 // - Access to the methods of the underlying bindings.
 // - Implement the |set_on_empty| method to be usable with AutoCleanableSet.
 template <typename D>
-class ErrorNotifierBinding {
+class SyncableBinding {
  public:
-  explicit ErrorNotifierBinding(D* delegate)
+  explicit SyncableBinding(D* delegate)
       : impl_(delegate, this), binding_(&impl_) {
     binding_.set_error_handler([this](zx_status_t status) {
       binding_error_status_ = status;
@@ -48,10 +48,10 @@ class ErrorNotifierBinding {
     sync_helper_.set_on_empty([this] { CheckEmpty(); });
   }
 
-  ErrorNotifierBinding(
-      D* delegate, fidl::InterfaceRequest<typename D::FidlInterface> request,
-      async_dispatcher_t* dispatcher = nullptr)
-      : ErrorNotifierBinding(delegate) {
+  SyncableBinding(D* delegate,
+                  fidl::InterfaceRequest<typename D::FidlInterface> request,
+                  async_dispatcher_t* dispatcher = nullptr)
+      : SyncableBinding(delegate) {
     binding_.Bind(std::move(request), dispatcher);
   }
 
@@ -128,4 +128,4 @@ class ErrorNotifierBinding {
 
 }  // namespace ledger
 
-#endif  // SRC_LEDGER_BIN_FIDL_ERROR_NOTIFIER_ERROR_NOTIFIER_BINDING_H_
+#endif  // SRC_LEDGER_BIN_FIDL_SYNCABLE_SYNCABLE_BINDING_H_
