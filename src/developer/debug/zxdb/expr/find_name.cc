@@ -150,19 +150,30 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
   if (!prefix_walker.WalkInto(looking_for_scope))
     return VisitResult::kContinue;
 
-  // Now search that node for anything with the given prefix. This also handles
-  // the exact match case because an exact match will be the first thing found
-  // with a prefix search. NameMatches() will handle the difference.
-  std::string last_comp = looking_for.components().back().GetName(false);
-  auto [cur, end] = prefix_walker.current()->FindPrefix(last_comp);
-  while (cur != end && results->size() < options.max_results &&
-         NameMatches(options, cur->first, last_comp)) {
-    VisitResult vr = GetNamesFromDieList(module_symbols, options,
-                                         cur->second.dies(), results);
-    if (vr != VisitResult::kContinue)
-      return vr;
+  // Need to separate out prefix so we can take advantage of the template
+  // canonization of the IndexWalker in the exact match case. This means that
+  // we can't currently do prefix matches of templates that are canonicalized
+  // differently than DWARF represents them.
+  if (options.how == FindNameOptions::kPrefix) {
+    std::string last_comp = looking_for.components().back().GetName(false);
+    auto [cur, end] = prefix_walker.current()->FindPrefix(last_comp);
+    while (cur != end && results->size() < options.max_results &&
+           NameMatches(options, cur->first, last_comp)) {
+      VisitResult vr = GetNamesFromDieList(module_symbols, options,
+                                           cur->second.dies(), results);
+      if (vr != VisitResult::kContinue)
+        return vr;
 
-    ++cur;
+      ++cur;
+    }
+  } else {
+    // Exact match case.
+    if (prefix_walker.WalkInto(looking_for.components().back())) {
+      VisitResult vr = GetNamesFromDieList(
+          module_symbols, options, prefix_walker.current()->dies(), results);
+      if (vr != VisitResult::kContinue)
+        return vr;
+    }
   }
 
   // We also want to know if there are any templates with that name which will

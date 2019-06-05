@@ -354,8 +354,9 @@ TEST(FindName, FindTypeName) {
   auto mod = std::make_unique<MockModuleSymbols>("mod.so");
   auto& root = mod->index().root();  // Root of the index for module 1.
 
-  const char kGlobalTypeName[] = "GlobalType";
-  const char kChildTypeName[] = "ChildType";  // "GlobalType::ChildType".
+  // Note space in "> >" which is how Clang likes to represent this.
+  const char kGlobalTypeName[] = "GlobalType<std::char_traits<char> >";
+  const char kChildTypeName[] = "ChildType<std::char_traits<char> >";
 
   // Global class name.
   ParsedIdentifier global_type_name(kGlobalTypeName);
@@ -368,8 +369,9 @@ TEST(FindName, FindTypeName) {
   // have child types and everything is found via the index.
   ParsedIdentifier child_type_name(kChildTypeName);
   ParsedIdentifier full_child_type_name;
-  Err err = ExprParser::ParseIdentifier("GlobalType::ChildType",
-                                        &full_child_type_name);
+  Err err = ExprParser::ParseIdentifier(
+      "GlobalType<std::char_traits<char> >::ChildType<std::char_traits<char> >",
+      &full_child_type_name);
   ASSERT_FALSE(err.has_error());
   auto child_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   child_type->set_assigned_name(kChildTypeName);
