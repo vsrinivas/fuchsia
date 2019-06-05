@@ -15,6 +15,7 @@ simple_drivers = [
 
 group("test") {
   deps = [
+    ":test-audio-codec",
     ":test-board",
     ":test-clock",
     ":test-gpio",
@@ -28,6 +29,7 @@ group("test") {
 
 driver("test-board") {
   sources = [
+    "test-audio-codec.cpp",
     "test-board.cpp",
     "test-clock.cpp",
     "test-gpio.cpp",
@@ -113,6 +115,22 @@ driver("test-i2c") {
   ]
 }
 
+driver("test-audio-codec") {
+  sources = [
+    "test/audio-codec.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
 foreach(driver, simple_drivers) {
   driver("test-$driver") {
     sources = [
@@ -120,6 +138,7 @@ foreach(driver, simple_drivers) {
     ]
     deps = [
       "$zx/system/banjo/ddk.protocol.clock",
+      "$zx/system/banjo/ddk.protocol.codec",
       "$zx/system/banjo/ddk.protocol.composite",
       "$zx/system/banjo/ddk.protocol.gpio",
       "$zx/system/banjo/ddk.protocol.platform.device",

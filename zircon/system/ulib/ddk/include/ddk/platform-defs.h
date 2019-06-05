@@ -203,6 +203,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_POWER         9
 #define PDEV_DID_TEST_CHILD_4       10
 #define PDEV_DID_TEST_VCAMERA       11
+#define PDEV_DID_TEST_AUDIO_CODEC   12
 
 // ARM
 #define PDEV_VID_ARM                18

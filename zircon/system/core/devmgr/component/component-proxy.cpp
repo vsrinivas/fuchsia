@@ -46,6 +46,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_MIPI_CSI:
         proto->ops = &mipi_csi_protocol_ops_;
         return ZX_OK;
+    case ZX_PROTOCOL_CODEC:
+        proto->ops = &codec_protocol_ops_;
+        return ZX_OK;
     case ZX_PROTOCOL_PDEV:
         proto->ops = &pdev_protocol_ops_;
         return ZX_OK;
@@ -195,6 +198,158 @@ zx_status_t ComponentProxy::MipiCsiDeInit() {
     req.op = MipiCsiOp::DEINIT;
 
     return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+void ComponentProxy::CodecReset(codec_reset_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::RESET;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    callback(cookie, status);
+}
+
+void ComponentProxy::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    CodecInfoProxyResponse resp = {};
+    info_t info = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::GET_INFO;
+
+    Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    info.unique_id = resp.unique_id;
+    info.manufacturer = resp.manufacturer;
+    info.product_name = resp.product_name;
+    callback(cookie, &info);
+}
+
+void ComponentProxy::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    CodecIsBridgeableProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::IS_BRIDGEABLE;
+
+    Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    callback(cookie, resp.supports_bridged_mode);
+}
+
+void ComponentProxy::CodecSetBridgedMode(bool enable_bridged_mode,
+                                         codec_set_bridged_mode_callback callback, void* cookie) {
+    CodecSetBridgedProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::SET_BRIDGED_MODE;
+    req.enable_bridged_mode = enable_bridged_mode;
+
+    Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    callback(cookie);
+}
+
+void ComponentProxy::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    uint8_t resp_buffer[kProxyMaxTransferSize];
+    auto* resp = reinterpret_cast<ProxyResponse*>(resp_buffer);
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::GET_DAI_FORMATS;
+
+    auto status = Rpc(&req.header, sizeof(req), resp, kProxyMaxTransferSize);
+    if (status != ZX_OK) {
+        callback(cookie, status, nullptr, 0);
+        return;
+    }
+    auto* p = reinterpret_cast<uint8_t*>(resp + 1);
+    size_t n_formats = *reinterpret_cast<size_t*>(p);
+    p += sizeof(size_t);
+
+    auto* formats = reinterpret_cast<dai_supported_formats_t*>(p);
+    p += sizeof(dai_supported_formats_t) * n_formats;
+
+    for (size_t i = 0; i < n_formats; ++i) {
+
+        formats[i].number_of_channels_list = reinterpret_cast<uint32_t*>(p);
+        p += formats[i].number_of_channels_count * sizeof(uint32_t);
+
+        formats[i].sample_formats_list = reinterpret_cast<sample_format_t*>(p);
+        p += formats[i].sample_formats_count * sizeof(sample_format_t);
+
+        formats[i].justify_formats_list = reinterpret_cast<justify_format_t*>(p);
+        p += formats[i].justify_formats_count * sizeof(justify_format_t);
+
+        formats[i].frame_rates_list = reinterpret_cast<uint32_t*>(p);
+        p += formats[i].frame_rates_count * sizeof(uint32_t);
+
+        formats[i].bits_per_channel_list = p;
+        p += formats[i].bits_per_channel_count * sizeof(uint8_t);
+
+        formats[i].bits_per_sample_list = p;
+        p += formats[i].bits_per_sample_count * sizeof(uint8_t);
+    }
+
+    callback(cookie, status, formats, n_formats);
+}
+
+void ComponentProxy::CodecSetDaiFormat(const dai_format_t* format,
+                                       codec_set_dai_format_callback callback, void* cookie) {
+    CodecDaiFormatProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::SET_DAI_FORMAT;
+    req.format = *format;
+
+    if (format->channels_to_use_count > kMaxChannels) {
+        callback(cookie, ZX_ERR_INTERNAL);
+        return;
+    }
+    for (size_t i = 0; i < format->channels_to_use_count; ++i) {
+        req.channels_to_use[i] = format->channels_to_use_list[i];
+    }
+
+    auto status = Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+
+    callback(cookie, status);
+}
+
+void ComponentProxy::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    CodecGainFormatProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::GET_GAIN_FORMAT;
+
+    Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    callback(cookie, &resp.format);
+}
+
+void ComponentProxy::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    CodecGainStateProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::GET_GAIN_STATE;
+
+    Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    callback(cookie, &resp.state);
+}
+
+void ComponentProxy::CodecSetGainState(const gain_state_t* gain_state,
+                                       codec_set_gain_state_callback callback, void* cookie) {
+    CodecGainStateProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::SET_GAIN_STATE;
+    req.state = *gain_state;
+
+    Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+    callback(cookie);
+}
+
+void ComponentProxy::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
+    CodecProxyRequest req = {};
+    CodecPlugStateProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_CODEC;
+    req.op = CodecOp::GET_PLUG_STATE;
+
+    Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    callback(cookie, &resp.plug_state);
 }
 
 zx_status_t ComponentProxy::GpioConfigIn(uint32_t flags) {

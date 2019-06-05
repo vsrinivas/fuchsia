@@ -10,6 +10,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
@@ -31,7 +32,7 @@ public:
     explicit Component(zx_device_t* parent)
         : ComponentBase(parent), canvas_(parent), clock_(parent),
           eth_board_(parent), gpio_(parent), i2c_(parent),
-          mipicsi_(parent), pdev_(parent), power_(parent),
+          mipicsi_(parent), codec_(parent), pdev_(parent), power_(parent),
           sysmem_(parent), ums_(parent) {}
 
     static zx_status_t Bind(void* ctx, zx_device_t* parent);
@@ -46,6 +47,12 @@ private:
         void* read_buf;
         size_t read_length;
         zx_status_t result;
+    };
+    struct CodecTransactContext {
+        sync_completion_t completion;
+        zx_status_t status;
+        void* buffer;
+        size_t size;
     };
 
     zx_status_t RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
@@ -88,16 +95,24 @@ private:
                            uint32_t* out_resp_size, const zx_handle_t* req_handles,
                            uint32_t req_handle_count, zx_handle_t* resp_handles,
                            uint32_t* resp_handle_count);
+    zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                         uint32_t req_handle_count, zx_handle_t* resp_handles,
+                         uint32_t* resp_handle_count);
 
     static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                     size_t op_count);
 
+    static void CodecTransactCallback(void* cookie, zx_status_t status,
+                                      const dai_supported_formats_t* formats_list,
+                                      size_t formats_count);
     ddk::AmlogicCanvasProtocolClient canvas_;
     ddk::ClockProtocolClient clock_;
     ddk::EthBoardProtocolClient eth_board_;
     ddk::GpioProtocolClient gpio_;
     ddk::I2cProtocolClient i2c_;
     ddk::MipiCsiProtocolClient mipicsi_;
+    ddk::CodecProtocolClient codec_;
     ddk::PDevProtocolClient pdev_;
     ddk::PowerProtocolClient power_;
     ddk::SysmemProtocolClient sysmem_;

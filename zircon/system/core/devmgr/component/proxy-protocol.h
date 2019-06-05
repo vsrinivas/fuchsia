@@ -8,6 +8,16 @@ namespace component {
 
 // Maximum transfer size we can proxy.
 static constexpr size_t kProxyMaxTransferSize = 4096;
+// TODO(andresoportus): remove these restrictions.
+static constexpr size_t kMaxDaiFormats = 8;
+static constexpr size_t kMaxChannelsToUse = 8;
+static constexpr size_t kMaxChannels = 8;
+static constexpr size_t kMaxSampleFormats = 8;
+static constexpr size_t kMaxJustifyFormats = 8;
+static constexpr size_t kMaxRates = 8;
+static constexpr size_t kMaxBitsPerChannel = 8;
+static constexpr size_t kMaxBitsPerSample = 8;
+static constexpr size_t kMaxCodecStringSize = 64;
 
 /// Header for RPC requests.
 struct ProxyRequest {
@@ -67,6 +77,82 @@ struct MipiCsiProxyRequest {
     MipiCsiOp op;
     mipi_info_t mipi_info;
     mipi_adap_info_t adap_info;
+};
+
+// ZX_PROTOCOL_CODEC proxy support.
+enum class CodecOp {
+    RESET,
+    GET_INFO,
+    IS_BRIDGEABLE,
+    SET_BRIDGED_MODE,
+    GET_GAIN_FORMAT,
+    GET_GAIN_STATE,
+    SET_GAIN_STATE,
+    GET_DAI_FORMATS,
+    SET_DAI_FORMAT,
+    GET_PLUG_STATE,
+};
+
+struct CodecProxyRequest {
+    ProxyRequest header;
+    CodecOp op;
+};
+
+struct CodecIsBridgeableProxyResponse {
+    ProxyResponse header;
+    bool supports_bridged_mode;
+};
+
+struct CodecSetBridgedProxyRequest {
+    ProxyRequest header;
+    CodecOp op;
+    bool enable_bridged_mode;
+};
+
+struct CodecGainFormatProxyResponse {
+    ProxyResponse header;
+    gain_format_t format;
+};
+
+struct CodecGainStateProxyRequest {
+    ProxyRequest header;
+    CodecOp op;
+    gain_state_t state;
+};
+
+struct CodecGainStateProxyResponse {
+    ProxyResponse header;
+    gain_state_t state;
+};
+
+struct CodecDaiFormatsProxyResponse {
+    ProxyResponse header;
+    dai_supported_formats_t formats[kMaxDaiFormats];
+    uint32_t number_of_channels[kMaxChannels];
+    sample_format_t formats_list[kMaxSampleFormats];
+    justify_format_t justify_formats[kMaxJustifyFormats];
+    uint32_t frame_rates_list[kMaxRates];
+    uint8_t bits_per_channel[kMaxBitsPerChannel];
+    uint8_t bits_per_sample_list[kMaxBitsPerSample];
+};
+
+struct CodecDaiFormatProxyRequest {
+    ProxyRequest header;
+    CodecOp op;
+    dai_format_t format;
+    uint32_t channels_to_use[kMaxChannelsToUse];
+};
+
+struct CodecPlugStateProxyResponse {
+    ProxyResponse header;
+    plug_state_t plug_state;
+};
+
+struct CodecInfoProxyResponse {
+    ProxyResponse header;
+    char unique_id[kMaxCodecStringSize];
+    char manufacturer[kMaxCodecStringSize];
+    char product_name[kMaxCodecStringSize];
 };
 
 // ZX_PROTOCOL_GPIO proxy support.

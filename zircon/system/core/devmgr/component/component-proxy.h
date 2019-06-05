@@ -10,6 +10,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
@@ -34,6 +35,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::GpioProtocol<ComponentProxy>,
                        public ddk::I2cProtocol<ComponentProxy>,
                        public ddk::MipiCsiProtocol<ComponentProxy>,
+                       public ddk::CodecProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
                        public ddk::SysmemProtocol<ComponentProxy>,
@@ -98,6 +100,20 @@ public:
     zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
                             const mipi_adap_info_t* adap_info);
     zx_status_t MipiCsiDeInit();
+
+    void CodecReset(codec_reset_callback callback, void* cookie);
+    void CodecGetInfo(codec_get_info_callback callback, void* cookie);
+    void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
+    void CodecSetBridgedMode(bool enable_bridged_mode, codec_set_bridged_mode_callback callback,
+                             void* cookie);
+    void CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie);
+    void CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
+                           void* cookie);
+    void CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie);
+    void CodecGetGainState(codec_get_gain_state_callback callback, void* cookie);
+    void CodecSetGainState(const gain_state_t* gain_state, codec_set_gain_state_callback callback,
+                           void* cookie);
+    void CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie);
 
     // USB Mode Switch
     zx_status_t UsbModeSwitchSetMode(usb_mode_t mode);
