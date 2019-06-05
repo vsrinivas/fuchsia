@@ -8,10 +8,6 @@
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #endif
 
-#ifdef SCENIC_ENABLE_SKETCHY_SUBSYSTEM
-#include "garnet/lib/ui/sketchy/sketchy_system.h"
-#endif
-
 #ifdef SCENIC_ENABLE_VIEWS_SUBSYSTEM
 #include "garnet/lib/ui/views/view_system.h"
 #endif
@@ -30,15 +26,6 @@ App::App(sys::ComponentContext* app_context, inspect::Node inspect_node,
   auto gfx = scenic_->RegisterSystem<gfx::GfxSystem>(
       std::make_unique<gfx::DisplayManager>());
   FXL_DCHECK(gfx);
-#endif
-
-#ifdef SCENIC_ENABLE_SKETCHY_SUBSYSTEM
-#ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto sketchy = scenic_->RegisterSystem<SketchySystem>(gfx);
-  FXL_DCHECK(sketchy);
-#else
-#error SketchySystem requires gfx::GfxSystem.
-#endif
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM

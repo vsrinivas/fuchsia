@@ -1,20 +1,27 @@
 # Scenic, the Fuchsia graphics engine
 
-* [Introduction](#introduction)
-* [Scenic and Fuchsia](#scenic-and-fuchsia)
-* [Concepts](#concepts)
-  * [Scenic](#scenic)
-  * [Sessions](#sessions)
-  * [Resources](#resources)
-    * [Nodes](#nodes)
-    * [Scenes](#scenes)
-    * [Compositors](#compositors)
-  * [Coordinate Frames and Units](#coordinate-frames-and-units)
-  * [Timing Model](#timing-model)
-  * [Fences](#fences)
-* [Examples of using Scenic](#examples-of-using-scenic)
-* [API Guide](#api-guide)
-  * [FIDL protocols](#fidl-protocols)
+- [Scenic, the Fuchsia graphics engine](#scenic-the-fuchsia-graphics-engine)
+- [Introduction](#introduction)
+  - [Scenic and Fuchsia](#scenic-and-fuchsia)
+- [Concepts](#concepts)
+  - [Scenic](#scenic)
+  - [Sessions](#sessions)
+  - [Resources](#resources)
+    - [Nodes](#nodes)
+    - [Scenes](#scenes)
+    - [Compositors](#compositors)
+    - [Scenic Resource Graph](#scenic-resource-graph)
+    - [TODO: More Resources](#todo-more-resources)
+  - [Coordinate Frames and Units](#coordinate-frames-and-units)
+    - [Units](#units)
+    - [World Space](#world-space)
+    - [View Space](#view-space)
+  - [Timing Model](#timing-model)
+  - [Fences](#fences)
+- [Examples of using Scenic](#examples-of-using-scenic)
+- [API Guide](#api-guide)
+  - [FIDL protocols](#fidl-protocols)
+  - [TODO](#todo)
 
 # Introduction
 
@@ -290,7 +297,6 @@ make up Scenic.
 * [App](/sdk/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
   * [view_provider.fidl](/sdk/fidl/fuchsia.ui.app/view_provider.fidl)
 
-* [experimental] [Sketchy](/sdk/fidl/fuchsia.ui.sketchy) (`fuchsia.ui.sketchy`)
 * [experimental] [Vectorial](/sdk/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
 
 ## TODO

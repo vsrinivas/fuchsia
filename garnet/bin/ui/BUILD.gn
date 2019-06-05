@@ -28,7 +28,6 @@ group("ui") {
     "scenic",
     "screencap",
     "set_renderer_params_HACK",
-    "sketchy",
     "snapshot",
     "tests",
     "text",

@@ -17,7 +17,6 @@ group("ui") {
     "shadertoy/service",
     "simplest_app",
     "simplest_embedder",
-    "sketchy",
     "spinning_square",
     "standalone_app",
     "tile",
@@ -197,21 +196,6 @@ package("simplest_embedder") {
     {
       path = rebase_path("meta/ui_example.cmx")
       dest = "simplest_embedder.cmx"
-    },
-  ]
-}
-
-package("sketchy_client") {
-  deps = [
-    "sketchy",
-  ]
-
-  binary = "sketchy_client"
-
-  meta = [
-    {
-      path = rebase_path("sketchy/meta/sketchy.cmx")
-      dest = "sketchy_client.cmx"
     },
   ]
 }
