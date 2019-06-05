@@ -163,11 +163,13 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
     // TODO(braval): CAM-44 (Run only when build flag enabled)
     // This needs to be replaced with run unittests hooks when
     // the framework is available.
+    #if 0
     status = gdc::GdcDeviceTester::RunTests(gdc_device.get());
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
         return status;
     }
+    #endif
 
     status = gdc_device->DdkAdd("gdc", 0, props, countof(props));
     if (status != ZX_OK) {

@@ -408,11 +408,13 @@ zx_status_t imx227_bind(void* ctx, zx_device_t* device) {
     // TODO(braval): CAM-44 (Run only when build flag enabled)
     // This needs to be replaced with run unittests hooks when
     // the framework is available.
+    #if 0
     status = camera::Imx227DeviceTester::RunTests(sensor_device.get());
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
         return status;
     }
+    #endif
 
     status = sensor_device->DdkAdd("imx227", 0, props, countof(props));
     if (status != ZX_OK) {
