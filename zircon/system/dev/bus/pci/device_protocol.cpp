@@ -165,7 +165,7 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {
-    RPC_UNIMPLEMENTED;
+    return RpcReply(ch, EnableBusMaster(request_.enable));
 }
 
 zx_status_t Device::RpcGetAuxdata(const zx::unowned_channel& ch) {

@@ -31,6 +31,7 @@ source_set("user_pci") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
@@ -50,6 +51,7 @@ source_set("user_pci.proxy") {
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/pretty",
   ]
 }
@@ -117,7 +119,6 @@ test("pci-unit") {
   deps = [
     ":user_pci",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -149,7 +150,6 @@ driver("pci_fake") {
     ":user_pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zxtest",
   ]
@@ -168,7 +168,6 @@ driver("pci_protocol_test_driver") {
   deps = [
     ":user_pci",
     "$zx/system/fidl/fuchsia-device-test:c",
-    "$zx/system/ulib/hwreg",
     "$zx/system/ulib/zxtest",
   ]
 }

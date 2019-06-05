@@ -7,6 +7,30 @@
 #define ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
 
 #include <ddk/debug.h>
+#include <hwreg/bitfields.h>
+
+namespace pci {
+namespace config {
+
+// Fields correspond to the name in the PCI Local Bus spec section 6.2.
+struct Command {
+    uint16_t value;
+    // 15-11 are reserved preserve.
+    DEF_SUBBIT(value, 10, interrupt_disable);
+    DEF_SUBBIT(value, 9, fast_back_to_back_enable);
+    DEF_SUBBIT(value, 8, serr_enable);
+    // 7 is reserved preserve.
+    DEF_SUBBIT(value, 6, parity_error_response);
+    DEF_SUBBIT(value, 5, vga_palette_snoop);
+    DEF_SUBBIT(value, 4, memory_write_and_invalidate_enable);
+    DEF_SUBBIT(value, 3, special_cycles);
+    DEF_SUBBIT(value, 2, bus_master);
+    DEF_SUBBIT(value, 1, memory_space);
+    DEF_SUBBIT(value, 0, io_space);
+};
+
+} // namespace config
+} // namespace pci
 
 // Switch for easy enabling of output during unit tests where we
 // won't have driver log values set.

@@ -161,6 +161,28 @@ TEST_F(PciProtocolTests, ConfigPattern32) {
     }
 }
 
+TEST_F(PciProtocolTests, EnableBusMaster) {
+    struct pci::config::Command cmd_reg = {};
+    uint16_t cached_value = 0;
+
+    // Ensure Bus master is disabled.
+    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+    ASSERT_EQ(false, cmd_reg.bus_master());
+    cached_value = cmd_reg.value; // cache so we can test other bits are preserved
+
+    // Enable and confirm it.
+    ASSERT_OK(pci().EnableBusMaster(true));
+    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+    ASSERT_EQ(true, cmd_reg.bus_master());
+    ASSERT_EQ(cached_value | PCI_COMMAND_BUS_MASTER_EN, cmd_reg.value);
+
+    // Ensure we can disable it again.
+    ASSERT_OK(pci().EnableBusMaster(false));
+    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+    ASSERT_EQ(false, cmd_reg.bus_master());
+    ASSERT_EQ(cached_value, cmd_reg.value);
+}
+
 zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
     auto driver = ProtocolTestDriver::GetInstance();
     auto zxt = zxtest::Runner::GetInstance();

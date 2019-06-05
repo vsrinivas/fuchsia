@@ -77,7 +77,11 @@ zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
 }
 
 zx_status_t DeviceProxy::PciEnableBusMaster(bool enable) {
-    DEVICE_PROXY_UNIMPLEMENTED;
+    PciRpcMsg req = {};
+    PciRpcMsg resp = {};
+
+    req.enable = enable;
+    return RpcRequest(PCI_OP_ENABLE_BUS_MASTER, nullptr, &req, &resp);
 }
 
 zx_status_t DeviceProxy::PciResetDevice() {
