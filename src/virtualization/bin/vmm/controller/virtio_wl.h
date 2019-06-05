@@ -25,8 +25,7 @@ class VirtioWl : public VirtioComponentDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
       const zx::guest& guest, zx::vmar vmar,
       fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
           dispatch_handle,
-      fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher,
-      const std::string& device_path, const std::string& driver_path);
+      fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

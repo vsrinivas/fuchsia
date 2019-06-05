@@ -24,8 +24,7 @@ zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
         dispatch_handle,
-    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher,
-    const std::string& device_path, const std::string& driver_path) {
+    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioWlUrl,
@@ -40,7 +39,7 @@ zx_status_t VirtioWl::Start(
   }
   status =
       wayland_->Start(std::move(start_info), std::move(vmar),
-                      std::move(dispatch_handle), device_path, driver_path);
+                      std::move(dispatch_handle));
   return status;
 }
 

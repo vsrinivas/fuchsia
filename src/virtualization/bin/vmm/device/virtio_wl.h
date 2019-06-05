@@ -106,7 +106,6 @@ class VirtioWl : public DeviceBase<VirtioWl>,
              zx::vmar vmar,
              fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
                  dispatcher,
-             std::string device_path, std::string driver_path,
              StartCallback callback) override;
 
  private:
@@ -166,8 +165,6 @@ class VirtioWl : public DeviceBase<VirtioWl>,
     VirtioChain payload;
   };
   std::deque<PendingVfd> pending_vfds_;
-  std::string device_path_;
-  std::string driver_path_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_WL_H_

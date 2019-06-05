@@ -148,7 +148,5 @@ protocol VirtioWayland {
     // Start the wayland device.
     Start(StartInfo start_info,
           handle<vmar> vmar,
-          fuchsia.virtualization.WaylandDispatcher dispatcher,
-          string device_path,
-          string driver_path) -> ();
+          fuchsia.virtualization.WaylandDispatcher dispatcher) -> ();
 };

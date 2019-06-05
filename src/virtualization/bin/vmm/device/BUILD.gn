@@ -263,6 +263,7 @@ executable("virtio_wl_bin") {
   ]
   deps = [
     ":virtio",
+    ":virtio_magma_generic",
     "//garnet/lib/magma/include/virtio",
     "//garnet/lib/magma/src/libmagma",
     "//garnet/lib/magma/src/magma_util",
@@ -350,5 +351,21 @@ executable("device_unittests") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
+  ]
+}
+
+action("virtio_magma_generic") {
+  out_file = "$target_gen_dir/virtio_magma_generic.h"
+  script = "virtio_magma_generic.h.gen.py"
+  args = [
+    rebase_path("//garnet/lib/magma/include/magma_abi/magma.json",
+                root_build_dir),
+    rebase_path(out_file, root_build_dir),
+  ]
+  inputs = [
+    "//garnet/lib/magma/include/magma_abi/magma.json",
+  ]
+  outputs = [
+    "$out_file",
   ]
 }

@@ -70,8 +70,7 @@ class VirtioWlTest : public TestWithDevice {
 
     // Start device execution.
     services_->Connect(wl_.NewRequest());
-    wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind(),
-               "test", "test");
+    wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind());
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
