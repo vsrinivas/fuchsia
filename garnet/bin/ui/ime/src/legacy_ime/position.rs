@@ -4,8 +4,6 @@
 
 //! This module contains helper functions that calculate cursor position movements.
 
-use lazy_static::lazy_static;
-use regex::Regex;
 use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
 
 /// Horizontal motion type for the cursor.
@@ -69,29 +67,22 @@ fn adjacent_cursor_position_grapheme_left(
     traversal: GraphemeTraversal,
 ) -> usize {
     let prev_boundary = get_grapheme_boundary(text, start, false);
-    if let Some(offset) = prev_boundary {
-        if let GraphemeTraversal::CombiningCharacters = traversal {
-            let grapheme_str = &text[offset..start];
-            let last_char_str = match grapheme_str.char_indices().last() {
-                Some((last_char_offset, _c)) => Some(&grapheme_str[last_char_offset..]),
-                None => None,
-            };
-            if let Some(last_char_str) = last_char_str {
-                lazy_static! {
-                    /// A regex that matches combining characters, e.g. accents and other
-                    /// diacritics. Rust does not provide a way to check the Unicode categories
-                    /// of `char`s directly, so this is the simplest workaround for now.
-                    static ref COMBINING_REGEX: Regex = Regex::new(r"\p{M}$").unwrap();
-                }
-                if COMBINING_REGEX.is_match(last_char_str) {
-                    return start - last_char_str.len();
-                }
-            }
-        }
-        offset
+    let offset = if let Some(offset) = prev_boundary { offset } else { return 0 };
+    match traversal {
+        GraphemeTraversal::CombiningCharacters => {},
+        GraphemeTraversal::WholeGrapheme => return offset,
+    }
+    let grapheme_str = &text[offset..start];
+    let (last_char_offset, last_char) = if let Some(x) = grapheme_str.char_indices().last() {
+        x
     } else {
-        // Can't go left from the beginning of the string.
-        0
+        return offset
+    };
+    if unicode_normalization::char::is_combining_mark(last_char) {
+        let last_char_str = &grapheme_str[last_char_offset..];
+        start - last_char_str.len()
+    } else {
+        offset
     }
 }
 

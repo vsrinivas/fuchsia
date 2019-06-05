@@ -21,10 +21,9 @@ rustc_binary("ime") {
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:unicode-normalization",
     "//third_party/rust_crates:unicode-segmentation",
   ]
 }
