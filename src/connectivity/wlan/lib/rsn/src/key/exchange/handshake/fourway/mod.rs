@@ -369,9 +369,13 @@ mod tests {
 
         // Use arbitrarily chosen key_replay_counter.
         let msg1 = env.initiate(12);
+        assert_eq!(msg1.version, eapol::ProtocolVersion::Ieee802dot1x2004 as u8);
         let (msg2, _) = env.send_msg1_to_supplicant(msg1, 12);
+        assert_eq!(msg2.version, eapol::ProtocolVersion::Ieee802dot1x2004 as u8);
         let msg3 = env.send_msg2_to_authenticator(msg2, 12, 13);
+        assert_eq!(msg3.version, eapol::ProtocolVersion::Ieee802dot1x2004 as u8);
         let (msg4, s_ptk, s_gtk) = env.send_msg3_to_supplicant(msg3, 13);
+        assert_eq!(msg4.version, eapol::ProtocolVersion::Ieee802dot1x2004 as u8);
         let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);
 
         // Finally verify that Supplicant and Authenticator derived the same keys.

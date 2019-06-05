@@ -181,7 +181,7 @@ fn create_message_1(
         Some(tk_bits) => tk_bits / 8,
     };
     let mut msg1 = eapol::KeyFrame {
-        version: eapol::ProtocolVersion::Ieee802dot1x2010 as u8,
+        version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
         packet_type: eapol::PacketType::Key as u8,
         packet_body_len: 0, // Updated afterwards
         descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
@@ -266,7 +266,7 @@ fn create_message_3(
         Some(tk_bits) => tk_bits / 8,
     };
     let mut msg3 = eapol::KeyFrame {
-        version: eapol::ProtocolVersion::Ieee802dot1x2010 as u8,
+        version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
         packet_type: eapol::PacketType::Key as u8,
         packet_body_len: 0, // Updated afterwards
         descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
