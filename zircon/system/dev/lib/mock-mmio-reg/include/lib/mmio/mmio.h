@@ -29,7 +29,6 @@ public:
 
     explicit MmioPinnedBuffer(mmio_pinned_buffer_t pinned)
         : pinned_(pinned) {
-        ZX_ASSERT(pinned_.paddr != 0);
     }
 
     ~MmioPinnedBuffer() {
@@ -83,7 +82,8 @@ public:
         return *this;
     }
 
-    // Create() and Pin() are not implemented.
+    // Create() is not implemented.
+    // Pin() returns an invalid paddr.
 
     void reset() {}
 
@@ -207,6 +207,15 @@ public:
     template <typename T>
     void ClearBit(size_t shift, zx_off_t offs) const {
         ModifyBit<T>(false, shift, offs);
+    }
+
+    zx_status_t Pin(const zx::bti& bti, std::optional<MmioPinnedBuffer>* pinned_buffer) {
+        mmio_pinned_buffer_t pinned;
+        pinned.mmio = &mmio_;
+        pinned.pmt = ZX_HANDLE_INVALID;
+        pinned.paddr = 0;
+        *pinned_buffer = MmioPinnedBuffer(pinned);
+        return ZX_OK;
     }
 
 protected:
