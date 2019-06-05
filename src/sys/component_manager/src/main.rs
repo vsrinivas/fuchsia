@@ -16,9 +16,7 @@ use {
     fuchsia_async as fasync,
     futures::prelude::*,
     log::*,
-    std::env,
-    std::process,
-    std::sync::Arc,
+    std::{env, process, sync::Arc},
 };
 
 const NUM_THREADS: usize = 2;
@@ -45,18 +43,19 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
     let resolver_registry = startup::available_resolvers()?;
-    let params = ModelParams {
+    let mut params = ModelParams {
         ambient: Box::new(RealAmbientEnvironment::new()),
         root_component_url: opt.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Box::new(ElfRunner::new()),
         hooks: Vec::new(),
     };
+    startup::install_hub_if_possible(&mut params)?;
 
     let model = Arc::new(Model::new(params));
 
-    // TODO: Bring up the hub (backed by the model) before running the root component.
-    executor.run(run_root(model), NUM_THREADS);
+    executor.run(run_root(model.clone()), NUM_THREADS);
+
     Ok(())
 }
 

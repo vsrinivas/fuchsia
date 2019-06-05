@@ -25,10 +25,14 @@ use {
 // and choose which events they'd like to monitor.
 pub trait Hook {
     // Called when a component instance is bound to the given |realm|.
-    fn on_bind_instance(&self, realm: Arc<Realm>) -> BoxFuture<()>;
+    fn on_bind_instance<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        instance_state: &'a InstanceState,
+    ) -> BoxFuture<Result<(), ModelError>>;
 
     // Called when a new |realm|'s declaration has been resolved.
-    fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<()>;
+    fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
 }
 
 pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
@@ -211,6 +215,9 @@ impl Model {
         {
             let mut state = await!(realm.instance.state.lock());
             child_realms = await!(self.populate_instance_state(&mut *state, realm.clone()))?;
+            for hook in self.hooks.iter() {
+                await!(hook.on_bind_instance(realm.clone(), &*state))?;
+            }
         }
 
         // Return children that need eager starting.
@@ -223,12 +230,9 @@ impl Model {
             }
         }
 
-        for hook in self.hooks.iter() {
-            await!(hook.on_bind_instance(realm.clone()));
-        }
         for child_realm in child_realms.iter() {
             for hook in self.hooks.iter() {
-                await!(hook.on_resolve_realm(child_realm.clone()));
+                await!(hook.on_resolve_realm(child_realm.clone()))?;
             }
         }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 mod binding;
-mod mocks;
+pub mod mocks;
 mod routing;
-mod routing_test_helpers;
+pub mod routing_test_helpers;
 mod test_hook;

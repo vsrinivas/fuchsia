@@ -4,7 +4,8 @@
 
 mod ambient;
 mod component;
-mod error;
+pub mod error;
+pub mod hub;
 mod model;
 mod moniker;
 mod namespace;
@@ -12,9 +13,9 @@ mod resolver;
 mod routing;
 mod runner;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub use self::{
-    ambient::*, component::*, error::*, model::*, moniker::*, namespace::*, resolver::*,
+    ambient::*, component::*, error::*, hub::*, model::*, moniker::*, namespace::*, resolver::*,
     routing::*, runner::*,
 };

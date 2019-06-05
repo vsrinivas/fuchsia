@@ -14,6 +14,11 @@ pub enum ModelError {
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[fail(display = "component declaration invalid")]
     ComponentInvalid,
+    #[fail(display = "Hub operation failed")]
+    HubError {
+        #[fail(cause)]
+        err: HubError,
+    },
     #[fail(display = "component manifest invalid")]
     ManifestInvalid {
         url: String,
@@ -62,6 +67,12 @@ impl ModelError {
 
     pub fn capability_discovery_error(err: impl Into<Error>) -> ModelError {
         ModelError::CapabilityDiscoveryError { err: err.into() }
+    }
+}
+
+impl From<HubError> for ModelError {
+    fn from(err: HubError) -> Self {
+        ModelError::HubError { err }
     }
 }
 
