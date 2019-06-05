@@ -34,11 +34,7 @@ executable("bin") {
     "main.c",
     "sort.cpp",
   ]
-  include_dirs = [
-    "$target_gen_dir",
-    "//src/graphics/lib/compute",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
-  ]
+  include_dirs = [ "$target_gen_dir" ]
   deps = [
     ":targets",
     "//src/graphics/lib/compute/common",

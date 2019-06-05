@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("spinel_public_config") {
+  # The sources and clients use 'spinel_xxx.h' to include the headers.
+  include_dirs = [ "." ]
+}
+
 source_set("spinel") {
   public = [
     "spinel.h",
@@ -37,10 +42,10 @@ source_set("spinel") {
     "weakref.c",
     "weakref.h",
   ]
-  include_dirs = [ "//src/graphics/lib/compute" ]
   deps = [
     "//src/graphics/lib/compute/common",
   ]
+  public_configs = [ ":spinel_public_config" ]
 }
 
 group("tests") {

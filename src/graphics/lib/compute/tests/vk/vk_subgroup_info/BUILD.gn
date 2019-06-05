@@ -15,9 +15,6 @@ executable("bin") {
   sources = [
     "main.c",
   ]
-  include_dirs = [
-    "//src/graphics/lib/compute",
-  ]
   deps = [
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",

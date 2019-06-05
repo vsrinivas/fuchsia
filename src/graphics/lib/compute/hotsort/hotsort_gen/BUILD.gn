@@ -17,7 +17,6 @@ if (current_toolchain == host_toolchain) {
       "transpose.c",
       "transpose.h",
     ]
-    include_dirs = [ "//src/graphics/lib/compute" ]
     deps = [
       "//src/graphics/lib/compute/common",
     ]

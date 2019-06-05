@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("common_public_config") {
+  # Unlike the sources, clients use "common/..." to include the headers here.
+  include_dirs = [ ".." ]
+}
+
 source_set("common") {
   public = [
     "macros.h",
@@ -12,4 +17,5 @@ source_set("common") {
     "util.c",
     "util.h",
   ]
+  public_configs = [ ":common_public_config" ]
 }

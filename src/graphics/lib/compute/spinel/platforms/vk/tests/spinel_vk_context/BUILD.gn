@@ -16,9 +16,6 @@ executable("bin") {
     "main.c",
   ]
   include_dirs = [
-    "//src/graphics/lib/compute",
-    "//src/graphics/lib/compute/spinel",
-    "//src/graphics/lib/compute/spinel/platforms/vk",
     "$root_gen_dir/src/graphics/lib/compute/spinel/platforms/vk",
   ]
   deps = [
