@@ -85,6 +85,20 @@ EXPORT int NamespaceFunction() { return 78; }
 
 }  // namespace my_ns
 
+// DW_TAG_namespace
+//   (no name)
+namespace {
+
+// DW_TAG_subprogram
+//    (The compiler *really* likes to strip anonymous namespace functions, even
+//    when marked "noinline". The parameter being passed in from a parameter
+//    from an exported function is required to prevent this).
+NOINLINE int AnonNSFunction(int i) {
+  return i + 5;
+}
+
+}  // namespace
+
 // DW_TAG_subprogram
 //   DW_AT_low_pc = ... (indicates there's code).
 //   DW_AT_high_pc = ...
@@ -93,13 +107,13 @@ EXPORT int NamespaceFunction() { return 78; }
 //
 //   (This one has no declaration nor specification attributes because there
 //   wasn't a separate declaration.)
-int MyFunction() {  // Must be on line # ModulSymbols::kMyFunctionLine.
+EXPORT int MyFunction(int i) {  // Must be on line # ModuleSymbols::kMyFunctionLine.
   // DW_TAG_variable
   //   DW_AT_name = "my_class"
   //   DW_AT_type = <reference to MyClass DIE above>
   my_ns::MyClass my_class;
   return my_class.MyMemberOne() + my_ns::NamespaceFunction() +
-         my_ns::MyClass::Inner::MyMemberTwo();
+         my_ns::MyClass::Inner::MyMemberTwo() + AnonNSFunction(i);
 }
 
 // The inplementation of the MyClass::MyMemberOne will be inserted somewhere in

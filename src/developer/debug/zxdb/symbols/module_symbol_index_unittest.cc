@@ -29,9 +29,16 @@ TEST(ModuleSymbolIndex, FindExactFunction) {
       TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
-  // Standalone function inside a namespace.
+  // Standalone function inside a named namespace.
   result = index.FindExact(
       TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
+  EXPECT_EQ(1u, result.size()) << "Symbol not found.";
+
+  // Standalone function inside an anonymous namespace. Currently this is
+  // indexed as if the anonymous namespace wasn't there, but this may need to
+  // change in the future.
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kAnonNSFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class member function search.

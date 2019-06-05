@@ -91,7 +91,7 @@ TEST(ModuleSymbols, Basic) {
   EXPECT_TRUE(locations[0].is_symbolized());
   EXPECT_TRUE(
       StringEndsWith(locations[0].file_line().file(), "/zxdb_symbol_test.cc"));
-  EXPECT_EQ(TestSymbolModule::kMyFunctionLine, locations[0].file_line().line());
+  EXPECT_EQ(96, locations[0].file_line().line());
 }
 
 TEST(ModuleSymbols, LineDetailsForAddress) {

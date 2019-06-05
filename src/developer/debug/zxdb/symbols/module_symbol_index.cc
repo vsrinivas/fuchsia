@@ -312,9 +312,28 @@ class SymbolStorageIndexer {
           die.getTag() != llvm::dwarf::DW_TAG_structure_type)
         return;
 
-      if (!FillName(die))
-        return;  // Likely corrupt, these nodes should have names.
-      components_.push_back(*name_);
+      if (!FillName(die)) {
+        // Only namespaces can lack names (means anonymous).
+        if (die.getTag() == llvm::dwarf::DW_TAG_class_type ||
+            die.getTag() == llvm::dwarf::DW_TAG_structure_type)
+          return;  // Likely corrupt, these nodes should have names.
+
+        // For now, just omit the anonymous namespace name in the index and
+        // index the item as if the namespace wasn't there. This allows
+        // resolving most things the way the user expects.
+        //
+        // Eventually we should have better support for this. Clang generates
+        // symbol names (e.g. when a template references a type in an anon
+        // namespace) as "(anonymous namespace)" which is also what GDB does
+        // for these symbols.
+        //
+        // But parsing these identifiers is challenging, there is no way to
+        // specify *which* anonymous namespace, and we still need to add lots
+        // of anonymous-namespace-specific code to allow them to both be
+        // implicit and explicit.
+      } else {
+        components_.push_back(*name_);
+      }
     }
 
     // Add the symbol to the index.
