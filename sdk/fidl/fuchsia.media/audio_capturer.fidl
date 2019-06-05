@@ -166,7 +166,7 @@ using fuchsia.media.audio;
 // packets have no data in them, but FIDL demands that all pending
 // method-return-value callbacks be executed.  Because of this, the regions will
 // be returned to the user, but their timestamps will be set to
-// kNoTimestamp, and their payload sizes will be set to zero.  Any
+// NO_TIMESTAMP, and their payload sizes will be set to zero.  Any
 // partially filled payload will have a valid timestamp, but a payload size
 // smaller than originally requested.  The final discarded payload (if there
 // were any to discard) will be followed by an OnEndOfStream event.

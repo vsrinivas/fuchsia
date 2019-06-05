@@ -156,7 +156,7 @@ protocol AudioRenderer {
     //
     // Users, depending on their use case, may optionally choose not to specify
     // one or both of these timestamps. A timestamp may be omitted by supplying
-    // the special value 'kNoTimestamp'. The AudioRenderer automatically deduces
+    // the special value 'NO_TIMESTAMP'. The AudioRenderer automatically deduces
     // any omitted timestamp value using the following rules:
     //
     // Reference Time
@@ -189,18 +189,18 @@ protocol AudioRenderer {
     // Examples
     // 1. A user has queued some audio using `SendPacket` and simply wishes them
     // to start playing as soon as possible. The user may call Play without
-    // providing explicit timestamps -- `Play(kNoTimestamp, kNoTimestamp)`.
+    // providing explicit timestamps -- `Play(NO_TIMESTAMP, NO_TIMESTAMP)`.
     //
     // 2. A user has queued some audio using `SendPacket`, and wishes to start
     // playback at a specified 'reference_time', in sync with some other media
     // stream, either initially or after discarding packets. The user would call
-    // `Play(reference_time, kNoTimestamp)`.
+    // `Play(reference_time, NO_TIMESTAMP)`.
     //
     // 3. A user has queued some audio using `SendPacket`. The first of these
     // packets has a PTS of zero, and the user wishes playback to begin as soon
     // as possible, but wishes to skip all of the audio content between PTS 0
     // and PTS 'media_time'. The user would call
-    // `Play(kNoTimestamp, media_time)`.
+    // `Play(NO_TIMESTAMP, media_time)`.
     //
     // 4. A user has queued some audio using `SendPacket` and want to present
     // this media in synch with another player in a different device. The
