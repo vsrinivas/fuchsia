@@ -27,6 +27,8 @@
 namespace fvm {
 namespace {
 
+constexpr char kRamdiskCtlPath[] = "misc/ramctl";
+
 zx_status_t RebindBlockDevice(DeviceRef* device) {
     zx_status_t status;
     zx_status_t fidl_status =
@@ -67,50 +69,63 @@ zx::unowned_channel GetChannel(int fd) {
 
 // namespace
 
-DeviceRef::DeviceRef(const std::string& path, fbl::unique_fd fd)
-    : fd_(std::move(fd)), channel_(GetChannel(fd_.get())) {
+DeviceRef::DeviceRef(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd)
+    : devfs_root_(devfs_root.get()), fd_(std::move(fd)), channel_(GetChannel(fd_.get())) {
     path_.Append(path.c_str());
 }
 
 void DeviceRef::Reconnect() {
     ASSERT_FALSE(path_.empty(), "Attempt to reconnect device with unset path.");
-    fd_.reset(open(path_.c_str(), O_RDWR));
+    fd_.reset(openat(devfs_root_, path_.c_str(), O_RDWR));
     ASSERT_TRUE(fd_.is_valid(), "Failed to reconnect to device.");
     channel_ = GetChannel(fd_.get());
 }
 
-std::unique_ptr<DeviceRef> DeviceRef::Create(const std::string& device_path) {
-    fbl::unique_fd device_fd(open(device_path.c_str(), O_RDWR));
+std::unique_ptr<DeviceRef> DeviceRef::Create(const fbl::unique_fd& devfs_root,
+                                             const std::string& device_path) {
+    fbl::unique_fd device_fd(openat(devfs_root.get(), device_path.c_str(), O_RDWR));
     if (!device_fd.is_valid()) {
         ADD_FAILURE("Unable to obtain handle to block_device at %s. Reason: %s",
                     device_path.c_str(), strerror(errno));
         return nullptr;
     }
 
-    return std::make_unique<DeviceRef>(device_path, std::move(device_fd));
+    return std::make_unique<DeviceRef>(devfs_root, device_path, std::move(device_fd));
 }
 
-std::unique_ptr<RamdiskRef> RamdiskRef::Create(uint64_t block_size, uint64_t block_count) {
+std::unique_ptr<RamdiskRef> RamdiskRef::Create(const fbl::unique_fd& devfs_root,
+                                               uint64_t block_size, uint64_t block_count) {
+    if (!devfs_root.is_valid()) {
+        ADD_FAILURE("Bad devfs root handle.");
+        return nullptr;
+    }
+
     if (block_size == 0 || block_count == 0) {
         ADD_FAILURE("Attempting to create 0 sized ramdisk.");
         return nullptr;
     }
 
+    zx_status_t status =
+        wait_for_device_at(devfs_root.get(), kRamdiskCtlPath, kDeviceWaitTime.get());
+    if (status != ZX_OK) {
+        ADD_FAILURE("Failed to wait for RamCtl. Reason: %s", zx_status_get_string(status));
+        return nullptr;
+    }
+
     RamdiskClient* client;
-    zx_status_t status;
-    if ((status = ramdisk_create(block_size, block_count, &client)) != ZX_OK) {
+    if ((status = ramdisk_create_at(devfs_root.get(), block_size, block_count, &client)) != ZX_OK) {
         ADD_FAILURE("Failed to create ramdisk. Reason: %s", zx_status_get_string(status));
         return nullptr;
     }
     const char* path = ramdisk_get_path(client);
-    fbl::unique_fd device_fd(open(path, O_RDWR));
+    fbl::unique_fd device_fd(openat(devfs_root.get(), path, O_RDWR));
     if (!device_fd.is_valid()) {
         ADD_FAILURE("Error: Unable to obtain handle to block_device at %s. Reason: %s", path,
                     strerror(errno));
         return nullptr;
     }
 
-    return std::make_unique<RamdiskRef>(path, std::move(device_fd), client);
+    return std::make_unique<RamdiskRef>(devfs_root, path, std::move(device_fd), client);
 }
 
 RamdiskRef::~RamdiskRef() {
@@ -165,7 +180,7 @@ void BlockDeviceAdapter::CheckContentsAt(const fbl::Array<uint8_t>& data, uint64
 }
 
 zx_status_t BlockDeviceAdapter::WaitUntilVisible() const {
-    zx_status_t status = wait_for_device(device()->path(), kDeviceWaitTime.get());
+    zx_status_t status = wait_for_device_at(devfs_root_, device()->path(), kDeviceWaitTime.get());
 
     if (status != ZX_OK) {
         ADD_FAILURE("Block device did not become visible at: %s", device()->path());
@@ -188,7 +203,8 @@ zx_status_t BlockDeviceAdapter::Rebind() {
     return ZX_OK;
 }
 
-std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const std::string& name,
+std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_fd& devfs_root,
+                                                             const std::string& name,
                                                              const Guid& guid, const Guid& type) {
     if (name.empty() || type.size() == 0 || guid.size() == 0) {
         ADD_FAILURE("Partition name(size=%lu), type(size=%lu) and guid(size=%lu) must be non "
@@ -204,18 +220,18 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const std::string& 
     }
 
     char out_path[kPathMax] = {};
-    fbl::unique_fd device_fd(
-        open_partition(guid.data(), type.data(), kDeviceWaitTime.get(), out_path));
+    fbl::unique_fd device_fd(open_partition_with_devfs(devfs_root.get(), guid.data(), type.data(),
+                                                       kDeviceWaitTime.get(), out_path));
     if (!device_fd.is_valid()) {
         ADD_FAILURE("Unable to obtain handle for partition.");
         return nullptr;
     }
-    return std::make_unique<VPartitionAdapter>(GetChannel(device_fd.get()), out_path,
+    return std::make_unique<VPartitionAdapter>(devfs_root, GetChannel(device_fd.get()), out_path,
                                                std::move(device_fd), name, guid, type);
 }
 
 VPartitionAdapter::~VPartitionAdapter() {
-    destroy_partition(guid_.data(), type_.data());
+    destroy_partition_with_devfs(devfs_root_, guid_.data(), type_.data());
 }
 
 zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
@@ -230,19 +246,22 @@ zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
 
 void VPartitionAdapter::Reconnect() {
     char out_path[kPathMax] = {};
-    fd_.reset(open_partition(guid_.data(), type_.data(), zx::duration::infinite().get(), out_path));
+    fd_.reset(open_partition_with_devfs(devfs_root_, guid_.data(), type_.data(),
+                                        zx::duration::infinite().get(), out_path));
     ASSERT_TRUE(fd_.get());
     path_.Clear();
     path_.Append(out_path);
     channel_ = GetChannel(fd_.get());
 }
 
-std::unique_ptr<FvmAdapter> FvmAdapter::Create(uint64_t block_size, uint64_t block_count,
+std::unique_ptr<FvmAdapter> FvmAdapter::Create(const fbl::unique_fd& devfs_root,
+                                               uint64_t block_size, uint64_t block_count,
                                                uint64_t slice_size, DeviceRef* device) {
-    return CreateGrowable(block_size, block_count, block_count, slice_size, device);
+    return CreateGrowable(devfs_root, block_size, block_count, block_count, slice_size, device);
 }
 
-std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(uint64_t block_size,
+std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& devfs_root,
+                                                       uint64_t block_size,
                                                        uint64_t initial_block_count,
                                                        uint64_t maximum_block_count,
                                                        uint64_t slice_size, DeviceRef* device) {
@@ -273,26 +292,26 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(uint64_t block_size,
     fbl::StringBuffer<kPathMax> fvm_path;
     fvm_path.AppendPrintf("%s/fvm", device->path());
 
-    if (wait_for_device(fvm_path.c_str(), kDeviceWaitTime.get()) != ZX_OK) {
+    if (wait_for_device_at(devfs_root.get(), fvm_path.c_str(), kDeviceWaitTime.get()) != ZX_OK) {
         ADD_FAILURE("Loading FVM driver timeout.");
         return nullptr;
     }
 
-    fbl::unique_fd device_fd(open(fvm_path.c_str(), O_RDWR));
+    fbl::unique_fd device_fd(openat(devfs_root.get(), fvm_path.c_str(), O_RDWR));
     if (!device_fd.is_valid()) {
         ADD_FAILURE("Failed to acquire handle for fvm.");
         return nullptr;
     }
 
-    return std::make_unique<FvmAdapter>(fvm_path.c_str(), std::move(device_fd), device);
+    return std::make_unique<FvmAdapter>(devfs_root, fvm_path.c_str(), std::move(device_fd), device);
 }
 
 FvmAdapter::~FvmAdapter() {
-    fvm_destroy(block_device_->path());
+    fvm_destroy_with_devfs(devfs_root_, block_device_->path());
 }
 
-zx_status_t FvmAdapter::AddPartition(const std::string& name, const Guid& guid, const Guid& type,
-                                     uint64_t slice_count,
+zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std::string& name,
+                                     const Guid& guid, const Guid& type, uint64_t slice_count,
                                      std::unique_ptr<VPartitionAdapter>* out_partition) {
     zx_status_t status;
     FidlGuid fidl_guid, fidl_type;
@@ -310,7 +329,7 @@ zx_status_t FvmAdapter::AddPartition(const std::string& name, const Guid& guid, 
         return status;
     }
 
-    auto vpartition = VPartitionAdapter::Create(name, guid, type);
+    auto vpartition = VPartitionAdapter::Create(devfs_root, name, guid, type);
     if (vpartition == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -348,7 +367,7 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
     }
 
     // Wait for FVM driver to become visible.
-    if ((status = wait_for_device(path(), kDeviceWaitTime.get())) != ZX_OK) {
+    if ((status = wait_for_device_at(devfs_root_, path(), kDeviceWaitTime.get())) != ZX_OK) {
         ADD_FAILURE("Loading FVM driver timeout.");
         return status;
     }

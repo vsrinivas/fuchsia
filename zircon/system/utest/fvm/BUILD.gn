@@ -76,6 +76,8 @@ test("fvm-integration") {
 
   deps = [
     ":fvm-test-utils",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/zxtest",
   ]
 }

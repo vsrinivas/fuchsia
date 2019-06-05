@@ -11,6 +11,7 @@ group("test") {
 
 test("fvm-unit") {
   sources = [
+    "integrity-validation-test.cpp",
     "format-info-test.cpp",
     "partition-entry-test.cpp",
     "slice-entry-test.cpp",

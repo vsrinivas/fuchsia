@@ -47,10 +47,9 @@ bool IsPartition(const fbl::unique_fd& fd, const uint8_t* uniqueGUID, const uint
     zx::unowned_channel channel(partition_connection.borrow_channel());
     zx_status_t io_status, status;
     if (typeGUID) {
-        io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status,
-                                                                          &guid);
-        if (io_status != ZX_OK || status != ZX_OK ||
-            memcmp(guid.value, typeGUID, GUID_LEN) != 0) {
+        io_status =
+            fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status, &guid);
+        if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, typeGUID, GUID_LEN) != 0) {
             return false;
         }
     }
@@ -107,9 +106,9 @@ zx_status_t fvm_init_preallocated(int fd, uint64_t initial_volume_size, uint64_t
 
     fvm_update_hash(mvmo.get(), format_info.metadata_size());
 
-    const void* backup =
-        reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mvmo.get()) +
-                                format_info.GetSuperblockOffset(fvm::SuperblockType::kSecondary));
+    void* backup = mvmo.get() + format_info.GetSuperblockOffset(fvm::SuperblockType::kSecondary);
+    memcpy(backup, mvmo.get(), format_info.metadata_size());
+
     zx_status_t status =
         fvm_validate_header(mvmo.get(), backup, format_info.metadata_size(), nullptr);
     if (status != ZX_OK) {
@@ -144,8 +143,8 @@ zx_status_t fvm_init(int fd, size_t slice_size) {
     fuchsia_hardware_block_BlockInfo block_info;
     fzl::UnownedFdioCaller disk_connection(fd);
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(),
-                                                                &status, &block_info);
+    zx_status_t io_status =
+        fuchsia_hardware_block_BlockGetInfo(disk_connection.borrow_channel(), &status, &block_info);
     if (io_status != ZX_OK) {
         return io_status;
     } else if (status != ZX_OK) {
@@ -163,8 +162,8 @@ zx_status_t fvm_overwrite_impl(const fbl::unique_fd& fd, size_t slice_size) {
     fzl::UnownedFdioCaller disk_connection(fd.get());
     zx::unowned_channel channel(disk_connection.borrow_channel());
     zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetInfo(channel->get(), &status,
-                                                                &block_info);
+    zx_status_t io_status =
+        fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info);
     if (io_status != ZX_OK) {
         return io_status;
     } else if (status != ZX_OK) {

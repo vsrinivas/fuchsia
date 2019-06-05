@@ -16,6 +16,7 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
@@ -116,10 +117,23 @@ void fvm_update_hash(void* metadata, size_t metadata_size) {
 zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t metadata_size,
                                 const void** out) {
     const fvm::Header* primary_header = static_cast<const fvm::Header*>(metadata);
-    const fvm::Header* backup_header = static_cast<const fvm::Header*>(backup);
+    fvm::FormatInfo primary_info = fvm::FormatInfo::FromSuperBlock(*primary_header);
+    size_t primary_metadata_size = primary_info.metadata_size();
 
-    bool primary_valid = fvm_check_hash(metadata, metadata_size);
-    bool backup_valid = fvm_check_hash(backup, metadata_size);
+    const fvm::Header* backup_header = static_cast<const fvm::Header*>(backup);
+    fvm::FormatInfo backup_info = fvm::FormatInfo::FromSuperBlock(*backup_header);
+    size_t backup_metadata_size = backup_info.metadata_size();
+
+    // Assume that the reported metadata size by each header is correct. This size must be smaller
+    // than metadata buffer size(|metadata_size|. If this is the case, then check that the contents
+    // from [start, reported_size] are valid.
+    // The metadata size should always be at least the size of the header.
+    bool primary_valid = primary_metadata_size <= metadata_size &&
+                         primary_metadata_size >= sizeof(fvm::Header) &&
+                         fvm_check_hash(metadata, primary_metadata_size);
+    bool backup_valid = backup_metadata_size <= metadata_size &&
+                        backup_metadata_size >= sizeof(fvm::Header) &&
+                        fvm_check_hash(backup, backup_metadata_size);
 
     // Decide if we should use the primary or the backup copy of metadata
     // for reading.
