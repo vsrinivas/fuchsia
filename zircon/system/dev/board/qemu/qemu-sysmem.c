@@ -20,6 +20,7 @@ static const sysmem_metadata_t sysmem_metadata = {
     .vid = PDEV_VID_QEMU,
     .pid = PDEV_PID_QEMU,
     .protected_memory_size = 0,
+    .contiguous_memory_size = 0,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {

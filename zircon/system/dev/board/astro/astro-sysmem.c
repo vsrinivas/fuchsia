@@ -20,6 +20,10 @@ static const sysmem_metadata_t sysmem_metadata = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_S905D2,
     .protected_memory_size = 16 * 1024 * 1024,
+    // Support h.264 5.1, which has a max DPB size of 70,778,880 bytes (with NV12), and add some
+    // extra size for additional pictures for buffering and several framebuffers (1024*608*4 bytes
+    // each).
+    .contiguous_memory_size = 100 * 1024 * 1024,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {

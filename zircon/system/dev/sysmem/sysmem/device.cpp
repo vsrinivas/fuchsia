@@ -5,8 +5,8 @@
 #include "device.h"
 
 #include "allocator.h"
-#include "amlogic_memory_allocator.h"
 #include "buffer_collection_token.h"
+#include "contiguous_pooled_system_ram_memory_allocator.h"
 #include "macros.h"
 
 #include <ddk/device.h>
@@ -30,17 +30,14 @@ public:
 
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
 public:
-    explicit ContiguousSystemRamMemoryAllocator(Device* parent_device)
+    explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
         : parent_device_(parent_device) {}
 
     zx_status_t Allocate(uint64_t size, zx::vmo* vmo) override {
-        // TODO(dustingreen): Optionally (per board) pre-allocate a
-        // physically-contiguous VMO with board-specific size, have a page heap,
-        // dole out portions of that VMO or non-copy-on-write child VMOs of that
-        // VMO.  For now, we just attempt to allocate contiguous when buffers
-        // are allocated, which is unlikely to work after the system has been
-        // running for a while and physical memory is more fragmented than early
-        // during boot.
+        // This code is unlikely to work after running for a while and physical
+        // memory is more fragmented than early during boot. The
+        // ContiguousPooledSystemRamMemoryAllocator handles that case by keeping
+        // a separate pool of contiguous memory.
         zx_status_t status =
             zx::vmo::create_contiguous(parent_device_->bti(), size, 0, vmo);
         if (status != ZX_OK) {
@@ -69,7 +66,7 @@ public:
     bool CoherencyDomainIsInaccessible() override { return false; }
 
 private:
-    Device* const parent_device_;
+    Owner* const parent_device_;
 };
 
 class ExternalMemoryAllocator : public MemoryAllocator {
@@ -234,6 +231,7 @@ zx_status_t Device::Bind() {
     }
 
     uint64_t protected_memory_size = 0;
+    uint64_t contiguous_memory_size = 0;
 
     sysmem_metadata_t metadata;
 
@@ -243,12 +241,11 @@ zx_status_t Device::Bind() {
         pdev_device_info_vid_ = metadata.vid;
         pdev_device_info_pid_ = metadata.pid;
         protected_memory_size = metadata.protected_memory_size;
+        contiguous_memory_size = metadata.contiguous_memory_size;
     }
 
     allocators_[fuchsia_sysmem_HeapType_SYSTEM_RAM] =
         std::make_unique<SystemRamMemoryAllocator>();
-    contiguous_system_ram_allocator_ =
-        std::make_unique<ContiguousSystemRamMemoryAllocator>(this);
 
     status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
     if (status != ZX_OK) {
@@ -263,10 +260,24 @@ zx_status_t Device::Bind() {
         return status;
     }
 
+    if (contiguous_memory_size) {
+        auto pooled_allocator =
+            std::make_unique<ContiguousPooledSystemRamMemoryAllocator>(this, contiguous_memory_size);
+        if (pooled_allocator->Init() != ZX_OK) {
+            DRIVER_ERROR("Contiguous system ram allocator initialization failed");
+            return ZX_ERR_NO_MEMORY;
+        }
+        contiguous_system_ram_allocator_ = std::move(pooled_allocator);
+    } else {
+        contiguous_system_ram_allocator_ =
+            std::make_unique<ContiguousSystemRamMemoryAllocator>(this);
+    }
+
     // TODO: Separate protected memory allocator into separate driver or library
     if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
-        auto amlogic_allocator = std::make_unique<AmlogicMemoryAllocator>(std::move(bti_copy));
-        status = amlogic_allocator->Init(protected_memory_size);
+        auto amlogic_allocator = std::make_unique<ContiguousPooledSystemRamMemoryAllocator>(this, protected_memory_size);
+        // Request 64kB alignment because the hardware can only modify protections along 64kB boundaries.
+        status = amlogic_allocator->Init(16);
         if (status != ZX_OK) {
             DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
             return status;
@@ -372,12 +383,17 @@ zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
 
     uint64_t base;
     uint64_t size;
-    zx_status_t status = protected_allocator_->GetProtectedMemoryInfo(&base, &size);
+    zx_status_t status = protected_allocator_->GetPhysicalMemoryInfo(&base, &size);
     return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, status, base, size);
 }
 
 const zx::bti& Device::bti() {
     return bti_;
+}
+
+zx_status_t Device::CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) {
+    return zx_vmo_create_physical(get_root_resource(), base, size,
+                                  vmo_out->reset_and_get_address());
 }
 
 uint32_t Device::pdev_device_info_vid() {

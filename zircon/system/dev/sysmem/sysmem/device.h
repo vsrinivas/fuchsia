@@ -19,14 +19,15 @@
 #include <lib/zx/channel.h>
 #include <region-alloc/region-alloc.h>
 
-#include "protected_memory_allocator.h"
-
 #include <limits>
 #include <map>
 
+#include "memory_allocator.h"
+
 class Driver;
 class BufferCollectionToken;
-class Device {
+
+class Device final : public MemoryAllocator::Owner {
 public:
     Device(zx_device_t* parent_device, Driver* parent_driver);
 
@@ -41,7 +42,9 @@ public:
 
     zx_status_t GetProtectedMemoryInfo(fidl_txn* txn);
 
-    const zx::bti& bti();
+    // MemoryAllocator::Owner implementation.
+    const zx::bti& bti() override;
+    zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
 
     uint32_t pdev_device_info_vid();
 
@@ -65,8 +68,6 @@ public:
     // registered for settings.
     MemoryAllocator* GetAllocator(
         const fuchsia_sysmem_BufferMemorySettings* settings);
-
-    ProtectedMemoryAllocator* protected_allocator() { return protected_allocator_; }
 
 private:
     zx_device_t* parent_device_ = nullptr;
@@ -94,7 +95,7 @@ private:
 
     fbl::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
 
-    ProtectedMemoryAllocator* protected_allocator_ = nullptr;
+    MemoryAllocator* protected_allocator_ = nullptr;
 };
 
 #endif // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_

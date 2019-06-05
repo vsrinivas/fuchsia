@@ -27,6 +27,7 @@ zx_status_t Mt8167::SysmemInit() {
         .vid = PDEV_VID_MEDIATEK,
         .pid = PDEV_PID_MEDIATEK_8167S_REF,
         .protected_memory_size = 0,
+        .contiguous_memory_size = 0,
     };
 
     static const pbus_metadata_t sysmem_metadata_list[] = {

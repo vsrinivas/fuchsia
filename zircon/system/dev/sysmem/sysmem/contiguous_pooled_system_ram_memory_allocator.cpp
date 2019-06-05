@@ -2,37 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "amlogic_memory_allocator.h"
-
-#include <ddk/driver.h>
+#include "contiguous_pooled_system_ram_memory_allocator.h"
 
 #include "macros.h"
 
-AmlogicMemoryAllocator::AmlogicMemoryAllocator(zx::bti bti)
-    : bti_(std::move(bti)),
-      protected_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())) {}
+ContiguousPooledSystemRamMemoryAllocator::ContiguousPooledSystemRamMemoryAllocator(Owner* parent_device, uint64_t size)
+    : parent_device_(parent_device),
+      region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
+      size_(size) {}
 
-zx_status_t AmlogicMemoryAllocator::Init(uint64_t size) {
-    // Request 64kB alignment because the hardware can only modify protections along 64kB boundaries.
-    zx_status_t status = zx::vmo::create_contiguous(bti_, size, 16, &contiguous_vmo_);
+zx_status_t ContiguousPooledSystemRamMemoryAllocator::Init(uint32_t alignment_log2) {
+    zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size_, alignment_log2, &contiguous_vmo_);
+    if (status != ZX_OK) {
+        DRIVER_ERROR("Could allocate contiguous memory, status %d\n", status);
+        return status;
+    }
 
     zx_paddr_t addrs;
     zx::pmt pmt;
-    status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
-                      contiguous_vmo_, 0, size, &addrs, 1, &pmt);
+    status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
+                                       contiguous_vmo_, 0, size_, &addrs, 1, &pmt);
     if (status != ZX_OK) {
-        DRIVER_ERROR("Could not pin memory\n");
+        DRIVER_ERROR("Could not pin memory, status %d\n", status);
         return status;
     }
 
     start_ = addrs;
-    size_ = size;
     ralloc_region_t region = {start_, size_};
-    protected_allocator_.AddRegion(region);
+    region_allocator_.AddRegion(region);
     return ZX_OK;
 }
 
-zx_status_t AmlogicMemoryAllocator::Allocate(size_t size, zx::vmo* vmo) {
+zx_status_t ContiguousPooledSystemRamMemoryAllocator::Allocate(uint64_t size, zx::vmo* vmo) {
     // Try to clean up all unused outstanding regions.
     for (uint32_t i = 0; i < regions_.size();) {
         fbl::unique_ptr<Region>& region = regions_[i];
@@ -57,17 +58,19 @@ zx_status_t AmlogicMemoryAllocator::Allocate(size_t size, zx::vmo* vmo) {
     }
 
     auto region = std::make_unique<Region>();
-    zx_status_t status = protected_allocator_.GetRegion(size, ZX_PAGE_SIZE, region->region);
+    // TODO: Use a fragmentation-reducing allocator (such as best fit).
+    zx_status_t status = region_allocator_.GetRegion(size, ZX_PAGE_SIZE, region->region);
 
     if (status != ZX_OK) {
         DRIVER_INFO("GetRegion failed (out of space?)\n");
+        DumpPoolStats();
         return status;
     }
     // The VMO created here is a sub-region of contiguous_vmo_.
-    // TODO: stop handing out phsyical VMOs when we can hand out non-COW clone VMOs instead.
+    // TODO: stop handing out physical VMOs when we can hand out non-COW clone VMOs instead.
     // Please do not use get_root_resource() in new code. See ZX-1467.
-    status = zx_vmo_create_physical(get_root_resource(), region->region->base, size,
-                                    vmo->reset_and_get_address());
+    status = parent_device_->CreatePhysicalVmo(region->region->base, size,
+                                               vmo);
     if (status != ZX_OK) {
         DRIVER_ERROR("Failed to create physical VMO: %d\n", status);
         return status;
@@ -77,15 +80,18 @@ zx_status_t AmlogicMemoryAllocator::Allocate(size_t size, zx::vmo* vmo) {
         DRIVER_ERROR("Failed to create duplicate VMO: %d\n", status);
         return status;
     }
+    regions_.push_back(std::move(region));
     return ZX_OK;
 }
 
-bool AmlogicMemoryAllocator::CoherencyDomainIsInaccessible() {
-    return false;
-}
+void ContiguousPooledSystemRamMemoryAllocator::DumpPoolStats() {
+    uint64_t unused_size = 0;
+    uint64_t max_free_size = 0;
+    region_allocator_.WalkAvailableRegions([&unused_size, &max_free_size](const ralloc_region_t* r) -> bool {
+        unused_size += r->size;
+        max_free_size = std::max(max_free_size, r->size);
+        return true;
+    });
 
-zx_status_t AmlogicMemoryAllocator::GetProtectedMemoryInfo(uint64_t* base, uint64_t* size) {
-    *base = start_;
-    *size = size_;
-    return ZX_OK;
+    DRIVER_ERROR("Contiguous pool unused total: %ld bytes, max free size %ld bytes\n", unused_size, max_free_size);
 }

@@ -5,10 +5,10 @@
 driver("sysmem") {
   sources = [
     "allocator.cpp",
-    "amlogic_memory_allocator.cpp",
     "binding.cpp",
     "buffer_collection.cpp",
     "buffer_collection_token.cpp",
+    "contiguous_pooled_system_ram_memory_allocator.cpp",
     "device.cpp",
     "driver.cpp",
     "koid_util.cpp",
@@ -44,6 +44,9 @@ driver("sysmem") {
 test("sysmem-unittest") {
   output_name = "sysmem-unittest"
   sources = [
+    "contiguous_pooled_system_ram_memory_allocator.cpp",
+    "memory_allocator.cpp",
+    "test/contiguous_pooled_system_ram_memory_allocator_test.cpp",
     "test/pixel_format_cost_test.cpp",
     "usage_pixel_format_cost.cpp",
   ]
@@ -52,6 +55,7 @@ test("sysmem-unittest") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/async:async-cpp",
