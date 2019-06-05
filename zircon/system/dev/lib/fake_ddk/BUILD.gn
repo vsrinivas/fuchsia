@@ -2,11 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Enable printing of in driver logs in unittests.
+  enable_driver_unittest_logs = false
+
+  # Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
+  # Refer to zircon/system/public/zircon/syscalls/log.h for levels.
+  driver_unittest_log_flags = "0x7"
+}
+
 library("fake_ddk") {
   testonly = true
   sources = [
     "fake_ddk.cpp",
   ]
+  if (enable_driver_unittest_logs) {
+    defines = [ "LOG_FLAGS=${driver_unittest_log_flags}" ]
+  } else {
+    defines = [ "LOG_FLAGS=0" ]
+  }
   deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",

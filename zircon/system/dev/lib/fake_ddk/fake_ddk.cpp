@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 #include <utility>
@@ -9,6 +10,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
+#include <zircon/syscalls/log.h>
 
 namespace fake_ddk {
 
@@ -233,6 +235,15 @@ void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t
     // This is currently a no-op.
 }
 
-extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}
+extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+}
 
-__WEAK zx_driver_rec __zircon_driver_rec__ = {};
+__WEAK zx_driver_rec __zircon_driver_rec__ = {
+    .ops = {},
+    .driver = {},
+    .log_flags = LOG_FLAGS,
+};
