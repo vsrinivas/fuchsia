@@ -362,7 +362,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const flat::Interface*>(decl);
         std::string interface_name = NameCodedName(interface_decl->name);
-        std::string interface_qname = NameName(interface_decl->name, ".", "/");
+        std::string interface_qname = NameFlatName(interface_decl->name);
         std::vector<std::unique_ptr<coded::MessageType>> interface_messages;
         for (const auto& method_pointer : interface_decl->all_methods) {
             assert(method_pointer != nullptr);
@@ -397,7 +397,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             &decl->name,
             std::make_unique<coded::TableType>(std::move(table_name), std::vector<coded::TableField>(),
                                                table_decl->typeshape.Size(),
-                                               NameName(table_decl->name, ".", "/")));
+                                               NameFlatName(table_decl->name)));
         break;
     }
     case flat::Decl::Kind::kStruct: {
@@ -409,7 +409,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             &decl->name,
             std::make_unique<coded::StructType>(std::move(struct_name), std::vector<coded::StructField>(),
                                                 struct_decl->typeshape.Size(),
-                                                NameName(struct_decl->name, ".", "/")));
+                                                NameFlatName(struct_decl->name)));
         break;
     }
     case flat::Decl::Kind::kUnion: {
@@ -419,7 +419,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             &decl->name, std::make_unique<coded::UnionType>(
                              std::move(union_name), std::vector<coded::UnionField>(),
                              union_decl->membershape.Offset(), union_decl->typeshape.Size(),
-                             NameName(union_decl->name, ".", "/")));
+                             NameFlatName(union_decl->name)));
         break;
     }
     case flat::Decl::Kind::kXUnion: {
@@ -429,7 +429,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             &decl->name, std::make_unique<coded::XUnionType>(
                              std::move(xunion_name),
                              std::vector<coded::XUnionField>(),
-                             NameName(xunion_decl->name, ".", "/"),
+                             NameFlatName(xunion_decl->name),
                              types::Nullability::kNonnullable));
         break;
     }

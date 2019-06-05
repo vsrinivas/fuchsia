@@ -46,6 +46,8 @@ raw::Ordinal GetGeneratedOrdinal(const std::vector<std::string_view>& library_na
                                  SourceLocation name,
                                  const raw::SourceElement& source_element) {
     std::string method_name = GetSelector(attributes, name);
+    // TODO(pascallouis): Move this closer (code wise) to NameFlatName, ideally
+    // sharing code.
     std::string full_name;
     bool once = false;
     for (std::string_view id : library_name) {

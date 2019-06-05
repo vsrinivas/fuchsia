@@ -25,6 +25,16 @@ std::string NameSize(uint64_t size) {
     return name.str();
 }
 
+std::string FormatName(const flat::Name& name, std::string_view library_separator, std::string_view name_separator) {
+    std::string compiled_name("");
+    if (name.library() != nullptr) {
+        compiled_name += LibraryName(name.library(), library_separator);
+        compiled_name += name_separator;
+    }
+    compiled_name += name.name_part();
+    return compiled_name;
+}
+
 } // namespace
 
 std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator) {
@@ -178,9 +188,13 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
     }
 }
 
+std::string NameFlatName(const flat::Name& name) {
+    return FormatName(name, ".", "/");
+}
+
 void NameFlatTypeConstructorHelper(std::ostringstream& buf,
                                    const flat::TypeConstructor* type_ctor) {
-    buf << NameName(type_ctor->name, ".", "/");
+    buf << NameFlatName(type_ctor->name);
     if (type_ctor->maybe_arg_type_ctor) {
         buf << "<";
         NameFlatTypeConstructorHelper(buf, type_ctor->maybe_arg_type_ctor.get());
@@ -293,7 +307,7 @@ std::string NameFlatConstant(const flat::Constant* constant) {
     }
     case flat::Constant::Kind::kIdentifier: {
         auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
-        return NameName(identifier_constant->name, ".", "/");
+        return NameFlatName(identifier_constant->name);
     }
     case flat::Constant::Kind::kSynthesized: {
         return std::string("synthesized constant");
@@ -347,7 +361,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     case flat::Type::Kind::kRequestHandle: {
         auto request_handle_type = static_cast<const flat::RequestHandleType*>(type);
         buf << "request<";
-        buf << NameName(request_handle_type->interface_type->name, ".", "/");
+        buf << NameFlatName(request_handle_type->interface_type->name);
         buf << ">";
         break;
     }
@@ -358,7 +372,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     }
     case flat::Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-        buf << NameName(identifier_type->name, ".", "/");
+        buf << NameFlatName(identifier_type->name);
         break;
     }
     } // switch
@@ -426,16 +440,6 @@ std::string NameIdentifier(SourceLocation name) {
     return std::string(name.data());
 }
 
-std::string NameName(const flat::Name& name, std::string_view library_separator, std::string_view name_separator) {
-    std::string compiled_name("");
-    if (name.library() != nullptr) {
-        compiled_name += LibraryName(name.library(), library_separator);
-        compiled_name += name_separator;
-    }
-    compiled_name += name.name_part();
-    return compiled_name;
-}
-
 std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& components) {
     std::string id;
     for (const auto& component : components) {
@@ -456,7 +460,7 @@ std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name
 }
 
 std::string NameDiscoverable(const flat::Interface& interface) {
-    return NameName(interface.name, ".", ".");
+    return FormatName(interface.name, ".", ".");
 }
 
 std::string NameMethod(std::string_view interface_name, const flat::Interface::Method& method) {
@@ -515,7 +519,7 @@ std::string NameFields(std::string_view name) {
 }
 
 std::string NameCodedName(const flat::Name& name) {
-    return NameName(name, "_", "_");
+    return FormatName(name, "_", "_");
 }
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {

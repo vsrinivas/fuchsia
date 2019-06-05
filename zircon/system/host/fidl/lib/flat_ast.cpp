@@ -498,7 +498,7 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
 }
 
 bool TypeTemplate::Fail(const SourceLocation* maybe_location, const std::string& content) const {
-    std::string message(NameName(name_, ".", "/"));
+    std::string message(NameFlatName(name_));
     message.append(" ");
     message.append(content);
     error_reporter_->ReportError(maybe_location, message);
@@ -3002,9 +3002,9 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(name, "This superinterface declaration is not an interface");
             if (!decl->HasAttribute("FragileBase")) {
                 std::string message = "interface ";
-                message += NameName(name, ".", "/");
+                message += NameFlatName(name);
                 message += " is not marked by [FragileBase] attribute, disallowing interface ";
-                message += NameName(interface_declaration->name, ".", "/");
+                message += NameFlatName(interface_declaration->name);
                 message += " from inheriting from it";
                 return Fail(name, message);
             }

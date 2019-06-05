@@ -245,7 +245,7 @@ void JSONGenerator::Generate(const flat::Name& value) {
     //     { "LIB.LIB.LIB", "ID" }
     // or (when there is not)
     //     { "ID" }
-    Generate(NameName(value, ".", "/"));
+    Generate(NameFlatName(value));
 }
 
 void JSONGenerator::Generate(const flat::Bits& value) {
@@ -486,7 +486,7 @@ void JSONGenerator::GenerateDeclarationsEntry(
     } else {
         EmitObjectSeparator();
     }
-    EmitObjectKey(NameName(name, ".", "/"));
+    EmitObjectKey(NameFlatName(name));
     EmitString(decl);
 }
 
@@ -587,7 +587,7 @@ std::ostringstream JSONGenerator::Produce() {
                     continue;
             }
             if (decl->name.library() == library_)
-                declaration_order.push_back(NameName(decl->name, ".", "/"));
+                declaration_order.push_back(NameFlatName(decl->name));
         }
         GenerateObjectMember("declaration_order", declaration_order);
 

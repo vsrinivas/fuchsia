@@ -18,7 +18,6 @@ namespace fidl {
 std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator);
 
 std::string NameIdentifier(SourceLocation name);
-std::string NameName(const flat::Name& name, std::string_view library_separator, std::string_view separator);
 
 std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& components);
 std::string NameLibrary(const std::vector<std::string_view>& library_name);
@@ -32,6 +31,7 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype);
 
 std::string NameRawLiteralKind(raw::Literal::Kind kind);
 
+std::string NameFlatName(const flat::Name& name);
 std::string NameFlatConstantKind(flat::Constant::Kind kind);
 std::string NameFlatTypeKind(flat::Type::Kind kind);
 std::string NameUnionTag(std::string_view union_name, const flat::Union::Member& member);
