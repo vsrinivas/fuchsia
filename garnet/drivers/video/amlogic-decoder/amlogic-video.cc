@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/smc.h>
 
 #include <chrono>
 #include <memory>
@@ -198,6 +199,12 @@ void AmlogicVideo::InitializeStreamInput(bool use_parser) {
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser,
                                                  uint32_t size) {
   zx_status_t status = AllocateStreamBuffer(stream_buffer_, size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser,
+                        false);
   if (status != ZX_OK) {
     return status;
   }
@@ -672,6 +679,74 @@ AmlogicVideo::ConnectToSysmem() {
   return client_end;
 }
 
+namespace tee_smc {
+
+enum CallType : uint8_t {
+  kYieldingCall = 0,
+  kFastCall = 1,
+};
+
+enum CallConvention : uint8_t {
+  kSmc32CallConv = 0,
+  kSmc64CallConv = 1,
+};
+
+enum Service : uint8_t {
+  kArchService = 0x00,
+  kCpuService = 0x01,
+  kSipService = 0x02,
+  kOemService = 0x03,
+  kStandardService = 0x04,
+  kTrustedOsService = 0x32,
+  kTrustedOsServiceEnd = 0x3F,
+};
+
+constexpr uint8_t kCallTypeMask = 0x01;
+constexpr uint8_t kCallTypeShift = 31;
+constexpr uint8_t kCallConvMask = 0x01;
+constexpr uint8_t kCallConvShift = 30;
+constexpr uint8_t kServiceMask = ARM_SMC_SERVICE_CALL_NUM_MASK;
+constexpr uint8_t kServiceShift = ARM_SMC_SERVICE_CALL_NUM_SHIFT;
+
+static constexpr uint32_t CreateFunctionId(CallType call_type,
+                                           CallConvention call_conv,
+                                           Service service,
+                                           uint16_t function_num) {
+  return (((call_type & kCallTypeMask) << kCallTypeShift) |
+          ((call_conv & kCallConvMask) << kCallConvShift) |
+          ((service & kServiceMask) << kServiceShift) | function_num);
+}
+}  // namespace tee_smc
+
+zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit,
+                                       bool protect) {
+  if (!secure_monitor_)
+    return protect ? ZX_ERR_INVALID_ARGS : ZX_OK;
+
+  // Call into the TEE to mark a particular hardware unit as able to access
+  // protected memory or not.
+  zx_smc_parameters_t params = {};
+  zx_smc_result_t result = {};
+  constexpr uint32_t kFuncIdConfigDeviceSecure = 14;
+  params.func_id = tee_smc::CreateFunctionId(
+      tee_smc::kFastCall, tee_smc::kSmc32CallConv, tee_smc::kTrustedOsService,
+      kFuncIdConfigDeviceSecure);
+  params.arg1 = static_cast<uint32_t>(unit);
+  params.arg2 = static_cast<uint32_t>(protect);
+  zx_status_t status = zx_smc_call(secure_monitor_.get(), &params, &result);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to set unit %ld protected status %ld code: %d",
+                 params.arg1, params.arg2, status);
+    return status;
+  }
+  if (result.arg0 != 0) {
+    DECODE_ERROR("Failed to set unit %ld protected status %ld: %lx",
+                 params.arg1, params.arg2, result.arg0);
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
@@ -713,6 +788,17 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     default:
       DECODE_ERROR("Unknown soc pid: %d\n", info.pid);
       return ZX_ERR_INVALID_ARGS;
+  }
+
+  static constexpr uint32_t kTrustedOsSmcIndex = 0;
+  status = pdev_get_smc(&pdev_, kTrustedOsSmcIndex,
+                        secure_monitor_.reset_and_get_address());
+  if (status != ZX_OK) {
+    // On systems where there's no protected memory it's fine if we can't get
+    // a handle to the secure monitor.
+    zxlogf(INFO,
+           "amlogic-video: Unable to get secure monitor handle, assuming no "
+           "protected memory\n");
   }
 
   mmio_buffer_t cbus_mmio;

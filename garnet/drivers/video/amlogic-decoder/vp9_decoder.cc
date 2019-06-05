@@ -257,6 +257,10 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kSwappedOut);
   assert(owner_->IsDecoderCurrent(this));
   working_buffers_.CheckBuffers();
+  zx_status_t status = owner_->SetProtected(
+      VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, false);
+  if (status != ZX_OK)
+    return status;
   uint8_t* firmware;
   uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =
@@ -264,8 +268,8 @@ zx_status_t Vp9Decoder::InitializeHardware() {
           ? FirmwareBlob::FirmwareType::kVp9MmuG12a
           : FirmwareBlob::FirmwareType::kVp9Mmu;
 
-  zx_status_t status = owner_->firmware_blob()->GetFirmwareData(
-      firmware_type, &firmware, &firmware_size);
+  status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &firmware,
+                                                    &firmware_size);
   if (status != ZX_OK)
     return status;
 

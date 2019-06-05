@@ -273,8 +273,12 @@ zx_status_t H264Decoder::LoadSecondaryFirmware(const uint8_t* data,
 zx_status_t H264Decoder::Initialize() {
   uint8_t* data;
   uint32_t firmware_size;
+  zx_status_t status = owner_->SetProtected(
+      VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, false);
+  if (status != ZX_OK)
+    return status;
 
-  zx_status_t status = owner_->firmware_blob()->GetFirmwareData(
+  status = owner_->firmware_blob()->GetFirmwareData(
       FirmwareBlob::FirmwareType::kH264, &data, &firmware_size);
   if (status != ZX_OK)
     return status;

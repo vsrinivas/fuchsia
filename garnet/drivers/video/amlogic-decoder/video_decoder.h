@@ -80,6 +80,13 @@ class VideoDecoder {
   using CheckOutputReady = fit::function<bool()>;
   class Owner {
    public:
+    enum class ProtectableHardwareUnit {
+      // From BL32.
+      kHevc = 4,
+      kParser = 7,
+      kVdec = 13
+    };
+
     virtual __WARN_UNUSED_RESULT DosRegisterIo* dosbus() = 0;
     virtual __WARN_UNUSED_RESULT zx_handle_t bti() = 0;
     virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
@@ -93,6 +100,10 @@ class VideoDecoder {
                      uint32_t flags) = 0;
     virtual __WARN_UNUSED_RESULT bool IsDecoderCurrent(
         VideoDecoder* decoder) = 0;
+    // Sets whether a particular hardware unit can read/write protected or
+    // unprotected memory.
+    virtual __WARN_UNUSED_RESULT zx_status_t
+    SetProtected(ProtectableHardwareUnit unit, bool protect) = 0;
   };
 
   VideoDecoder() { pts_manager_ = std::make_unique<PtsManager>(); }

@@ -9,6 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-t931/t931-hw.h>
+#include <zircon/syscalls/smc.h>
 
 namespace sherlock {
 
@@ -65,6 +66,14 @@ static const pbus_irq_t sherlock_video_irqs[] = {
     },
 };
 
+static const pbus_smc_t sherlock_video_smcs[] = {
+    {
+        .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_BASE,
+        .count = 1,
+        .exclusive = false,
+    },
+};
+
 static pbus_dev_t video_dev = []() {
     pbus_dev_t dev;
     dev.name = "aml-video";
@@ -77,6 +86,8 @@ static pbus_dev_t video_dev = []() {
     dev.bti_count = countof(sherlock_video_btis);
     dev.irq_list = sherlock_video_irqs;
     dev.irq_count = countof(sherlock_video_irqs);
+    dev.smc_list = sherlock_video_smcs;
+    dev.smc_count = countof(sherlock_video_smcs);
     return dev;
 }();
 

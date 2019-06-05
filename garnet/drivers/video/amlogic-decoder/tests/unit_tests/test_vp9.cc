@@ -64,12 +64,20 @@ class FakeOwner : public VideoDecoder::Owner {
     return ZX_OK;
   }
   bool IsDecoderCurrent(VideoDecoder* decoder) override { return true; }
+  zx_status_t SetProtected(ProtectableHardwareUnit unit,
+                           bool protect) override {
+    have_set_protected_ = true;
+    return ZX_OK;
+  }
+
+  bool have_set_protected() const { return have_set_protected_; }
 
  private:
   DosRegisterIo* dosbus_;
   FakeDecoderCore core_;
   uint64_t phys_map_start_ = 0x1000;
   FirmwareBlob blob_;
+  bool have_set_protected_ = false;
 };
 
 constexpr uint32_t kDosbusMemorySize = 0x10000;
@@ -111,10 +119,12 @@ class Vp9UnitTest {
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
     EXPECT_EQ(
         0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
+    EXPECT_FALSE(fake_owner.have_set_protected());
 
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
     EXPECT_NE(
         0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
+    EXPECT_TRUE(fake_owner.have_set_protected());
     auto dosbus_memory_copy =
         fbl::unique_ptr<uint32_t[]>(new uint32_t[kDosbusMemorySize]);
     memcpy(dosbus_memory_copy.get(), dosbus_memory.get(), kDosbusMemorySize);

@@ -82,8 +82,12 @@ void Mpeg12Decoder::InitializedFrames(std::vector<CodecFrame> frames,
 zx_status_t Mpeg12Decoder::Initialize() {
   uint8_t* data;
   uint32_t firmware_size;
+  zx_status_t status = owner_->SetProtected(
+      VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, false);
+  if (status != ZX_OK)
+    return status;
 
-  zx_status_t status = owner_->firmware_blob()->GetFirmwareData(
+  status = owner_->firmware_blob()->GetFirmwareData(
       FirmwareBlob::FirmwareType::kMPEG12, &data, &firmware_size);
   if (status != ZX_OK)
     return status;

@@ -66,6 +66,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     assert(decoder);
     return decoder == video_decoder_;
   }
+  __WARN_UNUSED_RESULT zx_status_t SetProtected(ProtectableHardwareUnit unit,
+                                                bool protect) override;
 
   // DecoderCore::Owner implementation.
   __WARN_UNUSED_RESULT
@@ -177,6 +179,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   sysmem_protocol_t sysmem_{};
   amlogic_canvas_protocol_t canvas_{};
   DeviceType device_type_ = DeviceType::kUnknown;
+  zx::handle secure_monitor_;
   std::unique_ptr<CbusRegisterIo> cbus_;
   std::unique_ptr<DosRegisterIo> dosbus_;
   std::unique_ptr<HiuRegisterIo> hiubus_;

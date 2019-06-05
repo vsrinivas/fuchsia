@@ -7,6 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+#include <zircon/syscalls/smc.h>
 
 #include "astro.h"
 
@@ -63,6 +64,14 @@ static const pbus_irq_t astro_video_irqs[] = {
     },
 };
 
+static const pbus_smc_t astro_video_smcs[] = {
+    {
+        .service_call_num_base = ARM_SMC_SERVICE_CALL_NUM_TRUSTED_OS_BASE,
+        .count = 1,
+        .exclusive = false,
+    },
+};
+
 static const pbus_dev_t video_dev = {
     .name = "aml-video",
     .vid = PDEV_VID_AMLOGIC,
@@ -74,6 +83,8 @@ static const pbus_dev_t video_dev = {
     .bti_count = countof(astro_video_btis),
     .irq_list = astro_video_irqs,
     .irq_count = countof(astro_video_irqs),
+    .smc_list = astro_video_smcs,
+    .smc_count = countof(astro_video_smcs),
 };
 
 zx_status_t aml_video_init(aml_bus_t* bus) {
