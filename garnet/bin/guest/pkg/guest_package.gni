@@ -1,8 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-# Allow old "import" statements to pick up the new "guest_package.gni" location.
-#
-# TODO(MAC-252): Remove once all BUILD files have been updated.
-import("//src/virtualization/packages/guest_package.gni")
