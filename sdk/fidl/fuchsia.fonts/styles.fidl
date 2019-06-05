@@ -78,8 +78,7 @@ table Style2 {
 /// the provider may return another available sans serif family, such as "Roboto Regular", instead.
 ///
 /// See also:
-/// https://www.w3.org/Style/Examples/007/fonts.en.html
-/// https://developer.mozilla.org/en-US/docs/Web/CSS/font-family#Values
+/// https://www.w3.org/TR/css-fonts-4/#generic-font-families
 enum GenericFontFamily {
     /// Glyphs have little "serifs", hooks, or notches at the ends of most strokes.
     /// Examples: Georgia, Noto Serif, Times New Roman.
@@ -96,4 +95,23 @@ enum GenericFontFamily {
     /// Decorative fonts.
     /// Examples: Impact, Papyrus.
     FANTASY = 5;
+    /// The default user interface font on the target platform.
+    /// This is included for completeness with the CSS specification; font manifests should not
+    /// declare that a font belongs to the |SYSTEM_UI| generic family, but instead should declare a
+    /// more specific option (e.g. |SERIF| for Roboto).
+    ///
+    /// Not commonly used.
+    SYSTEM_UI = 6;
+    /// Fonts that are used specifically for rendering emoji code points.
+    /// Examples: Noto Color Emoji.
+    EMOJI = 7;
+    /// Fonts that are used primarily for rendering mathematical expressions.
+    ///
+    /// Not commonly used.
+    MATH = 8;
+    /// A group of Chinese fonts between serif and cursive, often used for official Chinese
+    /// Government documents.
+    ///
+    /// Not commonly used.
+    FANGSONG = 9;
 };

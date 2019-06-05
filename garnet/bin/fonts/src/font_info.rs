@@ -13,6 +13,9 @@ const BITMAP_ELEMENT_SIZE: usize = 64;
 
 const MAX_RANGE_GAP: u32 = 2048;
 
+/// Represents an ordered set of code points that begin at [CharSetRange.start]. The largest
+/// allowed discontinuity between two consecutive code points in the set is [MAX_RANGE_GAP].
+#[derive(Debug)]
 struct CharSetRange {
     start: u32,
     bitmap: Vec<BitmapElement>,
@@ -20,10 +23,7 @@ struct CharSetRange {
 
 impl CharSetRange {
     fn new() -> CharSetRange {
-        CharSetRange {
-            start: 0,
-            bitmap: vec![],
-        }
+        CharSetRange { start: 0, bitmap: vec![] }
     }
 
     fn start(&self) -> u32 {
@@ -65,17 +65,22 @@ impl CharSetRange {
     }
 }
 
+/// Represents an ordered set of code points.
+///
+/// TODO(kpozin): Evaluate replacing with `MultiCharRange`, which might be more space-efficient for
+/// large sets with few discontinuities.
+#[derive(Debug)]
 pub struct CharSet {
     ranges: Vec<CharSetRange>,
 }
 
 impl CharSet {
-    pub fn new(mut codepoints: Vec<u32>) -> CharSet {
-        codepoints.sort_unstable();
+    pub fn new(mut code_points: Vec<u32>) -> CharSet {
+        code_points.sort_unstable();
 
         let mut ranges = vec![];
         let mut range = CharSetRange::new();
-        for c in codepoints {
+        for c in code_points {
             if c != 0 && !range.is_empty() && c >= range.end() + MAX_RANGE_GAP {
                 ranges.push(range);
                 range = CharSetRange::new();
@@ -132,7 +137,10 @@ impl VmoStreamInternal {
 
     // Unsafe callback called by freetype to read from the stream.
     unsafe extern "C" fn read_func(
-        stream: freetype::FT_Stream, offset: c_ulong, buffer: *mut c_uchar, count: c_ulong,
+        stream: freetype::FT_Stream,
+        offset: c_ulong,
+        buffer: *mut c_uchar,
+        count: c_ulong,
     ) -> c_ulong {
         let wrapper = &mut *((*stream).descriptor as *mut VmoStreamInternal);
         let buffer_slice = std::slice::from_raw_parts_mut(buffer as *mut u8, count as usize);
@@ -185,7 +193,7 @@ impl VmoStream {
 }
 
 pub struct FontInfo {
-    pub charset: CharSet,
+    pub char_set: CharSet,
 }
 
 pub struct FontInfoLoader {
@@ -216,7 +224,10 @@ impl FontInfoLoader {
     }
 
     pub fn load_font_info(
-        &self, vmo: zx::Vmo, vmo_size: usize, index: u32,
+        &self,
+        vmo: zx::Vmo,
+        vmo_size: usize,
+        index: u32,
     ) -> Result<FontInfo, Error> {
         let mut codepoints: Vec<u32> = Vec::new();
 
@@ -259,9 +270,7 @@ impl FontInfoLoader {
             freetype::FT_Done_Face(ft_face);
         }
 
-        Ok(FontInfo {
-            charset: CharSet::new(codepoints),
-        })
+        Ok(FontInfo { char_set: CharSet::new(codepoints) })
     }
 }
 

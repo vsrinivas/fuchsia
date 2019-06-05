@@ -15,7 +15,7 @@
     {
       "family": "Roboto",
       "fallback": true,
-      "fallback_group": "sans-serif",
+      "generic_family": "sans-serif",
       "fonts": [
         {
           "asset": "fonts/Roboto-Regular.ttf"

@@ -46,8 +46,7 @@ table TypefaceRequest {
 
 /// Parameters for looking up a typeface.
 table TypefaceQuery {
-    /// Desired font family name, e.g. "Roboto". Font family search ignores differences in case and
-    /// whitespace.
+    /// Desired font family name, e.g. "Roboto". Font family search is case-insensitive.
     ///
     /// Note: In cases where the specified family doesn't exist, or the specified family doesn't
     /// have a glyph for the requested |code_point|, a face from another family may be returned.
@@ -63,11 +62,11 @@ table TypefaceQuery {
     /// See |fuchsia.intl.LocaleId|.
     3: vector<fuchsia.intl.LocaleId>:MAX_FACE_QUERY_LANGUAGES languages;
 
-    /// Optional code point for which a glyph must be present in the returned face.
+    /// Optional code points for which glyphs must be present in the returned face.
     ///
     /// Callers that specify this field are expected to extract the character set from the result
     /// and cache it in order to avoid calling the API more than necessary.
-    4: uint32 code_point;
+    4: vector<uint32> code_points;
 
     /// A generic font family to fall back to if an exact match is unavailable or does not contain
     /// the requested code point.
@@ -111,5 +110,5 @@ table FontFamilyInfo {
     1: FamilyName name;
 
     /// Unordered list of all available styles in the family.
-    2: vector<Style>:MAX_FAMILY_STYLES styles;
+    2: vector<Style2>:MAX_FAMILY_STYLES styles;
 };

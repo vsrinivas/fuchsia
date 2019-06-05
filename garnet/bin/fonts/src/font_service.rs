@@ -2,24 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::collection::{Font, FontCollection};
-use super::font_info;
-use super::manifest;
-use failure::{format_err, Error, ResultExt};
-use fdio;
-use fidl;
-use fidl::encoding::OutOfLine;
-use fidl_fuchsia_fonts as fonts;
-use fidl_fuchsia_mem as mem;
-use fuchsia_async as fasync;
-use futures::prelude::*;
-use futures::{future, Future, FutureExt};
-use log::error;
-use std::collections::BTreeMap;
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use unicase::UniCase;
+use {
+    crate::{
+        collection::{Typeface, TypefaceCollection},
+        font_info, manifest,
+    },
+    failure::{format_err, Error, ResultExt},
+    fdio, fidl,
+    fidl::encoding::{Decodable, OutOfLine},
+    fidl_fuchsia_fonts as fonts,
+    fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
+    fidl_fuchsia_mem as mem, fuchsia_async as fasync,
+    futures::{prelude::*, FutureExt},
+    log,
+    std::{
+        collections::BTreeMap,
+        fs::File,
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
+    unicase::UniCase,
+};
+
+/// Get a field out of a `TypefaceRequest`'s `query` field as a reference, or returns early with a
+/// `failure::Error` if the query is missing.
+macro_rules! query_field {
+    ($request:ident, $field:ident) => {
+        $request.query.as_ref().ok_or(format_err!("Missing query"))?.$field.as_ref()
+    };
+}
 
 /// Stores the relationship between [`Asset`] paths and IDs.
 /// Should be initialized by [`FontService`].
@@ -83,18 +94,20 @@ impl AssetCollection {
     }
 }
 
+#[derive(Debug)]
 struct FontFamily {
     name: String,
-    fonts: FontCollection,
-    fallback_group: fonts::FallbackGroup,
+    faces: TypefaceCollection,
+    generic_family: Option<fonts::GenericFontFamily>,
 }
 
 impl FontFamily {
-    fn new(name: String, fallback_group: fonts::FallbackGroup) -> FontFamily {
-        FontFamily { name, fonts: FontCollection::new(), fallback_group }
+    fn new(name: String, generic_family: Option<fonts::GenericFontFamily>) -> FontFamily {
+        FontFamily { name, faces: TypefaceCollection::new(), generic_family }
     }
 }
 
+#[derive(Debug)]
 enum FamilyOrAlias {
     Family(FontFamily),
     /// Represents an alias to a `Family` whose name is the associated [`UniCase`]`<`[`String`]`>`.
@@ -105,7 +118,7 @@ pub struct FontService {
     assets: AssetCollection,
     /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
-    fallback_collection: FontCollection,
+    fallback_collection: TypefaceCollection,
 }
 
 impl FontService {
@@ -113,7 +126,7 @@ impl FontService {
         FontService {
             assets: AssetCollection::new(),
             families: BTreeMap::new(),
-            fallback_collection: FontCollection::new(),
+            fallback_collection: TypefaceCollection::new(),
         }
     }
 
@@ -157,7 +170,7 @@ impl FontService {
             let family = match self.families.entry(family_name.clone()).or_insert_with(|| {
                 FamilyOrAlias::Family(FontFamily::new(
                     family_manifest.family.clone(),
-                    family_manifest.fallback_group,
+                    family_manifest.generic_family,
                 ))
             }) {
                 FamilyOrAlias::Family(f) => f,
@@ -187,15 +200,15 @@ impl FontService {
                             font_manifest.asset.to_string_lossy()
                         )
                     })?;
-                let font = Arc::new(Font::new(
+                let typeface = Arc::new(Typeface::new(
                     asset_id,
                     font_manifest,
-                    info,
-                    family_manifest.fallback_group,
+                    info.char_set,
+                    family_manifest.generic_family,
                 ));
-                family.fonts.add_font(font.clone());
+                family.faces.add_typeface(typeface.clone());
                 if family_manifest.fallback {
-                    self.fallback_collection.add_font(font);
+                    self.fallback_collection.add_typeface(typeface);
                 }
             }
 
@@ -246,82 +259,113 @@ impl FontService {
         Some(family)
     }
 
-    fn match_request(&self, mut request: fonts::Request) -> Option<fonts::Response> {
-        request.language =
-            request.language.map(|list| list.iter().map(|l| l.to_ascii_lowercase()).collect());
+    fn match_request(
+        &self,
+        mut request: fonts::TypefaceRequest,
+    ) -> Result<fonts::TypefaceResponse, Error> {
+        let matched_family: Option<&FontFamily> = query_field!(request, family)
+            .and_then(|family| self.match_family(&UniCase::new(family.name.clone())));
+        let mut typeface = match matched_family {
+            Some(family) => family.faces.match_request(&request)?,
+            None => None,
+        };
 
-        let matched_family = request
-            .family
-            .as_ref()
-            .and_then(|family| self.match_family(&UniCase::new(family.clone())));
-        let mut font = matched_family.and_then(|family| family.fonts.match_request(&request));
-
-        if font.is_none() && (request.flags & fonts::REQUEST_FLAG_NO_FALLBACK) == 0 {
-            // If fallback_group is not specified by the client explicitly then copy it from
+        // If an exact match wasn't found, but fallback families are allowed...
+        if typeface.is_none()
+            && request
+                .flags
+                .map_or(true, |flags| !flags.contains(fonts::TypefaceRequestFlags::ExactFamily))
+        {
+            // If fallback_family is not specified by the client explicitly then copy it from
             // the matched font family.
-            if request.fallback_group == fonts::FallbackGroup::None {
+            if query_field!(request, fallback_family).is_none() {
                 if let Some(family) = matched_family {
-                    request.fallback_group = family.fallback_group;
+                    request
+                        .query
+                        .as_mut()
+                        .ok_or_else(|| format_err!("This should never happen"))?
+                        .fallback_family = family.generic_family;
                 }
             }
-            font = self.fallback_collection.match_request(&request);
+            typeface = self.fallback_collection.match_request(&request)?;
         }
 
-        font.and_then(|font| match self.assets.get_asset(font.asset_id) {
-            Ok(buffer) => Some(fonts::Response {
-                buffer,
-                buffer_id: font.asset_id,
-                font_index: font.font_index,
-            }),
-            Err(err) => {
-                error!("Failed to load font file: {}", err);
-                None
-            }
-        })
+        let typeface_response = typeface
+            .ok_or("Couldn't match a typeface")
+            .and_then(|font| match self.assets.get_asset(font.asset_id) {
+                Ok(buffer) => Result::Ok(fonts::TypefaceResponse {
+                    buffer: Some(buffer),
+                    buffer_id: Some(font.asset_id),
+                    font_index: Some(font.font_index),
+                }),
+                Err(err) => {
+                    log::error!("Failed to load font file: {}", err);
+                    Err("Failed to load font file")
+                }
+            })
+            .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty());
+
+        // Note that not finding a typeface is not an error, as long as the query was legal.
+        Ok(typeface_response)
     }
 
-    fn get_font_info(&self, family_name: String) -> Option<fonts::FamilyInfo> {
-        let family_name = UniCase::new(family_name);
-        let family = self.match_family(&family_name)?;
-        Some(fonts::FamilyInfo {
-            name: family.name.clone(),
-            styles: family.fonts.get_styles().collect(),
-        })
+    fn get_family_info(&self, family_name: fonts::FamilyName) -> fonts::FontFamilyInfo {
+        let family_name = UniCase::new(family_name.name);
+        let family = self.match_family(&family_name);
+        family.map_or_else(
+            || fonts::FontFamilyInfo::new_empty(),
+            |family| fonts::FontFamilyInfo {
+                name: Some(fonts::FamilyName { name: family.name.clone() }),
+                styles: Some(family.faces.get_styles().collect()),
+            },
+        )
     }
 
-    fn handle_font_provider_request(
+    async fn handle_font_provider_request(
         &self,
         request: fonts::ProviderRequest,
-    ) -> impl Future<Output = Result<(), fidl::Error>> {
-        #[allow(unused_variables)]
+    ) -> Result<(), failure::Error> {
         match request {
+            // TODO(I18N-12): Remove when all clients have migrated to GetTypeface
             fonts::ProviderRequest::GetFont { request, responder } => {
-                let mut response = self.match_request(request);
-                future::ready(responder.send(response.as_mut().map(OutOfLine)))
+                let request = request.into_typeface_request();
+                let mut response = self.match_request(request)?.into_font_response();
+                Ok(responder.send(response.as_mut().map(OutOfLine))?)
             }
+            // TODO(I18N-12): Remove when all clients have migrated to GetFontFamilyInfo
             fonts::ProviderRequest::GetFamilyInfo { family, responder } => {
-                let mut font_info = self.get_font_info(family);
-                future::ready(responder.send(font_info.as_mut().map(OutOfLine)))
+                let mut font_info =
+                    self.get_family_info(fonts::FamilyName { name: family }).into_family_info();
+                Ok(responder.send(font_info.as_mut().map(OutOfLine))?)
             }
             fonts::ProviderRequest::GetTypeface { request, responder } => {
-                // TODO(I18N-12): Implement changes from API review
-                unimplemented!();
+                let response = self.match_request(request)?;
+                // TODO(kpozin): OutOfLine?
+                Ok(responder.send(response)?)
             }
             fonts::ProviderRequest::GetFontFamilyInfo { family, responder } => {
-                // TODO(I18N-12): Implement changes from API review
-                unimplemented!();
+                let family_info = self.get_family_info(family);
+                // TODO(kpozin): OutOfLine?
+                Ok(responder.send(family_info)?)
             }
         }
     }
 }
 
 pub fn spawn_server(font_service: Arc<FontService>, stream: fonts::ProviderRequestStream) {
-    // TODO(sergeyu): Consider making handle_font_provider_request() and
-    // load_asset_to_vmo() asynchronous and using try_for_each_concurrent()
-    // instead of try_for_each() here. That would be useful only if clients can
-    // send more than one concurrent request.
-    let stream_complete = stream
-        .try_for_each(move |request| font_service.handle_font_provider_request(request))
-        .map(|_| ());
-    fasync::spawn(stream_complete);
+    // TODO(I18N-18): Consider making handle_font_provider_request() and load_asset_to_vmo()
+    // asynchronous and using try_for_each_concurrent() instead of try_for_each() here. That would
+    // be useful only if clients can send more than one concurrent request.
+    fasync::spawn(run_server(font_service, stream).map(|_| ()));
+}
+
+async fn run_server(
+    font_service: Arc<FontService>,
+    mut stream: fonts::ProviderRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) = await!(stream.try_next()).context("Error running provider")? {
+        await!(font_service.handle_font_provider_request(request))
+            .context("Error while handling request")?;
+    }
+    Ok(())
 }

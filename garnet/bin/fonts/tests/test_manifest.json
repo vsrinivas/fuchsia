@@ -3,56 +3,56 @@
     {
       "family": "Noto Serif CJK",
       "aliases": ["NotoSerifCJK"],
-      "fallback_group": "serif",
+      "generic_family": "serif",
       "fallback": true,
       "fonts": [
         {
           "asset": "NotoSerifCJK-Regular.ttc",
           "index": 0,
-          "language": "ja"
+          "languages": ["ja"]
         },
         {
           "asset": "NotoSerifCJK-Regular.ttc",
           "index": 1,
-          "language": "ko"
+          "languages": ["ko"]
         },
         {
           "asset": "NotoSerifCJK-Regular.ttc",
           "index": 2,
-          "language": "zh-Hans"
+          "languages": ["zh-Hans"]
         },
         {
           "asset": "NotoSerifCJK-Regular.ttc",
           "index": 3,
-          "language": ["zh-Hant", "zh-Bopo"]
+          "languages": ["zh-Hant", "zh-Bopo"]
         }
       ]
     },
     {
       "family": "Noto Sans CJK",
       "aliases": ["NotoSansCJK"],
-      "fallback_group": "sans-serif",
+      "generic_family": "sans-serif",
       "fallback": true,
       "fonts": [
         {
           "asset": "NotoSansCJK-Regular.ttc",
           "index": 0,
-          "language": "ja"
+          "languages": ["ja"]
         },
         {
           "asset": "NotoSansCJK-Regular.ttc",
           "index": 1,
-          "language": "ko"
+          "languages": ["ko"]
         },
         {
           "asset": "NotoSansCJK-Regular.ttc",
           "index": 2,
-          "language": "zh-Hans"
+          "languages": ["zh-Hans"]
         },
         {
           "asset": "NotoSansCJK-Regular.ttc",
           "index": 3,
-          "language": ["zh-Hant", "zh-Bopo"]
+          "languages": ["zh-Hant", "zh-Bopo"]
         }
       ]
     }

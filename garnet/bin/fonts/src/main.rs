@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro)]
+
 mod collection;
 mod font_info;
 mod font_service;
@@ -29,11 +31,7 @@ fn main() -> Result<(), Error> {
             "Load fonts from the specified font manifest file.",
             "MANIFEST",
         )
-        .optflag(
-            "n",
-            "no-default-fonts",
-            "Don't load fonts from default location.",
-        );
+        .optflag("n", "no-default-fonts", "Don't load fonts from default location.");
 
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
