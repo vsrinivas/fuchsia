@@ -18,3 +18,23 @@ driver("ethernet") {
     "$zx/system/ulib/zircon",
   ]
 }
+
+test("ethernet-unittest") {
+  testonly = true
+  output_name = "ethernet-unittest"
+  sources = [
+    "ethernet-test.cpp",
+    "ethernet.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.ethernet",
+    "$zx/system/fidl/fuchsia-hardware-ethernet:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zxtest",
+    "$zx/system/ulib/zircon",
+  ]
+}

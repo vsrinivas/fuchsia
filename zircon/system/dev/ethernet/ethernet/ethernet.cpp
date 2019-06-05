@@ -248,6 +248,9 @@ void EthDev0::SetStatus(uint32_t status) {
 // TODO: I think if this arrives at the wrong time during teardown we
 // can deadlock with the ethermac device.
 void EthDev0::Recv(const void* data, size_t len, uint32_t flags) TA_NO_THREAD_SAFETY_ANALYSIS {
+    if (!data || !len) {
+        return;
+    }
     fbl::AutoLock lock(&ethdev_lock_);
     for (auto& edev : list_active_) {
         edev.RecvLocked(data, len, 0);
@@ -255,6 +258,9 @@ void EthDev0::Recv(const void* data, size_t len, uint32_t flags) TA_NO_THREAD_SA
 }
 
 void EthDev0::CompleteTx(ethmac_netbuf_t* netbuf, zx_status_t status) {
+    if (!netbuf) {
+        return;
+    }
     TransmitInfo* transmit_info = NetbufToTransmitInfo(netbuf);
     auto edev = transmit_info->edev;
     eth_fifo_entry_t entry = {
@@ -667,9 +673,14 @@ zx_status_t EthDev::MsgSetClientNameLocked(const char* buf, size_t len,
 }
 
 zx_status_t EthDev::MsgGetStatusLocked(fidl_txn_t* txn) {
+    if (!receive_fifo_.is_valid()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
     if (receive_fifo_.signal_peer(fuchsia_hardware_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
+
     return REPLY(GetStatus)(txn, edev0_->status_);
 }
 
@@ -868,7 +879,9 @@ zx_status_t EthDev::DdkOpen(zx_device_t** out, uint32_t flags) {
         fbl::AutoLock lock(&lock_);
         open_count_++;
     }
-    *out = nullptr;
+    if (out) {
+        *out = nullptr;
+    }
     return ZX_OK;
 }
 
@@ -922,9 +935,16 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
         list_initialize(&free_transmit_buffers_);
         return status;
     }
-
-    *out = zxdev_;
+    if (out) {
+        *out = zxdev_;
+    }
     all_transmit_buffers_ = std::move(all_transmit_buffers);
+
+    {
+        fbl::AutoLock lock(&edev0_->ethdev_lock_);
+        edev0_->list_idle_.push_back(fbl::RefPtr(this));
+    }
+
     return ZX_OK;
 }
 
@@ -944,10 +964,6 @@ zx_status_t EthDev0::DdkOpen(zx_device_t** out, uint32_t flags) {
         return status;
     }
 
-    {
-        fbl::AutoLock lock(&ethdev_lock_);
-        list_idle_.push_back(edev);
-    }
     __UNUSED auto dev = edev.leak_ref();
     return ZX_OK;
 }
