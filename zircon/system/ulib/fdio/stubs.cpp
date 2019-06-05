@@ -141,10 +141,12 @@ int lchown(const char *path, uid_t owner, gid_t group) {
 // no permissions support, but treat rwx bits as don't care rather than error
 __EXPORT
 int chmod(const char *path, mode_t mode) {
+    mode &= 07777; // only last 4 octals are relevant to chmod
     return checkfile(path, (mode & (~0777)) ? ENOSYS : 0);
 }
 __EXPORT
 int fchmod(int fd, mode_t mode) {
+    mode &= 07777; // only last 4 octals are relevant to chmod
     return checkfd(fd, (mode & (~0777)) ? ENOSYS : 0);
 }
 __EXPORT

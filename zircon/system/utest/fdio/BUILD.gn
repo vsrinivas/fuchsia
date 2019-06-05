@@ -15,6 +15,7 @@ test("fdio") {
     "fdio_root.c",
     "fdio_socket.c",
     "fdio_socketpair.c",
+    "fdio_stubs.cpp",
     "fdio_unsafe.cpp",
     "fdio_watcher.cpp",
   ]
