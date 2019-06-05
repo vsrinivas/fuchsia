@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gdc-test.h"
+
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/bus.h>
@@ -17,7 +19,7 @@
 #include <threads.h>
 #include <zircon/fidl.h>
 
-namespace camera {
+namespace gdc {
 // |GdcDevice| is spawned by the driver in |gdc.cpp|
 // This provides ZX_PROTOCOL_GDC.
 class GdcDevice;
@@ -57,7 +59,12 @@ public:
     void GdcRemoveTask(uint32_t task_index);
     void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index);
 
+    // Used for unit tests.
+    const ddk::MmioBuffer* gdc_mmio() const { return &gdc_mmio_; }
+
 private:
+    friend class GdcDeviceTester;
+
     // All necessary clean up is done here in ShutDown().
     void ShutDown();
     void InitClocks();
@@ -71,4 +78,4 @@ private:
     std::atomic<bool> running_;
 };
 
-} // namespace camera
+} // namespace gdc

@@ -16,7 +16,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-namespace camera {
+namespace gdc {
 
 namespace {
 
@@ -150,7 +150,7 @@ void GdcDevice::ShutDown() {
 
 zx_status_t GdcBind(void* ctx, zx_device_t* device) {
     std::unique_ptr<GdcDevice> gdc_device;
-    zx_status_t status = camera::GdcDevice::Setup(ctx, device, &gdc_device);
+    zx_status_t status = gdc::GdcDevice::Setup(ctx, device, &gdc_device);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Could not setup gdc device: %d\n", __func__, status);
         return status;
@@ -158,6 +158,16 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_GDC},
     };
+
+    // Run the unit tests for this device
+    // TODO(braval): CAM-44 (Run only when build flag enabled)
+    // This needs to be replaced with run unittests hooks when
+    // the framework is available.
+    status = gdc::GdcDeviceTester::RunTests(gdc_device.get());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
+        return status;
+    }
 
     status = gdc_device->DdkAdd("gdc", 0, props, countof(props));
     if (status != ZX_OK) {
@@ -179,10 +189,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
     return ops;
 }();
 
-} // namespace camera
+} // namespace gdc
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(gdc, camera::driver_ops, "gdc", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(gdc, gdc::driver_ops, "gdc", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_ARM),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GDC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_IV010),

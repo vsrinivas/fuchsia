@@ -4,6 +4,7 @@
 
 driver("gdc") {
   sources = [
+    "gdc-test.cpp",
     "gdc.cpp",
   ]
   deps = [
@@ -25,5 +26,6 @@ driver("gdc") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

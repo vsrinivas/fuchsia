@@ -7,7 +7,7 @@
 #include <hwreg/bitfields.h>
 #include <zircon/types.h>
 
-namespace camera {
+namespace gdc {
 
 // HHI_APICALGDC_CNTL
 class GDC_CLK_CNTL : public hwreg::RegisterBase<GDC_CLK_CNTL, uint32_t> {
@@ -43,4 +43,14 @@ public:
         return hwreg::RegisterAddr<GDC_MEM_POWER_DOMAIN>(0x100);
     }
 };
-} // namespace camera
+
+// GDC registers
+class ID : public hwreg::RegisterBase<ID, uint32_t> {
+public:
+    DEF_FIELD(31, 0, id);
+    static auto Get() {
+        return hwreg::RegisterAddr<ID>(0x0);
+    }
+};
+
+} // namespace gdc
