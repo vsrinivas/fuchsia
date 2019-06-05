@@ -10,7 +10,7 @@
         }
     },
     "program": {
-        "binary": "bin/app"
+        "binary": "test/netstack_socks_test"
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
 }

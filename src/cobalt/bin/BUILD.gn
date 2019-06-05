@@ -52,13 +52,13 @@ test_package("cobalt_tests") {
     },
 
     {
-      name = rebase_path("meta/cobalt_testapp_no_network.cmx")
+      name = "cobalt_testapp"
       dest = "cobalt_testapp_no_network"
       environments = basic_envs
     },
 
     {
-      name = rebase_path("meta/cobalt_testapp_no_environment.cmx")
+      name = "cobalt_testapp"
       dest = "cobalt_testapp_no_environment"
 
       # We don't want to run this version of cobalt_testapp in the Garnet

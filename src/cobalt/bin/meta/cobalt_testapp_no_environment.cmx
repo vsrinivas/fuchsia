@@ -17,7 +17,7 @@
             "--skip_environment_test",
             "--verbose=10"
         ],
-        "binary": "bin/cobalt_testapp"
+        "binary": "test/cobalt_testapp_no_environment"
     },
     "sandbox": {
         "services": [

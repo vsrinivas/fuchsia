@@ -94,12 +94,6 @@ test_package("system_monitor_harvester_tests") {
     ":system_monitor_harvester_test",
   ]
 
-  binaries = [
-    {
-      name = "system_monitor_harvester_test"
-    },
-  ]
-
   tests = [
     {
       name = "system_monitor_harvester_test"

@@ -1,7 +1,16 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx"
+            }
+        }
+    },
     "program": {
-        "binary": "bin/cobalt_testapp",
-        "args": [ "--no_network_for_testing" ]
+        "args": [
+            "--no_network_for_testing"
+        ],
+        "binary": "test/cobalt_testapp_no_network"
     },
     "sandbox": {
         "services": [
@@ -9,12 +18,5 @@
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx"
-            }
-        }
     }
 }
