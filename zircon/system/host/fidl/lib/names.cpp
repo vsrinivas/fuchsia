@@ -403,7 +403,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             case flat::Decl::Kind::kEnum:
             case flat::Decl::Kind::kStruct:
             case flat::Decl::Kind::kUnion: {
-                std::string name = NameName(identifier_type->name, "_", "_");
+                std::string name = NameCodedName(identifier_type->name);
                 if (identifier_type->nullability == types::Nullability::kNullable) {
                     name.push_back('*');
                 }
@@ -453,10 +453,6 @@ std::string NameLibrary(const std::vector<std::string_view>& library_name) {
 
 std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name) {
     return StringJoin(library_name, "/") + "/c/fidl.h";
-}
-
-std::string NameInterface(const flat::Interface& interface) {
-    return NameName(interface.name, "_", "_");
 }
 
 std::string NameDiscoverable(const flat::Interface& interface) {
@@ -518,20 +514,8 @@ std::string NameFields(std::string_view name) {
     return fields_name;
 }
 
-std::string NameCodedStruct(const flat::Struct* struct_decl) {
-    return NameName(struct_decl->name, "_", "_");
-}
-
-std::string NameCodedTable(const flat::Table* table_decl) {
-    return NameName(table_decl->name, "_", "_");
-}
-
-std::string NameCodedUnion(const flat::Union* union_decl) {
-    return NameName(union_decl->name, "_", "_");
-}
-
-std::string NameCodedXUnion(const flat::XUnion* xunion_decl) {
-    return NameName(xunion_decl->name, "_", "_");
+std::string NameCodedName(const flat::Name& name) {
+    return NameName(name, "_", "_");
 }
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {

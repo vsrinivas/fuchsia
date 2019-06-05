@@ -775,7 +775,7 @@ std::map<const flat::Decl*, CGenerator::NamedBits>
 CGenerator::NameBits(const std::vector<std::unique_ptr<flat::Bits>>& bits_infos) {
     std::map<const flat::Decl*, NamedBits> named_bits;
     for (const auto& bits_info : bits_infos) {
-        std::string bits_name = NameName(bits_info->name, "_", "_");
+        std::string bits_name = NameCodedName(bits_info->name);
         named_bits.emplace(bits_info.get(), NamedBits{std::move(bits_name), *bits_info});
     }
     return named_bits;
@@ -787,7 +787,7 @@ std::map<const flat::Decl*, CGenerator::NamedConst>
 CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
     std::map<const flat::Decl*, NamedConst> named_consts;
     for (const auto& const_info : const_infos) {
-        named_consts.emplace(const_info.get(), NamedConst{NameName(const_info->name, "_", "_"), *const_info});
+        named_consts.emplace(const_info.get(), NamedConst{NameCodedName(const_info->name), *const_info});
     }
     return named_consts;
 }
@@ -796,7 +796,7 @@ std::map<const flat::Decl*, CGenerator::NamedEnum>
 CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
     std::map<const flat::Decl*, NamedEnum> named_enums;
     for (const auto& enum_info : enum_infos) {
-        std::string enum_name = NameName(enum_info->name, "_", "_");
+        std::string enum_name = NameCodedName(enum_info->name);
         named_enums.emplace(enum_info.get(), NamedEnum{std::move(enum_name), *enum_info});
     }
     return named_enums;
@@ -807,7 +807,7 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
     std::map<const flat::Decl*, NamedInterface> named_interfaces;
     for (const auto& interface_info : interface_infos) {
         NamedInterface named_interface;
-        named_interface.c_name = NameInterface(*interface_info);
+        named_interface.c_name = NameCodedName(interface_info->name);
         if (interface_info->HasAttribute("Discoverable")) {
             named_interface.discoverable_name = NameDiscoverable(*interface_info);
         }
@@ -862,7 +862,7 @@ CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct
     for (const auto& struct_info : struct_infos) {
         if (struct_info->anonymous)
             continue;
-        std::string c_name = NameName(struct_info->name, "_", "_");
+        std::string c_name = NameCodedName(struct_info->name);
         std::string coded_name = c_name + "Coded";
         named_structs.emplace(struct_info.get(),
                               NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
@@ -874,7 +874,7 @@ std::map<const flat::Decl*, CGenerator::NamedTable>
 CGenerator::NameTables(const std::vector<std::unique_ptr<flat::Table>>& table_infos) {
     std::map<const flat::Decl*, NamedTable> named_tables;
     for (const auto& table_info : table_infos) {
-        std::string c_name = NameName(table_info->name, "_", "_");
+        std::string c_name = NameCodedName(table_info->name);
         std::string coded_name = c_name + "Coded";
         named_tables.emplace(table_info.get(),
                              NamedTable{std::move(c_name), std::move(coded_name), *table_info});
@@ -886,7 +886,7 @@ std::map<const flat::Decl*, CGenerator::NamedUnion>
 CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
     std::map<const flat::Decl*, NamedUnion> named_unions;
     for (const auto& union_info : union_infos) {
-        std::string union_name = NameName(union_info->name, "_", "_");
+        std::string union_name = NameCodedName(union_info->name);
         named_unions.emplace(union_info.get(), NamedUnion{std::move(union_name), *union_info});
     }
     return named_unions;
@@ -896,7 +896,7 @@ std::map<const flat::Decl*, CGenerator::NamedXUnion>
 CGenerator::NameXUnions(const std::vector<std::unique_ptr<flat::XUnion>>& xunion_infos) {
     std::map<const flat::Decl*, NamedXUnion> named_xunions;
     for (const auto& xunion_info : xunion_infos) {
-        std::string xunion_name = NameName(xunion_info->name, "_", "_");
+        std::string xunion_name = NameCodedName(xunion_info->name);
         named_xunions.emplace(xunion_info.get(), NamedXUnion{std::move(xunion_name), *xunion_info});
     }
     return named_xunions;

@@ -74,7 +74,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
             return iter->second;
-        auto name = NameCodedRequestHandle(NameName(request_type->interface_type->name, "_", "_"),
+        auto name = NameCodedRequestHandle(NameCodedName(request_type->interface_type->name),
                                            request_type->nullability);
         auto coded_request_type =
             std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
@@ -168,7 +168,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             auto iter = interface_type_map_.find(identifier_type);
             if (iter != interface_type_map_.end())
                 return iter->second;
-            auto name = NameCodedInterfaceHandle(NameName(identifier_type->name, "_", "_"),
+            auto name = NameCodedInterfaceHandle(NameCodedName(identifier_type->name),
                                                  identifier_type->nullability);
             auto coded_interface_type = std::make_unique<coded::InterfaceHandleType>(
                 std::move(name), identifier_type->nullability);
@@ -337,7 +337,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     switch (decl->kind) {
     case flat::Decl::Kind::kBits: {
         auto bits_decl = static_cast<const flat::Bits*>(decl);
-        std::string bits_name = NameName(bits_decl->name, "_", "_");
+        std::string bits_name = NameCodedName(bits_decl->name);
         auto bits_subtype =
             static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type)->subtype;
         named_coded_types_.emplace(&bits_decl->name,
@@ -352,7 +352,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         break;
     case flat::Decl::Kind::kEnum: {
         auto enum_decl = static_cast<const flat::Enum*>(decl);
-        std::string enum_name = NameName(enum_decl->name, "_", "_");
+        std::string enum_name = NameCodedName(enum_decl->name);
         named_coded_types_.emplace(&enum_decl->name,
                                    std::make_unique<coded::EnumType>(
                                        std::move(enum_name), enum_decl->type->subtype,
@@ -361,7 +361,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const flat::Interface*>(decl);
-        std::string interface_name = NameInterface(*interface_decl);
+        std::string interface_name = NameCodedName(interface_decl->name);
         std::string interface_qname = NameName(interface_decl->name, ".", "/");
         std::vector<std::unique_ptr<coded::MessageType>> interface_messages;
         for (const auto& method_pointer : interface_decl->all_methods) {
@@ -392,7 +392,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kTable: {
         auto table_decl = static_cast<const flat::Table*>(decl);
-        std::string table_name = NameCodedTable(table_decl);
+        std::string table_name = NameCodedName(table_decl->name);
         named_coded_types_.emplace(
             &decl->name,
             std::make_unique<coded::TableType>(std::move(table_name), std::vector<coded::TableField>(),
@@ -404,7 +404,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
         if (struct_decl->anonymous)
             break;
-        std::string struct_name = NameCodedStruct(struct_decl);
+        std::string struct_name = NameCodedName(struct_decl->name);
         named_coded_types_.emplace(
             &decl->name,
             std::make_unique<coded::StructType>(std::move(struct_name), std::vector<coded::StructField>(),
@@ -414,7 +414,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kUnion: {
         auto union_decl = static_cast<const flat::Union*>(decl);
-        std::string union_name = NameCodedUnion(union_decl);
+        std::string union_name = NameCodedName(union_decl->name);
         named_coded_types_.emplace(
             &decl->name, std::make_unique<coded::UnionType>(
                              std::move(union_name), std::vector<coded::UnionField>(),
@@ -424,7 +424,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kXUnion: {
         auto xunion_decl = static_cast<const flat::XUnion*>(decl);
-        std::string xunion_name = NameCodedXUnion(xunion_decl);
+        std::string xunion_name = NameCodedName(xunion_decl->name);
         named_coded_types_.emplace(
             &decl->name, std::make_unique<coded::XUnionType>(
                              std::move(xunion_name),
