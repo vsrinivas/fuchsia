@@ -428,6 +428,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner,
         if (old_owner != nullptr) {
             DEBUG_ASSERT(this->InContainer());
             old_owner->owned_wait_queues.erase(*this);
+            owner_ = nullptr;
 
             if ((old_prio >= 0) && QueuePressureChanged(old_owner, old_prio, -1, &accum_cpu_mask)) {
                 local_resched = true;

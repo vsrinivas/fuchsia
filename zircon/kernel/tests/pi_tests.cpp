@@ -27,6 +27,8 @@ constexpr int TEST_HIGHEST_PRIORITY = HIGHEST_PRIORITY;
 constexpr int TEST_DEFAULT_PRIORITY = DEFAULT_PRIORITY;
 constexpr int TEST_PRIORTY_COUNT = TEST_HIGHEST_PRIORITY - TEST_LOWEST_PRIORITY;
 
+class TestThread;  // fwd decl
+
 // An RAII style helper which lets us auto boost the priority of our test thread
 // to maximum, but return it to whatever it was when the test ends.  Many of
 // these tests need to rely on timing in order to control the order with which
@@ -211,6 +213,8 @@ public:
             sched_reschedule();
         }
     }
+
+    void AssignOwner(TestThread* thread) TA_EXCL(thread_lock);
 };
 
 // LoopIterPrinter
@@ -314,6 +318,15 @@ public:
     // Simply send it the kill signal.
     bool Reset(bool explicit_kill = false);
 
+    int inherited_priority() const {
+        if (thread_ == nullptr) {
+            return -2;
+        }
+
+        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+        return thread_->inherited_priority;
+    }
+
     int effective_priority() const {
         if (thread_ == nullptr) {
             return -2;
@@ -348,6 +361,8 @@ private:
     // the future, this constexpr bound should be updated to match the new worst
     // case storage requirement.
     static constexpr size_t kMaxOpLambdaCaptureStorageBytes = sizeof(void*) * 6;
+
+    friend class LockedOwnedWaitQueue;
 
     int ThreadEntry();
     bool WaitForBlocked();
@@ -528,6 +543,14 @@ bool TestThread::WaitForBlocked() {
     }
 
     END_TEST;
+}
+
+void LockedOwnedWaitQueue::AssignOwner(TestThread* thread) {
+    Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+
+    if (OwnedWaitQueue::AssignOwner(thread ? thread->thread_ : nullptr)) {
+        sched_reschedule();
+    }
 }
 
 bool pi_test_basic() {
@@ -1199,6 +1222,122 @@ bool pi_test_cycle() {
     END_TEST;
 }
 
+// Exercise the specific failure tracked down during the investigation of ZX-4153
+//
+// There are a few different ways that this situation can be forced to happen.
+// See the bug writeup for details.
+bool pi_test_zx4153() {
+    BEGIN_TEST;
+    AutoPrioBooster pboost;
+
+    // Repro of this involves 2 threads and 2 wait queues involved in a PI
+    // cycle.  The simplest repro is as follows.
+    //
+    // Let T1.prio == 16
+    // Let T2.prio == 17
+    //
+    // 1) Block T1 on Q2 and declare T2 to be the owner of Q2
+    // 2) Block T2 on Q1 and declare T1 to be the owner of Q1.  T1 and T2 now
+    //    form a cycle.  The inherited priority of the cycle is now 17.
+    // 3) Raise T1's priority to 20.  The cycle priority is now up to 20.
+    // 4) Lower T1's priority back down to 16.  The cycle priority remains at
+    //    20.  It cannot relax until the cycle is broken.
+    // 5) Break the cycle by declaring Q1 to have no owner.  Do not wake T1.
+    //
+    // If the bookkeeping error found in ZX-4153 was still around, the effect
+    // would be...
+    //
+    // 1) T1 no longer feels pressure from Q1.  T1's effective priority drops
+    //    from 20 to 16 (its base priority)
+    // 2) T1 is the only waiter on Q2.  Q2's pressure drops from 20 -> 16
+    // 3) The pressure applied to T2 drops from 20 -> 16.  T2's effective
+    //    priority is now 17 (its base priority).
+    // 4) T2 is the only waiter on Q1.  Q1's pressure drops from 20 -> 17
+    // 5) Q1's owner is still mistakenly set to T1.  T1 receives Q1's pressure,
+    //    and its inherited priority goes from -1 -> 17.
+    // 6) Q1 now owns no queues, but has inherited priority.  This should be
+    //    impossible, and triggers the assert.
+    //
+
+    TestThread T1, T2;
+    LockedOwnedWaitQueue Q1, Q2;
+
+    // At the end of the tests, success or failure, be sure to clean up.
+    auto cleanup = fbl::MakeAutoCall([&]() {
+        TestThread::ClearShutdownBarrier();
+        Q1.ReleaseAllThreads();
+        Q2.ReleaseAllThreads();
+        T1.Reset();
+        T2.Reset();
+    });
+
+    constexpr int kT1InitialPrio = 16;
+    constexpr int kT2InitialPrio = 17;
+    constexpr int kT1BoostPrio = 20;
+
+    // Create the threads.
+    ASSERT_TRUE(T1.Create(kT1InitialPrio), "");
+    ASSERT_TRUE(T2.Create(kT2InitialPrio), "");
+
+    ASSERT_EQ(T1.base_priority(),      kT1InitialPrio, "");
+    ASSERT_EQ(T1.inherited_priority(), -1, "");
+    ASSERT_EQ(T1.effective_priority(), kT1InitialPrio, "");
+
+    ASSERT_EQ(T2.base_priority(),      kT2InitialPrio, "");
+    ASSERT_EQ(T2.inherited_priority(), -1, "");
+    ASSERT_EQ(T2.effective_priority(), kT2InitialPrio, "");
+
+    // Form the cycle, verify the priorities
+    ASSERT_TRUE(T1.BlockOnOwnedQueue(&Q2, &T2), "");
+    ASSERT_TRUE(T2.BlockOnOwnedQueue(&Q1, &T1), "");
+
+    ASSERT_EQ(T1.base_priority(),      kT1InitialPrio, "");
+    ASSERT_EQ(T1.inherited_priority(), kT2InitialPrio, "");
+    ASSERT_EQ(T1.effective_priority(), kT2InitialPrio, "");
+
+    ASSERT_EQ(T2.base_priority(),      kT2InitialPrio, "");
+    ASSERT_EQ(T2.inherited_priority(), kT2InitialPrio, "");
+    ASSERT_EQ(T2.effective_priority(), kT2InitialPrio, "");
+
+    // Boost T1's priority.
+    ASSERT_TRUE(T1.SetBasePriority(kT1BoostPrio), "");
+
+    ASSERT_EQ(T1.base_priority(),      kT1BoostPrio, "");
+    ASSERT_EQ(T1.inherited_priority(), kT1BoostPrio, "");
+    ASSERT_EQ(T1.effective_priority(), kT1BoostPrio, "");
+
+    ASSERT_EQ(T2.base_priority(),      kT2InitialPrio, "");
+    ASSERT_EQ(T2.inherited_priority(), kT1BoostPrio, "");
+    ASSERT_EQ(T2.effective_priority(), kT1BoostPrio, "");
+
+    // Relax T1's priority.  The cycle's priority cannot relax yet.
+    ASSERT_TRUE(T1.SetBasePriority(kT1InitialPrio), "");
+
+    ASSERT_EQ(T1.base_priority(),      kT1InitialPrio, "");
+    ASSERT_EQ(T1.inherited_priority(), kT1BoostPrio, "");
+    ASSERT_EQ(T1.effective_priority(), kT1BoostPrio, "");
+
+    ASSERT_EQ(T2.base_priority(),      kT2InitialPrio, "");
+    ASSERT_EQ(T2.inherited_priority(), kT1BoostPrio, "");
+    ASSERT_EQ(T2.effective_priority(), kT1BoostPrio, "");
+
+    // Release ownership of Q1, breaking the cycle.  T2 should feel the pressure
+    // from T1, but T1 should not be inheriting any priority anymore.
+    Q1.AssignOwner(nullptr);
+
+    ASSERT_EQ(T1.base_priority(),      kT1InitialPrio, "");
+    ASSERT_EQ(T1.inherited_priority(), -1, "");
+    ASSERT_EQ(T1.effective_priority(), kT1InitialPrio, "");
+
+    ASSERT_EQ(T2.base_priority(),      kT2InitialPrio, "");
+    ASSERT_EQ(T2.inherited_priority(), kT1InitialPrio, "");
+    ASSERT_EQ(T2.effective_priority(), kT2InitialPrio, "");
+
+    // Success!  Let the cleanup AutoCall do its job.
+
+    END_TEST;
+}
+
 }  // anon namespace
 
 UNITTEST_START_TESTCASE(pi_tests)
@@ -1208,4 +1347,5 @@ UNITTEST("long chains", pi_test_chain<29>)
 UNITTEST("multiple waiters", pi_test_multi_waiter<29>)
 UNITTEST("multiple owned queues", pi_test_multi_owned_queues<29>)
 UNITTEST("cycles", pi_test_cycle<29>)
+UNITTEST("ZX-4153", pi_test_zx4153)
 UNITTEST_END_TESTCASE(pi_tests, "pi", "Priority inheritance tests for OwnedWaitQueues");
