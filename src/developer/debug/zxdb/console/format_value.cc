@@ -85,10 +85,11 @@ bool IsNumericBaseType(int base_type) {
 
 // Returns true if the given symbol points to a character type that would
 // appear in a pretty-printed string.
-bool IsCharacterType(const Type* type) {
+bool IsCharacterType(fxl::RefPtr<ExprEvalContext>& eval_context,
+                     const Type* type) {
   if (!type)
     return false;
-  const Type* concrete = type->GetConcreteType();
+  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type);
 
   // Expect a 1-byte character type.
   // TODO(brettw) handle Unicode.
@@ -101,8 +102,9 @@ bool IsCharacterType(const Type* type) {
   return base_type->base_type() == BaseType::kBaseTypeSignedChar ||
          base_type->base_type() == BaseType::kBaseTypeUnsignedChar;
 }
-bool IsCharacterType(const LazySymbol& symbol) {
-  return IsCharacterType(symbol.Get()->AsType());
+bool IsCharacterType(fxl::RefPtr<ExprEvalContext>& eval_context,
+                     const LazySymbol& symbol) {
+  return IsCharacterType(eval_context, symbol.Get()->AsType());
 }
 
 // Appends the given byte to the destination, escaping as per C rules.
@@ -187,35 +189,36 @@ void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
                                   const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
                                   OutputKey output_key) {
-  // Always use this variable instead of value.type() since it will be modified
-  // below to strip unneeded stuff.
-  const Type* type = value.type();
-  if (!type) {
+  if (!value.type()) {
     OutputKeyComplete(output_key, ErrStringToOutput("no type"));
     return;
   }
 
-  // First output the type if required.
+  // First output the type if required. Do this before stripping C-V
+  // qualifications so the printed name is the original.
   if (options.verbosity == Verbosity::kAllTypes && !suppress_type_printing) {
     AppendToOutputKey(
         output_key,
-        OutputBuffer(Syntax::kComment,
-                     fxl::StringPrintf("(%s) ", type->GetFullName().c_str())));
+        OutputBuffer(
+            Syntax::kComment,
+            fxl::StringPrintf("(%s) ", value.type()->GetFullName().c_str())));
   }
 
   // Special-case zx_status_t. Long-term this should be removed and replaced
   // with a pretty-printing system where this can be expressed generically.
   // This code needs to go here because zx_status_t is a typedef that will be
   // expanded away by GetConcreteType().
-  if (type->GetFullName() == "zx_status_t" &&
-      type->byte_size() == sizeof(debug_ipc::zx_status_t)) {
+  if (value.type()->GetFullName() == "zx_status_t" &&
+      value.type()->byte_size() == sizeof(debug_ipc::zx_status_t)) {
     FormatZxStatusT(value, options, output_key);
     return;
   }
 
   // Trim "const", "volatile", etc. and follow typedef and using for the type
   // checking below.
-  type = type->GetConcreteType();
+  //
+  // Always use this variable below instead of value.type().
+  fxl::RefPtr<Type> type = value.GetConcreteType(eval_context.get());
 
   // Structs and classes.
   if (const Collection* coll = type->AsCollection()) {
@@ -224,7 +227,8 @@ void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
   }
 
   // Arrays and strings.
-  if (TryFormatArrayOrString(eval_context, type, value, options, output_key))
+  if (TryFormatArrayOrString(eval_context, type.get(), value, options,
+                             output_key))
     return;
 
   // References (these require asynchronous calls to format so can't be in the
@@ -404,7 +408,7 @@ void FormatValue::FormatCollection(fxl::RefPtr<ExprEvalContext> eval_context,
       needs_comma = true;
 
     ExprValue member_value;
-    Err err = ResolveMember(value, member, &member_value);
+    Err err = ResolveMember(eval_context, value, member, &member_value);
 
     // Type info if requested.
     if (options.verbosity == Verbosity::kAllTypes && member_value.type()) {
@@ -433,7 +437,7 @@ bool FormatValue::TryFormatArrayOrString(
     fxl::RefPtr<ExprEvalContext> eval_context, const Type* type,
     const ExprValue& value, const FormatExprValueOptions& options,
     OutputKey output_key) {
-  FXL_DCHECK(type == type->GetConcreteType());
+  FXL_DCHECK(type == type->StripCVT());
 
   if (type->tag() == DwarfTag::kPointerType) {
     // Any pointer type (we only char about char*).
@@ -441,7 +445,7 @@ bool FormatValue::TryFormatArrayOrString(
     if (!modified)
       return false;
 
-    if (IsCharacterType(modified->modified())) {
+    if (IsCharacterType(eval_context, modified->modified())) {
       FormatCharPointer(eval_context, type, value, options, output_key);
       return true;
     }
@@ -452,7 +456,7 @@ bool FormatValue::TryFormatArrayOrString(
     if (!array)
       return false;
 
-    if (IsCharacterType(array->value_type())) {
+    if (IsCharacterType(eval_context, array->value_type())) {
       size_t length = array->num_elts();
       bool truncated = false;
       if (length > options.max_array_size) {
@@ -555,7 +559,7 @@ void FormatValue::FormatArray(fxl::RefPtr<ExprEvalContext> eval_context,
       std::min(static_cast<int>(options.max_array_size), elt_count);
 
   std::vector<ExprValue> items;
-  Err err = ResolveArray(value, 0, print_count, &items);
+  Err err = ResolveArray(eval_context, value, 0, print_count, &items);
   if (err.has_error()) {
     OutputKeyComplete(output_key, ErrToOutput(err));
     return;
@@ -763,7 +767,7 @@ void FormatValue::FormatReference(fxl::RefPtr<ExprEvalContext> eval_context,
                                   const FormatExprValueOptions& options,
                                   OutputKey output_key) {
   EnsureResolveReference(
-      eval_context->GetDataProvider(), value,
+      eval_context, value,
       [weak_this = weak_factory_.GetWeakPtr(), eval_context,
        original_value = value, options,
        output_key](const Err& err, ExprValue resolved_value) {

@@ -81,8 +81,9 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
-Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& cmd,
-                              const char* command_name) {
+Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context,
+                                        const Command& cmd,
+                                        const char* command_name) {
   // Does most validation except noun checking.
   Err err = AssertStoppedThreadCommand(context, cmd, false, command_name);
   if (err.has_error())
@@ -680,14 +681,15 @@ Err EvalCommandAddressExpression(
                        std::optional<uint32_t> size)>
         cb) {
   return EvalCommandExpression(
-      cmd, verb, std::move(eval_context), true,
-      [cb = std::move(cb)](const Err& err, ExprValue value) {
+      cmd, verb, eval_context, true,
+      [eval_context, cb = std::move(cb)](const Err& err, ExprValue value) {
         if (err.has_error()) {
           cb(err, 0, std::nullopt);
           return;
         }
 
-        const Type* concrete_type = value.type()->GetConcreteType();
+        fxl::RefPtr<Type> concrete_type =
+            value.GetConcreteType(eval_context.get());
         if (concrete_type->AsCollection()) {
           // Don't allow structs and classes that are <= 64 bits to be converted
           // to addresses.

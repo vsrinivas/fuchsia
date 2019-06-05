@@ -64,7 +64,7 @@ int ExprValue::GetBaseType() const {
     return BaseType::kBaseTypeNone;
 
   // Remove "const", etc. and see if it's a base type.
-  const BaseType* base_type = type_->GetConcreteType()->AsBaseType();
+  const BaseType* base_type = type_->StripCVT()->AsBaseType();
   if (!base_type)
     return BaseType::kBaseTypeNone;
   return base_type->base_type();

@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
-#include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
@@ -21,7 +22,7 @@ class ResolvePtrRefTest : public TestWithLoop {};
 }  // namespace
 
 TEST_F(ResolvePtrRefTest, NotPointer) {
-  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
 
   auto int32_type = MakeInt32Type();
   ExprValue int32_value(int32_type, {0x00, 0x00, 0x00, 0x00});
@@ -30,7 +31,7 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
   Err out_err;
   ExprValue out_value;
   ResolvePointer(
-      provider, int32_value,
+      eval_context, int32_value,
       [&called, &out_err, &out_value](const Err& err, ExprValue value) {
         called = true;
         out_err = err;
@@ -49,7 +50,7 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
 
   called = false;
   ResolvePointer(
-      provider, int32_ptr_value,
+      eval_context, int32_ptr_value,
       [&called, &out_err, &out_value](const Err& err, ExprValue value) {
         called = true;
         out_err = err;
@@ -65,7 +66,7 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
 }
 
 TEST_F(ResolvePtrRefTest, InvalidMemory) {
-  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
   constexpr uint64_t kAddress = 0x10;
 
   auto int32_type = MakeInt32Type();
@@ -75,7 +76,7 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
   Err out_err;
   ExprValue out_value;
   ResolvePointer(
-      provider, kAddress, int32_type,
+      eval_context, kAddress, int32_type,
       [&called, &out_err, &out_value](const Err& err, ExprValue value) {
         called = true;
         out_err = err;
@@ -89,11 +90,11 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
   EXPECT_EQ("Invalid pointer 0x10", out_err.msg());
 
   // This read will return only 2 bytes (it requires 4).
-  provider->AddMemory(kAddress, {0x00, 0x00});
+  eval_context->data_provider()->AddMemory(kAddress, {0x00, 0x00});
   called = false;
   out_err = Err();
   ResolvePointer(
-      provider, kAddress, int32_type,
+      eval_context, kAddress, int32_type,
       [&called, &out_err, &out_value](const Err& err, ExprValue value) {
         called = true;
         out_err = err;
@@ -109,7 +110,7 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
 
 // Tests EnsureResolveReference when the value is not a reference.
 TEST_F(ResolvePtrRefTest, NotRef) {
-  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
   auto int32_type = MakeInt32Type();
 
   ExprValue value(123);
@@ -117,7 +118,8 @@ TEST_F(ResolvePtrRefTest, NotRef) {
   bool called = false;
   ExprValue out_value;
   EnsureResolveReference(
-      provider, value, [&called, &out_value](const Err& err, ExprValue result) {
+      eval_context, value,
+      [&called, &out_value](const Err& err, ExprValue result) {
         EXPECT_FALSE(err.has_error());
         called = true;
         out_value = result;
@@ -132,12 +134,12 @@ TEST_F(ResolvePtrRefTest, NotRef) {
 // get ignored, the ref should be stripped, and the pointed-to value should be
 // the result.
 TEST_F(ResolvePtrRefTest, ConstRef) {
-  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
 
   // Add a 32-bit int at a given address.
   constexpr uint64_t kAddress = 0x300020;
   std::vector<uint8_t> int_value = {0x04, 0x03, 0x02, 0x01};
-  provider->AddMemory(kAddress, int_value);
+  eval_context->data_provider()->AddMemory(kAddress, int_value);
 
   // Make "volatile const int32_t&". This tests modifies on both sides of the
   // reference (volatile on the outside, const on the inside).
@@ -155,7 +157,8 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
   bool called = false;
   ExprValue out_value;
   EnsureResolveReference(
-      provider, value, [&called, &out_value](const Err& err, ExprValue result) {
+      eval_context, value,
+      [&called, &out_value](const Err& err, ExprValue result) {
         EXPECT_FALSE(err.has_error());
         called = true;
         out_value = result;

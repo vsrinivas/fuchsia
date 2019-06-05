@@ -103,8 +103,7 @@ void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
   }
 
   TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
-  ResolvePointer(context->GetDataProvider(),
-                 base_address + member.data_member_offset(),
+  ResolvePointer(context, base_address + member.data_member_offset(),
                  std::move(member_type), std::move(cb));
 }
 
@@ -127,10 +126,11 @@ Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type,
 // This variant takes a precomputed offset of the data member in the base
 // class. This is to support the case where the data member is in a derived
 // class (the derived class will have its own offset).
-Err DoResolveMember(const ExprValue& base, const FoundMember& member,
-                    ExprValue* out) {
+Err DoResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+                    const FoundMember& member, ExprValue* out) {
+  fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
   const Collection* coll = nullptr;
-  if (!base.type() || !(coll = base.type()->GetConcreteType()->AsCollection()))
+  if (!base.type() || !(coll = concrete_type->AsCollection()))
     return Err("Can't resolve data member on non-struct/class value.");
 
   fxl::RefPtr<Type> member_type;
@@ -144,25 +144,26 @@ Err DoResolveMember(const ExprValue& base, const FoundMember& member,
 
 }  // namespace
 
-Err ResolveMember(const ExprValue& base, const DataMember* member,
-                  ExprValue* out) {
+Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+                  const DataMember* member, ExprValue* out) {
   if (!member)
     return GetErrorForInvalidMemberOf(base);
-  return DoResolveMember(base, FoundMember(member, member->member_location()),
-                         out);
+  return DoResolveMember(context, base,
+                         FoundMember(member, member->member_location()), out);
 }
 
-Err ResolveMember(const ExprValue& base, const ParsedIdentifier& identifier,
-                  ExprValue* out) {
-  if (!base.type())
+Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+                  const ParsedIdentifier& identifier, ExprValue* out) {
+  fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
+  if (!concrete_type)
     return Err("No type information.");
 
   FoundMember found;
-  Err err = FindMemberWithErr(base.type()->GetConcreteType()->AsCollection(),
-                              identifier, &found);
+  Err err =
+      FindMemberWithErr(concrete_type->AsCollection(), identifier, &found);
   if (err.has_error())
     return err;
-  return DoResolveMember(base, found, out);
+  return DoResolveMember(context, base, found, out);
 }
 
 void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,

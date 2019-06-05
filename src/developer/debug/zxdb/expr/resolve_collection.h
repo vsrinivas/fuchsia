@@ -31,15 +31,15 @@ class InheritedFrom;
 //
 // The DataMember may be null. If so, returns an error (this is so callers
 // don't have to type check the inputs).
-Err ResolveMember(const ExprValue& base, const DataMember* member,
-                  ExprValue* out);
+Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+                  const DataMember* member, ExprValue* out);
 
 // Resolves a DataMember by name. This variant searches base classes for name
 // matches.
 //
 // Returns an error if the name isn't found.
-Err ResolveMember(const ExprValue& base, const ParsedIdentifier& identifier,
-                  ExprValue* out);
+Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+                  const ParsedIdentifier& identifier, ExprValue* out);
 
 // The variant takes an ExprValue which is a pointer to the base/struct or
 // class. Because it fetches memory it is asynchronous.

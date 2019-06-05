@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
-#include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 
 namespace zxdb {
@@ -21,7 +22,7 @@ class ResolveArrayTest : public TestWithLoop {};
 }  // namespace
 
 TEST_F(ResolveArrayTest, ResolveStatic) {
-  auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
 
   // Request 3 elements from 1-4.
   constexpr uint64_t kBaseAddress = 0x100000;
@@ -39,7 +40,7 @@ TEST_F(ResolveArrayTest, ResolveStatic) {
   ExprValue value(array_type, array_bytes, ExprValueSource(kBaseAddress));
 
   std::vector<ExprValue> result;
-  Err err = ResolveArray(value, kBeginIndex, kEndIndex, &result);
+  Err err = ResolveArray(eval_context, value, kBeginIndex, kEndIndex, &result);
   EXPECT_FALSE(err.has_error());
 
   // Should have returned two values (the overlap of the array and the
@@ -57,7 +58,7 @@ TEST_F(ResolveArrayTest, ResolveStatic) {
 
 // Resolves an array element with a pointer as the base.
 TEST_F(ResolveArrayTest, ResolvePointer) {
-  auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
 
   // Request 3 elements from 1-4.
   constexpr uint64_t kBaseAddress = 0x100000;
@@ -75,7 +76,8 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   // one value from the beginning of the array so the requested address of the
   // kBeginIndex'th element matches this address.
   constexpr uint64_t kBeginAddress = kBaseAddress + kBeginIndex * kTypeSize;
-  data_provider->AddMemory(kBeginAddress, {0x44, 0x33, 0x66, 0x55});
+  eval_context->data_provider()->AddMemory(kBeginAddress,
+                                           {0x44, 0x33, 0x66, 0x55});
 
   // Data in the value is the pointer to the beginning of the array.
   ExprValue value(ptr_type, {0, 0, 0x10, 0, 0, 0, 0, 0});
@@ -83,7 +85,7 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   bool called = false;
   Err out_err;
   std::vector<ExprValue> result;
-  ResolveArray(data_provider, value, kBeginIndex, kEndIndex,
+  ResolveArray(eval_context, value, kBeginIndex, kEndIndex,
                [&called, &out_err, &result](const Err& err,
                                             std::vector<ExprValue> values) {
                  called = true;

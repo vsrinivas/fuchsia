@@ -240,7 +240,7 @@ fxl::RefPtr<Type> SymbolEvalContext::GetConcreteType(const Type* type) const {
     }
 
     // Strip C-V qualifiers and follow typedefs.
-    cur = fxl::RefPtr<Type>(const_cast<Type*>(cur->GetConcreteType()));
+    cur = fxl::RefPtr<Type>(const_cast<Type*>(cur->StripCVT()));
   } while (cur && cur->is_declaration());
   return cur;
 }
@@ -341,12 +341,14 @@ void SymbolEvalContext::OnDwarfEvalComplete(
                     ExprValue(state->type, std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    ResolvePointer(data_provider_, result_int, state->type,
-                   [state, weak_this = weak_factory_.GetWeakPtr()](
-                       const Err& err, ExprValue value) {
-                     if (weak_this)
-                       state->callback(err, state->symbol, std::move(value));
-                   });
+    ResolvePointer(
+        fxl::RefPtr<ExprEvalContext>(const_cast<SymbolEvalContext*>(this)),
+        result_int, state->type,
+        [state, weak_this = weak_factory_.GetWeakPtr()](const Err& err,
+                                                        ExprValue value) {
+          if (weak_this)
+            state->callback(err, state->symbol, std::move(value));
+        });
   }
 }
 

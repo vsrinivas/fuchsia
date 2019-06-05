@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -35,19 +36,22 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
 
 // Helper function that calls ResolveMember with an identifier with the
 // containing value.
-Err ResolveMemberFromString(const ExprValue& base, const std::string& name,
+Err ResolveMemberFromString(fxl::RefPtr<ExprEvalContext> eval_context,
+                            const ExprValue& base, const std::string& name,
                             ExprValue* out) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
   if (err.has_error())
     return err;
 
-  return ResolveMember(base, ident, out);
+  return ResolveMember(eval_context, base, ident, out);
 }
 
 }  // namespace
 
 TEST(ResolveCollection, GoodMemberAccess) {
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -65,7 +69,7 @@ TEST(ResolveCollection, GoodMemberAccess) {
 
   // Resolve A.
   ExprValue out;
-  Err err = ResolveMember(base, a_data, &out);
+  Err err = ResolveMember(eval_context, base, a_data, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ("int32_t", out.type()->GetAssignedName());
   EXPECT_EQ(4u, out.data().size());
@@ -74,12 +78,12 @@ TEST(ResolveCollection, GoodMemberAccess) {
 
   // Resolve A by name.
   ExprValue out_by_name;
-  err = ResolveMemberFromString(base, "a", &out_by_name);
+  err = ResolveMemberFromString(eval_context, base, "a", &out_by_name);
   EXPECT_EQ(out, out_by_name);
 
   // Resolve B.
   out = ExprValue();
-  err = ResolveMember(base, b_data, &out);
+  err = ResolveMember(eval_context, base, b_data, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ("int32_t", out.type()->GetAssignedName());
   EXPECT_EQ(4u, out.data().size());
@@ -88,18 +92,20 @@ TEST(ResolveCollection, GoodMemberAccess) {
 
   // Resolve B by name.
   out_by_name = ExprValue();
-  err = ResolveMemberFromString(base, "b", &out_by_name);
+  err = ResolveMemberFromString(eval_context, base, "b", &out_by_name);
   EXPECT_EQ(out, out_by_name);
 }
 
 TEST(ResolveCollection, BadMemberArgs) {
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Test null base class pointer.
   ExprValue out;
-  Err err = ResolveMember(ExprValue(), a_data, &out);
+  Err err = ResolveMember(eval_context, ExprValue(), a_data, &out);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Can't resolve data member on non-struct/class value.", err.msg());
 
@@ -109,12 +115,14 @@ TEST(ResolveCollection, BadMemberArgs) {
 
   // Null data member pointer.
   out = ExprValue();
-  err = ResolveMember(base, nullptr, &out);
+  err = ResolveMember(eval_context, base, nullptr, &out);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Invalid data member for struct 'Foo'.", err.msg());
 }
 
 TEST(ResolveCollection, BadMemberAccess) {
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+
   const DataMember* a_data;
   const DataMember* b_data;
   auto sc = GetTestClassType(&a_data, &b_data);
@@ -125,7 +133,7 @@ TEST(ResolveCollection, BadMemberAccess) {
 
   // Lookup by name that doesn't exist.
   ExprValue out;
-  Err err = ResolveMemberFromString(base, "c", &out);
+  Err err = ResolveMemberFromString(eval_context, base, "c", &out);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("No member 'c' in struct 'Foo'.", err.msg());
 
@@ -137,13 +145,15 @@ TEST(ResolveCollection, BadMemberAccess) {
   bad_member->set_member_location(5);
 
   out = ExprValue();
-  err = ResolveMember(base, bad_member.get(), &out);
+  err = ResolveMember(eval_context, base, bad_member.get(), &out);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Invalid data member for struct 'Foo'.", err.msg());
 }
 
 // Tests foo.bar where bar is in a derived class of foo's type.
 TEST(ResolveCollection, DerivedClass) {
+  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+
   const DataMember* a_data;
   const DataMember* b_data;
   auto base = GetTestClassType(&a_data, &b_data);
@@ -165,7 +175,7 @@ TEST(ResolveCollection, DerivedClass) {
 
   // Resolve B by name.
   ExprValue out;
-  Err err = ResolveMemberFromString(value, "b", &out);
+  Err err = ResolveMemberFromString(eval_context, value, "b", &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ("int32_t", out.type()->GetAssignedName());
   EXPECT_EQ(4u, out.data().size());

@@ -141,7 +141,8 @@ class ArrayAccessExprNode : public ExprNode {
 
   // Converts the given value which is the result of executing the "inner"
   // expression and converts it to an integer if possible.
-  static Err InnerValueToOffset(const ExprValue& inner, int64_t* offset);
+  static Err InnerValueToOffset(fxl::RefPtr<ExprEvalContext> context,
+                                const ExprValue& inner, int64_t* offset);
 
   static void DoAccess(fxl::RefPtr<ExprEvalContext> context, ExprValue left,
                        int64_t offset, EvalCallback cb);
@@ -346,7 +347,8 @@ class SizeofExprNode : public ExprNode {
   SizeofExprNode(fxl::RefPtr<ExprNode> expr) : expr_(std::move(expr)) {}
   ~SizeofExprNode() override = default;
 
-  static void SizeofType(const Type* type, EvalCallback cb);
+  static void SizeofType(fxl::RefPtr<ExprEvalContext> context, const Type* type,
+                         EvalCallback cb);
 
   fxl::RefPtr<ExprNode> expr_;
 };

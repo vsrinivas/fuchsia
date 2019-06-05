@@ -45,11 +45,11 @@ ModifiedType::~ModifiedType() = default;
 
 const ModifiedType* ModifiedType::AsModifiedType() const { return this; }
 
-const Type* ModifiedType::GetConcreteType() const {
+const Type* ModifiedType::StripCVT() const {
   if (IsTransparentTag(tag())) {
     const Type* mod = modified_.Get()->AsType();
     if (mod)
-      return mod->GetConcreteType();
+      return mod->StripCVT();
   }
   return this;
 }
@@ -68,7 +68,7 @@ bool ModifiedType::ModifiesVoid() const {
     return false;
   }
 
-  if (const BaseType* base = type->GetConcreteType()->AsBaseType())
+  if (const BaseType* base = type->StripCVT()->AsBaseType())
     return base->base_type() == BaseType::kBaseTypeNone;
   return false;
 }

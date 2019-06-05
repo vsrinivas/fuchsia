@@ -4,14 +4,15 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/type_utils.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -29,8 +30,8 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
 
 }  // namespace
 
-void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
-                    uint64_t address, fxl::RefPtr<Type> type,
+void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context, uint64_t address,
+                    fxl::RefPtr<Type> type,
                     std::function<void(const Err&, ExprValue)> cb) {
   if (!type) {
     cb(Err("Missing pointer type."), ExprValue());
@@ -38,7 +39,7 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
   }
 
   uint32_t type_size = type->byte_size();
-  data_provider->GetMemoryAsync(
+  eval_context->GetDataProvider()->GetMemoryAsync(
       address, type_size,
       [type = std::move(type), address, cb = std::move(cb)](
           const Err& err, std::vector<uint8_t> data) {
@@ -55,7 +56,7 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
       });
 }
 
-void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
+void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context,
                     const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb) {
   const Type* pointed_to = nullptr;
@@ -70,13 +71,13 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
   if (err.has_error()) {
     cb(err, ExprValue());
   } else {
-    ResolvePointer(std::move(data_provider), pointer_value,
+    ResolvePointer(std::move(eval_context), pointer_value,
                    fxl::RefPtr<Type>(const_cast<Type*>(pointed_to)),
                    std::move(cb));
   }
 }
 
-void EnsureResolveReference(fxl::RefPtr<SymbolDataProvider> data_provider,
+void EnsureResolveReference(fxl::RefPtr<ExprEvalContext> eval_context,
                             ExprValue value,
                             std::function<void(const Err&, ExprValue)> cb) {
   Type* type = value.type();
@@ -87,7 +88,8 @@ void EnsureResolveReference(fxl::RefPtr<SymbolDataProvider> data_provider,
     return;
   }
 
-  const Type* concrete = type->GetConcreteType();  // Strip "const", etc.
+  // Strip "const", etc. and check type.
+  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type);
   if (concrete->tag() != DwarfTag::kReferenceType &&
       concrete->tag() != DwarfTag::kRvalueReferenceType) {
     // Not a reference, nothing to do.
@@ -105,7 +107,7 @@ void EnsureResolveReference(fxl::RefPtr<SymbolDataProvider> data_provider,
   if (err.has_error()) {
     cb(err, ExprValue());
   } else {
-    ResolvePointer(std::move(data_provider), pointer_value,
+    ResolvePointer(std::move(eval_context), pointer_value,
                    fxl::RefPtr<Type>(const_cast<Type*>(underlying_type)),
                    std::move(cb));
   }

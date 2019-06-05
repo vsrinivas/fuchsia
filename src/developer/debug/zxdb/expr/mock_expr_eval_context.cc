@@ -46,7 +46,9 @@ fxl::RefPtr<Type> MockExprEvalContext::ResolveForwardDefinition(
 fxl::RefPtr<Type> MockExprEvalContext::GetConcreteType(const Type* type) const {
   // Just strip C-V qualifications, don't bother with the forward definitions
   // for mock purposes.
-  return fxl::RefPtr<Type>(const_cast<Type*>(type->GetConcreteType()));
+  if (!type)
+    return nullptr;
+  return fxl::RefPtr<Type>(const_cast<Type*>(type->StripCVT()));
 }
 
 fxl::RefPtr<SymbolDataProvider> MockExprEvalContext::GetDataProvider() {

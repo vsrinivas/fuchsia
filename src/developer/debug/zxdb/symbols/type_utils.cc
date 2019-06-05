@@ -4,10 +4,10 @@
 
 #include "src/developer/debug/zxdb/symbols/type_utils.h"
 
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -16,7 +16,7 @@ Err GetPointedToType(const Type* input, const Type** pointed_to) {
     return Err("No type information.");
 
   // Convert to a pointer.
-  const ModifiedType* mod_type = input->GetConcreteType()->AsModifiedType();
+  const ModifiedType* mod_type = input->StripCVT()->AsModifiedType();
   if (!mod_type || mod_type->tag() != DwarfTag::kPointerType) {
     return Err(fxl::StringPrintf(
         "Attempting to dereference '%s' which is not a pointer.",
@@ -35,7 +35,7 @@ Err GetPointedToCollection(const Type* type, const Collection** coll) {
   if (err.has_error())
     return err;
 
-  *coll = pointed_to->GetConcreteType()->AsCollection();
+  *coll = pointed_to->StripCVT()->AsCollection();
   if (!coll) {
     return Err(
         "Attempting to dereference a pointer to '%s' which "

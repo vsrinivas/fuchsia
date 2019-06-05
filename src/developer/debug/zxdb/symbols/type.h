@@ -18,17 +18,18 @@ class Type : public Symbol {
   const Type* AsType() const final;
   const std::string& GetAssignedName() const { return assigned_name_; }
 
-  // Returns the type with no "const", "volatile", or similar modifiers that
-  // don't affect the stored data, and expand typedef and using statements.
+  // Strips "const", "volatile", and follows typedefs to get the underlying
+  // type. This also strips "restrict" for C (unusual), and handles C++ "using"
+  // statements for defining types (which are encoded in DWARF as typedefs).
   //
-  // This does NOT expand forward definitions which will require a symbol
-  // name lookup. If possible, use ExprValue::GetConcreteType() which adds this
-  // capability.
+  // Prefer ExprValue::GetConcreteType() or ExprEvalContext::GetConcreteType()
+  // when possible. That version will also expand forward definitions which is
+  // almost always the right thing to do. This variant doesn't have enough
+  // context from the symbol system so just follows the type pointers.
   //
   // It is on the Type class rather than the ModifiedType class so that calling
-  // code can unconditionally call type->GetConcreteType()->byte_size() or
-  // other functions to work with the type.
-  virtual const Type* GetConcreteType() const;
+  // code can unconditionally call type->StripCVT().
+  virtual const Type* StripCVT() const;
 
   // The name assigned in the DWARF file. This will be empty for modified
   // types (Which usually have no assigned name). See

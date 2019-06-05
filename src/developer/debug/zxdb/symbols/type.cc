@@ -4,8 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/type.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -15,6 +15,6 @@ Type::~Type() = default;
 
 const Type* Type::AsType() const { return this; }
 
-const Type* Type::GetConcreteType() const { return this; }
+const Type* Type::StripCVT() const { return this; }
 
 }  // namespace zxdb
