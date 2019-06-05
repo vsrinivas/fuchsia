@@ -8,6 +8,7 @@ use crate::crypto_utils::prf;
 use crate::Error;
 use failure::{self, ensure};
 use mundane::rand_bytes;
+use std::hash::{Hash, Hasher};
 use wlan_common::ie::rsn::cipher::Cipher;
 
 /// This GTK provider does not support key rotations yet.
@@ -34,7 +35,7 @@ impl GtkProvider {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gtk {
     pub gtk: Vec<u8>,
     key_id: u8,
@@ -42,6 +43,14 @@ pub struct Gtk {
     pub rsc: u64,
     pub cipher: Cipher,
     // TODO(hahnr): Add TKIP Tx/Rx MIC support (IEEE 802.11-2016, 12.8.2).
+}
+
+/// Custom Hash implementation which doesn't take the RSC or cipher suite into consideration.
+impl Hash for Gtk {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.key_id.hash(state);
+        self.tk().hash(state);
+    }
 }
 
 impl Gtk {

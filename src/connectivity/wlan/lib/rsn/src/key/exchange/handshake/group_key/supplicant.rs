@@ -14,6 +14,7 @@ use bytes::Bytes;
 use eapol;
 use failure::{self, bail};
 
+/// Implementation of 802.11's Group Key Handshake for the Supplicant role.
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
     pub cfg: group_key::Config,
@@ -112,8 +113,15 @@ mod tests {
     use crate::key::exchange::handshake::group_key::GroupKey;
     use crate::key_data::kde;
     use crate::rsna::{test_util, NegotiatedRsne, Role, VerifiedKeyFrame};
+    use eapol::KeyFrame;
     use wlan_common::ie::rsn::akm::{Akm, PSK};
     use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
+
+    const KCK: [u8; 16] = [1; 16];
+    const KEK: [u8; 16] = [2; 16];
+    const GTK: [u8; 16] = [3; 16];
+    const GTK_RSC: u64 = 81234;
+    const GTK_KEY_ID: u8 = 2;
 
     fn make_verified(
         key_frame: &eapol::KeyFrame,
@@ -123,25 +131,38 @@ mod tests {
         VerifiedKeyFrame::from_key_frame(&key_frame, &role, &rsne, 0)
     }
 
-    fn fake_msg1() -> eapol::KeyFrame {
-        eapol::KeyFrame {
+    fn fake_msg1() -> KeyFrame {
+        let mut w = kde::Writer::new(vec![]);
+        w.write_gtk(&kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]))
+            .expect("error writing GTK KDE");
+        let key_data = w.finalize().expect("error finalizing key data");
+        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &key_data[..]);
+
+        let mut key_frame = eapol::KeyFrame {
             version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
             packet_type: eapol::PacketType::Key as u8,
             descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
             key_info: eapol::KeyInformation(0b01001110000010),
             key_mic: Bytes::from(vec![0; 16]),
+            key_rsc: GTK_RSC,
+            key_data_len: encrypted_key_data.len() as u16,
+            key_data: Bytes::from(encrypted_key_data),
             ..Default::default()
-        }
+        };
+        key_frame.update_packet_body_len();
+        let mic = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &mut key_frame)
+            .expect("error updating MIC");
+        key_frame.key_mic = Bytes::from(mic);
+        key_frame
+    }
+
+    fn fake_gtk() -> Gtk {
+        Gtk::from_gtk(GTK.to_vec(), GTK_KEY_ID, Cipher::new_dot11(CCMP_128), GTK_RSC)
+            .expect("error creating expected GTK")
     }
 
     #[test]
     fn full_supplicant_test() {
-        const KCK: [u8; 16] = [1; 16];
-        const KEK: [u8; 16] = [2; 16];
-        const GTK: [u8; 16] = [3; 16];
-        const GTK_RSC: u64 = 81234;
-        const GTK_KEY_ID: u8 = 2;
-
         let psk = Akm::new_dot11(PSK);
         let ccmp = Cipher::new_dot11(CCMP_128);
         let mut handshake = GroupKey::new(
@@ -151,35 +172,18 @@ mod tests {
         )
         .expect("error creating Group Key Handshake");
 
-        let mut w = kde::Writer::new(vec![]);
-        w.write_gtk(&kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]))
-            .expect("error writing GTK KDE");
-        let key_data = w.finalize().expect("error finalizing key data");
-        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &key_data[..]);
-
-        // Construct key frame.
-        let mut key_frame = eapol::KeyFrame {
-            key_rsc: GTK_RSC,
-            key_data_len: encrypted_key_data.len() as u16,
-            key_data: Bytes::from(encrypted_key_data),
-            ..fake_msg1()
-        };
-        key_frame.update_packet_body_len();
-        let mic = compute_mic(&KCK[..], &psk, &mut key_frame).expect("error updating MIC");
-        key_frame.key_mic = Bytes::from(mic);
-        let msg1 =
-            make_verified(&key_frame, Role::Supplicant).expect("error verifying group frame");
-
         // Let Supplicant handle key frame.
         let mut update_sink = UpdateSink::default();
+        let key_frame = fake_msg1();
+        let msg1 =
+            make_verified(&key_frame, Role::Supplicant).expect("error verifying group frame");
         handshake
             .on_eapol_key_frame(&mut update_sink, 0, msg1)
             .expect("error processing msg1 of Group Key Handshake");
 
         // Verify correct GTK was derived.
-        let actual_gtk = test_util::extract_reported_gtk(&update_sink);
-        let expected_gtk = Gtk::from_gtk(GTK.to_vec(), GTK_KEY_ID, ccmp, GTK_RSC)
-            .expect("error creating expected GTK");
+        let actual_gtk = test_util::expect_reported_gtk(&update_sink);
+        let expected_gtk = fake_gtk();
         assert_eq!(actual_gtk, expected_gtk);
     }
 }

@@ -346,7 +346,7 @@ pub enum Role {
     Supplicant,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SecAssocStatus {
     // TODO(hahnr): Rather than reporting wrong password as a status, report it as an error.
     WrongPassword,

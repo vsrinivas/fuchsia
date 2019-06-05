@@ -17,6 +17,7 @@ use crate::Error;
 use eapol;
 use failure::{self, bail};
 use log::{error, info};
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq)]
 enum Pmksa {
@@ -81,9 +82,18 @@ impl Ptksa {
 /// optional as it's used only for re-keying the GTK.
 #[derive(Debug, PartialEq)]
 enum Gtksa {
-    Uninitialized { cfg: Option<exchange::Config> },
-    Initialized { method: Option<exchange::Method> },
-    Established { method: Option<exchange::Method>, gtk: Gtk },
+    Uninitialized {
+        cfg: Option<exchange::Config>,
+    },
+    Initialized {
+        method: Option<exchange::Method>,
+    },
+    Established {
+        method: Option<exchange::Method>,
+        // A key history of previously installed group keys.
+        // Keys which have been previously installed must never be re-installed.
+        installed_gtks: HashSet<Gtk>,
+    },
 }
 
 impl Gtksa {
@@ -127,14 +137,21 @@ impl Gtksa {
 /// PMKSA must be established first as it yields the PMK used in the PTK and GTK key hierarchy.
 /// Depending on the selected PTKSA, it can yield not just the PTK but also GTK, and thus leaving
 /// the GTKSA's key exchange method only useful for re-keying.
+///
+/// Each association should spawn one ESSSA instance only.
+/// The security association correctly tracks and handles replays for robustness and
+/// prevents key re-installation to mitigate attacks such as described in KRACK.
 #[derive(Debug, PartialEq)]
 pub(crate) struct EssSa {
-    // Configuration.
+    // Determines the device's role (Supplicant or Authenticator).
     role: Role,
+    // The RSNE used for this association.
     pub negotiated_rsne: NegotiatedRsne,
+    // The last valid key replay counter. Messages with a key replay counter lower than this counter
+    // value will be dropped.
     key_replay_counter: u64,
 
-    // Security associations.
+    // Individual Security Associations.
     pmksa: StateMachine<Pmksa>,
     ptksa: StateMachine<Ptksa>,
     gtksa: StateMachine<Gtksa>,
@@ -230,6 +247,7 @@ impl EssSa {
                 self.ptksa.replace_state(|state| match state {
                     Ptksa::Initialized { method } => {
                         info!("established PTKSA");
+                        update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                         Ptksa::Established { method, ptk }
                     }
                     Ptksa::Established { method, .. } => {
@@ -255,16 +273,20 @@ impl EssSa {
                 self.gtksa.replace_state(|state| match state {
                     Gtksa::Initialized { method } => {
                         info!("established GTKSA");
-                        Gtksa::Established { method, gtk }
+
+                        let mut installed_gtks = HashSet::default();
+                        installed_gtks.insert(gtk.clone());
+                        update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
+                        Gtksa::Established { method, installed_gtks }
                     }
-                    Gtksa::Established { method, .. } => {
+                    Gtksa::Established { method, mut installed_gtks } => {
                         info!("re-established new GTKSA; invalidating previous one");
-                        // Checking that ESSSA was already established to make sure that it's a key
-                        // rotation (and not a message replay) before pushing to update sink.
-                        if was_esssa_established {
-                            update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
+
+                        if !installed_gtks.contains(&gtk) {
+                            installed_gtks.insert(gtk.clone());
+                            update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
                         }
-                        Gtksa::Established { method, gtk }
+                        Gtksa::Established { method, installed_gtks }
                     }
                     Gtksa::Uninitialized { cfg } => {
                         error!("received GTK in unexpected GTKSA state");
@@ -283,7 +305,7 @@ impl EssSa {
         frame: &eapol::Frame,
     ) -> Result<(), failure::Error> {
         // Only processes EAPOL Key frames. Drop all other frames silently.
-        let mut updates = match frame {
+        let updates = match frame {
             eapol::Frame::Key(key_frame) => {
                 let mut updates = UpdateSink::default();
                 self.on_eapol_key_frame(&mut updates, &key_frame)?;
@@ -306,18 +328,19 @@ impl EssSa {
             }
         };
 
-        // Process Key updates ourselves to correctly track security associations.
-        // If ESS-SA was not already established, wait with reporting PTK until GTK
-        // is also known.
         let was_esssa_established = self.is_established();
-        updates.iter().for_each(|update| {
-            if let SecAssocUpdate::Key(key) = update {
-                if let Err(e) = self.on_key_confirmed(update_sink, key.clone()) {
-                    error!("error while processing key: {}", e);
-                };
+        for update in updates {
+            match update {
+                // Process Key updates ourselves to correctly track security associations.
+                SecAssocUpdate::Key(key) => {
+                    if let Err(e) = self.on_key_confirmed(update_sink, key) {
+                        error!("error while processing key: {}", e);
+                    };
+                }
+                // Forward all other updates.
+                _ => update_sink.push(update),
             }
-        });
-        update_sink.append(&mut updates);
+        }
 
         // Report once ESSSA is established.
         if !was_esssa_established && self.is_established() {
@@ -412,6 +435,7 @@ mod tests {
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];
     const GTK_REKEY: [u8; 16] = [0x1F; 16];
+    const GTK_REKEY_2: [u8; 16] = [0x2F; 16];
 
     #[test]
     fn test_supplicant_with_authenticator() {
@@ -424,50 +448,48 @@ mod tests {
         let result = authenticator.initiate(&mut a_updates);
         assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 1);
-        let msg1 = extract_eapol_resp(&a_updates).expect("Authenticator did not send msg #1");
+        let msg1 = test_util::expect_eapol_resp(&a_updates[..]);;
 
         // Send msg #1 to Supplicant and wait for response.
         let mut s_updates = vec![];
         let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg1.clone()));
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         assert_eq!(s_updates.len(), 1);
-        let msg2 = extract_eapol_resp(&s_updates).expect("Supplicant did not send msg #2");
+        let msg2 = test_util::expect_eapol_resp(&s_updates[..]);
 
         // Send msg #2 to Authenticator and wait for response.
         let mut a_updates = vec![];
         let result = authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg2.clone()));
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 1);
-        let msg3 = extract_eapol_resp(&a_updates).expect("Authenticator did not send msg #3");
+        let msg3 = test_util::expect_eapol_resp(&a_updates[..]);
 
         // Send msg #3 to Supplicant and wait for response.
         let mut s_updates = vec![];
         let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg3.clone()));
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
-        assert_eq!(s_updates.len(), 4);
-        let msg4 = extract_eapol_resp(&s_updates).expect("Supplicant did not send msg #4");
-        let s_ptk = extract_reported_ptk(&s_updates).expect("Supplicant did not send PTK");
-        let s_gtk = extract_reported_gtk(&s_updates).expect("Supplicant did not send GTK");
-        let s_status = extract_reported_status(&s_updates).expect("Supplicant did not send status");
+        assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
+        let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
+        let s_ptk = test_util::expect_reported_ptk(&s_updates[..]);
+        let s_gtk = test_util::expect_reported_gtk(&s_updates[..]);
+        let s_status = test_util::expect_reported_status(&s_updates);
 
         // Send msg #4 to Authenticator.
         let mut a_updates = vec![];
         let result = authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg4.clone()));
         assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 3);
-        let a_ptk = extract_reported_ptk(&a_updates).expect("Authenticator did not send PTK");
-        let a_gtk = extract_reported_gtk(&a_updates).expect("Authenticator did not send GTK");
-        let a_status =
-            extract_reported_status(&a_updates).expect("Authenticator did not send status");
+        let a_ptk = test_util::expect_reported_ptk(&a_updates[..]);
+        let a_gtk = test_util::expect_reported_gtk(&a_updates[..]);
+        let a_status = test_util::expect_reported_status(&a_updates);
 
         // Verify derived keys match and status reports ESS-SA as established.
         assert_eq!(a_ptk, s_ptk);
         assert_eq!(a_gtk, s_gtk);
-        match (a_status, s_status) {
-            (SecAssocStatus::EssSaEstablished, SecAssocStatus::EssSaEstablished) => {}
-            (a, s) => panic!("Invalid status; Authenticator: {:?}, Supplicant: {:?}", a, s),
-        };
+        assert_eq!(a_status, SecAssocStatus::EssSaEstablished);
+        assert_eq!(s_status, SecAssocStatus::EssSaEstablished);
     }
+
     #[test]
     fn test_replay_first_message() {
         let mut supplicant = test_util::get_supplicant();
@@ -488,8 +510,7 @@ mod tests {
 
         // Extract second message response and verify Supplicant responded to the replayed first
         // message.
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
         assert_eq!(msg2.key_replay_counter, 3);
     }
 
@@ -502,9 +523,8 @@ mod tests {
             msg1.key_replay_counter = 0;
         });
         assert!(result.is_ok());
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = derive_ptk(msg2);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
@@ -530,9 +550,8 @@ mod tests {
             msg1.key_replay_counter = 1;
         });
         assert!(result.is_ok());
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = derive_ptk(msg2);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_replay_counter = 0;
@@ -549,9 +568,8 @@ mod tests {
             msg1.key_replay_counter = 0;
         });
         assert!(result.is_ok());
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = derive_ptk(msg2);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_replay_counter = 1;
@@ -568,9 +586,8 @@ mod tests {
             msg1.key_replay_counter = 0;
         });
         assert!(result.is_ok());
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let ptk = derive_ptk(msg2);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_replay_counter = 2;
@@ -606,20 +623,18 @@ mod tests {
         let (_, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 1;
         });
-        assert_eq!(extract_reported_ptk(&updates[..]), None);
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let first_ptk = derive_ptk(msg2);
+        assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let first_ptk = derive_ptk(&msg2);
         let first_nonce = msg2.key_nonce;
 
         // Send 1st message of 4-Way Handshake a second time and derive PTK.
         let (_, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_replay_counter = 2;
         });
-        assert_eq!(extract_reported_ptk(&updates[..]), None);
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 2nd message");
-        let second_ptk = derive_ptk(msg2);
+        assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let second_ptk = derive_ptk(&msg2);
         let second_nonce = msg2.key_nonce;
 
         // Send 3rd message of 4-Way Handshake.
@@ -627,15 +642,14 @@ mod tests {
         let (_, updates) = send_msg3(&mut supplicant, &second_ptk, |msg3| {
             msg3.key_replay_counter = 3;
         });
-        let installed_ptk =
-            extract_reported_ptk(&updates[..]).expect("Supplicant did not report PTK");
 
+        let installed_ptk = test_util::expect_reported_ptk(&updates[..]);
         assert_ne!(first_nonce, second_nonce);
         assert_ne!(&first_ptk, &second_ptk);
-        assert_eq!(installed_ptk, &second_ptk);
+        assert_eq!(installed_ptk, second_ptk);
     }
 
-    // Integration test for WPA2 CCMP-128 PSK with a Supplicant role.
+    // Test for WPA2-Personal (PSK CCMP-128) with a Supplicant role.
     #[test]
     fn test_supplicant_wpa2_ccmp128_psk() {
         // Create ESS Security Association
@@ -647,8 +661,7 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify 2nd message.
-        let msg2 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 3nd message");
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
         let s_rsne = test_util::get_s_rsne();
         let s_rsne_data = test_util::get_rsne_bytes(&s_rsne);
         assert_eq!(msg2.version, 1);
@@ -669,13 +682,12 @@ mod tests {
         assert_eq!(&msg2.key_data[20..], &vec![221u8, 0, 0, 0][..]);
 
         // Send 3rd message.
-        let ptk = derive_ptk(msg2);
+        let ptk = derive_ptk(&msg2);
         let (result, updates) = send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
 
         // Verify 4th message was received and is correct.
-        let msg4 =
-            extract_eapol_resp(&updates[..]).expect("Supplicant did not respond with 4th message");
+        let msg4 = test_util::expect_eapol_resp(&updates[..]);
         assert_eq!(msg4.version, 1);
         assert_eq!(msg4.packet_type, 3);
         assert_eq!(msg4.packet_body_len as usize, msg4.len() - 4);
@@ -696,31 +708,24 @@ mod tests {
         assert_eq!(&msg4.key_mic[..], &mic[..]);
 
         // Verify PTK was reported.
-        let reported_ptk =
-            extract_reported_ptk(&updates[..]).expect("Supplicant did not report PTK");
+        let reported_ptk = test_util::expect_reported_ptk(&updates[..]);
         assert_eq!(ptk.ptk, reported_ptk.ptk);
 
         // Verify GTK was reported.
-        let reported_gtk =
-            extract_reported_gtk(&updates[..]).expect("Supplicant did not report GTK");
+        let reported_gtk = test_util::expect_reported_gtk(&updates[..]);
         assert_eq!(&GTK[..], &reported_gtk.gtk[..]);
 
         // Verify ESS was reported to be established.
-        let reported_status =
-            extract_reported_status(&updates[..]).expect("Supplicant did not report any status");
-        match reported_status {
-            SecAssocStatus::EssSaEstablished => {}
-            _ => assert!(false),
-        };
+        let reported_status = test_util::expect_reported_status(&updates[..]);
+        assert_eq!(reported_status, SecAssocStatus::EssSaEstablished);
 
         // Cause re-keying of GTK via Group-Key Handshake.
 
-        let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, |_| {});
+        let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK_REKEY, 3, 3);
         assert!(result.is_ok());
 
         // Verify 2th message was received and is correct.
-        let msg2 = extract_eapol_resp(&updates[..])
-            .expect("Supplicant did not respond with 2nd message of group key handshake");
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
         assert_eq!(msg2.version, 1);
         assert_eq!(msg2.packet_type, 3);
         assert_eq!(msg2.packet_body_len as usize, msg2.len() - 4);
@@ -740,65 +745,104 @@ mod tests {
             compute_mic(ptk.kck(), &test_util::get_akm(), &msg2).expect("error computing MIC");
         assert_eq!(&msg2.key_mic[..], &mic[..]);
 
-        // Verify PTK was NOT reported.
-        assert!(
-            extract_reported_ptk(&updates[..]).is_none(),
-            "Unexpected PTK reported for GTK re-key"
-        );
+        // Verify PTK was NOT re-installed.
+        assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
 
-        // Verify GTK was reported.
-        let reported_gtk =
-            extract_reported_gtk(&updates[..]).expect("Supplicant did not report re-key'ed GTK");
+        // Verify GTK was installed.
+        let reported_gtk = test_util::expect_reported_gtk(&updates[..]);
         assert_eq!(&GTK_REKEY[..], &reported_gtk.gtk[..]);
     }
 
-    // TODO(hahnr): Add additional tests to validate replay attacks,
-    // invalid messages from Authenticator, timeouts, nonce reuse,
-    // (in)-compatible protocol and RSNE versions, etc.
+    // Test to verify that GTKs derived in the 4-Way Handshake are not being re-installed
+    // through Group Key Handshakes.
+    #[test]
+    fn test_supplicant_no_gtk_reinstallation_from_4way() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Complete 4-Way Handshake.
+        let updates = send_msg1(&mut supplicant, |_| {}).1;
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2);
+        let _ = send_msg3(&mut supplicant, &ptk, |_| {});
+
+        // Cause re-keying of GTK via Group-Key Handshake.
+        // Rekey same GTK which has been already installed via the 4-Way Handshake.
+        // This GTK should not be re-installed.
+
+        let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK, 2, 3);
+        assert!(result.is_ok());
+
+        // Verify 2th message was received and is correct.
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        assert_eq!(msg2.version, 1);
+        assert_eq!(msg2.packet_type, 3);
+        assert_eq!(msg2.packet_body_len as usize, msg2.len() - 4);
+        assert_eq!(msg2.descriptor_type, 2);
+        assert_eq!(msg2.key_info.value(), 0x0302);
+        assert_eq!(msg2.key_len, 0);
+        assert_eq!(msg2.key_replay_counter, 3);
+        assert!(test_util::is_zero(&msg2.key_nonce[..]));
+        assert!(test_util::is_zero(&msg2.key_iv[..]));
+        assert_eq!(msg2.key_rsc, 0);
+        assert!(!test_util::is_zero(&msg2.key_mic[..]));
+        assert_eq!(msg2.key_mic.len(), test_util::mic_len());
+        assert_eq!(msg2.key_data.len(), 0);
+        assert!(test_util::is_zero(&msg2.key_data[..]));
+        // Verify the message's MIC.
+        let mic =
+            compute_mic(ptk.kck(), &test_util::get_akm(), &msg2).expect("error computing MIC");
+        assert_eq!(&msg2.key_mic[..], &mic[..]);
+
+        // Verify neither PTK nor GTK were re-installed.
+        assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
+        assert_eq!(test_util::get_reported_gtk(&updates[..]), None);
+    }
+
+    // Test to verify that already rotated GTKs are not being re-installed.
+    #[test]
+    fn test_supplicant_no_gtk_reinstallation() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Complete 4-Way Handshake.
+        let updates = send_msg1(&mut supplicant, |_| {}).1;
+        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2);
+        let _ = send_msg3(&mut supplicant, &ptk, |_| {});
+
+        // Cause re-keying of GTK via Group-Key Handshake.
+        // Rekey same GTK which has been already installed via the 4-Way Handshake.
+        // This GTK should not be re-installed.
+
+        // Rotate GTK.
+        let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK_REKEY, 3, 3);
+        assert!(result.is_ok());
+        let reported_gtk = test_util::expect_reported_gtk(&updates[..]);
+        assert_eq!(&reported_gtk.gtk[..], &GTK_REKEY[..]);
+
+        let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK_REKEY_2, 1, 4);
+        assert!(result.is_ok(), "{:?}", result);
+        let reported_gtk = test_util::expect_reported_gtk(&updates[..]);
+        assert_eq!(&reported_gtk.gtk[..], &GTK_REKEY_2[..]);
+
+        // Rotate GTK to already installed key. Verify GTK was not re-installed.
+        let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK_REKEY, 3, 5);
+        assert!(result.is_ok());
+        assert_eq!(test_util::get_reported_gtk(&updates[..]), None);
+    }
+
+    // TODO(hahnr): Add additional tests:
+    // Invalid messages from Authenticator
+    // Timeouts
+    // Nonce reuse
+    // (in)-compatible protocol and RSNE versions
 
     fn derive_ptk(msg2: &eapol::KeyFrame) -> Ptk {
         let snonce = msg2.key_nonce;
         test_util::get_ptk(&ANONCE[..], &snonce[..])
-    }
-
-    fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> Option<&eapol::KeyFrame> {
-        updates
-            .iter()
-            .filter_map(|u| match u {
-                SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
-                _ => None,
-            })
-            .next()
-    }
-
-    fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Option<&Ptk> {
-        updates
-            .iter()
-            .filter_map(|u| match u {
-                SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
-                _ => None,
-            })
-            .next()
-    }
-
-    fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Option<&Gtk> {
-        updates
-            .iter()
-            .filter_map(|u| match u {
-                SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
-                _ => None,
-            })
-            .next()
-    }
-
-    fn extract_reported_status(updates: &[SecAssocUpdate]) -> Option<&SecAssocStatus> {
-        updates
-            .iter()
-            .filter_map(|u| match u {
-                SecAssocUpdate::Status(status) => Some(status),
-                _ => None,
-            })
-            .next()
     }
 
     fn send_msg1<F>(
@@ -828,15 +872,15 @@ mod tests {
         (result, update_sink)
     }
 
-    fn send_group_key_msg1<F>(
+    fn send_group_key_msg1(
         supplicant: &mut Supplicant,
         ptk: &Ptk,
-        msg_modifier: F,
-    ) -> (Result<(), failure::Error>, UpdateSink)
-    where
-        F: Fn(&mut eapol::KeyFrame),
-    {
-        let msg = test_util::get_group_key_hs_msg1(ptk, &GTK_REKEY[..], msg_modifier);
+        gtk: [u8; 16],
+        key_id: u8,
+        key_replay_counter: u64,
+    ) -> (Result<(), failure::Error>, UpdateSink) {
+        let msg = test_util::get_group_key_hs_msg1(ptk, &gtk[..], key_id, key_replay_counter);
+
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
         (result, update_sink)

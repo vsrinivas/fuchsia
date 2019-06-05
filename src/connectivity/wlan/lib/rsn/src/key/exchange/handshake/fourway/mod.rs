@@ -360,7 +360,7 @@ fn is_zero(slice: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::rsna::{test_util, SecAssocUpdate, UpdateSink};
+    use crate::rsna::{test_util, UpdateSink};
 
     // Create an Authenticator and Supplicant and perfoms the entire 4-Way Handshake.
     #[test]
@@ -396,13 +396,9 @@ mod tests {
         // Replay third message pretending Authenticator did not receive Supplicant's response.
         let mut update_sink = UpdateSink::default();
         env.send_msg3_to_supplicant_capture_updates(msg3, 13, &mut update_sink);
-        let msg4 = test_util::extract_eapol_resp(&update_sink[..]);
-        for update in update_sink {
-            match update {
-                SecAssocUpdate::Key(_) => panic!("reinstalled key"),
-                _ => (),
-            }
-        }
+        let msg4 = test_util::expect_eapol_resp(&update_sink[..]);
+        assert!(test_util::get_reported_ptk(&update_sink).is_none(), "reinstalled PTK");
+        assert!(test_util::get_reported_gtk(&update_sink).is_none(), "reinstalled GTK");
 
         // Let Authenticator process 4th message.
         let (a_ptk, a_gtk) = env.send_msg4_to_authenticator(msg4, 13);

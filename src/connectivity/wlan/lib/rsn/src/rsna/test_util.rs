@@ -179,12 +179,15 @@ where
     msg
 }
 
-pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F) -> eapol::KeyFrame
-where
-    F: Fn(&mut eapol::KeyFrame),
-{
+pub fn get_group_key_hs_msg1(
+    ptk: &Ptk,
+    gtk: &[u8],
+    key_id: u8,
+    key_replay_counter: u64,
+) -> eapol::KeyFrame {
     let mut w = kde::Writer::new(vec![]);
-    w.write_gtk(&kde::Gtk::new(3, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
+    w.write_gtk(&kde::Gtk::new(key_id, kde::GtkInfoTx::BothRxTx, gtk))
+        .expect("error writing GTK KDE");
     let key_data = w.finalize().expect("error finalizing key data");
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &key_data[..]);
 
@@ -195,7 +198,7 @@ where
         descriptor_type: 2,
         key_info: eapol::KeyInformation(0x1382),
         key_len: 0,
-        key_replay_counter: 3,
+        key_replay_counter,
         key_mic: Bytes::from(vec![0u8; mic_len()]),
         key_rsc: 0,
         key_iv: [0u8; 16],
@@ -203,7 +206,6 @@ where
         key_data_len: encrypted_key_data.len() as u16,
         key_data: Bytes::from(encrypted_key_data),
     };
-    msg_modifier(&mut msg);
     msg.update_packet_body_len();
 
     let mic = compute_mic(ptk.kck(), &get_akm(), &msg).expect("error computing MIC");
@@ -258,7 +260,7 @@ fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64) -
     result.unwrap()
 }
 
-pub fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
+pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrame> {
     updates
         .iter()
         .filter_map(|u| match u {
@@ -266,11 +268,14 @@ pub fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
             _ => None,
         })
         .next()
-        .expect("updates do not contain EAPOL frame")
-        .clone()
+        .map(|x| x.clone())
 }
 
-fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Ptk {
+pub fn expect_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
+    get_eapol_resp(updates).expect("updates do not contain EAPOL frame")
+}
+
+pub fn get_reported_ptk(updates: &[SecAssocUpdate]) -> Option<Ptk> {
     updates
         .iter()
         .filter_map(|u| match u {
@@ -278,11 +283,14 @@ fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Ptk {
             _ => None,
         })
         .next()
-        .expect("updates do not contain PTK")
-        .clone()
+        .map(|x| x.clone())
 }
 
-pub fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
+pub fn expect_reported_ptk(updates: &[SecAssocUpdate]) -> Ptk {
+    get_reported_ptk(updates).expect("updates do not contain PTK")
+}
+
+pub fn get_reported_gtk(updates: &[SecAssocUpdate]) -> Option<Gtk> {
     updates
         .iter()
         .filter_map(|u| match u {
@@ -290,8 +298,26 @@ pub fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
             _ => None,
         })
         .next()
-        .expect("updates do not contain GTK")
-        .clone()
+        .map(|x| x.clone())
+}
+
+pub fn expect_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
+    get_reported_gtk(updates).expect("updates do not contain GTK")
+}
+
+pub fn get_reported_status(updates: &[SecAssocUpdate]) -> Option<SecAssocStatus> {
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::Status(status) => Some(status),
+            _ => None,
+        })
+        .next()
+        .map(|x| x.clone())
+}
+
+pub fn expect_reported_status(updates: &[SecAssocUpdate]) -> SecAssocStatus {
+    get_reported_status(updates).expect("updates do not contain a status")
 }
 
 pub struct FourwayTestEnv {
@@ -315,8 +341,7 @@ impl FourwayTestEnv {
         assert_eq!(a_update_sink.len(), 1);
 
         // Verify Authenticator sent message #1.
-        let msg1 = extract_eapol_resp(&a_update_sink[..]);
-        msg1
+        expect_eapol_resp(&a_update_sink[..])
     }
 
     pub fn send_msg1_to_supplicant(
@@ -330,7 +355,7 @@ impl FourwayTestEnv {
         let mut s_update_sink = vec![];
         let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg1);
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
-        let msg2 = extract_eapol_resp(&s_update_sink[..]);
+        let msg2 = expect_eapol_resp(&s_update_sink[..]);
         let ptk = get_ptk(&msg1.key_nonce[..], &msg2.key_nonce[..]);
 
         (msg2, ptk)
@@ -358,9 +383,7 @@ impl FourwayTestEnv {
         let result =
             self.authenticator.on_eapol_key_frame(&mut a_update_sink, next_krc, verified_msg2);
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
-        let msg3 = extract_eapol_resp(&a_update_sink[..]);
-
-        msg3
+        expect_eapol_resp(&a_update_sink[..])
     }
 
     pub fn send_msg3_to_supplicant(
@@ -374,9 +397,9 @@ impl FourwayTestEnv {
         let mut s_update_sink = vec![];
         let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg3);
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
-        let msg4 = extract_eapol_resp(&s_update_sink[..]);
-        let s_ptk = extract_reported_ptk(&s_update_sink[..]);
-        let s_gtk = extract_reported_gtk(&s_update_sink[..]);
+        let msg4 = expect_eapol_resp(&s_update_sink[..]);
+        let s_ptk = expect_reported_ptk(&s_update_sink[..]);
+        let s_gtk = expect_reported_gtk(&s_update_sink[..]);
 
         (msg4, s_ptk, s_gtk)
     }
@@ -415,8 +438,8 @@ impl FourwayTestEnv {
         let result =
             self.authenticator.on_eapol_key_frame(&mut a_update_sink, expected_krc, verified_msg4);
         assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
-        let a_gtk = extract_reported_gtk(&a_update_sink[..]);
-        let a_ptk = extract_reported_ptk(&a_update_sink[..]);
+        let a_ptk = expect_reported_ptk(&a_update_sink[..]);
+        let a_gtk = expect_reported_gtk(&a_update_sink[..]);
 
         (a_ptk, a_gtk)
     }
