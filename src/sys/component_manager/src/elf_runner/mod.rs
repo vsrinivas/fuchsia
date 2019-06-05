@@ -5,12 +5,14 @@
 mod library_loader;
 
 use {
-    crate::model::{Runner, RunnerError},
-    crate::ns_util::{self, PKG_PATH},
+    crate::{constants::PKG_PATH, model::{Runner, RunnerError}},
     cm_rust::data::DictionaryExt,
     failure::{err_msg, format_err, Error, ResultExt},
     fdio::fdio_sys,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_data as fdata,
+    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
@@ -87,8 +89,9 @@ async fn load_launch_info(
 ) -> Result<fproc::LaunchInfo, Error> {
     let bin_path =
         get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
-    let bin_arg =
-        &[String::from(PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?)];
+    let bin_arg = &[String::from(
+        PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?,
+    )];
     let args = get_program_args(&start_info)?;
 
     let name = PathBuf::from(url)
@@ -98,22 +101,28 @@ async fn load_launch_info(
         .ok_or(err_msg("invalid url"))?
         .to_string();
 
-    // Make a non-Option namespace
+    // Convert the directories into proxies, so we can find "/pkg" and open "lib" and bin_path
     let ns =
         start_info.ns.unwrap_or(fsys::ComponentNamespace { paths: vec![], directories: vec![] });
-
-    // Load in a VMO holding the target executable from the namespace
-    let (mut ns, ns_clone) = ns_util::clone_component_namespace(ns)?;
-    let ns_map = ns_util::ns_to_map(ns_clone)?;
+    let mut paths = ns.paths;
+    let directories: Result<Vec<DirectoryProxy>, fidl::Error> =
+        ns.directories.into_iter().map(|d| d.into_proxy()).collect();
+    let mut directories = directories?;
 
     // Start the library loader service
+    let pkg_str = PKG_PATH.to_str().unwrap();
     let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
-    let pkg_proxy = ns_map.get(&*PKG_PATH).ok_or(err_msg("/pkg missing from namespace"))?;
+    let (_, pkg_proxy) = paths
+        .iter()
+        .zip(directories.iter())
+        .find(|(p, _)| p.as_str() == pkg_str)
+        .ok_or(err_msg("/pkg missing from namespace"))?;
+
     let lib_proxy = io_util::open_directory(pkg_proxy, &PathBuf::from("lib"))?;
 
-    // The loader service should only be able to load files from `/pkg/lib` and `/pkg/bin`. Giving
-    // it a larger scope is potentially a security vulnerability, as it could make it trivial for
-    // parts of applications to get handles to things the application author didn't intend.
+    // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
+    // scope is potentially a security vulnerability, as it could make it trivial for parts of
+    // applications to get handles to things the application author didn't intend.
     library_loader::start(lib_proxy, ll_service_chan);
 
     let executable_vmo = await!(library_loader::load_vmo(pkg_proxy, bin_path))
@@ -153,9 +162,15 @@ async fn load_launch_info(
     launcher.add_handles(&mut handle_infos.iter_mut())?;
 
     let mut name_infos = vec![];
-    while let Some(path) = ns.paths.pop() {
-        if let Some(directory) = ns.directories.pop() {
-            name_infos.push(fproc::NameInfo { path, directory })
+    while let Some(path) = paths.pop() {
+        if let Some(directory) = directories.pop() {
+            let directory = ClientEnd::new(
+                directory
+                    .into_channel()
+                    .map_err(|_| err_msg("into_channel failed"))?
+                    .into_zx_channel(),
+            );
+            name_infos.push(fproc::NameInfo { path, directory });
         }
     }
     launcher.add_names(&mut name_infos.iter_mut())?;

@@ -68,10 +68,10 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
     );
 }
 
-/// load_vmo will attempt to open the provided name in `lib_proxy` and return an executable VMO
+/// load_vmo will attempt to open the provided name in `dir_proxy` and return an executable VMO
 /// with the contents.
-pub async fn load_vmo(lib_proxy: &DirectoryProxy, object_name: String) -> Result<zx::Vmo, Error> {
-    let file_proxy = io_util::open_file(lib_proxy, &PathBuf::from(&object_name))?;
+pub async fn load_vmo(dir_proxy: &DirectoryProxy, object_name: String) -> Result<zx::Vmo, Error> {
+    let file_proxy = io_util::open_file(dir_proxy, &PathBuf::from(&object_name))?;
     let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ))
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
     let status = zx::Status::from_raw(status);
