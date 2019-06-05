@@ -254,7 +254,7 @@ template("assemble_system") {
       config_package_barrier = []
 
       if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, [ "metadata" ])
+        forward_variables_from(invoker.metadata, "*")
       }
     }
 
