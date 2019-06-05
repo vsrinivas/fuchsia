@@ -58,15 +58,16 @@ universe_package_labels += [ "//bundles:tools" ]
 
 ### Preparation: Boot with networking
 
-Boot the target system with networking support. For QEMU you'll need to set up
-a bridge interface so your target is visible (Googlers see
-[go/zxdb-networking](http://goto.google.com/zxdb-networking)).
+Boot the target system with networking support:
 
-Then run:
+  * Hardware devices: use the device instructions.
+  * AEMU: `fx aemu -N`
+  * QEMU: `fx run -N`
 
-```sh
-fx run -N
-```
+(If using x64 with an emulator on a Linux host, we also recommend the "-k" flag
+which will make it run faster).
+
+To manually validate network connectivity run `fx shell` or `fx netaddr`.
 
 ### Simple method
 
@@ -81,12 +82,18 @@ fx serve
 ```
 
 to make the debug agent's package avilable for serving to the system. Otherwise
-you will get the message "Timed out trying to find the Debug Agent". Once the
-server is running, launch the debugger in another terminal window:
+you will get the message "Timed out trying to find the Debug Agent".
+
+Once the server is running, launch the debugger in another terminal window:
 
 ```sh
 fx debug
 ```
+
+To manually validate packages can be loaded, run "ls" from within the Fuchsia
+shell (for most setups this requires "fx serve" to be successfully serving
+packages).
+
 ### Manual method
 
 In some cases you may want to run the debug agent and connect manually. To do
@@ -111,6 +118,7 @@ to see this, or run `fx netaddr` on the host.
 
 On the host system (where you do the build), run the client. Use the IP
 address of the target and the port you picked above in the `connect` command.
+If running in-tree, `fx netaddr` will tell you this address.
 
 For QEMU, we recommend using IPv6 and link local addresses. These addresses
 have to be annotated with the interface they apply to, so make sure the address
