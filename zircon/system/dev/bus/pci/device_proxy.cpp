@@ -101,7 +101,14 @@ zx_status_t DeviceProxy::PciSetIrqMode(zx_pci_irq_mode_t mode, uint32_t requeste
 }
 
 zx_status_t DeviceProxy::PciGetDeviceInfo(zx_pcie_device_info_t* out_info) {
-    DEVICE_PROXY_UNIMPLEMENTED;
+    PciRpcMsg req = {};
+    PciRpcMsg resp = {};
+
+    zx_status_t st = RpcRequest(PCI_OP_GET_DEVICE_INFO, nullptr, &req, &resp);
+    if (st == ZX_OK) {
+        *out_info = resp.info;
+    }
+    return st;
 }
 
 template <typename T>

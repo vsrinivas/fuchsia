@@ -183,6 +183,39 @@ TEST_F(PciProtocolTests, EnableBusMaster) {
     ASSERT_EQ(cached_value, cmd_reg.value);
 }
 
+TEST_F(PciProtocolTests, GetDeviceInfo) {
+    uint16_t vendor_id;
+    uint16_t device_id;
+    uint8_t base_class;
+    uint8_t sub_class;
+    uint8_t program_interface;
+    uint8_t revision_id;
+    uint8_t bus_id = PCI_TEST_BUS_ID;
+    uint8_t dev_id = PCI_TEST_DEV_ID;
+    uint8_t func_id = PCI_TEST_FUNC_ID;
+
+    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_VENDOR_ID, &vendor_id));
+    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_DEVICE_ID, &device_id));
+    ASSERT_EQ(vendor_id, PCI_TEST_DRIVER_VID);
+    ASSERT_EQ(device_id, PCI_TEST_DRIVER_DID);
+    ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE, &base_class));
+    ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_SUB, &sub_class));
+    ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_INTR, &program_interface));
+    ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_REVISION_ID, &revision_id));
+
+    zx_pcie_device_info_t info;
+    ASSERT_OK(pci().GetDeviceInfo(&info));
+    ASSERT_EQ(vendor_id, info.vendor_id);
+    ASSERT_EQ(device_id, info.device_id);
+    ASSERT_EQ(base_class, info.base_class);
+    ASSERT_EQ(sub_class, info.sub_class);
+    ASSERT_EQ(program_interface, info.program_interface);
+    ASSERT_EQ(revision_id, info.revision_id);
+    ASSERT_EQ(bus_id, info.bus_id);
+    ASSERT_EQ(dev_id, info.dev_id);
+    ASSERT_EQ(func_id, info.func_id);
+}
+
 zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
     auto driver = ProtocolTestDriver::GetInstance();
     auto zxt = zxtest::Runner::GetInstance();

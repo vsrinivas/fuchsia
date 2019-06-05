@@ -181,7 +181,17 @@ zx_status_t Device::RpcGetBti(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcGetDeviceInfo(const zx::unowned_channel& ch) {
-    RPC_UNIMPLEMENTED;
+    response_.info.vendor_id = vendor_id();
+    response_.info.device_id = device_id();
+    response_.info.base_class = class_id();
+    response_.info.sub_class = subclass();
+    response_.info.program_interface = prog_if();
+    response_.info.revision_id = rev_id();
+    response_.info.bus_id = bus_id();
+    response_.info.dev_id = dev_id();
+    response_.info.func_id = func_id();
+
+    return RpcReply(ch, ZX_OK);
 }
 
 zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
