@@ -56,6 +56,8 @@ private:
     static void OnSignal(void* ctx, int32_t flags);
     void OnReadable();
 
+    int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size)
+        TA_REQ(lock_);
     void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
     zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
     zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result)

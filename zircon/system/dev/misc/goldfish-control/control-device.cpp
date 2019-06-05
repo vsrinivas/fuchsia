@@ -233,9 +233,8 @@ zx_status_t Control::Bind() {
         return status;
     }
 
-    auto release_buffer =
-        fbl::MakeAutoCall([this]() TA_NO_THREAD_SAFETY_ANALYSIS
-            { cmd_buffer_.release(); });
+    auto release_buffer = fbl::MakeAutoCall(
+        [this]() TA_NO_THREAD_SAFETY_ANALYSIS { cmd_buffer_.release(); });
 
     auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
     buffer->id = id_;
@@ -254,7 +253,14 @@ zx_status_t Control::Bind() {
 
     size_t length = strlen(kPipeName) + 1;
     memcpy(io_buffer_.virt(), kPipeName, length);
-    WriteLocked(static_cast<uint32_t>(length));
+    int32_t consumed_size = 0;
+    int32_t result = WriteLocked(static_cast<uint32_t>(length), &consumed_size);
+    if (result < 0) {
+        zxlogf(ERROR, "%s: failed connecting to '%s' pipe: %d\n", kTag,
+               kPipeName, result);
+        return ZX_ERR_INTERNAL;
+    }
+    ZX_DEBUG_ASSERT(consumed_size == static_cast<int32_t>(length));
 
     memcpy(io_buffer_.virt(), &kClientFlags, sizeof(kClientFlags));
     WriteLocked(sizeof(kClientFlags));
@@ -454,7 +460,7 @@ void Control::OnReadable() {
     readable_cvar_.Signal();
 }
 
-void Control::WriteLocked(uint32_t cmd_size) {
+int32_t Control::WriteLocked(uint32_t cmd_size, int32_t* consumed_size) {
     TRACE_DURATION("gfx", "Control::Write", "cmd_size", cmd_size);
 
     auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
@@ -466,8 +472,15 @@ void Control::WriteLocked(uint32_t cmd_size) {
     buffer->rw_params.buffers_count = 1;
     buffer->rw_params.consumed_size = 0;
     pipe_.Exec(id_);
-    ZX_DEBUG_ASSERT(buffer->rw_params.consumed_size ==
-                    static_cast<int32_t>(cmd_size));
+    *consumed_size = buffer->rw_params.consumed_size;
+    return buffer->status;
+}
+
+void Control::WriteLocked(uint32_t cmd_size) {
+    int32_t consumed_size;
+    int32_t result = WriteLocked(cmd_size, &consumed_size);
+    ZX_DEBUG_ASSERT(result >= 0);
+    ZX_DEBUG_ASSERT(consumed_size == static_cast<int32_t>(cmd_size));
 }
 
 zx_status_t Control::ReadResultLocked(uint32_t* result) {
@@ -558,7 +571,8 @@ zx_status_t Control::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode,
 
 } // namespace goldfish
 
-static constexpr zx_driver_ops_t goldfish_control_driver_ops = []() -> zx_driver_ops_t {
+static constexpr zx_driver_ops_t goldfish_control_driver_ops =
+    []() -> zx_driver_ops_t {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = goldfish::Control::Create;
