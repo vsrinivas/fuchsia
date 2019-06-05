@@ -9,7 +9,7 @@
 #include "src/developer/debug/zxdb/console/mock_format_value_process_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -45,11 +45,10 @@ fxl::RefPtr<ModifiedType> GetCharPointerType() {
 
 class FormatValueTest : public TestWithLoop {
  public:
-  FormatValueTest()
-      : eval_context_(fxl::MakeRefCounted<MockExprEvalContext>()) {}
+  FormatValueTest() : eval_context_(fxl::MakeRefCounted<MockEvalContext>()) {}
 
   MockFormatValueProcessContext& process_context() { return process_context_; }
-  fxl::RefPtr<MockExprEvalContext>& eval_context() { return eval_context_; }
+  fxl::RefPtr<MockEvalContext>& eval_context() { return eval_context_; }
   MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
   // Synchronously calls FormatExprValue, returning the result.
@@ -81,7 +80,7 @@ class FormatValueTest : public TestWithLoop {
 
  private:
   MockFormatValueProcessContext process_context_;
-  fxl::RefPtr<MockExprEvalContext> eval_context_;
+  fxl::RefPtr<MockEvalContext> eval_context_;
 };
 
 }  // namespace

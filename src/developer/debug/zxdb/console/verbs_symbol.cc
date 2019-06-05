@@ -24,7 +24,7 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -415,8 +415,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
 
   if (cmd.frame()) {
     const Location& location = cmd.frame()->GetLocation();
-    fxl::RefPtr<ExprEvalContext> eval_context =
-        cmd.frame()->GetExprEvalContext();
+    fxl::RefPtr<EvalContext> eval_context = cmd.frame()->GetEvalContext();
     eval_context->GetNamedValue(
         identifier, [location](const Err& err, fxl::RefPtr<Symbol> symbol,
                                ExprValue value) {

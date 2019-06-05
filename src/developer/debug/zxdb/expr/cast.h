@@ -11,7 +11,7 @@
 namespace zxdb {
 
 class Err;
-class ExprEvalContext;
+class EvalContext;
 class ExprValue;
 class Type;
 
@@ -70,7 +70,7 @@ const char* CastTypeToString(CastType);
 //
 // The dest_source is an optional specification of what "source location" the
 // returned value should have.
-Err CastExprValue(ExprEvalContext* eval_context, CastType cast_type,
+Err CastExprValue(EvalContext* eval_context, CastType cast_type,
                   const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                   ExprValue* result,
                   const ExprValueSource& dest_source = ExprValueSource());
@@ -78,8 +78,8 @@ Err CastExprValue(ExprEvalContext* eval_context, CastType cast_type,
 // See comment for CastExprValue. This determines whether the source should
 // have references expanded to the referenced data before executing the given
 // cast.
-bool CastShouldFollowReferences(ExprEvalContext* eval_context,
-                                CastType cast_type, const ExprValue& source,
+bool CastShouldFollowReferences(EvalContext* eval_context, CastType cast_type,
+                                const ExprValue& source,
                                 const fxl::RefPtr<Type>& dest_type);
 
 }  // namespace zxdb

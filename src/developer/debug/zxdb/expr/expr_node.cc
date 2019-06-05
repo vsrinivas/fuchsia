@@ -10,8 +10,8 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
@@ -98,7 +98,7 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
 
 }  // namespace
 
-void ExprNode::EvalFollowReferences(fxl::RefPtr<ExprEvalContext> context,
+void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context,
                                     EvalCallback cb) const {
   Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
     if (err.has_error())
@@ -108,7 +108,7 @@ void ExprNode::EvalFollowReferences(fxl::RefPtr<ExprEvalContext> context,
   });
 }
 
-void AddressOfExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context,
                              EvalCallback cb) const {
   expr_->EvalFollowReferences(
       context, [cb = std::move(cb)](const Err& err, ExprValue value) {
@@ -134,7 +134,7 @@ void AddressOfExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
-void ArrayAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context,
                                EvalCallback cb) const {
   left_->EvalFollowReferences(
       context, [inner = inner_, context, cb = std::move(cb)](
@@ -167,9 +167,9 @@ void ArrayAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
 }
 
 // static
-Err ArrayAccessExprNode::InnerValueToOffset(
-    fxl::RefPtr<ExprEvalContext> context, const ExprValue& inner,
-    int64_t* offset) {
+Err ArrayAccessExprNode::InnerValueToOffset(fxl::RefPtr<EvalContext> context,
+                                            const ExprValue& inner,
+                                            int64_t* offset) {
   // Type should be some kind of number.
   const Type* abstract_type = inner.type();
   if (!abstract_type)
@@ -191,7 +191,7 @@ Err ArrayAccessExprNode::InnerValueToOffset(
 }
 
 // static
-void ArrayAccessExprNode::DoAccess(fxl::RefPtr<ExprEvalContext> context,
+void ArrayAccessExprNode::DoAccess(fxl::RefPtr<EvalContext> context,
                                    ExprValue left, int64_t offset,
                                    EvalCallback cb) {
   ResolveArray(
@@ -218,7 +218,7 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
   inner_->Print(out, indent + 1);
 }
 
-void BinaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void BinaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context,
                             EvalCallback cb) const {
   EvalBinaryOperator(std::move(context), left_, op_, right_, std::move(cb));
 }
@@ -229,7 +229,7 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
   right_->Print(out, indent + 1);
 }
 
-void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void CastExprNode::Eval(fxl::RefPtr<EvalContext> context,
                         EvalCallback cb) const {
   // Callback that does the cast given the right type of value.
   auto exec_cast = [context, cast_type = cast_type_, to_type = to_type_->type(),
@@ -268,7 +268,7 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
   from_->Print(out, indent + 1);
 }
 
-void DereferenceExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context,
                                EvalCallback cb) const {
   expr_->EvalFollowReferences(
       context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
@@ -281,7 +281,7 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
-void FunctionCallExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void FunctionCallExprNode::Eval(fxl::RefPtr<EvalContext> context,
                                 EvalCallback cb) const {
   cb(Err("Sorry, function calls are not supported."), ExprValue());
 }
@@ -292,7 +292,7 @@ void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
     arg->Print(out, indent + 1);
 }
 
-void IdentifierExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context,
                               EvalCallback cb) const {
   context->GetNamedValue(
       ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
@@ -306,7 +306,7 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "IDENTIFIER(" << ident_.GetDebugName() << ")\n";
 }
 
-void LiteralExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void LiteralExprNode::Eval(fxl::RefPtr<EvalContext> context,
                            EvalCallback cb) const {
   switch (token_.type()) {
     case ExprTokenType::kInteger: {
@@ -332,7 +332,7 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "LITERAL(" << token_.value() << ")\n";
 }
 
-void MemberAccessExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context,
                                 EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprTokenType::kArrow;
   left_->EvalFollowReferences(
@@ -363,7 +363,7 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent + 1) << member_.GetFullName() << "\n";
 }
 
-void SizeofExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void SizeofExprNode::Eval(fxl::RefPtr<EvalContext> context,
                           EvalCallback cb) const {
   if (const TypeExprNode* type_node =
           const_cast<ExprNode*>(expr_.get())->AsType()) {
@@ -389,7 +389,7 @@ void SizeofExprNode::Print(std::ostream& out, int indent) const {
 }
 
 // static
-void SizeofExprNode::SizeofType(fxl::RefPtr<ExprEvalContext> context,
+void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context,
                                 const Type* in_type, EvalCallback cb) {
   // References should get stripped (sizeof(char&) = 1).
   if (!in_type) {
@@ -418,7 +418,7 @@ void SizeofExprNode::SizeofType(fxl::RefPtr<ExprEvalContext> context,
   cb(Err(), ExprValue(type->byte_size()));
 }
 
-void TypeExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void TypeExprNode::Eval(fxl::RefPtr<EvalContext> context,
                         EvalCallback cb) const {
   // Doesn't make sense to evaluate a type, callers like casts that expect a
   // type name will look into the node themselves.
@@ -432,7 +432,7 @@ void TypeExprNode::Print(std::ostream& out, int indent) const {
   out << ")\n";
 }
 
-void UnaryOpExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void UnaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context,
                            EvalCallback cb) const {
   expr_->EvalFollowReferences(
       context, [cb = std::move(cb), op = op_](const Err& err, ExprValue value) {

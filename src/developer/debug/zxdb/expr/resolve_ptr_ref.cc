@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -30,7 +30,7 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
 
 }  // namespace
 
-void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context, uint64_t address,
+void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address,
                     fxl::RefPtr<Type> type,
                     std::function<void(const Err&, ExprValue)> cb) {
   if (!type) {
@@ -56,7 +56,7 @@ void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context, uint64_t address,
       });
 }
 
-void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context,
+void ResolvePointer(fxl::RefPtr<EvalContext> eval_context,
                     const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb) {
   const Type* pointed_to = nullptr;
@@ -77,7 +77,7 @@ void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context,
   }
 }
 
-void EnsureResolveReference(fxl::RefPtr<ExprEvalContext> eval_context,
+void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context,
                             ExprValue value,
                             std::function<void(const Err&, ExprValue)> cb) {
   Type* type = value.type();

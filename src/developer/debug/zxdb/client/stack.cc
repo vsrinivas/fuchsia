@@ -12,7 +12,7 @@
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
@@ -55,8 +55,8 @@ class InlineFrame final : public Frame {
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override {
     return physical_frame_->GetSymbolDataProvider();
   }
-  fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override {
-    return physical_frame_->GetExprEvalContext();
+  fxl::RefPtr<EvalContext> GetEvalContext() const override {
+    return physical_frame_->GetEvalContext();
   }
   bool IsAmbiguousInlineLocation() const override {
     const Location& loc = GetLocation();

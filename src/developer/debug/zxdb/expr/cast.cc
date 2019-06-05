@@ -7,7 +7,7 @@
 #include <optional>
 
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
@@ -257,7 +257,7 @@ Err CastNumberToBool(const ExprValue& source, const Type* concrete_from,
 }
 
 // Returns true if the two concrete types (resulting from previously calling
-// ExprEvalContext::GetConcreteType()) can be coerced by copying the data. This
+// EvalContext::GetConcreteType()) can be coerced by copying the data. This
 // includes things that are actually the same, as well as things like
 // signed/unsigned conversions and pointer/int conversions that our very loose
 // coercion rules support.
@@ -328,9 +328,8 @@ enum CastPointer { kAllowBaseToDerived, kDisallowBaseToDerived };
 // according to approximate static_cast rules.
 //
 // The source and dest types should already be concrete (from
-// ExprEvalContext::GetConcreteType()).
-Err StaticCastPointerOrRef(ExprEvalContext* eval_context,
-                           const ExprValue& source,
+// EvalContext::GetConcreteType()).
+Err StaticCastPointerOrRef(EvalContext* eval_context, const ExprValue& source,
                            const fxl::RefPtr<Type>& dest_type,
                            const Type* concrete_from, const Type* concrete_to,
                            const ExprValueSource& dest_source,
@@ -414,7 +413,7 @@ Err StaticCastPointerOrRef(ExprEvalContext* eval_context,
              concrete_to->GetFullName().c_str());
 }
 
-Err ImplicitCast(ExprEvalContext* eval_context, const ExprValue& source,
+Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
                  const fxl::RefPtr<Type>& dest_type,
                  const ExprValueSource& dest_source, ExprValue* result) {
   // There are several fundamental types of things that can be casted:
@@ -503,7 +502,7 @@ Err ImplicitCast(ExprEvalContext* eval_context, const ExprValue& source,
              dest_type->GetFullName().c_str());
 }
 
-Err ReinterpretCast(ExprEvalContext* eval_context, const ExprValue& source,
+Err ReinterpretCast(EvalContext* eval_context, const ExprValue& source,
                     const fxl::RefPtr<Type>& dest_type,
                     const ExprValueSource& dest_source, ExprValue* result) {
   if (!source.type())
@@ -535,7 +534,7 @@ Err ReinterpretCast(ExprEvalContext* eval_context, const ExprValue& source,
   return Err();
 }
 
-Err StaticCast(ExprEvalContext* eval_context, const ExprValue& source,
+Err StaticCast(EvalContext* eval_context, const ExprValue& source,
                const fxl::RefPtr<Type>& dest_type,
                const ExprValueSource& dest_source, ExprValue* result) {
   // Our implicit cast is permissive enough to handle most cases including all
@@ -573,7 +572,7 @@ const char* CastTypeToString(CastType type) {
   return "<invalid>";
 }
 
-Err CastExprValue(ExprEvalContext* eval_context, CastType cast_type,
+Err CastExprValue(EvalContext* eval_context, CastType cast_type,
                   const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                   ExprValue* result, const ExprValueSource& dest_source) {
   switch (cast_type) {
@@ -605,8 +604,8 @@ Err CastExprValue(ExprEvalContext* eval_context, CastType cast_type,
   return Err("Internal error.");
 }
 
-bool CastShouldFollowReferences(ExprEvalContext* eval_context,
-                                CastType cast_type, const ExprValue& source,
+bool CastShouldFollowReferences(EvalContext* eval_context, CastType cast_type,
+                                const ExprValue& source,
                                 const fxl::RefPtr<Type>& dest_type) {
   // Implicit casts never follow references. If you have two references:
   //   A& a;

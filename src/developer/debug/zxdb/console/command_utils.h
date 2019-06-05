@@ -16,7 +16,7 @@
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 
 namespace zxdb {
@@ -158,11 +158,11 @@ Err SetElementsToAdd(const std::vector<std::string>& args,
                      AssignType* assign_type,
                      std::vector<std::string>* elements_to_set);
 
-// Returns the best ExprEvalContext for the given command. If there is an
+// Returns the best EvalContext for the given command. If there is an
 // available frame, uses that to registers and local variables can be read.
 // Otherwise falls back to process (read/write memory and globals only) or
 // generic (calculator-like mode only) contexts.
-fxl::RefPtr<ExprEvalContext> GetEvalContextForCommand(const Command& cmd);
+fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd);
 
 // Evaluates all args in the given command as an expression and calls the
 // callback with the result. The callback will be called from within the
@@ -174,8 +174,8 @@ fxl::RefPtr<ExprEvalContext> GetEvalContextForCommand(const Command& cmd);
 //
 // The |verb| string is used to format error messages showing command examples.
 Err EvalCommandExpression(
-    const Command& cmd, const char* verb,
-    fxl::RefPtr<ExprEvalContext> eval_context, bool follow_references,
+    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
+    bool follow_references,
     std::function<void(const Err& err, ExprValue value)> cb);
 
 // Like EvalCommandExpression but attempts to convert the result to an address.
@@ -188,8 +188,7 @@ Err EvalCommandExpression(
 //
 // If the command doesn't evaluate to an address, the Err will be set.
 Err EvalCommandAddressExpression(
-    const Command& cmd, const char* verb,
-    fxl::RefPtr<ExprEvalContext> eval_context,
+    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
     std::function<void(const Err& err, uint64_t address,
                        std::optional<uint32_t> size)>
         cb);

@@ -13,8 +13,8 @@
 
 namespace zxdb {
 
+class EvalContextImpl;
 class MockSymbolDataProvider;
-class SymbolEvalContext;
 
 // Provides a MockFrame implementation that just returns constant values for
 // everything. Tests can override this to implement the subset of functionality
@@ -60,7 +60,7 @@ class MockFrame : public Frame {
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
-  fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
+  fxl::RefPtr<EvalContext> GetEvalContext() const override;
   bool IsAmbiguousInlineLocation() const override;
 
  private:
@@ -72,7 +72,7 @@ class MockFrame : public Frame {
   const Frame* physical_frame_;  // Null if non-inlined.
   Location location_;
   mutable fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
-  mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;        // Lazy.
+  mutable fxl::RefPtr<EvalContextImpl> eval_context_;                 // Lazy.
   bool is_ambiguous_inline_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockFrame);

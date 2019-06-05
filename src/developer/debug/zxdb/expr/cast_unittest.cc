@@ -10,7 +10,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
@@ -21,7 +21,7 @@
 namespace zxdb {
 
 TEST(Cast, Implicit) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   auto int32_type = MakeInt32Type();
   auto uint32_type = MakeInt32Type();
@@ -143,7 +143,7 @@ TEST(Cast, Implicit) {
 
 // Enums can be casted to and fro.
 TEST(Cast, Enum) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   // Enumeration values used in both enums below.
   Enumeration::Map values;
@@ -206,7 +206,7 @@ TEST(Cast, Enum) {
 
 // Tests implicit casting when there are derived classes.
 TEST(Cast, ImplicitDerived) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   DerivedClassTestSetup d;
 
@@ -267,7 +267,7 @@ TEST(Cast, ImplicitDerived) {
 }
 
 TEST(Cast, Reinterpret) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   auto int32_type = MakeInt32Type();
   auto uint32_type = MakeInt32Type();
@@ -325,7 +325,7 @@ TEST(Cast, Reinterpret) {
 // Static cast is mostly implement as implicit cast. This only tests the
 // additional behavior.
 TEST(Cast, Static) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   DerivedClassTestSetup d;
 
@@ -376,7 +376,7 @@ TEST(Cast, Static) {
 }
 
 TEST(Cast, C) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   DerivedClassTestSetup d;
 

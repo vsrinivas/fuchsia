@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_NODE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_NODE_H_
 
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 
@@ -14,8 +15,7 @@ class MockExprNode : public ExprNode {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  void Eval(fxl::RefPtr<ExprEvalContext> context,
-            EvalCallback cb) const override;
+  void Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -30,3 +30,5 @@ class MockExprNode : public ExprNode {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_NODE_H_

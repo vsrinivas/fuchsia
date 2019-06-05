@@ -27,8 +27,8 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -537,8 +537,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   for (const auto& pair : vars) {
     helper->AppendVariable(location.symbol_context(),
-                           cmd.frame()->GetExprEvalContext(), pair.second,
-                           options);
+                           cmd.frame()->GetEvalContext(), pair.second, options);
     helper->Append(OutputBuffer("\n"));
   }
   helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });
@@ -866,7 +865,7 @@ Examples
 Err DoPrint(ConsoleContext* context, const Command& cmd) {
   // This will work in any context, but the data that's available will vary
   // depending on whether there's a stopped thread, a process, or nothing.
-  fxl::RefPtr<ExprEvalContext> eval_context = GetEvalContextForCommand(cmd);
+  fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
 
   auto formatter = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));

@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
@@ -48,7 +48,7 @@ Err ResolveStaticArray(const ExprValue& array, const ArrayType* array_type,
 
 // Handles the "Foo*" case.
 void ResolvePointerArray(
-    fxl::RefPtr<ExprEvalContext> eval_context, const ExprValue& array,
+    fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
     const ModifiedType* ptr_type, size_t begin_index, size_t end_index,
     std::function<void(const Err&, std::vector<ExprValue>)> cb) {
   const Type* abstract_value_type = ptr_type->modified().Get()->AsType();
@@ -99,8 +99,8 @@ void ResolvePointerArray(
 
 }  // namespace
 
-Err ResolveArray(fxl::RefPtr<ExprEvalContext> eval_context,
-                 const ExprValue& array, size_t begin_index, size_t end_index,
+Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                 size_t begin_index, size_t end_index,
                  std::vector<ExprValue>* result) {
   if (!array.type())
     return Err("No type information.");
@@ -113,8 +113,8 @@ Err ResolveArray(fxl::RefPtr<ExprEvalContext> eval_context,
   return Err("Can't dereference a non-array type.");
 }
 
-void ResolveArray(fxl::RefPtr<ExprEvalContext> eval_context,
-                  const ExprValue& array, size_t begin_index, size_t end_index,
+void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                  size_t begin_index, size_t end_index,
                   std::function<void(const Err&, std::vector<ExprValue>)> cb) {
   if (!array.type()) {
     cb(Err("No type information."), std::vector<ExprValue>());

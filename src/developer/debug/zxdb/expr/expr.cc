@@ -4,15 +4,14 @@
 
 #include "src/developer/debug/zxdb/expr/expr.h"
 
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 
 namespace zxdb {
 
-void EvalExpression(const std::string& input,
-                    fxl::RefPtr<ExprEvalContext> context,
+void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
                     bool follow_references,
                     std::function<void(const Err& err, ExprValue value)> cb) {
   ExprTokenizer tokenizer(input);

@@ -8,7 +8,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
@@ -22,7 +22,7 @@ class ResolveArrayTest : public TestWithLoop {};
 }  // namespace
 
 TEST_F(ResolveArrayTest, ResolveStatic) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   // Request 3 elements from 1-4.
   constexpr uint64_t kBaseAddress = 0x100000;
@@ -58,7 +58,7 @@ TEST_F(ResolveArrayTest, ResolveStatic) {
 
 // Resolves an array element with a pointer as the base.
 TEST_F(ResolveArrayTest, ResolvePointer) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   // Request 3 elements from 1-4.
   constexpr uint64_t kBaseAddress = 0x100000;

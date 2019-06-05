@@ -6,7 +6,7 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -18,9 +18,8 @@ namespace {
 
 using EvalCallback = std::function<void(const Err& err, ExprValue value)>;
 
-void DoAssignment(fxl::RefPtr<ExprEvalContext> context,
-                  const ExprValue& left_value, const ExprValue& right_value,
-                  EvalCallback cb) {
+void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
+                  const ExprValue& right_value, EvalCallback cb) {
   // Note: the calling code will have evaluated the value of the left node.
   // Often this isn't strictly necessary: we only need the "source", but
   // optimizing in that way would complicate things.
@@ -55,7 +54,7 @@ void DoAssignment(fxl::RefPtr<ExprEvalContext> context,
       });
 }
 
-void DoBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
+void DoBinaryOperator(fxl::RefPtr<EvalContext> context,
                       const ExprValue& left_value, const ExprToken& op,
                       const ExprValue& right_value, EvalCallback cb) {
   switch (op.type()) {
@@ -77,7 +76,7 @@ void DoBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
 
 }  // namespace
 
-void EvalBinaryOperator(fxl::RefPtr<ExprEvalContext> context,
+void EvalBinaryOperator(fxl::RefPtr<EvalContext> context,
                         const fxl::RefPtr<ExprNode>& left, const ExprToken& op,
                         const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
   left->Eval(context, [context, op, right, cb = std::move(cb)](

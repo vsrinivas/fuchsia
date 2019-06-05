@@ -8,11 +8,13 @@ static_library("expr") {
     "builtin_types.h",
     "cast.cc",
     "cast.h",
+    "eval_context.h",
+    "eval_context_impl.cc",
+    "eval_context_impl.h",
     "eval_operators.cc",
     "eval_operators.h",
     "expr.cc",
     "expr.h",
-    "expr_eval_context.h",
     "expr_node.cc",
     "expr_node.h",
     "expr_parser.cc",
@@ -44,8 +46,6 @@ static_library("expr") {
     "resolve_collection.h",
     "resolve_ptr_ref.cc",
     "resolve_ptr_ref.h",
-    "symbol_eval_context.cc",
-    "symbol_eval_context.h",
     "template_type_extractor.cc",
     "template_type_extractor.h",
   ]
@@ -61,8 +61,8 @@ source_set("test_support") {
   testonly = true
 
   sources = [
-    "mock_expr_eval_context.cc",
-    "mock_expr_eval_context.h",
+    "mock_eval_context.cc",
+    "mock_eval_context.h",
   ]
 
   public_deps = [
@@ -77,6 +77,7 @@ source_set("tests") {
   sources = [
     "builtin_types_unittest.cc",
     "cast_unittest.cc",
+    "eval_context_impl_unittest.cc",
     "eval_operators_unittest.cc",
     "eval_test_support.cc",
     "eval_test_support.h",
@@ -92,7 +93,6 @@ source_set("tests") {
     "resolve_array_unittest.cc",
     "resolve_collection_unittest.cc",
     "resolve_ptr_ref_unittest.cc",
-    "symbol_eval_context_unittest.cc",
     "template_type_extractor_unittest.cc",
   ]
 

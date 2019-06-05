@@ -30,7 +30,7 @@ the symbol data or the running process. Mostly this is to allow better unit
 testing.
 
 _Looking up symbols:_ The abstract syntax tree nodes look up variables using
-the abstract `ExprEvalContext`. The `SymbolEvalContext` is the normal concrete
+the abstract `EvalContext`. The `EvalContextImpl` is the normal concrete
 implementation of this class that references the symbols associated with a
 process (`ProcessSymbols`) and provides access to the `SymbolDataProvider`
 implementation that reads data from the running process.

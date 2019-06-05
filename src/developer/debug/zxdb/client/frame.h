@@ -16,7 +16,7 @@
 
 namespace zxdb {
 
-class ExprEvalContext;
+class EvalContext;
 class Location;
 class Thread;
 class Register;
@@ -86,9 +86,9 @@ class Frame : public ClientObject {
   // in the context of this frame.
   virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const = 0;
 
-  // Returns the ExprEvalContext that can be used to evaluate expressions in
+  // Returns the EvalContext that can be used to evaluate expressions in
   // the context of this frame.
-  virtual fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const = 0;
+  virtual fxl::RefPtr<EvalContext> GetEvalContext() const = 0;
 
   // Determines if the code location this frame's address corresponds to is
   // potentially ambiguous. This happens when the instruction is the beginning

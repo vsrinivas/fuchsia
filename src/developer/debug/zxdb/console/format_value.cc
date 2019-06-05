@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
@@ -85,8 +85,7 @@ bool IsNumericBaseType(int base_type) {
 
 // Returns true if the given symbol points to a character type that would
 // appear in a pretty-printed string.
-bool IsCharacterType(fxl::RefPtr<ExprEvalContext>& eval_context,
-                     const Type* type) {
+bool IsCharacterType(fxl::RefPtr<EvalContext>& eval_context, const Type* type) {
   if (!type)
     return false;
   fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type);
@@ -102,7 +101,7 @@ bool IsCharacterType(fxl::RefPtr<ExprEvalContext>& eval_context,
   return base_type->base_type() == BaseType::kBaseTypeSignedChar ||
          base_type->base_type() == BaseType::kBaseTypeUnsignedChar;
 }
-bool IsCharacterType(fxl::RefPtr<ExprEvalContext>& eval_context,
+bool IsCharacterType(fxl::RefPtr<EvalContext>& eval_context,
                      const LazySymbol& symbol) {
   return IsCharacterType(eval_context, symbol.Get()->AsType());
 }
@@ -140,7 +139,7 @@ FormatValue::FormatValue(std::unique_ptr<ProcessContext> process_context)
     : process_context_(std::move(process_context)), weak_factory_(this) {}
 FormatValue::~FormatValue() = default;
 
-void FormatValue::AppendValue(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::AppendValue(fxl::RefPtr<EvalContext> eval_context,
                               const ExprValue& value,
                               const FormatExprValueOptions& options) {
   FormatExprValue(eval_context, value, options, false,
@@ -148,7 +147,7 @@ void FormatValue::AppendValue(fxl::RefPtr<ExprEvalContext> eval_context,
 }
 
 void FormatValue::AppendVariable(const SymbolContext& symbol_context,
-                                 fxl::RefPtr<ExprEvalContext> eval_context,
+                                 fxl::RefPtr<EvalContext> eval_context,
                                  const Variable* var,
                                  const FormatExprValueOptions& options) {
   OutputKey output_key = AsyncAppend(
@@ -184,7 +183,7 @@ void FormatValue::Complete(Callback callback) {
   // WARNING: |this| may be deleted.
 }
 
-void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::FormatExprValue(fxl::RefPtr<EvalContext> eval_context,
                                   const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
@@ -314,7 +313,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
   OutputKeyComplete(output_key, std::move(out));
 }
 
-void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::FormatExprValue(fxl::RefPtr<EvalContext> eval_context,
                                   const Err& err, const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
@@ -347,7 +346,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<ExprEvalContext> eval_context,
 //       bar = 2
 //     }
 //   }
-void FormatValue::FormatCollection(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::FormatCollection(fxl::RefPtr<EvalContext> eval_context,
                                    const Collection* coll,
                                    const ExprValue& value,
                                    const FormatExprValueOptions& options,
@@ -355,8 +354,8 @@ void FormatValue::FormatCollection(fxl::RefPtr<ExprEvalContext> eval_context,
   if (coll->is_declaration()) {
     // Sometimes a value will have a type that's a forward declaration and we
     // couldn't resolve its concrete type. Print an error instead of "{}".
-    OutputKeyComplete(
-        output_key, OutputBuffer(Syntax::kComment, "<No definition>"));
+    OutputKeyComplete(output_key,
+                      OutputBuffer(Syntax::kComment, "<No definition>"));
     return;
   }
 
@@ -441,10 +440,11 @@ void FormatValue::FormatCollection(fxl::RefPtr<ExprEvalContext> eval_context,
   OutputKeyComplete(output_key);
 }
 
-bool FormatValue::TryFormatArrayOrString(
-    fxl::RefPtr<ExprEvalContext> eval_context, const Type* type,
-    const ExprValue& value, const FormatExprValueOptions& options,
-    OutputKey output_key) {
+bool FormatValue::TryFormatArrayOrString(fxl::RefPtr<EvalContext> eval_context,
+                                         const Type* type,
+                                         const ExprValue& value,
+                                         const FormatExprValueOptions& options,
+                                         OutputKey output_key) {
   FXL_DCHECK(type == type->StripCVT());
 
   if (type->tag() == DwarfTag::kPointerType) {
@@ -480,7 +480,7 @@ bool FormatValue::TryFormatArrayOrString(
   return false;
 }
 
-void FormatValue::FormatCharPointer(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::FormatCharPointer(fxl::RefPtr<EvalContext> eval_context,
                                     const Type* type, const ExprValue& value,
                                     const FormatExprValueOptions& options,
                                     OutputKey output_key) {
@@ -557,7 +557,7 @@ void FormatValue::FormatCharArray(const uint8_t* data, size_t length,
   OutputKeyComplete(output_key, OutputBuffer(result));
 }
 
-void FormatValue::FormatArray(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::FormatArray(fxl::RefPtr<EvalContext> eval_context,
                               const ExprValue& value, int elt_count,
                               const FormatExprValueOptions& options,
                               OutputKey output_key) {
@@ -770,7 +770,7 @@ void FormatValue::FormatPointer(const ExprValue& value,
     out->Append(fxl::StringPrintf("0x%" PRIx64, value.GetAs<TargetPointer>()));
 }
 
-void FormatValue::FormatReference(fxl::RefPtr<ExprEvalContext> eval_context,
+void FormatValue::FormatReference(fxl::RefPtr<EvalContext> eval_context,
                                   const ExprValue& value,
                                   const FormatExprValueOptions& options,
                                   OutputKey output_key) {

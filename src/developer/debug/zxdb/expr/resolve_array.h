@@ -15,7 +15,7 @@ namespace zxdb {
 class Err;
 class ExprValue;
 class Type;
-class ExprEvalContext;
+class EvalContext;
 
 // Gets the values from a range given an array of a given type. The end index
 // is the index of one-past-the-end of the desired data.
@@ -26,8 +26,8 @@ class ExprEvalContext;
 // This variant works only for static array types ("foo[5]") where the size is
 // known constant at compile time and therefor the entire array is contained
 // in the ExprValue's data.
-Err ResolveArray(fxl::RefPtr<ExprEvalContext> eval_context,
-                 const ExprValue& array, size_t begin_index, size_t end_index,
+Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                 size_t begin_index, size_t end_index,
                  std::vector<ExprValue>* result);
 
 // This variant handles both the static array version above and also
@@ -36,8 +36,8 @@ Err ResolveArray(fxl::RefPtr<ExprEvalContext> eval_context,
 //
 // The input will be clipped to the array size so the result may be empty
 // or smaller than requested.
-void ResolveArray(fxl::RefPtr<ExprEvalContext> eval_context,
-                  const ExprValue& array, size_t begin_index, size_t end_index,
+void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
+                  size_t begin_index, size_t end_index,
                   std::function<void(const Err&, std::vector<ExprValue>)> cb);
 
 }  // namespace zxdb

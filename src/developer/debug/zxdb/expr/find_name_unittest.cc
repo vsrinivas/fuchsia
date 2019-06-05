@@ -24,7 +24,7 @@
 #include "src/lib/fxl/logging.h"
 
 // NOTE: Finding variables on *this* and subclasses is
-// SymbolEvalContextTest.FoundThis which tests both of our file's finding code
+// EvalContextImplTest.FoundThis which tests both of our file's finding code
 // as well as the decoding code.
 
 namespace zxdb {

@@ -19,7 +19,7 @@ namespace zxdb {
 
 class CodeBlock;
 class DataMember;
-class ExprEvalContext;
+class EvalContext;
 class ExprValue;
 class InheritedFrom;
 
@@ -31,19 +31,19 @@ class InheritedFrom;
 //
 // The DataMember may be null. If so, returns an error (this is so callers
 // don't have to type check the inputs).
-Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
                   const DataMember* member, ExprValue* out);
 
 // Resolves a DataMember by name. This variant searches base classes for name
 // matches.
 //
 // Returns an error if the name isn't found.
-Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
                   const ParsedIdentifier& identifier, ExprValue* out);
 
 // The variant takes an ExprValue which is a pointer to the base/struct or
 // class. Because it fetches memory it is asynchronous.
-void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
+void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
                             const ExprValue& base_ptr,
                             const FoundMember& found_member,
                             std::function<void(const Err&, ExprValue)> cb);
@@ -52,7 +52,7 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
 // The callback also provides the DataMember corresponding to what the name
 // matched.
 void ResolveMemberByPointer(
-    fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
+    fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
     const ParsedIdentifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 

@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
@@ -84,7 +84,7 @@ Err GetMemberType(const Collection* coll, const DataMember* member,
   return Err();
 }
 
-void DoResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
+void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
                               const ExprValue& base_ptr,
                               const Collection* pointed_to_type,
                               const FoundMember& member,
@@ -126,7 +126,7 @@ Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type,
 // This variant takes a precomputed offset of the data member in the base
 // class. This is to support the case where the data member is in a derived
 // class (the derived class will have its own offset).
-Err DoResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+Err DoResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
                     const FoundMember& member, ExprValue* out) {
   fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
   const Collection* coll = nullptr;
@@ -144,7 +144,7 @@ Err DoResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
 
 }  // namespace
 
-Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
                   const DataMember* member, ExprValue* out) {
   if (!member)
     return GetErrorForInvalidMemberOf(base);
@@ -152,7 +152,7 @@ Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
                          FoundMember(member, member->member_location()), out);
 }
 
-Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
+Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
                   const ParsedIdentifier& identifier, ExprValue* out) {
   fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
   if (!concrete_type)
@@ -166,7 +166,7 @@ Err ResolveMember(fxl::RefPtr<ExprEvalContext> context, const ExprValue& base,
   return DoResolveMember(context, base, found, out);
 }
 
-void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
+void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
                             const ExprValue& base_ptr,
                             const FoundMember& found_member,
                             std::function<void(const Err&, ExprValue)> cb) {
@@ -182,7 +182,7 @@ void ResolveMemberByPointer(fxl::RefPtr<ExprEvalContext> context,
 }
 
 void ResolveMemberByPointer(
-    fxl::RefPtr<ExprEvalContext> context, const ExprValue& base_ptr,
+    fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
     const ParsedIdentifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
   const Collection* coll = nullptr;

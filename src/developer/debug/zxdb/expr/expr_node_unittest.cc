@@ -11,12 +11,12 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -34,7 +34,7 @@ class ExprNodeTest : public TestWithLoop {};
 }  // namespace
 
 TEST_F(ExprNodeTest, EvalIdentifier) {
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
   ExprValue foo_expected(12);
   context->AddVariable("foo", foo_expected);
 
@@ -74,7 +74,7 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
 
 template <typename T>
 void DoUnaryMinusTest(T in) {
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
   ExprValue foo_expected(in);
   context->AddVariable("foo", foo_expected);
 
@@ -145,7 +145,7 @@ TEST_F(ExprNodeTest, UnaryMinus) {
 
   // Try an unsupported value (a 3-byte signed). This should throw an error and
   // compute an empty value.
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
   ExprValue expected(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 3, "uint24_t"),
       {0, 0, 0});
@@ -171,10 +171,10 @@ TEST_F(ExprNodeTest, UnaryMinus) {
 }
 
 // This test mocks at the SymbolDataProvider level because most of the
-// dereference logic is in the SymbolEvalContext.
+// dereference logic is in the EvalContextImpl.
 TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(
       fxl::WeakPtr<const ProcessSymbols>(),
       SymbolContext::ForRelativeAddresses(), data_provider, nullptr);
 
@@ -294,7 +294,7 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   // The index value (= 5) lives in memory as a 32-bit little-endian value.
   constexpr uint64_t kRefAddress = 0x5000;
   constexpr uint8_t kIndex = 5;
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
   context->data_provider()->AddMemory(kRefAddress, {kIndex, 0, 0, 0});
 
   // The index expression is a reference to the index we saved above, and the
@@ -351,7 +351,7 @@ TEST_F(ExprNodeTest, ArrayAccess) {
 // This is more of an integration smoke test for "." and "->". The details are
 // tested in resolve_collection_unittest.cc.
 TEST_F(ExprNodeTest, MemberAccess) {
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
 
   // Define a class.
   auto int32_type = MakeInt32Type();
@@ -427,7 +427,7 @@ TEST_F(ExprNodeTest, MemberAccess) {
 // the reference value).
 TEST_F(ExprNodeTest, Cast) {
   DerivedClassTestSetup d;
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
 
   // Base2& base2_ref_value = base2_value;
   // static_cast<Derived&>(base2_ref_value);  // <- cast_ref_ref_node
@@ -491,7 +491,7 @@ TEST_F(ExprNodeTest, Cast) {
 }
 
 TEST_F(ExprNodeTest, Sizeof) {
-  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
 
   // References on raw types should be stripped. Make a one-byte sized type and
   // an 8-byte reference to it.

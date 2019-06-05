@@ -8,7 +8,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -22,7 +22,7 @@ class ResolvePtrRefTest : public TestWithLoop {};
 }  // namespace
 
 TEST_F(ResolvePtrRefTest, NotPointer) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   auto int32_type = MakeInt32Type();
   ExprValue int32_value(int32_type, {0x00, 0x00, 0x00, 0x00});
@@ -66,7 +66,7 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
 }
 
 TEST_F(ResolvePtrRefTest, InvalidMemory) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
   constexpr uint64_t kAddress = 0x10;
 
   auto int32_type = MakeInt32Type();
@@ -110,7 +110,7 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
 
 // Tests EnsureResolveReference when the value is not a reference.
 TEST_F(ResolvePtrRefTest, NotRef) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
   auto int32_type = MakeInt32Type();
 
   ExprValue value(123);
@@ -134,7 +134,7 @@ TEST_F(ResolvePtrRefTest, NotRef) {
 // get ignored, the ref should be stripped, and the pointed-to value should be
 // the result.
 TEST_F(ResolvePtrRefTest, ConstRef) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   // Add a 32-bit int at a given address.
   constexpr uint64_t kAddress = 0x300020;

@@ -22,7 +22,7 @@ class Type : public Symbol {
   // type. This also strips "restrict" for C (unusual), and handles C++ "using"
   // statements for defining types (which are encoded in DWARF as typedefs).
   //
-  // Prefer ExprValue::GetConcreteType() or ExprEvalContext::GetConcreteType()
+  // Prefer ExprValue::GetConcreteType() or EvalContext::GetConcreteType()
   // when possible. That version will also expand forward definitions which is
   // almost always the right thing to do. This variant doesn't have enough
   // context from the symbol system so just follows the type pointers.

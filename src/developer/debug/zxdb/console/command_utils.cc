@@ -21,11 +21,11 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
@@ -629,26 +629,26 @@ const char* AssignTypeToString(AssignType assign_type) {
   return "";
 }
 
-fxl::RefPtr<ExprEvalContext> GetEvalContextForCommand(const Command& cmd) {
+fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
   if (cmd.frame())
-    return cmd.frame()->GetExprEvalContext();
+    return cmd.frame()->GetEvalContext();
 
   if (Process* process = cmd.target()->GetProcess()) {
     // Process context only.
-    return fxl::MakeRefCounted<SymbolEvalContext>(
+    return fxl::MakeRefCounted<EvalContextImpl>(
         process->GetSymbols()->GetWeakPtr(), process->GetSymbolDataProvider(),
         Location());
   }
 
   // No context.
-  return fxl::MakeRefCounted<SymbolEvalContext>(
+  return fxl::MakeRefCounted<EvalContextImpl>(
       fxl::WeakPtr<ProcessSymbols>(), fxl::MakeRefCounted<SymbolDataProvider>(),
       Location());
 }
 
 Err EvalCommandExpression(
-    const Command& cmd, const char* verb,
-    fxl::RefPtr<ExprEvalContext> eval_context, bool follow_references,
+    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
+    bool follow_references,
     std::function<void(const Err& err, ExprValue value)> cb) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
@@ -675,8 +675,7 @@ Err EvalCommandExpression(
 }
 
 Err EvalCommandAddressExpression(
-    const Command& cmd, const char* verb,
-    fxl::RefPtr<ExprEvalContext> eval_context,
+    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
     std::function<void(const Err& err, uint64_t address,
                        std::optional<uint32_t> size)>
         cb) {

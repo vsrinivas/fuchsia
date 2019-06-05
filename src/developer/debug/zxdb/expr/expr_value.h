@@ -16,7 +16,7 @@
 namespace zxdb {
 
 class Err;
-class ExprEvalContext;
+class EvalContext;
 class Type;
 
 // Holds a value for an expression. This could be the value of a variable in
@@ -67,13 +67,13 @@ class ExprValue {
 
   // Strips C-V qualifications and resolves forward declarations.
   //
-  // It is a convenience wrapper for ExprEvalContext::GetConcreteType(), see
+  // It is a convenience wrapper for EvalContext::GetConcreteType(), see
   // that for more. The context can not be null.
   //
   // This is the function to use (with the context provided) to properly
   // resolve the type to something there the data of the ExprValue can be
   // interpreted.
-  fxl::RefPtr<Type> GetConcreteType(ExprEvalContext* context) const;
+  fxl::RefPtr<Type> GetConcreteType(EvalContext* context) const;
 
   // Returns an error if the size of the data doesn't match the parameter.
   Err EnsureSizeIs(size_t size) const;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -36,13 +36,13 @@ constexpr uint64_t kEndValidRange = 0x2000;
 
 const char kPresentVarName[] = "present";
 
-class SymbolEvalContextTest : public testing::Test {
+class EvalContextImplTest : public testing::Test {
  public:
-  SymbolEvalContextTest()
+  EvalContextImplTest()
       : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {
     loop_.Init();
   }
-  ~SymbolEvalContextTest() { loop_.Cleanup(); }
+  ~EvalContextImplTest() { loop_.Cleanup(); }
 
   DwarfExprEval& eval() { return eval_; }
   fxl::RefPtr<MockSymbolDataProvider>& provider() { return provider_; }
@@ -64,9 +64,9 @@ class SymbolEvalContextTest : public testing::Test {
 
   // Returns an evaluation context for a code block. If the code block is null,
   // a default one will be created with MakeCodeBlock().
-  fxl::RefPtr<ExprEvalContext> MakeEvalContext(
+  fxl::RefPtr<EvalContext> MakeEvalContext(
       fxl::RefPtr<CodeBlock> code_block = nullptr) {
-    return fxl::MakeRefCounted<SymbolEvalContext>(
+    return fxl::MakeRefCounted<EvalContextImpl>(
         fxl::WeakPtr<const ProcessSymbols>(),
         SymbolContext::ForRelativeAddresses(), provider(),
         code_block ? code_block : MakeCodeBlock());
@@ -91,7 +91,7 @@ enum GetValueAsync { kQuitLoop, kSynchronous };
 
 // Wrapper around eval_context->GetNamedValue that places the callback
 // parameters into a struct. It makes the callsites cleaner.
-void GetNamedValue(const fxl::RefPtr<ExprEvalContext>& eval_context,
+void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context,
                    const std::string& name, GetValueAsync async,
                    ValueResult* result) {
   ParsedIdentifier ident;
@@ -111,7 +111,7 @@ void GetNamedValue(const fxl::RefPtr<ExprEvalContext>& eval_context,
 }
 
 // Sync wrapper around GetVariableValue().
-void GetVariableValue(const fxl::RefPtr<ExprEvalContext>& eval_context,
+void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context,
                       fxl::RefPtr<Variable> variable, GetValueAsync async,
                       ValueResult* result) {
   eval_context->GetVariableValue(
@@ -131,7 +131,7 @@ const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
 
 }  // namespace
 
-TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
+TEST_F(EvalContextImplTest, NotFoundSynchronous) {
   provider()->set_ip(0x1010);
 
   auto context = MakeEvalContext();
@@ -145,7 +145,7 @@ TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
   EXPECT_FALSE(result.symbol);
 }
 
-TEST_F(SymbolEvalContextTest, FoundSynchronous) {
+TEST_F(EvalContextImplTest, FoundSynchronous) {
   constexpr uint64_t kValue = 12345678;
   provider()->set_ip(0x1010);
   provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
@@ -166,7 +166,7 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
   EXPECT_EQ(kPresentVarName, var->GetFullName());
 }
 
-TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
+TEST_F(EvalContextImplTest, FoundAsynchronous) {
   constexpr uint64_t kValue = 12345678;
   provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
   provider()->set_ip(0x1010);
@@ -195,7 +195,7 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
 
 // Tests a symbol that's found but couldn't be evaluated (in this case, because
 // there's no "register 0" available.
-TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
+TEST_F(EvalContextImplTest, FoundButNotEvaluatable) {
   provider()->set_ip(0x1010);
 
   auto context = MakeEvalContext();
@@ -222,7 +222,7 @@ TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
 }
 
 // Tests finding variables on |this| and subclasses of |this|.
-TEST_F(SymbolEvalContextTest, FoundThis) {
+TEST_F(EvalContextImplTest, FoundThis) {
   auto int32_type = MakeInt32Type();
   auto derived = MakeDerivedClassPair(
       DwarfTag::kClassType, "Base", {{"b1", int32_type}, {"b2", int32_type}},
@@ -291,7 +291,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
 
 // Tests a variable lookup that has the IP out of range of the variable's
 // validity.
-TEST_F(SymbolEvalContextTest, RangeMiss) {
+TEST_F(EvalContextImplTest, RangeMiss) {
   // Set up a valid register for the variable. A missing register shouldn't be
   // why it fails to be found.
   constexpr uint64_t kValue = 0x1234567890123;
@@ -307,7 +307,7 @@ TEST_F(SymbolEvalContextTest, RangeMiss) {
 }
 
 // Tests the DWARF expression evaluation failing (empty expression).
-TEST_F(SymbolEvalContextTest, DwarfEvalFailure) {
+TEST_F(EvalContextImplTest, DwarfEvalFailure) {
   const char kEmptyExprVarName[] = "empty_expr";
   provider()->set_ip(kBeginValidRange);
 
@@ -329,7 +329,7 @@ TEST_F(SymbolEvalContextTest, DwarfEvalFailure) {
 // Tests asynchronously reading an integer from memory. This also tests
 // interleaved execution of multiple requests by having a resolution miss
 // request execute while the memory request is pending.
-TEST_F(SymbolEvalContextTest, IntOnStack) {
+TEST_F(EvalContextImplTest, IntOnStack) {
   // Define a 4-byte integer (=0x12345678) at location bp+8
   constexpr int32_t kValue = 0x12345678;
 
@@ -372,7 +372,7 @@ TEST_F(SymbolEvalContextTest, IntOnStack) {
 }
 
 // This is a larger test that runs the EvalContext through ExprNode.Eval.
-TEST_F(SymbolEvalContextTest, NodeIntegation) {
+TEST_F(EvalContextImplTest, NodeIntegation) {
   constexpr uint64_t kValue = 12345678;
   provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
   provider()->set_ip(kBeginValidRange + 0x10);
@@ -401,7 +401,7 @@ TEST_F(SymbolEvalContextTest, NodeIntegation) {
   EXPECT_EQ(ExprValue(kValue), out_value);
 }
 
-TEST_F(SymbolEvalContextTest, RegisterByName) {
+TEST_F(EvalContextImplTest, RegisterByName) {
   ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
 
   constexpr uint64_t kRegValue = 0xdeadb33f;
@@ -424,7 +424,7 @@ TEST_F(SymbolEvalContextTest, RegisterByName) {
   EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value);
 }
 
-TEST_F(SymbolEvalContextTest, RegisterShadowed) {
+TEST_F(EvalContextImplTest, RegisterShadowed) {
   constexpr uint64_t kRegValue = 0xdeadb33f;
   constexpr uint64_t kVarValue = 0xf00db4be;
 
@@ -457,7 +457,7 @@ TEST_F(SymbolEvalContextTest, RegisterShadowed) {
 }
 
 // Also tests ResolveForwardDefinition().
-TEST_F(SymbolEvalContextTest, GetConcreteType) {
+TEST_F(EvalContextImplTest, GetConcreteType) {
   ProcessSymbolsTestSetup setup;
   auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
   MockModuleSymbols* mod = mod_ref.get();  // Save for later.
@@ -481,7 +481,7 @@ TEST_F(SymbolEvalContextTest, GetConcreteType) {
       DwarfTag::kConstType, LazySymbol(forward_def));
 
   // Make a symbol context.
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(
       setup.process().GetWeakPtr(), symbol_context, provider(),
       fxl::RefPtr<CodeBlock>());
 

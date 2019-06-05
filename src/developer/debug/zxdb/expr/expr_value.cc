@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -70,7 +70,7 @@ int ExprValue::GetBaseType() const {
   return base_type->base_type();
 }
 
-fxl::RefPtr<Type> ExprValue::GetConcreteType(ExprEvalContext* context) const {
+fxl::RefPtr<Type> ExprValue::GetConcreteType(EvalContext* context) const {
   return context->GetConcreteType(type_.get());
 }
 

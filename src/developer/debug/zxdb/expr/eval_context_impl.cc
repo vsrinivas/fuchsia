@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -40,7 +40,7 @@ debug_ipc::RegisterID GetRegister(const ParsedIdentifier& ident) {
 // The data associated with one in-progress variable resolution. This must be
 // heap allocated for each resolution operation since multiple operations can
 // be pending.
-struct SymbolEvalContext::ResolutionState
+struct EvalContextImpl::ResolutionState
     : public fxl::RefCountedThreadSafe<ResolutionState> {
   DwarfExprEval dwarf_eval;
   ValueCallback callback;
@@ -64,7 +64,7 @@ struct SymbolEvalContext::ResolutionState
   ~ResolutionState() = default;
 };
 
-SymbolEvalContext::SymbolEvalContext(
+EvalContextImpl::EvalContextImpl(
     fxl::WeakPtr<const ProcessSymbols> process_symbols,
     const SymbolContext& symbol_context,
     fxl::RefPtr<SymbolDataProvider> data_provider,
@@ -75,7 +75,7 @@ SymbolEvalContext::SymbolEvalContext(
       block_(std::move(code_block)),
       weak_factory_(this) {}
 
-SymbolEvalContext::SymbolEvalContext(
+EvalContextImpl::EvalContextImpl(
     fxl::WeakPtr<const ProcessSymbols> process_symbols,
     fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location)
     : process_symbols_(std::move(process_symbols)),
@@ -94,10 +94,10 @@ SymbolEvalContext::SymbolEvalContext(
           location.symbol_context(), location.address())));
 }
 
-SymbolEvalContext::~SymbolEvalContext() = default;
+EvalContextImpl::~EvalContextImpl() = default;
 
-void SymbolEvalContext::GetNamedValue(const ParsedIdentifier& identifier,
-                                      ValueCallback cb) const {
+void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier,
+                                    ValueCallback cb) const {
   if (FoundName found =
           FindName(GetFindNameContext(),
                    FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
@@ -139,8 +139,8 @@ void SymbolEvalContext::GetNamedValue(const ParsedIdentifier& identifier,
       });
 }
 
-void SymbolEvalContext::GetVariableValue(fxl::RefPtr<Variable> var,
-                                         ValueCallback cb) const {
+void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var,
+                                       ValueCallback cb) const {
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type(const_cast<Type*>(var->type().Get()->AsType()));
   if (!type) {
@@ -195,7 +195,7 @@ void SymbolEvalContext::GetVariableValue(fxl::RefPtr<Variable> var,
       });
 }
 
-fxl::RefPtr<Type> SymbolEvalContext::ResolveForwardDefinition(
+fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(
     const Type* type) const {
   Identifier ident = type->GetIdentifier();
   if (ident.empty()) {
@@ -224,7 +224,7 @@ fxl::RefPtr<Type> SymbolEvalContext::ResolveForwardDefinition(
   return fxl::RefPtr<Type>(const_cast<Type*>(type));
 }
 
-fxl::RefPtr<Type> SymbolEvalContext::GetConcreteType(const Type* type) const {
+fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
   if (!type)
     return fxl::RefPtr<Type>();
 
@@ -245,11 +245,11 @@ fxl::RefPtr<Type> SymbolEvalContext::GetConcreteType(const Type* type) const {
   return cur;
 }
 
-fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
+fxl::RefPtr<SymbolDataProvider> EvalContextImpl::GetDataProvider() {
   return data_provider_;
 }
 
-NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
+NameLookupCallback EvalContextImpl::GetSymbolNameLookupCallback() {
   // The contract for this function is that the callback must not be stored
   // so the callback can reference |this|.
   return [this](const ParsedIdentifier& ident,
@@ -266,7 +266,7 @@ NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
   };
 }
 
-void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
+void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
   if (found.kind() == FoundName::kVariable) {
     // Simple variable resolution.
     GetVariableValue(found.variable_ref(), std::move(cb));
@@ -290,7 +290,7 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
 
         // Got |this|, resolve |this-><DataMember>|.
         ResolveMemberByPointer(
-            fxl::RefPtr<SymbolEvalContext>(weak_this.get()), value,
+            fxl::RefPtr<EvalContextImpl>(weak_this.get()), value,
             found.member(),
             [weak_this, found, cb = std::move(cb)](const Err& err,
                                                    ExprValue value) {
@@ -306,7 +306,7 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
       });
 }
 
-void SymbolEvalContext::OnDwarfEvalComplete(
+void EvalContextImpl::OnDwarfEvalComplete(
     const Err& err, fxl::RefPtr<ResolutionState> state) const {
   if (err.has_error()) {
     // Error decoding.
@@ -341,24 +341,23 @@ void SymbolEvalContext::OnDwarfEvalComplete(
                     ExprValue(state->type, std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    ResolvePointer(
-        fxl::RefPtr<ExprEvalContext>(const_cast<SymbolEvalContext*>(this)),
-        result_int, state->type,
-        [state, weak_this = weak_factory_.GetWeakPtr()](const Err& err,
-                                                        ExprValue value) {
-          if (weak_this)
-            state->callback(err, state->symbol, std::move(value));
-        });
+    ResolvePointer(fxl::RefPtr<EvalContext>(const_cast<EvalContextImpl*>(this)),
+                   result_int, state->type,
+                   [state, weak_this = weak_factory_.GetWeakPtr()](
+                       const Err& err, ExprValue value) {
+                     if (weak_this)
+                       state->callback(err, state->symbol, std::move(value));
+                   });
   }
 }
 
-FoundName SymbolEvalContext::DoTargetSymbolsNameLookup(
+FoundName EvalContextImpl::DoTargetSymbolsNameLookup(
     const ParsedIdentifier& ident) {
   return FindName(GetFindNameContext(),
                   FindNameOptions(FindNameOptions::kAllKinds), ident);
 }
 
-FindNameContext SymbolEvalContext::GetFindNameContext() const {
+FindNameContext EvalContextImpl::GetFindNameContext() const {
   return FindNameContext(process_symbols_.get(), symbol_context_, block_.get());
 }
 

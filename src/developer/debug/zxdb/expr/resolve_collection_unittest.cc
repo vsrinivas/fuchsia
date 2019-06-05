@@ -8,7 +8,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -36,7 +36,7 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
 
 // Helper function that calls ResolveMember with an identifier with the
 // containing value.
-Err ResolveMemberFromString(fxl::RefPtr<ExprEvalContext> eval_context,
+Err ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context,
                             const ExprValue& base, const std::string& name,
                             ExprValue* out) {
   ParsedIdentifier ident;
@@ -50,7 +50,7 @@ Err ResolveMemberFromString(fxl::RefPtr<ExprEvalContext> eval_context,
 }  // namespace
 
 TEST(ResolveCollection, GoodMemberAccess) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   const DataMember* a_data;
   const DataMember* b_data;
@@ -97,7 +97,7 @@ TEST(ResolveCollection, GoodMemberAccess) {
 }
 
 TEST(ResolveCollection, BadMemberArgs) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   const DataMember* a_data;
   const DataMember* b_data;
@@ -121,7 +121,7 @@ TEST(ResolveCollection, BadMemberArgs) {
 }
 
 TEST(ResolveCollection, BadMemberAccess) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   const DataMember* a_data;
   const DataMember* b_data;
@@ -152,7 +152,7 @@ TEST(ResolveCollection, BadMemberAccess) {
 
 // Tests foo.bar where bar is in a derived class of foo's type.
 TEST(ResolveCollection, DerivedClass) {
-  auto eval_context = fxl::MakeRefCounted<MockExprEvalContext>();
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   const DataMember* a_data;
   const DataMember* b_data;

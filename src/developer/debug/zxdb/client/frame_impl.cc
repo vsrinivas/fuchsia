@@ -8,7 +8,7 @@
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
@@ -95,10 +95,10 @@ fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() const {
   return symbol_data_provider_;
 }
 
-fxl::RefPtr<ExprEvalContext> FrameImpl::GetExprEvalContext() const {
+fxl::RefPtr<EvalContext> FrameImpl::GetEvalContext() const {
   if (!symbol_eval_context_) {
     EnsureSymbolized();
-    symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
+    symbol_eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(
         thread_->GetProcess()->GetSymbols()->GetWeakPtr(),
         GetSymbolDataProvider(), location_);
   }

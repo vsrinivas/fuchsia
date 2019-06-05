@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_
 
 #include <functional>
 
@@ -11,7 +12,7 @@
 namespace zxdb {
 
 class Err;
-class ExprEvalContext;
+class EvalContext;
 
 // Main entrypoint to evaluate an expression. This will parse the input,
 // execute the result with the given context, and call the callback when
@@ -24,9 +25,10 @@ class ExprEvalContext;
 //
 // The callback may get issued asynchronously in the future or it may get
 // called synchronously in a reentrant fashion from this function.
-void EvalExpression(const std::string& input,
-                    fxl::RefPtr<ExprEvalContext> context,
+void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
                     bool follow_references,
                     std::function<void(const Err& err, ExprValue value)> cb);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_H_

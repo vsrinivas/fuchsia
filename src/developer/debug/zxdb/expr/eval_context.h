@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_EVAL_CONTEXT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_EVAL_CONTEXT_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_CONTEXT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_CONTEXT_H_
 
 #include <functional>
 
@@ -21,12 +21,12 @@ class Variable;
 
 // Interface used by expression evaluation to communicate with the outside
 // world. This provides access to the variables currently in scope.
-class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
+class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
   using ValueCallback = std::function<void(
       const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value)>;
 
-  virtual ~ExprEvalContext() = default;
+  virtual ~EvalContext() = default;
 
   // Issues the callback with the value of the given named value in the context
   // of the current expression evaluation. This will handle things like
@@ -41,7 +41,7 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // with the remote debugged application is required. The callback may be
   // issued reentrantly for synchronously available data.
   //
-  // If the ExprEvalContext is destroyed before the data is ready, the callback
+  // If the EvalContext is destroyed before the data is ready, the callback
   // will not be issued.
   virtual void GetNamedValue(const ParsedIdentifier& identifier,
                              ValueCallback cb) const = 0;
@@ -89,4 +89,4 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_EVAL_CONTEXT_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_CONTEXT_H_

@@ -17,8 +17,8 @@
 namespace zxdb {
 
 class DwarfExprEval;
+class EvalContextImpl;
 class FrameSymbolDataProvider;
-class SymbolEvalContext;
 class Thread;
 
 // A frame is lazily symbolized.
@@ -39,7 +39,7 @@ class FrameImpl final : public Frame {
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
-  fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const override;
+  fxl::RefPtr<EvalContext> GetEvalContext() const override;
   bool IsAmbiguousInlineLocation() const override;
 
  private:
@@ -59,7 +59,7 @@ class FrameImpl final : public Frame {
 
   mutable Location location_;  // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
-  mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;         // Lazy.
+  mutable fxl::RefPtr<EvalContextImpl> symbol_eval_context_;           // Lazy.
 
   // The lazily computed frame base. This will be from DW_AT_frame_base on the
   // function if there is one.

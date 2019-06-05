@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
@@ -65,13 +65,13 @@ fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
   return symbol_data_provider_;
 }
 
-fxl::RefPtr<ExprEvalContext> MockFrame::GetExprEvalContext() const {
-  if (!symbol_eval_context_) {
-    symbol_eval_context_ = fxl::MakeRefCounted<SymbolEvalContext>(
+fxl::RefPtr<EvalContext> MockFrame::GetEvalContext() const {
+  if (!eval_context_) {
+    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(
         fxl::WeakPtr<const ProcessSymbols>(), GetSymbolDataProvider(),
         location_);
   }
-  return symbol_eval_context_;
+  return eval_context_;
 }
 
 bool MockFrame::IsAmbiguousInlineLocation() const {

@@ -12,7 +12,7 @@
 namespace zxdb {
 
 class Err;
-class ExprEvalContext;
+class EvalContext;
 class ExprValue;
 class Type;
 
@@ -21,14 +21,14 @@ class Type;
 // call the callback with an error).
 //
 // It's assumed the type is already concrete (so it has a size).
-void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context, uint64_t address,
+void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address,
                     fxl::RefPtr<Type> type,
                     std::function<void(const Err&, ExprValue)> cb);
 
 // Similar to the above but the pointer and type comes from the given
 // ExprValue, which is assumed to be a pointer type. If it's not a pointer
 // type, the callback will be issued with an error.
-void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context,
+void ResolvePointer(fxl::RefPtr<EvalContext> eval_context,
                     const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb);
 
@@ -41,7 +41,7 @@ void ResolvePointer(fxl::RefPtr<ExprEvalContext> eval_context,
 //
 // If the value is a reference type, it will be resolved and the value will be
 // the value of the referenced data.
-void EnsureResolveReference(fxl::RefPtr<ExprEvalContext> eval_context,
+void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context,
                             ExprValue value,
                             std::function<void(const Err&, ExprValue)> cb);
 

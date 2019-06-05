@@ -14,7 +14,7 @@ MockExprNode::MockExprNode(bool is_synchronous, ExprValue value)
 
 MockExprNode::~MockExprNode() = default;
 
-void MockExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+void MockExprNode::Eval(fxl::RefPtr<EvalContext> context,
                         EvalCallback cb) const {
   if (is_synchronous_) {
     cb(Err(), value_);

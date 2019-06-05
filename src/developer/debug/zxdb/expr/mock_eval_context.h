@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_EVAL_CONTEXT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_EVAL_CONTEXT_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EVAL_CONTEXT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EVAL_CONTEXT_H_
 
 #include <map>
 #include <string>
 
-#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
 
-class MockExprEvalContext : public ExprEvalContext {
+class MockEvalContext : public EvalContext {
  public:
-  MockExprEvalContext();
-  ~MockExprEvalContext();
+  MockEvalContext();
+  ~MockEvalContext();
 
   MockSymbolDataProvider* data_provider() { return data_provider_.get(); }
 
@@ -27,7 +27,7 @@ class MockExprEvalContext : public ExprEvalContext {
   // ResolveForwardDefinition() and GetConcreteType().
   void AddType(fxl::RefPtr<Type> type);
 
-  // ExprEvalContext implementation.
+  // EvalContext implementation.
   void GetNamedValue(const ParsedIdentifier& ident,
                      ValueCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Variable> variable,
@@ -45,4 +45,4 @@ class MockExprEvalContext : public ExprEvalContext {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EXPR_EVAL_CONTEXT_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_MOCK_EVAL_CONTEXT_H_
