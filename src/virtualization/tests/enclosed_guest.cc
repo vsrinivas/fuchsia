@@ -8,6 +8,8 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 
@@ -65,18 +67,24 @@ zx_status_t EnclosedGuest::Start() {
   zx_status_t status = services->AddServiceWithLaunchInfo(
       std::move(launch_info), fuchsia::virtualization::Manager::Name_);
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failure launching virtualization manager: "
+                   << zx_status_get_string(status);
     return status;
   }
 
   status = services->AddService(mock_netstack_.GetHandler(),
                                 fuchsia::netstack::Netstack::Name_);
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failure launching mock netstack: "
+                   << zx_status_get_string(status);
     return status;
   }
 
   status = services->AddService(fake_scenic_.GetHandler(),
                                 fuchsia::ui::scenic::Scenic::Name_);
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failure launching fake scenic service: "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -85,12 +93,16 @@ zx_status_t EnclosedGuest::Start() {
   bool environment_running = RunLoopUntil(
       &loop_, [this] { return enclosing_environment_->is_running(); });
   if (!environment_running) {
-    return ZX_ERR_BAD_STATE;
+    FXL_LOG(ERROR)
+        << "Timed out waiting for guest sandbox environment to become ready.";
+    return ZX_ERR_TIMED_OUT;
   }
 
   fuchsia::virtualization::LaunchInfo guest_launch_info;
   status = LaunchInfo(&guest_launch_info);
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failure launching guest image: "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -115,17 +127,22 @@ zx_status_t EnclosedGuest::Start() {
   bool socket_valid =
       RunLoopUntil(&loop_, [&] { return serial_socket.is_valid(); });
   if (!socket_valid) {
-    return ZX_ERR_BAD_STATE;
+    FXL_LOG(ERROR) << "Timed out waiting to connect to guest's serial.";
+    return ZX_ERR_TIMED_OUT;
   }
   console_ = std::make_unique<GuestConsole>(
       std::make_unique<ZxSocket>(std::move(serial_socket)));
   status = console_->Start();
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error connecting to guest's console: "
+                   << zx_status_get_string(status);
     return status;
   }
 
   status = WaitForSystemReady();
   if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failure while waiting for guest system to become ready: "
+                   << zx_status_get_string(status);
     return status;
   }
 
