@@ -13,11 +13,11 @@ use {
 };
 
 async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
-    await!(realm.instance.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()
+    await!(realm.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()
 }
 
 async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    await!(realm.instance.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
+    await!(realm.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -122,7 +122,7 @@ async fn bind_instance_child() {
     let echo_realm = await!(get_child_realm(&*model.root_realm, "echo"));
     let actual_children = await!(get_children(&*system_realm));
     assert!(actual_children.is_empty());
-    assert!(await!(echo_realm.instance.state.lock()).child_realms.is_none());
+    assert!(await!(echo_realm.state.lock()).child_realms.is_none());
     // bind to echo
     assert!(await!(model.look_up_and_bind_instance(vec!["echo"].into())).is_ok());
     let expected_urls =

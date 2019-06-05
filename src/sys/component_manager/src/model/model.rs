@@ -28,7 +28,7 @@ pub trait Hook {
     fn on_bind_instance<'a>(
         &'a self,
         realm: Arc<Realm>,
-        instance_state: &'a InstanceState,
+        realm_state: &'a RealmState,
     ) -> BoxFuture<Result<(), ModelError>>;
 
     // Called when a new |realm|'s declaration has been resolved.
@@ -77,16 +77,10 @@ impl Model {
                 resolver_registry: Arc::new(params.root_resolver_registry),
                 default_runner: Arc::new(params.root_default_runner),
                 abs_moniker: AbsoluteMoniker::root(),
-                instance: Instance {
-                    component_url: params.root_component_url,
-                    // Started by main().
-                    startup: fsys::StartupMode::Lazy,
-                    state: Mutex::new(InstanceState {
-                        execution: None,
-                        child_realms: None,
-                        decl: None,
-                    }),
-                },
+                component_url: params.root_component_url,
+                // Started by main().
+                startup: fsys::StartupMode::Lazy,
+                state: Mutex::new(RealmState { execution: None, child_realms: None, decl: None }),
             }),
             hooks: params.hooks,
         }
@@ -119,7 +113,7 @@ impl Model {
             let eager_children = await!(self.bind_instance(realm.clone()))?;
 
             let server_end = ServerEnd::new(server_chan);
-            let state = await!(realm.instance.state.lock());
+            let state = await!(realm.state.lock());
             let out_dir = &state
                 .execution
                 .as_ref()
@@ -146,7 +140,7 @@ impl Model {
         for moniker in look_up_abs_moniker.path().iter() {
             cur_realm = {
                 await!(cur_realm.resolve_decl())?;
-                let cur_state = await!(cur_realm.instance.state.lock());
+                let cur_state = await!(cur_realm.state.lock());
                 let child_realms = cur_state.child_realms.as_ref().unwrap();
                 if !child_realms.contains_key(&moniker) {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
@@ -158,17 +152,17 @@ impl Model {
         Ok(cur_realm)
     }
 
-    // Populates the InstanceState struct and starts the component instance.
-    async fn populate_instance_state<'a>(
+    // Populates the RealmState struct and starts the component instance.
+    async fn populate_realm_state<'a>(
         &'a self,
-        state: &'a mut InstanceState,
+        state: &'a mut RealmState,
         realm: Arc<Realm>,
     ) -> Result<Vec<Arc<Realm>>, ModelError> {
         if state.execution.is_some() {
             return Ok(vec![]);
         }
 
-        let component = await!(realm.resolver_registry.resolve(&realm.instance.component_url))?;
+        let component = await!(realm.resolver_registry.resolve(&realm.component_url))?;
         state.populate_decl(component.decl, &*realm)?;
         let decl = state.decl.as_ref().expect("ComponentDecl unavailable.");
         if decl.program.is_some() {
@@ -210,11 +204,11 @@ impl Model {
     async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
         let mut child_realms;
         let mut eager_children = vec![];
-        // Create a new scope for the InstanceState lock. To avoid deadlock, we cannot be holding
+        // Create a new scope for the RealmState lock. To avoid deadlock, we cannot be holding
         // that lock while calling out to hooks so release the lock first.
         {
-            let mut state = await!(realm.instance.state.lock());
-            child_realms = await!(self.populate_instance_state(&mut *state, realm.clone()))?;
+            let mut state = await!(realm.state.lock());
+            child_realms = await!(self.populate_realm_state(&mut *state, realm.clone()))?;
             for hook in self.hooks.iter() {
                 await!(hook.on_bind_instance(realm.clone(), &*state))?;
             }
@@ -222,7 +216,7 @@ impl Model {
 
         // Return children that need eager starting.
         for child_realm in child_realms.iter() {
-            match child_realm.instance.startup {
+            match child_realm.startup {
                 fsys::StartupMode::Eager => {
                     eager_children.push(child_realm.clone());
                 }

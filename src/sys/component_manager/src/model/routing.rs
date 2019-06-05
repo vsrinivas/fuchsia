@@ -154,7 +154,7 @@ async fn find_capability_source<'a>(
     // Walk offer chain
     'offerloop: loop {
         let current_realm = await!(model.look_up_realm(&s.moniker))?;
-        let realm_state = await!(current_realm.instance.state.lock());
+        let realm_state = await!(current_realm.state.lock());
         // This unwrap is safe because look_up_realm populates this field
         let decl = realm_state.decl.as_ref().expect("missing offer decl");
 
@@ -211,7 +211,7 @@ async fn find_capability_source<'a>(
     // Walk expose chain
     loop {
         let current_realm = await!(model.look_up_realm(&s.moniker))?;
-        let realm_state = await!(current_realm.instance.state.lock());
+        let realm_state = await!(current_realm.state.lock());
         // This unwrap is safe because look_up_realm populates this field
         let decl = realm_state.decl.as_ref().expect("missing expose decl");
 

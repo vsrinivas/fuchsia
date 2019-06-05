@@ -135,7 +135,7 @@ impl Hook for TestHook {
     fn on_bind_instance<'a>(
         &'a self,
         realm: Arc<Realm>,
-        _instance_state: &'a InstanceState,
+        _realm_state: &'a RealmState,
     ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
     }

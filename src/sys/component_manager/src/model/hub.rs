@@ -133,9 +133,9 @@ impl Hub {
     pub async fn on_bind_instance_async<'a>(
         &'a self,
         realm: Arc<model::Realm>,
-        instance_state: &'a model::InstanceState,
+        realm_state: &'a model::RealmState,
     ) -> Result<(), ModelError> {
-        let component_url = realm.instance.component_url.clone();
+        let component_url = realm.component_url.clone();
         let abs_moniker = realm.abs_moniker.clone();
         let mut instances_map = await!(self.instances.lock());
 
@@ -168,7 +168,7 @@ impl Hub {
                 .add_entry("runtime", runtime_controlled)
                 .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "runtime"))?;
 
-            if let Some(execution) = instance_state.execution.as_ref() {
+            if let Some(execution) = realm_state.execution.as_ref() {
                 let exec = Execution {
                     resolved_url: execution.resolved_url.clone(),
                     directory: controller,
@@ -196,7 +196,7 @@ impl Hub {
 
     pub async fn on_resolve_realm_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
         let abs_moniker = &realm.abs_moniker;
-        let component_url = realm.instance.component_url.clone();
+        let component_url = realm.component_url.clone();
         let mut instances_map = await!(self.instances.lock());
 
         if let Some(controlled) =
@@ -219,9 +219,9 @@ impl model::Hook for Hub {
     fn on_bind_instance<'a>(
         &'a self,
         realm: Arc<model::Realm>,
-        instance_state: &'a model::InstanceState,
+        realm_state: &'a model::RealmState,
     ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_bind_instance_async(realm, instance_state))
+        Box::pin(self.on_bind_instance_async(realm, realm_state))
     }
 
     fn on_resolve_realm<'a>(
