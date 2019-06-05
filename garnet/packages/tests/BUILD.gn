@@ -542,7 +542,6 @@ group("netstack") {
     "//garnet/packages/prod:netstack",
     "//src/connectivity/network/netstack:netstack_gotests",
     "//src/connectivity/network/netstack/dhcp:netstack_dhcp_gotests",
-    "//src/connectivity/network/netstack/dhcp:netstack_dhcp_test($host_toolchain)",
     "//src/connectivity/network/netstack/dns:netstack_dns_gotests",
     "//src/connectivity/network/netstack/link/bridge:netstack_link_bridge_test($host_toolchain)",
     "//src/connectivity/network/netstack/routes:netstack_routes_gotests",

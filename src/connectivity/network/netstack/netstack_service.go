@@ -83,7 +83,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		return netstack.NetInterface2{}, fmt.Errorf("stack.GetMainNICAddress(_): %s", err)
 	}
 
-	if mask == "" {
+	if len(mask) == 0 {
 		mask = zeroIpMask
 	}
 

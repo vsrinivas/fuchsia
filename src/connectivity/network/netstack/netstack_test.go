@@ -597,68 +597,31 @@ func TestDHCPAcquired(t *testing.T) {
 	serverAddress[len(serverAddress)-1]++
 	gatewayAddress := serverAddress
 	gatewayAddress[len(gatewayAddress)-1]++
-	const defaultLeaseLength time.Duration = 60 * time.Second
+	const defaultLeaseLength = 60 * time.Second
 
 	tests := []struct {
-		name               string
-		old                tcpip.Address
-		new                tcpip.Address
-		config             dhcp.Config
-		expectedRouteTable []routes.ExtendedRoute
+		name                 string
+		oldAddr, newAddr     tcpip.Address
+		oldSubnet, newSubnet tcpip.Subnet
+		config               dhcp.Config
+		expectedRouteTable   []routes.ExtendedRoute
 	}{
 		{
-			name: "no subnet mask provided",
-			old:  "",
-			new:  testV4Address,
+			name:      "subnet mask provided",
+			oldAddr:   "",
+			newAddr:   testV4Address,
+			oldSubnet: tcpip.Subnet{},
+			newSubnet: func() tcpip.Subnet {
+				subnet, err := tcpip.NewSubnet(util.ApplyMask(testV4Address, util.DefaultMask(testV4Address)), util.DefaultMask(testV4Address))
+				if err != nil {
+					t.Fatal(err)
+				}
+				return subnet
+			}(),
 			config: dhcp.Config{
 				ServerAddress: tcpip.Address(serverAddress),
 				Gateway:       tcpip.Address(serverAddress),
-				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
-				LeaseLength:   defaultLeaseLength,
-			},
-			expectedRouteTable: []routes.ExtendedRoute{
-				{
-					Route: tcpip.Route{
-						Destination: util.Parse("192.168.42.0"),
-						Mask:        tcpip.AddressMask(util.Parse("255.255.255.0")),
-						NIC:         1,
-					},
-					MetricTracksInterface: true,
-					Dynamic:               true,
-				},
-				{
-					Route: tcpip.Route{
-						Destination: util.Parse("0.0.0.0"),
-						Mask:        tcpip.AddressMask(util.Parse("0.0.0.0")),
-						Gateway:     util.Parse("192.168.42.18"),
-						NIC:         1,
-					},
-					Metric:                0,
-					MetricTracksInterface: true,
-					Dynamic:               true,
-					Enabled:               false,
-				},
-				{
-					Route: tcpip.Route{
-						Destination: util.Parse("::"),
-						Mask:        tcpip.AddressMask(util.Parse("::")),
-						NIC:         1,
-					},
-					Metric:                0,
-					MetricTracksInterface: true,
-					Dynamic:               true,
-					Enabled:               false,
-				},
-			},
-		},
-		{
-			name: "subnet mask provided",
-			old:  "",
-			new:  testV4Address,
-			config: dhcp.Config{
-				ServerAddress: tcpip.Address(serverAddress),
-				Gateway:       tcpip.Address(serverAddress),
-				SubnetMask:    tcpip.AddressMask("\xff\xff\xff\x00"),
+				SubnetMask:    util.DefaultMask(testV4Address),
 				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
 				LeaseLength:   defaultLeaseLength,
 			},
@@ -703,7 +666,7 @@ func TestDHCPAcquired(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ifState.dhcpAcquired(test.old, test.new, test.config)
+			ifState.dhcpAcquired(test.oldAddr, test.newAddr, test.oldSubnet, test.newSubnet, test.config)
 			ifState.mu.Lock()
 			hasDynamicAddr := ifState.mu.hasDynamicAddr
 			dnsServers := ifState.mu.dnsServers
@@ -717,9 +680,55 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 
-			got := ifState.ns.GetExtendedRouteTable()
-			if diff := cmp.Diff(got, test.expectedRouteTable); diff != "" {
+			if diff := cmp.Diff(ifState.ns.GetExtendedRouteTable(), test.expectedRouteTable); diff != "" {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
+			}
+
+			ns.mu.Lock()
+			infoMap := ns.mu.stack.NICInfo()
+			subnetMap := ns.mu.stack.NICSubnets()
+			ns.mu.Unlock()
+			if info, ok := infoMap[ifState.nicid]; ok {
+				found := false
+				for _, address := range info.ProtocolAddresses {
+					if address.Protocol == ipv4.ProtocolNumber {
+						switch address.Address {
+						case test.oldAddr:
+							t.Errorf("expired address %s was not removed from NIC addresses %v", test.oldAddr, info.ProtocolAddresses)
+						case test.newAddr:
+							found = true
+						}
+					}
+				}
+
+				if !found {
+					t.Errorf("new address %s was not added to NIC addresses %v", test.newAddr, info.ProtocolAddresses)
+				}
+			} else {
+				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)
+			}
+			if subnets, ok := subnetMap[ifState.nicid]; ok {
+				found := false
+				for _, subnet := range subnets {
+					switch subnet {
+					case test.oldSubnet:
+						t.Errorf("expired subnet %s/%d was not removed from NIC subnets", test.oldSubnet.ID(), test.oldSubnet.Prefix())
+						for _, subnet := range subnets {
+							t.Logf("%s/%d", subnet.ID(), subnet.Prefix())
+						}
+					case test.newSubnet:
+						found = true
+					}
+				}
+
+				if !found {
+					t.Errorf("new subnet %s/%d was not added to NIC subnets", test.newSubnet.ID(), test.newSubnet.Prefix())
+					for _, subnet := range subnets {
+						t.Logf("%s/%d", subnet.ID(), subnet.Prefix())
+					}
+				}
+			} else {
+				t.Errorf("NIC %d not found in %v", ifState.nicid, subnetMap)
 			}
 		})
 	}

@@ -135,8 +135,7 @@ func defaultRoutes(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID) tcpip.Route {
 	return tcpip.Route{
 		Destination: util.ApplyMask(addr, mask),
-		Mask:        tcpip.AddressMask(mask),
-		Gateway:     tcpip.Address(""),
+		Mask:        mask,
 		NIC:         nicid,
 	}
 }
@@ -256,7 +255,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
 	}
 	route := subnetRoute(addr, subnet.Mask(), nic)
-	syslog.Infof("removing static IP %v/%d from NIC %d, deleting subnet route %+v", addr, prefixLen, nic, route)
+	syslog.Infof("removing static IP %s/%d from NIC %d, deleting subnet route %+v", addr, prefixLen, nic, route)
 
 	ns.mu.Lock()
 	if err := func() error {
@@ -273,10 +272,10 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 				if err := ns.mu.stack.RemoveSubnet(nic, subnet); err == tcpip.ErrUnknownNICID {
 					panic(fmt.Sprintf("stack.RemoveSubnet(_): NIC [%d] not found", nic))
 				} else if err != nil {
-					return fmt.Errorf("error removing subnet %+v from NIC ID %d: %s", subnet, nic, err)
+					return fmt.Errorf("error removing subnet %s/%d from NIC ID %d: %s", addr, prefixLen, nic, err)
 				}
 			} else {
-				return fmt.Errorf("no such subnet %+v for NIC ID %d", subnet, nic)
+				return fmt.Errorf("no such subnet %s/%d for NIC ID %d", addr, prefixLen, nic)
 			}
 		}
 
@@ -359,20 +358,55 @@ func (ifs *ifState) updateMetric(metric routes.Metric) {
 	ifs.mu.Unlock()
 }
 
-func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
-	if oldAddr != "" && oldAddr != newAddr {
-		syslog.Infof("NIC %s: DHCP IP %s expired", ifs.mu.name, oldAddr)
+func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, oldSubnet, newSubnet tcpip.Subnet, config dhcp.Config) {
+	ifs.mu.Lock()
+	name := ifs.mu.name
+	ifs.mu.Unlock()
+
+	ifs.ns.mu.Lock()
+	if oldAddr != newAddr {
+		if len(oldAddr) != 0 {
+			if err := ifs.ns.mu.stack.RemoveAddress(ifs.nicid, oldAddr); err != nil {
+				syslog.Infof("NIC %s: failed to remove expired DHCP address %s: %s", name, oldAddr, err)
+			} else {
+				syslog.Infof("NIC %s: removed expired DHCP address %s", name, oldAddr)
+			}
+		}
+		if len(newAddr) != 0 {
+			if err := ifs.ns.mu.stack.AddAddressWithOptions(ifs.nicid, ipv4.ProtocolNumber, newAddr, stack.FirstPrimaryEndpoint); err != nil {
+				syslog.Infof("NIC %s: failed to add DHCP acquired address %s: %s", name, newAddr, err)
+			} else {
+				syslog.Infof("NIC %s: DHCP acquired address %s for %s", name, newAddr, config.LeaseLength)
+			}
+		} else {
+			syslog.Errorf("NIC %s: DHCP could not acquire address", name)
+		}
 	}
-	if config.Error != nil {
-		syslog.Errorf("%v", config.Error)
+	if oldSubnet != newSubnet {
+		if oldSubnet != (tcpip.Subnet{}) {
+			if err := ifs.ns.mu.stack.RemoveSubnet(ifs.nicid, oldSubnet); err != nil {
+				syslog.Infof("NIC %s: failed to remove expired DHCP subnet %s/%d: %s", name, oldSubnet.ID(), oldSubnet.Prefix(), err)
+			} else {
+				syslog.Infof("NIC %s: removed expired DHCP subnet %s/%d", name, oldSubnet.ID(), oldSubnet.Prefix())
+			}
+		}
+		if newSubnet != (tcpip.Subnet{}) {
+			if err := ifs.ns.mu.stack.AddSubnet(ifs.nicid, ipv4.ProtocolNumber, newSubnet); err != nil {
+				syslog.Infof("NIC %s: failed to add DHCP acquired subnet %s/%d: %s", name, newSubnet.ID(), oldSubnet.Prefix(), err)
+			} else {
+				syslog.Infof("NIC %s: DHCP acquired subnet %s/%d for %s", name, newSubnet.ID(), newSubnet.Prefix(), config.LeaseLength)
+			}
+		} else {
+			syslog.Errorf("NIC %s: DHCP could not acquire subnet", name)
+		}
+	}
+	ifs.ns.mu.Unlock()
+
+	if len(newAddr) == 0 || newSubnet == (tcpip.Subnet{}) {
 		return
 	}
-	if newAddr == "" {
-		syslog.Errorf("NIC %s: DHCP could not acquire address", ifs.mu.name)
-		return
-	}
-	syslog.Infof("NIC %s: DHCP acquired IP %s for %s", ifs.mu.name, newAddr, config.LeaseLength)
-	syslog.Infof("NIC %s: Adding DNS servers: %v", ifs.mu.name, config.DNS)
+
+	syslog.Infof("NIC %s: Adding DNS servers: %v", name, config.DNS)
 
 	ifs.mu.Lock()
 	ifs.mu.hasDynamicAddr = true
@@ -381,15 +415,12 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 
 	// Add a default route and a route for the local subnet.
 	rs := defaultRoutes(ifs.nicid, config.Gateway)
-	if config.SubnetMask == "" {
-		config.SubnetMask = util.DefaultMask(newAddr)
-	}
 	rs = append(rs, subnetRoute(newAddr, config.SubnetMask, ifs.nicid))
 	syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
 
 	ifs.ns.mu.Lock()
 	if err := ifs.ns.AddRoutesLocked(rs, metricNotSet, true /* dynamic */); err != nil {
-		syslog.Infof("error adding routes for DHCP address/gateway: %v", err)
+		syslog.Infof("error adding routes for DHCP address/gateway: %s", err)
 	}
 	interfaces := ifs.ns.getNetInterfaces2Locked()
 	ifs.ns.mu.Unlock()

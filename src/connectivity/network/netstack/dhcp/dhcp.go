@@ -16,7 +16,6 @@ import (
 
 // Config is standard DHCP configuration.
 type Config struct {
-	Error         error
 	ServerAddress tcpip.Address     // address of the server
 	SubnetMask    tcpip.AddressMask // client address subnet mask
 	Gateway       tcpip.Address     // client default gateway

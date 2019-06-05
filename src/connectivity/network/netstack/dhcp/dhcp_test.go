@@ -77,42 +77,55 @@ func TestDHCP(t *testing.T) {
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 	c0 := NewClient(s, nicid, clientLinkAddr0, nil)
-	if _, err := c0.Request(context.Background(), ""); err != nil {
+	if _, err := c0.runOnce(context.Background(), ""); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := c0.Address(), clientAddrs[0]; got != want {
-		t.Errorf("c.Addr()=%s, want=%s", got, want)
+	if got, want := c0.addr, clientAddrs[0]; got != want {
+		t.Errorf("c.addr=%s, want=%s", got, want)
 	}
-	if _, err := c0.Request(context.Background(), ""); err != nil {
+	if got, want := c0.subnet.Mask(), serverCfg.SubnetMask; got != want {
+		t.Errorf("c.subnet.Mask()=%s, want=%s", got, want)
+	}
+	if _, err := c0.runOnce(context.Background(), ""); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := c0.Address(), clientAddrs[0]; got != want {
-		t.Errorf("c.Addr()=%s, want=%s", got, want)
+	if got, want := c0.addr, clientAddrs[0]; got != want {
+		t.Errorf("c.addr=%s, want=%s", got, want)
+	}
+	if got, want := c0.subnet.Mask(), serverCfg.SubnetMask; got != want {
+		t.Errorf("c.subnet.Mask()=%s, want=%s", got, want)
 	}
 
 	const clientLinkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
 	c1 := NewClient(s, nicid, clientLinkAddr1, nil)
-	if _, err := c1.Request(context.Background(), ""); err != nil {
+	if _, err := c1.runOnce(context.Background(), ""); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := c1.Address(), clientAddrs[1]; got != want {
-		t.Errorf("c.Addr()=%s, want=%s", got, want)
+	if got, want := c1.addr, clientAddrs[1]; got != want {
+		t.Errorf("c.addr=%s, want=%s", got, want)
+	}
+	if got, want := c0.subnet.Mask(), serverCfg.SubnetMask; got != want {
+		t.Errorf("c.subnet.Mask()=%s, want=%s", got, want)
 	}
 
-	if _, err := c0.Request(context.Background(), ""); err != nil {
+	cfg, err := c0.runOnce(context.Background(), "")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := c0.Address(), clientAddrs[0]; got != want {
-		t.Errorf("c.Addr()=%s, want=%s", got, want)
+	if got, want := c0.addr, clientAddrs[0]; got != want {
+		t.Errorf("c.addr=%s, want=%s", got, want)
+	}
+	if got, want := c0.subnet.Mask(), serverCfg.SubnetMask; got != want {
+		t.Errorf("c.subnet.Mask()=%s, want=%s", got, want)
 	}
 
-	if got, want := c0.Config(), serverCfg; !equalConfig(got, want) {
+	if got, want := cfg, serverCfg; !equalConfig(got, want) {
 		t.Errorf("client config:\n\t%#+v\nwant:\n\t%#+v", got, want)
 	}
 }
 
 func equalConfig(c0, c1 Config) bool {
-	if c0.Error != c1.Error || c0.ServerAddress != c1.ServerAddress || c0.SubnetMask != c1.SubnetMask || c0.Gateway != c1.Gateway || c0.LeaseLength != c1.LeaseLength {
+	if c0.ServerAddress != c1.ServerAddress || c0.SubnetMask != c1.SubnetMask || c0.Gateway != c1.Gateway || c0.LeaseLength != c1.LeaseLength {
 		return false
 	}
 	if len(c0.DNS) != len(c1.DNS) {
@@ -147,10 +160,7 @@ func TestRenew(t *testing.T) {
 	count := 0
 	var curAddr tcpip.Address
 	addrCh := make(chan tcpip.Address)
-	acquiredFunc := func(oldAddr, newAddr tcpip.Address, cfg Config) {
-		if err := cfg.Error; err != nil {
-			t.Fatalf("acquisition %d failed: %v", count, err)
-		}
+	acquiredFunc := func(oldAddr, newAddr tcpip.Address, oldSubnet, newSubnet tcpip.Subnet, cfg Config) {
 		if oldAddr != curAddr {
 			t.Fatalf("aquisition %d: curAddr=%v, oldAddr=%v", count, curAddr, oldAddr)
 		}
@@ -163,6 +173,7 @@ func TestRenew(t *testing.T) {
 	}
 
 	clientCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 	c := NewClient(s, nicid, clientLinkAddr0, acquiredFunc)
 	c.Run(clientCtx)
@@ -184,8 +195,6 @@ func TestRenew(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout waiting for address renewal")
 	}
-
-	cancel()
 }
 
 // Regression test for https://fuchsia.atlassian.net/browse/NET-17
@@ -306,7 +315,7 @@ func TestTwoServers(t *testing.T) {
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 	c := NewClient(s, nicid, clientLinkAddr0, nil)
-	if _, err := c.Request(context.Background(), ""); err != nil {
+	if _, err := c.runOnce(context.Background(), ""); err != nil {
 		t.Fatal(err)
 	}
 }

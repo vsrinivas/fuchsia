@@ -420,7 +420,7 @@ async fn acquire_dhcp() -> Result {
         let () = server_environment.get_launcher(server).context("failed to get launcher")?;
         client
     };
-    let dhcpd = fuchsia_component::client::launch(
+    let _dhcpd = fuchsia_component::client::launch(
         &launcher,
         fuchsia_component::fuchsia_single_component_package_url!("dhcpd").to_string(),
         None,
@@ -495,7 +495,7 @@ async fn acquire_dhcp() -> Result {
                                 if addr == std::net::Ipv4Addr::UNSPECIFIED.octets() {
                                     None
                                 } else {
-                                    Some(interface.addr)
+                                    Some((interface.addr, interface.netmask))
                                 }
                             }
                             fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
@@ -516,10 +516,21 @@ async fn acquire_dhcp() -> Result {
             fuchsia_zircon::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
             || None,
         );
-        let _: fidl_fuchsia_net::IpAddress = await!(address_change)
+        let (addr, netmask) = await!(address_change)
             .ok_or(failure::err_msg("failed to observe DHCP acquisition"))?
             .context("failed to observe DHCP acquisition")?;
+        assert_eq!(
+            addr,
+            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                addr: [192, 168, 0, 2]
+            })
+        );
+        assert_eq!(
+            netmask,
+            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                addr: [255, 255, 255, 0]
+            })
+        );
     }
-    drop(dhcpd);
     Ok(())
 }
