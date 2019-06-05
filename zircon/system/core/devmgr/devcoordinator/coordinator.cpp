@@ -1399,6 +1399,13 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
         // Convert ERR_NEXT to avoid confusing the caller
         status = ZX_ERR_INTERNAL;
     }
+    // TODO(FLK-299): Remove this once the root cause is found.
+    char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
+    zx_status_t topo_status = GetTopologicalPath(dev, path, sizeof(path));
+    if (topo_status == ZX_OK && strstr(path, "misc/ramctl") != nullptr) {
+        printf("[%ld ms] (ramctl) BindDriver: %s to %s\n",
+            zx::clock::get_monotonic().get() / ZX_MSEC(1), drv->name.data(), path);
+    }
     return status;
 }
 

@@ -468,10 +468,18 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc, const uint64_t
                                                         props_count, name, protocol_id, driver_path,
                                                         args, false, std::move(client_remote),
                                                         &device);
+    // TODO(FLK-299): Remove this once the root cause is found.
     if (parent->name() == "misc") {
-        // TODO(FLK-299): Remove this once the root cause is found.
         printf("[%ld ms] (misc) AddDevice: %s\n", zx::clock::get_monotonic().get() / ZX_MSEC(1),
             name.data());
+    } else {
+        char path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
+        zx_status_t topo_status =
+            parent->coordinator->GetTopologicalPath(device, path, sizeof(path));
+        if (topo_status == ZX_OK && strstr(path, "misc/ramctl") != nullptr) {
+            printf("[%ld ms] (ramctl) AddDevice: %s\n",
+                zx::clock::get_monotonic().get() / ZX_MSEC(1), path);
+        }
     }
     uint64_t local_id = device != nullptr ? device->local_id() : 0;
     return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status, local_id);
