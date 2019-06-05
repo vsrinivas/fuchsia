@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/array.h>
-#include <fbl/function.h>
 #include <lib/async-testutils/test_loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
@@ -22,25 +21,25 @@ namespace {
 
 // Initializes |wait| to wait on |event| to call |closure| once |trigger| is
 // signaled.
-void InitWait(async::Wait* wait, fbl::Closure closure, const zx::event& event,
+void InitWait(async::Wait* wait, fit::closure closure, const zx::event& event,
               zx_signals_t trigger) {
     wait->set_handler(
-        [closure = std::move(closure)] (async_dispatcher_t*, async::Wait*,
-                                        zx_status_t,
-                                        const zx_packet_signal_t*) {
-        closure();
-    });
+        [closure = std::move(closure)](async_dispatcher_t*, async::Wait*,
+                                       zx_status_t,
+                                       const zx_packet_signal_t*) {
+            closure();
+        });
     wait->set_object(event.get());
     wait->set_trigger(trigger);
 }
-
 
 bool DefaultDispatcherIsSetAndUnset() {
     BEGIN_TEST;
 
     EXPECT_NULL(async_get_default_dispatcher());
     {
-        async::TestLoop loop;;
+        async::TestLoop loop;
+        ;
         EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher());
     }
     EXPECT_NULL(async_get_default_dispatcher());
@@ -89,7 +88,8 @@ bool TasksAreDispatched() {
 
     async::TestLoop loop;
     bool called = false;
-    async::PostDelayedTask(loop.dispatcher(), [&called] { called = true; }, zx::sec(2));
+    async::PostDelayedTask(
+        loop.dispatcher(), [&called] { called = true; }, zx::sec(2));
 
     // t = 1: nothing should happen.
     loop.RunFor(zx::sec(1));
@@ -119,8 +119,8 @@ bool SameDeadlinesDispatchInPostingOrder() {
         calledA = true;
     });
     async::PostTask(loop.dispatcher(), [&] {
-      EXPECT_TRUE(calledA);
-      calledB = true;
+        EXPECT_TRUE(calledA);
+        calledB = true;
     });
 
     loop.RunUntilIdle();
@@ -163,9 +163,9 @@ bool NestedTasksAreDispatched() {
             loop.dispatcher(),
             [&] {
                 async::PostDelayedTask(
-                      loop.dispatcher(),
-                      [&] { called = true; },
-                      zx::min(25));
+                    loop.dispatcher(),
+                    [&] { called = true; },
+                    zx::min(25));
             },
             zx::min(35));
     });
@@ -190,15 +190,15 @@ bool TimeIsCorrectWhileDispatching() {
             [&] {
                 EXPECT_EQ(10, loop.Now().get());
                 async::PostDelayedTask(
-                      loop.dispatcher(),
-                      [&] {
-                          EXPECT_EQ(15, loop.Now().get());
-                          async::PostTask(loop.dispatcher(), [&] {
-                              EXPECT_EQ(15, loop.Now().get());
-                              called = true;
-                          });
-                      },
-                      zx::nsec(5));
+                    loop.dispatcher(),
+                    [&] {
+                        EXPECT_EQ(15, loop.Now().get());
+                        async::PostTask(loop.dispatcher(), [&] {
+                            EXPECT_EQ(15, loop.Now().get());
+                            called = true;
+                        });
+                    },
+                    zx::nsec(5));
             },
             zx::nsec(10));
     });
@@ -276,7 +276,8 @@ bool WaitsAreDispatched() {
     bool called = false;
 
     ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
-    InitWait(&wait, [&called] { called = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &wait, [&called] { called = true; }, event, ZX_USER_SIGNAL_0);
     ASSERT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
 
     // |wait| has not yet been triggered.
@@ -317,7 +318,8 @@ bool NestedWaitsAreDispatched() {
             InitWait(
                 &waitB,
                 [&] {
-                    InitWait(&waitC, [&] { calledC = true; }, event, ZX_USER_SIGNAL_2);
+                    InitWait(
+                        &waitC, [&] { calledC = true; }, event, ZX_USER_SIGNAL_2);
                     waitC.Begin(loop.dispatcher());
                     calledB = true;
                 },
@@ -374,9 +376,12 @@ bool WaitsAreCanceled() {
 
     ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    InitWait(&waitA, [&calledA] { calledA = true; }, event, ZX_USER_SIGNAL_0);
-    InitWait(&waitB, [&calledB] { calledB = true; }, event, ZX_USER_SIGNAL_0);
-    InitWait(&waitC, [&calledC] { calledC = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitA, [&calledA] { calledA = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitB, [&calledB] { calledB = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitC, [&calledC] { calledC = true; }, event, ZX_USER_SIGNAL_0);
 
     ASSERT_EQ(ZX_OK, waitA.Begin(loop.dispatcher()));
     ASSERT_EQ(ZX_OK, waitB.Begin(loop.dispatcher()));
@@ -409,19 +414,21 @@ bool NestedTasksAndWaitsAreDispatched() {
     InitWait(
         &wait,
         [&] {
-            async::PostDelayedTask(loop.dispatcher(),
-                                   [&] { inner_task_dispatched = true; },
-                                   zx::min(2));
+            async::PostDelayedTask(
+                loop.dispatcher(),
+                [&] { inner_task_dispatched = true; },
+                zx::min(2));
             wait_dispatched = true;
         },
         event,
         ZX_USER_SIGNAL_0);
-    async::PostDelayedTask(loop.dispatcher(),
-                           [&] {
-                               wait.Begin(loop.dispatcher());
-                               wait_begun = true;
-                           },
-                           zx::min(3));
+    async::PostDelayedTask(
+        loop.dispatcher(),
+        [&] {
+            wait.Begin(loop.dispatcher());
+            wait_begun = true;
+        },
+        zx::min(3));
 
     loop.RunFor(zx::min(3));
     EXPECT_TRUE(wait_begun);
@@ -495,9 +502,11 @@ bool TasksAreDispatchedOnManyLoops() {
     async::TaskClosure taskC([&calledC] { calledC = true; });
 
     async::PostTask(loopB->dispatcher(), [&calledB] { calledB = true; });
-    async::PostDelayedTask(loop.dispatcher(), [&called] { called = true; }, zx::sec(1));
+    async::PostDelayedTask(
+        loop.dispatcher(), [&called] { called = true; }, zx::sec(1));
     ASSERT_EQ(ZX_OK, taskC.PostDelayed(loopC->dispatcher(), zx::sec(1)));
-    async::PostDelayedTask(loopA->dispatcher(), [&calledA] { calledA = true; }, zx::sec(2));
+    async::PostDelayedTask(
+        loopA->dispatcher(), [&calledA] { calledA = true; }, zx::sec(2));
 
     loop.RunUntilIdle();
     EXPECT_FALSE(called);
@@ -540,10 +549,14 @@ bool WaitsAreDispatchedOnManyLoops() {
 
     ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    InitWait(&wait, [&called] { called = true; }, event, ZX_USER_SIGNAL_0);
-    InitWait(&waitA, [&calledA] { calledA = true; }, event, ZX_USER_SIGNAL_0);
-    InitWait(&waitB, [&calledB] { calledB = true; }, event, ZX_USER_SIGNAL_0);
-    InitWait(&waitC, [&calledC] { calledC = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &wait, [&called] { called = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitA, [&calledA] { calledA = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitB, [&calledB] { calledB = true; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitC, [&calledC] { calledC = true; }, event, ZX_USER_SIGNAL_0);
 
     ASSERT_EQ(ZX_OK, wait.Begin(loop.dispatcher()));
     ASSERT_EQ(ZX_OK, waitA.Begin(loopA->dispatcher()));
@@ -562,10 +575,9 @@ bool WaitsAreDispatchedOnManyLoops() {
     END_TEST;
 }
 
-
 // Populates |order| with the order in which two tasks and two waits on four
 // loops were dispatched, given a |loop|.
-    bool DetermineDispatchOrder(std::unique_ptr<async::TestLoop> loop, int (*order)[4]) {
+bool DetermineDispatchOrder(std::unique_ptr<async::TestLoop> loop, int (*order)[4]) {
     BEGIN_HELPER;
 
     auto loopA = loop->StartNewLoop();
@@ -578,9 +590,11 @@ bool WaitsAreDispatchedOnManyLoops() {
 
     ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
 
-    InitWait(&wait, [&] { (*order)[0] = ++i; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &wait, [&] { (*order)[0] = ++i; }, event, ZX_USER_SIGNAL_0);
     async::PostTask(loopA->dispatcher(), [&] { (*order)[1] = ++i; });
-    InitWait(&waitB, [&] { (*order)[2] = ++i; }, event, ZX_USER_SIGNAL_0);
+    InitWait(
+        &waitB, [&] { (*order)[2] = ++i; }, event, ZX_USER_SIGNAL_0);
     async::PostTask(loopC->dispatcher(), [&] { (*order)[3] = ++i; });
 
     ASSERT_EQ(ZX_OK, wait.Begin(loop->dispatcher()));
@@ -637,7 +651,6 @@ bool DispatchOrderIsDeterministicFor(uint32_t random_seed) {
 
     END_HELPER;
 }
-
 
 bool DispatchOrderIsDeterministic() {
     BEGIN_TEST;

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_TESTUTILS_TEST_LOOP_H_
+#define LIB_ASYNC_TESTUTILS_TEST_LOOP_H_
+
+#include <memory>
+#include <vector>
 
 #include <lib/async-testutils/test_loop_dispatcher.h>
 
-#include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
 #include <lib/async/dispatcher.h>
 
 namespace async {
@@ -36,7 +38,7 @@ public:
     // Returns a loop interface simulating the starting up of a new message
     // loop. The lifetime of the 'loop' is tied to the returned interface.
     // Each successive calls to this method corresponds to a new loop.
-    fbl::unique_ptr<LoopInterface> StartNewLoop();
+    std::unique_ptr<LoopInterface> StartNewLoop();
 
     // Returns the current fake clock time.
     zx::time Now() const;
@@ -83,10 +85,10 @@ private:
     // Returns the next due task time across |dispatchers_|.
     zx::time GetNextTaskDueTime() const;
 
-    fbl::unique_ptr<TestLoopTimeKeeper> time_keeper_;
+    std::unique_ptr<TestLoopTimeKeeper> time_keeper_;
 
     // Encapsulation of the async_dispatcher_t dispatch methods.
-    fbl::Vector<fbl::unique_ptr<TestLoopDispatcher>> dispatchers_;
+    std::vector<std::unique_ptr<TestLoopDispatcher>> dispatchers_;
 
     // The seed of a pseudo-random number used to determinisitically determine the
     // dispatching order across |dispatchers_|.
@@ -101,3 +103,5 @@ private:
 };
 
 } // namespace async
+
+#endif // LIB_ASYNC_TESTUTILS_TEST_LOOP_H_

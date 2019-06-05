@@ -21,9 +21,6 @@ library("async-testutils") {
     # <lib/async-testutils/dispatcher.h_stub> has #include <lib/async/dispatcher.h>.
     "$zx/system/ulib/async:headers",
 
-    # <lib/async-testutils/test_loop_dispatcher.h> has #include <fbl/macros.h>.
-    "$zx/system/ulib/fbl:headers",
-
     # <lib/async-testutils/dispatcher.h_stub> has #include <lib/zx/time.h>.
     "$zx/system/ulib/zx:headers",
   ]
@@ -31,10 +28,7 @@ library("async-testutils") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
   ]
 }

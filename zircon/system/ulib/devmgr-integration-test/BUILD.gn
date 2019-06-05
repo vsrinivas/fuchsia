@@ -15,13 +15,15 @@ library("devmgr-integration-test") {
   public_deps = [
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
     "$zx/system/ulib/devmgr-launcher:headers",
+
+    # <lib/devmgr-integration-test/fixture.h> has #include <fbl/unique_fd.h>.
+    "$zx/system/ulib/fbl:headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-launcher",
-    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs",
