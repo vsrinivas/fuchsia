@@ -885,11 +885,6 @@ void SessionmgrImpl::GetAccount(
   callback(fidl::Clone(account_));
 }
 
-void SessionmgrImpl::GetAgentProvider(
-    fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) {
-  agent_runner_->Connect(std::move(request));
-}
-
 void SessionmgrImpl::GetComponentContext(
     fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
   session_shell_component_context_impl_->Connect(std::move(request));

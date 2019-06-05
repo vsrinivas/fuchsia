@@ -8,5 +8,6 @@ namespace modular {
 
 AgentRunnerStorage::AgentRunnerStorage() = default;
 AgentRunnerStorage::~AgentRunnerStorage() = default;
+AgentRunnerStorage::NotificationDelegate::~NotificationDelegate() = default;
 
 }  // namespace modular

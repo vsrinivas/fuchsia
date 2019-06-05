@@ -60,7 +60,6 @@ protocol SessionShellContext {
     // The account associated with the currently logged-in user. It's NULL if
     // logged into GUEST mode.
     GetAccount() -> (fuchsia.modular.auth.Account? account);
-    GetAgentProvider(request<AgentProvider> request);
     GetComponentContext(request<ComponentContext> request);
     GetDeviceName() -> (string device_name);
     GetFocusController(request<FocusController> request);

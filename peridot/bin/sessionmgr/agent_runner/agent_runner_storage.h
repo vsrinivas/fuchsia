@@ -57,6 +57,7 @@ class AgentRunnerStorage {
   // and deleted tasks.
   class NotificationDelegate {
    public:
+    virtual ~NotificationDelegate();
     virtual void AddedTask(const std::string& key,
                            TriggerInfo trigger_info) = 0;
     virtual void DeletedTask(const std::string& key) = 0;

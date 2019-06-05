@@ -11,7 +11,6 @@ fidl("fuchsia.modular") {
     "agent/agent.fidl",
     "agent/agent_context.fidl",
     "agent/agent_controller/agent_controller.fidl",
-    "agent/agent_provider.fidl",
     "basemgr/base_shell.fidl",
     "basemgr/user_provider.fidl",
     "clipboard/clipboard.fidl",

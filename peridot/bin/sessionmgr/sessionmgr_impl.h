@@ -119,8 +119,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void GetAccount(
       fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)>
           callback) override;
-  void GetAgentProvider(
-      fidl::InterfaceRequest<fuchsia::modular::AgentProvider> request) override;
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request)
       override;
