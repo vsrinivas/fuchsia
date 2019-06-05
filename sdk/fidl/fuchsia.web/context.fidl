@@ -32,6 +32,12 @@ table CreateContextParams {
     // TODO(WEB-28): Provide an API to inform the caller when the
     // |data_directory| can be safely removed.
     2: fuchsia.io.Directory data_directory;
+
+    /// Optional suffix to append to the UserAgent string, to describe the
+    /// embedder's product & version. See the User-Agent HTTP header
+    /// specification at https://tools.ietf.org/html/rfc7231#section-5.5.3
+    3: string user_agent_product;
+    4: string user_agent_version;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with

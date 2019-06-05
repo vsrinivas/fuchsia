@@ -121,6 +121,8 @@ impl WebdriverFacadeInternal {
             CreateContextParams {
                 service_directory: Some(service_directory),
                 data_directory: None,
+                user_agent_product: None,
+                user_agent_version: None,
             },
             context_server_end,
         )?;
