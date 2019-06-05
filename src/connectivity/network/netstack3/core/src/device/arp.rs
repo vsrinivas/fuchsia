@@ -4,10 +4,12 @@
 
 //! The Address Resolution Protocol (ARP).
 
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::time::Duration;
 
+use log::{debug, error};
 use packet::{BufferMut, InnerSerializer, MtuError, Serializer};
 
 use crate::device::ethernet::EthernetArpDevice;
@@ -15,7 +17,6 @@ use crate::device::DeviceLayerTimerId;
 use crate::ip::Ipv4Addr;
 use crate::wire::arp::{ArpPacket, ArpPacketBuilder, HType, PType};
 use crate::{Context, EventDispatcher, StackState, TimerId, TimerIdInner};
-use log::debug;
 
 /// The type of an ARP operation.
 #[derive(Debug, Eq, PartialEq)]
@@ -200,7 +201,7 @@ pub(crate) fn receive_arp_packet<
     // Gratuitous ARPs, which have the same sender and target address, need to
     // be handled separately since they do not send a response.
     if packet.sender_protocol_address() == packet.target_protocol_address() {
-        table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
+        table.insert_dynamic(packet.sender_protocol_address(), packet.sender_hardware_address());
 
         increment_counter!(ctx, "arp::rx_gratuitous_resolve");
         // Notify device layer:
@@ -258,7 +259,7 @@ pub(crate) fn receive_arp_packet<
     // to update the table, and one to send a response).
 
     if addressed_to_me || table.lookup(packet.sender_protocol_address()).is_some() {
-        table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
+        table.insert_dynamic(packet.sender_protocol_address(), packet.sender_hardware_address());
         // Since we just got the protocol -> hardware address mapping, we can
         // cancel a timeout to resend a request.
         ctx.dispatcher.cancel_timeout(ArpTimerId::new_ipv4_timer_id(
@@ -296,14 +297,20 @@ pub(crate) fn receive_arp_packet<
     }
 }
 
-/// Insert an entry into the ARP table.
-pub(crate) fn insert<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
+/// Insert a static entry into this device's ARP table.
+///
+/// This will cause any conflicting dynamic entry to be removed, and
+/// any future conflicting gratuitous ARPs to be ignored.
+pub(crate) fn insert_static<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
     device_id: u64,
     net: P,
     hw: AD::HardwareAddr,
 ) {
-    AD::get_arp_state(ctx.state_mut(), device_id).table.insert(net, hw);
+    // Cancel any outstanding timers for this entry, if none exists, this will be a noop.
+    // The timer could be a request retry timer or an entry expiration timer (not in this CL).
+    ctx.dispatcher.cancel_timeout(ArpTimerId::new_ipv4_timer_id(device_id, net.addr()));
+    AD::get_arp_state(ctx.state_mut(), device_id).table.insert_static(net, hw);
 }
 
 /// Look up the hardware address for a network protocol address.
@@ -414,13 +421,40 @@ struct ArpTable<H, P: Hash + Eq> {
 
 #[derive(Debug, Eq, PartialEq)] // for testing
 enum ArpValue<H> {
-    Known { hardware_addr: H },
+    // invariant: no timers exist for this entry
+    Static { hardware_addr: H },
+    // invariant: a single entry expiration timer exists for this entry
+    Dynamic { hardware_addr: H },
+    // invariant: a single request retry timer exists for this entry
     Waiting { remaining_tries: usize },
 }
 
 impl<H, P: Hash + Eq> ArpTable<H, P> {
-    fn insert(&mut self, net: P, hw: H) {
-        self.table.insert(net, ArpValue::Known { hardware_addr: hw });
+    fn insert_static(&mut self, net: P, hw: H) {
+        // a static entry overrides everything, so just insert it.
+        self.table.insert(net, ArpValue::Static { hardware_addr: hw });
+    }
+
+    fn insert_dynamic(&mut self, net: P, hw: H) {
+        // a dynamic entry should not override a static one, if that happens, don't do it.
+        // if we want to handle this kind of situation in the future, we can make this
+        // function return a `Result`
+        let new_val = ArpValue::Dynamic { hardware_addr: hw };
+
+        match self.table.entry(net) {
+            Entry::Occupied(ref mut entry) => {
+                let old_val = entry.get_mut();
+                match old_val {
+                    ArpValue::Static { .. } => {
+                        error!("Conflicting ARP entries: please check your manual configuration and hosts in your local network");
+                    }
+                    _ => *old_val = new_val,
+                }
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(new_val);
+            }
+        }
     }
 
     fn remove(&mut self, net: P) {
@@ -443,7 +477,8 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
 
     fn lookup(&self, addr: P) -> Option<&H> {
         match self.table.get(&addr) {
-            Some(ArpValue::Known { hardware_addr }) => Some(hardware_addr),
+            Some(ArpValue::Static { hardware_addr })
+            | Some(ArpValue::Dynamic { hardware_addr }) => Some(hardware_addr),
             _ => None,
         }
     }
@@ -764,7 +799,7 @@ mod tests {
     fn test_arp_table() {
         let mut t: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
-        t.insert(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
+        t.insert_dynamic(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(*t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap(), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
     }
@@ -882,6 +917,119 @@ mod tests {
         assert_eq!(
             *net.context("local").state().test_counters.get("receive_icmp_packet::echo_reply"),
             1
+        );
+    }
+
+    #[test]
+    fn test_arp_table_static_override_dynamic() {
+        let mut table: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
+        let ip = TEST_REMOTE_IPV4;
+        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
+        table.insert_dynamic(ip, mac0);
+        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        table.insert_static(ip, mac1);
+        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+    }
+
+    #[test]
+    fn test_arp_table_static_override_static() {
+        let mut table: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
+        let ip = TEST_REMOTE_IPV4;
+        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
+        table.insert_static(ip, mac0);
+        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        table.insert_static(ip, mac1);
+        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+    }
+
+    #[test]
+    fn test_arp_table_static_override_waiting() {
+        let mut table: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
+        let ip = TEST_REMOTE_IPV4;
+        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
+        table.set_waiting(ip, 4);
+        assert_eq!(table.lookup(ip), None);
+        table.insert_static(ip, mac1);
+        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+    }
+
+    #[test]
+    fn test_arp_table_dynamic_override_waiting() {
+        let mut table: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
+        let ip = TEST_REMOTE_IPV4;
+        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
+        table.set_waiting(ip, 4);
+        assert_eq!(table.lookup(ip), None);
+        table.insert_dynamic(ip, mac1);
+        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+    }
+
+    #[test]
+    fn test_arp_table_dynamic_override_dynamic() {
+        let mut table: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
+        let ip = TEST_REMOTE_IPV4;
+        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
+        table.insert_dynamic(ip, mac0);
+        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        table.insert_dynamic(ip, mac1);
+        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+    }
+
+    #[test]
+    fn test_arp_table_dynamic_should_not_override_static() {
+        let mut table: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
+        let ip = TEST_REMOTE_IPV4;
+        let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
+        table.insert_static(ip, mac0);
+        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        table.insert_dynamic(ip, mac1);
+        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+    }
+
+    #[test]
+    fn test_arp_table_static_cancel_waiting_timer() {
+        let mut stack: StackState<DummyEventDispatcher> = StackState::default();
+        let dev_id = stack.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU).id();
+        let mut ctx = Context::new(stack, DummyEventDispatcher::default());
+        set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+        // we don't have an answer at the time.
+        assert_eq!(
+            lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+                &mut ctx,
+                dev_id,
+                TEST_LOCAL_MAC,
+                TEST_REMOTE_IPV4
+            ),
+            None
+        );
+        // it should be in WAITING state
+        assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
+            .table
+            .get_remaining_tries(TEST_REMOTE_IPV4)
+            .is_some());
+        // the timer that we are interested in this particular test.
+        let related_timer = ArpTimerId::new_ipv4_timer_id(dev_id, TEST_REMOTE_IPV4);
+        // the previous lookup should have set a timer for us.
+        assert_eq!(
+            ctx.dispatcher().timer_events().filter(|(_, t)| { *t == &related_timer }).count(),
+            1
+        );
+        insert_static::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+        // now since we have added a static entry, the timer should have gone.
+        assert_eq!(
+            ctx.dispatcher().timer_events().filter(|(_, t)| { *t == &related_timer }).count(),
+            0
         );
     }
 }

@@ -373,14 +373,17 @@ pub(crate) fn get_mtu<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) 
     get_device_state(ctx.state(), device_id).mtu
 }
 
-/// Insert an entry into this device's ARP table.
-pub(crate) fn insert_arp_table_entry<D: EventDispatcher>(
+/// Insert a static entry into this device's ARP table.
+///
+/// This will cause any conflicting dynamic entry to be removed, and
+/// any future conflicting gratuitous ARPs to be ignored.
+pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device_id: u64,
     addr: Ipv4Addr,
     mac: Mac,
 ) {
-    crate::device::arp::insert::<D, Ipv4Addr, EthernetArpDevice>(ctx, device_id, addr, mac);
+    crate::device::arp::insert_static::<D, Ipv4Addr, EthernetArpDevice>(ctx, device_id, addr, mac);
 }
 
 /// Insert an entry into this device's NDP table.
