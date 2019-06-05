@@ -9,13 +9,14 @@ use failure::Error;
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_modular::{SessionShellMarker, SessionShellRequest, SessionShellRequestStream};
 use fuchsia_async as fasync;
-use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
+use fuchsia_scenic::{Circle, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_syslog::{self as fx_log, fx_log_err, fx_log_info, fx_log_warn};
 use futures::{TryFutureExt, TryStreamExt};
 use std::env;
 
 const BACKGROUND_Z: f32 = 0.0;
 const LABEL_Z: f32 = BACKGROUND_Z - 0.01;
+const INDICATOR_Z: f32 = BACKGROUND_Z - 0.02;
 
 struct SessionShellAppAssistant;
 
@@ -75,6 +76,7 @@ impl SessionShellAppAssistant {
 struct SessionShellViewAssistant {
     background_node: ShapeNode,
     label: Label,
+    indicator_node: ShapeNode,
     bg_color: Color,
     fg_color: Color,
 }
@@ -84,6 +86,7 @@ impl SessionShellViewAssistant {
         Ok(SessionShellViewAssistant {
             background_node: ShapeNode::new(session.clone()),
             label: Label::new(&session, "Hello, world!")?,
+            indicator_node: ShapeNode::new(session.clone()),
             fg_color: Color::from_hash_code("#00FF41")?,
             bg_color: Color::from_hash_code("#0D0208")?,
         })
@@ -95,6 +98,8 @@ impl ViewAssistant for SessionShellViewAssistant {
         set_node_color(context.session, &self.background_node, &Color::from_hash_code("#0D0208")?);
         context.root_node.add_child(&self.background_node);
         context.root_node.add_child(self.label.node());
+        set_node_color(context.session, &self.indicator_node, &Color::from_hash_code("#00FF41")?);
+        context.root_node.add_child(&self.indicator_node);
         Ok(())
     }
 
@@ -117,9 +122,15 @@ impl ViewAssistant for SessionShellViewAssistant {
         // Update and position the label.
         let paint = Paint { fg: self.fg_color, bg: self.bg_color };
         let min_dimension = context.size.width.min(context.size.height);
-        let font_size = (min_dimension / 5.0).ceil().min(64.0) as u32;
-        self.label.update(font_size, &paint)?;
-        self.label.node().set_translation(center_x, center_y, LABEL_Z);
+        let font_size = (min_dimension / 8.0).ceil().min(32.0);
+        let top_y = font_size;
+        self.label.update(font_size as u32, &paint)?;
+        self.label.node().set_translation(center_x, top_y, LABEL_Z);
+
+        // Update and position the indicator.
+        let circle_radius = context.size.width.min(context.size.height) * 0.25;
+        self.indicator_node.set_shape(&Circle::new(context.session.clone(), circle_radius));
+        self.indicator_node.set_translation(center_x, center_y, INDICATOR_Z);
 
         Ok(())
     }

@@ -27,8 +27,10 @@ use fuchsia_scenic::{
 use fuchsia_syslog::{self as fx_log, fx_log_info, fx_log_warn};
 use futures::prelude::*;
 use rand::Rng;
+use std::clone::Clone;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use structopt::StructOpt;
 
 mod layout;
 mod message;
@@ -43,15 +45,32 @@ use crate::session_context::SessionContext;
 use crate::toggle::Toggle;
 
 const CLOUD_PROVIDER_URI: &str = fuchsia_single_component_package_url!("cloud_provider_in_memory");
-const ERMINE_URI: &str = fuchsia_single_component_package_url!("ermine");
-const MONDRIAN_URI: &str = fuchsia_single_component_package_url!("mondrian");
 
 const BACKGROUND_Z: f32 = 0.0;
 const CIRCLE_Z: f32 = BACKGROUND_Z - 8.0;
 const REPLICA_Z: f32 = BACKGROUND_Z - 9.0;
 const TOGGLE_Z: f32 = BACKGROUND_Z - 9.0;
 
-struct VoilaAppAssistant {}
+#[derive(StructOpt, Clone, Debug)]
+#[structopt(name = "voila")]
+struct Options {
+    #[structopt(long = "count_of_replicas", default_value = "2")]
+    replica_count: i32,
+    #[structopt(
+        long = "session_shell",
+        default_value = "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx"
+    )]
+    session_shell: String,
+    #[structopt(
+        long = "story_shell",
+        default_value = "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"
+    )]
+    story_shell: String,
+}
+
+struct VoilaAppAssistant {
+    options: Options,
+}
 
 impl AppAssistant for VoilaAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
@@ -67,6 +86,7 @@ impl AppAssistant for VoilaAppAssistant {
         let cloud_provider = launch(&launcher, CLOUD_PROVIDER_URI.to_string(), None)
             .context("Failed to launch the cloud provider service")?;
         Ok(Box::new(VoilaViewAssistant {
+            options: self.options.clone(),
             background_node: ShapeNode::new(session.clone()),
             circle_node: ShapeNode::new(session.clone()),
             cloud_provider_app: Arc::new(cloud_provider),
@@ -76,6 +96,7 @@ impl AppAssistant for VoilaAppAssistant {
 }
 
 struct VoilaViewAssistant {
+    options: Options,
     background_node: ShapeNode,
     circle_node: ShapeNode,
     cloud_provider_app: Arc<LaunchedApp>,
@@ -118,14 +139,20 @@ impl VoilaViewAssistant {
         };
 
         // Set up shell configs.
-        let mut session_shell_config = AppConfig { url: ERMINE_URI.to_string(), args: None };
-        let mut story_shell_config = AppConfig { url: MONDRIAN_URI.to_string(), args: None };
+        let mut session_shell_config =
+            AppConfig { url: self.options.session_shell.to_string(), args: None };
+        let mut story_shell_config =
+            AppConfig { url: self.options.story_shell.to_string(), args: None };
 
         // Set up views.
         let mut token_pair = ViewTokenPair::new()?;
 
         let host_node = EntityNode::new(session.clone());
-        let host_view_holder = ViewHolder::new(session.clone(), token_pair.view_holder_token, None);
+        let host_view_holder = ViewHolder::new(
+            session.clone(),
+            token_pair.view_holder_token,
+            Some(String::from("Voila Embedded View")),
+        );
         host_node.attach(&host_view_holder);
         root_node.add_child(&host_node);
 
@@ -185,8 +212,11 @@ impl ViewAssistant for VoilaViewAssistant {
 
         let profile_random_number = rand::thread_rng().gen_range(1, 1000000);
         let profile_id = format!("voila-p{}", profile_random_number.to_string());
-        self.create_replica(&profile_id, context.session, context.root_node)?;
-        self.create_replica(&profile_id, context.session, context.root_node)?;
+
+        for _x in 0..self.options.replica_count {
+            self.create_replica(&profile_id, context.session, context.root_node)?;
+        }
+
         Ok(())
     }
 
@@ -248,6 +278,7 @@ impl ViewAssistant for VoilaViewAssistant {
 fn main() -> Result<(), Error> {
     fx_log::init_with_tags(&["voila"])?;
     fx_log::set_severity(fx_log::levels::INFO);
-    let assistant = VoilaAppAssistant {};
+    let options = Options::from_args();
+    let assistant = VoilaAppAssistant { options };
     App::run(Box::new(assistant))
 }
