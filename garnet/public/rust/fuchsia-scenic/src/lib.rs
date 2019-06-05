@@ -10,13 +10,13 @@ pub use self::view_token_pair::*;
 
 use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
 use fidl_fuchsia_ui_gfx::{
-    CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, ImportSpec, MaterialArgs, MemoryArgs,
-    RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value, ViewArgs2,
-    ViewHolderArgs2, ViewProperties,
+    CircleArgs, ColorRgba, EntityNodeArgs, ImageArgs, MaterialArgs, MemoryArgs, RectangleArgs,
+    ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value, ViewArgs2, ViewHolderArgs2,
+    ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
-use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmo};
+use fuchsia_zircon::{Event, HandleBased, Rights, Status, Vmo};
 use mapped_vmo::Mapping;
 use parking_lot::Mutex;
 use std::ops::Deref;
@@ -113,16 +113,6 @@ impl Resource {
             let mut s = session.lock();
             let id = s.alloc_resource_id();
             s.enqueue(cmd::create_resource(id, resource));
-            id
-        };
-        Resource { session, id }
-    }
-
-    fn import(session: SessionPtr, token: EventPair, spec: ImportSpec) -> Resource {
-        let id = {
-            let mut s = session.lock();
-            let id = s.alloc_resource_id();
-            s.enqueue(cmd::import_resource(id, token, spec));
             id
         };
         Resource { session, id }
@@ -425,22 +415,6 @@ impl Deref for ContainerNode {
     }
 }
 
-pub struct ImportNode(ContainerNode);
-
-impl ImportNode {
-    pub fn new(session: SessionPtr, token: EventPair) -> ImportNode {
-        ImportNode(ContainerNode::new(Resource::import(session, token, ImportSpec::Node)))
-    }
-}
-
-impl Deref for ImportNode {
-    type Target = ContainerNode;
-
-    fn deref(&self) -> &ContainerNode {
-        &self.0
-    }
-}
-
 pub struct EntityNode(ContainerNode);
 
 impl EntityNode {
@@ -455,12 +429,6 @@ impl EntityNode {
 
     pub fn attach(&self, view_holder: &ViewHolder) {
         self.enqueue(cmd::add_child(self.id(), view_holder.id()))
-    }
-
-    pub fn export_as_request(&self) -> EventPair {
-        let (mine, theirs) = EventPair::create().unwrap();
-        self.enqueue(cmd::export_resource(self.id(), mine));
-        theirs
     }
 }
 
