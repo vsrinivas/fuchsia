@@ -30,7 +30,6 @@ dart_test("screen_is_not_black_test") {
         device_type = "Astro"
       }
       tags = [
-        "astro",
         "e2e-terminal",
       ]
     },
