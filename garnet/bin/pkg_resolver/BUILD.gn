@@ -13,7 +13,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_amber_ext",
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/fuchsia_uri",
@@ -41,7 +40,6 @@ rustc_binary("bin") {
   ]
 }
 
-# Ensure the contents of this package stay in sync with //garnet/tests/amberctl:amberctl-tests
 package("pkg_resolver") {
   deps = [
     ":bin",

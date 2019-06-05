@@ -100,11 +100,6 @@ impl RewriteManager {
         }
     }
 
-    /// Finds the first rule, if any, that remaps all of `fuchsia.com`.
-    pub fn amber_source_name(&self) -> Option<String> {
-        self.list().filter_map(|rule| rule.fuchsia_replacement()).next()
-    }
-
     /// Return an iterator through all rewrite rules in the order they should be applied to
     /// incoming `fuchsia-pkg://` URIs.
     pub fn list<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {

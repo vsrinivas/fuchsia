@@ -35,11 +35,6 @@ impl SourceConfigBuilder {
         }
     }
 
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.config.id = id.into();
-        self
-    }
-
     pub fn repo_url(mut self, value: impl Into<String>) -> Self {
         self.config.repo_url = value.into();
         self.config.blob_repo_url = format!("{}/blobs", self.config.repo_url);
@@ -374,7 +369,6 @@ mod tests {
     prop_compose! {
         fn arb_source_builder()(
             id in "[[:alnum:]]+",
-            id2 in prop::option::of("[[:alnum:]]+"),
             repo_url in prop::option::of(arb_url()),
             rate_period in prop::option::of(any::<i32>()),
             auto in prop::option::of(any::<bool>()),
@@ -382,9 +376,6 @@ mod tests {
             enabled in prop::option::of(any::<bool>()),
         ) -> SourceConfigBuilder {
             let mut builder = SourceConfigBuilder::new(id);
-            if let Some(id2) = id2 {
-                builder = builder.id(id2);
-            }
             if let Some(repo_url) = repo_url {
                 builder = builder.repo_url(repo_url);
             }

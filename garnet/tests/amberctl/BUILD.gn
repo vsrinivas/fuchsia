@@ -38,7 +38,6 @@ rustc_library("driver") {
 test_package("amberctl-tests") {
   deps = [
     ":driver",
-    "//garnet/bin/pkg_resolver:bin",
     "//garnet/go/src/grand_unified_binary",
   ]
 
@@ -50,10 +49,6 @@ test_package("amberctl-tests") {
     {
       name = "amberctl"
       source = "grand_unified_binary"
-    },
-    {
-      name = "pkg_resolver"
-      source = "pkg_resolver"
     },
   ]
 
@@ -77,11 +72,6 @@ test_package("amberctl-tests") {
     {
       path = rebase_path("//garnet/go/src/amber/meta/amberctl.cmx")
       dest = "amberctl.cmx"
-    },
-    {
-      path = rebase_path(
-              "//garnet/bin/pkg_resolver/meta/pkg_resolver_integration_test.cmx")
-      dest = "pkg_resolver_integration_test.cmx"
     },
   ]
 

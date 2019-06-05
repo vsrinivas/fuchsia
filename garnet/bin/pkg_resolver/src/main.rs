@@ -19,7 +19,6 @@ use {
     std::sync::Arc,
 };
 
-mod amber;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
@@ -58,7 +57,6 @@ fn main() -> Result<(), Error> {
     let resolver_cb = {
         // Capture a clone of rewrite_manager's Arc so the new client callback has a copy from
         // which to make new clones.
-        let amber = amber.clone();
         let rewrite_manager = rewrite_manager.clone();
         move |stream| {
             fasync::spawn(
@@ -86,7 +84,7 @@ fn main() -> Result<(), Error> {
     };
 
     let rewrite_cb = move |stream| {
-        let mut rewrite_service = RewriteService::new(rewrite_manager.clone(), amber.clone());
+        let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
 
         fasync::spawn(
             async move { await!(rewrite_service.handle_client(stream)) }

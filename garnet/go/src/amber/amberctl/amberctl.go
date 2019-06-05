@@ -49,18 +49,19 @@ Commands
         -n: name of the update source (optional, with URL)
         -f: file path or url to a source config file
         -h: SHA256 hash of source config file (optional, with URL)
-        -x: [Obsolete] do not disable other active sources (if the provided source is enabled)
+        -x: do not disable other active sources (if the provided source is enabled)
 
-    rm_src        - remove a source, if it exists, disabling all remaining sources
+    rm_src        - remove a source, if it exists
         -n: name of the update source
 
     list_srcs     - list the set of sources we can use
 
     enable_src
         -n: name of the update source
-        -x: [Obsolete] do not disable other active sources
+        -x: do not disable other active sources
 
-    disable_src   - disables all sources
+    disable_src
+        -n: name of the update source
 
     system_update - check for, download, and apply any available system update
 
@@ -77,7 +78,7 @@ var (
 	version      = fs.String("v", "", "Version of a package")
 	blobID       = fs.String("i", "", "Content ID of the blob")
 	merkle       = fs.String("m", "", "Merkle root of the desired update.")
-	nonExclusive = fs.Bool("x", false, "[Obsolete] When adding or enabling a source, do not disable other sources.")
+	nonExclusive = fs.Bool("x", false, "When adding or enabling a source, do not disable other sources.")
 )
 
 type ErrGetFile string
@@ -202,14 +203,14 @@ func sanitizeId(id string) string {
 }
 
 func repoUrlForId(id string) string {
-	return fmt.Sprintf("fuchsia-pkg://%s", id)
+	return fmt.Sprintf("fuchsia-pkg://%s", sanitizeId(id))
 }
 
 func rewriteRuleForId(id string) rewrite.Rule {
 	var rule rewrite.Rule
 	rule.SetLiteral(rewrite.LiteralRule{
 		HostMatch:             "fuchsia.com",
-		HostReplacement:       id,
+		HostReplacement:       sanitizeId(id),
 		PathPrefixMatch:       "/",
 		PathPrefixReplacement: "/",
 	})
@@ -351,8 +352,6 @@ func addSource(services Services) error {
 
 	if *name != "" {
 		cfg.Id = *name
-	} else {
-		cfg.Id = sanitizeId(cfg.Id)
 	}
 
 	// Update the host segment of the URL with the original if it appears to have
@@ -380,6 +379,12 @@ func addSource(services Services) error {
 	}
 	if !added {
 		return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
+	}
+
+	if isSourceConfigEnabled(&cfg) && !*nonExclusive {
+		if err := disableAllSources(services.amber, cfg.Id); err != nil {
+			return err
+		}
 	}
 
 	repoCfg := upgradeSourceConfig(cfg)
@@ -484,11 +489,45 @@ func listSources(a *amber.ControlInterface) error {
 	return nil
 }
 
+func setSourceEnablement(a *amber.ControlInterface, id string, enabled bool) error {
+	status, err := a.SetSrcEnabled(id, enabled)
+	if err != nil {
+		return fmt.Errorf("call failure attempting to change source status: %s", err)
+	}
+	if status != amber.StatusOk {
+		return fmt.Errorf("failure changing source status")
+	}
+
+	return nil
+}
+
 func isSourceConfigEnabled(cfg *amber.SourceConfig) bool {
 	if cfg.StatusConfig == nil {
 		return true
 	}
 	return cfg.StatusConfig.Enabled
+}
+
+func disableAllSources(a *amber.ControlInterface, except string) error {
+	errorIds := []string{}
+	cfgs, err := a.ListSrcs()
+	if err != nil {
+		return err
+	}
+	for _, cfg := range cfgs {
+		if cfg.Id != except && isSourceConfigEnabled(&cfg) {
+			if err := setSourceEnablement(a, cfg.Id, false); err != nil {
+				log.Printf("error disabling %q: %s", cfg.Id, err)
+				errorIds = append(errorIds, fmt.Sprintf("%q", cfg.Id))
+			} else {
+				fmt.Printf("Source %q disabled\n", cfg.Id)
+			}
+		}
+	}
+	if len(errorIds) > 0 {
+		return fmt.Errorf("could not disable %s", strings.Join(errorIds, ", "))
+	}
+	return nil
 }
 
 func do(services Services) int {
@@ -551,18 +590,34 @@ func do(services Services) int {
 			log.Printf("Error enabling source: no source id provided")
 			return 1
 		}
-		err := replaceDynamicRewriteRules(services.rewriteEngine, rewriteRuleForId(*name))
+		err := setSourceEnablement(services.amber, *name, true)
+		if err != nil {
+			log.Printf("Error enabling source: %s", err)
+			return 1
+		}
+		err = replaceDynamicRewriteRules(services.rewriteEngine, rewriteRuleForId(*name))
 		if err != nil {
 			log.Printf("Error configuring rewrite rules: %s", err)
 			return 1
 		}
 		fmt.Printf("Source %q enabled\n", *name)
-	case "disable_src":
-		if *name != "" {
-			log.Printf("\"name\" parameter is now ignored: disabling all sources.\n"+
-				"To enable a specific source, use 'amberctl enable_src -n %q'", *name)
+		if !*nonExclusive {
+			if err := disableAllSources(services.amber, *name); err != nil {
+				log.Printf("Error disabling sources: %s", err)
+				return 1
+			}
 		}
-		err := removeAllDynamicRewriteRules(services.rewriteEngine)
+	case "disable_src":
+		if *name == "" {
+			log.Printf("Error disabling source: no source id provided")
+			return 1
+		}
+		err := setSourceEnablement(services.amber, *name, false)
+		if err != nil {
+			log.Printf("Error disabling source: %s", err)
+			return 1
+		}
+		err = removeAllDynamicRewriteRules(services.rewriteEngine)
 		if err != nil {
 			log.Printf("Error configuring rewrite rules: %s", err)
 			return 1
@@ -622,14 +677,6 @@ func Main() {
 	}
 
 	fs.Parse(os.Args[2:])
-
-	if *name != "" {
-		*name = sanitizeId(*name)
-	}
-
-	if *nonExclusive {
-		fmt.Println(`Warning: -x is no longer supported.`)
-	}
 
 	ctx := context.CreateFromStartupInfo()
 
