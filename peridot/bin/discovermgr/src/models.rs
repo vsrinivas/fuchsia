@@ -34,7 +34,8 @@ pub struct Parameter {
 #[derive(Deserialize, Debug)]
 pub struct ActionDisplayInfo {
     pub display_info: Option<DisplayInfo>,
-    pub parameter_mapping: Option<Vec<ParameterMapping>>,
+    #[serde(default)]
+    pub parameter_mapping: Vec<ParameterMapping>,
 }
 
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq)]
@@ -52,7 +53,7 @@ pub struct ParameterMapping {
 
 #[derive(Deserialize, Debug)]
 pub struct WebFulfillment {
-    url_template: Option<String>,
+    url_template: String,
     #[serde(default)]
     parameter_mapping: Vec<ParameterMapping>,
 }
