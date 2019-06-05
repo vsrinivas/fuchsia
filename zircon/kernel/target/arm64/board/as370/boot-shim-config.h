@@ -76,4 +76,9 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
 
     // add platform ID
     append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
+
+    // Temporary, until we can move this to the build scripts.
+    const char cmdline[] = "netsvc.netboot=true";
+    append_boot_item(bootdata, ZBI_TYPE_CMDLINE, 0, cmdline, sizeof(cmdline));
+
 }
