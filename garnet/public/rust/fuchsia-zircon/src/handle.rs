@@ -9,15 +9,22 @@ use crate::{
     PropertyQuery, PropertyQueryGet, PropertyQuerySet, Rights, Signals, Status, Time, Topic,
     WaitAsyncOpts,
 };
+
+use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::mem::{self, ManuallyDrop};
-use std::ops::Deref;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Koid(sys::zx_koid_t);
+
+impl Koid {
+    pub fn raw_koid(&self) -> sys::zx_koid_t {
+        self.0
+    }
+}
 
 /// An object representing a Zircon
 /// [handle](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/handles.md).
@@ -160,16 +167,6 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
         };
         ok(status)
     }
-
-    pub fn basic_info(&self) -> Result<HandleBasicInfo, Status> {
-        let mut info = HandleBasicInfo::default();
-        object_get_info::<HandleBasicInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
-            .map(|_| info)
-    }
-
-    pub fn get_koid(&self) -> Result<Koid, Status> {
-        self.basic_info().map(|info| Koid(info.koid))
-    }
 }
 
 /// A trait to get a reference to the underlying handle of an object.
@@ -242,6 +239,23 @@ pub trait AsHandleRef {
         let mut buf = [0u8; sys::ZX_MAX_NAME_LEN];
         buf[..bytes.len()].copy_from_slice(bytes);
         object_set_property::<NameProperty>(self.as_handle_ref(), &buf)
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_HANDLE_BASIC topic.
+    fn basic_info(&self) -> Result<HandleBasicInfo, Status> {
+        let mut info = sys::zx_info_handle_basic_t::default();
+        object_get_info::<HandleBasicInfoQuery>(
+            self.as_handle_ref(),
+            std::slice::from_mut(&mut info),
+        )
+        .map(|_| HandleBasicInfo::from(info))
+    }
+
+    /// Returns the koid (kernel object ID) for this handle.
+    fn get_koid(&self) -> Result<Koid, Status> {
+        self.basic_info().map(|info| info.koid)
     }
 }
 
@@ -327,27 +341,101 @@ pub trait Peered: HandleBased {
     }
 }
 
-#[derive(Copy, Clone, Default)]
+/// Zircon object types.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct HandleBasicInfo(sys::zx_info_handle_basic_t);
+pub struct ObjectType(sys::zx_obj_type_t);
 
-impl Deref for HandleBasicInfo {
-    type Target = sys::zx_info_handle_basic_t;
+assoc_values!(ObjectType, [
+    NONE            = sys::ZX_OBJ_TYPE_NONE;
+    PROCESS         = sys::ZX_OBJ_TYPE_PROCESS;
+    THREAD          = sys::ZX_OBJ_TYPE_THREAD;
+    VMO             = sys::ZX_OBJ_TYPE_VMO;
+    CHANNEL         = sys::ZX_OBJ_TYPE_CHANNEL;
+    EVENT           = sys::ZX_OBJ_TYPE_EVENT;
+    PORT            = sys::ZX_OBJ_TYPE_PORT;
+    INTERRUPT       = sys::ZX_OBJ_TYPE_INTERRUPT;
+    PCI_DEVICE      = sys::ZX_OBJ_TYPE_PCI_DEVICE;
+    LOG             = sys::ZX_OBJ_TYPE_LOG;
+    SOCKET          = sys::ZX_OBJ_TYPE_SOCKET;
+    RESOURCE        = sys::ZX_OBJ_TYPE_RESOURCE;
+    EVENTPAIR       = sys::ZX_OBJ_TYPE_EVENTPAIR;
+    JOB             = sys::ZX_OBJ_TYPE_JOB;
+    VMAR            = sys::ZX_OBJ_TYPE_VMAR;
+    FIFO            = sys::ZX_OBJ_TYPE_FIFO;
+    GUEST           = sys::ZX_OBJ_TYPE_GUEST;
+    VCPU            = sys::ZX_OBJ_TYPE_VCPU;
+    TIMER           = sys::ZX_OBJ_TYPE_TIMER;
+    IOMMU           = sys::ZX_OBJ_TYPE_IOMMU;
+    BTI             = sys::ZX_OBJ_TYPE_BTI;
+    PROFILE         = sys::ZX_OBJ_TYPE_PROFILE;
+    PMT             = sys::ZX_OBJ_TYPE_PMT;
+    SUSPEND_TOKEN   = sys::ZX_OBJ_TYPE_SUSPEND_TOKEN;
+    PAGER           = sys::ZX_OBJ_TYPE_PAGER;
+    EXCEPTION       = sys::ZX_OBJ_TYPE_EXCEPTION;
+]);
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+bitflags! {
+    /// Properties associated with an object type.
+    ///
+    /// Wrapper type for [sys::zx_obj_prop_t], returned from [Handle::basic_info()].
+    #[repr(C)]
+    pub struct ObjectTypeProperties: sys::zx_obj_props_t {
+        const NONE     = sys::ZX_OBJ_PROP_NONE;
+        const WAITABLE = sys::ZX_OBJ_PROP_WAITABLE;
     }
 }
 
-unsafe impl ObjectQuery for HandleBasicInfo {
+/// Basic information about a handle.
+///
+/// Wrapper for data returned from [Handle::basic_info()].
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct HandleBasicInfo {
+    pub koid: Koid,
+    pub rights: Rights,
+    pub object_type: ObjectType,
+    pub related_koid: Koid,
+    pub props: ObjectTypeProperties,
+}
+
+impl Default for HandleBasicInfo {
+    fn default() -> Self {
+        Self::from(sys::zx_info_handle_basic_t::default())
+    }
+}
+
+impl From<sys::zx_info_handle_basic_t> for HandleBasicInfo {
+    fn from(info: sys::zx_info_handle_basic_t) -> Self {
+        let sys::zx_info_handle_basic_t { koid, rights, type_, related_koid, props } = info;
+
+        // Note lossy conversion of Rights and HandleProperty here if either of those types are out
+        // of date or incomplete.
+        HandleBasicInfo {
+            koid: Koid(koid),
+            rights: Rights::from_bits_truncate(rights),
+            object_type: ObjectType(type_),
+            related_koid: Koid(related_koid),
+            props: ObjectTypeProperties::from_bits_truncate(props),
+        }
+    }
+}
+
+// zx_info_handle_basic_t is able to be safely replaced with a byte representation and is a PoD
+// type.
+struct HandleBasicInfoQuery;
+unsafe impl ObjectQuery for HandleBasicInfoQuery {
     const TOPIC: Topic = Topic::HANDLE_BASIC;
-    type InfoTy = HandleBasicInfo;
+    type InfoTy = sys::zx_info_handle_basic_t;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Vmo;
+    // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
+    // fuchsia_zircon::Vmar that we need to use.
+    use fuchsia_zircon::{
+        AsHandleRef, Channel, HandleBased, ObjectType, ObjectTypeProperties, Rights, Status, Vmo,
+    };
 
     #[test]
     fn set_get_name() {
@@ -372,5 +460,39 @@ mod tests {
         let too_long_name =
             CStr::from_bytes_with_nul(b"bad_really_too_too_long_vmo_name\0").unwrap(); // 33 bytes
         assert_eq!(vmo.set_name(too_long_name), Err(Status::INVALID_ARGS));
+    }
+
+    #[test]
+    fn basic_info_channel() {
+        let (side1, side2) = Channel::create().unwrap();
+        let info1 = side1.basic_info().expect("side1 basic_info failed");
+        let info2 = side2.basic_info().expect("side2 basic_info failed");
+
+        assert_eq!(info1.koid, info2.related_koid);
+        assert_eq!(info2.koid, info1.related_koid);
+
+        for info in &[info1, info2] {
+            assert!(info.koid.raw_koid() >= sys::ZX_KOID_FIRST);
+            assert_eq!(info.object_type, ObjectType::CHANNEL);
+            assert!(info.rights.contains(Rights::READ | Rights::WRITE | Rights::WAIT));
+            assert_eq!(info.props, ObjectTypeProperties::WAITABLE);
+        }
+
+        let side1_repl = side1.replace_handle(Rights::READ).expect("side1 replace_handle failed");
+        let info1_repl = side1_repl.basic_info().expect("side1_repl basic_info failed");
+        assert_eq!(info1_repl.koid, info1.koid);
+        assert_eq!(info1_repl.rights, Rights::READ);
+        // Handle not having WAIT right doesn't affect these properties.
+        assert_eq!(info1_repl.props, ObjectTypeProperties::WAITABLE);
+    }
+
+    #[test]
+    fn basic_info_vmar() {
+        // VMARs aren't waitable.
+        let root_vmar = fuchsia_runtime::vmar_root_self();
+        let info = root_vmar.basic_info().expect("vmar basic_info failed");
+        assert_eq!(info.object_type, ObjectType::VMAR);
+        assert!(!info.rights.contains(Rights::WAIT));
+        assert_eq!(info.props, ObjectTypeProperties::NONE);
     }
 }

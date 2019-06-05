@@ -18,24 +18,16 @@ use fuchsia_zircon_sys as sys;
 pub struct Job(Handle);
 impl_handle_based!(Job);
 
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
-pub struct JobInfo {
-    pub return_code: i64,
-    pub exited: bool,
-    pub kill_on_oom: bool,
-    pub debugger_attached: bool,
-}
+sys::zx_info_job_t!(JobInfo);
 
 impl From<sys::zx_info_job_t> for JobInfo {
-    fn from(
-        sys::zx_info_job_t { return_code, exited, kill_on_oom, debugger_attached }: sys::zx_info_job_t,
-    ) -> JobInfo {
+    fn from(info: sys::zx_info_job_t) -> JobInfo {
+        let sys::zx_info_job_t { return_code, exited, kill_on_oom, debugger_attached } = info;
         JobInfo { return_code, exited, kill_on_oom, debugger_attached }
     }
 }
 
-// JobInfo is able to be safely replaced with a byte representation
+// JobInfo is able to be safely replaced with a byte representation and is a PoD type.
 unsafe impl ObjectQuery for JobInfo {
     const TOPIC: Topic = Topic::JOB;
     type InfoTy = JobInfo;

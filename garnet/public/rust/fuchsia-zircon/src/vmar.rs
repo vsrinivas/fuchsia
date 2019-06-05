@@ -19,6 +19,20 @@ use fuchsia_zircon_sys as sys;
 pub struct Vmar(Handle);
 impl_handle_based!(Vmar);
 
+sys::zx_info_vmar_t!(VmarInfo);
+
+impl From<sys::zx_info_vmar_t> for VmarInfo {
+    fn from(sys::zx_info_vmar_t { base, len }: sys::zx_info_vmar_t) -> VmarInfo {
+        VmarInfo { base, len }
+    }
+}
+
+// VmarInfo is able to be safely replaced with a byte representation and is a PoD type.
+unsafe impl ObjectQuery for VmarInfo {
+    const TOPIC: Topic = Topic::VMAR;
+    type InfoTy = VmarInfo;
+}
+
 impl Vmar {
     pub fn allocate(
         &self,
@@ -103,18 +117,6 @@ impl Vmar {
     }
 }
 
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
-pub struct VmarInfo {
-    pub base: usize,
-    pub len: usize,
-}
-
-unsafe impl ObjectQuery for VmarInfo {
-    const TOPIC: Topic = Topic::VMAR;
-    type InfoTy = VmarInfo;
-}
-
 // TODO(smklein): Ideally we would have two separate sets of bitflags,
 // and a union of both of them.
 macro_rules! vmar_flags {
@@ -168,26 +170,14 @@ vmar_flags! {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Unowned;
-    use fuchsia_zircon_sys as sys;
-
-    extern "C" {
-        pub fn zx_vmar_root_self() -> sys::zx_handle_t;
-    }
-
-    // Can't depend on fuchsia-runtime here so its vmar_root_self function is duplicated.
-    fn vmar_root_self() -> Unowned<'static, Vmar> {
-        unsafe {
-            let handle = zx_vmar_root_self();
-            Unowned::from_raw_handle(handle)
-        }
-    }
+    // The unit tests are built with a different crate name, but fuchsia_runtime returns a "real"
+    // fuchsia_zircon::Vmar that we need to use.
+    use fuchsia_zircon::{Status, VmarFlags};
 
     #[test]
     fn allocate_and_info() -> Result<(), Status> {
         let size = usize::pow(2, 20); // 1MiB
-        let root_vmar = vmar_root_self();
+        let root_vmar = fuchsia_runtime::vmar_root_self();
         let (vmar, base) = root_vmar.allocate(0, size, VmarFlags::empty())?;
 
         let info = vmar.info()?;
@@ -198,7 +188,7 @@ mod tests {
 
     #[test]
     fn root_vmar_info() -> Result<(), Status> {
-        let root_vmar = vmar_root_self();
+        let root_vmar = fuchsia_runtime::vmar_root_self();
         let info = root_vmar.info()?;
         assert!(info.base > 0);
         assert!(info.len > 0);

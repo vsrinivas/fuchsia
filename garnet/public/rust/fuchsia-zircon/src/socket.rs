@@ -86,9 +86,11 @@ impl From<sys::zx_info_socket_t> for SocketInfo {
     }
 }
 
-unsafe impl ObjectQuery for SocketInfo {
+// zx_info_socket_t is able to be safely replaced with a byte representation and is a PoD type.
+struct SocketInfoQuery;
+unsafe impl ObjectQuery for SocketInfoQuery {
     const TOPIC: Topic = Topic::SOCKET;
-    type InfoTy = SocketInfo;
+    type InfoTy = sys::zx_info_socket_t;
 }
 
 impl Socket {
@@ -182,10 +184,13 @@ impl Socket {
         Ok(self.info()?.rx_buf_available)
     }
 
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_SOCKET topic.
     pub fn info(&self) -> Result<SocketInfo, Status> {
-        let mut info = SocketInfo::default();
-        object_get_info::<SocketInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
-            .map(|_| info)
+        let mut info = sys::zx_info_socket_t::default();
+        object_get_info::<SocketInfoQuery>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| SocketInfo::from(info))
     }
 }
 

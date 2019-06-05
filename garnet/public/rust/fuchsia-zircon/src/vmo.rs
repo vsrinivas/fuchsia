@@ -294,12 +294,10 @@ mod tests {
         let vmo = Vmo::create(16).unwrap();
 
         let info = vmo.as_handle_ref().basic_info().unwrap();
-        let rights = Rights::from_bits(info.rights).unwrap();
-        assert!(!rights.contains(Rights::EXECUTE));
+        assert!(!info.rights.contains(Rights::EXECUTE));
 
         let exec_vmo = vmo.replace_as_executable().unwrap();
         let info = exec_vmo.as_handle_ref().basic_info().unwrap();
-        let rights = Rights::from_bits(info.rights).unwrap();
-        assert!(rights.contains(Rights::EXECUTE));
+        assert!(info.rights.contains(Rights::EXECUTE));
     }
 }

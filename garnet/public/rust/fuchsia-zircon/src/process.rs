@@ -18,24 +18,16 @@ use fuchsia_zircon_sys as sys;
 pub struct Process(Handle);
 impl_handle_based!(Process);
 
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
-pub struct ProcessInfo {
-    pub return_code: i64,
-    pub started: bool,
-    pub exited: bool,
-    pub debugger_attached: bool,
-}
+sys::zx_info_process_t!(ProcessInfo);
 
 impl From<sys::zx_info_process_t> for ProcessInfo {
-    fn from(
-        sys::zx_info_process_t { return_code, started, exited, debugger_attached }: sys::zx_info_process_t,
-    ) -> ProcessInfo {
+    fn from(info: sys::zx_info_process_t) -> ProcessInfo {
+        let sys::zx_info_process_t { return_code, started, exited, debugger_attached } = info;
         ProcessInfo { return_code, started, exited, debugger_attached }
     }
 }
 
-// ProcessInfo is able to be safely replaced with a byte representation
+// ProcessInfo is able to be safely replaced with a byte representation and is a PoD type.
 unsafe impl ObjectQuery for ProcessInfo {
     const TOPIC: Topic = Topic::PROCESS;
     type InfoTy = ProcessInfo;

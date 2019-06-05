@@ -7,12 +7,13 @@
 use fuchsia_zircon_sys as sys;
 use std::ops::Deref;
 
+/// Object property types for use with [object_get_property()] and [object_set_property].
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[repr(transparent)]
-pub struct Property(sys::zx_obj_props_t);
+pub struct Property(u32);
 
 impl Deref for Property {
-    type Target = sys::zx_obj_props_t;
+    type Target = u32;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -21,12 +22,11 @@ impl Deref for Property {
 
 /// A definition for properties about a zircon object.
 ///
-///  # Safety
+/// # Safety
 ///
-/// `PROPERTY` must correspond to a valid `zx_obj_props_t` property and `PropTy`
-/// must be a type that can be safely replaced with the byte representation of
-/// the associated `zx_object_props_t` value. Additionally `PropTy` must be
-/// a type that is safe to drop when uninitialized, i.e. it must be a PoD type.
+/// `PROPERTY` must correspond to a valid property type and `PropTy` must be a type that can be
+/// safely replaced with the byte representation of the associated value. Additionally `PropTy`
+/// must be a type that is safe to drop when uninitialized, i.e. it must be a PoD type.
 pub unsafe trait PropertyQuery {
     /// The raw `Property` value
     const PROPERTY: Property;
@@ -40,8 +40,6 @@ pub unsafe trait PropertyQueryGet: PropertyQuery {}
 pub unsafe trait PropertyQuerySet: PropertyQuery {}
 
 assoc_values!(Property, [
-    NONE =  sys::ZX_OBJ_PROP_NONE;
-    WAITABLE = sys::ZX_OBJ_PROP_WAITABLE;
     NAME = sys::ZX_PROP_NAME;
 
     #[cfg(target_arch = "x86_64")]
