@@ -10,19 +10,23 @@ if (current_toolchain == default_toolchain) {
   # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
   # the first thing that happens at all and it's synchronous so after this
   # point we can read in files written by this gen step.
-  exec_script(
-      "//buildtools/gn",
-      [
-        "gen",
-        "-q",
-        "--root=" + rebase_path("//zircon", root_build_dir),
-        "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
-            "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
-            "# zircon_args = { ... } to replace the defaults above.$0x0a" +
-            "forward_variables_from($zircon_args, \"*\")",
-        "--export-compile-commands=default",
-        rebase_path(zircon_root_build_dir, root_build_dir),
-      ])
+  gn_cmd = [
+    "gen",
+    "-q",
+    "--root=" + rebase_path("//zircon", root_build_dir),
+    "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
+        "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
+        "# zircon_args = { ... } to replace the defaults above.$0x0a" +
+        "forward_variables_from($zircon_args, \"*\")",
+    "--export-compile-commands=default",
+    rebase_path(zircon_root_build_dir, root_build_dir),
+  ]
+
+  if (zircon_tracelog != "") {
+    gn_cmd += [ "--tracelog=" + rebase_path(zircon_tracelog, root_build_dir) ]
+  }
+
+  exec_script("//buildtools/gn", gn_cmd)
 
   exec_script("//build/zircon/populate_zircon_public.py",
               [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],

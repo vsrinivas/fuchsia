@@ -31,6 +31,10 @@ declare_args() {
   # kernel or netsvc builds.
   zircon_enable_kernel_debugging_features = false
   zircon_enable_netsvc_debugging_features = false
+
+  # Where to emit a tracelog from Zircon's GN run. No trace will be produced if
+  # given the empty string. Path can be source-absolute or system-absolute.
+  zircon_tracelog = ""
 }
 
 declare_args() {
