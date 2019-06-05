@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("rust_backtrace") {
+  with_unit_tests = true
+  edition = "2018"
+  testonly = true
+
+  deps = [
+    "//third_party/rust_crates:bitflags",
+  ]
+}
+
+package("rust_backtrace_tests") {
+  testonly = true
+
+  deps = [
+    ":rust_backtrace",
+  ]
+
+  tests = [
+    {
+      name = "rust_backtrace_lib_test"
+      envioronments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    ":rust_backtrace_tests",
+  ]
+}

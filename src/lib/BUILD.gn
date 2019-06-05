@@ -27,6 +27,7 @@ group("tests") {
     "containers/cpp:tests",
     "fidl_table_validation:tests",
     "isolated_devmgr:tests",
+    "rust_backtrace:tests",
     "ui:tests",
   ]
 }
