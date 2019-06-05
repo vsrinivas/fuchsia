@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//garnet/bin/wayland/protocol.gni")
 
 rustc_library("lib") {
@@ -26,9 +27,8 @@ if (host_toolchain == current_toolchain) {
   }
 }
 
-rustc_library("wayland_scanner_front_end_test") {
+rustc_test("wayland_scanner_front_end_test") {
   edition = "2018"
-  with_unit_tests = true
   deps = [
     ":lib",
   ]
@@ -39,9 +39,8 @@ wayland_protocol("test_protocol") {
   protocol = "tests/test_protocol.xml"
 }
 
-rustc_library("wayland_scanner_back_end_test") {
+rustc_test("wayland_scanner_back_end_test") {
   edition = "2018"
-  with_unit_tests = true
   deps = [
     ":lib",
     ":test_protocol",
@@ -53,6 +52,7 @@ rustc_library("wayland_scanner_back_end_test") {
 }
 
 group("tests") {
+  testonly = true
   public_deps = [
     ":wayland_scanner_back_end_test",
     ":wayland_scanner_front_end_test",

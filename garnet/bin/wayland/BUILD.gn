@@ -21,11 +21,11 @@ test_package("wayland_tests") {
   ]
   tests = [
     {
-      name = "wayland_scanner_front_end_test_lib_test"
+      name = "wayland_scanner_front_end_test"
       environments = basic_envs
     },
     {
-      name = "wayland_scanner_back_end_test_lib_test"
+      name = "wayland_scanner_back_end_test"
       environments = basic_envs
     },
     {

@@ -161,7 +161,7 @@ template("rustc_third_party_artifact") {
 
 # Defines a Rust artifact to be built directly with rustc (rather than using cargo)
 #
-# Only for internal use, supporting rustc_library and rustc_binary.
+# Only for internal use, supporting rustc_{binary,library,macro,staticlib,test}.
 #
 # The arguments are the same as for rustc_library and rustc_binary, with the exception
 # of `type`, which must be one of bin/lib/staticlib/proc-macro. This is used to determine
@@ -256,11 +256,26 @@ template("rustc_artifact") {
   output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
 
   build_target_name = "${target_name}_build"
-  group_deps += [ ":${build_target_name}" ]
+  only_unit_tests = defined(invoker.only_unit_tests) && invoker.only_unit_tests
+  if (only_unit_tests) {
+    not_needed([
+                 "output_filename",
+                 "output_file",
+                 "output_depfile",
+                 "build_target_name",
+               ])
+  } else {
+    group_deps += [ ":${build_target_name}" ]
+  }
 
-  with_unit_tests = defined(invoker.with_unit_tests) && invoker.with_unit_tests
+  with_unit_tests = only_unit_tests || (defined(invoker.with_unit_tests) &&
+                                        invoker.with_unit_tests)
   if (with_unit_tests) {
-    test_filename = "${crate_name}_${invoker.type}_test"
+    if (only_unit_tests) {
+      test_filename = crate_name
+    } else {
+      test_filename = "${crate_name}_${invoker.type}_test"
+    }
     test_output_file = "${root_out_dir}/exe.unstripped/${test_filename}"
     test_depfile = "${test_output_file}.d"
 
@@ -321,19 +336,21 @@ template("rustc_artifact") {
   cargo_toml_dir = "$target_gen_dir/$target_name"
 
   # Collect the lib_dirs we should be getting from //zircon/public/lib deps.
-  zircon_lib_dirs_file = "$target_gen_dir/${build_target_name}_zircon_libs"
+  zircon_lib_dirs_file = "$target_gen_dir/${target_name}_build_zircon_libs"
   extra_args = [
     "--lib-dir-file",
     rebase_path(zircon_lib_dirs_file),
   ]
-  extra_deps = [ ":${build_target_name}_zircon_libs" ]
+  extra_deps = [ ":${target_name}_build_zircon_libs" ]
   extra_inputs = [ zircon_lib_dirs_file ]
-  generated_file("${build_target_name}_zircon_libs") {
+  generated_file("${target_name}_build_zircon_libs") {
     forward_variables_from(invoker, [ "testonly" ])
 
     # Clear possibly inherited visibility before setting our own.
     visibility = []
-    visibility = [ ":$build_target_name" ]
+    if (!only_unit_tests) {
+      visibility += [ ":$build_target_name" ]
+    }
     if (with_unit_tests) {
       visibility += [ ":$build_test_target_name" ]
     }
@@ -452,37 +469,39 @@ template("rustc_artifact") {
 
   rustc_target_args += dep_info_paths
 
-  action(build_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+  if (!only_unit_tests) {
+    action(build_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
 
-    script = rustc_target_script
-    pool = rustc_target_pool
+      script = rustc_target_script
+      pool = rustc_target_pool
 
-    out_info_path = "${target_out_dir}/${target_name}_info.json"
+      out_info_path = "${target_out_dir}/${target_name}_info.json"
 
-    args = rustc_target_args
-    args += [
-      "--cargo-toml-dir",
-      rebase_path(cargo_toml_dir),
-      "--version",
-      version,
-      "--out-info",
-      rebase_path(out_info_path),
-      "--output-file",
-      rebase_path(output_file),
-      "--depfile",
-      rebase_path(output_depfile),
-    ]
+      args = rustc_target_args
+      args += [
+        "--cargo-toml-dir",
+        rebase_path(cargo_toml_dir),
+        "--version",
+        version,
+        "--out-info",
+        rebase_path(out_info_path),
+        "--output-file",
+        rebase_path(output_file),
+        "--depfile",
+        rebase_path(output_depfile),
+      ]
 
-    inputs = rustc_target_inputs
-    outputs = [
-      output_file,
-      out_info_path,
-    ]
+      inputs = rustc_target_inputs
+      outputs = [
+        output_file,
+        out_info_path,
+      ]
 
-    depfile = output_depfile
-    deps = rustc_target_deps
-    public_deps = rustc_target_public_deps
+      depfile = output_depfile
+      deps = rustc_target_deps
+      public_deps = rustc_target_public_deps
+    }
   }
 
   if (with_unit_tests) {
@@ -516,7 +535,7 @@ template("rustc_artifact") {
     }
   }
 
-  if (type == "staticlib") {
+  if (type == "staticlib" && !only_unit_tests) {
     output_path = "${root_out_dir}/${output_filename}"
 
     # Copy staticlibs out of rust_crates/* into the root dir
@@ -539,7 +558,7 @@ template("rustc_artifact") {
     }
   }
 
-  if (type == "bin") {
+  if (type == "bin" && !only_unit_tests) {
     output_path_unstripped = "${root_out_dir}/exe.unstripped/${output_filename}"
     output_path = "${root_out_dir}/${output_filename}"
 

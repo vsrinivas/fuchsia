@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/wayland_scanner_front_end_test"
+    }
+}

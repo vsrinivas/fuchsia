@@ -5,6 +5,7 @@
 import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -20,6 +21,7 @@ group("test") {
 rustc_library("stream_processor_test_lib") {
   name = "stream_processor_test"
   edition = "2018"
+  testonly = true
   with_unit_tests = true
 
   deps = [
@@ -55,6 +57,7 @@ rustc_library("stream_processor_decoder_factory_lib") {
   name = "stream_processor_decoder_factory"
   edition = "2018"
   source_root = "stream_processor_factories/decoders.rs"
+  testonly = true
 
   deps = [
     ":stream_processor_test_lib",
@@ -71,6 +74,7 @@ rustc_library("stream_processor_encoder_factory_lib") {
   name = "stream_processor_encoder_factory"
   edition = "2018"
   source_root = "stream_processor_factories/encoders.rs"
+  testonly = true
 
   deps = [
     ":stream_processor_test_lib",
@@ -86,9 +90,9 @@ rustc_library("stream_processor_encoder_factory_lib") {
 rustc_library("audio_encoder_test_lib") {
   name = "audio_encoder_test"
   edition = "2018"
-  with_unit_tests = true
   source_root = "audio_encoder_test/lib.rs"
   testonly = true
+  with_unit_tests = true
 
   deps = [
     ":stream_processor_encoder_factory_lib",
@@ -117,10 +121,8 @@ test_package("audio_encoder_test") {
   ]
 }
 
-rustc_library("h264_decoder_test_lib") {
-  name = "h264_decoder_test"
+rustc_test("h264_decoder_test_bin") {
   edition = "2018"
-  with_unit_tests = true
   source_root = "h264_decoder_test/lib.rs"
 
   deps = [
@@ -139,12 +141,12 @@ rustc_library("h264_decoder_test_lib") {
 
 test_package("h264_decoder_test") {
   deps = [
-    ":h264_decoder_test_lib",
+    ":h264_decoder_test_bin",
   ]
 
   tests = [
     {
-      name = "h264_decoder_test_lib_test"
+      name = "h264_decoder_test_bin"
       environments = basic_envs
     },
   ]

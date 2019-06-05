@@ -29,7 +29,8 @@ import("//build/rust/rustc_artifact.gni")
 #
 #   with_unit_tests (optional)
 #     Builds unit tests associated with the binary. This will create a
-#     `<name>_bin_test` test file in the output directory.
+#     `<name>_bin_test` test file in the output directory. Equivalent to adding
+#     a `rustc_test` target with that name and the same source_root.
 #
 #   test_environments (optional)
 #     What environments unit tests, if provided, should target. Only used here

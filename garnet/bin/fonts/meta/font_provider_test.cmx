@@ -1,6 +1,6 @@
 {
   "program": {
-    "binary": "test/font_provider_test_lib_test"
+    "binary": "test/font_provider_test"
   },
   "sandbox": {
     "services": [

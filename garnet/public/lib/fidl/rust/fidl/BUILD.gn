@@ -35,7 +35,7 @@ test_package("rust_fidl_tests") {
   deps = [
     ":fidl",
     ":fidl.rust.test.compilation-rustc",
-    "//garnet/public/lib/fidl/rust/fidl_tests",
+    "//garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests",
   ]
   tests = [
     {
@@ -44,7 +44,7 @@ test_package("rust_fidl_tests") {
       environments = basic_envs
     },
     {
-      name = "fidl_tests_lib_test"
+      name = "fidl_external_tests"
       dest = "fidl_external_tests"
       environments = basic_envs
     },

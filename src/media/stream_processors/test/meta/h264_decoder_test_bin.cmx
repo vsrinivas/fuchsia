@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/h264_decoder_test_lib_test"
+        "binary": "test/h264_decoder_test_bin"
     },
     "sandbox": {
         "dev": [

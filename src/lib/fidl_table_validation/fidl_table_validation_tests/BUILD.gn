@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_library("fidl_table_validation_tests_bin") {
-  with_unit_tests = true
+rustc_test("fidl_table_validation_tests_bin") {
   edition = "2018"
   deps = [
     "//src/lib/fidl_table_validation",
@@ -20,7 +19,7 @@ test_package("fidl_table_validation_tests") {
 
   tests = [
     {
-      name = "fidl_table_validation_tests_bin_lib_test"
+      name = "fidl_table_validation_tests_bin"
       dest = "fidl_table_validation_tests"
     },
   ]

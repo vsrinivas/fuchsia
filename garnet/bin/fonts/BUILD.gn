@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -78,9 +79,7 @@ package("fonts") {
 }
 
 # Integration tests without a `main()` function.
-rustc_library("font_provider_test") {
-  testonly = true
-  with_unit_tests = true
+rustc_test("font_provider_test") {
   edition = "2018"
 
   deps = [
@@ -106,7 +105,7 @@ test_package("font_provider_tests") {
 
   tests = [
     {
-      name = "font_provider_test_lib_test"
+      name = "font_provider_test"
       environments = basic_envs
     },
     {

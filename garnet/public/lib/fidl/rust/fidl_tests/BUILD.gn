@@ -2,12 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
-rustc_library("fidl_tests") {
-  with_unit_tests = true
+rustc_test("fidl_external_tests") {
   edition = "2018"
-  testonly = true
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/public/lib/fidl/rust/fidl",

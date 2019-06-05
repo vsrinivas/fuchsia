@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -21,9 +22,8 @@ rustc_library("fuchsia-zircon") {
 # to the main library's without causing circular dependencies. Only the test
 # artifact is used, not the main artifact.
 # TODO: If we add test-only deps to rustc_artifact, this can merge back in.
-rustc_library("fuchsia-zircon-unittest") {
+rustc_test("fuchsia-zircon-unittest") {
   edition = "2018"
-  with_unit_tests = true
   deps = [
     "fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
@@ -61,7 +61,7 @@ test_package("fuchsia-zircon-tests") {
 
   tests = [
     {
-      name = "fuchsia_zircon_unittest_lib_test"
+      name = "fuchsia_zircon_unittest"
       dest = "fuchsia_zircon_tests"
       environments = basic_envs
     },
