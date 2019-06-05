@@ -73,12 +73,27 @@ Enable detailed scheduler traces.
 
 From //kernel/params.gni:39
 
+### driver_unittest_log_flags
+Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
+Refer to zircon/system/public/zircon/syscalls/log.h for levels.
+
+**Current value (from the default):** `"0x7"`
+
+From //system/dev/lib/fake_ddk/BUILD.gn:11
+
 ### enable_acpi_debug
 Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
 From //third_party/lib/acpica/BUILD.gn:9
+
+### enable_driver_unittest_logs
+Enable printing of in driver logs in unittests.
+
+**Current value (from the default):** `false`
+
+From //system/dev/lib/fake_ddk/BUILD.gn:7
 
 ### enable_fair_scheduler
 Disable fair scheduler by default on all architectures.
