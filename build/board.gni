@@ -9,4 +9,9 @@ declare_args() {
   # A list of package labels to include in the 'base' package set. Used by the
   # board definition rather than the product definition.
   board_package_labels = []
+
+  # List of kernel command line this board to bake into the boot image that are
+  # required by this board. See also kernel_cmdline_args in
+  # //build/images/BUILD.gn
+  board_kernel_cmdline_args = []
 }

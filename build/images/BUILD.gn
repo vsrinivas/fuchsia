@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/compiled_action.gni")
 import("//build/config.gni")
 import("//build/config/clang/clang.gni")
@@ -663,7 +664,7 @@ zbi("fuchsia") {
       },
     ]
   }
-  cmdline = kernel_cmdline_args
+  cmdline = kernel_cmdline_args + board_kernel_cmdline_args
   cmdline_inputs = kernel_cmdline_files
   manifest += bootfs_extra
 }
