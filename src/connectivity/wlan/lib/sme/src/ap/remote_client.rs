@@ -419,8 +419,7 @@ mod tests {
 
     fn addr(id: u32) -> MacAddr {
         // impl doesn't matter, just need a unique address for each id for our test
-        use std::mem;
-        let mac_addr: [u8; 4] = unsafe { mem::transmute(id) };
+        let mac_addr: [u8; 4] = id.to_le_bytes();
         [mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], 0, 0]
     }
 
