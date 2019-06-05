@@ -49,7 +49,7 @@ class FakeModule : public modular::testing::FakeComponent,
   static std::vector<std::string> GetSandboxServices();
 
  private:
-  // |FakeComponent|
+  // |modular::testing::FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
   // |IntentHandler|

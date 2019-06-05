@@ -19,11 +19,6 @@ FakeModule::~FakeModule() = default;
 void FakeModule::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->svc()->Connect(component_context_.NewRequest());
   component_context()->svc()->Connect(module_context_.NewRequest());
-  module_context_.set_error_handler([this](zx_status_t err) {
-    if (err != ZX_OK) {
-      ZX_PANIC("Could not connect to ModuleContext service.");
-    }
-  });
 
   component_context()
       ->outgoing()
