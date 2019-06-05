@@ -42,7 +42,6 @@ void SemanticsManagerImpl::RegisterView(
                                      std::move(semantic_tree_request));
 }
 
-
 fuchsia::accessibility::semantics::NodePtr
 SemanticsManagerImpl::GetAccessibilityNode(
     const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id) {

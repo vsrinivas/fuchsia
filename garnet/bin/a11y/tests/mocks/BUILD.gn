@@ -6,6 +6,8 @@ source_set("mocks") {
   testonly = true
 
   sources = [
+    "mock_semantic_action_listener.cc",
+    "mock_semantic_action_listener.h",
     "mock_settings_service.cc",
     "mock_settings_service.h",
     "mock_settings_watcher.cc",
@@ -16,8 +18,9 @@ source_set("mocks") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
