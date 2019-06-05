@@ -38,9 +38,11 @@ fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
 static void oom_lowmem(size_t shortfall_bytes) {
     printf("OOM: oom_lowmem(shortfall_bytes=%zu) called\n", shortfall_bytes);
 
-#if defined(ENABLE_KERNEL_DEBUGGING_FEATURES)
-    // See ZX-3637 for why this is currently disabled outside of the bringup
-    // product configuration.
+    // TODO(ZX-4277), TODO(ZX-2093): Re-enable reboot when journalling for minfs
+    // is rolled out.
+#if 1
+    // See ZX-3637 for the product details on when this path vs. the reboot
+    // should be used.
 
     bool found = false;
     JobDispatcher::ForEachJob([&found](JobDispatcher* job) {
