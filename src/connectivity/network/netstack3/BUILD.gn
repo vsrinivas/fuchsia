@@ -56,15 +56,20 @@ test_package("netstack3_tests") {
   deps = [
     ":bin",
     "core:netstack3-core",
+    "core/specialize-ip-macro/test:lib",
   ]
   tests = [
     {
       name = "netstack3_bin_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
     },
     {
       name = "netstack3_core_lib_test"
-      environments = basic_envs
+      environments = [ qemu_env ]
+    },
+    {
+      name = "specialize_ip_macro_test_lib_test"
+      environments = [ qemu_env ]
     },
   ]
 }

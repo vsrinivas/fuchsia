@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/specialize_ip_macro_test_lib_test"
+    }
+}

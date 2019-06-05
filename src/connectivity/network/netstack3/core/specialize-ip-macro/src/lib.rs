@@ -142,7 +142,7 @@ struct Input {
     trait_fn_decl: FnDecl,
     // The list of type identifiers to provide as arguments to the trait method
     // when calling it from the outer function. Equivalent to the full list of
-    // type parameters minus the target type.
+    // type parameters minus the target type and lifetimes.
     trait_fn_type_params: Vec<Ident>,
     // The type parameter name found while calculating trait_fn_decl
     type_ident: Ident,
@@ -203,6 +203,7 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                 }
 
                 impl<__SpecializeIpDummyTypeParam: crate::ip::#trait_ident> Ext for __SpecializeIpDummyTypeParam {
+                    #![allow(unused_variables)]
                     default fn f #trait_decl {
                         // It's important that we use the constant here to force
                         // evaluation.
@@ -214,12 +215,14 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     // Due to the lack of support for attributes on expressions
                     // (see README.md), users often need to do `return x;`
                     // rather than just `x`, which causes Clippy to complain.
-                    #[allow(clippy::needless_return)]
+                    // Also, some specializations may not use all the arguments
+                    // so we allow unused variables.
+                    #[allow(clippy::needless_return, unused_variables)]
                     fn f #trait_decl #ipv4_block
                 }
 
                 impl Ext for crate::ip::#ipv6_type_ident {
-                    #[allow(clippy::needless_return)]
+                    #[allow(clippy::needless_return, unused_variables)]
                     fn f #trait_decl #ipv6_block
                 }
 
@@ -395,14 +398,21 @@ fn parse_input(input: ItemFn, cfg: &Config) -> Input {
 
     // Get a list of the names of the type parameters that we need to pass when
     // invoking the trait function.
+    //
+    // Note, we do not capture the lifetime parameters as we do not pass them on
+    // to the generated function. This is because rust does not allow us to specify
+    // lifetime arguments explicitly if late bound lifetime parameters are present.
+    // If we wanted to pass lifetimes, we would need to add logic to first detect
+    // whether any late bound lifetime parameters are present. Instead, we simply
+    // do not specify any lifetime for the generated function and let rust infer them.
     let trait_fn_type_params = trait_fn_decl
         .generics
         .params
         .iter()
-        .map(|param| match param {
-            GenericParam::Type(param) => param.ident.clone(),
-            GenericParam::Lifetime(param) => param.lifetime.ident.clone(),
-            GenericParam::Const(param) => param.ident.clone(),
+        .filter_map(|param| match param {
+            GenericParam::Type(param) => Some(param.ident.clone()),
+            GenericParam::Const(param) => Some(param.ident.clone()),
+            GenericParam::Lifetime(_param) => None,
         })
         .collect();
 
