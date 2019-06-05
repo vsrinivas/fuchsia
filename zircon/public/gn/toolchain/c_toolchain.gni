@@ -481,6 +481,9 @@ template("c_toolchain") {
           executable_extension = ""
         }
 
+        # The invoker can override.  See toolchain_runtime_deps().
+        runtime_deps_cflags = []
+
         if (defined(invoker.toolchain_vars)) {
           forward_variables_from(invoker.toolchain_vars, "*")
         }

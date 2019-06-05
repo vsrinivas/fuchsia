@@ -36,43 +36,11 @@ source_set("asan_default_options") {
   }
 }
 
-# This is included in ${toolchain.implicit_deps} for asan variants.  It
-# ensures that the runtime library is visible in the filesystem image.
-if (is_fuchsia) {
-  toolchain_manifest("asan_deps") {
-    # TODO(TC-366): Ideally we'd get JSON from the toolchain that we could
-    # massage directly here into a resource() target or the like.
-    args = [ "lib/libclang_rt.asan.so" ]
-    foreach(soname, libcxxabi_dt_needed) {
-      args += [ "lib/asan/${soname}" ]
-    }
-  }
-} else {
-  group("asan_deps") {
-  }
-}
-
 config("ubsan") {
   compiler_flags = [ "-fsanitize=undefined" ]
   asmflags = compiler_flags
   cflags = compiler_flags
   ldflags = compiler_flags
-}
-
-# This is included in ${toolchain.implicit_deps} for ubsan variants.  It
-# ensures that the runtime library is visible in the filesystem image.
-if (is_fuchsia) {
-  toolchain_manifest("ubsan_deps") {
-    # TODO(TC-366): Ideally we'd get JSON from the toolchain that we could
-    # massage directly here into a resource() target or the like.
-    args = [ "lib/libclang_rt.ubsan_standalone.so" ]
-    foreach(soname, libcxxabi_dt_needed) {
-      args += [ "lib/${soname}" ]
-    }
-  }
-} else {
-  group("ubsan_deps") {
-  }
 }
 
 # NOTE: Every variant that includes any sancov configs must have "sancov"

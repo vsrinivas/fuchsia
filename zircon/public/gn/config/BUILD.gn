@@ -280,6 +280,7 @@ config("opt_level") {
     compiler_flags = [ "-O0" ]
   } else {
     assert(opt_level >= 0)
+
     # TODO(TC-472): opt_level==0 should mean -Og if that ever comes
     # to mean something useful.  Correctly clang -Og is just -O1, which
     # is still not as debugging-friendly as -O0, so don't use it.  It
@@ -583,11 +584,14 @@ config("static-libc++") {
 }
 
 if (is_fuchsia) {
-  toolchain_manifest("shared-libcxx-deps") {
-    args = []
-    foreach(soname, libcxx_dt_needed) {
-      args += [ "lib/${toolchain.libprefix}${soname}" ]
-    }
+  toolchain_runtime_deps("static-libc++-deps") {
+    cflags = toolchain.runtime_deps_cflags
+    ldflags = [ "-static-libstdc++" ]
+  }
+
+  toolchain_runtime_deps("shared-libc++-deps") {
+    cflags = toolchain.runtime_deps_cflags
+    ldflags = []
   }
 }
 

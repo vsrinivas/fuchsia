@@ -31,66 +31,163 @@ if (clang_tool_dir == "" && use_prebuilt_clang) {
   clang_version_string = _prebuilt_cipd_version.instance_id
 }
 
-# TODO(TC-366): Ideally the toolchain itself would emit this info in
-# a readable (JSON) form.
-libcxxabi_dt_needed = [
-  "libc++abi.so.1",
-  "libunwind.so.1",
-]
-libcxx_dt_needed = [ "libc++.so.2" ] + libcxxabi_dt_needed
+_clang_lib_dir = "$clang_tool_dir/../lib"
 
-# Generate a manifest file extracted from the Clang toolchain manifest.
+# Human-readable identifier for the toolchain version.
 #
-# This acts like a manifest_file() target in the dependency graph of
-# another manifest_file() target (or a zbi() or zbi_input() target).
-# Its contents are extracted from the manifest file supplied by the
-# Clang toolchain.
+# clang_version_string is useful for Fuchsia standard prebuilts, since it's
+# the CIPD instance ID that can be looked up to find the compiler build.
+# clang_version_description is something that can lead a human to find the
+# specific toolchain, such as a source repository URL and revision identifier.
 #
-# TODO(TC-366): Ideally the toolchain itself would emit this info in a
-# GN-readable (i.e. JSON) form.  Then this could be a resource() target
-# that extracted the file names at gen time.  Also it could be keyed by
-# things like compiler options (-fsanitize=foo, -stdlib++) to make this
-# more generic and e.g. get rid of libcxx_dt_needed.
+# TODO(mcgrathr): Make this the same repo/revision info from `clang --version`.
+# e.g., clang_version_description = read_file("$_clang_lib_dir/VERSION")
+clang_version_description = ""
+
+# This file is provided by the toolchain to describe the runtime
+# dependencies implied by linking a binary based on --target and other
+# compiler switches.  The file contains a JSON array of objects that map to
+# the following GN schema.  Each entry matches a single compilation mode
+# and yields all the runtime dependencies implied by that mode.
+#
+# Type: list(scope)
+#
+#   target
+#     Required: --target tuple a la ${toolchain.target_tuple}.
+#     Type: string
+#
+#   cflags
+#     Optional: List of compilation flags that select this mode,
+#     e.g. "-fsanitizer=..." and the like.
+#     Type: list(string)
+#     Default: []
+#
+#   ldflags
+#     Optional: Link-time flags that select this mode.
+#     This is either [ "-static-libstdc++" ] or [].
+#     Type: list(string)
+#     Default: []
+#
+#   runtime
+#     Required: List of runtime files needed by binaries in this mode.
+#     Type: list(scope)
+#
+#       soname
+#         Required: `DT_SONAME` string in the ELF shared library.
+#         Type: string
+#
+#       dist
+#         Required: File to load to satisfy $soname `DT_NEEDED` entries.
+#         Type: path relative to JSON file's directory
+#
+#       debug
+#         Optional: Unstripped or separate debug file matching $dist.
+#         Type: path relative to JSON file's directory
+#
+_clang_runtime_file = "$_clang_lib_dir/runtime.json"
+clang_runtime = read_file(_clang_runtime_file, "json")
+
+# Provide deps required by toolchain-provided runtime libraries.
+#
+# Every linking target, such as executable(), shared_library(), or
+# loadable_module(), needs this in deps to represent the link-time and
+# runtime dependencies of support code the compiler links in implicitly.
+# The parameters indicate the compilation mode in terms of the link-time
+# and compile-time flags used.  These must exactly match lists supplied by
+# the toolchain in $clang_runtime to select for things like instrumentation
+# and shared vs static linking of the standard C++ library.
 #
 # Parameters
 #
-#   args
-#     Required: Patterns to match (like sh `case`) in the lhs of the manifest.
+#   cflags, ldflags
+#     Required: Flags to match in the runtimes manifest.
 #     Type: list(string)
 #
-template("toolchain_manifest") {
-  if (defined(toolchain.shlib) && current_toolchain != toolchain.shlib) {
-    not_needed(invoker, [ "args" ])
-    group(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
+template("toolchain_runtime_deps") {
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    # This information comes out the same in the main and the shlib
+    # toolchains.  But we don't want two copies to appear in the metadata
+    # collection, so we always redirect to the shlib toolchain (when there
+    # is one).  Note that multiple toolchains (variants that aren't that
+    # different, e.g. uninstrumented variants) may produce identical
+    # manifest entries because they match the same entries in the
+    # clang_runtime and use the same ${toolchain.libprefix} string.  That
+    # is less than ideal but it does no harm since the tools like zbi that
+    # consume manifests accept redundant entries if they are identical.
+    if (!defined(toolchain.shlib) || current_toolchain == toolchain.shlib) {
+      if (defined(toolchain.shlib) && defined(visibility)) {
+        visibility += [ ":$target_name" ]
+      }
+      match = false
+      foreach(config, clang_runtime) {
+        if (!defined(config.cflags)) {
+          config.cflags = []
+        }
+        if (!defined(config.ldflags)) {
+          config.ldflags = []
+        }
+        if (config.target + [ toolchain.target_tuple ] -
+            [ toolchain.target_tuple ] != config.target &&
+            invoker.cflags == config.cflags &&
+            invoker.ldflags == config.ldflags) {
+          match = config
+        }
+      }
+      assert(match != false,
+             "$_clang_runtime_file has no match for" +
+                 " --target=${toolchain.target_tuple} + $invoker")
+
+      metadata = {
+        binaries = []
+        manifest_lines = []
+        foreach(lib, match.runtime) {
+          # For build_api_module("binaries") in $zx/BUILD.gn.
+          binaries += [
+            {
+              cpu = current_cpu
+              os = current_os
+              environment = toolchain.environment
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              type = "shared_library"
+              dist = rebase_path(lib.dist, root_build_dir, _clang_lib_dir)
+              if (defined(lib.debug)) {
+                debug = rebase_path(lib.debug, root_build_dir, _clang_lib_dir)
+              }
+
+              target_tuple = match.target
+              cflags = match.cflags
+              ldflags = match.ldflags
+
+              if (clang_version_string != "") {
+                toolchain_id = clang_version_string
+              }
+              if (clang_version_description != "") {
+                toolchain_version = clang_version_description
+              }
+            },
+          ]
+
+          # This is the main purpose of the whole target.
+          manifest_lines +=
+              [ "lib/${toolchain.libprefix}${lib.soname}=" +
+                rebase_path(lib.dist, root_build_dir, _clang_lib_dir) ]
+        }
+      }
+    } else {
       public_deps = [
         ":$target_name(${toolchain.shlib})",
       ]
-    }
-  } else {
-    action(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      sources = [
-        # Note: Not ${toolchain.tool_dir} here because this might be GCC.
-        "$clang_tool_dir/../lib/${toolchain.target_tuple}.manifest",
-      ]
-      outputs = [
-        "$target_gen_dir/$target_name.manifest",
-      ]
-      script = "$zx/public/gn/toolchain/toolchain-manifest.sh"
-      args = rebase_path(sources + outputs, root_build_dir) + invoker.args
-      metadata = {
-        # This tells manifest_file() to fold this manifest in.
-        manifest_files = rebase_path(outputs, root_build_dir)
-      }
+      not_needed(invoker,
+                 [
+                   "cflags",
+                   "ldflags",
+                 ])
     }
   }
 }

@@ -156,12 +156,19 @@ standard_environments = [
         ]
         add = [ "$zx/system/core/devmgr:driver_deps" ]
       },
+
+      # The compiler implicitly links to runtime libraries that might turn
+      # into runtime dependencies on the shared libraries.  By default,
+      # that includes the shared standard C++ runtime.  But when that is
+      # linked in statically, other runtimes (e.g. instrumentation) still
+      # implicitly linked in might have runtime dependencies of their own.
+      # So first add the static C++ deps and then, if not actually using
+      # static C++, remove it again and add the shared C++ deps instead.
+      "$zx/public/gn/config:static-libc++-deps",
       {
-        # Unless we're statically linking the C++ standard library, we have
-        # to assume there will be some link-time references that turn into
-        # runtime dependencies on the shared libraries.
         unless_configs = [ "$zx/public/gn/config:static-libc++" ]
-        add = [ "$zx/public/gn/config:shared-libcxx-deps" ]
+        add = [ "$zx/public/gn/config:shared-libc++-deps" ]
+        remove = [ "$zx/public/gn/config:static-libc++-deps" ]
       },
     ]
     shlib = true
@@ -214,7 +221,6 @@ standard_sanitizer_variants = [
         },
       ]
       implicit_deps = [
-        "$zx/public/gn/config/instrumentation:asan_deps",
         {
           types = [
             "executable",
@@ -230,6 +236,13 @@ standard_sanitizer_variants = [
           add = [ "$zx/system/core/devmgr:driver_deps.$name" ]
         },
       ]
+      toolchain_vars = {
+        # This is the key for toolchain_runtime_deps() to find the right
+        # shared library dependencies for the instrumentation.  Note that
+        # the asan runtime includes ubsan but not vice versa, so this set
+        # must be used in preference to ubsan when both are enabled.
+        runtime_deps_cflags = [ "-fsanitize=address" ]
+      }
       tags = [
         "instrumented",
         "useronly",
@@ -240,7 +253,13 @@ standard_sanitizer_variants = [
     variant = {
       name = "ubsan"
       configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
-      implicit_deps = [ "$zx/public/gn/config/instrumentation:ubsan_deps" ]
+      toolchain_vars = {
+        # This is the key for toolchain_runtime_deps() to find the right
+        # shared library dependencies for the instrumentation.  Note that
+        # the asan runtime includes ubsan but not vice versa, so this set
+        # should be ignored and the asan set used instead.
+        runtime_deps_cflags = [ "-fsanitize=undefined" ]
+      }
       tags = [
         "instrumented",
         "useronly",
@@ -251,15 +270,12 @@ standard_sanitizer_variants = [
     variant = {
       name = "asan-ubsan"
       bases = [
-        "asan",
+        # Note ubsan comes first so that asan's runtime_deps_cflags setting
+        # can override it.  Later bases append to configs and
+        # implicit_deps, but each toolchain_vars field just replaces any
+        # value set by the earlier base.
         "ubsan",
-      ]
-      implicit_deps = [
-        {
-          # The asan runtime covers ubsan too, so the standalone ubsan
-          # runtime is not needed.
-          remove = [ "$zx/public/gn/config/instrumentation:ubsan_deps" ]
-        },
+        "asan",
       ]
     }
   },
