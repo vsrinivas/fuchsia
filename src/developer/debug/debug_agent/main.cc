@@ -163,8 +163,6 @@ class SocketServer {
            std::shared_ptr<sys::ServiceDirectory> services);
 
  private:
-  bool AcceptNextConnection();
-
   fxl::UniqueFD server_socket_;
   std::unique_ptr<SocketConnection> connection_;
 
@@ -258,8 +256,10 @@ int main(int argc, const char* argv[]) {
     // MessageLoop.
     {
       debug_agent::SocketServer server;
-      if (!server.Run(message_loop.get(), options.port, services))
+      if (!server.Run(message_loop.get(), options.port, services)) {
+        message_loop->Cleanup();
         return 1;
+      }
     }
     message_loop->Cleanup();
   } else {

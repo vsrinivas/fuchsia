@@ -15,8 +15,8 @@
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
-#include "src/developer/debug/debug_agent/process_watchpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
+#include "src/developer/debug/debug_agent/process_watchpoint.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -31,6 +31,13 @@
 namespace debug_agent {
 
 namespace {
+
+bool IsBlockedOnException(const zx::thread& thread) {
+  zx_info_thread info;
+  return thread.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr,
+                         nullptr) == ZX_OK &&
+         info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION;
+}
 
 // Used to have better context upon reading the debug logs.
 std::string ThreadPreamble(const DebuggedThread* thread) {
@@ -263,22 +270,49 @@ DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
 }
 
 zx::time DebuggedThread::DefaultSuspendDeadline() {
-  return zx::deadline_after(zx::msec(100));
+  // Various events and environments can cause suspensions to take a long time,
+  // so this needs to be a relatively long time. We don't generally expect
+  // error cases that take infinitely long so there isn't much downside of a
+  // long timeout.
+  return zx::deadline_after(zx::sec(1));
 }
 
 DebuggedThread::SuspendResult DebuggedThread::WaitForSuspension(
     zx::time deadline) {
-  // Only exception will return immediatelly.
-  if (suspend_reason_ == SuspendReason::kException)
-    return SuspendResult::kOnException;
+  // This function is complex because a thread in an exception state can't be
+  // suspended (ZX-3772). Delivery of exceptions are queued on the
+  // exception port so our cached state may be stale, and exceptions can also
+  // race with our suspend call.
+  //
+  // To manually stress-test this code, write a one-line infinite loop:
+  //   volatile bool done = false;
+  //   while (!done) {}
+  // and step over it with "next". This will cause an infinite flood of
+  // single-step exceptions as fast as the debugger can process them. Pausing
+  // after doing the "next" will trigger a suspension and is more likely to
+  // race with an exception.
 
-  zx_signals_t observed;
-  zx_status_t status =
-      thread_.wait_one(ZX_THREAD_SUSPENDED, deadline, &observed);
-  FXL_DCHECK(observed & ZX_THREAD_SUSPENDED);
-  if (status != ZX_OK)
-    return SuspendResult::kError;
-  return SuspendResult::kSuspended;
+  // If an exception happens before the suspend does, we'll never get the
+  // suspend signal and will end up waiting for the entire timeout just to be
+  // able to tell the difference between suspended and exception. To avoid
+  // waiting for a long timeout to tell the difference, wait for short timeouts
+  // multiple times.
+  auto poll_time = zx::msec(10);
+  zx_status_t status = ZX_OK;
+  do {
+    // Always check the thread state from the kernel because of queue desribed
+    // above.
+    if (IsBlockedOnException(thread_))
+      return SuspendResult::kOnException;
+
+    zx_signals_t observed;
+    status = thread_.wait_one(ZX_THREAD_SUSPENDED,
+                              zx::deadline_after(poll_time), &observed);
+    if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
+      return SuspendResult::kSuspended;
+
+  } while (status == ZX_ERR_TIMED_OUT && zx::clock::get_monotonic() < deadline);
+  return SuspendResult::kError;
 }
 
 void DebuggedThread::FillThreadRecord(
@@ -524,8 +558,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForHardwareBreakpoint(
 }
 
 DebuggedThread::OnStop DebuggedThread::UpdateForWatchpoint(
-      zx_thread_state_general_regs* regs,
-      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+    zx_thread_state_general_regs* regs,
+    std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
   auto& arch = arch::ArchProvider::Get();
   uint64_t address = arch.InstructionForWatchpointHit(*this);
 

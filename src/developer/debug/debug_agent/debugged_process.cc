@@ -169,7 +169,7 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
-    // 0 thread ID means resume all threads.
+    // 0 thread ID means pause all threads.
     SuspendAll(true);
     FillThreadRecords(&reply->threads);
   }
