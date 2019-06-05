@@ -32,7 +32,6 @@ _sysroot_deps = []
 
 # TODO(BLD-230): sysroot.gni should provide the correct label and path to the Fuchsia sysroot.
 if (is_fuchsia) {
-  import("//build/config/fuchsia/zircon.gni")
   _sysroot_deps = [ "//sdk:zircon_sysroot_export" ]
   _sysroot = rebase_path(
           "$root_out_dir/sdk/exported/zircon_sysroot/arch/$target_cpu/sysroot")

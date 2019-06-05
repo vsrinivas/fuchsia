@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
@@ -12,7 +13,6 @@ import("//build/package.gni")
 import("//build/package/component.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//build/config/fuchsia/zircon.gni")
 
 go_library("metrics_lib") {
   name = "metrics"
@@ -48,9 +48,7 @@ go_library("lib") {
 zircon_extras_manifest("install-disk-image.manifest") {
   visibility = [ ":*" ]
   manifest = "image"
-  patterns = [
-    "bin/install-disk-image",
-  ]
+  patterns = [ "bin/install-disk-image" ]
 }
 
 manifest_outputs = get_target_outputs(":install-disk-image.manifest")

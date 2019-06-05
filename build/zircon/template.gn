@@ -6,7 +6,7 @@
 # This file is hard-linked to various //zircon/public/*/BUILD.gn files.
 # See //zircon/public/README.md for details.
 
-import("//build/config/fuchsia/zircon.gni")
+import("//build/config/fuchsia/zircon_legacy_vars.gni")
 
 dir = get_label_info(".", "name")
 zircon_public = get_label_info("..", "name")

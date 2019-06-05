@@ -68,53 +68,8 @@ declare_args() {
 # $zircon_root_build_dir before running ninja in $root_build_dir.
 zircon_root_build_dir = "${root_build_dir}.zircon"
 
-# The Zircon GN is completely a puppet of this build.  This gen runs that gen.
-if (current_toolchain == default_toolchain) {
-  # First run Zircon's `gn gen`.  By GN evaluation order this is roughly
-  # the first thing that happens at all and it's synchronous so after this
-  # point we can read in files written by this gen step.
-  exec_script(
-      "//buildtools/gn",
-      [
-        "gen",
-        "-q",
-        "--root=" + rebase_path("//zircon", root_build_dir),
-        "--args=# THIS FILE IS CLOBBERED.  DO NOT EDIT!$0x0a" +
-            "# Instead, edit $root_build_dir/args.gn to add$0x0a" +
-            "# zircon_args = { ... } to replace the defaults above.$0x0a" +
-            "forward_variables_from($zircon_args, \"*\")",
-        "--export-compile-commands=default",
-        rebase_path(zircon_root_build_dir, root_build_dir),
-      ])
-
-  exec_script("//build/zircon/populate_zircon_public.py",
-              [ rebase_path("$zircon_root_build_dir/legacy_dirs.json") ],
-              "",
-              [ "$zircon_root_build_dir/legacy_dirs.json" ])
-}
-
 # The top-level `tools` Ninja target in Zircon puts the tool binaries here.
 zircon_tools_dir = "$zircon_root_build_dir/tools"
-
-# The `gn gen` stage of the Zircon GN build writes these files.
-# See //build/zircon/template.gn for how they're used.
-zircon_legacy_targets =
-    read_file("$zircon_root_build_dir/legacy_targets-$target_cpu.json", "json")
-
-# See //zircon/public/sysroot/BUILD.gn and //build/config/fuchsia/BUILD.gn.
-zircon_legacy_sysroot =
-    read_file("$zircon_root_build_dir/legacy_sysroot-$target_cpu.json", "json")
-
-# The `gn gen` stage of the Zircon GN build writes this file.
-# It's a list of {name=... path=... type=...} scopes.
-zircon_images = read_file("$zircon_root_build_dir/legacy_images.json", "json")
-
-foreach(image, zircon_images) {
-  if (image.name == "kernel" && image.type == "zbi" &&
-      image.cpu == target_cpu) {
-    zircon_kernel_zbi = "$zircon_root_build_dir/${image.path}"
-  }
-}
 
 # Template for running a Zircon host tool as part of the build.
 # This is a thin wrapper to define an `action()` target.
@@ -159,55 +114,5 @@ template("zircon_tool_action") {
              clang_prefix,
              rebase_path(_tool, root_build_dir),
            ] + invoker.args
-  }
-}
-
-# Produce a manifest of binaries from the Zircon build.
-#
-# This is meant to be used with a package() target that does:
-#   deps = [ this_target ]
-#   extras = get_target_outputs(this_target)
-#
-# Parameters
-#
-#   manifest
-#     - Required: Which Zircon manifest to draw from.
-#     - Type: "image" or "tests"
-#
-#   patterns
-#     - Required: List of filename patterns to match in the manifest.
-#     These are shell filename patterns that match the whole target path
-#     with no leading slash: "bin/foo" or "bin/*" or "*" all match "bin/foo".
-#     - Type: list(string)
-#
-template("zircon_extras_manifest") {
-  action(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "visibility",
-                             "testonly",
-                           ])
-    foreach(image, zircon_images) {
-      if (image.type == "manifest" &&
-          image.name == "legacy-${invoker.manifest}-$target_cpu") {
-        sources = [
-          "$zircon_root_build_dir/${image.path}",
-        ]
-      }
-    }
-    outputs = [
-      "$target_gen_dir/$target_name.manifest",
-    ]
-    script = "//build/images/manifest.py"
-    args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-    foreach(pattern, invoker.patterns) {
-      args += [ "--include=$pattern" ]
-    }
-    foreach(manifest, sources) {
-      args += [
-        "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
-        "--manifest=" + rebase_path(manifest, root_build_dir),
-      ]
-    }
   }
 }
