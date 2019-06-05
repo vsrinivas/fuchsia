@@ -24,6 +24,7 @@
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
@@ -500,7 +501,8 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                         &is_object_synced, &data));
   RunLoopUntilIdle();
-  EXPECT_FALSE(called);
+  EXPECT_TRUE(called);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
   EXPECT_THAT(mesh.messages_, IsEmpty());
 }
 
@@ -1312,6 +1314,68 @@ TEST_F(PageCommunicatorImplTest, DestructionRemoveDevice) {
   // The destructor of PageCommunicatorImpl sends messages to connected devices.
   // This test succeeds if this destructor completes without throwing an
   // exception.
+}
+
+TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  bool called;
+  ledger::Status status = ledger::Status::NOT_IMPLEMENTED;
+  storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
+  std::unique_ptr<storage::DataSource::DataChunk> data;
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &is_object_synced, &data));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+
+  // A second call for the same object also returns.
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &is_object_synced, &data));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
+}
+
+// When a device disconnects, its pending object requests should be abandonned.
+TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator(&coroutine_service_, &storage,
+                                         &storage, "ledger", "page", &mesh);
+  page_communicator.Start();
+
+  ConnectToDevice(&page_communicator, "device2", "ledger", "page");
+
+  bool called;
+  ledger::Status status;
+  storage::ChangeSource source;
+  storage::IsObjectSynced is_object_synced;
+  std::unique_ptr<storage::DataSource::DataChunk> data;
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &is_object_synced, &data));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+
+  page_communicator.OnDeviceChange("device2",
+                                   p2p_provider::DeviceChangeType::DELETED);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(ledger::Status::INTERNAL_NOT_FOUND, status);
 }
 
 }  // namespace

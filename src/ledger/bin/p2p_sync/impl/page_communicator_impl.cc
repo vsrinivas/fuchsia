@@ -62,9 +62,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
       }
       // All requests have returned and none is valid: return an error.
       for (auto& callback : callbacks_) {
-        callback(ledger::Status::INTERNAL_NOT_FOUND,
-                 storage::ChangeSource::P2P, storage::IsObjectSynced::NO,
-                 nullptr);
+        callback(ledger::Status::INTERNAL_NOT_FOUND, storage::ChangeSource::P2P,
+                 storage::IsObjectSynced::NO, nullptr);
       }
       if (on_empty_) {
         on_empty_();
@@ -85,8 +84,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
       std::unique_ptr<storage::DataSource::DataChunk> chunk =
           storage::DataSource::DataChunk::Create(
               convert::ToString(object->data()->bytes()));
-      callback(ledger::Status::OK, storage::ChangeSource::P2P,
-               is_object_synced, std::move(chunk));
+      callback(ledger::Status::OK, storage::ChangeSource::P2P, is_object_synced,
+               std::move(chunk));
     }
     if (on_empty_) {
       on_empty_();
@@ -189,6 +188,16 @@ void PageCommunicatorImpl::OnDeviceChange(
     const auto& it3 = pending_commit_batches_.find(remote_device);
     if (it3 != pending_commit_batches_.end()) {
       pending_commit_batches_.erase(it3);
+    }
+
+    // Remove pending requests from the device: it disconnected, it is not going
+    // to answer.
+    for (auto it = pending_object_requests_.begin();
+         it != pending_object_requests_.end();) {
+      // |Complete| may delete the request, invalidating the iterator. We
+      // increment and make a copy to be able to continue to iterate.
+      auto request = it++;
+      request->second.Complete(remote_device, nullptr);
     }
     return;
   }
@@ -327,6 +336,12 @@ void PageCommunicatorImpl::GetObject(
                        storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
+  if (interested_devices_.empty()) {
+    callback(ledger::Status::INTERNAL_NOT_FOUND, storage::ChangeSource::P2P,
+             storage::IsObjectSynced::NO, nullptr);
+    return;
+  }
+
   auto [request_holder, is_new_request] = pending_object_requests_.emplace(
       object_identifier, PendingObjectRequestHolder());
   request_holder->second.AddCallback(std::move(callback));

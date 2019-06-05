@@ -426,7 +426,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
   // If |RunLoopUntil| returns, the condition is met, thus the ledgers have
   // converged.
-  RunLoopUntil(std::move(is_sync_and_merge_complete));
+  EXPECT_TRUE(RunLoopUntil(std::move(is_sync_and_merge_complete)));
   int num_changes = 0;
   for (int i = 0; i < num_ledgers_; i++) {
     num_changes += watchers[i]->changes;
