@@ -1,0 +1,16 @@
+{
+    "program": {
+        "args": [
+            "/pkg/test/process_builder_tests"
+        ],
+        "binary": "bin/root_job_test_runner"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

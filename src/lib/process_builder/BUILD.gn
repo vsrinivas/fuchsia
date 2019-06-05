@@ -1,0 +1,112 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("process_builder") {
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:owning_ref",
+    "//third_party/rust_crates:static_assertions",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/public/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
+    "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",
+
+    # Test only deps
+    ":test-util-fidl-rustc",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    ":process_builder_tests",
+  ]
+}
+
+rustc_binary("root_job_test_runner") {
+  testonly = true
+  edition = "2018"
+  source_root = "root_job_test_runner/main.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
+  ]
+}
+
+fidl("test-util-fidl") {
+  # Should be 'testonly = true', but :process_builder's tests need to use this
+  # and test-only deps are not separate
+  name = "test.processbuilder"
+
+  sources = [
+    "test_util.test.fidl",
+  ]
+}
+
+rustc_binary("test_util") {
+  testonly = true
+  name = "process_builder_test_util"
+  edition = "2018"
+  source_root = "test/test_util.rs"
+
+  deps = [
+    ":test-util-fidl-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+test_package("process_builder_tests") {
+  deps = [
+    ":process_builder",
+    ":root_job_test_runner",
+    ":test_util",
+  ]
+
+  binaries = [
+    {
+      name = "root_job_test_runner"
+    },
+    {
+      name = "process_builder_test_util"
+    },
+  ]
+
+  tests = [
+    {
+      name = "process_builder_lib_test"
+      dest = "process_builder_tests"
+      environments = basic_envs
+    },
+  ]
+}
