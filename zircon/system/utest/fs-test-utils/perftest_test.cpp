@@ -178,6 +178,7 @@ bool RunTestCasesPreservesOrder() {
     BEGIN_TEST;
     PerformanceTestOptions p_options = PerformanceTestOptions::UnitTest();
     FixtureOptions f_options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    f_options.isolated_devmgr = true;
     p_options.sample_count = 1;
     fbl::Vector<int> calls;
 
@@ -227,6 +228,7 @@ bool RunTestCasesPreservesOrderWithMultipleSamples() {
     BEGIN_TEST;
     PerformanceTestOptions p_options = PerformanceTestOptions::UnitTest();
     FixtureOptions f_options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    f_options.isolated_devmgr = true;
     p_options.is_unittest = false;
     p_options.sample_count = 10;
     fbl::Vector<int> calls;
@@ -284,6 +286,7 @@ bool RunTestCasesWritesResultsAndStatistics() {
     p_options.print_statistics = true;
 
     FixtureOptions f_options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    f_options.isolated_devmgr = true;
     p_options.sample_count = 1;
 
     auto test_1 = [](perftest::RepeatState* state, Fixture* fixture) {

@@ -16,6 +16,7 @@
 #include <fs-test-utils/fixture.h>
 #include <fuchsia/device/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
@@ -27,6 +28,13 @@
 namespace fs_test_utils {
 
 namespace {
+
+constexpr char kRamdiskCtlPath[] = "misc/ramctl";
+
+constexpr char kDevPath[] = "/dev";
+// Used as path for referencing devices bound to the isolated devmgr
+// in the current test case.
+constexpr char kIsolatedDevPath[] = "/isolated-dev";
 
 // Mount point for local MemFs to be mounted.
 constexpr char kMemFsPath[] = "/memfs";
@@ -43,13 +51,11 @@ constexpr char kFsPartitionName[] = "fs-test-partition";
 // FVM Driver lib
 constexpr char kFvmDriverLibPath[] = "/boot/driver/fvm.so";
 
-constexpr uint8_t kTestUniqueGUID[] = {
-    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                       0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
-constexpr uint8_t kTestPartGUID[] = {
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                                     0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
 zx_status_t ToStatus(ssize_t result) {
     return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
@@ -68,14 +74,14 @@ zx_status_t MountMemFs(async::Loop* loop) {
     return result;
 }
 
-zx_status_t MakeRamdisk(const FixtureOptions& options, ramdisk_client_t** out_ramdisk) {
+zx_status_t MakeRamdisk(int devfs_root, const FixtureOptions& options,
+                        ramdisk_client_t** out_ramdisk) {
     ZX_DEBUG_ASSERT(options.use_ramdisk);
     if (options.use_ramdisk) {
-        zx_status_t result = ramdisk_create(options.ramdisk_block_size,
-                                            options.ramdisk_block_count, out_ramdisk);
+        zx_status_t result = ramdisk_create_at(devfs_root, options.ramdisk_block_size,
+                                               options.ramdisk_block_count, out_ramdisk);
         if (result != ZX_OK) {
-            LOG_ERROR(result,
-                      "Failed to create ramdisk(block_size=%lu, ramdisk_block_count=%lu)\n",
+            LOG_ERROR(result, "Failed to create ramdisk(block_size=%lu, ramdisk_block_count=%lu)\n",
                       options.ramdisk_block_size, options.ramdisk_block_count);
             return result;
         }
@@ -95,13 +101,15 @@ zx_status_t RemoveRamdisk(const FixtureOptions& options, ramdisk_client_t* ramdi
     return ZX_OK;
 }
 
-zx_status_t MakeFvm(const fbl::String& block_device_path, uint64_t fvm_slice_size,
+zx_status_t MakeFvm(int devfs_root, const char* root_path, const fbl::String& block_device_path,
+                    uint64_t fvm_slice_size,
+
                     fbl::String* partition_path, bool* fvm_mounted) {
     zx_status_t result = ZX_OK;
     fbl::unique_fd fd(open(block_device_path.c_str(), O_RDWR));
     if (!fd) {
-        LOG_ERROR(ZX_ERR_IO, "%s.\nblock_device_path: %s\n",
-                  strerror(errno), block_device_path.c_str());
+        LOG_ERROR(ZX_ERR_IO, "%s.\nblock_device_path: %s\n", strerror(errno),
+                  block_device_path.c_str());
         return ZX_ERR_IO;
     }
     result = fvm_init(fd.get(), fvm_slice_size);
@@ -118,9 +126,8 @@ zx_status_t MakeFvm(const fbl::String& block_device_path, uint64_t fvm_slice_siz
         return ZX_ERR_INTERNAL;
     }
     zx_status_t call_status;
-    result = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io),
-                                           kFvmDriverLibPath, strlen(kFvmDriverLibPath),
-                                           &call_status);
+    result = fuchsia_device_ControllerBind(fdio_unsafe_borrow_channel(io), kFvmDriverLibPath,
+                                           strlen(kFvmDriverLibPath), &call_status);
     fdio_unsafe_release(io);
     if (result == ZX_OK) {
         result = call_status;
@@ -140,8 +147,7 @@ zx_status_t MakeFvm(const fbl::String& block_device_path, uint64_t fvm_slice_siz
 
     fbl::unique_fd fvm_fd(open(fvm_device_path.c_str(), O_RDWR));
     if (!fvm_fd) {
-        LOG_ERROR(ZX_ERR_IO, "%s.\nfvm_device_path:%s\n",
-                  strerror(errno), fvm_device_path.c_str());
+        LOG_ERROR(ZX_ERR_IO, "%s.\nfvm_device_path:%s\n", strerror(errno), fvm_device_path.c_str());
         return ZX_ERR_IO;
     }
 
@@ -152,15 +158,17 @@ zx_status_t MakeFvm(const fbl::String& block_device_path, uint64_t fvm_slice_siz
     memcpy(request.type, kTestPartGUID, sizeof(request.type));
     memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
 
-    fbl::unique_fd partition_fd(fvm_allocate_partition(fvm_fd.get(), &request));
+    fbl::unique_fd partition_fd(
+        fvm_allocate_partition_with_devfs(devfs_root, fvm_fd.get(), &request));
     if (!partition_fd) {
-        LOG_ERROR(ZX_ERR_IO, "Failed to allocate FVM partition\n");
+        LOG_ERROR(ZX_ERR_IO, "Failed to allocate FVM partition. Error: %s \n", strerror(errno));
         return ZX_ERR_IO;
     }
 
     char buffer[kPathSize];
-    partition_fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, buffer));
-    *partition_path = buffer;
+    partition_fd.reset(
+        open_partition_with_devfs(devfs_root, kTestUniqueGUID, kTestPartGUID, 0, buffer));
+    *partition_path = fbl::String::Concat({root_path, "/", buffer});
     if (!partition_fd) {
         LOG_ERROR(ZX_ERR_IO, "Could not locate FVM partition. %s\n", strerror(errno));
         return ZX_ERR_IO;
@@ -183,9 +191,8 @@ bool FixtureOptions::IsValid(fbl::String* err_description) const {
         size_t max_size = zx_system_get_physmem();
         size_t requested_size = ramdisk_block_count * ramdisk_block_size;
         if (max_size < requested_size) {
-            buffer.AppendPrintf(
-                "ramdisk size(%lu) cannot exceed available memory(%lu).\n",
-                requested_size, requested_size);
+            buffer.AppendPrintf("ramdisk size(%lu) cannot exceed available memory(%lu).\n",
+                                requested_size, requested_size);
         }
         if (ramdisk_block_count == 0) {
             buffer.Append("ramdisk_block_count must be greater than 0.\n");
@@ -208,8 +215,7 @@ bool FixtureOptions::IsValid(fbl::String* err_description) const {
     return err_description->empty();
 }
 
-Fixture::Fixture(const FixtureOptions& options)
-    : options_(options) {}
+Fixture::Fixture(const FixtureOptions& options) : options_(options) {}
 
 Fixture::~Fixture() {
     // Sanity check, teardown any resources if these two were not called yet.
@@ -220,8 +226,8 @@ Fixture::~Fixture() {
 zx_status_t Fixture::Mount() {
     fbl::unique_fd fd(open(GetFsBlockDevice().c_str(), O_RDWR));
     if (!fd) {
-        LOG_ERROR(ZX_ERR_IO, "%s.\nblock_device_path:%s\n",
-                  strerror(errno), GetFsBlockDevice().c_str());
+        LOG_ERROR(ZX_ERR_IO, "%s.\nblock_device_path:%s\n", strerror(errno),
+                  GetFsBlockDevice().c_str());
         return ZX_ERR_IO;
     }
 
@@ -235,11 +241,11 @@ zx_status_t Fixture::Mount() {
     mount_options.wait_until_ready = true;
 
     disk_format_t format = detect_disk_format(fd.get());
-    zx_status_t result = mount(fd.release(), fs_path_.c_str(), format,
-                               &mount_options, launch_stdio_async);
+    zx_status_t result =
+        mount(fd.release(), fs_path_.c_str(), format, &mount_options, launch_stdio_async);
     if (result != ZX_OK) {
-        LOG_ERROR(result, "Failed to mount device at %s.\nblock_device_path:%s\n",
-                  fs_path_.c_str(), GetFsBlockDevice().c_str());
+        LOG_ERROR(result, "Failed to mount device at %s.\nblock_device_path:%s\n", fs_path_.c_str(),
+                  GetFsBlockDevice().c_str());
         return result;
     }
     fs_state_ = ResourceState::kAllocated;
@@ -262,11 +268,10 @@ zx_status_t Fixture::Fsck() const {
     fsck_options.force = true;
 
     // run fsck
-    zx_status_t result = fsck(block_dev.c_str(), options_.fs_type,
-                              &fsck_options, launch_stdio_sync);
+    zx_status_t result =
+        fsck(block_dev.c_str(), options_.fs_type, &fsck_options, launch_stdio_sync);
     if (result != ZX_OK) {
-        LOG_ERROR(result, "Fsck failed on device at block_device_path:%s\n",
-                  block_dev.c_str());
+        LOG_ERROR(result, "Fsck failed on device at block_device_path:%s\n", block_dev.c_str());
         return result;
     }
 
@@ -294,8 +299,8 @@ zx_status_t Fixture::Format() const {
     // Format device.
     mkfs_options_t mkfs_options = default_mkfs_options;
     fbl::String block_device_path = GetFsBlockDevice();
-    zx_status_t result = mkfs(block_device_path.c_str(), options_.fs_type,
-                              launch_stdio_sync, &mkfs_options);
+    zx_status_t result =
+        mkfs(block_device_path.c_str(), options_.fs_type, launch_stdio_sync, &mkfs_options);
     if (result != ZX_OK) {
         LOG_ERROR(result, "Failed to format block device.\nblock_device_path:%s\n",
                   block_device_path.c_str());
@@ -316,13 +321,53 @@ zx_status_t Fixture::Format() const {
 
 zx_status_t Fixture::SetUpTestCase() {
     LOG_INFO("Using random seed: %u\n", options_.seed);
+    zx_status_t result;
     seed_ = options_.seed;
-    if (options_.use_ramdisk) {
-        zx_status_t result = MakeRamdisk(options_, &ramdisk_);
+
+    // Create the devmgr instance and bind it
+    if (options_.isolated_devmgr) {
+
+        devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+        args.disable_block_watcher = true;
+        args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
+        args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+        args.driver_search_paths.push_back("/boot/driver");
+        result = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_);
+
         if (result != ZX_OK) {
             return result;
         }
-        block_device_path_ = ramdisk_get_path(ramdisk_);
+        fdio_ns_t* ns;
+        result = fdio_ns_get_installed(&ns);
+        if (result != ZX_OK) {
+            return result;
+        }
+        result = fdio_ns_bind_fd(ns, kIsolatedDevPath, devmgr_.devfs_root().get());
+        if (result != ZX_OK) {
+            return result;
+        }
+        // Wait for RamCtl to appear.
+        result = wait_for_device_at(devmgr_.devfs_root().get(), kRamdiskCtlPath, zx::sec(5).get());
+
+        if (result != ZX_OK) {
+            return result;
+        }
+        devfs_root_.reset(open(kIsolatedDevPath, O_RDWR));
+        root_path_ = kIsolatedDevPath;
+    } else {
+
+        devfs_root_.reset(open(kDevPath, O_RDWR));
+        root_path_ = kDevPath;
+    }
+
+    if (options_.use_ramdisk) {
+        result = MakeRamdisk(devfs_root_.get(), options_, &ramdisk_);
+        if (result != ZX_OK) {
+            return result;
+        }
+        block_device_path_ =
+            fbl::StringPrintf("%s/%s", options_.isolated_devmgr ? kIsolatedDevPath : kDevPath,
+                              ramdisk_get_path(ramdisk_));
         ramdisk_state_ = ResourceState::kAllocated;
     }
 
@@ -338,8 +383,8 @@ zx_status_t Fixture::SetUp() {
     fs_state_ = ResourceState::kUnallocated;
     if (options_.use_fvm) {
         bool allocated = false;
-        zx_status_t result = MakeFvm(block_device_path_, options_.fvm_slice_size,
-                                     &partition_path_, &allocated);
+        zx_status_t result = MakeFvm(devfs_root_.get(), root_path_, block_device_path_,
+                                     options_.fvm_slice_size, &partition_path_, &allocated);
         if (allocated) {
             fvm_state_ = ResourceState::kAllocated;
         }
@@ -405,6 +450,20 @@ zx_status_t Fixture::TearDown() {
 }
 
 zx_status_t Fixture::TearDownTestCase() {
+    if (options_.isolated_devmgr) {
+        zx_status_t result;
+        fdio_ns_t* ns;
+        result = fdio_ns_get_installed(&ns);
+        if (result != ZX_OK) {
+            return result;
+        }
+        result = fdio_ns_unbind(ns, kIsolatedDevPath);
+        // Either successfuly unbind or we already unbound it.
+        if (result != ZX_OK && result != ZX_ERR_NOT_FOUND) {
+            return result;
+        }
+    }
+
     if (ramdisk_state_ == ResourceState::kAllocated) {
         zx_status_t ramdisk_result = RemoveRamdisk(options_, ramdisk_);
         ramdisk_ = nullptr;

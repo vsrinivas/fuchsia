@@ -172,6 +172,7 @@ END_TEST_CASE(FixtureOptionsTests)
 bool RamdiskSetupAndCleanup() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    options.isolated_devmgr = true;
     Fixture fixture(options);
     fixture.SetUpTestCase();
     ASSERT_TRUE(!fixture.block_device_path().empty());
@@ -188,6 +189,7 @@ bool RamdiskSetupAndCleanup() {
 bool DiskIsFormattedCorrectlyNoFvm() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.isolated_devmgr = true;
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
     ASSERT_EQ(fixture.SetUp(), ZX_OK);
@@ -206,6 +208,7 @@ bool DiskIsFormattedCorrectlyNoFvm() {
 bool DiskAndFvmAreFormattedCorrectly() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.isolated_devmgr = true;
     options.use_fvm = true;
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -237,6 +240,7 @@ bool UseBlockDeviceIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
     options.use_ramdisk = false;
+    options.isolated_devmgr = false;
 
     // Create a Ramdisk which will be passed as the 'block_device'.
     ramdisk_client_t* ramdisk = nullptr;
@@ -285,6 +289,7 @@ bool UseBlockDeviceWithFvmIsOk() {
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
     options.use_ramdisk = false;
     options.use_fvm = true;
+    options.isolated_devmgr = false;
 
     // Create a Ramdisk which will be passed as the 'block_device'.
     ramdisk_client_t* ramdisk = nullptr;
@@ -311,7 +316,6 @@ bool UseBlockDeviceWithFvmIsOk() {
     ASSERT_TRUE(blk_fd);
     disk_format_t actual_format = detect_disk_format(blk_fd.get());
     ASSERT_EQ(actual_format, DISK_FORMAT_BLOBFS);
-
     ASSERT_EQ(fixture.SetUp(), ZX_OK);
     blk_fd.reset(open(fixture.block_device_path().c_str(), O_RDONLY));
     ASSERT_TRUE(blk_fd);
@@ -337,6 +341,7 @@ bool UseBlockDeviceWithFvmIsOk() {
 bool SkipFormatIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.isolated_devmgr = true;
     options.use_ramdisk = false;
     options.fs_format = false;
 
@@ -385,6 +390,7 @@ bool SkipFormatIsOk() {
 bool SkipMountIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.isolated_devmgr = true;
     options.fs_mount = false;
 
     Fixture fixture(options);
@@ -401,6 +407,7 @@ bool SkipMountIsOk() {
 bool MountIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
+    options.isolated_devmgr = true;
     options.fs_mount = false;
 
     Fixture fixture(options);
@@ -422,6 +429,7 @@ bool UmountIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
     options.fs_mount = true;
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -438,6 +446,7 @@ bool RemountIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
     options.fs_mount = true;
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -454,6 +463,7 @@ bool FsckIsOk() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
     options.fs_mount = false;
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -470,6 +480,7 @@ bool FsckFails() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
     options.fs_mount = false;
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -502,6 +513,7 @@ bool FsckFails() {
 bool FsckMounted() {
     BEGIN_TEST;
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -518,6 +530,7 @@ bool FsckUnformatted() {
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
     options.fs_format = false;
     options.fs_mount = false;
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
@@ -535,6 +548,7 @@ bool FsckNoBlockDevice() {
     options.use_ramdisk = false;
     options.fs_format = false;
     options.fs_mount = false;
+    options.isolated_devmgr = true;
 
     Fixture fixture(options);
     ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);

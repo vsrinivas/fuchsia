@@ -13,6 +13,8 @@
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 #include <fvm/format.h>
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/devmgr-launcher/launch.h>
 #include <lib/zx/time.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/status.h>
@@ -57,6 +59,7 @@ struct FixtureOptions {
         options.fvm_slice_size = kFvmBlockSize * (2 << 10);
         options.fs_type = format;
         options.seed = static_cast<unsigned int>(zx::ticks::now().get());
+        options.isolated_devmgr = false;
         return options;
     }
 
@@ -95,6 +98,9 @@ struct FixtureOptions {
 
     // Seed for pseudo random number generator.
     unsigned int seed = 0;
+
+    // Whether to use an isolated devmgr for each test.
+    bool isolated_devmgr = false;
 };
 
 // Provides a base fixture for File system tests.
@@ -211,6 +217,12 @@ private:
     ResourceState fs_state_ = ResourceState::kUnallocated;
     ResourceState fvm_state_ = ResourceState::kUnallocated;
     ResourceState ramdisk_state_ = ResourceState::kUnallocated;
+
+    // Isolated devmgr if requested.
+    devmgr_integration_test::IsolatedDevmgr devmgr_;
+
+    fbl::unique_fd devfs_root_;
+    const char* root_path_;
 };
 
 } // namespace fs_test_utils

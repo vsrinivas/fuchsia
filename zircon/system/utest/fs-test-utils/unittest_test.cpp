@@ -24,6 +24,7 @@ FixtureOptions OptionsUseRamdiskAndFvm() {
     FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_MINFS);
     options.use_fvm = true;
     options.fs_type = DISK_FORMAT_MINFS;
+    options.isolated_devmgr = true;
     return options;
 }
 

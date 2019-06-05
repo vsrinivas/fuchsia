@@ -30,6 +30,8 @@ library("fs-test-utils") {
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
