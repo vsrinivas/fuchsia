@@ -10,7 +10,6 @@ use crate::key::{
     gtk::{Gtk, GtkProvider},
     ptk::Ptk,
 };
-use crate::key_data;
 use crate::key_data::kde;
 use crate::keywrap::keywrap_algorithm;
 use crate::psk;
@@ -42,9 +41,9 @@ pub fn get_a_rsne() -> Rsne {
 }
 
 pub fn get_rsne_bytes(rsne: &Rsne) -> Vec<u8> {
-    let mut a_rsne_data = Vec::with_capacity(rsne.len());
-    rsne.as_bytes(&mut a_rsne_data);
-    a_rsne_data
+    let mut buf = Vec::with_capacity(rsne.len());
+    rsne.write_into(&mut buf).expect("error writing RSNE into buffer");
+    buf
 }
 
 pub fn get_s_rsne() -> Rsne {
@@ -150,24 +149,11 @@ pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F) -
 where
     F: Fn(&mut eapol::KeyFrame),
 {
-    let mut buf = Vec::with_capacity(256);
-
-    // Write GTK KDE
-    let gtk_kde = kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk);
-    if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
-        hdr.as_bytes(&mut buf);
-        gtk.as_bytes(&mut buf);
-    }
-
-    // Write RSNE
-    let a_rsne = get_a_rsne();
-    a_rsne.as_bytes(&mut buf);
-
-    // Add optional padding
-    key_data::add_padding(&mut buf);
-
-    // Encrypt key data
-    let encrypted_key_data = encrypt_key_data(ptk.kek(), &buf[..]);
+    let mut w = kde::Writer::new(vec![]);
+    w.write_gtk(&kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
+    w.write_rsne(&get_a_rsne()).expect("error writing RSNE");
+    let key_data = w.finalize().expect("error finalizing key data");
+    let encrypted_key_data = encrypt_key_data(ptk.kek(), &key_data[..]);
 
     let mut msg = eapol::KeyFrame {
         version: 1,
@@ -197,20 +183,10 @@ pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F) -> eapol
 where
     F: Fn(&mut eapol::KeyFrame),
 {
-    let mut buf = Vec::with_capacity(256);
-
-    // Write GTK KDE
-    let gtk_kde = kde::Gtk::new(3, kde::GtkInfoTx::BothRxTx, gtk);
-    if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
-        hdr.as_bytes(&mut buf);
-        gtk.as_bytes(&mut buf);
-    }
-
-    // Add optional padding
-    key_data::add_padding(&mut buf);
-
-    // Encrypt key data
-    let encrypted_key_data = encrypt_key_data(ptk.kek(), &buf[..]);
+    let mut w = kde::Writer::new(vec![]);
+    w.write_gtk(&kde::Gtk::new(3, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
+    let key_data = w.finalize().expect("error finalizing key data");
+    let encrypted_key_data = encrypt_key_data(ptk.kek(), &key_data[..]);
 
     let mut msg = eapol::KeyFrame {
         version: 1,

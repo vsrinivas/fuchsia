@@ -5,7 +5,6 @@
 pub mod kde;
 
 use crate::Error;
-use bytes::BufMut;
 use failure::{self, ensure};
 use nom::IResult::{Done, Incomplete};
 use nom::{call, error_position, many0, named, take, try_parse};
@@ -20,22 +19,8 @@ pub enum Element {
     UnsupportedKde(kde::Header),
     UnsupportedIe(u8, u8),
 }
-impl Element {
-    pub fn as_bytes(&self, buf: &mut Vec<u8>) {
-        match self {
-            Element::Gtk(hdr, gtk) => {
-                hdr.as_bytes(buf);
-                gtk.as_bytes(buf);
-            }
-            Element::Rsne(rsne) => {
-                rsne.as_bytes(buf);
-            }
-            _ => {}
-        }
-    }
-}
 
-fn peek_u8_at<'a>(input: &'a [u8], index: usize) -> IResult<&'a [u8], u8> {
+fn peek_u8_at(input: &[u8], index: usize) -> IResult<&[u8], u8> {
     if input.len() <= index {
         Incomplete(Needed::Size(index))
     } else {
@@ -43,7 +28,7 @@ fn peek_u8_at<'a>(input: &'a [u8], index: usize) -> IResult<&'a [u8], u8> {
     }
 }
 
-fn parse_ie<'a>(i0: &'a [u8]) -> IResult<&'a [u8], Element> {
+fn parse_ie(i0: &[u8]) -> IResult<&[u8], Element> {
     let (i1, id) = try_parse!(i0, call!(peek_u8_at, 0));
     let (i2, len) = try_parse!(i1, call!(peek_u8_at, 1));
     let (out, bytes) = try_parse!(i2, take!(2 + (len as usize)));
@@ -56,7 +41,7 @@ fn parse_ie<'a>(i0: &'a [u8]) -> IResult<&'a [u8], Element> {
     }
 }
 
-fn parse_element<'a>(input: &'a [u8]) -> IResult<&'a [u8], Element> {
+fn parse_element(input: &[u8]) -> IResult<&[u8], Element> {
     let (_, type_) = try_parse!(input, call!(peek_u8_at, 0));
     match type_ {
         kde::TYPE => kde::parse(input),
@@ -76,87 +61,9 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
     parse_elements(key_data).to_full_result().map_err(|e| Error::InvalidKeyData(e).into())
 }
 
-// IEEE Std 802.11-2016, 12.7.2 j)
-// Adds padding to a given key data if necessary and truncates all remaining bytes of the buffer.
-pub fn add_padding(buf: &mut Vec<u8>) {
-    let padding_len =
-        if buf.len() < 16 { 16 - buf.len() } else { ((buf.len() + 7) / 8) * 8 - buf.len() };
-
-    if padding_len != 0 {
-        // Buffer too small to hold padding; grow buffer.
-        buf.reserve(padding_len);
-
-        buf.put_u8(kde::TYPE);
-        buf.put(&vec![0u8; padding_len - 1][..]);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    pub fn is_zero(slice: &[u8]) -> bool {
-        slice.iter().all(|&x| x == 0)
-    }
-
-    #[test]
-    fn test_add_padding_min_length() {
-        let mut buf = vec![];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 16);
-        assert_eq!(buf[0], 0xDD);
-        assert!(is_zero(&buf[1..]));
-
-        let mut buf = vec![0xFF];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 16);
-        assert_eq!(buf[1], 0xDD);
-        assert!(is_zero(&buf[2..]));
-
-        // Although length is a multiple of 8, the minimum length should be 16.
-        let mut buf = vec![0xFF; 8];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 16);
-        assert_eq!(buf[8], 0xDD);
-        assert!(is_zero(&buf[9..]));
-
-        let mut buf = vec![0xFF; 14];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 16);
-        assert_eq!(buf[14], 0xDD);
-        assert!(is_zero(&buf[15..]));
-
-        let mut buf = vec![0xFF; 16];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 16);
-        assert_eq!(buf[15], 0xFF);
-    }
-
-    #[test]
-    fn test_add_padding_8_multiple_length() {
-        let mut buf = vec![0xFF; 17];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 24);
-        assert_eq!(buf[17], 0xDD);
-        assert!(is_zero(&buf[18..]));
-
-        let mut buf = vec![0xFF; 22];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 24);
-        assert_eq!(buf[22], 0xDD);
-        assert!(is_zero(&buf[23..]));
-
-        let mut buf = vec![0xFF; 24];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 24);
-        assert_eq!(buf[23], 0xFF);
-
-        let mut buf = vec![0xFF; 25];
-        add_padding(&mut buf);
-        assert_eq!(buf.len(), 32);
-        assert_eq!(buf[25], 0xDD);
-        assert!(is_zero(&buf[26..]));
-    }
 
     #[test]
     fn test_complex_key_data() {
@@ -202,7 +109,7 @@ mod tests {
                     assert_eq!(pos, 0);
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 14);
-                    assert_eq!(hdr.oui, kde::OUI);
+                    assert_eq!(hdr.oui, kde::IEEE_80211_OUI);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 5);
                     assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -234,8 +141,7 @@ mod tests {
                         assert!(rsne.group_data_cipher_suite.is_some());
                         let cipher = rsne.group_data_cipher_suite.unwrap();
                         assert_eq!(cipher.suite_type, 1);
-                        let oui = vec![0x00, 0x0F, 0xAC];
-                        assert_eq!(cipher.oui, &oui[..]);
+                        assert_eq!(cipher.oui, &kde::IEEE_80211_OUI[..]);
                     }
                     _ => assert!(false),
                 },
@@ -371,7 +277,7 @@ mod tests {
                 Element::Gtk(hdr, kde) => {
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 14);
-                    assert_eq!(hdr.oui, kde::OUI);
+                    assert_eq!(hdr.oui, kde::IEEE_80211_OUI);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 5);
                     assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -405,7 +311,7 @@ mod tests {
                 Element::Gtk(hdr, kde) => {
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 22);
-                    assert_eq!(hdr.oui, kde::OUI);
+                    assert_eq!(hdr.oui, kde::IEEE_80211_OUI);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 200);
                     assert_eq!(

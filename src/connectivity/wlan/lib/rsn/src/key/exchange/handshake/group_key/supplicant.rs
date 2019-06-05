@@ -110,7 +110,7 @@ impl Supplicant {
 mod tests {
     use super::*;
     use crate::key::exchange::handshake::group_key::GroupKey;
-    use crate::key_data::{self, kde};
+    use crate::key_data::kde;
     use crate::rsna::{test_util, NegotiatedRsne, Role, VerifiedKeyFrame};
     use wlan_common::ie::rsn::akm::{Akm, PSK};
     use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
@@ -151,15 +151,11 @@ mod tests {
         )
         .expect("error creating Group Key Handshake");
 
-        // Write GTK KDE
-        let mut buf = Vec::with_capacity(256);
-        let gtk_kde = kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]);
-        if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
-            hdr.as_bytes(&mut buf);
-            gtk.as_bytes(&mut buf);
-        }
-        key_data::add_padding(&mut buf);
-        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &buf[..]);
+        let mut w = kde::Writer::new(vec![]);
+        w.write_gtk(&kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]))
+            .expect("error writing GTK KDE");
+        let key_data = w.finalize().expect("error finalizing key data");
+        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &key_data[..]);
 
         // Construct key frame.
         let mut key_frame = eapol::KeyFrame {

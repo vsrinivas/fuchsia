@@ -664,8 +664,9 @@ mod tests {
         assert!(!test_util::is_zero(&msg2.key_mic[..]));
         assert_eq!(msg2.key_mic.len(), test_util::mic_len());
         assert_eq!(msg2.key_data.len(), msg2.key_data_len as usize);
-        assert_eq!(msg2.key_data.len(), s_rsne_data.len());
-        assert_eq!(&msg2.key_data[..], &s_rsne_data[..]);
+        assert_eq!(msg2.key_data.len(), 24);
+        assert_eq!(&msg2.key_data[..s_rsne_data.len()], &s_rsne_data[..]);
+        assert_eq!(&msg2.key_data[20..], &vec![221u8, 0, 0, 0][..]);
 
         // Send 3rd message.
         let ptk = derive_ptk(msg2);

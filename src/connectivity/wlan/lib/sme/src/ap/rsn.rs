@@ -77,7 +77,7 @@ mod tests {
         ];
         let rsne = create_wpa2_psk_rsne();
         let mut actual = Vec::with_capacity(rsne.len());
-        rsne.as_bytes(&mut actual);
+        rsne.write_into(&mut actual).expect("error writing RSNE");
 
         assert_eq!(&expected[..], &actual[..]);
     }

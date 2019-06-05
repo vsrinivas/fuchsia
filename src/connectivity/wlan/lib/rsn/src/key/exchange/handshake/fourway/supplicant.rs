@@ -8,6 +8,7 @@ use crate::key::exchange::{compute_mic, Key};
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
+use crate::key_data::kde;
 use crate::rsna::{
     KeyFrameKeyDataState, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
 };
@@ -54,8 +55,9 @@ fn create_message_2(
     key_info.set_key_type(msg1.key_info.key_type());
     key_info.set_key_mic(true);
 
-    let mut key_data = vec![];
-    cfg.s_rsne.as_bytes(&mut key_data);
+    let mut w = kde::Writer::new(vec![]);
+    w.write_rsne(&cfg.s_rsne)?;
+    let key_data = w.finalize()?;
 
     let mut msg2 = eapol::KeyFrame {
         version: msg1.version,
