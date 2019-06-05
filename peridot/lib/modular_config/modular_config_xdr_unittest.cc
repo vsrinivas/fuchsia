@@ -103,8 +103,7 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
       "startup_agents":null,
       "session_agents":null,
       "component_args":null,
-      "agent_service_index":null,
-      "use_parent_runner_for_story_realm": false})";
+      "agent_service_index":null})";
 
   // Remove whitespace for string comparison
   expected_json.erase(
@@ -121,7 +120,6 @@ TEST(ModularConfigXdr, SessionmgrDefaultValues) {
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_TRUE(read_config.enable_story_shell_preload());
   EXPECT_FALSE(read_config.use_memfs_for_ledger());
-  EXPECT_FALSE(read_config.use_parent_runner_for_story_realm());
 
   EXPECT_EQ(0u, read_config.startup_agents().size());
   EXPECT_EQ(0u, read_config.session_agents().size());

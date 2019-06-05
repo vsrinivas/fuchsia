@@ -307,12 +307,6 @@ void XdrSessionmgrConfig_v1(
                         data->mutable_agent_service_index(),
                         XdrAgentServiceIndexEntry, has_agent_service_index,
                         std::move(default_agent_service_index));
-
-  bool has_use_parent_runner_for_story_realm =
-      data->has_use_parent_runner_for_story_realm();
-  xdr->FieldWithDefault(modular_config::kUseParentRunnerForStoryRealm,
-                        data->mutable_use_parent_runner_for_story_realm(),
-                        has_use_parent_runner_for_story_realm, false);
 }
 
 }  // namespace modular
