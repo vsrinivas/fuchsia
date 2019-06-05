@@ -129,7 +129,7 @@ group("scenic") {
 group("cmc") {
   testonly = true
   public_deps = [
-    "//garnet/bin/cmc:cmc($host_toolchain)",
+    "//src/sys/cmc:cmc($host_toolchain)",
   ]
 }
 
@@ -1146,7 +1146,6 @@ group("bluetooth") {
 group("rust_crates") {
   testonly = true
   public_deps = [
-    "//garnet/bin/cmc:cmc_integration_test",
     "//garnet/bin/rolldice:rolldice-tests",
     "//garnet/lib/rust/cm_fidl_translator:cm_fidl_translator_tests",
     "//garnet/lib/rust/cm_fidl_validator:cm_fidl_validator_tests",
@@ -1168,6 +1167,7 @@ group("rust_crates") {
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
     "//garnet/public/rust/fuchsia-zircon:fuchsia-zircon-tests",
+    "//src/sys/cmc:cmc_integration_test",
   ]
 }
 

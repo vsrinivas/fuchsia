@@ -9,7 +9,6 @@ group("bin") {
     "appmgr",
     "catapult_converter",
     "chrealm",
-    "cmc",
     "cpuperf",
     "cpuperf_provider",
     "cs",
