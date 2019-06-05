@@ -9,6 +9,7 @@ use fidl_fuchsia_ui_text as txt;
 // TextField::OnUpdate() tests
 // #######################################################
 
+/// Inserts an empty commit to check that it increments the revision number.
 pub async fn test_noop_causes_state_update(text_field: &mut TextFieldWrapper) -> Result<(), Error> {
     let rev = text_field.state().revision;
 
@@ -32,6 +33,7 @@ pub async fn test_noop_causes_state_update(text_field: &mut TextFieldWrapper) ->
 // TextField::PointOffset()/TextField::Distance()/TextField::Contents() tests
 // #######################################################
 
+/// Inserts "meow1 meow2 meow3" and validates some simple range and distance requests.
 pub async fn test_simple_content_request(text_field: &mut TextFieldWrapper) -> Result<(), Error> {
     await!(text_field.simple_insert("meow1 meow2 meow3"))?;
 
@@ -43,6 +45,8 @@ pub async fn test_simple_content_request(text_field: &mut TextFieldWrapper) -> R
     Ok(())
 }
 
+/// Inserts "meow1 🐱 meow3" and validates some simple range and distance requests, this time across
+/// the emoji boundary, to ensure distances are correctly calculated around multibyte unicode chars.
 pub async fn test_multibyte_unicode_content_request(
     text_field: &mut TextFieldWrapper,
 ) -> Result<(), Error> {
@@ -60,6 +64,9 @@ pub async fn test_multibyte_unicode_content_request(
 // TextField::CommitEdit() tests
 // #######################################################
 
+/// Double checks that within a transaction, if a `Point` A appears after an initial replacement,
+/// its position in the string is properly adjusted to account for that initial replacement before
+/// any subsequent edits in that transaction are applied.
 pub async fn test_multiple_edit_moves_points(
     text_field: &mut TextFieldWrapper,
 ) -> Result<(), Error> {
@@ -88,6 +95,10 @@ pub async fn test_multiple_edit_moves_points(
     Ok(())
 }
 
+/// Attempts to create a point one character after the end of the document, and then delete that one
+/// character. Since that character doesn't exist, the document should remain unchanged. The correct
+/// behavior is the new point should clamp back to the end of the document, resulting in a
+/// zero-width delete.
 pub async fn test_invalid_delete_off_end_of_field(
     text_field: &mut TextFieldWrapper,
 ) -> Result<(), Error> {
