@@ -225,7 +225,7 @@ private:
     uint32_t num_multicast_ = 0;
 
     uint32_t state_ = 0;
-    char name_[fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN + 1];
+    char name_[fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN + 1] = "";
 
     // Fifos are named from the perspective of the packet from the client
     // to the network interface.

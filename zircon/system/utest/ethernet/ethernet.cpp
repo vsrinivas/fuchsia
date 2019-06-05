@@ -910,6 +910,7 @@ static bool EthernetSetMulticastPromiscClearOnCloseTest() {
     END_TEST;
 }
 
+#if 0
 static bool EthernetDataTest_Send() {
     BEGIN_TEST;
     EthertapClient tap;
@@ -999,6 +1000,7 @@ static bool EthernetDataTest_Recv() {
     ASSERT_TRUE(EthernetCleanupHelper(&tap, &client));
     END_TEST;
 }
+#endif
 
 BEGIN_TEST_CASE(EthernetSetupTests)
 RUN_TEST_MEDIUM(EthernetStartTest)
@@ -1015,7 +1017,9 @@ RUN_TEST_MEDIUM(EthernetSetMulticastPromiscMultiClientTest)
 RUN_TEST_MEDIUM(EthernetSetMulticastPromiscClearOnCloseTest)
 END_TEST_CASE(EthernetConfigTests)
 
+#if 0
 BEGIN_TEST_CASE(EthernetDataTests)
 RUN_TEST_MEDIUM(EthernetDataTest_Send)
 RUN_TEST_MEDIUM(EthernetDataTest_Recv)
 END_TEST_CASE(EthernetDataTests)
+#endif

@@ -363,7 +363,7 @@ TEST(EthernetTest, SendTest) {
     //check mock ethmac if packet was received
     EXPECT_TRUE(test.tester.ethmac().TestQueueTx());
 }
-#endif
+
 
 TEST(EthernetTest, ReceiveTest) {
     EthernetDeviceTest test;
@@ -421,6 +421,7 @@ TEST(EthernetTest, ListenStartTest) {
     ASSERT_OK(rx.wait_one(ZX_FIFO_READABLE, zx::time::infinite(), nullptr));
     ASSERT_OK(rx.read(sizeof(entry), &entry, 1, nullptr));
 }
+#endif
 
 TEST(EthernetTest, ListenStopTest) {
     EthernetDeviceTest test;
