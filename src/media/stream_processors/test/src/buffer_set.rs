@@ -311,6 +311,7 @@ pub struct BufferSet {
     pub proxy: BufferCollectionProxy,
     pub buffers: Vec<Buffer>,
     pub buffer_lifetime_ordinal: u64,
+    pub buffer_size: usize,
 }
 
 impl TryFrom<BufferSetSpec> for BufferSet {
@@ -332,7 +333,12 @@ impl TryFrom<BufferSetSpec> for BufferSet {
             });
         }
 
-        Ok(Self { proxy: src.proxy, buffers, buffer_lifetime_ordinal: src.buffer_lifetime_ordinal })
+        Ok(Self {
+            proxy: src.proxy,
+            buffers,
+            buffer_lifetime_ordinal: src.buffer_lifetime_ordinal,
+            buffer_size: src.collection_info.settings.buffer_settings.size_bytes as usize,
+        })
     }
 }
 

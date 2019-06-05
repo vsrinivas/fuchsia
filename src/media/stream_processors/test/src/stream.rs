@@ -91,9 +91,10 @@ impl<'a: 'b, 'b> Stream<'a> {
                     self.stream.format_details(self.format_details_version_ordinal),
                 )?;
 
+                let chunk_stream = self.stream.capped_chunks(buffer_set.buffer_size);
                 self.input_packet_stream = Some(InputPacketStream::new(
                     buffer_set,
-                    self.stream.stream(),
+                    chunk_stream,
                     self.stream_lifetime_ordinal,
                 ));
                 self.send_available_input()?;

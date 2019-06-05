@@ -13,12 +13,14 @@ group("test") {
   deps = [
     ":audio_encoder_test",
     ":h264_decoder_test",
+    ":stream_processor_lib_test",
   ]
 }
 
 rustc_library("stream_processor_test_lib") {
   name = "stream_processor_test"
   edition = "2018"
+  with_unit_tests = true
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -33,6 +35,19 @@ rustc_library("stream_processor_test_lib") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+  ]
+}
+
+test_package("stream_processor_lib_test") {
+  deps = [
+    ":stream_processor_test_lib",
+  ]
+
+  tests = [
+    {
+      name = "stream_processor_test_lib_test"
+      environments = basic_envs
+    },
   ]
 }
 
