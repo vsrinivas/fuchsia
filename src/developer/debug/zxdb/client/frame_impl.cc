@@ -159,10 +159,6 @@ bool FrameImpl::EnsureBasePointer() {
         std::move(base_pointer_requests_);
     for (const auto& cb : callbacks)
       cb(*computed_base_pointer_);
-
-    // This will delete the DwarfExprEval that called into this callback, but
-    // that code expects to handle this case.
-    base_pointer_eval_.reset();
   };
 
   auto eval_result = base_pointer_eval_->Eval(

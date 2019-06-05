@@ -17,7 +17,6 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
-#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"

@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/index_test_support.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
@@ -28,6 +29,12 @@
 namespace zxdb {
 
 namespace {
+
+// The range of IP addresses where the "present" variable is valid.
+constexpr uint64_t kBeginValidRange = 0x1000;
+constexpr uint64_t kEndValidRange = 0x2000;
+
+const char kPresentVarName[] = "present";
 
 class SymbolEvalContextTest : public testing::Test {
  public:
@@ -46,13 +53,23 @@ class SymbolEvalContextTest : public testing::Test {
 
     // Declare a variable in this code block stored in register 0.
     auto variable = MakeUint64VariableForTest(
-        "present", 0x1000, 0x2000,
+        kPresentVarName, kBeginValidRange, kEndValidRange,
         {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
     block->set_variables({LazySymbol(std::move(variable))});
 
     // TODO(brettw) this needs a type. Currently this test is very simple and
     // only outputs internal ints.
     return block;
+  }
+
+  // Returns an evaluation context for a code block. If the code block is null,
+  // a default one will be created with MakeCodeBlock().
+  fxl::RefPtr<ExprEvalContext> MakeEvalContext(
+      fxl::RefPtr<CodeBlock> code_block = nullptr) {
+    return fxl::MakeRefCounted<SymbolEvalContext>(
+        fxl::WeakPtr<const ProcessSymbols>(),
+        SymbolContext::ForRelativeAddresses(), provider(),
+        code_block ? code_block : MakeCodeBlock());
   }
 
  private:
@@ -70,12 +87,12 @@ struct ValueResult {
 
 // Indicates whether GetNamedValue should exit the message loop when the
 // callback is issued. Synchronous results don't need this.
-enum GetNamedValueAsync { kQuitLoop, kSynchronous };
+enum GetValueAsync { kQuitLoop, kSynchronous };
 
 // Wrapper around eval_context->GetNamedValue that places the callback
 // parameters into a struct. It makes the callsites cleaner.
-void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
-                   const std::string& name, GetNamedValueAsync async,
+void GetNamedValue(const fxl::RefPtr<ExprEvalContext>& eval_context,
+                   const std::string& name, GetValueAsync async,
                    ValueResult* result) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
@@ -93,6 +110,22 @@ void GetNamedValue(fxl::RefPtr<ExprEvalContext>& eval_context,
       });
 }
 
+// Sync wrapper around GetVariableValue().
+void GetVariableValue(const fxl::RefPtr<ExprEvalContext>& eval_context,
+                      fxl::RefPtr<Variable> variable, GetValueAsync async,
+                      ValueResult* result) {
+  eval_context->GetVariableValue(
+      variable, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol,
+                                ExprValue value) {
+        result->called = true;
+        result->err = err;
+        result->value = std::move(value);
+        result->symbol = std::move(symbol);
+        if (async == kQuitLoop)
+          debug_ipc::MessageLoop::Current()->QuitNow();
+      });
+}
+
 const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
 const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
 
@@ -101,13 +134,10 @@ const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
 TEST_F(SymbolEvalContextTest, NotFoundSynchronous) {
   provider()->set_ip(0x1010);
 
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(eval_context, "not_present", kSynchronous, &result);
+  GetNamedValue(context, "not_present", kSynchronous, &result);
 
   EXPECT_TRUE(result.called);
   EXPECT_TRUE(result.err.has_error());
@@ -120,13 +150,10 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
   provider()->set_ip(0x1010);
   provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
 
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(eval_context, "present", kSynchronous, &result);
+  GetNamedValue(context, kPresentVarName, kSynchronous, &result);
 
   EXPECT_TRUE(result.called);
   EXPECT_FALSE(result.err.has_error()) << result.err.msg();
@@ -136,7 +163,7 @@ TEST_F(SymbolEvalContextTest, FoundSynchronous) {
   ASSERT_TRUE(result.symbol);
   const Variable* var = result.symbol->AsVariable();
   ASSERT_TRUE(var);
-  EXPECT_EQ("present", var->GetFullName());
+  EXPECT_EQ(kPresentVarName, var->GetFullName());
 }
 
 TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
@@ -144,13 +171,10 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
   provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
   provider()->set_ip(0x1010);
 
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(eval_context, "present", kQuitLoop, &result);
+  GetNamedValue(context, kPresentVarName, kQuitLoop, &result);
 
   // Should not have been called yet since retrieving the register is
   // asynchronous.
@@ -166,7 +190,7 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
   ASSERT_TRUE(result.symbol);
   const Variable* var = result.symbol->AsVariable();
   ASSERT_TRUE(var);
-  EXPECT_EQ("present", var->GetFullName());
+  EXPECT_EQ(kPresentVarName, var->GetFullName());
 }
 
 // Tests a symbol that's found but couldn't be evaluated (in this case, because
@@ -174,13 +198,10 @@ TEST_F(SymbolEvalContextTest, FoundAsynchronous) {
 TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
   provider()->set_ip(0x1010);
 
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext();
 
   ValueResult result;
-  GetNamedValue(eval_context, "present", kQuitLoop, &result);
+  GetNamedValue(context, kPresentVarName, kSynchronous, &result);
 
   // The value should be not found and this should be known synchronously.
   EXPECT_TRUE(result.called);
@@ -192,7 +213,12 @@ TEST_F(SymbolEvalContextTest, FoundButNotEvaluatable) {
   ASSERT_TRUE(result.symbol);
   const Variable* var = result.symbol->AsVariable();
   ASSERT_TRUE(var);
-  EXPECT_EQ("present", var->GetFullName());
+  EXPECT_EQ(kPresentVarName, var->GetFullName());
+
+  // Prevent leak by processing pending messages. The symbol eval context
+  // currently deletes the DwarfExprEval on a PostTask().
+  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
+  loop().Run();
 }
 
 // Tests finding variables on |this| and subclasses of |this|.
@@ -217,10 +243,10 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
                                       kD2, 0, 0, 0});  // (int32) Derived.d2
 
   // Our parameter "Derived* this = kObjectAddr" is passed in register 0.
-  provider()->set_ip(0x1000);
+  provider()->set_ip(kBeginValidRange);
   provider()->AddRegisterValue(kDWARFReg0ID, false, kObjectAddr);
   auto this_var = MakeVariableForTest(
-      "this", derived_ptr, 0x1000, 0x2000,
+      "this", derived_ptr, kBeginValidRange, kEndValidRange,
       {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
 
   // Make a function with a parameter / object pointer to Derived (this will be
@@ -229,14 +255,11 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
   function->set_parameters({LazySymbol(this_var)});
   function->set_object_pointer(LazySymbol(this_var));
 
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), function);
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext(function);
 
   // First get d2 on the derived class. "this" should be implicit.
   ValueResult result_d2;
-  GetNamedValue(eval_context, "d2", kQuitLoop, &result_d2);
+  GetNamedValue(context, "d2", kQuitLoop, &result_d2);
 
   // Should not have been called yet since retrieving the register is
   // asynchronous.
@@ -251,7 +274,7 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
   // Now get b2 on the base class, it should implicitly find it on "this"
   // and then check the base class.
   ValueResult result_b2;
-  GetNamedValue(eval_context, "b2", kQuitLoop, &result_b2);
+  GetNamedValue(context, "b2", kQuitLoop, &result_b2);
 
   EXPECT_FALSE(result_b2.called);
   loop().Run();
@@ -266,24 +289,103 @@ TEST_F(SymbolEvalContextTest, FoundThis) {
   EXPECT_EQ("b2", dm->GetFullName());
 }
 
+// Tests a variable lookup that has the IP out of range of the variable's
+// validity.
+TEST_F(SymbolEvalContextTest, RangeMiss) {
+  // Set up a valid register for the variable. A missing register shouldn't be
+  // why it fails to be found.
+  constexpr uint64_t kValue = 0x1234567890123;
+  provider()->AddRegisterValue(kDWARFReg0ID, true, kValue);
+  provider()->set_ip(kEndValidRange + 0x10);
+
+  ValueResult result;
+  GetNamedValue(MakeEvalContext(), kPresentVarName, kSynchronous, &result);
+  EXPECT_TRUE(result.called);
+  EXPECT_TRUE(result.err.has_error());
+  EXPECT_EQ(ErrType::kOptimizedOut, result.err.type());
+  EXPECT_EQ(ExprValue(), result.value);
+}
+
+// Tests the DWARF expression evaluation failing (empty expression).
+TEST_F(SymbolEvalContextTest, DwarfEvalFailure) {
+  const char kEmptyExprVarName[] = "empty_expr";
+  provider()->set_ip(kBeginValidRange);
+
+  auto var = MakeUint64VariableForTest(kEmptyExprVarName, kBeginValidRange,
+                                       kEndValidRange, {});
+
+  auto block = MakeCodeBlock();
+  block->set_variables({LazySymbol(std::move(var))});
+
+  ValueResult result;
+  GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, kSynchronous,
+                &result);
+  EXPECT_TRUE(result.called);
+  EXPECT_TRUE(result.err.has_error());
+  EXPECT_EQ("DWARF expression produced no results.", result.err.msg());
+  EXPECT_EQ(ExprValue(), result.value);
+}
+
+// Tests asynchronously reading an integer from memory. This also tests
+// interleaved execution of multiple requests by having a resolution miss
+// request execute while the memory request is pending.
+TEST_F(SymbolEvalContextTest, IntOnStack) {
+  // Define a 4-byte integer (=0x12345678) at location bp+8
+  constexpr int32_t kValue = 0x12345678;
+
+  constexpr uint8_t kOffset = 8;
+  auto type = MakeInt32Type();
+  auto var =
+      MakeUint64VariableForTest("i", 0, 0, {llvm::dwarf::DW_OP_fbreg, kOffset});
+  var->set_type(LazySymbol(type));
+
+  constexpr uint64_t kBp = 0x1000;
+  provider()->set_bp(kBp);
+  provider()->set_ip(0x1000);
+  provider()->AddMemory(kBp + kOffset, {0x78, 0x56, 0x34, 0x12});
+
+  auto context = MakeEvalContext();
+
+  ValueResult result1;
+  GetVariableValue(context, var, kQuitLoop, &result1);
+
+  // Should be run async since it requests memory.
+  EXPECT_FALSE(result1.called);
+  EXPECT_FALSE(result1.err.has_error()) << result1.err.msg();
+
+  // Before running the loop and receiving the memory, start a new request,
+  // this one will fail synchronously due to a range miss.
+  auto rangemiss = MakeUint64VariableForTest("rangemiss", 0x6000, 0x7000,
+                                             {llvm::dwarf::DW_OP_reg0});
+  ValueResult result2;
+  GetVariableValue(context, rangemiss, kSynchronous, &result2);
+  EXPECT_TRUE(result2.called);
+  EXPECT_TRUE(result2.err.has_error());
+  EXPECT_EQ(ErrType::kOptimizedOut, result2.err.type());
+  EXPECT_EQ(ExprValue(), result2.value);
+
+  // Now let the first request complete.
+  loop().Run();
+  EXPECT_TRUE(result1.called);
+  EXPECT_FALSE(result1.err.has_error()) << result1.err.msg();
+  EXPECT_EQ(ExprValue(kValue), result1.value);
+}
+
 // This is a larger test that runs the EvalContext through ExprNode.Eval.
 TEST_F(SymbolEvalContextTest, NodeIntegation) {
   constexpr uint64_t kValue = 12345678;
   provider()->AddRegisterValue(kDWARFReg0ID, false, kValue);
-  provider()->set_ip(0x1010);
+  provider()->set_ip(kBeginValidRange + 0x10);
 
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext();
 
   // Look up an identifier that's not present.
-  auto present = fxl::MakeRefCounted<IdentifierExprNode>("present");
+  auto present = fxl::MakeRefCounted<IdentifierExprNode>(kPresentVarName);
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  present->Eval(eval_context, [&called, &out_err, &out_value](const Err& err,
-                                                              ExprValue value) {
+  present->Eval(context, [&called, &out_err, &out_value](const Err& err,
+                                                         ExprValue value) {
     called = true;
     out_err = err;
     out_value = value;
@@ -304,15 +406,12 @@ TEST_F(SymbolEvalContextTest, RegisterByName) {
 
   constexpr uint64_t kRegValue = 0xdeadb33f;
   provider()->AddRegisterValue(kDWARFReg0ID, false, kRegValue);
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), MakeCodeBlock());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext();
 
   // We've defined no variables*, so this should fall back and give us the
-  // register by name.   *(Except "present" which MakeCodeBlock defines).
+  // register by name.   *(Except kPresentVarName which MakeCodeBlock defines).
   ValueResult reg;
-  GetNamedValue(eval_context, "x0", kQuitLoop, &reg);
+  GetNamedValue(context, "x0", kQuitLoop, &reg);
 
   // Should not have been called yet since retrieving the register is
   // asynchronous.
@@ -330,24 +429,21 @@ TEST_F(SymbolEvalContextTest, RegisterShadowed) {
   constexpr uint64_t kVarValue = 0xf00db4be;
 
   auto shadow_var = MakeUint64VariableForTest(
-      "x0", 0x1000, 0x2000,
+      "x0", kBeginValidRange, kEndValidRange,
       {llvm::dwarf::DW_OP_reg1, llvm::dwarf::DW_OP_stack_value});
 
   auto block = MakeCodeBlock();
   block->set_variables({LazySymbol(std::move(shadow_var))});
 
-  provider()->set_ip(0x1000);
+  provider()->set_ip(kBeginValidRange);
   provider()->AddRegisterValue(kDWARFReg0ID, false, kRegValue);
   provider()->AddRegisterValue(kDWARFReg1ID, false, kVarValue);
-  auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      fxl::WeakPtr<const ProcessSymbols>(),
-      SymbolContext::ForRelativeAddresses(), provider(), block);
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
+  auto context = MakeEvalContext(block);
 
   // This should just look up our variable, x0, which is in the register x1. If
   // It looks up the register x0 something has gone very wrong.
   ValueResult val;
-  GetNamedValue(eval_context, "x0", kQuitLoop, &val);
+  GetNamedValue(context, "x0", kQuitLoop, &val);
 
   // Should not have been called yet since retrieving the register is
   // asynchronous.
@@ -361,7 +457,7 @@ TEST_F(SymbolEvalContextTest, RegisterShadowed) {
 }
 
 // Also tests ResolveForwardDefinition().
-TEST(ExprValue, GetConcreteType) {
+TEST_F(SymbolEvalContextTest, GetConcreteType) {
   ProcessSymbolsTestSetup setup;
   auto mod_ref = std::make_unique<MockModuleSymbols>("mod.so");
   MockModuleSymbols* mod = mod_ref.get();  // Save for later.
@@ -385,14 +481,12 @@ TEST(ExprValue, GetConcreteType) {
       DwarfTag::kConstType, LazySymbol(forward_def));
 
   // Make a symbol context.
-  auto provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto context = fxl::MakeRefCounted<SymbolEvalContext>(
-      setup.process().GetWeakPtr(), symbol_context, provider,
+      setup.process().GetWeakPtr(), symbol_context, provider(),
       fxl::RefPtr<CodeBlock>());
-  fxl::RefPtr<ExprEvalContext> eval_context(context);
 
   // Resolving the const forward-defined value gives the non-const version.
-  auto result_type = eval_context->GetConcreteType(const_forward_def.get());
+  auto result_type = context->GetConcreteType(const_forward_def.get());
   EXPECT_EQ(forward_def.get(), result_type.get());
 
   // Make a definition for the type. It has one 32-bit data member.
@@ -404,9 +498,9 @@ TEST(ExprValue, GetConcreteType) {
 
   // Now that the index exists for the type, both the const and non-const
   // declarations should resolve to the full definition.
-  result_type = eval_context->GetConcreteType(forward_def.get());
+  result_type = context->GetConcreteType(forward_def.get());
   EXPECT_EQ(decl.get(), result_type.get());
-  result_type = eval_context->GetConcreteType(const_forward_def.get());
+  result_type = context->GetConcreteType(const_forward_def.get());
   EXPECT_EQ(decl.get(), result_type.get());
 }
 

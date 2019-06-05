@@ -10,7 +10,6 @@
 
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
-#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -18,6 +17,7 @@
 namespace zxdb {
 
 class CodeBlock;
+class DwarfExprEval;
 class LazySymbol;
 class Location;
 class ProcessSymbols;
@@ -49,57 +49,40 @@ class SymbolEvalContext : public ExprEvalContext {
   ~SymbolEvalContext() override;
 
   // ExprEvalContext implementation.
-  void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) override;
-  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) override;
-  fxl::RefPtr<Type> GetConcreteType(const Type* type) override;
-  SymbolVariableResolver& GetVariableResolver() override;
+  void GetNamedValue(const ParsedIdentifier& name,
+                     ValueCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Variable> variable,
+                        ValueCallback cb) const override;
+  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
+  fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
 
  private:
-  struct SearchResult {
-    enum Status {
-      // The variable was found, the value is set and there is no Err.
-      kFound,
-
-      // The variable was not found. The Err object will not be set (not finding
-      // a variable for a given phase of lookup isn't necessarily an error).
-      kNotFound,
-
-      // There was a problem and evaluation should not continue. For example,
-      // the name may be ambiguous. The Err object will be set.
-      kError
-    };
-
-    SearchResult() = default;
-    SearchResult(Status s, Err e = Err(),
-                 fxl::RefPtr<Symbol> sym = fxl::RefPtr<Symbol>())
-        : status(s), err(std::move(e)), symbol(std::move(sym)) {}
-
-    Status status = kNotFound;
-    Err err;
-    fxl::RefPtr<Symbol> symbol;
-  };
+  struct ResolutionState;
 
   // Computes the value of the given variable and issues the callback (possibly
   // asynchronously, possibly not).
   void DoResolve(FoundName found, ValueCallback cb) const;
 
+  // Callback for when the dwarf_eval_ has completed evaluation.
+  void OnDwarfEvalComplete(const Err& err,
+                           fxl::RefPtr<ResolutionState> state) const;
+
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);
 
-  FindNameContext GetFindNameContext();
+  FindNameContext GetFindNameContext() const;
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   SymbolContext symbol_context_;
   fxl::RefPtr<SymbolDataProvider> data_provider_;  // Possibly null.
-  SymbolVariableResolver resolver_;
 
   // Innermost block of the current context. May be null if there is none
   // (this means you won't get any local variable lookups).
   fxl::RefPtr<const CodeBlock> block_;
 
-  fxl::WeakPtrFactory<SymbolEvalContext> weak_factory_;
+  mutable fxl::WeakPtrFactory<SymbolEvalContext> weak_factory_;
 };
 
 }  // namespace zxdb

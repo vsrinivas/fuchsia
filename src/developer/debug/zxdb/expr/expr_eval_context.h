@@ -17,7 +17,6 @@ class Err;
 class ExprValue;
 class Symbol;
 class SymbolDataProvider;
-class SymbolVariableResolver;
 class Variable;
 
 // Interface used by expression evaluation to communicate with the outside
@@ -41,8 +40,16 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // The callback may be issued asynchronously in the future if communication
   // with the remote debugged application is required. The callback may be
   // issued reentrantly for synchronously available data.
+  //
+  // If the ExprEvalContext is destroyed before the data is ready, the callback
+  // will not be issued.
   virtual void GetNamedValue(const ParsedIdentifier& identifier,
-                             ValueCallback cb) = 0;
+                             ValueCallback cb) const = 0;
+
+  // Like GetNamedValue() but takes an already-identified Variable. In this
+  // case the Symbol of the callback will just be the input |variable|.
+  virtual void GetVariableValue(fxl::RefPtr<Variable> variable,
+                                ValueCallback cb) const = 0;
 
   // Attempts to resolve a type that is a declaration (is_declaration() is set
   // on the type) by looking up a non-declaration type with the same name.
@@ -58,7 +65,8 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // a different type, but if the user has more than one type with the same
   // name bad things will happen anyway. On failure, the input type will be
   // returned.
-  virtual fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) = 0;
+  virtual fxl::RefPtr<Type> ResolveForwardDefinition(
+      const Type* type) const = 0;
 
   // Strips C-V qualifications and resolves forward declarations.
   //
@@ -68,11 +76,7 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
   // It will return null only if the input type is null. Sometimes forward
   // declarations can't be resolved or the "const" refers to nothing, in which
   // case this function will return the original type.
-  virtual fxl::RefPtr<Type> GetConcreteType(const Type* type) = 0;
-
-  // Returns the SymbolVariableResolver used to create variables from
-  // memory for this context.
-  virtual SymbolVariableResolver& GetVariableResolver() = 0;
+  virtual fxl::RefPtr<Type> GetConcreteType(const Type* type) const = 0;
 
   virtual fxl::RefPtr<SymbolDataProvider> GetDataProvider() = 0;
 

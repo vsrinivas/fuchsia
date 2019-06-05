@@ -17,7 +17,6 @@
 #include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
 #include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
-#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"

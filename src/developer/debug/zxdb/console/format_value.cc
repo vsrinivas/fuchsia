@@ -13,7 +13,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
-#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -151,22 +151,18 @@ void FormatValue::AppendVariable(const SymbolContext& symbol_context,
                                  const FormatExprValueOptions& options) {
   OutputKey output_key = AsyncAppend(
       NodeType::kVariable, var->GetAssignedName(), GetRootOutputKey());
-  auto resolver =
-      std::make_unique<SymbolVariableResolver>(eval_context->GetDataProvider());
 
-  // We can capture "this" here since the callback will be scoped to the
-  // lifetime of the resolver which this class owns.
-  resolver->ResolveVariable(
-      symbol_context, var,
-      [this, eval_context, options, output_key](const Err& err, ExprValue val) {
-        // The variable has been resolved, now we need to
-        // print it (which could in itself be
-        // asynchronous).
-        FormatExprValue(eval_context, err, val, options, false, output_key);
+  eval_context->GetVariableValue(
+      fxl::RefPtr<Variable>(const_cast<Variable*>(var)),
+      [weak_this = weak_factory_.GetWeakPtr(), eval_context, options,
+       output_key](const Err& err, fxl::RefPtr<Symbol>, ExprValue val) {
+        // The variable has been resolved, now we need to print it (which could
+        // in itself be asynchronous).
+        if (weak_this) {
+          weak_this->FormatExprValue(eval_context, err, val, options, false,
+                                     output_key);
+        }
       });
-
-  // Keep in our class scope so the callbacks will be run.
-  resolvers_.push_back(std::move(resolver));
 }
 
 void FormatValue::Append(OutputBuffer out) {

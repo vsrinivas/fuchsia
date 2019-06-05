@@ -28,7 +28,6 @@ class MemberPtr;
 class OutputBuffer;
 class SymbolContext;
 class ExprEvalContext;
-class SymbolVariableResolver;
 class Type;
 class Value;
 class Variable;
@@ -268,8 +267,6 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   std::unique_ptr<ProcessContext> process_context_;
   Callback complete_callback_;
   std::vector<OutputBuffer> buffers_;
-
-  std::vector<std::unique_ptr<SymbolVariableResolver>> resolvers_;
 
   // The root of the output.
   OutputNode root_;

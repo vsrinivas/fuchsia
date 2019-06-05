@@ -9,7 +9,6 @@
 #include <string>
 
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
-#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
@@ -25,19 +24,17 @@ class MockExprEvalContext : public ExprEvalContext {
   void AddVariable(const std::string& name, ExprValue v);
 
   // ExprEvalContext implementation.
-  void GetNamedValue(
-      const ParsedIdentifier& ident,
-      std::function<void(const Err&, fxl::RefPtr<Symbol>, ExprValue)> cb)
-      override;
-  SymbolVariableResolver& GetVariableResolver() override;
-  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) override;
-  fxl::RefPtr<Type> GetConcreteType(const Type* type) override;
+  void GetNamedValue(const ParsedIdentifier& ident,
+                     ValueCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Variable> variable,
+                        ValueCallback cb) const override;
+  fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
+  fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;
 
  private:
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
-  SymbolVariableResolver resolver_;
   std::map<std::string, ExprValue> values_;
 };
 

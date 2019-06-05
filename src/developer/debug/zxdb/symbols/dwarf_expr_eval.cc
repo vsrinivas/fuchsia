@@ -22,7 +22,13 @@ namespace zxdb {
 DwarfExprEval::DwarfExprEval()
     : symbol_context_(SymbolContext::ForRelativeAddresses()),
       weak_factory_(this) {}
-DwarfExprEval::~DwarfExprEval() = default;
+
+DwarfExprEval::~DwarfExprEval() {
+  // This assertion verifies that this class was not accidentally deleted from
+  // within the completion callback. This class is not set up to handle this
+  // case.
+  FXL_CHECK(!in_completion_callback_);
+}
 
 DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
   FXL_DCHECK(is_complete_);
@@ -81,13 +87,11 @@ bool DwarfExprEval::ContinueEval() {
         is_success_ = true;
       }
 
-      // The callback may delete |this| but we also want to clear the value to
-      // prevent accidental future use. So we need to copy members to local
-      // variables in case |this| goes away.
-      auto is_complete = is_complete_;
-      auto cb = std::move(completion_callback_);
-      cb(this, err);
-      return is_complete;
+      in_completion_callback_ = true;
+      completion_callback_(this, err);
+      completion_callback_ = {};
+      in_completion_callback_ = false;
+      return is_complete_;
     }
 
     if (instruction_count == kMaxInstructionsAtOnce) {
@@ -363,10 +367,12 @@ void DwarfExprEval::ReportError(const Err& err) {
   data_provider_.reset();
   is_complete_ = true;
 
-  // The callback may delete |this| but we also want to clear the value to
-  // prevent accidental future use.
-  auto cb = std::move(completion_callback_);
-  cb(this, err);
+  // Wrap completion callback with the flag to catch deletions from within the
+  // callback.
+  in_completion_callback_ = true;
+  completion_callback_(this, err);
+  completion_callback_ = {};
+  in_completion_callback_ = false;
 }
 
 void DwarfExprEval::ReportStackUnderflow() {

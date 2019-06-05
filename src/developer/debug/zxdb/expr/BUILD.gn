@@ -46,8 +46,6 @@ static_library("expr") {
     "resolve_ptr_ref.h",
     "symbol_eval_context.cc",
     "symbol_eval_context.h",
-    "symbol_variable_resolver.cc",
-    "symbol_variable_resolver.h",
     "template_type_extractor.cc",
     "template_type_extractor.h",
   ]
@@ -95,7 +93,6 @@ source_set("tests") {
     "resolve_collection_unittest.cc",
     "resolve_ptr_ref_unittest.cc",
     "symbol_eval_context_unittest.cc",
-    "symbol_variable_resolver_unittest.cc",
     "template_type_extractor_unittest.cc",
   ]
 
