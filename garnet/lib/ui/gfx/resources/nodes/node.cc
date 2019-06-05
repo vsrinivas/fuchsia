@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
+#include <algorithm>
+
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
-#include "src/ui/lib/escher/geometry/types.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -304,6 +305,10 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   }
   clip_to_self_ = clip_to_self;
   return true;
+}
+
+bool Node::SetClipPlanesFromBBox(const escher::BoundingBox& box) {
+  return SetClipPlanes(box.CreatePlanes());
 }
 
 bool Node::SetClipPlanes(std::vector<escher::plane3> clip_planes) {

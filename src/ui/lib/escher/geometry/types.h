@@ -131,7 +131,7 @@ struct planeN {
 struct plane2 : public planeN<vec2> {
   using planeN::planeN;
 
-  // Project a 3D plane onto the Z=0 plane, as described abover.
+  // Project a 3D plane onto the Z=0 plane, as described above.
   plane2(const planeN<vec3>& plane) {
     vec3 direction = plane.dir();
     float_t distance = plane.dist();

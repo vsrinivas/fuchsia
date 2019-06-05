@@ -30,7 +30,7 @@ class VkSessionTest : public SessionTest {
   // into the SessionContext before construction.
   virtual void OnSessionContextCreated(SessionContext* context) {}
 
- private:
+ protected:
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;

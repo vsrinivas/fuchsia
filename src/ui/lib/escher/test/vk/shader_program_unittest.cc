@@ -5,7 +5,6 @@
 #include "src/ui/lib/escher/vk/shader_program.h"
 
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
-#include "src/ui/lib/escher/geometry/clip_planes.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
@@ -98,7 +97,6 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   EXPECT_EQ(program3, program4);
   EXPECT_NE(program1, program3);
 }
-
 
 #ifdef __Fuchsia__
 // TODO(ES-83): we need to set up so many meshes, materials, framebuffers, etc.

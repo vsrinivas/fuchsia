@@ -89,10 +89,16 @@ void PaperDrawCallFactory::EnqueueDrawCalls(
     const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
     PaperDrawableFlags drawable_flags) {
   FXL_DCHECK(frame_);
-  if (!cache_entry)
+  if (!cache_entry) {
     return;
+  }
 
   TRACE_DURATION("gfx", "PaperDrawCallFactory::EnqueueDrawCalls");
+
+  if (track_cache_entries_) {
+    tracked_cache_entries_.push_back(cache_entry);
+    return;  // No need to do anything else.
+  }
 
   auto* mesh = cache_entry.mesh.get();
   const auto& texture =
@@ -194,6 +200,7 @@ void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, PaperScene* scene,
   shape_cache_ = shape_cache;
   camera_pos_ = camera_pos;
   camera_dir_ = camera_dir;
+  tracked_cache_entries_.clear();
 }
 
 void PaperDrawCallFactory::EndFrame() {

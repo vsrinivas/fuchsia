@@ -5,6 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_GEOMETRY_BOUNDING_BOX_H_
 #define SRC_UI_LIB_ESCHER_GEOMETRY_BOUNDING_BOX_H_
 
+#include <vector>
+
 #include "src/ui/lib/escher/geometry/types.h"
 
 namespace escher {
@@ -61,6 +63,8 @@ class BoundingBox {
   // specified plane (between 0 and 8).
   uint32_t NumClippedCorners(const plane3& plane,
                              const float_t& epsilon = kEpsilon) const;
+
+  std::vector<plane3> CreatePlanes() const;
 
  private:
   vec3 min_;

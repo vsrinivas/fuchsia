@@ -4,11 +4,28 @@
 
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 
+#include <array>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/lib/escher/geometry/plane_ops.h"
 
 namespace escher {
+
+namespace {
+
+static const size_t kNumPlanes = 6;
+
+bool PlanesAreValid(const std::array<vec4, kNumPlanes>& planes) {
+  for (size_t i = 0; i < kNumPlanes; ++i) {
+    if (std::abs(glm::length(vec3(planes[i])) - 1.f) > kEpsilon) {
+      return false;
+    }
+  }
+  return true;
+}
+
+}  // namespace
 
 BoundingBox::BoundingBox(vec3 min, vec3 max) : min_(min), max_(max) {
 #ifndef NDEBUG
@@ -91,6 +108,27 @@ BoundingBox operator*(const mat4& matrix, const BoundingBox& box) {
              glm::max(vec3(za), vec3(zb)) + vec3(matrix[3]);
 
   return BoundingBox(min, max);
+}
+
+std::vector<plane3> BoundingBox::CreatePlanes() const {
+  std::array<glm::vec4, kNumPlanes> planes;
+  std::vector<escher::plane3> result;
+  result.resize(kNumPlanes);
+
+  planes[0] = glm::vec4(1, 0, 0, min_.x);
+  planes[1] = glm::vec4(0, 1, 0, min_.y);
+  planes[2] = glm::vec4(0, 0, 1, min_.z);
+  planes[3] = glm::vec4(-1, 0, 0, -max_.x);
+  planes[4] = glm::vec4(0, -1, 0, -max_.y);
+  planes[5] = glm::vec4(0, 0, -1, -max_.z);
+
+  FXL_DCHECK(PlanesAreValid(planes));
+
+  for (size_t i = 0; i < kNumPlanes; i++) {
+    glm::vec4 plane = planes[i];
+    result[i] = plane3(glm::vec3(plane), plane.w);
+  }
+  return result;
 }
 
 uint32_t BoundingBox::NumClippedCorners(const plane2& plane,

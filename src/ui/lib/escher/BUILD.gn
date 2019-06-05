@@ -225,8 +225,6 @@ source_set("escher") {
     "fs/hack_filesystem.h",
     "geometry/bounding_box.cc",
     "geometry/bounding_box.h",
-    "geometry/clip_planes.cc",
-    "geometry/clip_planes.h",
     "geometry/indexed_triangle_mesh.h",
     "geometry/indexed_triangle_mesh_clip.h",
     "geometry/indexed_triangle_mesh_upload.h",

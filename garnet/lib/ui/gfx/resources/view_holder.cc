@@ -8,6 +8,7 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -16,9 +17,8 @@ const ResourceTypeInfo ViewHolder::kTypeInfo = {
     ResourceType::kNode | ResourceType::kViewHolder, "ViewHolder"};
 
 ViewHolder::ViewHolder(Session* session, ResourceId node_id,
-                               ViewLinker::ExportLink link)
-    : Node(session, node_id, ViewHolder::kTypeInfo),
-      link_(std::move(link)) {
+                       ViewLinker::ExportLink link)
+    : Node(session, node_id, ViewHolder::kTypeInfo), link_(std::move(link)) {
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
 }
@@ -65,8 +65,28 @@ void ViewHolder::LinkDisconnected() {
 void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
   if (!fidl::Equals(props, view_properties_)) {
     view_properties_ = std::move(props);
-    // TODO(SCN-1180) Set the BoundingBox bounds as ClipPlanes on this node.
     if (view_) {
+      // This code transforms the bounding box given to the view holder
+      // into a set of clipping planes on the transform node that will
+      // then be applied to all children of this view holder. This is
+      // to ensure that all geometry gets clipped to the view bounds and
+      // does not extend past its allowed extent.
+#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+
+      fuchsia::ui::gfx::BoundingBox bbox = view_properties_.bounding_box;
+      fuchsia::ui::gfx::vec3 min = bbox.min;
+      fuchsia::ui::gfx::vec3 max = bbox.max;
+
+      glm::vec3 glm_min(min.x, min.y, min.z);
+      glm::vec3 glm_max(max.x, max.y, max.z);
+
+      escher::BoundingBox e_bbox(glm_min, glm_max);
+
+      // TODO(SCN-1471) - Ensure that clipped meshes are not hit
+      // during hit tests.
+      SetClipPlanesFromBBox(e_bbox);
+#endif  // SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+
       SendViewPropertiesChangedEvent();
     }
   }

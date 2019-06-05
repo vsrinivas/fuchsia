@@ -9,6 +9,9 @@ declare_args() {
 
   # Draws the current frame number in the top-left corner.
   scenic_display_frame_number = false
+
+  # Turns on view bound clipping for all of Scenic.
+  scenic_enforce_view_bound_clipping = false
 }
 
 config("common_include_dirs") {
@@ -22,6 +25,12 @@ config("swapchain") {
   defines = [
     "SCENIC_IGNORE_VSYNC=$scenic_ignore_vsync",
     "SCENIC_DISPLAY_FRAME_NUMBER=$scenic_display_frame_number",
+  ]
+}
+
+config("feature_flags") {
+  defines = [
+    "SCENIC_ENFORCE_VIEW_BOUND_CLIPPING=$scenic_enforce_view_bound_clipping",
   ]
 }
 
@@ -181,7 +190,10 @@ source_set("gfx") {
     "swapchain/swapchain_factory.h",
   ]
 
-  public_configs = [ ":common_include_dirs" ]
+  public_configs = [
+    ":common_include_dirs",
+    ":feature_flags",
+  ]
 
   configs += [ ":swapchain" ]
 

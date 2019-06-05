@@ -101,6 +101,7 @@ executable("unittests") {
     "size_change_hint_unittest.cc",
     "snapshotter_unittest.cc",
     "stereo_camera_unittest.cc",
+    "view_clipping_unittest.cc",
     "view_unittest.cc",
   ]
   deps = [

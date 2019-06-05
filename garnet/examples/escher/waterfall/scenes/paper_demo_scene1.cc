@@ -4,7 +4,6 @@
 
 #include "garnet/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 
-#include "src/ui/lib/escher/geometry/clip_planes.h"
 #include "src/ui/lib/escher/geometry/plane_ops.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/geometry/types.h"

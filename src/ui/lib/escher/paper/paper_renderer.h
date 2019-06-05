@@ -134,6 +134,11 @@ class PaperRenderer final : public Renderer {
   // draw-calls that will emit Vulkan commands during EndFrame().
   void DrawLegacyObject(const Object& obj, PaperDrawableFlags flags = {});
 
+  // TODO(ES-203) - We will remove this once PaperDrawCallFactory becomes
+  // injectable. We should never have to access this directly from the
+  // renderer - it should be completely opaque.
+  PaperDrawCallFactory* draw_call_factory() { return &draw_call_factory_; }
+
  private:
   explicit PaperRenderer(EscherWeakPtr escher,
                          const PaperRendererConfig& config);

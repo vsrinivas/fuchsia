@@ -12,8 +12,9 @@
 #include "garnet/lib/ui/gfx/resources/nodes/variable_binding.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/variable.h"
-#include "src/ui/lib/escher/geometry/transform.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ui/lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/geometry/transform.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -51,6 +52,7 @@ class Node : public Resource {
   bool SetAnchor(Vector3VariablePtr anchor);
   bool SetClipToSelf(bool clip_to_self);
   bool SetClipPlanes(std::vector<escher::plane3> clip_planes);
+  bool SetClipPlanesFromBBox(const escher::BoundingBox& box);
   bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
   bool SendSizeChangeHint(float width_change_factor,
                           float height_change_factor);

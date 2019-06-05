@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_NODE_H_   // @#@#
-#define GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_NODE_H_
+#ifndef GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_H_
+#define GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -29,8 +29,7 @@ class ViewHolder final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, ResourceId node_id,
-                 ViewLinker::ExportLink link);
+  ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportLink link);
   ~ViewHolder() {}
 
   // |Resource|
@@ -93,4 +92,4 @@ class ViewHolder final : public Node {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_NODE_H_
+#endif  // GARNET_LIB_UI_GFX_RESOURCES_VIEW_HOLDER_H_

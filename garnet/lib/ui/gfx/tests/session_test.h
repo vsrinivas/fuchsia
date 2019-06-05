@@ -39,8 +39,8 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   // Apply the specified Command.  Return true if it was applied successfully,
   // and false if an error occurred.
   bool Apply(::fuchsia::ui::gfx::Command command) {
-    CommandContext empty_command_context(nullptr);
-    return session_->ApplyCommand(&empty_command_context, std::move(command));
+    CommandContext context(nullptr);
+    return session_->ApplyCommand(&context, std::move(command));
   }
 
   template <class ResourceT>

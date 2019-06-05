@@ -47,6 +47,18 @@ class PaperDrawCallFactory final {
                         const PaperMaterial& material,
                         PaperDrawableFlags flags);
 
+  // TODO(ES203) - We will eventualy not need to do this as we will simply
+  // inject PaperRenderer with a version of the PaperDrawCallFactory that
+  // is used explicitly for testing.
+  //
+  // When this is set to true, no draw calls get enqueued and instead,
+  // PaperDrawCallFactory will accumulate a list of cache entries that
+  // would have been drawn.
+  void set_track_cache_entries(bool track) { track_cache_entries_ = track; }
+  const std::vector<PaperShapeCacheEntry>& tracked_cache_entries() const {
+    return tracked_cache_entries_;
+  }
+
   // Helper for the creation of uint64_t sort-keys for the opaque and
   // translucent RenderQueues.
   class SortKey {
@@ -113,6 +125,9 @@ class PaperDrawCallFactory final {
   // Cache for |object_data| used by RenderQueueItems in both the opaque and
   // translucent queues.
   HashMap<Hash, void*> object_data_;
+
+  bool track_cache_entries_ = false;
+  std::vector<PaperShapeCacheEntry> tracked_cache_entries_;
 };
 
 }  // namespace escher
