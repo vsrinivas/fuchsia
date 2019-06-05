@@ -279,11 +279,6 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
     fd_.reset(fd.release());
     disk_size_ = disk_size;
 
-    if ((status = Verify()) != ZX_OK) {
-        fprintf(stderr, "Verify failed - cancelling extension\n");
-        return status;
-    }
-
     if (rename(path.c_str(), path_.c_str()) < 0) {
         fprintf(stderr, "Failed to copy over temp file\n");
         return ZX_ERR_IO;
