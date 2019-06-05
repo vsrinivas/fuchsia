@@ -13,10 +13,6 @@ unpack_dir="${2}"
 # The path at which to output the list of archives.
 output="${3}"
 
-# TODO(IN-1336): remove and re-enable the rest of the flow once we sorted out
-# the tar flakes.
-exit 0
-
 archives=""
 if [ -d "$build_id_archive_dir" ]
 then
@@ -27,7 +23,7 @@ if [ ! -d "$unpack_dir" ]
 then mkdir "$unpack_dir"
 fi
 
-if [ ! -z "$archives" ]
+if [ ! -z "$array" ]
 then echo "$archives" | xargs --max-procs 10 -n1 tar -xC "$unpack_dir" -jf
 fi
 
