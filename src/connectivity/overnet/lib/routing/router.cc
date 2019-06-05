@@ -17,7 +17,21 @@ static constexpr TimeDelta kPollLinkChangeTimeout =
 Router::Router(Timer* timer, NodeId node_id, bool allow_non_determinism)
     : timer_(timer),
       node_id_(node_id),
-      rng_(allow_non_determinism ? std::random_device()() : 0),
+      primary_rng_(
+          allow_non_determinism
+              ? fit::function<uint64_t()>(
+                    [rng = std::make_unique<std::random_device>(),
+                     dist =
+                         std::uniform_int_distribution<uint64_t>()]() mutable {
+                      return dist(*rng);
+                    })
+              : fit::function<uint64_t()>(
+                    [rng = std::make_unique<std::mt19937_64>(node_id.get()),
+                     dist =
+                         std::uniform_int_distribution<uint64_t>()]() mutable {
+                      return dist(*rng);
+                    })),
+      rng_(primary_rng_()),
       routing_table_(node_id, timer, allow_non_determinism),
       own_node_status_{node_id.as_fidl(), 1} {
   std::vector<fuchsia::overnet::protocol::NodeStatus> node_status;

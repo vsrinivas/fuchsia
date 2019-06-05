@@ -151,7 +151,7 @@ class Router {
     }
   }
 
-  uint64_t GenerateLinkLabel() { return next_link_label_++; }
+  uint64_t GenerateLinkLabel() { return primary_rng_(); }
 
  private:
   Timer* const timer_;
@@ -262,14 +262,13 @@ class Router {
 
   std::unordered_map<LocalStreamId, StreamHolder> streams_;
   std::unordered_map<NodeId, LinkHolder> links_;
+  fit::function<uint64_t()> primary_rng_;
   std::mt19937 rng_;
 
   RoutingTable routing_table_;
   Optional<Timeout> poll_link_changes_timeout_;
   Optional<Timeout> flush_old_nodes_timeout_;
   fuchsia::overnet::protocol::NodeStatus own_node_status_;
-
-  uint64_t next_link_label_ = 1;
 };
 
 }  // namespace overnet

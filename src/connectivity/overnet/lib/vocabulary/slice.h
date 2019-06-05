@@ -8,11 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
 #include <algorithm>
 #include <iosfwd>
 #include <string>
 #include <type_traits>
 #include <vector>
+
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 
 namespace overnet {

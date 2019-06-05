@@ -19,8 +19,9 @@
 
 namespace overnet {
 
-template <class Address, uint32_t kMSS, class HashAddress = std::hash<Address>,
-          class EqAddress = std::equal_to<Address>>
+template <class Address, uint32_t kMSS,
+          typename HashAddress = std::hash<Address>,
+          typename EqAddress = std::equal_to<Address>>
 class PacketNub {
   enum class PacketOp : uint8_t {
     Connected = 0,
@@ -90,7 +91,9 @@ class PacketNub {
   class NubLink final : public PacketLink {
    public:
     NubLink(PacketNub* nub, LinkDataPtr link, NodeId peer, uint64_t label)
-        : PacketLink(nub->router_, peer, kMSS, label), nub_(nub), link_(link) {}
+        : PacketLink(nub->router_, peer, kMSS - kLinkLabelHeaderSize, label),
+          nub_(nub),
+          link_(link) {}
 
     ~NubLink() { Delist(); }
 
@@ -122,9 +125,10 @@ class PacketNub {
 
   struct LinkData : public fbl::RefCounted<LinkData> {
     ~LinkData() { assert(link == nullptr); }
-    LinkData(std::vector<Address> addresses)
-        : addresses(std::move(addresses)) {}
+    LinkData(std::vector<Address> addresses, uint64_t label)
+        : label(label), addresses(std::move(addresses)) {}
 
+    const uint64_t label;
     std::vector<Address> addresses;
     Optional<Address> preferred_address;
     LinkState state = LinkState::Initial;
@@ -176,6 +180,7 @@ class PacketNub {
 
   static constexpr size_t kCallMeMaybeSize = 256;
   static constexpr size_t kHelloSize = 256;
+  static constexpr size_t kLinkLabelHeaderSize = sizeof(uint64_t);
   static constexpr uint64_t kAnnounceResendMillis = 1000;
 
   PacketNub(Router* router)
@@ -198,6 +203,12 @@ class PacketNub {
     OVERNET_TRACE(DEBUG) << "INCOMING: from:" << src << " " << received << " "
                          << slice;
 
+    uint64_t link_label;
+    if (!ParseLE64(&p, end, &link_label)) {
+      OVERNET_TRACE(INFO) << "Short packet received (no link label)";
+      return;
+    }
+
     if (p == end) {
       OVERNET_TRACE(INFO) << "Short packet received (no op code)";
       return;
@@ -208,29 +219,32 @@ class PacketNub {
       return (static_cast<uint16_t>(op) << 8) | static_cast<uint16_t>(state);
     };
 
+    OVERNET_TRACE(DEBUG) << "Packet from link " << link_label;
+
     while (true) {
-      LinkDataPtr link = LinkForIncomingPacket(src);
+      LinkDataPtr link = LinkForIncomingPacket(link_label, src);
       if (!link->preferred_address) {
         link->preferred_address = src;
       }
       uint64_t node_id;
       OVERNET_TRACE(DEBUG) << " op=" << op << " state=" << link->state;
       switch (op_state(op, link->state)) {
+        case op_state(PacketOp::GoAway, LinkState::Initial):
         case op_state(PacketOp::GoAway, LinkState::AckingHello):
         case op_state(PacketOp::GoAway, LinkState::SemiConnected):
         case op_state(PacketOp::GoAway, LinkState::Connected):
-          OVERNET_TRACE(TRACE) << "Forget " << src << " due to goaway";
+          OVERNET_TRACE(TRACE) << "Forget " << link_label << " due to goaway";
           if (link->link != nullptr) {
             link->link->Tombstone();
           } else {
-            links_.erase(src);
+            RemoveLink(link);
           }
-          break;
+          return;
         case op_state(PacketOp::Connected, LinkState::AckingHello):
           if (!link->SetState(LinkState::Connected)) {
             OVERNET_TRACE(DEBUG)
-                << "Forget " << src << " couldn't set connected";
-            links_.erase(src);
+                << "Forget " << link_label << " couldn't set connected";
+            RemoveLink(link);
             return;
           }
           link->next_timeout.Reset();
@@ -249,8 +263,10 @@ class PacketNub {
           if (p == end && link->node_id && *link->node_id < local_node_) {
             // Empty connected packets get reflected to fully advance state
             // machine in the case of connecting when applications are idle.
-            SendToLink(link, std::move(slice));
+            SendToLink(link, Slice::FromContainer(
+                                 {static_cast<uint8_t>(PacketOp::Connected)}));
           } else {
+            slice.TrimBegin(sizeof(uint64_t));
             link->link->Process(received, std::move(slice));
           }
           return;
@@ -347,22 +363,28 @@ class PacketNub {
 
     LinkDataPtr link;
     for (auto peer : peer_addresses) {
-      if (auto it = links_.find(peer); it != links_.end()) {
+      if (auto it = links_by_addr_.find(peer); it != links_by_addr_.end()) {
         if (!link || link->state < it->second->state) {
+          OVERNET_TRACE(DEBUG)
+              << "Found existing connection for initiation @ " << peer;
           link = it->second;
         }
       }
     }
 
     if (!link) {
-      link = CreateLink(peer_addresses);
+      auto new_label = router_->GenerateLinkLabel();
+      OVERNET_TRACE(DEBUG) << "Generate new link label: " << new_label;
+      link = CreateLink(new_label, peer_addresses);
     } else {
       for (auto old_addr : link->addresses) {
-        links_.erase(old_addr);
+        links_by_addr_.erase(old_addr);
       }
       for (auto addr : peer_addresses) {
-        links_.emplace(addr, link);
+        links_by_addr_.emplace(addr, link);
       }
+      link->preferred_address.Reset();
+      link->addresses = peer_addresses;
     }
 
     OVERNET_TRACE(INFO) << "Initiate peer=" << AddrVecStr(peer_addresses)
@@ -382,8 +404,8 @@ class PacketNub {
   }
 
   bool HasConnectionTo(Address peer) const {
-    auto it = links_.find(peer);
-    return it != links_.end() && it->second->link != nullptr;
+    auto it = links_by_addr_.find(peer);
+    return it != links_by_addr_.end() && it->second->link != nullptr;
   }
 
  private:
@@ -407,18 +429,20 @@ class PacketNub {
                initial_millis, millis)(rng_));
   }
 
-  LinkDataPtr LinkForIncomingPacket(Address address) {
-    if (auto it = links_.find(address); it != links_.end()) {
+  LinkDataPtr LinkForIncomingPacket(uint64_t link_label, Address src) {
+    if (auto it = links_by_label_.find(link_label);
+        it != links_by_label_.end()) {
       return it->second;
     }
-    return CreateLink({address});
+    return CreateLink(link_label, {src});
   }
 
-  LinkDataPtr CreateLink(std::vector<Address> addrs) {
-    auto link = fbl::MakeRefCounted<LinkData>(std::move(addrs));
+  LinkDataPtr CreateLink(uint64_t link_label, std::vector<Address> addrs) {
+    auto link = fbl::MakeRefCounted<LinkData>(std::move(addrs), link_label);
     for (auto addr : link->addresses) {
-      links_.emplace(addr, link);
+      links_by_addr_.emplace(addr, link);
     }
+    links_by_label_.emplace(link_label, link);
     return link;
   }
 
@@ -437,26 +461,36 @@ class PacketNub {
     abort();
   }
 
-  void SendToLink(LinkDataPtr link, Slice slice) {
+  void SendToLink(LinkDataPtr link, Slice unlabelled_pkt) {
+    auto pkt = unlabelled_pkt.WithPrefix(
+        sizeof(uint64_t), [&](uint8_t* p) { WriteLE64(link->label, p); });
     if (link->preferred_address) {
       OVERNET_TRACE(DEBUG) << "SendTo addr=" << *link->preferred_address
-                           << " slice=" << slice;
-      SendTo(*link->preferred_address, std::move(slice));
+                           << " slice=" << pkt;
+      SendTo(*link->preferred_address, std::move(pkt));
     } else {
       for (auto addr : link->addresses) {
-        OVERNET_TRACE(DEBUG) << "SendTo addr=" << addr << " slice=" << slice;
-        SendTo(addr, slice);
+        OVERNET_TRACE(DEBUG) << "SendTo addr=" << addr << " slice=" << pkt;
+        SendTo(addr, pkt);
       }
     }
   }
 
   void RemoveLink(LinkDataPtr link) {
-    for (auto addr : link->addresses) {
-      if (auto it = links_.find(addr);
-          it != links_.end() && it->second == link) {
-        links_.erase(it);
+    OVERNET_TRACE(DEBUG) << "RemoveLink " << link->label << " "
+                         << AddrVecStr(link->addresses);
+
+    auto remove_if_link = [link](auto* map, const auto& key) {
+      if (auto it = map->find(key); it != map->end() && it->second == link) {
+        OVERNET_TRACE(DEBUG) << key << " hits";
+        map->erase(it);
       }
+    };
+
+    for (auto addr : link->addresses) {
+      remove_if_link(&links_by_addr_, addr);
     }
+    remove_if_link(&links_by_label_, link->label);
   }
 
   template <class F>
@@ -469,7 +503,7 @@ class PacketNub {
                          << " packet_size=" << packet_size;
     const Optional<int> ticks_or_nothing =
         link->SetStateAndMaybeNode(state, node);
-    if (!ticks_or_nothing) {
+    if (!ticks_or_nothing.has_value()) {
       OVERNET_TRACE(TRACE) << "Forget " << AddrVecStr(link->addresses)
                            << " due to age";
       RemoveLink(link);
@@ -486,15 +520,7 @@ class PacketNub {
               if (status.is_error()) {
                 return;
               }
-              bool is_current = false;
-              for (const auto& addr : link->addresses) {
-                if (auto it = links_.find(addr);
-                    it != links_.end() && it->second == link) {
-                  is_current = true;
-                  break;
-                }
-              }
-              if (!is_current) {
+              if (links_by_label_.find(link->label) == links_by_label_.end()) {
                 return;
               }
               StartSimpleState(link, node, state, resend, packet_size,
@@ -509,18 +535,20 @@ class PacketNub {
 
   void StartAnnouncing(LinkDataPtr link, NodeId node) {
     StartSimpleState(link, node, LinkState::Announcing,
-                     ResendBehavior::kResendable, kCallMeMaybeSize,
+                     ResendBehavior::kResendable,
+                     kCallMeMaybeSize - kLinkLabelHeaderSize,
                      [local_node = local_node_](uint8_t* p) {
-                       memset(p, 0, kCallMeMaybeSize);
+                       memset(p, 0, kCallMeMaybeSize - kLinkLabelHeaderSize);
                        *p++ = static_cast<uint8_t>(PacketOp::CallMeMaybe);
                        p = local_node.Write(p);
                      });
   }
 
   void StartHello(LinkDataPtr link, NodeId node, ResendBehavior resend) {
-    StartSimpleState(link, node, LinkState::SayingHello, resend, kHelloSize,
+    StartSimpleState(link, node, LinkState::SayingHello, resend,
+                     kHelloSize - kLinkLabelHeaderSize,
                      [local_node = local_node_](uint8_t* p) {
-                       memset(p, 0, kHelloSize);
+                       memset(p, 0, kHelloSize - kLinkLabelHeaderSize);
                        *p++ = static_cast<uint8_t>(PacketOp::Hello);
                        p = local_node.Write(p);
                      });
@@ -541,15 +569,16 @@ class PacketNub {
   void BecomePublished(LinkDataPtr link) {
     assert(link->link == nullptr);
     assert(link->node_id);
-    link->link =
-        new NubLink(this, link, *link->node_id, router_->GenerateLinkLabel());
+    link->link = new NubLink(this, link, *link->node_id, link->label);
     Publish(LinkPtr<>(link->link));
   }
 
   Timer* const timer_;
   Router* const router_;
   const NodeId local_node_;
-  std::unordered_map<Address, LinkDataPtr, HashAddress, EqAddress> links_;
+  std::unordered_map<uint64_t, LinkDataPtr> links_by_label_;
+  std::unordered_map<Address, LinkDataPtr, HashAddress, EqAddress>
+      links_by_addr_;
   std::mt19937_64 rng_;
 };
 

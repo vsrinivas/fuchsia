@@ -57,16 +57,7 @@ class Fuzzer {
   void DropPacket(uint64_t packet);
   void Initiate1();
   void Initiate2();
-
-  ~Fuzzer() {
-    bool done1 = false;
-    bool done2 = false;
-    nub1_.router()->Close([&done1] { done1 = true; });
-    nub2_.router()->Close([&done2] { done2 = true; });
-    while (!done1 || !done2) {
-      StepTime();
-    }
-  }
+  void Close();
 
  private:
   TestTimer timer_;
@@ -99,6 +90,7 @@ Nub::Nub(Fuzzer* fuzzer, uint8_t index)
       index_(index) {}
 
 void Nub::SendTo(int dest, Slice slice) {
+  assert(dest != 0);
   fuzzer_->QueueSend(index_, dest, std::move(slice));
 }
 
@@ -152,6 +144,15 @@ void Fuzzer::DropPacket(uint64_t packet) {
   p.state = PacketState::DROPPED;
 }
 
+void Fuzzer::Close() {
+  int nubs_closed = 0;
+  nub1_.router()->Close([&nubs_closed] { nubs_closed++; });
+  nub2_.router()->Close([&nubs_closed] { nubs_closed++; });
+  while (nubs_closed != 2) {
+    StepTime();
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -189,17 +190,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   const uint8_t end_behavior = input.NextByte();
   while (!fuzzer.IsDone()) {
     switch (input.NextByte()) {
-      case 0:
+      default:
         OVERNET_TRACE(INFO) << "Fuzzer: Flush";
         do {
-          if (input.IsEof()) {
-            if (end_behavior & 1) {
-              OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 1 -> 2";
-              fuzzer.Initiate1();
-            } else {
-              OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 2 -> 1";
-              fuzzer.Initiate2();
-            }
+          if (end_behavior & 1) {
+            OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 1 -> 2";
+            fuzzer.Initiate1();
+          } else {
+            OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 2 -> 1";
+            fuzzer.Initiate2();
           }
         } while (fuzzer.FlushPackets() || fuzzer.StepTime());
         if (input.IsEof() && !fuzzer.IsDone()) {
@@ -232,10 +231,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         OVERNET_TRACE(INFO) << "Fuzzer: Initiate from 2 -> 1";
         fuzzer.Initiate2();
       } break;
-      default: {
-        return 0;
-      }
     }
   }
+  fuzzer.Close();
   return 0;
 }
