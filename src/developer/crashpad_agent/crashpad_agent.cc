@@ -147,11 +147,9 @@ CrashpadAgent::CrashpadAgent(
 }
 
 void CrashpadAgent::OnNativeException(zx::process process, zx::thread thread,
-                                      zx::port exception_port,
                                       OnNativeExceptionCallback callback) {
   auto promise =
-      OnNativeException(std::move(process), std::move(thread),
-                        std::move(exception_port))
+      OnNativeException(std::move(process), std::move(thread))
           .and_then([] {
             Analyzer_OnNativeException_Result result;
             Analyzer_OnNativeException_Response response;
@@ -262,8 +260,7 @@ std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(
 }  // namespace
 
 fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
-                                                    zx::thread thread,
-                                                    zx::port exception_port) {
+                                                    zx::thread thread) {
   const std::string process_name = fsl::GetObjectName(process.get());
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << process_name;
@@ -271,7 +268,6 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
   // Prepare annotations and attachments.
   return GetFeedbackData().then(
       [this, process = std::move(process), thread = std::move(thread),
-       exception_port = std::move(exception_port),
        process_name](fit::result<Data>& result) mutable -> fit::result<void> {
         Data feedback_data;
         if (result.is_ok()) {
@@ -293,9 +289,8 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
             &attachments,
             /*user_stream_data_sources=*/nullptr);
         crashpad::UUID local_report_id;
-        if (!exception_handler.HandleExceptionHandles(
-                process, thread, zx::unowned_port(exception_port),
-                &local_report_id)) {
+        if (!exception_handler.HandleException(process, thread,
+                                               &local_report_id)) {
           database_->SkipReportUpload(
               local_report_id,
               crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);

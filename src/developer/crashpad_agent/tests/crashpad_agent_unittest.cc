@@ -220,13 +220,6 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
-  // We create a parent job and a child job. The child job will spawn the
-  // crashing program and analyze the crash. The parent job is just here to
-  // swallow the exception potentially bubbling up from the child job once the
-  // exception has been handled by the test agent (today this is the case as the
-  // Crashpad exception handler RESUME_TRY_NEXTs the thread).
-  zx::job parent_job;
-  zx::port parent_exception_port;
   zx::job job;
   zx::port exception_port;
   zx::process process;
@@ -235,12 +228,7 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   // Create the child jobs of the current job now so we can bind to the
   // exception port before spawning the crashing program.
   zx::unowned_job current_job(zx_job_default());
-  ASSERT_EQ(zx::job::create(*current_job, 0, &parent_job), ZX_OK);
-  ASSERT_EQ(zx::port::create(0u, &parent_exception_port), ZX_OK);
-  ASSERT_EQ(zx_task_bind_exception_port(parent_job.get(),
-                                        parent_exception_port.get(), 0u, 0u),
-            ZX_OK);
-  ASSERT_EQ(zx::job::create(parent_job, 0, &job), ZX_OK);
+  ASSERT_EQ(zx::job::create(*current_job, 0, &job), ZX_OK);
   ASSERT_EQ(zx::port::create(0u, &exception_port), ZX_OK);
   ASSERT_EQ(
       zx_task_bind_exception_port(job.get(), exception_port.get(), 0u, 0u),
@@ -279,7 +267,7 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   Analyzer_OnNativeException_Result out_result;
   bool has_out_result = false;
   agent_->OnNativeException(
-      std::move(process), std::move(thread), std::move(exception_port),
+      std::move(process), std::move(thread),
       [&out_result, &has_out_result](Analyzer_OnNativeException_Result result) {
         out_result = std::move(result);
         has_out_result = true;
@@ -288,12 +276,6 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
 
   EXPECT_TRUE(out_result.is_response());
   CheckAttachments();
-
-  // The parent job just swallows the exception, i.e. not RESUME_TRY_NEXT it,
-  // to not trigger the real agent attached to the root job.
-  thread.resume_from_exception(
-      parent_exception_port,
-      0u /*no options to mark the exception as handled*/);
 
   // We kill the job so that it doesn't try to reschedule the process, which
   // would crash again, but this time would be handled by the real agent

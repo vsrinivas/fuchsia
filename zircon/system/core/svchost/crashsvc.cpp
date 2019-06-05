@@ -160,37 +160,23 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
 
     if (ctx.svc_request.is_valid()) {
         // Use the full system analyzer FIDL service, presumably crashpad_analyzer.
-
-        zx::port port;
-        const zx_status_t port_status = ctx.exception_port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port);
-        if (port_status != ZX_OK) {
-            fprintf(stderr, "crashsvc: failed to duplicate exception port: %s (%d)\n",
-                    zx_status_get_string(port_status), port_status);
-            return;
-        }
-        // The resume_thread is only needed if the FIDL call fails.
-        zx::thread resume_thread;
-        thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &resume_thread);
+        zx::thread thread_copy;
+        thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &thread_copy);
 
         fuchsia_crash_Analyzer_OnNativeException_Result analyzer_result;
         const zx_status_t exception_status = fuchsia_crash_AnalyzerOnNativeException(
-            ctx.svc_request.get(), process.release(), thread.release(), port.release(),
-            &analyzer_result);
+            ctx.svc_request.get(), process.release(), thread_copy.release(), &analyzer_result);
 
         if ((exception_status != ZX_OK) ||
             (analyzer_result.tag == fuchsia_crash_Analyzer_OnNativeException_ResultTag_err)) {
             fprintf(stderr, "crashsvc: analyzer failed, err (%d | %d)\n", exception_status,
                     analyzer_result.err);
-            if (resume_thread) {
-                zx_task_resume_from_exception(resume_thread.get(), ctx.exception_port.get(),
-                                              ZX_RESUME_TRY_NEXT);
-            }
         }
-    } else {
-        // Use RESUME_TRY_NEXT to pass it to the next handler, if we're the root
-        // job handler this will kill the process.
-        thread.resume_from_exception(ctx.exception_port, ZX_RESUME_TRY_NEXT);
     }
+
+    // Use RESUME_TRY_NEXT to pass it to the next handler, if we're the root
+    // job handler this will kill the process.
+    thread.resume_from_exception(ctx.exception_port, ZX_RESUME_TRY_NEXT);
 }
 
 int crash_svc(void* arg) {

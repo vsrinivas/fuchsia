@@ -14,18 +14,10 @@ protocol Analyzer {
     /// Requests that the crash analyzer handles the exception thrown by the
     /// given |thread| in |process|.
     ///
-    /// |exception_port| is the port on which the exception was delivered and
-    /// can be passed to zx_task_resume_from_exception(). This method is
-    /// responsible for resuming or stopping the thread once the analysis is
-    /// done. This might get changed to a more generic FIDL struct later on.
-    ///
     /// A typical implementation might print a crash dump to the system log or
     /// upload a crash report to a server.
-    // The type of |exception_port| will be changed to some exception-specific
-    // FIDL struct eventually.
     OnNativeException(handle<process> process,
-                      handle<thread> thread,
-                      handle<port> exception_port)
+                      handle<thread> thread)
         -> () error zx.status;
 
     /// Requests that the crash analyzer handles the exception thrown in the

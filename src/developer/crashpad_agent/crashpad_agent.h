@@ -13,7 +13,6 @@
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <stdint.h>
@@ -51,7 +50,6 @@ class CrashpadAgent : public Analyzer {
 
   // |fuchsia::crash::Analyzer|
   void OnNativeException(zx::process process, zx::thread thread,
-                         zx::port exception_port,
                          OnNativeExceptionCallback callback) override;
   void OnManagedRuntimeException(
       std::string component_url, ManagedRuntimeException exception,
@@ -66,8 +64,7 @@ class CrashpadAgent : public Analyzer {
                 std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server);
 
-  fit::promise<void> OnNativeException(zx::process process, zx::thread thread,
-                                       zx::port exception_port);
+  fit::promise<void> OnNativeException(zx::process process, zx::thread thread);
   fit::promise<void> OnManagedRuntimeException(
       std::string component_url, ManagedRuntimeException exception);
   fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);

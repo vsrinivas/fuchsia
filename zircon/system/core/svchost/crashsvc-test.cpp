@@ -145,8 +145,8 @@ zx_koid_t GetKoid(const zx::object<T>& object) {
 class CrashAnalyzerStub {
 public:
     enum class Behavior {
-        kResumeThread, // Resume exception handling and return ZX_OK.
-        kError         // Simulate analyzer failure by returning an error.
+        kSuccess, // Return ZX_OK.
+        kError    // Simulate analyzer failure by returning an error.
     };
 
     // Sets the behavior to use on the next OnNativeException() call. |process|
@@ -182,13 +182,13 @@ public:
 
 private:
     static zx_status_t OnNativeExceptionWrapper(void* ctx, zx_handle_t process, zx_handle_t thread,
-                                                zx_handle_t exception_port, fidl_txn_t* txn) {
-        return reinterpret_cast<CrashAnalyzerStub*>(ctx)->OnNativeException(
-            zx::process(process), zx::thread(thread), zx::port(exception_port), txn);
+                                                fidl_txn_t* txn) {
+        return reinterpret_cast<CrashAnalyzerStub*>(ctx)->OnNativeException(zx::process(process),
+                                                                            zx::thread(thread),
+                                                                            txn);
     }
 
-    zx_status_t OnNativeException(zx::process process, zx::thread thread, zx::port exception_port,
-                                  fidl_txn_t* txn) {
+    zx_status_t OnNativeException(zx::process process, zx::thread thread, fidl_txn_t* txn) {
         ++on_native_exception_count_;
 
         // Make sure crashsvc passed us the correct task handles.
@@ -197,8 +197,7 @@ private:
 
         // Build a reply corresponding to our desired behavior.
         fuchsia_crash_Analyzer_OnNativeException_Result result;
-        if (behavior_ == Behavior::kResumeThread) {
-            EXPECT_OK(thread.resume_from_exception(exception_port, ZX_RESUME_TRY_NEXT));
+        if (behavior_ == Behavior::kSuccess) {
             result.tag = fuchsia_crash_Analyzer_OnNativeException_ResultTag_response;
         } else {
             result.tag = fuchsia_crash_Analyzer_OnNativeException_ResultTag_err;
@@ -263,7 +262,7 @@ TEST(crashsvc, ThreadCrashAnalyzerSuccess) {
     ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
 
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
-                                          CrashAnalyzerStub::Behavior::kResumeThread));
+                                          CrashAnalyzerStub::Behavior::kSuccess));
     EXPECT_EQ(1, analyzer.on_native_exception_count());
 
     ASSERT_OK(job.kill());
@@ -308,11 +307,11 @@ TEST(crashsvc, MultipleThreadCrashAnalyzer) {
 
     // Make sure crashsvc continues to loop no matter what the analyzer does.
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
-                                          CrashAnalyzerStub::Behavior::kResumeThread));
+                                          CrashAnalyzerStub::Behavior::kSuccess));
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
                                           CrashAnalyzerStub::Behavior::kError));
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
-                                          CrashAnalyzerStub::Behavior::kResumeThread));
+                                          CrashAnalyzerStub::Behavior::kSuccess));
     ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
                                           CrashAnalyzerStub::Behavior::kError));
     EXPECT_EQ(4, analyzer.on_native_exception_count());
