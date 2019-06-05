@@ -34,6 +34,7 @@ static constexpr size_t BULK_MAX_PACKET = 512;  // FIXME(voydanoff) USB 3.0 supp
 static constexpr size_t BULK_REQ_SIZE = 4096;   // FIXME(voydanoff) Increase this when DCI drivers support
                                                 //                  non-contiguous DMA buffers.
 static constexpr size_t INTR_REQ_SIZE = 1024;
+static constexpr size_t INTR_MAX_PACKET = 64;
 
 struct usb_test_t {
     zx_device_t* zxdev;
@@ -81,7 +82,7 @@ struct {
         .bDescriptorType = USB_DT_ENDPOINT,
         .bEndpointAddress = 0, // set later
         .bmAttributes = USB_ENDPOINT_INTERRUPT,
-        .wMaxPacketSize = htole16(INTR_REQ_SIZE),
+        .wMaxPacketSize = htole16(INTR_MAX_PACKET),
         .bInterval = 8,
     },
     .bulk_out_ep = {
