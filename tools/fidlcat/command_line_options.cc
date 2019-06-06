@@ -110,7 +110,9 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
     return status;
   }
 
-  if (requested_help) {
+  if (requested_help ||
+      (options->filter.empty() && !options->remote_pid &&
+       std::find(params->begin(), params->end(), "run") == params->end())) {
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 

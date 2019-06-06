@@ -65,7 +65,8 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
 
   // Parse the command line.
   std::string param = "@" + filename;
-  const char* argv[] = {"fakebinary", "--fidl-ir-path", param.c_str()};
+  const char* argv[] = {"fakebinary", "--remote-pid", "3141", "--fidl-ir-path",
+                        param.c_str()};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DisplayOptions display_options;
@@ -97,8 +98,9 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
 // Test to ensure that non-existent files are reported accordingly.
 TEST_F(CommandLineOptionsTest, BadOptionsTest) {
   // Parse the command line.
-  const char* argv[] = {"fakebinary", "--fidl-ir-path", "blah.fidl.json",
-                        "--fidl-ir-path", "@all_files.txt"};
+  const char* argv[] = {"fakebinary",    "--fidl-ir-path", "blah.fidl.json",
+                        "--remote-pid",  "3141",           "--fidl-ir-path",
+                        "@all_files.txt"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DisplayOptions display_options;
@@ -157,6 +159,29 @@ TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
   std::string filter = "echo_client";
   const char* argv[] = {"fakebinary",   "--filter",         filter.c_str(),
                         "--remote-pid", remote_pid.c_str(), "leftover",
+                        "args"};
+  int argc = sizeof(argv) / sizeof(argv[0]);
+  CommandLineOptions options;
+  DisplayOptions display_options;
+  std::vector<std::string> params;
+  auto status =
+      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  ASSERT_TRUE(!status.ok());
+}
+
+// Test to ensure that help is printed when no action is requested
+TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
+  std::string fidl_ir_path = "blah.fidl.json";
+  std::string symbol_path = "path/to/debug/symbols";
+  std::string connect = "localhost:8080";
+  const char* argv[] = {"fakebinary",
+                        "--fidl-ir-path",
+                        fidl_ir_path.c_str(),
+                        "-s",
+                        symbol_path.c_str(),
+                        "--connect",
+                        connect.c_str(),
+                        "leftover",
                         "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;

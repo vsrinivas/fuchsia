@@ -273,6 +273,8 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
   zxdb::Target* target = GetTarget();
   AddObserver(target);
 
+  FXL_CHECK(!command.empty()) << "No arguments passed to launcher";
+
   auto on_err = [command](const zxdb::Err& err) {
     std::string cmd;
     for (auto& param : command) {
