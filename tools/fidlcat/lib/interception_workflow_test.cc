@@ -59,6 +59,28 @@ class DataForZxChannelTest {
     zx_channel_read_result_ = zx_channel_read_result;
   }
 
+  // read_has_handles controls whether the zx_channel_read parameters
+  // passed NULL for actual_handles.
+  bool read_has_handles() { return read_has_handles_; }
+  void set_read_has_handles(int64_t read_has_handles) {
+    read_has_handles_ = read_has_handles;
+    if (!read_has_handles) {
+      uint64_t* stack_ptr = reinterpret_cast<uint64_t*>(stack_);
+      stack_ptr[2] = 0;
+    }
+  }
+
+  // read_has_bytes controls whether the zx_channel_read parameters
+  // passed NULL for actual_bytes.
+  bool read_has_bytes() { return read_has_bytes_; }
+  void set_read_has_bytes(int64_t read_has_bytes) {
+    read_has_bytes_ = read_has_bytes;
+    if (!read_has_bytes) {
+      uint64_t* stack_ptr = reinterpret_cast<uint64_t*>(stack_);
+      stack_ptr[1] = 0;
+    }
+  }
+
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> GetModuleRef(
       zxdb::Session* session) {
     // Create a module with zx_channel_write and zx_channel_read
@@ -224,11 +246,13 @@ class DataForZxChannelTest {
         Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x5, num_handles(),
                               &registers);
         // output num_bytes address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x6, kActualBytesPtr,
+        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x6,
+                              read_has_bytes_ ? kActualBytesPtr : 0,
                               &registers);
         // output num_handles address
         Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x7,
-                              kActualHandlesPtr, &registers);
+                              read_has_handles_ ? kActualHandlesPtr : 0,
+                              &registers);
         // stack pointer
         Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
                               current_stack_ptr_, &registers);
@@ -297,6 +321,8 @@ class DataForZxChannelTest {
   zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
   uint8_t stack_[3 * sizeof(uint64_t)];
   debug_ipc::Arch arch_;
+  bool read_has_bytes_ = true;
+  bool read_has_handles_ = true;
   bool first_register_read_ = true;
   int64_t zx_channel_read_result_ = ZX_OK;
 };
@@ -628,25 +654,29 @@ void InterceptionWorkflowTest::ReadTest() {
 
         std::string result;
 
-        const uint8_t* data = data_.data();
-        uint32_t num_bytes = params.GetNumBytes();
-        ASSERT_EQ(num_bytes, data_.num_bytes());
-        if (memcmp(params.GetBytes().get(), data, num_bytes) != 0) {
-          result.append("bytes not equivalent");
-          AppendElements<uint8_t>(result, num_bytes, params.GetBytes().get(),
-                                  data);
-          FAIL() << result;
+        if (data_.read_has_bytes()) {
+          const uint8_t* data = data_.data();
+          uint32_t num_bytes = params.GetNumBytes();
+          ASSERT_EQ(num_bytes, data_.num_bytes());
+          if (memcmp(params.GetBytes().get(), data, num_bytes) != 0) {
+            result.append("bytes not equivalent");
+            AppendElements<uint8_t>(result, num_bytes, params.GetBytes().get(),
+                                    data);
+            FAIL() << result;
+          }
         }
 
-        const zx_handle_t* handles = data_.handles();
-        uint32_t num_handles = params.GetNumHandles();
-        ASSERT_EQ(num_handles, data_.num_handles());
-        if (memcmp(params.GetHandles().get(), handles,
-                   num_handles * sizeof(zx_handle_t)) != 0) {
-          result.append("handles not equivalent\n");
-          AppendElements<zx_handle_t>(result, num_handles,
-                                      params.GetHandles().get(), handles);
-          FAIL() << result;
+        if (data_.read_has_handles()) {
+          const zx_handle_t* handles = data_.handles();
+          uint32_t num_handles = params.GetNumHandles();
+          ASSERT_EQ(num_handles, data_.num_handles());
+          if (memcmp(params.GetHandles().get(), handles,
+                     num_handles * sizeof(zx_handle_t)) != 0) {
+            result.append("handles not equivalent\n");
+            AppendElements<zx_handle_t>(result, num_handles,
+                                        params.GetHandles().get(), handles);
+            FAIL() << result;
+          }
         }
       });
 
@@ -689,18 +719,25 @@ void InterceptionWorkflowTest::ReadTest() {
   }
 }
 
-TEST_F(InterceptionWorkflowTestX64, ZxChannelRead) { ReadTest(); }
+#define TEST_WITH_ARCH(arch)                                            \
+  TEST_F(InterceptionWorkflowTest##arch, ZxChannelRead) { ReadTest(); } \
+                                                                        \
+  TEST_F(InterceptionWorkflowTest##arch, ZxChannelReadFailed) {         \
+    data().set_zx_channel_read_result(ZX_ERR_SHOULD_WAIT);              \
+    ReadTest();                                                         \
+  }                                                                     \
+                                                                        \
+  TEST_F(InterceptionWorkflowTest##arch, ZxChannelReadNoHandles) {      \
+    data().set_read_has_handles(false);                                 \
+    ReadTest();                                                         \
+  }                                                                     \
+                                                                        \
+  TEST_F(InterceptionWorkflowTest##arch, ZxChannelReadNoBytes) {        \
+    data().set_read_has_bytes(false);                                   \
+    ReadTest();                                                         \
+  }
 
-TEST_F(InterceptionWorkflowTestArm, ZxChannelRead) { ReadTest(); }
-
-TEST_F(InterceptionWorkflowTestX64, ZxChannelReadFailed) {
-  data().set_zx_channel_read_result(ZX_ERR_SHOULD_WAIT);
-  ReadTest();
-}
-
-TEST_F(InterceptionWorkflowTestArm, ZxChannelReadFailed) {
-  data().set_zx_channel_read_result(ZX_ERR_SHOULD_WAIT);
-  ReadTest();
-}
+TEST_WITH_ARCH(Arm)
+TEST_WITH_ARCH(X64)
 
 }  // namespace fidlcat

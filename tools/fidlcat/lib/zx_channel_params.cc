@@ -443,36 +443,52 @@ void ZxChannelReadParamsBuilder::GetResultAndContinue(
   // Read the filled in values for actual_bytes and actual_handles, then read
   // the memory at those locations, and then finish.
   if (state == PerThreadState::READING_ACTUAL_BYTES) {
-    GetMemoryAtAndThen<uint32_t>(
-        thread, actual_bytes_ptr_, sizeof(uint32_t),
-        [this, thread](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
-          if (!thread || !err.ok()) {
-            Cancel(err);
-            return;
-          }
-          if (data != nullptr) {
-            num_bytes_ = *data;
-            GetPerThreadState()[thread_koid_] =
-                PerThreadState::READING_ACTUAL_HANDLES;
-          } else {
-            Cancel(zxdb::Err(zxdb::ErrType::kGeneral,
-                             "Malformed zx_channel_read call"));
-            return;
-          }
-          GetResultAndContinue(thread);
-        });
+    // actual_bytes_ptr_ is allowed to be null.
+    if (actual_bytes_ptr_ == 0) {
+      num_bytes_ = 0;
+      GetPerThreadState()[thread_koid_] =
+          PerThreadState::READING_ACTUAL_HANDLES;
+      GetResultAndContinue(thread);
+    } else {
+      GetMemoryAtAndThen<uint32_t>(
+          thread, actual_bytes_ptr_, sizeof(uint32_t),
+          [this, thread](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
+            if (!thread || !err.ok()) {
+              Cancel(err);
+              return;
+            }
+            if (data != nullptr) {
+              num_bytes_ = *data;
+              GetPerThreadState()[thread_koid_] =
+                  PerThreadState::READING_ACTUAL_HANDLES;
+            } else {
+              Cancel(zxdb::Err(zxdb::ErrType::kGeneral,
+                               "Malformed zx_channel_read call"));
+              return;
+            }
+            GetResultAndContinue(thread);
+          });
+    }
   } else if (state == PerThreadState::READING_ACTUAL_HANDLES) {
-    GetMemoryAtAndThen<uint32_t>(
-        thread, actual_handles_ptr_, sizeof(uint32_t),
-        [this, thread](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
-          if (!thread || !err.ok()) {
-            Cancel(err);
-            return;
-          }
-          num_handles_ = *data;
-          GetPerThreadState()[thread_koid_] = PerThreadState::FILLING_IN_BYTES;
-          GetResultAndContinue(thread);
-        });
+    // actual_handles_ptr_ is allowed to be null.
+    if (actual_handles_ptr_ == 0) {
+      num_handles_ = 0;
+      GetPerThreadState()[thread_koid_] = PerThreadState::FILLING_IN_BYTES;
+      GetResultAndContinue(thread);
+    } else {
+      GetMemoryAtAndThen<uint32_t>(
+          thread, actual_handles_ptr_, sizeof(uint32_t),
+          [this, thread](const zxdb::Err& err, std::unique_ptr<uint32_t> data) {
+            if (!thread || !err.ok()) {
+              Cancel(err);
+              return;
+            }
+            num_handles_ = *data;
+            GetPerThreadState()[thread_koid_] =
+                PerThreadState::FILLING_IN_BYTES;
+            GetResultAndContinue(thread);
+          });
+    }
   } else if (state == PerThreadState::FILLING_IN_BYTES) {
     if (num_bytes_ == 0) {
       GetPerThreadState()[thread_koid_] = PerThreadState::FILLING_IN_HANDLES;
