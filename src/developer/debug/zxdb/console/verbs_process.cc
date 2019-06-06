@@ -131,11 +131,56 @@ const char kRunHelp[] =
   process context, if any. With an argument, the binary name will be set and
   that binary will be run.
 
+Why "run" is usually wrong
+
+  The following loader environments all have different capabilities (in order
+  from least capable to most capable):
+
+    • The debugger's "run <file name>" command (base system process stuff).
+    • The system console or "fx shell" (adds some libraries).
+    • The base component environment via the shell‘s run and the debugger’s
+      "run -c <package url>" (adds component capabilities).
+    • The test environment via "fx run-test".
+    • The user environment when launched from a “story” (adds high-level
+      services like scenic).
+
+  This panoply of environments is why the debugger can't have a simple “run”
+  command that always works.
+
+  When the debugger launches a process or a component, that process or
+  component will have the same capabilities as the debug_agent running on the
+  system. Whether this is enough to run a specific process or component is
+  mostly accidental.
+
+  The only way to get the correct environment is to launch your process or
+  component in the way it expects and attach the debugger to it. Filters
+  allow you to attach to a new process as it's created to debug from the
+  beginning. A typical flow is:
+
+    # Register for the process name. Use the name that appears in "ps" for
+    # the process:
+    [zxdb] set filters my_app_name
+    Set value(s) for job 1:
+    • my_app_name
+
+    # Set a pending breakpoint to stop where you want:
+    [zxdb] break main
+    Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
+    Pending: No matches for location, it will be pending library loads.
+
+    # Launch your app like normal, the debugger should catch it:
+    Attached Process 1 [Running] koid=33213 debug_agent.cmx
+    🛑 on bp 1 main(…) • main.cc:220
+       219 ...
+     ▶ 220 int main(int argc, const char* argv[]) {
+       221 ...
+
 Arguments
 
-  --component | -c [EXPERIMENTAL]
-    Run this program as a component.
-    TODO(donosoc): Document this feature once it's fleshed out.
+  --component | -c
+      Run this program as a component. The program name should be a component
+      URL. In addition to the above-discussed limitations, the debugger must
+      currently be attached to the system root job.
 
 Hints
 
@@ -202,6 +247,12 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
   err = AssertRunnableTarget(cmd.target());
   if (err.has_error())
     return err;
+
+  // Output warning about this possibly not working.
+  OutputBuffer warning(Syntax::kWarning, "⚠  Warning: ");
+  warning.Append("Run won't work for many processes and components. "
+                 "See \"help run\".\n");
+  Console::get()->Output(warning);
 
   if (!cmd.HasSwitch(kRunComponentSwitch)) {
     if (cmd.args().empty()) {

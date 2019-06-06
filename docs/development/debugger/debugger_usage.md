@@ -27,8 +27,12 @@ there are different loader environments (see "A note about launcher
 environments" below).
 
 The only want to reliably debug all types of processes is to create a filter on
-the process name and start it the normal way you would start that process. This
-example sets a pending breakpoint on `main` to stop at the beginning of
+the process name and start it the normal way you would start that process. The
+process name is usually the name of the build target that generates it. To
+check what this is, use "ps" (either in the debugger or from a system shell)
+with it running.
+
+This example sets a pending breakpoint on `main` to stop at the beginning of
 execution, and waits for a process called "my_app" to start:
 
 ```

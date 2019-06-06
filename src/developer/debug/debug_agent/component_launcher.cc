@@ -66,12 +66,11 @@ zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Prepare the launch info.
+  // Prepare the launch info. The parameters to the component do not include
+  // the component URL.
   launch_info_.url = argv.front();
-  launch_info_.arguments->reserve(argv.size());
-  for (auto& arg : argv) {
-    launch_info_.arguments->push_back(std::move(arg));
-  }
+  for (size_t i = 1; i < argv.size(); i++)
+    launch_info_.arguments->push_back(std::move(argv[i]));
 
   *description = {};
   description->component_id = kNextComponentId++;
