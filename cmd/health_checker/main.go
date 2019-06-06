@@ -35,6 +35,7 @@ var (
 const (
 	healthyState   = "healthy"
 	unhealthyState = "unhealthy"
+	logFile        = "/tmp/health_checker.log"
 )
 
 // DeviceHealthProperties contains health properties of a hardware device.
@@ -116,16 +117,29 @@ func main() {
 		devices = append(devices, device)
 	}
 
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
+
 	var checkResultSlice []HealthCheckResult
 	for _, device := range devices {
 		nodename := device.Nodename()
 		if nodename == "" {
 			log.Fatal("no nodename in config")
 		}
+		log.Printf("checking health for %s", nodename)
 		checkResult := checkHealth(client, nodename)
+		log.Printf("state=%s, error_msg=%s", checkResult.State, checkResult.ErrorMsg)
 		if checkResult.State == unhealthyState && rebootIfUnhealthy {
+			log.Printf("attempting reboot for %s", nodename)
 			if rebootErr := device.Restart(context.Background()); rebootErr != nil {
+				log.Printf("reboot failed with error: %s", rebootErr.Error())
 				checkResult.ErrorMsg += "; " + rebootErr.Error()
+			} else {
+				log.Printf("reboot succeeded for %s", nodename)
 			}
 		}
 		checkResultSlice = append(checkResultSlice, checkResult)
