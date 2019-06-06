@@ -51,6 +51,11 @@ Commands
         -h: SHA256 hash of source config file (optional, with URL)
         -x: do not disable other active sources (if the provided source is enabled)
 
+    add_repo_cfg  - add a repository config to the set of known repositories, using a source config
+        -n: name of the update source (optional, with URL)
+        -f: file path or url to a source config file
+        -h: SHA256 hash of source config file (optional, with URL)
+
     rm_src        - remove a source, if it exists
         -n: name of the update source
 
@@ -287,7 +292,7 @@ func doRewriteRuleEditTransaction(rewriteEngine *rewrite.EngineInterface, cb fun
 	return fmt.Errorf("unable to commit rewrite rule changes")
 }
 
-func addSource(services Services) error {
+func addSource(services Services, repoOnly bool) error {
 	if len(*pkgFile) == 0 {
 		return fmt.Errorf("a url or file path (via -f) are required")
 	}
@@ -373,17 +378,19 @@ func addSource(services Services) error {
 		cfg.BlobRepoUrl = filepath.Join(cfg.RepoUrl, "blobs")
 	}
 
-	added, err := services.amber.AddSrc(cfg)
-	if err != nil {
-		return fmt.Errorf("fuchsia.amber.Control IPC encountered an error: %s", err)
-	}
-	if !added {
-		return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
-	}
+	if !repoOnly {
+		added, err := services.amber.AddSrc(cfg)
+		if err != nil {
+			return fmt.Errorf("fuchsia.amber.Control IPC encountered an error: %s", err)
+		}
+		if !added {
+			return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
+		}
 
-	if isSourceConfigEnabled(&cfg) && !*nonExclusive {
-		if err := disableAllSources(services.amber, cfg.Id); err != nil {
-			return err
+		if isSourceConfigEnabled(&cfg) && !*nonExclusive {
+			if err := disableAllSources(services.amber, cfg.Id); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -402,7 +409,7 @@ func addSource(services Services) error {
 	// fuchsia.com to this source if it is enabled. Note that this doesn't prevent resolving a
 	// package using this config's id explicitly or calling an amber source config
 	// "fuchsia.com".
-	if isSourceConfigEnabled(&cfg) {
+	if !repoOnly && isSourceConfigEnabled(&cfg) {
 		rule := rewriteRuleForId(cfg.Id)
 		if err := replaceDynamicRewriteRules(services.rewriteEngine, rule); err != nil {
 			return err
@@ -546,8 +553,17 @@ func do(services Services) int {
 			log.Printf("error requesting blob fetch: %s", err)
 			return 1
 		}
+	case "add_repo_cfg":
+		if err := addSource(services, true); err != nil {
+			log.Printf("error adding repo: %s", err)
+			if _, ok := err.(ErrGetFile); ok {
+				return 2
+			} else {
+				return 1
+			}
+		}
 	case "add_src":
-		if err := addSource(services); err != nil {
+		if err := addSource(services, false); err != nil {
 			log.Printf("error adding source: %s", err)
 			if _, ok := err.(ErrGetFile); ok {
 				return 2

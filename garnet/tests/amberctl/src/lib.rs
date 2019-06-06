@@ -163,6 +163,19 @@ impl TestEnv {
         ));
     }
 
+    async fn run_amberctl_add_repo_config(&self, source: types::SourceConfig) {
+        let mut config_file = tempfile::tempfile().expect("temp config file to create");
+        serde_json::to_writer(&mut config_file, &source).expect("source config to serialize");
+
+        await!(self._run_amberctl(
+            amberctl()
+                .add_dir_to_namespace("/configs/test.json".to_string(), config_file)
+                .expect("static /configs to mount")
+                .arg("add_repo_cfg")
+                .arg("-f=/configs/test.json")
+        ));
+    }
+
     async fn amber_list_sources(&self) -> Vec<types::SourceConfig> {
         let sources = await!(self.proxies.amber.list_srcs()).unwrap();
 
@@ -238,6 +251,15 @@ impl Iterator for SourceConfigGenerator {
     }
 }
 
+fn make_test_source_config() -> types::SourceConfig {
+    SourceConfigBuilder::new("test")
+        .repo_url("http://example.com")
+        .rate_period(60)
+        .auto(true)
+        .add_root_key(ROOT_KEY_1)
+        .build()
+}
+
 fn make_test_repo_config() -> RepositoryConfig {
     RepositoryConfigBuilder::new("fuchsia-pkg://test".parse().unwrap())
         .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
@@ -260,19 +282,33 @@ async fn test_add_src() {
 
     await!(env.run_amberctl_add_static_src("test.json"));
 
-    let cfg_test = SourceConfigBuilder::new("test")
-        .repo_url("http://example.com")
-        .rate_period(60)
-        .auto(true)
-        .add_root_key(ROOT_KEY_1)
-        .build();
-
-    assert_eq!(await!(env.amber_list_sources()), vec![cfg_test]);
+    assert_eq!(await!(env.amber_list_sources()), vec![make_test_source_config()]);
     assert_eq!(await!(env.resolver_list_repos()), vec![make_test_repo_config()]);
     assert_eq!(
         await!(env.rewrite_engine_list_rules()),
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_add_repo() {
+    let env = TestEnv::new();
+
+    let source = SourceConfigBuilder::new("localhost")
+        .repo_url("http://127.0.0.1:8083")
+        .add_root_key(ROOT_KEY_1)
+        .build();
+
+    let repo = RepositoryConfigBuilder::new("fuchsia-pkg://localhost".parse().unwrap())
+        .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
+        .add_mirror(MirrorConfigBuilder::new("http://127.0.0.1:8083"))
+        .build();
+
+    await!(env.run_amberctl_add_repo_config(source));
+
+    assert_eq!(await!(env.amber_list_sources()), vec![]);
+    assert_eq!(await!(env.resolver_list_repos()), vec![repo]);
+    assert_eq!(await!(env.rewrite_engine_list_rules()), vec![]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -337,19 +373,43 @@ async fn test_add_src_disables_other_sources() {
 
     await!(env.run_amberctl_add_static_src("test.json"));
 
-    let mut source_configs = vec![];
+    let mut source_configs = vec![make_test_source_config()];
     let mut repo_configs = vec![make_test_repo_config()];
     for (source_config, repo_config) in configs {
         source_configs.push(source_config.enabled(false).build());
         repo_configs.push(repo_config.build());
     }
-    let test_config =
-        serde_json::from_reader(File::open("/pkg/data/sources/test.json").unwrap()).unwrap();
-    source_configs.push(test_config);
     source_configs.sort_unstable();
 
     assert_eq!(await!(env.amber_list_sources()), source_configs);
     assert_eq!(await!(env.resolver_list_repos()), repo_configs);
+    assert_eq!(
+        await!(env.rewrite_engine_list_rules()),
+        vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_add_repo_retains_existing_state() {
+    let env = TestEnv::new();
+
+    // start with an existing source.
+    await!(env.run_amberctl_add_static_src("test.json"));
+
+    // add a repo.
+    let source = SourceConfigBuilder::new("devhost")
+        .repo_url("http://10.0.0.1:8083")
+        .add_root_key(ROOT_KEY_1)
+        .build();
+    let repo = RepositoryConfigBuilder::new("fuchsia-pkg://devhost".parse().unwrap())
+        .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
+        .add_mirror(MirrorConfigBuilder::new("http://10.0.0.1:8083"))
+        .build();
+    await!(env.run_amberctl_add_repo_config(source));
+
+    // ensure adding the repo didn't remove state configured when adding the source.
+    assert_eq!(await!(env.amber_list_sources()), vec![make_test_source_config()]);
+    assert_eq!(await!(env.resolver_list_repos()), vec![repo, make_test_repo_config()]);
     assert_eq!(
         await!(env.rewrite_engine_list_rules()),
         vec![Rule::new("fuchsia.com", "test", "/", "/").unwrap()]
