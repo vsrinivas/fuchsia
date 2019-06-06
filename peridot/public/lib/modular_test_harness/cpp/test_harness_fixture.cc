@@ -62,11 +62,13 @@ bool BufferFromString(std::string str, fuchsia::mem::Buffer* buffer) {
 
 }  // namespace
 
+TestHarnessBuilder::TestHarnessBuilder() : env_services_(new vfs::PseudoDir) {}
+
 fuchsia::modular::testing::TestHarnessSpec TestHarnessBuilder::BuildSpec() {
   fuchsia::io::DirectoryPtr dir;
   // This directory must be READABLE *and* WRITABLE, otherwise service
   // connections fail.
-  env_services_.Serve(
+  env_services_->Serve(
       fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
       dir.NewRequest().TakeChannel());
   spec_.mutable_env_services()->set_service_dir(dir.Unbind().TakeChannel());
@@ -157,8 +159,8 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(
 
 TestHarnessBuilder& TestHarnessBuilder::AddService(
     const std::string& service_name, vfs::Service::Connector connector) {
-  env_services_.AddEntry(service_name,
-                         std::make_unique<vfs::Service>(std::move(connector)));
+  env_services_->AddEntry(service_name,
+                          std::make_unique<vfs::Service>(std::move(connector)));
   return *this;
 }
 

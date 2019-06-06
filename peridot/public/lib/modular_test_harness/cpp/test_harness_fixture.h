@@ -73,6 +73,8 @@ class TestHarnessBuilder {
       fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
           intercepted_component)>;
 
+  TestHarnessBuilder();
+
   // Takes the TestHarnessSpec built so far with the builder functions below.
   //
   // Can only be called once.
@@ -181,7 +183,7 @@ class TestHarnessBuilder {
   std::map<std::string, OnNewComponentHandler> handlers_;
 
   // Hosts services injected using AddService() and InheritService().
-  vfs::PseudoDir env_services_;
+  std::unique_ptr<vfs::PseudoDir> env_services_;
 };
 
 class TestHarnessFixture : public sys::testing::TestWithEnvironment {
