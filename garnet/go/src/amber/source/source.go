@@ -31,7 +31,6 @@ import (
 	"fidl/fuchsia/amber"
 
 	"fuchsia.googlesource.com/sse"
-
 	tuf "github.com/flynn/go-tuf/client"
 	tuf_data "github.com/flynn/go-tuf/data"
 )
@@ -140,6 +139,8 @@ func newSourceConfig(cfg *amber.SourceConfig) (tufSourceConfig, error) {
 
 // Source wraps a TUF Client into the Source interface
 type Source struct {
+	httpClient *http.Client
+
 	// mu guards all following fields
 	mu sync.Mutex
 
@@ -152,8 +153,6 @@ type Source struct {
 	// multiple database connections to the same file, which could corrupt
 	// the TUF database.
 	localStore tuf.LocalStore
-
-	httpClient *http.Client
 
 	keys      []*tuf_data.Key
 	tufClient *tuf.Client
@@ -470,15 +469,6 @@ func (f *Source) SetEnabled(enabled bool) {
 	f.mu.Unlock()
 }
 
-func (f *Source) GetHttpClient() (*http.Client, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	// http.Client itself is thread safe, but the member alias is not, so is
-	// guarded here.
-	return f.httpClient, nil
-}
-
 // UpdateIfStale updates this source if the source has not recently updated.
 func (f *Source) UpdateIfStale() error {
 	f.mu.Lock()
@@ -494,6 +484,11 @@ func (f *Source) UpdateIfStale() error {
 // Update requests updated metadata from this source, returning any error that
 // ocurred during the process.
 func (f *Source) Update() error {
+	return update(f)
+}
+
+// method is stub-able for autowatch test
+var update = func(f *Source) error {
 	return atonce.Do("source", f.cfg.Config.Id, func() error {
 		f.mu.Lock()
 		defer f.mu.Unlock()
@@ -668,11 +663,6 @@ func needsInit(s tuf.LocalStore) bool {
 }
 
 func (f *Source) requestBlob(blob string) (*http.Response, error) {
-	client, err := f.GetHttpClient()
-	if err != nil {
-		return nil, err
-	}
-
 	blobUrl := f.GetConfig().BlobRepoUrl
 	if blobUrl == "" {
 		blobUrl = f.GetConfig().RepoUrl + "/blobs"
@@ -683,7 +673,7 @@ func (f *Source) requestBlob(blob string) (*http.Response, error) {
 	}
 	u.Path = filepath.Join(u.Path, blob)
 
-	return client.Get(u.String())
+	return f.httpClient.Get(u.String())
 }
 
 func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
@@ -779,51 +769,47 @@ func (f *Source) AutoWatch() {
 	if !f.Enabled() || !f.cfg.Config.Auto {
 		return
 	}
-	go func() {
-		for {
-			if !f.Enabled() {
-				return
-			}
+	go f.watch()
+}
 
-			req, err := http.NewRequest("GET", f.cfg.Config.RepoUrl+"/auto", nil)
-			if err != nil {
-				log.Printf("autowatch terminal error: %q: %s", f.cfg.Config.RepoUrl, err)
-				return
-			}
-			req.Header.Add("Accept", "text/event-stream")
-			cli, err := f.GetHttpClient()
-			if err != nil {
-				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
-				time.Sleep(time.Minute)
-				continue
-			}
-			r, err := cli.Do(req.WithContext(f.ctx))
-			if err != nil {
-				if e, ok := err.(*url.Error); ok {
-					if e.Err == context.Canceled {
-						break
-					}
+func (f *Source) watch() {
+	for {
+		if !f.Enabled() {
+			return
+		}
+
+		req, err := http.NewRequest("GET", f.cfg.Config.RepoUrl+"/auto", nil)
+		if err != nil {
+			log.Printf("autowatch terminal error: %q: %s", f.cfg.Config.Id, err)
+			return
+		}
+		req.Header.Add("Accept", "text/event-stream")
+		r, err := f.httpClient.Do(req.WithContext(f.ctx))
+		if err != nil {
+			if e, ok := err.(*url.Error); ok {
+				if e.Err == context.Canceled {
+					return
 				}
-				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
-				time.Sleep(time.Minute)
-				continue
 			}
+			log.Printf("autowatch error for %q: %s", f.cfg.Config.Id, err)
+			time.Sleep(time.Minute)
+			continue
+		}
+		func() {
+			defer r.Body.Close()
 			c, err := sse.New(r)
 			if err != nil {
-				log.Printf("autowatch error for %q: %s", f.cfg.Config.RepoUrl, err)
+				log.Printf("autowatch error for %q: %s", f.cfg.Config.Id, err)
 				time.Sleep(time.Minute)
-				continue
+				return
 			}
 			for {
 				_, err := c.ReadEvent()
-				if err != nil {
-					break
-				}
-				if !f.Enabled() {
+				if err != nil || !f.Enabled() {
 					return
 				}
 				f.Update()
 			}
-		}
-	}()
+		}()
+	}
 }

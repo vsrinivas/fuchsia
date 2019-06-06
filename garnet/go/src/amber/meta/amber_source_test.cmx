@@ -5,6 +5,19 @@
     "sandbox": {
         "features": [
             "system-temp"
+        ],
+        "services": [
+            "fuchsia.net.SocketProvider"
         ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.Connectivity",
+                "fuchsia.net.SocketProvider",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack"
+            ]
+        }
     }
 }
