@@ -94,7 +94,8 @@
               "shell-commands",
               "root-ssl-certificates",
               "system-temp",
-              "vulkan"
+              "vulkan",
+              "deprecated-ambient-replace-as-executable"
             ]
           }
         },

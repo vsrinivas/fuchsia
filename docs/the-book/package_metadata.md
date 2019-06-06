@@ -237,6 +237,9 @@ The set of currently known features are as follows:
   graphics interface. This adds layer configuration data in the `/config/vulkan`
   directory in the package's namespace.
 
+- `deprecated-ambient-replace-as-executable`, which provides legacy support for
+  using the invalid handle with replace_as_executable.
+
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 
