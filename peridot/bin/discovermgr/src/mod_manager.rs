@@ -6,7 +6,7 @@ use {
     crate::models::{AddMod, Suggestion},
     failure::{format_err, Error},
     fidl_fuchsia_modular::{
-        ExecuteStatus, PuppetMasterProxy, StoryCommand, StoryPuppetMasterMarker,
+        ExecuteStatus, FocusMod, PuppetMasterProxy, StoryCommand, StoryPuppetMasterMarker,
     },
     futures::future::join_all,
     std::collections::{HashMap, HashSet},
@@ -28,7 +28,7 @@ impl ModManager {
     }
 
     pub async fn execute_suggestion(&mut self, suggestion: Suggestion) -> Result<(), Error> {
-        await!(self.execute_action(&suggestion.action()))?;
+        await!(self.execute_actions(&suggestion.action(), /*focus=*/ true))?;
         if let Some(params) = suggestion.action().intent().parameters() {
             for param in params {
                 self.actions
@@ -48,16 +48,26 @@ impl ModManager {
             .into_iter()
             .map(|action| action.replace_reference_in_parameters(old, new))
             .collect::<HashSet<AddMod>>();
-        await!(join_all(actions.iter().map(|action| self.execute_action(action))));
+        await!(join_all(
+            actions.iter().map(|action| self.execute_actions(action, /*focus=*/ false))
+        ));
         self.actions.insert(new.to_string(), actions);
     }
 
-    async fn execute_action<'a>(&'a self, action: &'a AddMod) -> Result<(), Error> {
+    async fn execute_actions<'a>(&'a self, action: &'a AddMod, focus: bool) -> Result<(), Error> {
         let (story_puppet_master, server_end) =
             fidl::endpoints::create_proxy::<StoryPuppetMasterMarker>()?;
         self.puppet_master.control_story(&action.story_name(), server_end)?;
-        let command = StoryCommand::AddMod(action.clone().into());
-        story_puppet_master.enqueue(&mut vec![command].iter_mut())?;
+        let mut commands = vec![StoryCommand::AddMod(action.clone().into())];
+
+        if focus {
+            commands.push(StoryCommand::FocusMod(FocusMod {
+                mod_name: vec![],
+                mod_name_transitional: Some(action.mod_name.to_string()),
+            }));
+        }
+
+        story_puppet_master.enqueue(&mut commands.iter_mut())?;
         let result = await!(story_puppet_master.execute())?;
         if result.status != ExecuteStatus::Ok {
             Err(format_err!(
@@ -97,8 +107,10 @@ mod tests {
 
         // This will be called when the suggestion is executed.
         puppet_master_fake.set_on_execute("story_name", |commands| {
-            assert_eq!(commands.len(), 1);
-            if let StoryCommand::AddMod(add_mod) = &commands[0] {
+            assert_eq!(commands.len(), 2);
+            if let (StoryCommand::AddMod(add_mod), StoryCommand::FocusMod(focus_mod)) =
+                (&commands[0], &commands[1])
+            {
                 assert_eq!(add_mod.intent.action, Some("PLAY_MUSIC".to_string()));
                 assert_eq!(
                     add_mod.intent.parameters,
@@ -107,6 +119,7 @@ mod tests {
                         data: IntentParameterData::EntityReference("peridot-ref".to_string()),
                     },])
                 );
+                assert_eq!(focus_mod.mod_name_transitional, add_mod.mod_name_transitional);
             } else {
                 assert!(false);
             }
@@ -147,7 +160,7 @@ mod tests {
             assert_eq!(commands.len(), 1);
             if let StoryCommand::AddMod(add_mod) = &commands[0] {
                 assert_eq!(add_mod.intent.action, Some("PLAY_MUSIC".to_string()));
-                assert_eq!(add_mod.mod_name, vec!["mod_name"]);
+                assert_eq!(add_mod.mod_name_transitional, Some("mod_name".to_string()));
                 assert_eq!(
                     add_mod.intent.parameters,
                     Some(vec![IntentParameter {

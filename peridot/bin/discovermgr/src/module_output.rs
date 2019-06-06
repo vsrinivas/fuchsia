@@ -200,7 +200,7 @@ mod tests {
             assert_eq!(commands.len(), 1);
             if let StoryCommand::AddMod(add_mod) = &commands[0] {
                 assert_eq!(add_mod.intent.action, Some("PLAY_MUSIC".to_string()));
-                assert_eq!(add_mod.mod_name, vec!["mod-a"]);
+                assert_eq!(add_mod.mod_name_transitional, Some("mod-a".to_string()));
                 assert_eq!(
                     add_mod.intent.parameters,
                     Some(vec![FidlIntentParameter {

@@ -68,7 +68,7 @@ pub struct Suggestion {
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub struct AddMod {
-    mod_name: String,
+    pub mod_name: String,
     story_name: String,
     pub intent: Intent,
 }
@@ -259,8 +259,8 @@ impl Into<FidlIntentParameter> for IntentParameter {
 impl Into<FidlAddMod> for AddMod {
     fn into(self) -> FidlAddMod {
         FidlAddMod {
-            mod_name: vec![self.mod_name],
-            mod_name_transitional: None,
+            mod_name: vec![],
+            mod_name_transitional: Some(self.mod_name),
             intent: self.intent.into(),
             surface_parent_mod_name: None,
             surface_relation: SurfaceRelation {
@@ -346,7 +346,7 @@ mod tests {
         };
         let add_mod_fidl: FidlAddMod = add_mod.clone().into();
 
-        assert_eq!(add_mod_fidl.mod_name, vec![add_mod.mod_name]);
+        assert_eq!(add_mod_fidl.mod_name_transitional, Some(add_mod.mod_name));
         assert_eq!(add_mod_fidl.intent.handler, add_mod.intent.handler);
         assert_eq!(add_mod_fidl.intent.action, add_mod.intent.action);
         assert!(add_mod_fidl

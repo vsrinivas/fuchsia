@@ -150,8 +150,10 @@ mod tests {
 
         // This will be called when the suggestion is executed.
         puppet_master_fake.set_on_execute("story_name", |commands| {
-            assert_eq!(commands.len(), 1);
-            if let StoryCommand::AddMod(add_mod) = &commands[0] {
+            assert_eq!(commands.len(), 2);
+            if let (StoryCommand::AddMod(add_mod), StoryCommand::FocusMod(focus_mod)) =
+                (&commands[0], &commands[1])
+            {
                 assert_eq!(add_mod.intent.action, Some("SEE_CONCERTS".to_string()));
                 assert_eq!(
                     add_mod.intent.parameters,
@@ -160,6 +162,7 @@ mod tests {
                         data: IntentParameterData::EntityReference("abcdefgh".to_string()),
                     },])
                 );
+                assert_eq!(add_mod.mod_name_transitional, focus_mod.mod_name_transitional);
             } else {
                 assert!(false);
             }
