@@ -409,12 +409,18 @@ function fx-run-ninja {
 
   # TERM is passed for the pretty ninja UI
   # PATH is passed as some tools are referenced via $PATH due to platform differences.
-  # TMPDIR is passed for Goma on macOS. TMPDIR must be set, or unset, not
-  # empty. Some Dart build tools have been observed writing into source paths
+  # TMPDIR is passed for Goma on macOS.
+  # NINJA_STATUS is passed to control Ninja progress status.
+  # GOMA_DISABLED is passed to forcefully disabling Goma.
+  #
+  # GOMA_DISABLED and TMPDIR must be set, or unset, not empty. Some Dart
+  # build tools have been observed writing into source paths
   # when TMPDIR="" - it is deliberately unquoted and using the ${+} expansion
-  # expression).
+  # expression). GOMA_DISABLED will forcefully disable Goma even if it's set to
+  # empty.
   fx-try-locked env -i TERM="${TERM}" PATH="${PATH}" \
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
+    ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
     "$cmd" "${args[@]}"
 }
