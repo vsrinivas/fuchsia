@@ -244,8 +244,7 @@ allowing the device being booted to advertise its bootability and the host to fi
 it and send a system image to it.
 
 If you have a device (for example a Broadwell or Skylake Intel NUC) running
-GigaBoot20x6 first create a USB drive [manually](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/acer12.md#How-to-Create-a-Bootable-USB-Flash-Drive)
-or (Linux only) using the [script](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/build-bootable-usb-gigaboot.sh).
+GigaBoot20x6, first [create a USB drive](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/usb_setup.md).
 
 ```
 $BUILDDIR/tools/bootserver $BUILDDIR/zircon.bin
