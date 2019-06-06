@@ -1479,7 +1479,7 @@ namespace {
 template <typename T>
 void StoreDecl(Decl* decl_ptr, std::vector<std::unique_ptr<T>>* declarations) {
     std::unique_ptr<T> t_decl;
-    t_decl.reset(reinterpret_cast<T*>(decl_ptr));
+    t_decl.reset(static_cast<T*>(decl_ptr));
     declarations->push_back(std::move(t_decl));
 }
 
@@ -1544,6 +1544,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
         auto const_decl = static_cast<Const*>(decl_ptr);
         const auto name = &const_decl->name;
         constants_.emplace(name, const_decl);
+        break;
     }
     } // switch
     return true;
