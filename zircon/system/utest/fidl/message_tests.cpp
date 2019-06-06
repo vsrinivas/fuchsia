@@ -124,6 +124,24 @@ bool message_part_size_test() {
     END_TEST;
 }
 
+bool message_part_wrap_array_test() {
+    BEGIN_TEST;
+
+    uint8_t dummy[42];
+
+    auto full = fidl::MessagePart<uint8_t>::WrapFull(dummy);
+    EXPECT_EQ(full.data(), dummy);
+    EXPECT_EQ(full.actual(), 42);
+    EXPECT_EQ(full.capacity(), 42);
+
+    auto empty = fidl::MessagePart<uint8_t>::WrapEmpty(dummy);
+    EXPECT_EQ(empty.data(), dummy);
+    EXPECT_EQ(empty.actual(), 0);
+    EXPECT_EQ(empty.capacity(), 42);
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(message_tests)
@@ -131,4 +149,5 @@ RUN_NAMED_TEST("Message test", message_test)
 RUN_NAMED_TEST("MessageBuilder test", message_builder_test)
 RUN_NAMED_TEST("MessagePart friendly with STL test", message_part_is_stl_container_test)
 RUN_NAMED_TEST("MessagePart size test", message_part_size_test)
+RUN_NAMED_TEST("MessagePart wrap array test", message_part_wrap_array_test)
 END_TEST_CASE(message_tests)

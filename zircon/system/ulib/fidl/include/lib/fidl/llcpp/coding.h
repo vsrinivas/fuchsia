@@ -50,6 +50,13 @@ struct DecodeResult final {
     const char* error = nullptr;
     DecodedMessage<FidlType> message;
 
+    // Convenience accessor for the FIDL message pointer.
+    // Asserts that the decoding was successful.
+    FidlType* Unwrap() {
+        ZX_DEBUG_ASSERT(status == ZX_OK);
+        return message.message();
+    }
+
     DecodeResult() = default;
 
     DecodeResult(zx_status_t status,
@@ -305,6 +312,13 @@ EncodeResult<ResponseType> Call(zx::channel& chan,
     return Call<RequestType, ResponseType>(zx::unowned_channel(chan),
                                            std::move(request),
                                            std::move(response_buffer));
+}
+
+// Calculates the maximum possible message size for a FIDL type,
+// clamped at the Zircon channel packet size.
+template <typename FidlType>
+constexpr uint32_t MaxSizeInChannel() {
+    return internal::ClampedMessageSize<FidlType>();
 }
 
 #endif

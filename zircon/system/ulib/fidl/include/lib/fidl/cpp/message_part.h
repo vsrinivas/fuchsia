@@ -61,6 +61,21 @@ public:
         return *this;
     }
 
+    // Constructs a full |MessagePart| wrapping an array.
+    // The array is assumed to be initialized with data, such that |actual()|
+    // will match exactly the length of the array.
+    template <size_t N>
+    static MessagePart WrapFull(T (&array)[N]) {
+        return MessagePart(array, N, N);
+    }
+
+    // Constructs an empty |MessagePart| wrapping an array.
+    // The array is assumed to be uninitialized, hence |actual()| is set to 0.
+    template <size_t N>
+    static MessagePart WrapEmpty(T (&array)[N]) {
+        return MessagePart(array, N, 0);
+    }
+
     // The data stored in this part of the message.
     T* data() const { return data_; }
 

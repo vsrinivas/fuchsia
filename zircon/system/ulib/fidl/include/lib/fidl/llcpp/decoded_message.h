@@ -45,8 +45,9 @@ public:
     // The buffer region is assumed to contain a linearized FIDL message with valid pointers.
     // This does not take ownership of that buffer region.
     // But it does take ownership of the handles within the buffer.
-    DecodedMessage(BytePart bytes) :
-        bytes_(std::move(bytes)) { }
+    explicit DecodedMessage(BytePart bytes) : bytes_(std::move(bytes)) {
+        ZX_DEBUG_ASSERT(bytes_.actual() >= FidlType::PrimarySize);
+    }
 
     DecodedMessage(DecodedMessage&& other) = default;
 
