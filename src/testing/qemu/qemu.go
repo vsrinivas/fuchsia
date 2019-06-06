@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Untar untars a tar.gz file into a directory.
@@ -162,6 +163,9 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 func (d *Distribution) Create(params Params) *Instance {
 	path := d.systemPath(params.Arch)
 	args := []string{}
+	if params.ZBI == "" {
+		panic("ZBI must be specified")
+	}
 	args = append(args, "-kernel", d.kernelPath(params.Arch), "-initrd", params.ZBI)
 	args = append(args, "-m", "2048", "-nographic", "-net", "none", "-smp", "4,threads=2",
 		"-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
@@ -190,7 +194,19 @@ func (i *Instance) Start() error {
 	i.stdin = bufio.NewWriter(stdin)
 	i.stdout = bufio.NewReader(stdout)
 	i.stderr = bufio.NewReader(stderr)
-	return i.cmd.Start()
+
+	startErr := i.cmd.Start()
+
+	// Look for very early log message to validate that qemu likely started
+	// correctly. Loop for a while to give qemu a chance to boot.
+	for j := 0; j < 100; j++ {
+		if i.CheckForLogMessage("SeaBIOS") == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return startErr
 }
 
 // Kill terminates the QEMU instance.
@@ -204,9 +220,20 @@ func (i *Instance) RunCommand(cmd string) error {
 	return err
 }
 
-// WaitForLogMessage reads log messages from the QEMU instance until it reads
-// a message that contains the given string.
-func (i *Instance) WaitForLogMessage(msg string) error {
+// WaitForLogMessage reads log messages from the QEMU instance until it reads a
+// message that contains the given string. panic()s on error (and in particular
+// if the string is not seen until EOF).
+func (i *Instance) WaitForLogMessage(msg string) {
+	err := i.CheckForLogMessage(msg)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Reads all messages from stdout of QEMU, and tests if msg appears. Returns
+// error if any. Prefer WaitForLogMessage() unless you're certain this is the
+// one you want.
+func (i *Instance) CheckForLogMessage(msg string) error {
 	for {
 		line, err := i.stdout.ReadString('\n')
 		if err != nil {
