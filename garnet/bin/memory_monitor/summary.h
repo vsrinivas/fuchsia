@@ -17,6 +17,8 @@ namespace memory {
 
 struct Sizes {
   Sizes() : private_bytes(0), scaled_bytes(0), total_bytes(0) {}
+  Sizes(uint64_t b) : private_bytes(b), scaled_bytes(b), total_bytes(b) {}
+
   uint64_t private_bytes;
   uint64_t scaled_bytes;
   uint64_t total_bytes;
@@ -24,6 +26,8 @@ struct Sizes {
 
 class ProcessSummary {
  public:
+  static const zx_koid_t kKernelKoid;
+
   zx_koid_t koid() const { return koid_; }
   std::string name() const { return name_; }
   Sizes sizes() const { return sizes_; }
@@ -34,6 +38,7 @@ class ProcessSummary {
 
  private:
   ProcessSummary(zx_koid_t koid, std::string name) : koid_(koid), name_(name) {}
+  ProcessSummary(const zx_info_kmem_stats_t& kmem);
 
   zx_koid_t koid_;
   std::string name_;

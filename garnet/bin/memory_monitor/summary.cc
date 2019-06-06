@@ -11,6 +11,10 @@ Summary::Summary(const Capture& capture)
   std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>>
       vmo_to_processes;
   auto const& koid_to_vmo = capture.koid_to_vmo();
+
+  ProcessSummary kernel_summary(kstats_);
+  process_summaries_.push_back(kernel_summary);
+
   for (auto const& pair : capture.koid_to_process()) {
     auto process_koid = pair.first;
     auto& process = pair.second;
@@ -49,6 +53,24 @@ Summary::Summary(const Capture& capture)
       }
     }
   }
+}
+
+const zx_koid_t ProcessSummary::kKernelKoid = 1;
+
+ProcessSummary::ProcessSummary(const zx_info_kmem_stats_t& kmem) :
+    koid_(kKernelKoid), name_("kernel") {
+  name_to_sizes_.emplace("heap", kmem.total_heap_bytes);
+  name_to_sizes_.emplace("wired", kmem.wired_bytes);
+  name_to_sizes_.emplace("mmu", kmem.mmu_overhead_bytes);
+  name_to_sizes_.emplace("ipc", kmem.ipc_bytes);
+  name_to_sizes_.emplace("other", kmem.other_bytes);
+
+  sizes_.private_bytes = sizes_.scaled_bytes = sizes_.total_bytes =
+    kmem.wired_bytes +
+    kmem.total_heap_bytes +
+    kmem.mmu_overhead_bytes +
+    kmem.ipc_bytes +
+    kmem.other_bytes;
 }
 
 const Sizes& ProcessSummary::GetSizes(std::string name) const {

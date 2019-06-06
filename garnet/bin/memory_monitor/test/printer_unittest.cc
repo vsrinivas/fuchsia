@@ -20,9 +20,8 @@ using PrinterUnitTest = gtest::TestLoopFixture;
 void ConfirmLines(std::ostringstream& oss,
                   std::vector<std::string> expected_lines) {
   SCOPED_TRACE("");
-  fxl::StringView lines_view(oss.str());
   auto lines = fxl::SplitStringCopy(
-      lines_view, "\n", fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
+      oss.str(), "\n", fxl::kKeepWhitespace, fxl::kSplitWantNonEmpty);
   ASSERT_EQ(expected_lines.size(), lines.size());
   for (size_t li = 0; li < expected_lines.size(); li++) {
     SCOPED_TRACE(li);
@@ -153,12 +152,46 @@ TEST_F(PrinterUnitTest, OutputSummarySingle) {
   p.OutputSummary(s, SORTED, ZX_KOID_INVALID);
   ConfirmLines(oss, {
     "1234,100,p1,100,100,100",
+    "1234,1,kernel,0,0,0",
   });
 
   oss.str("");
   p.OutputSummary(s, SORTED, 100);
   ConfirmLines(oss, {
     "1234,100,v1,100,100,100",
+  });
+}
+
+TEST_F(PrinterUnitTest, OutputSummaryKernel) {
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .time = 1234L * 1000000000L,
+    .kmem = {
+        .wired_bytes = 10,
+        .total_heap_bytes = 20,
+        .mmu_overhead_bytes = 30,
+        .ipc_bytes = 40,
+        .other_bytes = 50,
+    },
+  });
+  Summary s(c);
+
+  std::ostringstream oss;
+  Printer p(oss);
+
+  p.OutputSummary(s, SORTED, ZX_KOID_INVALID);
+  ConfirmLines(oss, {
+    "1234,1,kernel,150,150,150",
+  });
+
+  oss.str("");
+  p.OutputSummary(s, SORTED, ProcessSummary::kKernelKoid);
+  ConfirmLines(oss, {
+    "1234,1,other,50,50,50",
+    "1234,1,ipc,40,40,40",
+    "1234,1,mmu,30,30,30",
+    "1234,1,heap,20,20,20",
+    "1234,1,wired,10,10,10",
   });
 }
 
@@ -184,6 +217,7 @@ TEST_F(PrinterUnitTest, OutputSummaryDouble) {
   ConfirmLines(oss, {
     "1234,200,p2,200,200,200",
     "1234,100,p1,100,100,100",
+    "1234,1,kernel,0,0,0",
   });
 
   oss.str("");
@@ -224,6 +258,7 @@ TEST_F(PrinterUnitTest, OutputSummaryShared) {
   ConfirmLines(oss, {
     "1234,200,p2,300,350,400",
     "1234,100,p1,200,250,300",
+    "1234,1,kernel,0,0,0",
   });
 
   oss.str("");

@@ -87,16 +87,11 @@ void Printer::PrintSummary(
   auto& kstats = summary.kstats();
   os_ << "Time: " << summary.time()
       << " VMO: " << kstats.vmo_bytes
-      << " Free: " << kstats.free_bytes
-      << " Wired: " << kstats.wired_bytes
-      << " Heap: " << kstats.total_heap_bytes
-      << " Heap Free: " << kstats.free_heap_bytes
-      << " Overhead: " << kstats.mmu_overhead_bytes
-      << " Other: " << kstats.other_bytes << "\n";
+      << " Free: " << kstats.free_bytes << "\n";
 
   if (level == KMEM) {
     return;
-  } 
+  }
 
   auto const& summaries = summary.process_summaries();
   std::vector<ProcessSummary> sorted_summaries;
@@ -155,6 +150,7 @@ void Printer::OutputSummary(
       return a.sizes().private_bytes > b.sizes().private_bytes;
         });
   }
+  auto const time = summary.time() / 1000000000;
   for (auto const& s : sorted == SORTED ? sorted_summaries : summaries) {
     if (pid != ZX_KOID_INVALID) {
       if (s.koid() != pid) {
@@ -180,7 +176,7 @@ void Printer::OutputSummary(
         if (sizes.total_bytes == 0) {
           continue;
         }
-        os_ << summary.time() / 1000000000 << ","
+        os_ << time << ","
             << s.koid() << ","
             << name << ","
             << sizes.private_bytes << ","
@@ -190,7 +186,7 @@ void Printer::OutputSummary(
       continue;
     }
     auto sizes = s.sizes();
-    os_ << summary.time() / 1000000000 << ","
+    os_ << time << ","
         << s.koid() << ","
         << s.name() << ","
         << sizes.private_bytes << ","
