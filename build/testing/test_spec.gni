@@ -243,10 +243,10 @@ template("test_spec") {
       if (is_linux || is_mac) {
         # Trim leading //.
         location = rebase_path(location, root_build_dir)
-        forward_variables_from(invoker, [ "command" ])
       }
       os = current_os
       cpu = current_cpu
+      forward_variables_from(invoker, [ "command" ])
       if (runtime_deps_file != "") {
         deps_file = rebase_path(runtime_deps_file, root_build_dir)
       }
@@ -264,5 +264,5 @@ template("test_spec") {
 
   # When an unreferenced board_name is used, the allowed_device_types
   # assignment will have no effect.
-  not_needed(["allowed_device_types"])
+  not_needed([ "allowed_device_types" ])
 }

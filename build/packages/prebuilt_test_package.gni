@@ -1,0 +1,65 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/packages/prebuilt_package.gni")
+import("//build/testing/test_spec.gni")
+
+# Describes a prebuilt package of tests.
+#
+# Parameters
+#
+#   archive (required)
+#     [string] Path to archive containing a package.
+#
+#   package (required)
+#     [string] Name of the package.
+#
+#   tests (required)
+#     [list of scopes] Defines the component tests in the package.
+#
+#     Entries in a scope in the tests list:
+#
+#       component_name (required)
+#         [string] Component name to test.
+#
+#       environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#         [list of scopes] Device environments in which the test should run.
+#
+#         Environment scope is defined in //build/testing/test_spec.gni
+#
+#   deps (optional)
+#     [list of labels]: List of labels that the test depends on.
+#
+template("prebuilt_test_package") {
+  assert(defined(invoker.archive), "archive must be defined.")
+  assert(defined(invoker.package), "package must be defined.")
+  assert(defined(invoker.tests), "tests must be defined.")
+
+  _spec_labels = []
+  foreach(test, invoker.tests) {
+    _spec_name = "${target_name}_${test.component_name}_spec"
+    test_spec(_spec_name) {
+      name = "${target_name}"
+
+      # "location" is intentionally empty since it's not used for running prebuilt package tests
+      location = ""
+      command = [
+        "run-test-component",
+        "fuchsia-pkg://fuchsia.com/${invoker.package}#meta/${test.component_name}.cmx",
+      ]
+
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "environments",
+                             ])
+    }
+    _spec_labels += [ ":${_spec_name}" ]
+  }
+
+  prebuilt_package(target_name) {
+    archive = invoker.archive
+    deps = _spec_labels
+  }
+}

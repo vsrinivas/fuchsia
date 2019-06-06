@@ -13,6 +13,7 @@
 #     Name of the package.
 #     Defaults to the target's name.
 #
+#   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
 #     Usual GN meanings.
@@ -74,6 +75,9 @@ template("prebuilt_package") {
     deps = [
       "//garnet/go/src/pm:pm_bin($host_toolchain)",
     ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
 
     blobs_json_path = rebase_path(blobs_json, root_build_dir)
 
@@ -102,9 +106,7 @@ template("prebuilt_package") {
           [ "${pkg.package_name}/${pkg.package_version}=" +
             rebase_path("$meta_dir/meta.far.merkle", root_build_dir) ]
 
-      package_output_manifests = [
-        package_manifest_json,
-      ]
+      package_output_manifests = [ package_manifest_json ]
     }
   }
 
