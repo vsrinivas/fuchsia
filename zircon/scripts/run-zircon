@@ -37,7 +37,7 @@ function HELP {
     echo "-X                   : use XRay build"
     echo "-z <zbi>             : boot specified complete ZBI via trampoline"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
-    echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
+    echo "                     : <host_drv> should be one of (alsa, oss, pa, wav, none)"
     echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
     echo "--build-debug        : build an image for use with gdb (equivalent to -d to build-zircon)"
     echo "--debugger           : Enable gdb stub and wait for connection"
@@ -336,6 +336,7 @@ if [[ -n $AUDIO ]]; then
     case $AUDIO in
         none) ;;
         alsa) ;;
+        oss) ;;
         pa) ;;
         wav)
             export QEMU_WAV_FREQUENCY=48000
