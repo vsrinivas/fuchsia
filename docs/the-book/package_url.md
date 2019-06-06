@@ -1,4 +1,4 @@
-# Fuchsia Package URIs
+# Fuchsia Package URLs
 
 Fuchsia software, including system components and third-party components, is
 distributed in the form of packages.  These packages are signed in such a way
@@ -8,18 +8,18 @@ authenticity of packages as required to implement features such as verified
 boot.
 
 This document addresses the problem of how to identify individual packages
-using **fuchsia-pkg** URIs.
+using **fuchsia-pkg** URLs.
 
 ## Goals
 
- * Encode stable identifiers for packages in the form of a URI under the
-   assumption that many system components will effectively "bookmark" URIs for
-   the long term.  (Example: to persist the URIs of all modules in a story.)
- * Establish an association between a package URI and the hostname of an
+ * Encode stable identifiers for packages in the form of a URL under the
+   assumption that many system components will effectively "bookmark" URLs for
+   the long term.  (Example: to persist the URLs of all modules in a story.)
+ * Establish an association between a package URL and the hostname of an
    Internet server from which the package could perhaps be downloaded.
  * Be robust in the face of repository mirrors: a package's authenticity can be
    proven even if the contents were actually downloaded from a different host
-   than the one specified in the package URI.  (Example: edge cache,
+   than the one specified in the package URL.  (Example: edge cache,
    peer-to-peer, USB stick...)
  * Be relatively human-readable.
  * Be strict about representation, including structure, allowed characters, and
@@ -27,13 +27,13 @@ using **fuchsia-pkg** URIs.
  * No requirement for TLS at point of distribution: the package and repository
    metadata and auxiliary information about known sources is enough to verify
    authenticity independently of how the contents were actually obtained given a
-   package URI (even offline).
+   package URL (even offline).
 
 ## Non-Goals
 
- * Establish a cryptographically strong association between a package URI itself
+ * Establish a cryptographically strong association between a package URL itself
    and its repository's chain of trust, enabling proof of authenticity given
-   nothing but the URI.
+   nothing but the URL.
 
 ## Identifying Repositories, Packages, and Resources
 
@@ -69,7 +69,7 @@ device.  Packages from unknown sources will be rejected.
 
 ### Repository Hostname
 
-The package URI contains a repository [hostname] to identify the package's
+The package URL contains a repository [hostname] to identify the package's
 source.  Per [RFC 1123] and [RFC 5890], a hostname is a sequence of dot
 (`.`)-delimited [IDNA A-labels], each of which consists of 1 to 63 of the
 following latin-1 characters in any order: digits (`0` to `9`), lower-case
@@ -168,9 +168,9 @@ characters not equal to `.`, `..`, or `/`.
 
 This definition is compatible with the definition of [Fuchsia filesystem paths]
 but it imposes a UTF-8 encoding rather than admitting arbitrary binary strings
-since such strings cannot always be encoded as valid URIs.
+since such strings cannot always be encoded as valid URLs.
 
-Per [RFC 3986], resource paths are percent-encoded when they appear in URIs.
+Per [RFC 3986], resource paths are percent-encoded when they appear in URLs.
 
 **Example resource paths:**
 
@@ -183,9 +183,9 @@ Per [RFC 3986], resource paths are percent-encoded when they appear in URIs.
 [Fuchsia filesystem paths]: /docs/the-book/namespaces.md#object-relative-path-expressions
 [RFC 3986]: https://tools.ietf.org/html/rfc3986#page-11
 
-## The fuchsia-pkg URI Scheme
+## The fuchsia-pkg URL Scheme
 
-The **fuchsia-pkg** URI scheme combines the preceding identifying
+The **fuchsia-pkg** URL scheme combines the preceding identifying
 characteristics to establish a means for referring to a repository, a package,
 or a resource, depending on which parts are included.
 
@@ -197,7 +197,7 @@ fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>][?hash=<pkg-hash>][#<re
 
 **Scheme: (required)**
  * The following case-insensitive characters: `fuchsia-pkg://`.
-  * Although the canonical form is lower-case, URI scheme encoding is
+  * Although the canonical form is lower-case, URL scheme encoding is
     case-insensitive therefore the system must handle all cases.
 
 **Repository: (required)**
@@ -219,7 +219,7 @@ fuchsia-pkg://<repo-hostname>[/<pkg-name>[/<pkg-variant>][?hash=<pkg-hash>][#<re
  * The UTF-8 [resource path](#resource-paths), relative to the root of the
    package, percent-encoded as required, per [RFC 3986].
 
-URI components containing reserved characters are percent-encoded according to
+URL components containing reserved characters are percent-encoded according to
 [RFC 3986].  Note that the scheme, [repository hostname](#repository-hostname),
 [package name](#package-name), [package variant](#package-variant), and [package
 hash](#package-hash) components are all defined to use a restricted subset of
@@ -227,26 +227,26 @@ characters, none of which require encoding, unlike the resource path.
 
 ## Interpretation
 
-A **fuchsia-pkg** URI has different interpretations depending on which parts are
+A **fuchsia-pkg** URL has different interpretations depending on which parts are
 present.
 
- * If the repository, package, and resource parts are present, then the URI
+ * If the repository, package, and resource parts are present, then the URL
    identifies the indicated resource within the package.
- * If only the repository and package parts are present, then the URI identifies
+ * If only the repository and package parts are present, then the URL identifies
    the indicated package itself.
- * If only the repository parts are present, then the URI identifies the
+ * If only the repository parts are present, then the URL identifies the
    indicated repository itself.
 
 The package parts can express varying degrees of specificity.  At minimum the
 package name must be present, optionally followed by the package variant and
 package hash.
 
-When the **package resolver** fetches resources given a **fuchsia-pkg** URI, it
+When the **package resolver** fetches resources given a **fuchsia-pkg** URL, it
 is required that the package variant be specified. If the package hash is
 missing, the **package resolver** fetches the resources from the newest revision
 of the package variant available to the client.
 
-Although a repository hostname is included in the URI, it is safe to fetch
+Although a repository hostname is included in the URL, it is safe to fetch
 resources from any replica of the repository which satisfies the same
 cryptographic chain of trust.  The problem of locating an appropriate mirror is
 beyond the scope of this document.

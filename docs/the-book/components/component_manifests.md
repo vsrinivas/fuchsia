@@ -26,7 +26,7 @@ declaration](#component-declaration), usually distributed as part of a
 one-to-one onto the FIDL representation, by convention ending in a `.cm`
 extension.
 
-A [fuchsia-pkg URL](/docs/the-book/package_uri.md) with a component manifest
+A [fuchsia-pkg URL](/docs/the-book/package_url.md) with a component manifest
 fragment identifies a component in a package.
 
 ### Component manifest source

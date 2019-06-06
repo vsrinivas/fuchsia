@@ -99,7 +99,7 @@ the application on Fuchsia as a [component](glossary.md#component). This is
 the proper way to create a Fuchsia package.
 
 You run a Fuchsia component by referencing its
-[Fuchsia package URI](glossary.md#fuchsia_pkg-uri).
+[Fuchsia package URl](glossary.md#fuchsia-pkg-url).
 
 ## Set the build to include examples
 
@@ -161,7 +161,7 @@ It should now return a pithy quote.
 
 You can't run this sample as the other two (try to run `hello_world_cpp` or
 `hello_world_rust`). To run a Fuchsia component, you need to run it's Fuchsia
-package URI. Luckily, there are some built-in conveniences to help you find this.
+package URL. Luckily, there are some built-in conveniences to help you find this.
 You can use the `run` command:
 
 ```
@@ -180,7 +180,7 @@ the device (for example,
 `fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx: not
 found`).
 
-The `run` command can expand a string to a URI if the string only matches one
+The `run` command can expand a string to a URL if the string only matches one
 component in your product configuration:
 
 ```
