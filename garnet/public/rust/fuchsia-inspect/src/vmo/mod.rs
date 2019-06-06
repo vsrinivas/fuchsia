@@ -133,7 +133,7 @@ impl Inspector {
 macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
-            pub fn [<create_ $name >](&self, name: &str, value: $type)
+            pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
                 -> [<$name_cap Property>] {
                 self.state
                     .as_ref()
@@ -141,7 +141,7 @@ macro_rules! create_numeric_property_fn {
                     .and_then(|state| {
                         state
                             .lock()
-                            .[<create_ $name _metric>](name, value, self.block_index.unwrap())
+                            .[<create_ $name _metric>](name.as_ref(), value, self.block_index.unwrap())
                     })
                     .map(|block| {
                         [<$name_cap Property>] {state: self.state.clone(), block_index: Some(block.index()) }
@@ -167,11 +167,11 @@ impl Node {
     }
 
     /// Add a child to this node.
-    pub fn create_child(&self, name: &str) -> Node {
+    pub fn create_child(&self, name: impl AsRef<str>) -> Node {
         self.state
             .as_ref()
             .ok_or(format_err!("No-Op node"))
-            .and_then(|state| state.lock().create_node(name, self.block_index.unwrap()))
+            .and_then(|state| state.lock().create_node(name.as_ref(), self.block_index.unwrap()))
             .map(|block| Node { state: self.state.clone(), block_index: Some(block.index()) })
             .unwrap_or(Node { state: None, block_index: None })
     }
@@ -183,14 +183,14 @@ impl Node {
     create_numeric_property_fn!(double, Double, f64);
 
     /// Add a string property to this node.
-    pub fn create_string(&self, name: &str, value: &str) -> StringProperty {
+    pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
         self.state
             .as_ref()
             .ok_or(format_err!("No-Op node"))
             .and_then(|state| {
                 state.lock().create_property(
-                    name,
-                    value.as_bytes(),
+                    name.as_ref(),
+                    value.as_ref().as_bytes(),
                     PropertyFormat::String,
                     self.block_index.unwrap(),
                 )
@@ -203,14 +203,14 @@ impl Node {
     }
 
     /// Add a byte vector property to this node.
-    pub fn create_bytes(&self, name: &str, value: &[u8]) -> BytesProperty {
+    pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
         self.state
             .as_ref()
             .ok_or(format_err!("No-Op node"))
             .and_then(|state| {
                 state.lock().create_property(
-                    name,
-                    value,
+                    name.as_ref(),
+                    value.as_ref(),
                     PropertyFormat::Bytes,
                     self.block_index.unwrap(),
                 )
@@ -606,6 +606,26 @@ mod tests {
 
             property.set(b"test-set");
             assert_eq!(property_block.property_total_length().unwrap(), 8);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn owned_method_argument_properties() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        {
+            let _string_property =
+                node.create_string(String::from("string_property"), String::from("test"));
+            let _bytes_property =
+                node.create_bytes(String::from("bytes_property"), vec![0, 1, 2, 3]);
+            let _double_property = node.create_double(String::from("double_property"), 1.0);
+            let _int_property = node.create_int(String::from("int_property"), 1);
+            let _uint_property = node.create_uint(String::from("uint_property"), 1);
+            assert_eq!(node_block.child_count().unwrap(), 5);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }
