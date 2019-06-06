@@ -17,6 +17,7 @@ use log::{error, info};
 use std::sync::Arc;
 
 use crate::device::{self, IfaceDevice, IfaceMap, NewIface, PhyDevice, PhyMap};
+use crate::inspect;
 use crate::station;
 use crate::stats_scheduler::StatsRef;
 use crate::watcher_service::WatcherService;
@@ -26,7 +27,7 @@ pub async fn serve_device_requests(
     ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
     mut req_stream: fidl_svc::DeviceServiceRequestStream,
-    inspect_root: wlan_inspect::SharedNodePtr,
+    inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error> {
     while let Some(req) = await!(req_stream.try_next()).context("error running DeviceService")? {
@@ -63,13 +64,20 @@ pub async fn serve_device_requests(
 
                         // TODO(WLAN-927): Remove check once all drivers support SME channels.
                         if new_iface.mlme_proxy.is_some() {
+                            let inspect_tree = inspect_tree.clone();
+                            let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
+
                             let serve_sme_fut = device::query_and_serve_iface(
                                 new_iface,
                                 ifaces.clone(),
-                                inspect_root.clone(),
-                                cobalt_sender.clone()
-                            ).map(move |result| if let Err(e) = result {
-                                error!("error serving iface {}: {}", iface_id, e);
+                                iface_tree_holder,
+                                cobalt_sender.clone(),
+                            )
+                            .map(move |result| {
+                                if let Err(e) = result {
+                                    error!("error serving iface {}: {}", iface_id, e);
+                                }
+                                inspect_tree.notify_iface_removed(iface_id);
                             });
                             fasync::spawn(serve_sme_fut);
                         } else {
@@ -486,10 +494,12 @@ mod tests {
             Poll::Ready(Some(Ok(PhyRequest::Query { responder }))) => responder,
             _ => panic!("phy_stream returned unexpected result"),
         };
-        responder.send(&mut fidl_wlan_dev::QueryResponse {
-            status: zx::sys::ZX_OK,
-            info: fake_phy_info(),
-        }).expect("failed to send QueryResponse");
+        responder
+            .send(&mut fidl_wlan_dev::QueryResponse {
+                status: zx::sys::ZX_OK,
+                info: fake_phy_info(),
+            })
+            .expect("failed to send QueryResponse");
 
         // Continue running create iface request.
         match exec.run_until_stalled(&mut create_fut) {
@@ -498,9 +508,7 @@ mod tests {
         };
 
         let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
-            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => {
-                (req, responder)
-            },
+            Poll::Ready(Some(Ok(PhyRequest::CreateIface { req, responder }))) => (req, responder),
             _ => panic!("phy_stream returned unexpected result"),
         };
 

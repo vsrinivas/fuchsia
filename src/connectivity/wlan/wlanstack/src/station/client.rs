@@ -46,12 +46,12 @@ pub async fn serve<S>(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
     cobalt_sender: CobaltSender,
-    inspect_sme: wlan_inspect::nodes::SharedNodePtr,
+    iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
 ) -> Result<(), failure::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
-    let (sme, mlme_stream, info_stream, time_stream) = Sme::new(device_info, inspect_sme);
+    let (sme, mlme_stream, info_stream, time_stream) = Sme::new(device_info, iface_tree_holder);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy,

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
+use fuchsia_inspect_contrib::{inspect_log, log::InspectBytes};
 use log::{error, warn};
 use wep_deprecated;
 use wlan_common::{format::MacFmt, ie::rsn::cipher, RadioConfig};
-use wlan_inspect::{inspect_log, log::InspectBytes};
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
 
@@ -204,7 +204,10 @@ impl State {
                         let connect_result = deauth_code_to_connect_result(ind.reason_code);
                         report_connect_finished(responder, &context, connect_result, None);
                     }
-                    state_change_msg.replace("received DeauthenticateInd msg".to_string());
+                    state_change_msg.replace(format!(
+                        "received DeauthenticateInd msg; reason code {:?}",
+                        ind.reason_code
+                    ));
                     State::Idle
                 }
                 MlmeEvent::SignalReport { ind } => {
@@ -214,7 +217,7 @@ impl State {
                     // Reject EAPOL frames from other BSS.
                     if ind.src_addr != bss.bssid {
                         let eapol_pdu = &ind.data[..];
-                        inspect_log!(context.inspect.rsn_events, {
+                        inspect_log!(context.inspect.rsn_events.lock(), {
                             rx_eapol_frame: InspectBytes(&eapol_pdu),
                             foreign_bssid: ind.src_addr.to_mac_str(),
                             current_bssid: bss.bssid.to_mac_str(),
@@ -309,10 +312,10 @@ impl State {
         };
 
         if start_state != new_state.state_name() || state_change_msg.is_some() {
-            inspect_log!(context.inspect.states, {
+            inspect_log!(context.inspect.states.lock(), {
                 from: start_state,
                 to: new_state.state_name(),
-                ctx: state_change_msg,
+                ctx?: state_change_msg,
             });
         }
         new_state
@@ -398,10 +401,10 @@ impl State {
         };
 
         if start_state != new_state.state_name() || state_change_msg.is_some() {
-            inspect_log!(context.inspect.states, {
+            inspect_log!(context.inspect.states.lock(), {
                 from: start_state,
                 to: new_state.state_name(),
-                ctx: state_change_msg,
+                ctx?: state_change_msg,
             });
         }
         new_state
@@ -428,12 +431,12 @@ impl State {
         context.info_sink.send(InfoEvent::AssociationStarted { att_id: context.att_id });
 
         let msg = connect_cmd_inspect_summary(&cmd);
-        inspect_log!(context.inspect.states, from: start_state, to: JOINING_STATE, ctx: msg);
+        inspect_log!(context.inspect.states.lock(), from: start_state, to: JOINING_STATE, ctx: msg);
         State::Joining { cmd }
     }
 
     pub fn disconnect(self, context: &mut Context) -> Self {
-        inspect_log!(context.inspect.states, {
+        inspect_log!(context.inspect.states.lock(), {
             from: self.state_name(),
             to: IDLE_STATE,
             ctx: "disconnect command",
@@ -483,7 +486,7 @@ fn install_wep_key(context: &mut Context, bssid: [u8; 6], key: &wep_deprecated::
     };
     // unwrap() is safe, OUI is defined in RSN and always compatible with ciphers.
     let cipher = cipher::Cipher::new_dot11(cipher_suite);
-    inspect_log!(context.inspect.rsn_events, {
+    inspect_log!(context.inspect.rsn_events.lock(), {
         derived_key: "WEP",
         cipher: format!("{:?}", cipher),
         key_index: 0,
@@ -613,7 +616,7 @@ fn process_eapol_ind(
         Ok(key_frame) => eapol::Frame::Key(key_frame),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
-            inspect_log!(context.inspect.rsn_events, {
+            inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 status: format!("rejected (parse error): {:?}", e)
             });
@@ -625,14 +628,14 @@ fn process_eapol_ind(
     match rsna.supplicant.on_eapol_frame(&mut update_sink, &eapol_frame) {
         Err(e) => {
             error!("error processing EAPOL key frame: {}", e);
-            inspect_log!(context.inspect.rsn_events, {
+            inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 status: format!("rejected (processing error): {}", e)
             });
             return RsnaStatus::Unchanged;
         }
         Ok(_) => {
-            inspect_log!(context.inspect.rsn_events, {
+            inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 status: "processed"
             });
@@ -665,7 +668,10 @@ fn process_eapol_ind(
             // We should fix the API and make this more explicit.
             // Then we should rework this part.
             SecAssocUpdate::Status(status) => {
-                inspect_log!(context.inspect.rsn_events, rsna_status: format!("{:?}", status));
+                inspect_log!(
+                    context.inspect.rsn_events.lock(),
+                    rsna_status: format!("{:?}", status)
+                );
                 match status {
                     // ESS Security Association was successfully established. Link is now up.
                     SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
@@ -689,10 +695,10 @@ fn inspect_log_key(context: &mut Context, key: &Key) {
         Key::Gtk(gtk) => (Some(&gtk.cipher), Some(gtk.key_id())),
         _ => (None, None),
     };
-    inspect_log!(context.inspect.rsn_events, {
+    inspect_log!(context.inspect.rsn_events.lock(), {
         derived_key: key.name(),
-        cipher: cipher.map(|c| format!("{:?}", c)),
-        key_index: key_index,
+        cipher?: cipher.map(|c| format!("{:?}", c)),
+        key_index?: key_index,
     });
 }
 
@@ -712,7 +718,7 @@ fn send_eapol_frame(
 
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(false, &mut buf);
-    inspect_log!(context.inspect.rsn_events, tx_eapol_frame: InspectBytes(&buf));
+    inspect_log!(context.inspect.rsn_events.lock(), tx_eapol_frame: InspectBytes(&buf));
     context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
         src_addr: sta_addr,
         dst_addr: bssid,
@@ -801,7 +807,7 @@ fn handle_supplicant_start_failure(
 mod tests {
     use super::*;
     use failure::format_err;
-    use fuchsia_inspect as finspect;
+    use fuchsia_inspect::vmo::Inspector;
     use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
@@ -1418,6 +1424,8 @@ mod tests {
         info_stream: InfoStream,
         time_stream: TimeStream,
         context: Context,
+        // Inspector is kept so that root node doesn't automatically get removed from VMO
+        _inspector: Inspector,
     }
 
     impl TestHelper {
@@ -1425,15 +1433,16 @@ mod tests {
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
+            let inspector = Inspector::new().expect("unable to create Inspector");
             let context = Context {
                 device_info: Arc::new(fake_device_info()),
                 mlme_sink: MlmeSink::new(mlme_sink),
                 info_sink: InfoSink::new(info_sink),
                 timer,
                 att_id: 0,
-                inspect: inspect::SmeNode::new(finspect::ObjectTreeNode::new_root()),
+                inspect: Arc::new(inspect::SmeTree::new(inspector.root())),
             };
-            TestHelper { mlme_stream, info_stream, time_stream, context }
+            TestHelper { mlme_stream, info_stream, time_stream, context, _inspector: inspector }
         }
     }
 

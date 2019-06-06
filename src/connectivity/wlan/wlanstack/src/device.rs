@@ -15,7 +15,6 @@ use {
         stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
     },
     log::{error, info},
-    parking_lot::Mutex,
     std::{marker::Unpin, sync::Arc},
     void::Void,
     wlan_inspect,
@@ -24,13 +23,12 @@ use {
 
 use crate::{
     device_watch::{self, NewIfaceDevice},
+    inspect,
     mlme_query_proxy::MlmeQueryProxy,
     station,
     stats_scheduler::{self, StatsScheduler},
     watchable_map::WatchableMap,
 };
-
-const MAX_DEAD_IFACE_NODES: usize = 3;
 
 #[derive(Debug)]
 pub struct NewIface {
@@ -107,13 +105,11 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
 pub async fn serve_ifaces(
     ifaces: Arc<IfaceMap>,
     cobalt_sender: CobaltSender,
-    inspect_root: wlan_inspect::SharedNodePtr,
+    inspect_tree: Arc<inspect::WlanstackTree>,
 ) -> Result<Void, Error> {
     #[allow(deprecated)]
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = FuturesUnordered::new();
-    let inspect_ifacemgr =
-        Arc::new(Mutex::new(wlan_inspect::IfaceManager::new(inspect_root, MAX_DEAD_IFACE_NODES)));
     loop {
         select! {
             new_iface = new_ifaces.next().fuse() => match new_iface {
@@ -121,13 +117,14 @@ pub async fn serve_ifaces(
                 Some(Err(e)) => bail!("new iface stream returned an error: {}", e),
                 Some(Ok(new_iface)) => {
                     let iface_id = new_iface.id;
-                    let inspect_ifacemgr = inspect_ifacemgr.clone();
-                    let inspect_sme = inspect_ifacemgr.lock().create_iface_child(iface_id);
+
+                    let inspect_tree = inspect_tree.clone();
+                    let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
                     #[allow(deprecated)]
                     let fut = query_and_serve_iface_deprecated(
-                            new_iface, &ifaces, cobalt_sender.clone(), inspect_sme
+                            new_iface, &ifaces, cobalt_sender.clone(), iface_tree_holder
                         ).then(move |_| async move {
-                            inspect_ifacemgr.lock().notify_iface_removed(iface_id);
+                            inspect_tree.notify_iface_removed(iface_id);
                         });
                     active_ifaces.push(fut);
                 }
@@ -142,7 +139,7 @@ async fn query_and_serve_iface_deprecated(
     new_iface: NewIfaceDevice,
     ifaces: &IfaceMap,
     cobalt_sender: CobaltSender,
-    inspect_sme: wlan_inspect::SharedNodePtr,
+    iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
 ) {
     let NewIfaceDevice { id, device, proxy } = new_iface;
     let event_stream = proxy.take_event_stream();
@@ -161,7 +158,7 @@ async fn query_and_serve_iface_deprecated(
         &device_info,
         stats_reqs,
         cobalt_sender,
-        inspect_sme,
+        iface_tree_holder,
     );
     let (sme, sme_fut) = match result {
         Ok(x) => x,
@@ -194,7 +191,7 @@ async fn query_and_serve_iface_deprecated(
 pub async fn query_and_serve_iface(
     new_iface: NewIface,
     ifaces: Arc<IfaceMap>,
-    inspect_sme: wlan_inspect::SharedNodePtr,
+    iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error> {
     let mlme_proxy = new_iface.mlme_proxy.expect("MlmeProxy must not be None");
@@ -209,7 +206,7 @@ pub async fn query_and_serve_iface(
         &device_info,
         stats_reqs,
         cobalt_sender,
-        inspect_sme,
+        iface_tree_holder,
     )
     .map_err(|e| format_err!("failed to creating SME: {}", e))?;
 
@@ -232,7 +229,7 @@ fn create_sme<S>(
     device_info: &DeviceInfo,
     stats_requests: S,
     cobalt_sender: CobaltSender,
-    inspect_sme: wlan_inspect::SharedNodePtr,
+    iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
 ) -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
@@ -254,7 +251,7 @@ where
                 receiver,
                 stats_requests,
                 cobalt_sender,
-                inspect_sme,
+                iface_tree_holder,
             );
             Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
         }

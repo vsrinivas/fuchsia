@@ -16,6 +16,7 @@ use failure::{bail, format_err};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent, ScanRequest};
 use fidl_fuchsia_wlan_sme as fidl_sme;
+use fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure};
 use futures::channel::{mpsc, oneshot};
 use log::error;
 use std::collections::HashMap;
@@ -23,7 +24,7 @@ use std::sync::Arc;
 use wep_deprecated;
 use wlan_common::format::MacFmt;
 use wlan_common::RadioConfig;
-use wlan_inspect::{inspect_log, log::InspectListClosure, nodes::BoundedListNode, NodeExt};
+use wlan_inspect::wrappers::InspectWlanChan;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
@@ -59,7 +60,7 @@ mod internal {
         pub info_sink: InfoSink,
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
-        pub(crate) inspect: inspect::SmeNode,
+        pub(crate) inspect: Arc<inspect::SmeTree>,
     }
 }
 
@@ -157,12 +158,14 @@ pub enum Standard {
 impl ClientSme {
     pub fn new(
         info: DeviceInfo,
-        inspect_node: wlan_inspect::SharedNodePtr,
+        iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
+        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node));
+        iface_tree_holder.place_iface_subtree(inspect.clone());
         (
             ClientSme {
                 state: Some(State::Idle),
@@ -173,7 +176,7 @@ impl ClientSme {
                     device_info,
                     timer,
                     att_id: 0,
-                    inspect: inspect::SmeNode::new(inspect_node),
+                    inspect,
                 },
             },
             mlme_stream,
@@ -327,16 +330,12 @@ impl super::Station for ClientSme {
                             }
                         };
 
-                        inspect_log_join_scan(
-                            &mut self.context.inspect.join_scan_events,
-                            &bss_list,
-                            inspect_msg,
-                        );
+                        inspect_log_join_scan(&mut self.context, &bss_list, inspect_msg);
                         new_state
                     }
                     ScanResult::JoinScanFinished { token, result: Err(e) } => {
                         inspect_log!(
-                            self.context.inspect.join_scan_events,
+                            self.context.inspect.join_scan_events.lock(),
                             scan_failure: format!("{:?}", e),
                         );
                         error!("cannot join network because scan failed: {:?}", e);
@@ -398,22 +397,22 @@ impl super::Station for ClientSme {
 }
 
 fn inspect_log_join_scan(
-    node: &mut BoundedListNode,
+    ctx: &mut Context,
     bss_list: &[fidl_mlme::BssDescription],
     result_msg: Option<String>,
 ) {
-    let inspect_bss = InspectListClosure(&bss_list, |node, key, bss| {
+    let inspect_bss = InspectListClosure(&bss_list, |node_writer, key, bss| {
         let ssid = String::from_utf8_lossy(&bss.ssid[..]);
-        node.create_child(key)
-            .lock()
-            .insert("bssid", bss.bssid.to_mac_str())
-            .insert("ssid", ssid.as_ref())
-            .insert("channel", &bss.chan)
-            .insert("rcpi_dbm", bss.rcpi_dbmh / 2)
-            .insert("rsni_db", bss.rsni_dbh / 2)
-            .insert("rssi_dbm", bss.rssi_dbm);
+        inspect_insert!(node_writer, var key: {
+            bssid: bss.bssid.to_mac_str(),
+            ssid: ssid.as_ref(),
+            channel: InspectWlanChan(&bss.chan),
+            rcpi_dbm: bss.rcpi_dbmh / 2,
+            rsni_db: bss.rsni_dbh / 2,
+            rssi_dbm: bss.rssi_dbm,
+        });
     });
-    inspect_log!(node, bss_list: inspect_bss, result: result_msg);
+    inspect_log!(ctx.inspect.join_scan_events.lock(), bss_list: inspect_bss, result?: result_msg);
 }
 
 fn report_connect_finished(
@@ -906,9 +905,11 @@ mod tests {
     }
 
     fn create_sme() -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
+        let inspector = finspect::vmo::Inspector::new().expect("unable to create Inspector");
+        let sme_root_node = inspector.root().create_child("sme");
         ClientSme::new(
             test_utils::fake_device_info(CLIENT_ADDR),
-            finspect::ObjectTreeNode::new_root(),
+            Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
         )
     }
 }

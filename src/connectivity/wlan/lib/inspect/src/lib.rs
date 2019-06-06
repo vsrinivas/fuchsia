@@ -3,12 +3,6 @@
 // found in the LICENSE file.
 
 pub mod iface_mgr;
-#[macro_use]
-pub mod log;
-pub mod nodes;
+pub mod wrappers;
 
-#[cfg(test)]
-mod test_utils;
-
-pub use iface_mgr::IfaceManager;
-pub use nodes::{NodeExt, SharedNodePtr};
+pub use iface_mgr::{IfaceTree, IfaceTreeHolder, IfacesTrees};

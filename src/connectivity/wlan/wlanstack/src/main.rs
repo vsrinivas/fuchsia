@@ -13,6 +13,7 @@ mod device;
 mod device_watch;
 mod fidl_util;
 mod future_util;
+mod inspect;
 mod logger;
 mod mlme_query_proxy;
 mod service;
@@ -23,17 +24,14 @@ mod watchable_map;
 mod watcher_service;
 
 use failure::Error;
-use fidl_fuchsia_inspect::InspectRequestStream;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
-use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect as finspect;
+use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use futures::future::{try_join, try_join5};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
-use wlan_inspect;
 
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watcher_service::WatcherService;
@@ -50,8 +48,11 @@ async fn main() -> Result<(), Error> {
     log::set_max_level(MAX_LOG_LEVEL);
 
     info!("Starting");
+    let mut fs = ServiceFs::new_local();
+    let inspect_tree =
+        Arc::new(inspect::WlanstackTree::new(&mut fs).expect("fail creating Inspect tree"));
+    fs.dir("public").add_fidl_service(IncomingServices::Device);
 
-    let inspect_root = finspect::ObjectTreeNode::new_root();
     let (phys, phy_events) = device::PhyMap::new();
     let (ifaces, iface_events) = device::IfaceMap::new();
     let phys = Arc::new(phys);
@@ -64,11 +65,11 @@ async fn main() -> Result<(), Error> {
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     // TODO(WLAN-927): Remove once drivers support SME channel.
     let iface_server =
-        device::serve_ifaces(ifaces.clone(), cobalt_sender.clone(), inspect_root.clone())
+        device::serve_ifaces(ifaces.clone(), cobalt_sender.clone(), inspect_tree.clone())
             .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let serve_fidl_fut = serve_fidl(phys, ifaces, watcher_service, inspect_root, cobalt_sender);
+    let serve_fidl_fut = serve_fidl(fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
     let services_server = try_join(serve_fidl_fut, watcher_fut);
 
     await!(try_join5(
@@ -83,29 +84,24 @@ async fn main() -> Result<(), Error> {
 
 enum IncomingServices {
     Device(DeviceServiceRequestStream),
-    Inspect(InspectRequestStream),
 }
 
 async fn serve_fidl(
+    mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
     phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
-    inspect_root: wlan_inspect::SharedNodePtr,
+    inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
-    let mut fs = ServiceFs::new_local();
-    fs.dir("public")
-        .add_fidl_service(IncomingServices::Device)
-        .add_fidl_service(IncomingServices::Inspect);
-
     fs.take_and_serve_directory_handle()?;
 
     let fdio_server = fs.for_each_concurrent(CONCURRENT_LIMIT, move |s| {
         let phys = phys.clone();
         let ifaces = ifaces.clone();
         let watcher_service = watcher_service.clone();
-        let inspect_root = inspect_root.clone();
         let cobalt_sender = cobalt_sender.clone();
+        let inspect_tree = inspect_tree.clone();
         async move {
             match s {
                 IncomingServices::Device(stream) => await!(service::serve_device_requests(
@@ -113,14 +109,10 @@ async fn serve_fidl(
                     ifaces,
                     watcher_service,
                     stream,
-                    inspect_root,
+                    inspect_tree,
                     cobalt_sender,
                 )
                 .unwrap_or_else(|e| println!("{:?}", e))),
-                IncomingServices::Inspect(stream) => {
-                    await!(finspect::serve_request_stream(inspect_root, stream)
-                        .unwrap_or_else(|e| println!("{:?}", e)))
-                }
             }
         }
     });
