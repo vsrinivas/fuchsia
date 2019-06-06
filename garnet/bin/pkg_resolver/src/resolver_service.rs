@@ -15,7 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_url::pkg_uri::PkgUri,
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{Channel, MessageBuf, Signals, Status},
     futures::prelude::*,
     log::{info, warn},
@@ -36,7 +36,7 @@ pub async fn run_resolver_service(
 
     while let Some(event) = await!(stream.try_next())? {
         let PackageResolverRequest::Resolve {
-            package_uri,
+            package_uri: package_url,
             selectors,
             update_policy,
             dir,
@@ -50,7 +50,7 @@ pub async fn run_resolver_service(
         }
 
         let status =
-            await!(resolve(&rewrites, &amber, &cache, package_uri, selectors, update_policy, dir));
+            await!(resolve(&rewrites, &amber, &cache, package_url, selectors, update_policy, dir));
 
         // TODO this is an overbroad error type for this, make it more accurate
         if let Err(Status::INTERNAL) = &status {
@@ -72,34 +72,34 @@ async fn resolve<'a>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
     amber: &'a AmberProxy,
     cache: &'a PackageCacheProxy,
-    pkg_uri: String,
+    pkg_url: String,
     selectors: Vec<String>,
     _update_policy: UpdatePolicy,
     dir_request: ServerEnd<DirectoryMarker>,
 ) -> Result<(), Status> {
-    let uri = PkgUri::parse(&pkg_uri).map_err(|err| {
-        fx_log_err!("failed to parse package uri {:?}: {}", pkg_uri, err);
+    let url = PkgUrl::parse(&pkg_url).map_err(|err| {
+        fx_log_err!("failed to parse package url {:?}: {}", pkg_url, err);
         Err(Status::INVALID_ARGS)
     })?;
-    let was_fuchsia_host = uri.host() == "fuchsia.com";
-    let uri = rewrites.read().rewrite(uri);
+    let was_fuchsia_host = url.host() == "fuchsia.com";
+    let url = rewrites.read().rewrite(url);
 
     // FIXME: at the moment only the fuchsia.com host is supported.
-    if !was_fuchsia_host && uri.host() != "fuchsia.com" {
-        fx_log_err!("package uri's host is currently unsupported: {}", uri);
+    if !was_fuchsia_host && url.host() != "fuchsia.com" {
+        fx_log_err!("package url's host is currently unsupported: {}", url);
         return Err(Status::INVALID_ARGS);
     }
 
     // While the fuchsia-pkg:// spec doesn't require a package name, we do.
-    let name = uri.name().ok_or_else(|| {
-        fx_log_err!("package uri is missing a package name: {}", uri);
+    let name = url.name().ok_or_else(|| {
+        fx_log_err!("package url is missing a package name: {}", url);
         Err(Status::INVALID_ARGS)
     })?;
 
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
     // given one.
-    if uri.resource().is_some() {
-        fx_log_err!("package uri should not contain a resource name: {}", uri);
+    if url.resource().is_some() {
+        fx_log_err!("package url should not contain a resource name: {}", url);
         return Err(Status::INVALID_ARGS);
     }
 
@@ -111,21 +111,21 @@ async fn resolve<'a>(
     // FIXME: use the package cache to fetch the package instead of amber.
 
     // Ask amber to cache the package.
-    let chan = await!(amber.get_update_complete(&name, uri.variant(), uri.package_hash()))
+    let chan = await!(amber.get_update_complete(&name, url.variant(), url.package_hash()))
         .map_err(|err| {
             fx_log_err!("error communicating with amber: {:?}", err);
             Status::INTERNAL
         })?;
 
-    let merkle = await!(wait_for_update_to_complete(chan, &uri)).map_err(|err| {
+    let merkle = await!(wait_for_update_to_complete(chan, &url)).map_err(|err| {
         fx_log_err!("error when waiting for amber to complete: {:?}", err);
         err
     })?;
 
     fx_log_info!(
         "resolved {} as {} with the selectors {:?} to {}",
-        pkg_uri,
-        uri,
+        pkg_url,
+        url,
         selectors,
         merkle
     );
@@ -173,7 +173,7 @@ fn is_unavailable_msg(msg: &str) -> bool {
     return tail.starts_with(UNAVAILABLE_POST);
 }
 
-async fn wait_for_update_to_complete(chan: Channel, uri: &PkgUri) -> Result<BlobId, Status> {
+async fn wait_for_update_to_complete(chan: Channel, url: &PkgUrl) -> Result<BlobId, Status> {
     let mut buf = MessageBuf::new();
 
     let sigs = await!(fasync::OnSignals::new(
@@ -189,16 +189,16 @@ async fn wait_for_update_to_complete(chan: Channel, uri: &PkgUri) -> Result<Blob
             let msg = String::from_utf8_lossy(&buf);
 
             if msg.starts_with(PACKAGE_NOT_FOUND) {
-                fx_log_info!("package {} was not found: {}", uri, msg);
+                fx_log_info!("package {} was not found: {}", url, msg);
                 return Err(Status::NOT_FOUND);
             }
 
             if is_unavailable_msg(&msg) {
-                fx_log_info!("package {} is currently unavailable: {}", uri, msg);
+                fx_log_info!("package {} is currently unavailable: {}", url, msg);
                 return Err(Status::UNAVAILABLE);
             }
 
-            fx_log_err!("error installing package {}: {}", uri, msg);
+            fx_log_err!("error installing package {}: {}", url, msg);
 
             return Err(Status::INTERNAL);
         }
@@ -443,17 +443,17 @@ mod tests {
                 Some(variant) => format!("/{}/{}", name, variant),
             };
 
-            let uri =
-                PkgUri::new_package("fuchsia.com".to_string(), path, merkle.map(|s| s.to_string()))
+            let url =
+                PkgUrl::new_package("fuchsia.com".to_string(), path, merkle.map(|s| s.to_string()))
                     .unwrap();
 
-            let res = await!(wait_for_update_to_complete(chan, &uri));
+            let res = await!(wait_for_update_to_complete(chan, &url));
             assert_eq!(res, expected_res);
         }
 
         async fn run_resolve<'a>(
             &'a self,
-            uri: &'a str,
+            url: &'a str,
             expected_res: Result<Vec<String>, Status>,
         ) {
             let selectors = vec![];
@@ -463,7 +463,7 @@ mod tests {
                 &self.rewrite_manager,
                 &self.amber_proxy,
                 &self.cache_proxy,
-                uri.to_string(),
+                url.to_string(),
                 selectors,
                 update_policy,
                 ServerEnd::new(package_dir_s),
@@ -474,7 +474,7 @@ mod tests {
                     DirectoryProxy::new(fasync::Channel::from_channel(package_dir_c).unwrap());
                 await!(self.check_dir_async(&dir_proxy, expected_files));
             }
-            assert_eq!(res, expected_res.map(|_s| ()), "unexpected result for {}", uri);
+            assert_eq!(res, expected_res.map(|_s| ()), "unexpected result for {}", url);
         }
     }
 
@@ -566,7 +566,7 @@ mod tests {
             test.run_resolve("fuchsia-pkg://fuchsia.com/unavailable/0", Err(Status::UNAVAILABLE))
         );
 
-        // Bad package URI
+        // Bad package URL
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo!", Err(Status::INVALID_ARGS)));
 
         // No package name

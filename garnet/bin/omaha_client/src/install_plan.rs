@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use failure::Fail;
-use fuchsia_url::pkg_uri::PkgUri;
+use fuchsia_url::pkg_url::PkgUrl;
 use log::{error, warn};
 use omaha_client::installer::Plan;
 use omaha_client::protocol::response::{OmahaStatus, Response};
 
 #[derive(Debug, PartialEq)]
 pub struct FuchsiaInstallPlan {
-    /// The fuchsia TUF repo URI, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
-    pub uri: PkgUri,
+    /// The fuchsia TUF repo URL, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
+    pub url: PkgUrl,
 }
 
 #[derive(Debug, Fail, PartialEq)]
@@ -79,10 +79,10 @@ impl Plan for FuchsiaInstallPlan {
             warn!("Only 1 url is supported, found {}", urls.len());
         }
 
-        match PkgUri::parse(&url.codebase) {
-            Ok(uri) => Ok(FuchsiaInstallPlan { uri: uri }),
+        match PkgUrl::parse(&url.codebase) {
+            Ok(url) => Ok(FuchsiaInstallPlan { url: url }),
             Err(err) => {
-                error!("Failed to parse {} to PkgUri: {}", url.codebase, err);
+                error!("Failed to parse {} to PkgUrl: {}", url.codebase, err);
                 Err(InstallPlanErrors::Failed)
             }
         }
@@ -94,20 +94,20 @@ mod tests {
     use super::*;
     use omaha_client::protocol::response::{App, UpdateCheck};
 
-    const TEST_URI: &str = "fuchsia-pkg://fuchsia.com/update/0";
+    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
     #[test]
     fn test_simple_response() {
         let response = Response {
             apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec![TEST_URI.to_string()])),
+                update_check: Some(UpdateCheck::ok(vec![TEST_URL.to_string()])),
                 ..App::default()
             }],
             ..Response::default()
         };
 
         let install_plan = FuchsiaInstallPlan::try_create_from(&response).unwrap();
-        assert_eq!(install_plan.uri.to_string(), TEST_URI);
+        assert_eq!(install_plan.url.to_string(), TEST_URL);
     }
 
     #[test]
@@ -122,7 +122,7 @@ mod tests {
         let response = Response {
             apps: vec![
                 App {
-                    update_check: Some(UpdateCheck::ok(vec![TEST_URI.to_string()])),
+                    update_check: Some(UpdateCheck::ok(vec![TEST_URL.to_string()])),
                     ..App::default()
                 },
                 App::default(),
@@ -131,7 +131,7 @@ mod tests {
         };
 
         let install_plan = FuchsiaInstallPlan::try_create_from(&response).unwrap();
-        assert_eq!(install_plan.uri.to_string(), TEST_URI);
+        assert_eq!(install_plan.url.to_string(), TEST_URL);
     }
 
     #[test]
@@ -175,10 +175,10 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_uri() {
+    fn test_invalid_url() {
         let response = Response {
             apps: vec![App {
-                update_check: Some(UpdateCheck::ok(vec!["invalid-uri".to_string()])),
+                update_check: Some(UpdateCheck::ok(vec!["invalid-url".to_string()])),
                 ..App::default()
             }],
             ..Response::default()

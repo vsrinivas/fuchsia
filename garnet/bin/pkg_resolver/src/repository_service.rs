@@ -11,7 +11,7 @@ use fidl_fuchsia_pkg::{
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
-use fuchsia_url::pkg_uri::RepoUri;
+use fuchsia_url::pkg_url::RepoUrl;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
 use futures::TryFutureExt;
@@ -77,10 +77,10 @@ impl RepositoryService {
     }
 
     fn serve_remove(&mut self, repo_url: String) -> Result<(), Status> {
-        let repo_url = match RepoUri::parse(&repo_url) {
+        let repo_url = match RepoUrl::parse(&repo_url) {
             Ok(repo_url) => repo_url,
             Err(err) => {
-                fx_log_err!("invalid repository URI: {}", err);
+                fx_log_err!("invalid repository URL: {}", err);
                 return Err(Status::INVALID_ARGS);
             }
         };
@@ -141,7 +141,7 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_pkg::RepositoryIteratorMarker;
     use fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder};
-    use fuchsia_url::pkg_uri::RepoUri;
+    use fuchsia_url::pkg_url::RepoUrl;
     use std::convert::TryInto;
 
     async fn list(service: &RepositoryService) -> Vec<RepositoryConfig> {
@@ -179,8 +179,8 @@ mod tests {
         // First, create a bunch of repo configs we're going to use for testing.
         let configs = (0..200)
             .map(|i| {
-                let uri = RepoUri::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
-                RepositoryConfigBuilder::new(uri).build()
+                let url = RepoUrl::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
+                RepositoryConfigBuilder::new(url).build()
             })
             .collect::<Vec<_>>();
 
@@ -211,8 +211,8 @@ mod tests {
         // is cheaper.
         let configs = (0..20)
             .map(|i| {
-                let uri = RepoUri::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
-                RepositoryConfigBuilder::new(uri).build()
+                let url = RepoUrl::parse(&format!("fuchsia-pkg://fuchsia{:04}.com", i)).unwrap();
+                RepositoryConfigBuilder::new(url).build()
             })
             .collect::<Vec<_>>();
 

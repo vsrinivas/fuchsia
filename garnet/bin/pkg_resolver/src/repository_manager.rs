@@ -6,7 +6,7 @@ use {
     failure::Fail,
     fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigs},
     fuchsia_syslog::fx_log_err,
-    fuchsia_url::pkg_uri::RepoUri,
+    fuchsia_url::pkg_url::RepoUrl,
     std::collections::btree_set,
     std::collections::hash_map::Entry,
     std::collections::{BTreeSet, HashMap},
@@ -20,14 +20,14 @@ use {
 #[derive(Debug, PartialEq, Eq)]
 pub struct RepositoryManager {
     dynamic_configs_path: PathBuf,
-    static_configs: HashMap<RepoUri, RepositoryConfig>,
-    dynamic_configs: HashMap<RepoUri, RepositoryConfig>,
+    static_configs: HashMap<RepoUrl, RepositoryConfig>,
+    dynamic_configs: HashMap<RepoUrl, RepositoryConfig>,
 }
 
 impl RepositoryManager {
     /// Returns a reference to the [RepositoryConfig] config identified by the config `repo_url`,
     /// or `None` if it does not exist.
-    pub fn get(&self, repo_url: &RepoUri) -> Option<&RepositoryConfig> {
+    pub fn get(&self, repo_url: &RepoUrl) -> Option<&RepositoryConfig> {
         self.dynamic_configs.get(repo_url).or_else(|| self.static_configs.get(repo_url))
     }
 
@@ -48,7 +48,7 @@ impl RepositoryManager {
     /// Removes a [RepositoryConfig] identified by the config `repo_url`.
     pub fn remove(
         &mut self,
-        repo_url: &RepoUri,
+        repo_url: &RepoUrl,
     ) -> Result<Option<RepositoryConfig>, CannotRemoveStaticRepositories> {
         if let Some(config) = self.dynamic_configs.remove(repo_url) {
             self.save();
@@ -104,8 +104,8 @@ impl RepositoryManager {
 #[derive(Clone, Debug)]
 pub struct RepositoryManagerBuilder {
     dynamic_configs_path: PathBuf,
-    static_configs: HashMap<RepoUri, RepositoryConfig>,
-    dynamic_configs: HashMap<RepoUri, RepositoryConfig>,
+    static_configs: HashMap<RepoUrl, RepositoryConfig>,
+    dynamic_configs: HashMap<RepoUrl, RepositoryConfig>,
 }
 
 impl RepositoryManagerBuilder {
@@ -193,7 +193,7 @@ impl RepositoryManagerBuilder {
 /// individual [LoadError] errors encountered during the load.
 fn load_configs_dir<T: AsRef<Path>>(
     dir: T,
-) -> (HashMap<RepoUri, RepositoryConfig>, Vec<LoadError>) {
+) -> (HashMap<RepoUrl, RepositoryConfig>, Vec<LoadError>) {
     let dir = dir.as_ref();
 
     let mut entries = match dir.read_dir() {
@@ -234,10 +234,10 @@ fn load_configs_dir<T: AsRef<Path>>(
             }
         }
 
-        let expected_uri = path
+        let expected_url = path
             .file_stem()
             .and_then(|name| name.to_str())
-            .and_then(|name| RepoUri::new(name.to_string()).ok());
+            .and_then(|name| RepoUrl::new(name.to_string()).ok());
 
         let configs = match load_configs_file(&path) {
             Ok(configs) => configs,
@@ -254,7 +254,7 @@ fn load_configs_dir<T: AsRef<Path>>(
         for config in configs {
             match map.entry(config.repo_url().clone()) {
                 Entry::Occupied(mut entry) => {
-                    let replaced_config = if Some(entry.key()) == expected_uri.as_ref() {
+                    let replaced_config = if Some(entry.key()) == expected_url.as_ref() {
                         entry.insert(config)
                     } else {
                         config
@@ -324,7 +324,7 @@ impl fmt::Display for LoadError {
 ///
 /// See its documentation for more.
 pub struct List<'a> {
-    keys: btree_set::IntoIter<&'a RepoUri>,
+    keys: btree_set::IntoIter<&'a RepoUrl>,
     repo_mgr: &'a RepositoryManager,
 }
 
@@ -350,7 +350,7 @@ mod tests {
 
     use crate::test_util::create_dir;
     use fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryKey};
-    use fuchsia_url::pkg_uri::RepoUri;
+    use fuchsia_url::pkg_url::RepoUrl;
     use maplit::hashmap;
     use std::fs::File;
     use std::io::Write;
@@ -404,7 +404,7 @@ mod tests {
             }
         );
 
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         assert_eq!(repomgr.get(&fuchsia_url), None);
 
         let config1 = RepositoryConfigBuilder::new(fuchsia_url.clone())
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn shadowing_static_config() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
@@ -484,7 +484,7 @@ mod tests {
 
     #[test]
     fn cannot_remove_static_config() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
@@ -530,12 +530,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let invalid_path = dir.path().join("invalid");
 
-        let example_uri = RepoUri::parse("fuchsia-pkg://example.com").unwrap();
-        let example_config = RepositoryConfigBuilder::new(example_uri.clone())
+        let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
+        let example_config = RepositoryConfigBuilder::new(example_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
             .build();
 
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
             .build();
@@ -569,7 +569,7 @@ mod tests {
             RepositoryManager {
                 dynamic_configs_path: dynamic_configs_path,
                 static_configs: hashmap! {
-                    example_uri => example_config,
+                    example_url => example_config,
                     fuchsia_url => fuchsia_config,
                 },
                 dynamic_configs: HashMap::new(),
@@ -579,11 +579,11 @@ mod tests {
 
     #[test]
     fn test_builder_static_configs_dir() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone()).build();
 
-        let example_uri = RepoUri::parse("fuchsia-pkg://example.com").unwrap();
-        let example_config = RepositoryConfigBuilder::new(example_uri.clone()).build();
+        let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
+        let example_config = RepositoryConfigBuilder::new(example_url.clone()).build();
 
         let dir = create_dir(vec![
             ("example.com.json", RepositoryConfigs::Version1(vec![example_config.clone()])),
@@ -604,7 +604,7 @@ mod tests {
             RepositoryManager {
                 dynamic_configs_path: dynamic_configs_path,
                 static_configs: hashmap! {
-                    example_uri => example_config,
+                    example_url => example_config,
                     fuchsia_url => fuchsia_config,
                 },
                 dynamic_configs: HashMap::new(),
@@ -614,7 +614,7 @@ mod tests {
 
     #[test]
     fn test_builder_static_configs_dir_overlapping_filename_wins() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -680,7 +680,7 @@ mod tests {
 
     #[test]
     fn test_builder_static_configs_dir_overlapping_first_wins() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let fuchsia_config1 = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -763,7 +763,7 @@ mod tests {
 
     #[test]
     fn test_builder_dynamic_configs_path() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![0]))
@@ -789,7 +789,7 @@ mod tests {
 
     #[test]
     fn test_persistence() {
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
 
         let static_config = RepositoryConfigBuilder::new(fuchsia_url.clone())
             .add_root_key(RepositoryKey::Ed25519(vec![1]))
@@ -848,10 +848,10 @@ mod tests {
 
     #[test]
     fn test_list() {
-        let example_uri = RepoUri::parse("fuchsia-pkg://example.com").unwrap();
-        let example_config = RepositoryConfigBuilder::new(example_uri).build();
+        let example_url = RepoUrl::parse("fuchsia-pkg://example.com").unwrap();
+        let example_config = RepositoryConfigBuilder::new(example_url).build();
 
-        let fuchsia_url = RepoUri::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
         let fuchsia_config = RepositoryConfigBuilder::new(fuchsia_url).build();
 
         let static_dir = create_dir(vec![

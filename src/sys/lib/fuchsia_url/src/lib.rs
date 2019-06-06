@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod boot_uri;
+pub mod boot_url;
 pub mod errors;
 mod parse;
-pub mod pkg_uri;
+pub mod pkg_url;

@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_pkg as fpkg, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, macros::*},
-    fuchsia_url::pkg_uri::PkgUri,
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{HandleBased, Status},
     futures::{StreamExt, TryStreamExt},
     std::ffi::CString,
@@ -61,7 +61,7 @@ async fn resolve(
     dir: ServerEnd<DirectoryMarker>,
     packages_to_mock: Vec<String>,
 ) -> Result<(), Status> {
-    let uri = PkgUri::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
+    let uri = PkgUrl::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
     let name = uri.name().ok_or_else(|| Err(Status::INVALID_ARGS))?;
     if !packages_to_mock.contains(&name.to_string()) {
         return Err(Status::NOT_FOUND);

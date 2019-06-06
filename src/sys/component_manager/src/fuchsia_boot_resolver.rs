@@ -7,7 +7,7 @@ use {
     cm_fidl_translator::translate,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_url::boot_uri::BootUri,
+    fuchsia_url::boot_url::BootUrl,
     futures::future::FutureObj,
     std::path::PathBuf,
 };
@@ -30,7 +30,7 @@ impl FuchsiaBootResolver {
         component_url: &'a str,
     ) -> Result<fsys::Component, ResolverError> {
         // Parse URL.
-        let url = BootUri::parse(component_url)
+        let url = BootUrl::parse(component_url)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let res = url.resource().ok_or(ResolverError::url_missing_resource_error(component_url))?;
         let res_path = PathBuf::from(url.path()).join(PathBuf::from(res));
@@ -50,7 +50,7 @@ impl FuchsiaBootResolver {
         let path_proxy = io_util::open_directory_in_namespace(&package_path)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let package = fsys::Package {
-            package_url: Some(url.root_uri().to_string()),
+            package_url: Some(url.root_url().to_string()),
             package_dir: Some(ClientEnd::new(path_proxy.into_channel().unwrap().into_zx_channel())),
         };
 

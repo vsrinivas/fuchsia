@@ -37,8 +37,8 @@ struct Options {
 enum Command {
     #[structopt(name = "resolve", about = "resolve a package")]
     Resolve {
-        #[structopt(help = "URI of package to cache")]
-        pkg_uri: String,
+        #[structopt(help = "URL of package to cache")]
+        pkg_url: String,
 
         #[structopt(help = "Package selectors")]
         selectors: Vec<String>,
@@ -56,7 +56,7 @@ enum Command {
     #[structopt(name = "repo", about = "repo subcommands")]
     Repo(RepoCommand),
 
-    #[structopt(name = "rule", about = "manage URI rewrite rules")]
+    #[structopt(name = "rule", about = "manage URL rewrite rules")]
     Rule(RuleCommand),
 }
 
@@ -122,15 +122,15 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match cmd {
-            Command::Resolve { pkg_uri, selectors } => {
+            Command::Resolve { pkg_url, selectors } => {
                 let resolver = connect_to_service::<PackageResolverMarker>()
                     .context("Failed to connect to resolver service")?;
-                println!("resolving {} with the selectors {:?}", pkg_uri, selectors);
+                println!("resolving {} with the selectors {:?}", pkg_url, selectors);
 
                 let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
                 let res = await!(resolver.resolve(
-                    &pkg_uri,
+                    &pkg_url,
                     &mut selectors.iter().map(|s| s.as_str()),
                     &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
                     dir_server_end,

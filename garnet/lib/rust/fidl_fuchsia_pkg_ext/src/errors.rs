@@ -38,9 +38,9 @@ pub enum RepositoryParseError {
     #[fail(display = "missing required field subscribe")]
     SubscribeMissing,
 
-    #[fail(display = "invalid repository uri: {}", _0)]
-    InvalidRepoUrl(#[cause] fuchsia_url::pkg_uri::ParseError),
+    #[fail(display = "invalid repository url: {}", _0)]
+    InvalidRepoUrl(#[cause] fuchsia_url::pkg_url::ParseError),
 
-    #[fail(display = "invalid update package uri: {}", _0)]
-    InvalidUpdatePackageUri(#[cause] fuchsia_url::pkg_uri::ParseError),
+    #[fail(display = "invalid update package url: {}", _0)]
+    InvalidUpdatePackageUrl(#[cause] fuchsia_url::pkg_url::ParseError),
 }

@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{PackageResolverProxy, UpdatePolicy},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_url::pkg_uri::PkgUri,
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,
     futures::future::FutureObj,
     std::path::PathBuf,
@@ -18,7 +18,7 @@ use {
 
 pub static SCHEME: &str = "fuchsia-pkg";
 
-/// Resolves component URLs with the "fuchsia-pkg" scheme. See the fuchsia_pkg_uri crate for URL
+/// Resolves component URLs with the "fuchsia-pkg" scheme. See the fuchsia_pkg_url crate for URL
 /// syntax.
 pub struct FuchsiaPkgResolver {
     pkg_resolver: PackageResolverProxy,
@@ -34,13 +34,13 @@ impl FuchsiaPkgResolver {
         component_url: &'a str,
     ) -> Result<fsys::Component, ResolverError> {
         // Parse URL.
-        let fuchsia_pkg_uri = PkgUri::parse(component_url)
+        let fuchsia_pkg_url = PkgUrl::parse(component_url)
             .map_err(|e| ResolverError::url_parse_error(component_url, e))?;
-        fuchsia_pkg_uri
+        fuchsia_pkg_url
             .resource()
             .ok_or(ResolverError::url_missing_resource_error(component_url))?;
-        let package_url = fuchsia_pkg_uri.root_uri().to_string();
-        let cm_path: PathBuf = fuchsia_pkg_uri.resource().unwrap().into();
+        let package_url = fuchsia_pkg_url.root_url().to_string();
+        let cm_path: PathBuf = fuchsia_pkg_url.resource().unwrap().into();
 
         // Resolve package.
         let (package_dir_c, package_dir_s) = zx::Channel::create()
@@ -117,13 +117,13 @@ mod tests {
                 let pkg_resolver = MockPackageResolver {};
                 let mut stream = server.into_stream().unwrap();
                 while let Some(PackageResolverRequest::Resolve {
-                    package_uri,
+                    package_uri: package_url,
                     dir,
                     responder,
                     ..
                 }) = await!(stream.try_next()).expect("failed to read request")
                 {
-                    let s = match pkg_resolver.resolve(&package_uri, dir) {
+                    let s = match pkg_resolver.resolve(&package_url, dir) {
                         Ok(()) => 0,
                         Err(s) => s.into_raw(),
                     };
@@ -138,7 +138,7 @@ mod tests {
             package_url: &str,
             dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
         ) -> Result<(), zx::Status> {
-            let package_url = PkgUri::parse(&package_url).expect("bad url");
+            let package_url = PkgUrl::parse(&package_url).expect("bad url");
             if package_url.name().unwrap() != "hello_world" {
                 return Err(zx::Status::NOT_FOUND);
             }

@@ -21,7 +21,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_url::pkg_uri::RepoUri,
+    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_url_rewrite::Rule,
     futures::prelude::*,
     std::{convert::TryInto, fs::File},
@@ -244,7 +244,7 @@ impl Iterator for SourceConfigGenerator {
                 .repo_url(mirror_url.clone())
                 .add_root_key(ROOT_KEY_1)
                 .auto(true),
-            RepositoryConfigBuilder::new(RepoUri::parse(&repo_url).unwrap())
+            RepositoryConfigBuilder::new(RepoUrl::parse(&repo_url).unwrap())
                 .add_root_key(RepositoryKey::Ed25519(hex::decode(ROOT_KEY_1).unwrap()))
                 .add_mirror(MirrorConfigBuilder::new(mirror_url).subscribe(true)),
         ))
