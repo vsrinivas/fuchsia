@@ -23,18 +23,21 @@ def main():
         help='JSON file to be pretty-printed.')
     args = parser.parse_args()
     for json_file in args.file:
-        with json_file:
-            data = json.load(json_file)
-            json_file.seek(0)
-            json_file.truncate()
-            json.dump(
-                data,
-                json_file,
-                indent=4,
-                sort_keys=True,
-                separators=(',', ': '))
-            json_file.write('\n')
-
+        try:
+            with json_file:
+                data = json.load(json_file)
+                json_file.seek(0)
+                json_file.truncate()
+                json.dump(
+                    data,
+                    json_file,
+                    indent=4,
+                    sort_keys=True,
+                    separators=(',', ': '))
+                json_file.write('\n')
+        except:
+            print("Exception encountered while processing file " + json_file.name)
+            raise
 
 if __name__ == "__main__":
     main()
