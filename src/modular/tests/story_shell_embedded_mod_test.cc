@@ -160,7 +160,7 @@ TEST_F(StoryShellEmbeddedModTest, SurfaceRelationships) {
 }
 
 // Checks that embedded modules are not reinflated when stories are retarted.
-TEST_F(StoryShellEmbeddedModTest, ReinflateModules) {
+TEST_F(StoryShellEmbeddedModTest, DISABLED_ReinflateModules) {
   LaunchParentModule();
   ParentModuleEmbedsModule();
   EmbeddedModuleLaunchesModule();
