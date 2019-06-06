@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hwinfo;
+using fuchsia.intl;
+
+/// Collection of properties that is unique per device.
+table DeviceInfo {
+    1: string serial_number;
+};
+
+/// Collection of properties that is shared with other devices within the same
+/// product line.
+table ProductInfo {
+    1: string sku;
+    2: string language;
+    3: fuchsia.intl.RegulatoryDomain regulatory_domain;
+    4: vector<fuchsia.intl.LocaleId> locale_list;
+};
+
+/// Device provides an interface to retrieve device-specific properties.
+[Discoverable]
+protocol Device {
+    GetInfo() -> (DeviceInfo info);
+};
+
+/// Product provides an interface to retrieve product-specific properties.
+[Discoverable]
+protocol Product {
+    GetInfo() -> (ProductInfo info);
+};

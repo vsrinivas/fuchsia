@@ -4,6 +4,13 @@
 
 library fuchsia.intl;
 
+/// Typed identifier for a regulatory domain as specified in the IEEE 802.11 standard.
+table RegulatoryDomain {
+    /// ISO 3166-1 alpha-2, a two-letter code representing a domain of operation.
+    /// (https://www.iso.org/publication/PUB500001.html)
+    1: string country_code;
+};
+
 /// Typed identifier for a single Locale, which is a set of internationalization-related properties.
 ///
 /// Most APIs that consume locales will probably want to accept a vector of locales to account for
