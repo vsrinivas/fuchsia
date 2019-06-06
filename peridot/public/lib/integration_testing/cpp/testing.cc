@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/integration_testing/cpp/testing.h>
-
-#include <set>
+#include "lib/integration_testing/cpp/testing.h"
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/logging.h>
+
+#include <set>
 
 using fuchsia::testing::runner::TestRunner;
 using fuchsia::testing::runner::TestRunnerPtr;
@@ -25,12 +25,12 @@ std::set<std::string> g_test_points;
 bool g_connected;
 }  // namespace
 
-void Init(component::StartupContext* context, const std::string& identity) {
+void Init(sys::ComponentContext* context, const std::string& identity) {
   FXL_CHECK(context);
   FXL_CHECK(!g_test_runner.is_bound());
   FXL_CHECK(!g_test_runner_store.is_bound());
 
-  g_test_runner = context->ConnectToEnvironmentService<TestRunner>();
+  g_test_runner = context->svc()->Connect<TestRunner>();
   g_test_runner.set_error_handler([](zx_status_t status) {
     if (g_connected) {
       FXL_LOG(ERROR) << "Lost connection to TestRunner. This indicates that "
@@ -43,7 +43,7 @@ void Init(component::StartupContext* context, const std::string& identity) {
   });
   g_test_runner->Identify(identity, [] { g_connected = true; });
   g_test_runner->SetTestPointCount(g_test_points.size());
-  g_test_runner_store = context->ConnectToEnvironmentService<TestRunnerStore>();
+  g_test_runner_store = context->svc()->Connect<TestRunnerStore>();
 }
 
 void Fail(const std::string& log_msg) {

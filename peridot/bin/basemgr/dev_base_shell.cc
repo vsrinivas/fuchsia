@@ -13,8 +13,8 @@
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/callback/scoped_callback.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
@@ -63,15 +63,14 @@ class Settings {
 
 class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
-  explicit DevBaseShellApp(component::StartupContext* const startup_context,
+  explicit DevBaseShellApp(sys::ComponentContext* const component_context,
                            Settings settings)
-      : SingleServiceApp(startup_context),
+      : SingleServiceApp(component_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
-    this->startup_context()->ConnectToEnvironmentService(
-        account_manager_.NewRequest());
+    this->component_context()->svc()->Connect(account_manager_.NewRequest());
     if (settings_.use_test_runner) {
-      testing::Init(this->startup_context(), __FILE__);
+      testing::Init(this->component_context(), __FILE__);
       testing::Await(testing::kTestShutdown,
                      [this] { base_shell_context_->Shutdown(); });
 
@@ -185,9 +184,9 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular::DevBaseShellApp> driver(
-      context->outgoing().deprecated_services(),
+      context->outgoing(),
       std::make_unique<modular::DevBaseShellApp>(context.get(), settings),
       [&loop] { loop.Quit(); });
 

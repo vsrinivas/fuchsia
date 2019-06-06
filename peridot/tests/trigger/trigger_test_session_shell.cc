@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
+
+#include <memory>
 
 #include "peridot/lib/testing/component_main.h"
 #include "peridot/lib/testing/session_shell_base.h"
@@ -28,11 +28,11 @@ const char kStoryName[] = "story";
 
 class TestApp : public modular::testing::SessionShellBase {
  public:
-  TestApp(component::StartupContext* const startup_context)
-      : SessionShellBase(startup_context), weak_ptr_factory_(this) {
+  TestApp(sys::ComponentContext* const component_context)
+      : SessionShellBase(component_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
 
-    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
+    component_context->svc()->Connect(puppet_master_.NewRequest());
 
     CreateStory();
   }

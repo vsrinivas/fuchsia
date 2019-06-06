@@ -40,8 +40,8 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
   using Base = SingleServiceApp<Component>;
 
-  ComponentBase(component::StartupContext* const startup_context)
-      : Base(startup_context), weak_factory_(this) {}
+  ComponentBase(sys::ComponentContext* const component_context)
+      : Base(component_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
 
@@ -49,7 +49,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
   void TestInit(const char* const file) {
-    testing::Init(Base::startup_context(), file);
+    testing::Init(Base::component_context(), file);
   }
 
   // Wraps the callback function into a layer that protects executing the
@@ -81,8 +81,8 @@ class ComponentBase<void> : protected ViewApp {
   }
 
  protected:
-  ComponentBase(component::StartupContext* const startup_context)
-      : ViewApp(startup_context), weak_factory_(this) {}
+  ComponentBase(sys::ComponentContext* const component_context)
+      : ViewApp(component_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
 
@@ -90,7 +90,7 @@ class ComponentBase<void> : protected ViewApp {
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
   void TestInit(const char* const file) {
-    testing::Init(ViewApp::startup_context(), file);
+    testing::Init(ViewApp::component_context(), file);
   }
 
   // Wraps the callback function into a layer that protects executing the

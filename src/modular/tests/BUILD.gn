@@ -50,6 +50,7 @@ executable("queue_persistence_test") {
 
   deps = [
     ":queue_persistence_test_service",
+    "//garnet/public/lib/svc/cpp",
     "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",

@@ -41,9 +41,9 @@ template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<Impl> driver(
-      context->outgoing().deprecated_services(),
+      context->outgoing(),
       std::make_unique<Impl>(context.get(), std::move(args)...),
       [&loop] { loop.Quit(); });
 

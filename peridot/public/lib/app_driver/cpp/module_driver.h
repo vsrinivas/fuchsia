@@ -5,25 +5,25 @@
 #ifndef LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_
 #define LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/lifecycle/cpp/lifecycle_impl.h>
+#include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/logging.h>
+
+#include <memory>
 
 namespace modular {
 
 // This interface is passed to the |Impl| object that ModuleDriver initializes.
 class ModuleHost {
  public:
-  virtual component::StartupContext* startup_context() = 0;
+  virtual sys::ComponentContext* component_context() = 0;
   virtual fuchsia::modular::ModuleContext* module_context() = 0;
 };
 
@@ -59,7 +59,7 @@ class ModuleHost {
 //
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-//   auto context = component::StartupContext::CreateFromStartupInfo();
+//   auto context = sys::ComponentContext::Create();
 //   modular::ModuleDriver<HelloWorldApp> driver(context.get(),
 //                                               [&loop] { loop.Quit(); });
 //   loop.Run();
@@ -68,14 +68,14 @@ class ModuleHost {
 template <typename Impl>
 class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
  public:
-  ModuleDriver(component::StartupContext* const context,
+  ModuleDriver(sys::ComponentContext* const context,
                fit::function<void()> on_terminated)
       : context_(context),
-        lifecycle_impl_(context->outgoing().deprecated_services(), this),
+        lifecycle_impl_(context->outgoing(), this),
         on_terminated_(std::move(on_terminated)) {
-    context_->ConnectToEnvironmentService(module_context_.NewRequest());
+    context_->svc()->Connect(module_context_.NewRequest());
 
-    context_->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
+    context_->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
         [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
           impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
                                          std::move(request));
@@ -84,7 +84,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
 
  private:
   // |ModuleHost|
-  component::StartupContext* startup_context() override { return context_; }
+  sys::ComponentContext* component_context() override { return context_; }
 
   // |ModuleHost|
   fuchsia::modular::ModuleContext* module_context() override {
@@ -112,7 +112,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
     }
   }
 
-  component::StartupContext* const context_;
+  sys::ComponentContext* const context_;
   LifecycleImpl lifecycle_impl_;
   fit::function<void()> on_terminated_;
   fuchsia::modular::ModuleContextPtr module_context_;

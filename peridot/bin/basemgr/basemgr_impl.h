@@ -15,11 +15,11 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/wlan/service/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/macros.h>
 
 #include <memory>
@@ -57,7 +57,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(
       fuchsia::modular::session::BasemgrConfig config,
-      fuchsia::sys::Launcher* const launcher,
+      fuchsia::sys::LauncherPtr launcher,
       fuchsia::ui::policy::PresenterPtr presenter,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
       fuchsia::wlan::service::WlanPtr wlan,
@@ -145,7 +145,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       active_session_shell_configs_index_{};
 
   // Used to launch component instances, such as the base shell.
-  fuchsia::sys::Launcher* const launcher_;  // Not owned.
+  fuchsia::sys::LauncherPtr launcher_;
   // Used to connect the |presentation_container_| to scenic.
   fuchsia::ui::policy::PresenterPtr presenter_;
   // Used to look-up whether device needs a factory reset.

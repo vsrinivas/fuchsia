@@ -6,8 +6,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
 
 #include "peridot/lib/fidl/clone.h"
 
@@ -15,7 +15,7 @@ namespace modular {
 namespace testing {
 namespace {
 
-using ::component::testing::FakeLauncher;
+using ::sys::testing::FakeLauncher;
 using SessionContextImplTest = gtest::TestLoopFixture;
 
 // Unique identifier for a test session.

@@ -5,9 +5,9 @@
 #include "peridot/lib/module_manifest/module_facet_reader_impl.h"
 
 #include "lib/cmx_facet_parser/cmx_facet_parser.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/io/fd.h"
 #include "lib/json/json_parser.h"
+#include "lib/sys/cpp/component_context.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/module_manifest/module_manifest_xdr.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"

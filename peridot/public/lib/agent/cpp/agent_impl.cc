@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/agent/cpp/agent_impl.h>
-
 #include <fs/service.h>
+#include <lib/agent/cpp/agent_impl.h>
 
 namespace modular {
 
-AgentImpl::AgentImpl(component::ServiceNamespace* const service_namespace,
-                     Delegate* const delegate)
+AgentImpl::AgentImpl(
+    const std::shared_ptr<sys::OutgoingDirectory>& outgoing_services,
+    Delegate* const delegate)
     : delegate_(delegate), binding_(this) {
-  service_namespace->AddService<fuchsia::modular::Agent>(
+  outgoing_services->AddPublicService<fuchsia::modular::Agent>(
       [this](fidl::InterfaceRequest<fuchsia::modular::Agent> request) {
         binding_.Bind(std::move(request));
       });

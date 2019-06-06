@@ -7,7 +7,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 
@@ -21,8 +21,10 @@ namespace {
 class TestStoryShellApp
     : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
-  TestStoryShellApp(component::StartupContext* const startup_context)
-      : SingleServiceApp(startup_context) {}
+  TestStoryShellApp(sys::ComponentContext* const component_context)
+      : SingleServiceApp(component_context) {
+    startup_context_ = component::StartupContext::CreateFromStartupInfo();
+  }
 
   ~TestStoryShellApp() override = default;
 
@@ -104,13 +106,12 @@ class TestStoryShellApp
   void Connect() {
     if (story_shell_context_.is_bound() && view_token_.value) {
       auto scenic =
-          startup_context()
-              ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+          component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
       scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
           .view_token = std::move(view_token_),
-          .startup_context = startup_context(),
+          .startup_context = startup_context_.get(),
       };
 
       view_ = std::make_unique<modular::ViewHost>(std::move(view_context));
@@ -127,6 +128,8 @@ class TestStoryShellApp
   std::vector<fuchsia::ui::views::ViewHolderToken> child_view_holder_tokens_;
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
+
+  std::unique_ptr<component::StartupContext> startup_context_;
 };
 
 }  // namespace
@@ -134,10 +137,9 @@ class TestStoryShellApp
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<TestStoryShellApp> driver(
-      context->outgoing().deprecated_services(),
-      std::make_unique<TestStoryShellApp>(context.get()),
+      context->outgoing(), std::make_unique<TestStoryShellApp>(context.get()),
       [&loop] { loop.Quit(); });
 
   loop.Run();

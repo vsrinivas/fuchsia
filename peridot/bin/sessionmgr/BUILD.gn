@@ -27,7 +27,6 @@ executable_package("sessionmgr") {
     ":presentation_provider",
     ":session_ctl",
     ":user_intelligence_provider",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/bin/sessionmgr/agent_runner",
@@ -73,6 +72,7 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
@@ -206,13 +206,14 @@ source_set("user_intelligence_provider") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 
   deps = [
     ":focus",
     ":intelligence_services",
     ":rate_limited_retry",
+    "//garnet/public/lib/svc/cpp",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/lib:maxwell_internal",
     "//sdk/fidl/fuchsia.bluetooth.le",

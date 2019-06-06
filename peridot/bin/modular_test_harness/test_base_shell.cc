@@ -7,7 +7,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
 
 #include <memory>
@@ -23,8 +23,8 @@ namespace {
 class TestBaseShellApp
     : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
-  explicit TestBaseShellApp(component::StartupContext* const startup_context)
-      : SingleServiceApp(startup_context) {}
+  explicit TestBaseShellApp(sys::ComponentContext* const component_context)
+      : SingleServiceApp(component_context) {}
 
   ~TestBaseShellApp() override = default;
 
@@ -89,10 +89,10 @@ class TestBaseShellApp
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
 
   modular::AppDriver<modular::TestBaseShellApp> driver(
-      context->outgoing().deprecated_services(),
+      context->outgoing(),
       std::make_unique<modular::TestBaseShellApp>(context.get()),
       [&loop] { loop.Quit(); });
 

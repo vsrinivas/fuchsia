@@ -5,15 +5,15 @@
 #ifndef PERIDOT_EXAMPLES_TODO_CPP_TODO_H_
 #define PERIDOT_EXAMPLES_TODO_CPP_TODO_H_
 
-#include <random>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
+
+#include <random>
 
 #include "peridot/examples/todo_cpp/generator.h"
 
@@ -50,7 +50,7 @@ class TodoApp : public fuchsia::ledger::PageWatcher,
   std::normal_distribution<> size_distribution_;
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::InterfacePtr<fuchsia::modular::ModuleContext> module_context_;
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::ledger::LedgerPtr ledger_;

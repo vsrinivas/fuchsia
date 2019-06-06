@@ -12,8 +12,8 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
@@ -39,13 +39,12 @@ class Settings {
 class AutoLoginBaseShellApp
     : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
  public:
-  explicit AutoLoginBaseShellApp(
-      component::StartupContext* const startup_context, Settings settings)
-      : SingleServiceApp(startup_context),
+  explicit AutoLoginBaseShellApp(sys::ComponentContext* const component_context,
+                                 Settings settings)
+      : SingleServiceApp(component_context),
         settings_(std::move(settings)),
         weak_ptr_factory_(this) {
-    this->startup_context()->ConnectToEnvironmentService(
-        account_manager_.NewRequest());
+    this->component_context()->svc()->Connect(account_manager_.NewRequest());
   }
 
   ~AutoLoginBaseShellApp() override = default;
@@ -138,9 +137,9 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular::AutoLoginBaseShellApp> driver(
-      context->outgoing().deprecated_services(),
+      context->outgoing(),
       std::make_unique<modular::AutoLoginBaseShellApp>(context.get(), settings),
       [&loop] { loop.Quit(); });
 

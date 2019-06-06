@@ -8,6 +8,6 @@ source_set("bound_set") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 }

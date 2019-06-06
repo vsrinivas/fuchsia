@@ -6,10 +6,11 @@
 
 namespace modular {
 
-LifecycleImpl::LifecycleImpl(component::ServiceNamespace* service_namespace,
-                             LifecycleImpl::Delegate* delegate)
+LifecycleImpl::LifecycleImpl(
+    const std::shared_ptr<sys::OutgoingDirectory>& outgoing_services,
+    LifecycleImpl::Delegate* delegate)
     : delegate_(delegate), binding_(this) {
-  service_namespace->AddService<fuchsia::modular::Lifecycle>(
+  outgoing_services->AddPublicService<fuchsia::modular::Lifecycle>(
       [this](fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
         binding_.Bind(std::move(request));
       });

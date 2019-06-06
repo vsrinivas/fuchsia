@@ -30,8 +30,8 @@ executable_package("simple_agent") {
 
   deps = [
     ":interfaces",
-    "//garnet/public/lib/component/cpp",
     "//peridot/public/lib/app_driver/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -50,12 +50,12 @@ executable_package("simple_module") {
 
   deps = [
     ":interfaces",
-    "//garnet/public/lib/component/cpp",
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/message_queue/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

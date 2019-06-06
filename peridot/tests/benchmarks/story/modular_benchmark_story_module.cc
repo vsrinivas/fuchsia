@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -12,6 +10,8 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
+
+#include <string>
 
 #include "peridot/tests/benchmarks/story/tracing_waiter.h"
 
@@ -84,7 +84,7 @@ class NullModule : fuchsia::modular::LinkWatcher {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<NullModule> driver(context.get(),
                                            [&loop] { loop.Quit(); });
   loop.Run();

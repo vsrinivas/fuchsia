@@ -38,7 +38,7 @@ class TestApp {
               fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()),
         entity_watcher_binding_(&entity_watcher_) {
-    modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->component_context(), __FILE__);
     initialized_.Pass();
 
     const char kTestString[] = "test";
@@ -144,7 +144,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<TestApp> driver(context.get(),
                                         [&loop] { loop.Quit(); });
   loop.Run();

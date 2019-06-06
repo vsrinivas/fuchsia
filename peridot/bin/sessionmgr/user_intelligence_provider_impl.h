@@ -6,8 +6,10 @@
 #define PERIDOT_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/svc/cpp/service_namespace.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
 #include <deque>
@@ -23,7 +25,7 @@ class UserIntelligenceProviderImpl
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      component::StartupContext* context,
+      sys::ComponentContext* context,
       fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
           context_engine_handle,
       fit::function<

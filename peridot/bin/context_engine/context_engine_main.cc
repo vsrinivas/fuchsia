@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <memory>
 
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
@@ -17,15 +17,14 @@ namespace modular {
 
 class ContextEngineApp {
  public:
-  ContextEngineApp(component::StartupContext* const context) {
+  ContextEngineApp(sys::ComponentContext* const context) {
     auto component_context =
-        context
-            ->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>();
+        context->svc()->Connect<fuchsia::modular::ComponentContext>();
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
     context_engine_impl_ =
         std::make_unique<ContextEngineImpl>(entity_resolver_.get());
 
-    context->outgoing().AddPublicService<fuchsia::modular::ContextEngine>(
+    context->outgoing()->AddPublicService<fuchsia::modular::ContextEngine>(
         [this](
             fidl::InterfaceRequest<fuchsia::modular::ContextEngine> request) {
           context_engine_impl_->AddBinding(std::move(request));
@@ -49,14 +48,14 @@ class ContextEngineApp {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   auto context_engine_app =
       std::make_unique<modular::ContextEngineApp>(context.get());
   fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();
   debug->GetIdleWaiter()->SetLoop(&loop);
 
   modular::AppDriver<modular::ContextEngineApp> driver(
-      context->outgoing().deprecated_services(), std::move(context_engine_app),
+      context->outgoing(), std::move(context_engine_app),
       [&loop] { loop.Quit(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to

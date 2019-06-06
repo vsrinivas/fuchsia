@@ -24,7 +24,7 @@ class TestModule {
   TestModule(modular::ModuleHost* module_host,
              fidl::InterfaceRequest<
                  fuchsia::ui::app::ViewProvider> /*view_provider_request*/) {
-    modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->component_context(), __FILE__);
 
     FXL_LOG(INFO) << "Child module 2 initialized";
     Signal(std::string("child_module_2_init"));
@@ -48,7 +48,7 @@ class TestModule {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<TestModule> driver(context.get(),
                                            [&loop] { loop.Quit(); });
   loop.Run();

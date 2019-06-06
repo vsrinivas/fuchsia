@@ -39,7 +39,7 @@ class ModuleApp : public modular::ViewApp {
   using CreateViewCallback =
       fit::function<scenic::BaseView*(scenic::ViewContext view_context)>;
 
-  explicit ModuleApp(component::StartupContext* const startup_context,
+  explicit ModuleApp(sys::ComponentContext* const component_context,
                      CreateViewCallback create);
 
  private:
@@ -52,6 +52,7 @@ class ModuleApp : public modular::ViewApp {
 
   CreateViewCallback create_;
   std::unique_ptr<scenic::BaseView> view_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleApp);
 };

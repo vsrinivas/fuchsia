@@ -69,8 +69,8 @@ source_set("module_package_source") {
     ":json",
     ":module_manifest_source",
     ":package_util",
-    "//garnet/public/lib/component/cpp",
     "//peridot/lib:maxwell_internal",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
 }

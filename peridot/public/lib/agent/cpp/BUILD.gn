@@ -16,10 +16,11 @@ source_set("agent_impl") {
     "agent_impl.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
   ]
 }

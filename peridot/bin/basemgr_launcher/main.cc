@@ -5,7 +5,8 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <src/lib/files/glob.h>
@@ -83,10 +84,10 @@ int main(int argc, const char** argv) {
   launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 
   // Launch a basemgr instance with the custom namespace we created above.
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context =
+      sys::ComponentContext::Create();
   fuchsia::sys::LauncherPtr launcher;
-  context->ConnectToEnvironmentService(launcher.NewRequest());
+  context->svc()->Connect(launcher.NewRequest());
   fidl::InterfacePtr<fuchsia::sys::ComponentController> controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 

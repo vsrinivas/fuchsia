@@ -61,14 +61,14 @@ constexpr char kTokenManagerFactoryUrl[] =
 
 BasemgrImpl::BasemgrImpl(
     fuchsia::modular::session::BasemgrConfig config,
-    fuchsia::sys::Launcher* const launcher,
+    fuchsia::sys::LauncherPtr launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
     fuchsia::wlan::service::WlanPtr wlan,
     fuchsia::auth::account::AccountManagerPtr account_manager,
     fit::function<void()> on_shutdown)
     : config_(std::move(config)),
-      launcher_(launcher),
+      launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
       wlan_(std::move(wlan)),
@@ -99,7 +99,7 @@ void BasemgrImpl::StartBaseShell() {
   auto base_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.base_shell().app_config());
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_, std::move(base_shell_config));
+      launcher_.get(), std::move(base_shell_config));
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -186,7 +186,7 @@ void BasemgrImpl::Start() {
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.story_shell().app_config());
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_, std::move(sessionmgr_config),
+      /* delegate= */ this, launcher_.get(), std::move(sessionmgr_config),
       CloneStruct(session_shell_config_), std::move(story_shell_config),
       config_.use_session_shell_for_story_shell_factory(),
       /* on_zero_sessions= */
@@ -216,7 +216,7 @@ void BasemgrImpl::InitializeUserProvider() {
   token_manager_config.url = kTokenManagerFactoryUrl;
   token_manager_factory_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          launcher_, CloneStruct(token_manager_config));
+          launcher_.get(), CloneStruct(token_manager_config));
   token_manager_factory_app_->services().ConnectToService(
       token_manager_factory_.NewRequest());
 

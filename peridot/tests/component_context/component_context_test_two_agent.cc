@@ -20,7 +20,7 @@ namespace {
 class TestApp {
  public:
   TestApp(modular::AgentHost* const agent_host) {
-    modular::testing::Init(agent_host->startup_context(), __FILE__);
+    modular::testing::Init(agent_host->component_context(), __FILE__);
   }
 
   // Called by AgentDriver.
@@ -48,7 +48,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

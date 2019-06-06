@@ -13,7 +13,6 @@
 #include <lib/async/cpp/future.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -22,6 +21,7 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 #include <src/lib/fxl/logging.h>

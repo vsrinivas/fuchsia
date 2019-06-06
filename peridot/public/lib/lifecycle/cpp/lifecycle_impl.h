@@ -5,13 +5,13 @@
 #ifndef LIB_LIFECYCLE_CPP_LIFECYCLE_IMPL_H_
 #define LIB_LIFECYCLE_CPP_LIFECYCLE_IMPL_H_
 
-#include <functional>
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/svc/cpp/service_namespace.h>
+
+#include <functional>
+#include <memory>
 
 namespace modular {
 
@@ -25,8 +25,9 @@ class LifecycleImpl : fuchsia::modular::Lifecycle {
 
   // |Delegate.Terminate()| is called when a
   // fuchsia::modular::Lifecycle.Terminate message is received.
-  LifecycleImpl(component::ServiceNamespace* service_namespace,
-                Delegate* delegate);
+  LifecycleImpl(
+      const std::shared_ptr<sys::OutgoingDirectory>& outgoing_services,
+      Delegate* delegate);
 
  private:
   // |fuchsia::modular::Lifecycle|

@@ -9,6 +9,7 @@
 #include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
+#include <lib/svc/cpp/service_namespace.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/intelligence_services_impl.h"
@@ -52,7 +53,7 @@ void UserIntelligenceProviderImpl::SessionAgentData::
 }
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    component::StartupContext* const context,
+    sys::ComponentContext* const context,
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
         context_engine_handle,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>

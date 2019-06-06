@@ -5,12 +5,12 @@
 #ifndef LIB_INTEGRATION_TESTING_CPP_TESTING_H_
 #define LIB_INTEGRATION_TESTING_CPP_TESTING_H_
 
-#include <string>
-
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <string>
 
 namespace modular {
 namespace testing {
@@ -28,7 +28,7 @@ constexpr int kTestTimeoutMilliseconds = 30000;
 // test is expected to call either Done() or Teardown() before terminating
 // itself in order for the TestRunner service to know that a test process did
 // not crash, or that the test has completed and should be torn down.
-void Init(component::StartupContext* context, const std::string& identity);
+void Init(sys::ComponentContext* context, const std::string& identity);
 
 // Marks the test a failure with the given |log_msg| message, but does not tear
 // it down; the test may continue running. Once the test signals teardown by

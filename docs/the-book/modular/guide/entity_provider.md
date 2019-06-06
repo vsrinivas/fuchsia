@@ -33,8 +33,8 @@ data out.
 
 C++ example snippet of an Agent creating an entity.
 ```
-  auto startup_context = sys::ComponentContext::Create();
-  auto agent_ctx = startup_context->svc()
+  auto component_context = sys::ComponentContext::Create();
+  auto agent_ctx = component_context->svc()
         ->Connect<fuchsia::modular::AgentContext>();
 
   fuchsia::modular::EntityReferenceFactory factory;
@@ -52,8 +52,8 @@ entity references manufactured by its modules also become invalid.
 
 C++ example snippet of a Module creating an entity.
 ```
-  auto startup_context = sys::ComponentContext::Create();
-  auto module_ctx = startup_context->svc()
+  auto component_context = sys::ComponentContext::Create();
+  auto module_ctx = component_context->svc()
         ->Connect<fuchsia::modular::ModuleContext>();
 
   fuchsia::mem::Buffer data;
@@ -74,8 +74,8 @@ data out of the Entity by calling `Entity.GetTypes()` or
 
 C++ Example snippet getting data out of an `entity_reference`:
 ```
-  auto startup_context = sys::ComponentContext::Create();
-  auto component_ctx = startup_context->svc()
+  auto component_context = sys::ComponentContext::Create();
+  auto component_ctx = component_context->svc()
         ->Connect<fuchsia::modular::ComponentContext>();
 
   fuchsia::modular::EntityResolverPtr resolver;

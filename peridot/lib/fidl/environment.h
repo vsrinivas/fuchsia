@@ -10,10 +10,10 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <string>
@@ -35,8 +35,8 @@ class Environment {
   template <typename Interface>
   void AddService(fidl::InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
-    auto service = fbl::AdoptRef(new fs::Service(
-        [handler = std::move(handler)](zx::channel channel) {
+    auto service = fbl::AdoptRef(
+        new fs::Service([handler = std::move(handler)](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
           return ZX_OK;
         }));

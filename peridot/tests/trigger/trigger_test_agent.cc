@@ -5,6 +5,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/svc/cpp/service_namespace.h>
 #include <src/lib/fxl/logging.h>
 #include <test/peridot/tests/trigger/cpp/fidl.h>
 
@@ -24,7 +26,7 @@ class TestApp : TriggerTestService {
 
   TestApp(modular::AgentHost* const agent_host)
       : agent_context_(agent_host->agent_context()) {
-    modular::testing::Init(agent_host->startup_context(), __FILE__);
+    modular::testing::Init(agent_host->component_context(), __FILE__);
     agent_context_->GetComponentContext(component_context_.NewRequest());
 
     // Create a message queue and schedule a task to be run on receiving a
@@ -98,7 +100,7 @@ class TestApp : TriggerTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

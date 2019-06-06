@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -12,6 +10,8 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <iostream>
 
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
@@ -47,7 +47,7 @@ class TestModule {
              fidl::InterfaceRequest<
                  fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    modular::testing::Init(module_host->startup_context(), __FILE__);
+    modular::testing::Init(module_host->component_context(), __FILE__);
     initialized_.Pass();
 
     StartChildModuleTwice();
@@ -141,7 +141,7 @@ class TestModule {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<TestModule> driver(context.get(),
                                            [&loop] { loop.Quit(); });
   loop.Run();

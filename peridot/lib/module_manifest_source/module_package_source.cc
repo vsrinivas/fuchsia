@@ -5,35 +5,33 @@
 #include "peridot/lib/module_manifest_source/module_package_source.h"
 
 #include <dirent.h>
-#include <sys/types.h>
-
-#include <fs/service.h>
 #include <lib/async/cpp/task.h>
+#include <lib/vfs/cpp/service.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
+#include <sys/types.h>
 
 #include "peridot/lib/module_manifest_source/json.h"
 #include "peridot/lib/module_manifest_source/package_util.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 
 namespace modular {
 
 using ::fuchsia::maxwell::internal::ModulePackageIndexer;
 
-ModulePackageSource::ModulePackageSource(
-    component::StartupContext* const context)
+ModulePackageSource::ModulePackageSource(sys::ComponentContext* const context)
     : weak_factory_(this) {
-  context->outgoing().debug_dir()->AddEntry(
+  context->outgoing()->debug_dir()->AddEntry(
       ModulePackageIndexer::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+      std::make_unique<vfs::Service>([this](zx::channel channel,
+                                            async_dispatcher_t*) {
         indexer_bindings_.AddBinding(
             this,
             fidl::InterfaceRequest<ModulePackageIndexer>(std::move(channel)));
-        return ZX_OK;
-      })));
+      }));
 }
 
 ModulePackageSource::~ModulePackageSource() {}

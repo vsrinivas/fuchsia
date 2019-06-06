@@ -9,8 +9,8 @@
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/message_queue/cpp/message_queue_client.h>
+#include <lib/sys/cpp/component_context.h>
 
 using ::fuchsia::modular::examples::simple::SimplePtr;
 
@@ -82,7 +82,7 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });
   loop.Run();

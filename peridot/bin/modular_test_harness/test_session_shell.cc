@@ -7,7 +7,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <utility>
@@ -22,17 +22,18 @@ class TestSessionShellApp : public modular::ViewApp,
                             public fuchsia::modular::StoryProviderWatcher,
                             public fuchsia::modular::SessionShell {
  public:
-  explicit TestSessionShellApp(component::StartupContext* const startup_context)
-      : ViewApp(startup_context), story_provider_watcher_(this) {
-    startup_context->outgoing().AddPublicService(
+  explicit TestSessionShellApp(sys::ComponentContext* const component_context)
+      : ViewApp(component_context), story_provider_watcher_(this) {
+    component_context->outgoing()->AddPublicService(
         session_shell_bindings_.GetHandler(this));
 
-    startup_context->ConnectToEnvironmentService(
-        session_shell_context_.NewRequest());
+    component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_->GetStories(
         story_provider_watcher_.NewBinding(),
         [](std::vector<fuchsia::modular::StoryInfo>) {});
+
+    startup_context_ = component::StartupContext::CreateFromStartupInfo();
   }
 
   virtual ~TestSessionShellApp() override = default;
@@ -52,13 +53,12 @@ class TestSessionShellApp : public modular::ViewApp,
     fuchsia::ui::views::ViewToken view_token;
     view_token.value = std::move(view_event_pair);
     auto scenic =
-        startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
-        .startup_context = startup_context(),
+        .startup_context = startup_context_.get(),
     };
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
   }
@@ -98,6 +98,8 @@ class TestSessionShellApp : public modular::ViewApp,
 
   std::unique_ptr<modular::ViewHost> view_;
   fidl::Binding<StoryProviderWatcher> story_provider_watcher_;
+
+  std::unique_ptr<component::StartupContext> startup_context_;
 };
 
 }  // namespace
@@ -105,10 +107,9 @@ class TestSessionShellApp : public modular::ViewApp,
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<TestSessionShellApp> driver(
-      context->outgoing().deprecated_services(),
-      std::make_unique<TestSessionShellApp>(context.get()),
+      context->outgoing(), std::make_unique<TestSessionShellApp>(context.get()),
       [&loop] { loop.Quit(); });
 
   loop.Run();

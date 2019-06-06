@@ -5,11 +5,13 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/message_queue/cpp/message_queue_client.h>
 #include <lib/message_queue/cpp/message_sender_client.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
 #include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
+#include <lib/svc/cpp/service_namespace.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <sdk/lib/sys/cpp/service_directory.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>

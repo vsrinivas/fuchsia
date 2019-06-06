@@ -18,7 +18,7 @@ displays the messages from `SimpleAgent` on screen.
 The first step to writing a `Module` is implementing the initializer.
 
 ```c++
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <ui/cpp/fidl.h>
@@ -107,7 +107,7 @@ message_queue.RegsiterReceiver(
 ```c++
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });
   loop.Run();

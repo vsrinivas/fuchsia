@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
@@ -19,6 +16,9 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
+
+#include <memory>
+#include <utility>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_main.h"
@@ -142,15 +142,14 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 // interaction, as a session shell normally would.
 class TestApp : public modular::ViewApp {
  public:
-  TestApp(component::StartupContext* const startup_context, Settings settings)
-      : ViewApp(startup_context), settings_(std::move(settings)) {
-    startup_context->ConnectToEnvironmentService(
-        session_shell_context_.NewRequest());
+  TestApp(sys::ComponentContext* const component_context, Settings settings)
+      : ViewApp(component_context), settings_(std::move(settings)) {
+    component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
+    component_context->svc()->Connect(puppet_master_.NewRequest());
 
-    startup_context->outgoing().AddPublicService(
+    component_context->outgoing()->AddPublicService(
         session_shell_impl_.GetHandler());
 
     tracing_waiter_.WaitForTracing([this] { Loop(); });

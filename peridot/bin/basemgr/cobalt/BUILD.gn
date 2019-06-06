@@ -26,7 +26,7 @@ source_set("cobalt") {
 
   public_deps = [
     ":basemgr_metrics_registry",
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
 

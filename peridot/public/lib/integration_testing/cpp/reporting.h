@@ -5,11 +5,9 @@
 #ifndef LIB_INTEGRATION_TESTING_CPP_REPORTING_H_
 #define LIB_INTEGRATION_TESTING_CPP_REPORTING_H_
 
-#include <iostream>
-
 #include <fuchsia/testing/runner/cpp/fidl.h>
 
-#include <lib/integration_testing/cpp/testing.h>
+#include <iostream>
 
 #define TEST_PASS(label) std::cerr << "[TEST] PASS: " << (label) << std::endl
 #define TEST_FAIL(label)                                  \

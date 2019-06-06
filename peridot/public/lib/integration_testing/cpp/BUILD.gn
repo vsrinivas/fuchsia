@@ -11,7 +11,8 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
+    "//peridot/public/lib/async/cpp:future",
+    "//sdk/lib/sys/cpp",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.testing.runner",

@@ -5,14 +5,15 @@
 #ifndef PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_
 #define PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_
 
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+
 #include <functional>
 #include <map>
 #include <string>
 #include <vector>
-
-#include <fuchsia/maxwell/internal/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
@@ -25,7 +26,7 @@ namespace modular {
 class ModulePackageSource : public ModuleManifestSource,
                             ::fuchsia::maxwell::internal::ModulePackageIndexer {
  public:
-  ModulePackageSource(component::StartupContext* context);
+  ModulePackageSource(sys::ComponentContext* context);
   ~ModulePackageSource() override;
 
   // |ModuleManifestSource|

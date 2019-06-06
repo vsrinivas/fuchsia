@@ -131,7 +131,7 @@ implementation(s) of the protocol(s) it provides.
 ```c++
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AgentDriver<simple_agent::SimpleAgent> driver(
       context.get(), [&loop] { loop.Quit(); });
   loop.Run();

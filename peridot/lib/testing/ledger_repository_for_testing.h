@@ -5,14 +5,14 @@
 #ifndef PERIDOT_LIB_TESTING_LEDGER_REPOSITORY_FOR_TESTING_H_
 #define PERIDOT_LIB_TESTING_LEDGER_REPOSITORY_FOR_TESTING_H_
 
-#include <string>
-
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
+
+#include <string>
 
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -33,7 +33,7 @@ class LedgerRepositoryForTesting {
   void Terminate(fit::function<void()> callback);
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   scoped_tmpfs::ScopedTmpFS tmp_fs_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>>
       ledger_app_client_;

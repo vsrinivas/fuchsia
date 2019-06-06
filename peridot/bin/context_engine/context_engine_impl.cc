@@ -4,7 +4,7 @@
 
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "peridot/bin/context_engine/context_reader_impl.h"
 #include "peridot/bin/context_engine/context_repository.h"

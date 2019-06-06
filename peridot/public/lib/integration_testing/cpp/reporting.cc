@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/integration_testing/cpp/reporting.h>
+#include "lib/integration_testing/cpp/reporting.h"
+
+#include <lib/integration_testing/cpp/testing.h>
 
 namespace modular {
 namespace testing {

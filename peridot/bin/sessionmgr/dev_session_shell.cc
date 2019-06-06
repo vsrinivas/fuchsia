@@ -13,10 +13,10 @@
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <utility>
@@ -48,21 +48,22 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                            fuchsia::modular::SessionShell,
                            public modular::ViewApp {
  public:
-  explicit DevSessionShellApp(component::StartupContext* const startup_context,
+  explicit DevSessionShellApp(sys::ComponentContext* const component_context,
                               Settings settings)
-      : ViewApp(startup_context),
+      : ViewApp(component_context),
         settings_(std::move(settings)),
         story_watcher_binding_(this) {
-    startup_context->ConnectToEnvironmentService(puppet_master_.NewRequest());
-    startup_context->ConnectToEnvironmentService(
-        session_shell_context_.NewRequest());
+    component_context->svc()->Connect(puppet_master_.NewRequest());
+    component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     session_shell_context_->GetFocusController(focus_controller_.NewRequest());
     session_shell_context_->GetVisibleStoriesController(
         visible_stories_controller_.NewRequest());
 
-    startup_context->outgoing().AddPublicService(
+    component_context->outgoing()->AddPublicService(
         session_shell_bindings_.GetHandler(this));
+
+    startup_context_ = component::StartupContext::CreateFromStartupInfo();
   }
 
   ~DevSessionShellApp() override = default;
@@ -88,13 +89,12 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                   << settings_.root_link;
 
     auto scenic =
-        startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token_),
-        .startup_context = startup_context(),
+        .startup_context = startup_context_.get(),
     };
 
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
@@ -199,6 +199,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   fidl::Binding<fuchsia::modular::StoryWatcher> story_watcher_binding_;
 
+  std::unique_ptr<component::StartupContext> startup_context_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(DevSessionShellApp);
 };
 
@@ -210,9 +212,9 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<DevSessionShellApp> driver(
-      context->outgoing().deprecated_services(),
+      context->outgoing(),
       std::make_unique<DevSessionShellApp>(context.get(), std::move(settings)),
       [&loop] { loop.Quit(); });
 

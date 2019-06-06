@@ -37,12 +37,12 @@ source_set("module_facet_reader_impl") {
     ":json_xdr",
     ":module_facet_reader",
     "//garnet/public/lib/cmx_facet_parser",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
     "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
     "//src/lib/pkg_url",
   ]
 }

@@ -17,6 +17,8 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
+#include <set>
+
 namespace modular::testing {
 
 // Provides the |TestHarness| service.
@@ -68,7 +70,7 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
 
     // The session agent's intercepted state that we must keep around to keep
     // the component alive:
-    std::unique_ptr<component::StartupContext> component_context;
+    std::unique_ptr<sys::ComponentContext> component_context;
     std::unique_ptr<sys::testing::InterceptedComponent> intercepted_component;
     std::unique_ptr<::modular::AgentDriver<InterceptedSessionAgent>>
         agent_driver;

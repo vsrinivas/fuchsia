@@ -5,7 +5,8 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_SESSION_CTL_H_
 #define PERIDOT_BIN_SESSIONMGR_SESSION_CTL_H_
 
-#include <fs/pseudo-dir.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
+
 #include <string>
 
 #include "fbl/ref_ptr.h"
@@ -22,12 +23,12 @@ class SessionCtl {
   // entry is removed when destructed.
   //
   // |puppet_master_impl| is not owned and must outlive *this.
-  SessionCtl(fbl::RefPtr<fs::PseudoDir> dir, const std::string& entry_name,
+  SessionCtl(vfs::PseudoDir* dir, const std::string& entry_name,
              PuppetMasterImpl* puppet_master_impl);
   ~SessionCtl();
 
  private:
-  fbl::RefPtr<fs::PseudoDir> dir_;
+  vfs::PseudoDir* dir_;
   const std::string entry_name_;
 
   PuppetMasterImpl* const puppet_master_impl_;

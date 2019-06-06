@@ -375,6 +375,17 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   basemgr_ctrl_ = enclosing_env_->CreateComponent(std::move(info));
 }
 
+zx::channel TakeSvcFromFlatNamespace(
+    fuchsia::sys::FlatNamespace* flat_namespace) {
+  for (size_t i = 0; i < flat_namespace->paths.size(); i++) {
+    if (flat_namespace->paths[i] == "/svc") {
+      return std::move(flat_namespace->directories[i]);
+    }
+  }
+  FXL_CHECK(false) << "Could not find /svc in component namespace.";
+  return zx::channel();
+}
+
 zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
   auto interception_retval = interceptor_.InterceptURL(
       kSessionAgentFakeInterceptionUrl, kSessionAgentFakeInterceptionCmx,
@@ -382,7 +393,10 @@ zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
              std::unique_ptr<sys::testing::InterceptedComponent>
                  intercepted_component) {
         intercepted_session_agent_info_.component_context =
-            component::StartupContext::CreateFrom(std::move(startup_info));
+            std::make_unique<sys::ComponentContext>(
+                std::make_shared<sys::ServiceDirectory>(
+                    TakeSvcFromFlatNamespace(&startup_info.flat_namespace)),
+                std::move(startup_info.launch_info.directory_request));
         intercepted_session_agent_info_.agent_driver.reset(
             new ::modular::AgentDriver<InterceptedSessionAgent>(
                 intercepted_session_agent_info_.component_context.get(),
@@ -537,9 +551,8 @@ void TestHarnessImpl::FlushBufferedSessionAgentServices() {
   }
 
   for (auto&& req : intercepted_session_agent_info_.buffered_service_requests) {
-    intercepted_session_agent_info_.component_context
-        ->ConnectToEnvironmentService(req.service_name,
-                                      std::move(req.service_request));
+    intercepted_session_agent_info_.component_context->svc()->Connect(
+        req.service_name, std::move(req.service_request));
   }
   intercepted_session_agent_info_.buffered_service_requests.clear();
 }

@@ -13,14 +13,13 @@ namespace testing {
 
 class SessionShellBase : public ComponentBase<void> {
  public:
-  SessionShellBase(component::StartupContext* const startup_context)
-      : ComponentBase(startup_context) {
-    startup_context->ConnectToEnvironmentService(
-        session_shell_context_.NewRequest());
+  SessionShellBase(sys::ComponentContext* const component_context)
+      : ComponentBase(component_context) {
+    component_context->svc()->Connect(session_shell_context_.NewRequest());
 
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    startup_context->outgoing().AddPublicService(
+    component_context->outgoing()->AddPublicService(
         session_shell_impl_.GetHandler());
   }
 

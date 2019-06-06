@@ -19,12 +19,12 @@ namespace modular {
 namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : component_context_(sys::ComponentContext::Create()),
       weak_ptr_factory_(this) {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 
-  auto& launcher = startup_context_->launcher();
+  auto launcher = component_context_->svc()->Connect<fuchsia::sys::Launcher>();
   ledger_app_client_ =
       std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
           launcher.get(), std::move(ledger_config));

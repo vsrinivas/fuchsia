@@ -5,8 +5,10 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/message_queue/cpp/message_sender_client.h>
+#include <lib/svc/cpp/service_namespace.h>
+#include <src/lib/fxl/logging.h>
 #include <test/peridot/tests/componentcontext/cpp/fidl.h>
 
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
@@ -24,7 +26,7 @@ namespace {
 class TestApp : ComponentContextTestService {
  public:
   TestApp(modular::AgentHost* const agent_host) {
-    modular::testing::Init(agent_host->startup_context(), __FILE__);
+    modular::testing::Init(agent_host->component_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
     agent_services_.AddService<ComponentContextTestService>(
@@ -88,7 +90,7 @@ class TestApp : ComponentContextTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AgentDriver<TestApp> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;

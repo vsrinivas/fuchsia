@@ -5,6 +5,7 @@
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+#include <lib/svc/cpp/service_namespace.h>
 
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
@@ -29,6 +30,14 @@ class ClipboardAgent {
         });
 
     clipboard_ = std::make_unique<ClipboardImpl>(ledger_client_.get());
+
+    agent_host->component_context()
+        ->outgoing()
+        ->AddPublicService<fuchsia::modular::Clipboard>(
+            [this](
+                fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+              clipboard_->Connect(std::move(request));
+            });
 
     services_.AddService<fuchsia::modular::Clipboard>(
         [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
@@ -63,7 +72,7 @@ class ClipboardAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AgentDriver<modular::ClipboardAgent> driver(
       context.get(), [&loop] { loop.Quit(); });
   loop.Run();

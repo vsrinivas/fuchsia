@@ -9,8 +9,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
-#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/svc/cpp/service_namespace.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/zx/object.h>
 #include <src/lib/fxl/macros.h>
 #include <zircon/errors.h>
@@ -33,7 +34,7 @@ namespace modular {
 namespace testing {
 namespace {
 
-using ::component::testing::FakeLauncher;
+using ::sys::testing::FakeLauncher;
 
 // The choice of "Clipboard" as the test service is arbitrary, but the
 // ConnectToAgentService() tests require an existing service type.

@@ -5,7 +5,7 @@
 #include "peridot/examples/swap_cpp/module.h"
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <utility>
 
@@ -29,17 +29,19 @@ void ModuleView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties) {
                                   logical_size().y * .5f, 0.f);
 }
 
-ModuleApp::ModuleApp(component::StartupContext* const startup_context,
+ModuleApp::ModuleApp(sys::ComponentContext* const component_context,
                      CreateViewCallback create)
-    : ViewApp(startup_context), create_(std::move(create)) {}
+    : ViewApp(component_context), create_(std::move(create)) {
+  // TODO(CF-710): use component_context() instead of StartupContext.
+  startup_context_ = component::StartupContext::CreateFromStartupInfo();
+}
 
 void ModuleApp::CreateView(
     zx::eventpair view_token,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
   auto scenic =
-      startup_context()
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+      component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic::ViewContext context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
@@ -47,7 +49,7 @@ void ModuleApp::CreateView(
           fuchsia::ui::views::ViewToken{.value = std::move(view_token)},
       .incoming_services = std::move(incoming_services),
       .outgoing_services = std::move(outgoing_services),
-      .startup_context = startup_context(),
+      .startup_context = startup_context_.get(),
   };
 
   view_.reset(create_(std::move(context)));

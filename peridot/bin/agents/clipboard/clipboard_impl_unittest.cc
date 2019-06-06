@@ -8,7 +8,6 @@
 #include <string>
 
 #include "peridot/lib/testing/test_with_ledger.h"
-#include "trace/internal/event_common.h"
 
 namespace modular {
 

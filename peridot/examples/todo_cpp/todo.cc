@@ -92,9 +92,9 @@ TodoApp::TodoApp(async::Loop* loop)
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
-      context_(component::StartupContext::CreateFromStartupInfo()),
+      context_(sys::ComponentContext::Create()),
       page_watcher_binding_(this) {
-  context_->ConnectToEnvironmentService(module_context_.NewRequest());
+  context_->svc()->Connect(module_context_.NewRequest());
   module_context_->GetComponentContext(component_context_.NewRequest());
   ledger_.set_error_handler(
       NewErrorHandler([this] { loop_->Quit(); }, "Ledger"));

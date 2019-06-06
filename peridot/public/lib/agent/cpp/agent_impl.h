@@ -5,14 +5,16 @@
 #ifndef LIB_AGENT_CPP_AGENT_IMPL_H_
 #define LIB_AGENT_CPP_AGENT_IMPL_H_
 
-#include <memory>
-
+#include <fbl/ref_ptr.h>
+#include <fs/pseudo-dir.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/svc/cpp/service_namespace.h>
+
+#include <memory>
 
 namespace modular {
 
@@ -30,7 +32,8 @@ class AgentImpl : public fuchsia::modular::Agent {
                          fit::function<void()> done) = 0;
   };
 
-  AgentImpl(component::ServiceNamespace* service_namespace, Delegate* delegate);
+  AgentImpl(const std::shared_ptr<sys::OutgoingDirectory>& outgoing_services,
+            Delegate* delegate);
 
   AgentImpl(fbl::RefPtr<fs::PseudoDir> directory, Delegate* delegate);
 

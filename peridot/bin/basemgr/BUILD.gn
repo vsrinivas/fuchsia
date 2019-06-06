@@ -59,6 +59,7 @@ executable_package("basemgr") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
@@ -98,7 +99,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
@@ -115,6 +115,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/trace",
   ]
@@ -237,11 +238,12 @@ executable("session_context_impl_unittest") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
+    "//peridot/lib/fidl:environment",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
   ]

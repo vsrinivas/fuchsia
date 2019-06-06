@@ -21,13 +21,13 @@ executable_package("module_resolver") {
 
   deps = [
     ":local_module_resolver",
-    "//garnet/public/lib/component/cpp",
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/lib/module_manifest_source:module_package_source",
     "//peridot/public/lib/app_driver/cpp:app_driver",
     "//peridot/public/lib/entity/cpp:json",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]

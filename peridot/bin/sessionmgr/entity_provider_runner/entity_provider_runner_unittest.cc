@@ -4,8 +4,6 @@
 
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
-#include <memory>
-
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -13,11 +11,12 @@
 #include <lib/agent/cpp/agent_impl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/service_provider_impl.h>
-#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
 #include <src/lib/fxl/macros.h>
-#include "src/lib/files/scoped_temp_dir.h"
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
@@ -28,12 +27,13 @@
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "src/lib/files/scoped_temp_dir.h"
 
 namespace modular {
 namespace testing {
 namespace {
 
-using ::component::testing::FakeLauncher;
+using ::sys::testing::FakeLauncher;
 
 class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
  public:

@@ -171,15 +171,16 @@ class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
 };
 
 SessionmgrImpl::SessionmgrImpl(
-    component::StartupContext* const startup_context,
+    sys::ComponentContext* const component_context,
     fuchsia::modular::session::SessionmgrConfig config)
-    : startup_context_(startup_context),
+    : component_context_(component_context),
       config_(std::move(config)),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner"),
       weak_ptr_factory_(this) {
-  startup_context_->outgoing()
-      .AddPublicService<fuchsia::modular::internal::Sessionmgr>(
+  startup_context_ = component::StartupContext::CreateFromStartupInfo();
+  component_context_->outgoing()
+      ->AddPublicService<fuchsia::modular::internal::Sessionmgr>(
           [this](fidl::InterfaceRequest<fuchsia::modular::internal::Sessionmgr>
                      request) {
             bindings_.AddBinding(this, std::move(request));
@@ -252,20 +253,18 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   static const auto* const kEnvServices =
       new std::vector<std::string>{fuchsia::modular::Clipboard::Name_};
   session_environment_ = std::make_unique<Environment>(
-      startup_context_->environment(),
+      component_context_->svc()->Connect<fuchsia::sys::Environment>(),
       std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
       /* kill_on_oom = */ true);
-
-  fuchsia::sys::LauncherPtr parent_launcher;
-  startup_context_->environment()->GetLauncher(parent_launcher.NewRequest());
 
   ArgvInjectingLauncher::ArgvMap argv_map;
   for (auto& agent : config_.component_args()) {
     argv_map.insert(std::make_pair(agent.url(), agent.args()));
   }
-  auto argv_injecting_launcher = std::make_unique<ArgvInjectingLauncher>(
-      std::move(parent_launcher), argv_map);
-  session_environment_->OverrideLauncher(std::move(argv_injecting_launcher));
+  session_environment_->OverrideLauncher(
+      std::make_unique<ArgvInjectingLauncher>(
+          component_context_->svc()->Connect<fuchsia::sys::Launcher>(),
+          argv_map));
 
   AtEnd(Reset(&session_environment_));
 }
@@ -330,8 +329,7 @@ void SessionmgrImpl::InitializeLedger(
 
     if ((config_.cloud_provider()) ==
         fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT) {
-      startup_context_->ConnectToEnvironmentService(
-          cloud_provider.NewRequest());
+      component_context_->svc()->Connect(cloud_provider.NewRequest());
     } else if (config_.cloud_provider() ==
                fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE) {
       cloud_provider = LaunchCloudProvider(account_->profile_id,
@@ -434,7 +432,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   auto puppet_master_request = puppet_master.NewRequest();
 
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
-      startup_context_, std::move(context_engine),
+      component_context_, std::move(context_engine),
       [this](fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
         if (terminating_) {
           return;
@@ -612,7 +610,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       ledger_client_.get(), fuchsia::ledger::PageId());
 
   module_facet_reader_.reset(new ModuleFacetReaderImpl(
-      startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>()));
+      component_context_->svc()->Connect<fuchsia::sys::Loader>()));
 
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), LoadDeviceID(session_id_),
@@ -622,8 +620,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       user_intelligence_provider_impl_.get(), discover_registry_service_.get(),
       module_resolver_service_.get(), entity_provider_runner_.get(),
       module_facet_reader_.get(), presentation_provider_impl_.get(),
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>(),
+      component_context_->svc()->Connect<fuchsia::ui::viewsv1::ViewSnapshot>(),
       (config_.enable_story_shell_preload())));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
@@ -665,7 +662,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   puppet_master_impl_->Connect(std::move(puppet_master_request));
 
   session_ctl_ =
-      std::make_unique<SessionCtl>(startup_context_->outgoing().debug_dir(),
+      std::make_unique<SessionCtl>(component_context_->outgoing()->debug_dir(),
                                    kSessionCtlDir, puppet_master_impl_.get());
 
   AtEnd(Reset(&story_command_executor_));
@@ -726,13 +723,12 @@ void SessionmgrImpl::InitializeSessionShell(
   // We setup our own view and make the fuchsia::modular::SessionShell a child
   // of it.
   auto scenic =
-      startup_context_
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+      component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic::ViewContext view_context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),
-      .startup_context = startup_context_,
+      .startup_context = startup_context_.get(),
   };
   session_shell_view_host_ =
       std::make_unique<ViewHost>(std::move(view_context));

@@ -151,26 +151,26 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
 // Configures Basemgr by passing in connected services.
 std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
     fuchsia::modular::session::BasemgrConfig& config,
-    std::shared_ptr<component::StartupContext> context,
     sys::ComponentContext* component_context, async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
       config.enable_cobalt(), loop->dispatcher(), component_context);
 
   fuchsia::ui::policy::PresenterPtr presenter;
-  context->ConnectToEnvironmentService(presenter.NewRequest());
+  component_context->svc()->Connect(presenter.NewRequest());
   fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager;
-  context->ConnectToEnvironmentService(device_settings_manager.NewRequest());
+  component_context->svc()->Connect(device_settings_manager.NewRequest());
   fuchsia::wlan::service::WlanPtr wlan;
-  context->ConnectToEnvironmentService(wlan.NewRequest());
+  component_context->svc()->Connect(wlan.NewRequest());
   fuchsia::auth::account::AccountManagerPtr account_manager;
-  context->ConnectToEnvironmentService(account_manager.NewRequest());
+  component_context->svc()->Connect(account_manager.NewRequest());
 
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config), context->launcher().get(), std::move(presenter),
-      std::move(device_settings_manager), std::move(wlan),
-      std::move(account_manager), [&loop, &cobalt_cleanup, &context] {
+      std::move(config),
+      component_context->svc()->Connect<fuchsia::sys::Launcher>(),
+      std::move(presenter), std::move(device_settings_manager), std::move(wlan),
+      std::move(account_manager), [&loop, &cobalt_cleanup, component_context] {
         cobalt_cleanup.call();
-        context->outgoing().debug_dir()->RemoveEntry(
+        component_context->outgoing()->debug_dir()->RemoveEntry(
             modular_config::kBasemgrConfigName);
         loop->Quit();
       });
@@ -201,39 +201,37 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  auto context = std::shared_ptr<component::StartupContext>(
-      component::StartupContext::CreateFromStartupInfo());
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::Create());
 
   fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
-  auto initialize_basemgr =
-      [&config, &loop, &context, &component_context, &basemgr_impl, &setui,
-       ran = false](fuchsia::setui::SettingsObject settings_obj) mutable {
-        if (ran) {
-          return;
-        }
+  auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl,
+                             &setui, ran = false](fuchsia::setui::SettingsObject
+                                                      settings_obj) mutable {
+    if (ran) {
+      return;
+    }
 
-        ran = true;
+    ran = true;
 
-        ConfigureLoginOverride(config, settings_obj, setui.get());
+    ConfigureLoginOverride(config, settings_obj, setui.get());
 
-        std::unique_ptr<modular::BasemgrImpl> basemgr =
-            ConfigureBasemgr(config, context, component_context.get(), &loop);
+    std::unique_ptr<modular::BasemgrImpl> basemgr =
+        ConfigureBasemgr(config, component_context.get(), &loop);
 
-        basemgr_impl = std::move(basemgr);
+    basemgr_impl = std::move(basemgr);
 
-        context->outgoing().debug_dir()->AddEntry(
-            modular_config::kBasemgrConfigName,
-            fbl::AdoptRef(new fs::Service([basemgr_impl = basemgr_impl.get()](
-                                              zx::channel channel) {
-              fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>
-                  request(std::move(channel));
-              basemgr_impl->Connect(std::move(request));
-              return ZX_OK;
-            })));
-      };
+    component_context->outgoing()->debug_dir()->AddEntry(
+        modular_config::kBasemgrConfigName,
+        std::make_unique<vfs::Service>([basemgr_impl = basemgr_impl.get()](
+                                           zx::channel request,
+                                           async_dispatcher_t*) {
+          basemgr_impl->Connect(
+              fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug>(
+                  std::move(request)));
+        }));
+  };
 
   setui.set_error_handler([&initialize_basemgr](zx_status_t status) {
     // In case of error, log event and continue as if no user setting is
@@ -250,7 +248,7 @@ int main(int argc, const char** argv) {
     initialize_basemgr(std::move(default_settings_object));
   });
 
-  context->ConnectToEnvironmentService(setui.NewRequest());
+  component_context->svc()->Connect(setui.NewRequest());
 
   // Retrieve the user specified login override. This override will take
   // precedence over any compile time configuration. Watch will always

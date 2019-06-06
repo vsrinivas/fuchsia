@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
@@ -73,9 +74,10 @@ class RecipeView : public scenic::BaseView {
 
 class RecipeApp : public modular::ViewApp {
  public:
-  RecipeApp(component::StartupContext* const startup_context)
-      : ViewApp(startup_context) {
-    startup_context->ConnectToEnvironmentService(module_context_.NewRequest());
+  RecipeApp(sys::ComponentContext* const component_context)
+      : ViewApp(component_context) {
+    component_context->svc()->Connect(module_context_.NewRequest());
+    startup_context_ = component::StartupContext::CreateFromStartupInfo();
     SwapModule();
   }
 
@@ -89,15 +91,14 @@ class RecipeApp : public modular::ViewApp {
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
       override {
     auto scenic =
-        startup_context()
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext view_context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = scenic::ToViewToken(std::move(view_token)),
         .incoming_services = std::move(incoming_services),
         .outgoing_services = std::move(outgoing_services),
-        .startup_context = startup_context(),
+        .startup_context = startup_context_.get(),
     };
     view_ = std::make_unique<RecipeView>(std::move(view_context));
     SetChild();
@@ -142,6 +143,7 @@ class RecipeApp : public modular::ViewApp {
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ModuleControllerPtr module_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   std::unique_ptr<RecipeView> view_;
 
   int query_index_ = 0;
@@ -153,10 +155,10 @@ int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<RecipeApp> driver(
-      context->outgoing().deprecated_services(),
-      std::make_unique<RecipeApp>(context.get()), [&loop] { loop.Quit(); });
+      context->outgoing(), std::make_unique<RecipeApp>(context.get()),
+      [&loop] { loop.Quit(); });
 
   loop.Run();
   return 0;

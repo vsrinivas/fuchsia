@@ -7,11 +7,12 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/eventpair.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zx/eventpair.h>
+
 #include <memory>
 
 namespace modular {
@@ -21,10 +22,10 @@ namespace modular {
 // used as an Impl class of AppDriver.
 class ViewApp : private fuchsia::ui::app::ViewProvider {
  public:
-  ViewApp(component::StartupContext* const startup_context)
-      : startup_context_(startup_context), view_provider_binding_(this) {
-    startup_context_->outgoing()
-        .AddPublicService<fuchsia::ui::app::ViewProvider>(
+  ViewApp(sys::ComponentContext* const component_context)
+      : component_context_(component_context), view_provider_binding_(this) {
+    component_context_->outgoing()
+        ->AddPublicService<fuchsia::ui::app::ViewProvider>(
             [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
                        request) {
               FXL_DCHECK(!view_provider_binding_.is_bound());
@@ -37,8 +38,8 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
   virtual void Terminate(fit::function<void()> done) { done(); }
 
  protected:
-  component::StartupContext* startup_context() const {
-    return startup_context_;
+  sys::ComponentContext* component_context() const {
+    return component_context_;
   }
 
  private:
@@ -49,7 +50,7 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
       fidl::InterfaceHandle<
           fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {}
 
-  component::StartupContext* const startup_context_;
+  sys::ComponentContext* const component_context_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewApp);
@@ -60,11 +61,11 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
 template <class Service>
 class SingleServiceApp : public ViewApp, protected Service {
  public:
-  SingleServiceApp(component::StartupContext* const start_context)
+  SingleServiceApp(sys::ComponentContext* const start_context)
       : ViewApp(start_context), service_binding_(this) {
     // The 'template' is required here because AddPublicService is a dependent
     // template name.
-    startup_context()->outgoing().template AddPublicService<Service>(
+    component_context()->outgoing()->template AddPublicService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
           FXL_DCHECK(!service_binding_.is_bound());
           service_binding_.Bind(std::move(request));

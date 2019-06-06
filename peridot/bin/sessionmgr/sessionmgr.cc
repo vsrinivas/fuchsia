@@ -5,7 +5,6 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -98,9 +97,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+
+  trace::TraceProvider trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> component_context(
       sys::ComponentContext::Create());
 
@@ -109,8 +107,8 @@ int main(int argc, const char** argv) {
                   component_context.get());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
-      context->outgoing().deprecated_services(),
-      std::make_unique<modular::SessionmgrImpl>(context.get(),
+      component_context->outgoing(),
+      std::make_unique<modular::SessionmgrImpl>(component_context.get(),
                                                 std::move(config)),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();

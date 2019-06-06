@@ -8,10 +8,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
@@ -27,13 +27,13 @@ namespace http = ::fuchsia::net::oldhttp;
 
 class ModuleResolverApp {
  public:
-  ModuleResolverApp(component::StartupContext* const context) {
+  ModuleResolverApp(sys::ComponentContext* const context) {
     resolver_impl_ = std::make_unique<LocalModuleResolver>();
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource("module_package",
                               std::make_unique<ModulePackageSource>(context));
 
-    context->outgoing().AddPublicService<fuchsia::modular::ModuleResolver>(
+    context->outgoing()->AddPublicService<fuchsia::modular::ModuleResolver>(
         [this](
             fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
           resolver_impl_->Connect(std::move(request));
@@ -60,9 +60,9 @@ int main(int argc, const char** argv) {
     printf(kUsage, argv[0]);
     return 0;
   }
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular::ModuleResolverApp> driver(
-      context->outgoing().deprecated_services(),
+      context->outgoing(),
       std::make_unique<modular::ModuleResolverApp>(context.get()),
       [&loop] { loop.Quit(); });
   loop.Run();
