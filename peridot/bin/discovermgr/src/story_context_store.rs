@@ -20,9 +20,9 @@ pub struct StoryContextStore {
 #[derive(Derivative)]
 #[derivative(Debug, Eq, PartialEq)]
 pub struct ContextEntity {
-    reference: EntityReference,
-    contributors: HashSet<Contributor>,
-    types: HashSet<String>,
+    pub reference: EntityReference,
+    pub contributors: HashSet<Contributor>,
+    pub types: HashSet<String>,
 
     #[derivative(PartialEq = "ignore")]
     // Optional purely for testing purposes.

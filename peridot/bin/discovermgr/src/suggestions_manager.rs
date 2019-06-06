@@ -177,7 +177,8 @@ mod tests {
         "12345".to_string() => suggestion!(
             action = "SEE_CONCERTS",
             title = "See concerts for Garnet",
-            parameters = [(name = "artist", entity_reference = "abcdefgh")]
+            parameters = [(name = "artist", entity_reference = "abcdefgh")],
+            story = "story_name"
         ));
 
         // Execute the suggestion

@@ -29,13 +29,11 @@ impl ModManager {
 
     pub async fn execute_suggestion(&mut self, suggestion: Suggestion) -> Result<(), Error> {
         await!(self.execute_actions(&suggestion.action(), /*focus=*/ true))?;
-        if let Some(params) = suggestion.action().intent().parameters() {
-            for param in params {
-                self.actions
-                    .entry(param.entity_reference().to_string())
-                    .or_insert(HashSet::new())
-                    .insert(suggestion.action().clone());
-            }
+        for param in suggestion.action().intent().parameters() {
+            self.actions
+                .entry(param.entity_reference().to_string())
+                .or_insert(HashSet::new())
+                .insert(suggestion.action().clone());
         }
         Ok(())
     }
@@ -131,7 +129,8 @@ mod tests {
         let suggestion = suggestion!(
             action = "PLAY_MUSIC",
             title = "Play music",
-            parameters = [(name = "artist", entity_reference = "peridot-ref")]
+            parameters = [(name = "artist", entity_reference = "peridot-ref")],
+            story = "story_name"
         );
         let action = suggestion.action().clone();
 

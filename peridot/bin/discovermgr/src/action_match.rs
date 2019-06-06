@@ -58,13 +58,13 @@ pub fn query_text_match(query: &str, text: &str) -> bool {
 // TODO: match against keywords rather than display_info.title
 #[cfg(test)]
 fn query_action_match(action: &Action, query: &str) -> bool {
-    match &action.display_info.display_info {
-        Some(display_info) => match &display_info.title {
-            Some(title) => query_text_match(query, title),
-            None => false,
-        },
-        None => false,
-    }
+    action
+        .action_display
+        .as_ref()
+        .and_then(|action_display| action_display.display_info.as_ref())
+        .and_then(|display_info| display_info.title.as_ref())
+        .map(|title| query_text_match(query, &title))
+        .unwrap_or(false)
 }
 
 /// Match a vector of actions.

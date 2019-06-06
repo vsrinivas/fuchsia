@@ -10,28 +10,30 @@ use {
         IntentParameter as FidlIntentParameter, IntentParameterData as FidlIntentParameterData,
         SurfaceArrangement, SurfaceDependency, SurfaceRelation,
     },
+    maplit::btreeset,
     serde_derive::Deserialize,
+    std::collections::BTreeSet,
     uuid::Uuid,
 };
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Action {
-    name: String,
+    pub name: String,
     #[serde(default)]
     pub parameters: Vec<Parameter>,
-    pub display_info: ActionDisplayInfo,
+    pub action_display: Option<ActionDisplayInfo>,
     web_fulfillment: Option<WebFulfillment>,
-    fuchsia_fulfillment: Option<FuchsiaFulfillment>,
+    pub fuchsia_fulfillment: Option<FuchsiaFulfillment>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Parameter {
     #[serde(rename = "type")]
     pub parameter_type: String,
     pub name: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct ActionDisplayInfo {
     pub display_info: Option<DisplayInfo>,
     #[serde(default)]
@@ -51,7 +53,7 @@ pub struct ParameterMapping {
     parameter_property: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct WebFulfillment {
     url_template: String,
     #[serde(default)]
@@ -77,10 +79,10 @@ pub struct AddMod {
 pub struct Intent {
     pub handler: Option<String>,
     pub action: Option<String>,
-    pub parameters: Option<Vec<IntentParameter>>,
+    pub parameters: BTreeSet<IntentParameter>,
 }
 
-#[derive(Debug, Clone, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct IntentParameter {
     pub name: String,
     pub entity_reference: String,
@@ -102,17 +104,6 @@ impl Suggestion {
     pub fn display_info(&self) -> &DisplayInfo {
         &self.display_info
     }
-
-    // TODO: implement and test
-    #[allow(dead_code)]
-    fn filled_display_info(&self) -> FidlDisplayInfo {
-        // TODO: this will fill the template from the data in the suggestion intent
-        FidlDisplayInfo {
-            title: self.display_info.title.clone(),
-            subtitle: self.display_info.subtitle.clone(),
-            icon: self.display_info.icon.clone(),
-        }
-    }
 }
 
 impl IntentParameter {
@@ -131,6 +122,12 @@ impl DisplayInfo {
         self.title = Some(title.to_string());
         self
     }
+
+    #[cfg(test)]
+    pub fn with_icon(mut self, icon: &str) -> Self {
+        self.icon = Some(icon.to_string());
+        self
+    }
 }
 
 impl AddMod {
@@ -146,7 +143,6 @@ impl AddMod {
         }
     }
 
-    #[cfg(test)]
     pub fn new(intent: Intent, story_name: Option<String>, mod_name: Option<String>) -> Self {
         AddMod {
             story_name: story_name.unwrap_or(Uuid::new_v4().to_string()),
@@ -170,18 +166,18 @@ impl AddMod {
             intent: Intent {
                 handler: self.intent.handler,
                 action: self.intent.action,
-                parameters: self.intent.parameters.map(|parameters| {
-                    parameters
-                        .into_iter()
-                        .map(|p| {
-                            if p.entity_reference == old {
-                                IntentParameter { name: p.name, entity_reference: new.to_string() }
-                            } else {
-                                p
-                            }
-                        })
-                        .collect::<Vec<IntentParameter>>()
-                }),
+                parameters: self
+                    .intent
+                    .parameters
+                    .into_iter()
+                    .map(|p| {
+                        if p.entity_reference == old {
+                            IntentParameter { name: p.name, entity_reference: new.to_string() }
+                        } else {
+                            p
+                        }
+                    })
+                    .collect::<BTreeSet<IntentParameter>>(),
             },
         }
     }
@@ -189,10 +185,10 @@ impl AddMod {
 
 impl Intent {
     pub fn new() -> Self {
-        Intent { handler: None, action: None, parameters: None }
+        Intent { handler: None, action: None, parameters: btreeset!() }
     }
 
-    pub fn parameters(&self) -> &Option<Vec<IntentParameter>> {
+    pub fn parameters(&self) -> &BTreeSet<IntentParameter> {
         &self.parameters
     }
 
@@ -201,15 +197,13 @@ impl Intent {
         self
     }
 
-    #[cfg(test)]
     pub fn with_action(mut self, action: &str) -> Self {
         self.action = Some(action.to_string());
         self
     }
 
-    #[cfg(test)]
     pub fn add_parameter(mut self, name: &str, entity_reference: &str) -> Self {
-        self.parameters.get_or_insert(vec![]).push(IntentParameter {
+        self.parameters.insert(IntentParameter {
             name: name.to_string(),
             entity_reference: entity_reference.to_string(),
         });
@@ -217,9 +211,9 @@ impl Intent {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct FuchsiaFulfillment {
-    component_url: String,
+    pub component_url: String,
 }
 
 impl Into<FidlDisplayInfo> for DisplayInfo {
@@ -230,8 +224,7 @@ impl Into<FidlDisplayInfo> for DisplayInfo {
 
 impl Into<FidlSuggestion> for Suggestion {
     fn into(self) -> FidlSuggestion {
-        let display_info = self.filled_display_info();
-        FidlSuggestion { id: Some(self.id), display_info: Some(display_info) }
+        FidlSuggestion { id: Some(self.id), display_info: Some(self.display_info.into()) }
     }
 }
 
@@ -240,9 +233,9 @@ impl Into<FidlIntent> for Intent {
         FidlIntent {
             handler: self.handler,
             action: self.action,
-            parameters: self.parameters.map(|params| {
-                params.into_iter().map(|p| p.into()).collect::<Vec<FidlIntentParameter>>()
-            }),
+            parameters: Some(
+                self.parameters.into_iter().map(|p| p.into()).collect::<Vec<FidlIntentParameter>>(),
+            ),
         }
     }
 }
@@ -274,18 +267,19 @@ impl Into<FidlAddMod> for AddMod {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, std::iter::FromIterator};
 
     #[test]
     fn test_from_assets() {
         let data: Vec<Action> =
             serde_json::from_str(include_str!("../test_data/test_actions.json")).unwrap();
-        assert_eq!(data.len(), 3);
+        assert_eq!(data.len(), 4);
         assert_eq!(data[0].name, "PLAY_MUSIC");
         assert_eq!(data[1].name, "SHOW_WEATHER");
-        assert_eq!(data[2].name, "VIEW_COLLECTION");
+        assert_eq!(data[2].name, "SHOW_DIRECTIONS");
+        assert_eq!(data[3].name, "VIEW_COLLECTION");
 
-        let fulfillment = data[2].fuchsia_fulfillment.as_ref().unwrap();
+        let fulfillment = data[3].fuchsia_fulfillment.as_ref().unwrap();
         assert_eq!(
             fulfillment.component_url,
             "fuchsia-pkg://fuchsia.com/collections#meta/collections.cmx"
@@ -316,7 +310,7 @@ mod tests {
             },
             action: AddMod {
                 mod_name: "mod_name".to_string(),
-                intent: Intent { handler: None, action: None, parameters: None },
+                intent: Intent { handler: None, action: None, parameters: btreeset!() },
                 story_name: "story_name".to_string(),
             },
         };
@@ -334,10 +328,10 @@ mod tests {
         let intent = Intent {
             handler: Some("handler".to_string()),
             action: Some("action".to_string()),
-            parameters: Some(vec![IntentParameter {
+            parameters: btreeset!(IntentParameter {
                 name: "param_name".to_string(),
                 entity_reference: "ref".to_string(),
-            }]),
+            }),
         };
         let add_mod = AddMod {
             story_name: "story_name".to_string(),
@@ -354,7 +348,7 @@ mod tests {
             .parameters
             .unwrap()
             .into_iter()
-            .zip(add_mod.intent.parameters.unwrap().into_iter())
+            .zip(add_mod.intent.parameters.into_iter())
             .all(|(param_fidl, param)| {
                 param_fidl.name.unwrap() == param.name
                     && param_fidl.data
@@ -364,23 +358,21 @@ mod tests {
 
     #[test]
     fn replace_reference_in_parameters() {
+        let mut params = vec![
+            IntentParameter { name: "param_name".to_string(), entity_reference: "ref".to_string() },
+            IntentParameter {
+                name: "other_param".to_string(),
+                entity_reference: "some-other-ref".to_string(),
+            },
+            IntentParameter {
+                name: "another_param".to_string(),
+                entity_reference: "ref".to_string(),
+            },
+        ];
         let mut intent = Intent {
             handler: Some("handler".to_string()),
             action: Some("action".to_string()),
-            parameters: Some(vec![
-                IntentParameter {
-                    name: "param_name".to_string(),
-                    entity_reference: "ref".to_string(),
-                },
-                IntentParameter {
-                    name: "other_param".to_string(),
-                    entity_reference: "some-other-ref".to_string(),
-                },
-                IntentParameter {
-                    name: "another_param".to_string(),
-                    entity_reference: "ref".to_string(),
-                },
-            ]),
+            parameters: BTreeSet::from_iter(params.clone().into_iter()),
         };
         let add_mod = AddMod {
             story_name: "story_name".to_string(),
@@ -388,8 +380,9 @@ mod tests {
             intent: intent.clone(),
         };
         let add_mod = add_mod.replace_reference_in_parameters("ref", "new-ref");
-        intent.parameters.as_mut().map(|params| params[0].entity_reference = "new-ref".to_string());
-        intent.parameters.as_mut().map(|params| params[2].entity_reference = "new-ref".to_string());
+        params[0].entity_reference = "new-ref".to_string();
+        params[2].entity_reference = "new-ref".to_string();
+        intent.parameters = BTreeSet::from_iter(params.into_iter());
         assert_eq!(add_mod.intent, intent);
     }
 }

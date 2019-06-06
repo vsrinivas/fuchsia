@@ -25,17 +25,20 @@ impl TestSuggestionsProvider {
                 suggestion!(
                     action = "PLAY_MUSIC",
                     title = "Listen to Garnet",
-                    parameters = [(name = "artist", entity_reference = "abcdefgh")]
+                    parameters = [(name = "artist", entity_reference = "abcdefgh")],
+                    story = "story_name"
                 ),
                 suggestion!(
                     action = "PLAY_MUSIC",
                     title = "Listen to Peridot",
-                    parameters = [(name = "artist", entity_reference = "123456")]
+                    parameters = [(name = "artist", entity_reference = "123456")],
+                    story = "story_name"
                 ),
                 suggestion!(
                     action = "SEE_CONCERTS",
                     title = "See concerts for Garnet",
-                    parameters = [(name = "artist", entity_reference = "abcdefgh")]
+                    parameters = [(name = "artist", entity_reference = "abcdefgh")],
+                    story = "story_name"
                 ),
             ],
         }

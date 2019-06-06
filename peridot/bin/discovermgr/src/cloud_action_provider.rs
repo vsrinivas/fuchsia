@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
 use {
     crate::models::Action, failure::Error, fidl_fuchsia_net_oldhttp as http,
     fuchsia_async as fasync, fuchsia_component as component, fuchsia_syslog::macros::*,

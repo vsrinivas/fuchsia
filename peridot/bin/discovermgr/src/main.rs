@@ -6,8 +6,11 @@
 
 use {
     crate::{
-        mod_manager::ModManager, story_context_store::StoryContextStore,
-        suggestion_providers::PackageSuggestionsProvider, suggestions_manager::SuggestionsManager,
+        cloud_action_provider::get_actions,
+        mod_manager::ModManager,
+        story_context_store::StoryContextStore,
+        suggestion_providers::{ContextualSuggestionsProvider, PackageSuggestionsProvider},
+        suggestions_manager::SuggestionsManager,
         suggestions_service::SuggestionsService,
     },
     failure::{Error, ResultExt},
@@ -71,6 +74,14 @@ async fn main() -> Result<(), Error> {
 
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
+
+    let actions = await!(get_actions()).unwrap_or_else(|e| {
+        fx_log_err!("Error fetching actions index: {}", e);
+        vec![]
+    });
+    suggestions_manager
+        .register_suggestions_provider(Box::new(ContextualSuggestionsProvider::new(actions)));
+
     let suggestions_manager_ref = Arc::new(Mutex::new(suggestions_manager));
 
     let entity_resolver = connect_to_service::<EntityResolverMarker>()
