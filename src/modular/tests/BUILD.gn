@@ -133,7 +133,6 @@ executable("story_shell_factory_test") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
@@ -239,6 +238,7 @@ test_package("modular_integration_tests") {
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
   ]
 }
 

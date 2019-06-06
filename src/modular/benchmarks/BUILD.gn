@@ -1,0 +1,103 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/test/test_package.gni")
+
+group("benchmarks") {
+  testonly = true
+
+  deps = [
+    ":modular_benchmarks",
+
+    # modular_test_harness is a dep for any test that uses test_harness_fixture
+    # (all of the tests below). Add it here so that an fx set --with
+    # //src/modular/benchmarks includes it.
+    "//peridot/packages/tests:modular_test_harness",
+  ]
+}
+
+executable("modular_benchmarks_bin") {
+  testonly = true
+
+  output_name = "modular_benchmarks"
+
+  sources = [
+    "benchmarks.cc",
+  ]
+
+  deps = [
+    "//garnet/testing/benchmarking",
+  ]
+}
+
+executable("story_benchmark_test") {
+  testonly = true
+
+  output_name = "story_benchmark_test"
+
+  sources = [
+    "story_benchmark_test.cc",
+  ]
+
+  deps = [
+    ":tracing_waiter",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("modular_benchmarks") {
+  tests = [
+    {
+      name = "story_benchmark_test"
+      environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("story_benchmark_test.tspec")
+      dest = "story_benchmark_test.tspec"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "modular_benchmarks"
+      shell = true
+    },
+  ]
+
+  deps = [
+    ":modular_benchmarks_bin",
+    ":story_benchmark_test",
+  ]
+}
+
+source_set("tracing_waiter") {
+  sources = [
+    "tracing_waiter.cc",
+    "tracing_waiter.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//src/lib/fxl",
+  ]
+}

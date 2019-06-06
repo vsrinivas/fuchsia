@@ -4,7 +4,9 @@
 
 group("modular") {
   testonly = true
+
   deps = [
+    ":benchmarks",
     ":tests",
     "bundles",
   ]
@@ -15,5 +17,13 @@ group("tests") {
 
   deps = [
     "tests",  # tests/ directory
+  ]
+}
+
+group("benchmarks") {
+  testonly = true
+
+  deps = [
+    "benchmarks",  # benchmarks/ directory
   ]
 }

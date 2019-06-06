@@ -1,0 +1,44 @@
+{
+  "test_suite_name": "fuchsia.modular",
+  "app": "fuchsia-pkg://fuchsia.com/modular_benchmarks#meta/story_benchmark_test.cmx",
+  "args": [],
+  "categories": ["benchmark", "modular"],
+  "duration": 120,
+  "measure": [
+    {
+      "type": "duration",
+      "event_name": "link/set",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "link/trans",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "story/create",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "story/info",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "story/start",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "story/stop",
+      "event_category": "benchmark"
+    },
+    {
+      "type": "duration",
+      "event_name": "user/logout",
+      "event_category": "benchmark"
+    }
+  ]
+}

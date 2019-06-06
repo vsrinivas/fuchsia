@@ -51,7 +51,16 @@ group("testing") {
 group("tests") {
   testonly = true
   public_deps = [
-    "//peridot/packages/tests:modular_test_harness",
+    ":testing",
     "//src/modular:tests",
+  ]
+}
+
+# Packages which contain benchmarks.
+group("benchmarks") {
+  testonly = true
+  public_deps = [
+    ":testing",
+    "//src/modular:benchmarks",
   ]
 }

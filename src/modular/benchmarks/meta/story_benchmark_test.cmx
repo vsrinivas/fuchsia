@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/story_benchmark_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}
