@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 test_package("bugreport_tests") {
@@ -65,21 +66,15 @@ executable("bugreport_integration_test") {
 }
 
 if (current_toolchain == host_toolchain) {
-  test_package("bugreport_client_tests") {
-    tests = [
-      {
-        name = "bugreport_client_unittests"
-      },
-    ]
+  group("bugreport_client_tests") {
+    testonly = true
 
     deps = [
-      ":bugreport_client_unittests",
+      ":bugreport_client_unittest",
     ]
   }
 
-  executable("bugreport_client_unittests") {
-    testonly = true
-
+  test("bugreport_client_unittest") {
     sources = [
       "bug_report_client_unittest.cc",
     ]
