@@ -12,6 +12,8 @@ export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
 unset devshell_lib_dir
 
+source "${FUCHSIA_DIR}/buildtools/vars.sh"
+
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
   set -x
 fi
@@ -38,16 +40,21 @@ function fx-symbolize {
   if [[ -z "$FUCHSIA_BUILD_DIR" ]]; then
     fx-config-read
   fi
-  if [[ -z "$BUILDTOOLS_CLANG_DIR" ]]; then
-    source "${FUCHSIA_DIR}/buildtools/vars.sh"
-  fi
-  local idstxt="${FUCHSIA_BUILD_DIR}/ids.txt"
+  local idstxt=()
   if [[ $# -gt 0 ]]; then
-    idstxt="$1"
+    idstxt=(-ids-rel -ids "$1")
   fi
   local prebuilt_dir="${FUCHSIA_DIR}/zircon/prebuilt/downloads"
   local llvm_symbolizer="${BUILDTOOLS_CLANG_DIR}/bin/llvm-symbolizer"
-  "${prebuilt_dir}/symbolize" -ids-rel -ids "$idstxt" -llvm-symbolizer "$llvm_symbolizer"
+  local download_dir="${FUCHSIA_DIR}/prebuilt_build_ids"
+  local toolchain_dir="${BUILDTOOLS_CLANG_DIR}/lib/debug/.build-id"
+  local out_dir="${FUCHSIA_BUILD_DIR}/.build-id"
+  local zircon_dir="${ZIRCON_BUILDROOT}/.build-id"
+  set -x
+  "${prebuilt_dir}/symbolize" -llvm-symbolizer "$llvm_symbolizer" \
+    "${idstxt[@]}" \
+    -build-id-dir "$download_dir" -build-id-dir "$toolchain_dir" \
+    -build-id-dir "$out_dir" -build-id-dir "$zircon_dir"
 }
 
 function fx-gen {

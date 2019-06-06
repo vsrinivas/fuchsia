@@ -83,4 +83,8 @@ else
     IDARGS=(-ids "$IDSTXT")
 fi
 
-exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" "${IDARGS[@]}" "$@"
+CLANG_BUILD_ID_DIR="${PREBUILT_DIR}/clang/lib/debug/.build-id"
+
+exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" \
+  -build-id-dir "$CLANG_BUILD_ID_DIR" \
+  "${IDARGS[@]}" "$@"
