@@ -30,7 +30,6 @@ executable_package("clipboard_test_module") {
     ":defs",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
-    "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",

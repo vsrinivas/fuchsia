@@ -38,7 +38,6 @@ executable_package("component_context_test_module") {
     "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
-    "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -65,7 +64,6 @@ executable_package("component_context_test_one_agent") {
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
-    "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -89,7 +87,6 @@ executable_package("component_context_test_two_agent") {
     ":defs",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
-    "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -113,7 +110,6 @@ executable_package("component_context_test_unstoppable_agent") {
     ":defs",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/integration_testing/cpp",
-    "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular",
     "//zircon/public/lib/async-loop-cpp",
   ]

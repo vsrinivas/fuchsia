@@ -18,7 +18,6 @@
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/testing/session_shell_impl.h"
-#include "peridot/tests/common/defs.h"
 
 namespace {
 

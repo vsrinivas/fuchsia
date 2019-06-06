@@ -18,7 +18,6 @@
 #include "peridot/lib/testing/session_shell_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
-#include "peridot/tests/common/defs.h"
 #include "peridot/tests/module_context/defs.h"
 
 using ::modular::testing::Await;

@@ -179,7 +179,6 @@ executable("story_shell_embedded_mod_test") {
   deps = [
     "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//peridot/tests/common:defs",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.views",

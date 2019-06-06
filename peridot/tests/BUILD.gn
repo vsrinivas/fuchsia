@@ -55,14 +55,12 @@ group("tests") {
     "agent_services_tests",
     "benchmarks",
     "clipboard",
-    "common",
     "component_context",
     "modular_config",
     "modular_login_tests",
     "module_context",
     "parent_child",
     "sessionctl",
-    "story_shell",
     "trigger",
   ]
 }

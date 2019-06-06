@@ -10,7 +10,6 @@
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"
 #include "peridot/tests/clipboard/defs.h"
-#include "peridot/tests/common/defs.h"
 
 using modular::testing::Signal;
 using modular::testing::TestPoint;
