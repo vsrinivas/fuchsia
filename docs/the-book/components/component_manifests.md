@@ -1,9 +1,10 @@
 # Component manifests
 
-A component manifest is a declaration that defines a component. This document
-gives an overview of the concepts used by component manifests, and presents the
-syntax for writing component manifest source (CML). Component manifests
-contain:
+A [component manifest](#component-manifest) is a file that defines a component
+by encoding a [component declaration](#component-declaration). This document
+gives an overview of the concepts used by component declarations, and presents
+the syntax for writing [component manifest source](#component-manifest-source).
+Component declarations contain:
 
 - Information about [how to run the component](#runtime).
 - The realm's [child component instances](#child-component-instances).
@@ -12,30 +13,40 @@ contain:
 - [Freeform data ("facets")](#facet-metadata) which is ignored by the component
   framework but can be interpreted by third parties.
 
-## Formats
+## Manifests and declarations
 
-A component manifest can be represented in multiple formats, depending on the
-context.
+This section explains the distinction between component manifests, component
+manifest sources, and component declarations.
 
-### CML format
+### Component manifest
 
-*CML* (*component manifest language*) is the developer-facing source format for
-component manifests. CML files are JSON5 files that end with a `.cml` extension.
-Descriptions and examples of the CML syntax are contained in this document: see
+A *component manifest* is a file that encodes a [component
+declaration](#component-declaration), usually distributed as part of a
+[package](/sdk/docs/packages.md). The binary format is a JSON file mapping
+one-to-one onto the FIDL representation, by convention ending in a `.cm`
+extension.
+
+A [fuchsia-pkg URL](/docs/the-book/package_uri.md) with a component manifest
+fragment identifies a component in a package.
+
+### Component manifest source
+
+A *component manifest source* is a file that encodes part of a component
+manifest. Component manifest sources are written in *CML* (*component manifest
+language*), which is the developer-facing source format for component manifests.
+CML files are JSON5 files that end with a `.cml` extension. Descriptions and
+examples of the CML syntax are contained in this document: see
 [Syntax](#syntax).
 
-### FIDL format
+Component manifest sources are compiled to [component
+manifests](#component-manifest) by the [`cmc`](/src/sys/cmc) tool.
+
+### Component declaration
 
 The [`ComponentDecl`](/sdk/fidl/fuchsia.sys2/decls/component_decl.fidl) FIDL
-table is the canonical representation of a component manifest. It is the
-representation used by the component framework APIs and the form in which
-component manifests are provided to components at runtime.
-
-### Binary format
-
-The binary format stores component manifests at rest (for example, as part of a
-package). The binary format is a JSON file mapping one-to-one onto the FIDL
-representation, by convention ending in a `.cm` extension.
+table is a *component declaration*. Component declarations are used by the
+component framework APIs to represent components and may be provided to
+components at runtime.
 
 ## Concepts
 
