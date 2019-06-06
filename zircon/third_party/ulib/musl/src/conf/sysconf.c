@@ -10,7 +10,6 @@
 
 #define JT(x) (-256 | (x))
 #define VER JT(1)
-#define JT_ARG_MAX JT(2)
 #define JT_MQ_PRIO_MAX JT(3)
 #define JT_PAGE_SIZE JT(4)
 #define JT_SEM_VALUE_MAX JT(5)
@@ -24,7 +23,7 @@
 
 long sysconf(int name) {
     static const short values[] = {
-            [_SC_ARG_MAX] = JT_ARG_MAX,
+            [_SC_ARG_MAX] = -1,
             [_SC_CHILD_MAX] = JT_CHILD_MAX,
             [_SC_CLK_TCK] = 100,
             [_SC_NGROUPS_MAX] = 32,
@@ -176,8 +175,6 @@ long sysconf(int name) {
     switch ((unsigned char)values[name]) {
     case VER & 255:
         return _POSIX_VERSION;
-    case JT_ARG_MAX & 255:
-        return ARG_MAX;
     case JT_MQ_PRIO_MAX & 255:
         return MQ_PRIO_MAX;
     case JT_PAGE_SIZE & 255:

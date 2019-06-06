@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <unistd.h>
-
 #include <unittest/unittest.h>
 
 static bool sysconf_test(void) {
@@ -14,9 +14,18 @@ static bool sysconf_test(void) {
   EXPECT_GE(rv, 1, "wrong number of cpus configured");
   rv = sysconf(_SC_NPROCESSORS_ONLN);
   EXPECT_GE(rv, 1, "wrong number of cpus currently online");
+
   // test on invalid input
+  errno = 0;
   rv = sysconf(-1);
   EXPECT_EQ(rv, -1, "wrong return value on invalid input");
+  EXPECT_EQ(errno, EINVAL, "wrong errno value on invalid input");
+
+  // Indeterminate limit.
+  errno = 0;
+  rv = sysconf(_SC_ARG_MAX);
+  EXPECT_EQ(rv, -1, "wrong return value for indeterminate limit {ARG_MAX}");
+  EXPECT_EQ(errno, 0, "wrong errno value for indeterminate limit {ARG_MAX}");
 
   END_TEST;
 }

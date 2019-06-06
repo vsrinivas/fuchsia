@@ -49,7 +49,6 @@
 #define PATH_MAX 4096
 #define NZERO 20
 #define NGROUPS_MAX 32
-#define ARG_MAX 131072
 #define IOV_MAX 1024
 #define SYMLOOP_MAX 40
 #define WORD_BIT 32
