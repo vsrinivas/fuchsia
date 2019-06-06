@@ -5,10 +5,10 @@
 #ifndef LIB_GTEST_TEST_LOOP_FIXTURE_H_
 #define LIB_GTEST_TEST_LOOP_FIXTURE_H_
 
-#include <functional>
-
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>
+
+#include <functional>
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/macros.h"

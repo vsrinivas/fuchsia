@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_TESTING_TIME_KEEPER_H_
+#define LIB_ASYNC_TESTING_TIME_KEEPER_H_
 
 #include <lib/zx/time.h>
 
@@ -27,4 +28,6 @@ public:
     virtual zx::time Now() const = 0;
 };
 
-} // namespace
+} // namespace async
+
+#endif // LIB_ASYNC_TESTING_TIME_KEEPER_H_

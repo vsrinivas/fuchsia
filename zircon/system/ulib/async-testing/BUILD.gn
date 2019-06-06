@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("async-testutils") {
+library("async-testing") {
   sdk = "source"
   sdk_headers = [
-    "lib/async-testutils/dispatcher_stub.h",
-    "lib/async-testutils/test_loop.h",
-    "lib/async-testutils/test_loop_dispatcher.h",
-    "lib/async-testutils/time-keeper.h",
+    "lib/async-testing/dispatcher_stub.h",
+    "lib/async-testing/test_loop.h",
+    "lib/async-testing/test_loop_dispatcher.h",
+    "lib/async-testing/time-keeper.h",
   ]
   testonly = true
   sources = [
@@ -18,10 +18,10 @@ library("async-testutils") {
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
-    # <lib/async-testutils/dispatcher.h_stub> has #include <lib/async/dispatcher.h>.
+    # <lib/async-testing/dispatcher.h_stub> has #include <lib/async/dispatcher.h>.
     "$zx/system/ulib/async:headers",
 
-    # <lib/async-testutils/dispatcher.h_stub> has #include <lib/zx/time.h>.
+    # <lib/async-testing/dispatcher.h_stub> has #include <lib/zx/time.h>.
     "$zx/system/ulib/zx:headers",
   ]
   deps = [

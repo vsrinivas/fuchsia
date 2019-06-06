@@ -5,11 +5,11 @@
 group("test") {
   testonly = true
   deps = [
-    ":async-testutils",
+    ":async-testing",
   ]
 }
 
-test("async-testutils") {
+test("async-testing") {
   sources = [
     "test_loop_tests.cpp",
   ]
@@ -17,7 +17,7 @@ test("async-testutils") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-testutils",
+    "$zx/system/ulib/async-testing",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/unittest",

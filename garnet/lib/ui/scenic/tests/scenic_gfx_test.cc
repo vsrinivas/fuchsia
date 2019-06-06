@@ -4,7 +4,8 @@
 
 #include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
 
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
+
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/scenic/tests/mocks.h"

@@ -62,7 +62,7 @@ source_set("future_unittest") {
   deps = [
     ":future",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/async-testing",
   ]
 }
 

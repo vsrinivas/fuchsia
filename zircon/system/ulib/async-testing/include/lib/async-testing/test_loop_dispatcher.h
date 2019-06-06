@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ASYNC_TESTUTILS_TEST_LOOP_DISPATCHER_H_
-#define LIB_ASYNC_TESTUTILS_TEST_LOOP_DISPATCHER_H_
+#ifndef LIB_ASYNC_TESTING_TEST_LOOP_DISPATCHER_H_
+#define LIB_ASYNC_TESTING_TEST_LOOP_DISPATCHER_H_
 
 #include <list>
 #include <memory>
 #include <set>
 
-#include <lib/async-testutils/dispatcher_stub.h>
-#include <lib/async-testutils/time-keeper.h>
+#include <lib/async-testing/dispatcher_stub.h>
+#include <lib/async-testing/time-keeper.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
@@ -86,4 +86,4 @@ private:
 
 } // namespace async
 
-#endif // LIB_ASYNC_TESTUTILS_TEST_LOOP_DISPATCHER_H_
+#endif // LIB_ASYNC_TESTING_TEST_LOOP_DISPATCHER_H_

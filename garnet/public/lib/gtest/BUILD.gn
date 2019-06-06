@@ -21,7 +21,7 @@ source_set("gtest") {
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

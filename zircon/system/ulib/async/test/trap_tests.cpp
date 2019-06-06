@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-testutils/dispatcher_stub.h>
+#include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/trap.h>
 #include <unittest/unittest.h>
 
@@ -104,7 +104,7 @@ bool guest_bell_trap_test() {
     Harness harness;
 
     EXPECT_EQ(ZX_OK, harness.trap().SetTrap(
-                  &dispatcher, *zx::unowned_guest(dummy_guest), dummy_addr, dummy_length));
+                         &dispatcher, *zx::unowned_guest(dummy_guest), dummy_addr, dummy_length));
     EXPECT_EQ(dummy_guest, dispatcher.last_guest);
     EXPECT_EQ(dummy_addr, dispatcher.last_addr);
     EXPECT_EQ(dummy_length, dispatcher.last_length);

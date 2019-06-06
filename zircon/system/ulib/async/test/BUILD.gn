@@ -23,7 +23,7 @@ test("async") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-testutils",
+    "$zx/system/ulib/async-testing",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",

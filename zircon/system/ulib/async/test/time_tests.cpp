@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/time.h>
-#include <lib/async-testutils/dispatcher_stub.h>
 #include <unittest/unittest.h>
-
 
 namespace {
 

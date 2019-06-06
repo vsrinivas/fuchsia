@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gtest/gtest.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/callback/scoped_task_runner.h>
-
 #include <pthread.h>
+#include <src/lib/fxl/macros.h>
 
 #include <thread>
-
-#include <gtest/gtest.h>
-#include <lib/async-testutils/test_loop.h>
-#include <src/lib/fxl/macros.h>
 
 namespace callback {
 namespace {

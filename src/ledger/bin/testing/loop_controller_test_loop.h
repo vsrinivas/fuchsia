@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_TEST_LOOP_H_
 #define SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_TEST_LOOP_H_
 
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
 
 #include <memory>
 

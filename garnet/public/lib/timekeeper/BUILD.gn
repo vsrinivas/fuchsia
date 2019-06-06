@@ -49,7 +49,7 @@ source_set("testing") {
   public_deps = [
     ":timekeeper",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
   ]
 }
@@ -68,6 +68,6 @@ source_set("unittests") {
     ":testing",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/async-testing",
   ]
 }

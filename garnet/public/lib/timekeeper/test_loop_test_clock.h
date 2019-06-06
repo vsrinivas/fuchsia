@@ -5,7 +5,7 @@
 #ifndef LIB_TIMEKEEPER_TEST_LOOP_TEST_CLOCK_H_
 #define LIB_TIMEKEEPER_TEST_LOOP_TEST_CLOCK_H_
 
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/timekeeper/monotonic_test_clock_base.h>
 
 namespace timekeeper {

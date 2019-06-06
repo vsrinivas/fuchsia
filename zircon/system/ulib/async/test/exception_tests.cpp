@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <lib/async-testutils/dispatcher_stub.h>
+#include <lib/async-testing/dispatcher_stub.h>
 #include <lib/async/cpp/exception.h>
+#include <stdio.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -83,10 +83,10 @@ public:
     LambdaHarness(zx_handle_t task = ZX_HANDLE_INVALID,
                   uint32_t options = 0)
         : exception_{task, options,
-                [this](async_dispatcher_t* dispatcher, async::Exception* exception,
-                       zx_status_t status, const zx_port_packet_t* report) {
-                    Handler(dispatcher, exception, status, report);
-                }} {}
+                     [this](async_dispatcher_t* dispatcher, async::Exception* exception,
+                            zx_status_t status, const zx_port_packet_t* report) {
+                         Handler(dispatcher, exception, status, report);
+                     }} {}
 
     async::ExceptionBase& exception() override { return exception_; }
 

@@ -75,7 +75,7 @@ if (current_cpu != "") {
       "$zx/system/uapp/thermal-cli:thermal-cli-test",
       "$zx/system/ulib/affine/test",
       "$zx/system/ulib/async-loop/test",
-      "$zx/system/ulib/async-testutils/test",
+      "$zx/system/ulib/async-testing/test",
       "$zx/system/ulib/async/test",
       "$zx/system/ulib/backtrace-request/test",
       "$zx/system/ulib/bitmap/test",

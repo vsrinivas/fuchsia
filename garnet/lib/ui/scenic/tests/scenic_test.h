@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
 #define GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
 
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/session.h>

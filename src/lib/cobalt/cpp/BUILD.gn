@@ -64,7 +64,7 @@ source_set("unittests") {
     ":test_metrics_registry_cc",
     "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/async-testing",
   ]
 }
 

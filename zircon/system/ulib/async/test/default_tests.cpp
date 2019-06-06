@@ -6,7 +6,7 @@
 
 #include <threads.h>
 
-#include <lib/async-testutils/dispatcher_stub.h>
+#include <lib/async-testing/dispatcher_stub.h>
 #include <unittest/unittest.h>
 
 namespace {

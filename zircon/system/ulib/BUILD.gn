@@ -23,7 +23,7 @@ group("ulib") {
     "async:async-default",
     "async-loop",
     "async-loop:async-loop-cpp",
-    "async-testutils",
+    "async-testing",
     "audio-driver-proto",
     "audio-proto-utils",
     "audio-utils",

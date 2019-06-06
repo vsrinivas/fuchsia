@@ -1,15 +1,12 @@
+#include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/future.h>
-
-#include <string>
-
-#include <lib/async-testutils/test_loop.h>
 #include <src/lib/fxl/logging.h>
-
-#include "gtest/gtest-spi.h"
-#include "gtest/gtest.h"
 
 #include <memory>
 #include <string>
+
+#include "gtest/gtest-spi.h"
+#include "gtest/gtest.h"
 
 namespace modular {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-testutils/dispatcher_stub.h>
+#include <lib/async-testing/dispatcher_stub.h>
 
 namespace async {
 
@@ -35,8 +35,7 @@ zx_status_t stub_queue_packet(async_dispatcher_t* dispatcher, async_receiver_t* 
 
 zx_status_t stub_set_guest_bell_trap(async_dispatcher_t* dispatcher, async_guest_bell_trap_t* trap,
                                      zx_handle_t guest, zx_vaddr_t addr, size_t length) {
-    return static_cast<DispatcherStub*>(dispatcher)->SetGuestBellTrap(
-        trap, *zx::unowned_guest(guest), addr, length);
+    return static_cast<DispatcherStub*>(dispatcher)->SetGuestBellTrap(trap, *zx::unowned_guest(guest), addr, length);
 }
 
 zx_status_t stub_bind_exception_port(async_dispatcher_t* dispatcher,
@@ -103,13 +102,13 @@ zx_status_t DispatcherStub::CancelTask(async_task_t* task) {
 }
 
 zx_status_t DispatcherStub::QueuePacket(async_receiver_t* receiver,
-                                   const zx_packet_user_t* data) {
+                                        const zx_packet_user_t* data) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t DispatcherStub::SetGuestBellTrap(async_guest_bell_trap_t* trap,
-                                        const zx::guest& guest,
-                                        zx_vaddr_t addr, size_t length) {
+                                             const zx::guest& guest,
+                                             zx_vaddr_t addr, size_t length) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

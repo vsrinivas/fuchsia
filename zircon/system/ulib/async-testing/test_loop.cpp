@@ -4,13 +4,13 @@
 
 // TODO(joshuseaton): Once std lands in Zircon, simplify everything below.
 
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
 
 #include <stdlib.h>
 
 #include <algorithm>
 
-#include <lib/async-testutils/time-keeper.h>
+#include <lib/async-testing/time-keeper.h>
 #include <lib/async/default.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

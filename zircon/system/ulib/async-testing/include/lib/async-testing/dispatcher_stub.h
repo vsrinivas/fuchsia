@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ASYNC_TESTING_DISPATCHER_STUB_H_
+#define LIB_ASYNC_TESTING_DISPATCHER_STUB_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/zx/guest.h>
@@ -32,3 +33,5 @@ public:
 };
 
 } // namespace async
+
+#endif // LIB_ASYNC_TESTING_DISPATCHER_STUB_H_

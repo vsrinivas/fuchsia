@@ -40,7 +40,7 @@ source_set("unittests") {
     "//garnet/public/lib/callback",
     "//src/ledger/bin/fidl/syncable/fidl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/async-testing",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

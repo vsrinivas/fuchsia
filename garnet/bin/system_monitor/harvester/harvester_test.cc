@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
-#include <lib/async-testutils/dispatcher_stub.h>
+#include <lib/async-testing/dispatcher_stub.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <zircon/process.h>

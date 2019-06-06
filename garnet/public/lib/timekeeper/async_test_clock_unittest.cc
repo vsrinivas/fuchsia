@@ -4,7 +4,7 @@
 
 #include "garnet/public/lib/timekeeper/async_test_clock.h"
 
-#include <lib/async-testutils/test_loop.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/time.h>
 
 #include "gtest/gtest.h"
