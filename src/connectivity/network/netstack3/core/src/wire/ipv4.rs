@@ -13,6 +13,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
+use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv4, Ipv4Addr, Ipv4Option};
 use crate::wire::util::checksum::Checksum;
 use crate::wire::util::records::options::Options;
@@ -207,7 +208,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     // The size of the header prefix and options.
-    fn header_len(&self) -> usize {
+    pub(crate) fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
     }
 
@@ -233,6 +234,12 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         s.df_flag(self.df_flag());
         s.mf_flag(self.mf_flag());
         s
+    }
+}
+
+impl<B: ByteSlice> FragmentablePacket for Ipv4Packet<B> {
+    fn fragment_data(&self) -> Option<(u32, u16, bool)> {
+        Some((self.id() as u32, self.fragment_offset(), self.mf_flag()))
     }
 }
 

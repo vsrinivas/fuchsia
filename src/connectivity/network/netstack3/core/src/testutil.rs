@@ -94,7 +94,7 @@ pub(crate) fn set_logger_for_test() {
     })
 }
 
-/// Skip current (fake) time forward to trigger the next timer event.
+/// Skip current time forward to trigger the next timer event.
 ///
 /// Returns true if a timer was triggered, false if there were no timers waiting
 /// to be triggered.
@@ -107,6 +107,29 @@ pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> boo
         }
         None => false,
     }
+}
+
+/// Skip current time forward by `duration`, triggering all timer events until then,
+/// inclusive.
+///
+/// Returns the number of timer events triggered.
+pub(crate) fn run_for(ctx: &mut Context<DummyEventDispatcher>, duration: Duration) -> usize {
+    let end_time = ctx.dispatcher.current_time + duration;
+    let mut timers_fired = 0;
+
+    while let Some(tmr) = ctx.dispatcher.timer_events.peek() {
+        if tmr.0 > end_time {
+            break;
+        }
+
+        assert!(trigger_next_timer(ctx));
+        timers_fired += 1;
+    }
+
+    assert!(ctx.dispatcher.current_time <= end_time);
+    ctx.dispatcher.current_time = end_time;
+
+    timers_fired
 }
 
 /// Trigger timer events until`f` callback returns true or passes the max
@@ -530,7 +553,7 @@ impl DummyEventDispatcher {
         self.timer_events.iter().map(|t| (&t.0, &t.1))
     }
 
-    /// Get the current (fake) time
+    /// Get the current time
     pub(crate) fn current_time(&self) -> Instant {
         self.current_time
     }

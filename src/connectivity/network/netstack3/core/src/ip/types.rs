@@ -927,6 +927,9 @@ mod internal {
         fn set_ttl(&mut self, ttl: u8)
         where
             B: ByteSliceMut;
+
+        /// Get the body.
+        fn body(&self) -> &[u8];
     }
 
     impl<B: ByteSlice> IpPacket<B, Ipv4> for Ipv4Packet<B> {
@@ -950,6 +953,9 @@ mod internal {
         {
             Ipv4Packet::set_ttl(self, ttl)
         }
+        fn body(&self) -> &[u8] {
+            Ipv4Packet::body(self)
+        }
     }
 
     impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
@@ -972,6 +978,9 @@ mod internal {
             B: ByteSliceMut,
         {
             Ipv6Packet::set_hop_limit(self, ttl)
+        }
+        fn body(&self) -> &[u8] {
+            Ipv6Packet::body(self)
         }
     }
 

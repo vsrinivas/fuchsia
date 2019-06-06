@@ -46,7 +46,7 @@ pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
 use crate::device::{DeviceLayerState, DeviceLayerTimerId};
-use crate::ip::IpLayerState;
+use crate::ip::{IpLayerState, IpLayerTimerId};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of an address.
@@ -180,15 +180,17 @@ impl<D: EventDispatcher + Default> Context<D> {
 }
 
 /// The identifier for any timer event.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct TimerId(TimerIdInner);
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum TimerIdInner {
     /// A timer event in the device layer.
     DeviceLayer(DeviceLayerTimerId),
     /// A timer event in the transport layer.
     TransportLayer(TransportLayerTimerId),
+    /// A timer event in the IP layer.
+    IpLayer(IpLayerTimerId),
     /// A no-op timer event (used for tests)
     #[cfg(test)]
     Nop(usize),
@@ -202,6 +204,9 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
         }
         TimerId(TimerIdInner::TransportLayer(x)) => {
             transport::handle_timeout(ctx, x);
+        }
+        TimerId(TimerIdInner::IpLayer(x)) => {
+            ip::handle_timeout(ctx, x);
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {

@@ -122,7 +122,7 @@ impl Default for DeviceLayerState {
 }
 
 /// The identifier for timer events in the device layer.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub(crate) enum DeviceLayerTimerId {
     /// A timer event in the ARP layer with a protocol type of IPv4
     ArpIpv4(arp::ArpTimerId<Ipv4Addr>),

@@ -60,7 +60,7 @@ pub(crate) mod igmp;
 pub(crate) mod ipv4;
 pub(crate) mod ipv6;
 pub(crate) mod tcp;
-mod util;
+pub(crate) mod util;
 
 #[cfg(test)]
 pub(crate) mod testdata;

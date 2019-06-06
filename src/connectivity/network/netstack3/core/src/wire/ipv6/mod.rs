@@ -16,8 +16,8 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
+use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv6, Ipv6Addr};
-
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
 use crate::wire::util::records::Records;
 
@@ -290,6 +290,12 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         }
 
         Ok(packet)
+    }
+}
+
+impl<B: ByteSlice> FragmentablePacket for Ipv6Packet<B> {
+    fn fragment_data(&self) -> Option<(u32, u16, bool)> {
+        unimplemented!("Not implemented yet for Ipv6Packet");
     }
 }
 

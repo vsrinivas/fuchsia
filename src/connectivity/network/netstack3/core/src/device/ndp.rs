@@ -166,7 +166,7 @@ impl<D: NdpDevice> Default for NdpState<D> {
 /// The identifier for timer events in NDP operations.
 ///
 /// This is used to retry sending Neighbor Discovery Protocol requests.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub(crate) struct NdpTimerId {
     device_id: u64,
     neighbor_addr: Ipv6Addr,
