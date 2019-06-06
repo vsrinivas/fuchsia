@@ -104,13 +104,14 @@ class Sl4f {
       }
 
       _log.info('Try $attempt at starting sl4f.');
-      // 'run -d' doesn't exit with error if the component doesn't exist
-      // (CF-666). Since we'd like to have clear logs about that particular
-      // error, we don't run with '-d', but that in turn means that the ssh
-      // command will be waiting for sl4f to exit. So we rely only on
-      // [_isRunning] to tell whether sl4f has started successfully.
+      // We run sl4f with `-d` to make sure that it keeps running even if sshd
+      // dies or the connection somehow breaks.
+      // This has the nasty side effect that we won't get an error in the logs
+      // if sl4f.cmx isn't available. This shouldn't be an issue if the users
+      // start the test with the given instructions, but it could still happen
+      // if something gets misconfigured in the product config.
       // ignore: unawaited_futures
-      ssh('run $_sl4fComponentUrl');
+      ssh('run -d $_sl4fComponentUrl');
 
       if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
         _log.info('SL4F has started.');
