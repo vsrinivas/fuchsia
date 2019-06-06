@@ -7,7 +7,7 @@ use {
     cm_fidl_translator::translate,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_uri::boot_uri::BootUri,
+    fuchsia_url::boot_uri::BootUri,
     futures::future::FutureObj,
     std::path::PathBuf,
 };

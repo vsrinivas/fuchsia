@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use failure::Fail;
-use fuchsia_uri::pkg_uri::PkgUri;
+use fuchsia_url::pkg_uri::PkgUri;
 use log::{error, warn};
 use omaha_client::installer::Plan;
 use omaha_client::protocol::response::{OmahaStatus, Response};

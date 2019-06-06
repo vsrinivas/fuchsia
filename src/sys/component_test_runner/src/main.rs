@@ -11,7 +11,7 @@ use fidl_fuchsia_sys::{FlatNamespace, RunnerRequest, RunnerRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::fx_log_info;
-use fuchsia_uri::pkg_uri::PkgUri;
+use fuchsia_url::pkg_uri::PkgUri;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 

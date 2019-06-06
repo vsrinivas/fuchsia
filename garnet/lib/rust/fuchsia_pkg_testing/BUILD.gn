@@ -14,11 +14,11 @@ rustc_library("fuchsia_pkg_testing") {
 
   deps = [
     "//garnet/lib/rust/fuchsia_pkg",
-    "//garnet/lib/rust/fuchsia_uri",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-merkle",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",

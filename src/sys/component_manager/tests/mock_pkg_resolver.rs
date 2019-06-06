@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_pkg as fpkg, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, macros::*},
-    fuchsia_uri::pkg_uri::PkgUri,
+    fuchsia_url::pkg_uri::PkgUri,
     fuchsia_zircon::{HandleBased, Status},
     futures::{StreamExt, TryStreamExt},
     std::ffi::CString,

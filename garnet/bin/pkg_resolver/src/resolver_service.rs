@@ -15,14 +15,13 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_uri::pkg_uri::PkgUri,
+    fuchsia_url::pkg_uri::PkgUri,
     fuchsia_zircon::{Channel, MessageBuf, Signals, Status},
     futures::prelude::*,
     log::{info, warn},
     parking_lot::RwLock,
     std::sync::Arc,
 };
-
 
 // The error amber returns if it could not find the merkle for this package.
 const PACKAGE_NOT_FOUND: &str = "merkle not found for package";
@@ -604,7 +603,10 @@ mod tests {
     fn test_is_unavailable_msg() {
         // Success:
         assert!(is_unavailable_msg("not found in 1 active sources"), "single digit");
-        assert!(is_unavailable_msg("not found in 12345678901928 active sources"), "multiple digits");
+        assert!(
+            is_unavailable_msg("not found in 12345678901928 active sources"),
+            "multiple digits"
+        );
 
         // Failure:
         assert!(!is_unavailable_msg("not found in  active sources"), "no digits");

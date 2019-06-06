@@ -15,7 +15,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/fuchsia_uri",
     "//garnet/lib/rust/fuchsia_uri_rewrite",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
@@ -23,6 +22,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/sys/lib/fuchsia_url:fuchsia_url",
 
     # "//garnet/public/rust/tuf", FIXME re-enable once tuf is on futures alpha 13
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",

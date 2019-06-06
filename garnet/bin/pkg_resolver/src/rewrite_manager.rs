@@ -5,8 +5,8 @@
 use {
     failure::Fail,
     fuchsia_syslog::fx_log_err,
-    fuchsia_uri::pkg_uri::PkgUri,
     fuchsia_uri_rewrite::{Rule, RuleConfig},
+    fuchsia_url::pkg_uri::PkgUri,
     std::{
         collections::VecDeque,
         fs::{self, File},

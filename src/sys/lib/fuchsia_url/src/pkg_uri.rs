@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub use crate::errors::ParseError;
-pub use crate::parse::{check_resource, is_name, is_hash};
+pub use crate::parse::{check_resource, is_hash, is_name};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
 use std::fmt;

@@ -11,7 +11,7 @@ use fidl_fuchsia_pkg::{
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
-use fuchsia_uri::pkg_uri::RepoUri;
+use fuchsia_url::pkg_uri::RepoUri;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
 use futures::TryFutureExt;
@@ -141,7 +141,7 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_pkg::RepositoryIteratorMarker;
     use fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder};
-    use fuchsia_uri::pkg_uri::RepoUri;
+    use fuchsia_url::pkg_uri::RepoUri;
     use std::convert::TryInto;
 
     async fn list(service: &RepositoryService) -> Vec<RepositoryConfig> {

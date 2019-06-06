@@ -5,7 +5,7 @@
 use {
     crate::errors::{RuleDecodeError, RuleParseError},
     fidl_fuchsia_pkg_rewrite as fidl,
-    fuchsia_uri::pkg_uri::{ParseError, PkgUri},
+    fuchsia_url::pkg_uri::{ParseError, PkgUri},
     serde_derive::{Deserialize, Serialize},
     std::convert::TryFrom,
 };

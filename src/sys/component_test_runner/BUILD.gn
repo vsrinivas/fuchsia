@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
   name = "component_test_runner"
@@ -14,7 +14,6 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/fuchsia_uri",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -22,6 +21,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:serde_json",

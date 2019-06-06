@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{PackageResolverProxy, UpdatePolicy},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_uri::pkg_uri::PkgUri,
+    fuchsia_url::pkg_uri::PkgUri,
     fuchsia_zircon as zx,
     futures::future::FutureObj,
     std::path::PathBuf,

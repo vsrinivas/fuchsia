@@ -12,8 +12,8 @@ rustc_library("fidl_fuchsia_amber_ext") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/fuchsia_uri",
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
+    "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:proptest",

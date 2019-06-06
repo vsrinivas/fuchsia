@@ -338,8 +338,7 @@ mod tests {
 
     #[test]
     fn test_new_resource() {
-        let uri =
-            BootUri::new_resource("/path/to".to_string(), "foo/bar".to_string()).unwrap();
+        let uri = BootUri::new_resource("/path/to".to_string(), "foo/bar".to_string()).unwrap();
         assert_eq!("/path/to", uri.path());
         assert_eq!(Some("foo/bar"), uri.resource());
         let mut uri_no_resource = uri.clone();
