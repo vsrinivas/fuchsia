@@ -28,13 +28,13 @@ bool ExtractCobaltRegistryBytes(ProjectProfile profile,
   bool success =
       fsl::SizedVmo::FromTransport(std::move(profile.config), &registry_vmo);
   if (!success) {
-    FXL_LOG(ERROR) << "Transport buffer is invalid";
+    FX_LOGS(ERROR) << "Transport buffer is invalid";
     return false;
   }
 
   success = fsl::StringFromVmo(registry_vmo, metrics_registry_bytes_out);
   if (!success) {
-    FXL_LOG(ERROR) << "Could not read Metrics Registry from VMO";
+    FX_LOGS(ERROR) << "Could not read Metrics Registry from VMO";
     return false;
   }
 
@@ -52,7 +52,7 @@ ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {
     case fuchsia::cobalt::ReleaseStage::DEBUG:
       return ReleaseStage::DEBUG;
     default:
-      FXL_LOG(ERROR) << "Unknown ReleaseStage provided. Defaulting to DEBUG.";
+      FX_LOGS(ERROR) << "Unknown ReleaseStage provided. Defaulting to DEBUG.";
       return ReleaseStage::DEBUG;
   }
 }
@@ -76,7 +76,7 @@ LoggerFactoryImpl::LoggerFactoryImpl(
           kCobaltInternalCustomerName, kCobaltInternalMetricsProjectName,
           ReleaseStage::GA);
   if (!internal_project_context) {
-    FXL_LOG(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
+    FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
                       "include the expected internal metrics project. "
                       "Cobalt-measuring-Cobalt will be disabled.";
   }
@@ -111,7 +111,7 @@ void LoggerFactoryImpl::CreateAndBindLogger(
   ReleaseStage release_stage = ToReleaseStageProto(profile.release_stage);
   std::string cobalt_registry_bytes;
   if (!ExtractCobaltRegistryBytes(std::move(profile), &cobalt_registry_bytes)) {
-    FXL_LOG(ERROR) << "Unable to extract a CobaltRegistry from the provided "
+    FX_LOGS(ERROR) << "Unable to extract a CobaltRegistry from the provided "
                       "ProjectProfile.";
     callback(Status::INVALID_ARGUMENTS);
     return;
@@ -119,13 +119,13 @@ void LoggerFactoryImpl::CreateAndBindLogger(
   std::shared_ptr<ProjectContextFactory> factory(
       new ProjectContextFactory(cobalt_registry_bytes));
   if (!factory->is_valid()) {
-    FXL_LOG(ERROR) << "Unable to extract a valid CobaltRegistry from the "
+    FX_LOGS(ERROR) << "Unable to extract a valid CobaltRegistry from the "
                       "provided ProjectProfile.";
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
   if (factory->is_single_legacy_project()) {
-    FXL_LOG(ERROR) << "The provided ProjectProfile contained an older type of "
+    FX_LOGS(ERROR) << "The provided ProjectProfile contained an older type of "
                       "project that is no longer supported.";
     callback(Status::INVALID_ARGUMENTS);
     return;
@@ -135,7 +135,7 @@ void LoggerFactoryImpl::CreateAndBindLogger(
     callback(Status::OK);
     return;
   } else {
-    FXL_LOG(ERROR) << "The CobaltRegistry in the provided ProjectProfile was "
+    FX_LOGS(ERROR) << "The CobaltRegistry in the provided ProjectProfile was "
                       "invalid because it contained multiple projects.";
     callback(Status::INVALID_ARGUMENTS);
     return;
@@ -151,7 +151,7 @@ void LoggerFactoryImpl::CreateAndBindLoggerFromProjectName(
   auto project_context = global_project_context_factory_->NewProjectContext(
       kFuchsiaCustomerName, project_name, ToReleaseStageProto(release_stage));
   if (!project_context) {
-    FXL_LOG(ERROR) << "The CobaltRegistry bundled with this release does not "
+    FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a Fuchsia project named "
                    << project_name;
     callback(Status::INVALID_ARGUMENTS);
@@ -199,7 +199,7 @@ void LoggerFactoryImpl::CreateLoggerFromProjectId(
     uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerFromProjectIdCallback callback) {
-  FXL_LOG(ERROR)
+  FX_LOGS(ERROR)
       << "The method CreateLoggerFromProjectId() is no longer supported",
       callback(Status::INVALID_ARGUMENTS);
 }
@@ -208,7 +208,7 @@ void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
     uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleFromProjectIdCallback callback) {
-  FXL_LOG(ERROR)
+  FX_LOGS(ERROR)
       << "The method CreateLoggerSimpleFromProjectId() is no longer supported",
       callback(Status::INVALID_ARGUMENTS);
 }

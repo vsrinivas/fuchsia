@@ -24,13 +24,13 @@
 #include "lib/fsl/vmo/file.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/sys/cpp/component_context.h"
+#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/cobalt/bin/testapp/prober_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/tests.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
@@ -153,7 +153,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   controller_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Connection error from CobaltTestApp to Cobalt FIDL Service.";
   });
 
@@ -166,7 +166,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   std::string project_name =
       (test_for_prober_ ? cobalt_prober_registry::kProjectName
                         : cobalt_registry::kProjectName);
-  FXL_LOG(INFO) << "Test app is logging for the " << project_name << " project";
+  FX_LOGS(INFO) << "Test app is logging for the " << project_name << " project";
   logger_factory->CreateLoggerFromProjectName(
       project_name, fuchsia::cobalt::ReleaseStage::DEBUG,
       logger_.logger_.NewRequest(), &status);

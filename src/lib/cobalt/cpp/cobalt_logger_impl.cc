@@ -11,8 +11,8 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/waiter.h>
 #include <lib/component/cpp/connect.h>
+#include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 
 #include <set>
@@ -36,7 +36,7 @@ BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(
 
 BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
   if (!events_in_transit_.empty() || !events_to_send_.empty()) {
-    FXL_LOG(WARNING) << "Disconnecting connection to cobalt with events "
+    FX_LOGS(WARNING) << "Disconnecting connection to cobalt with events "
                         "still pending... Events will be lost.";
   }
 }
@@ -163,7 +163,7 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
               OnConnectionError();
             }
           } else {
-            FXL_LOG(ERROR) << "CreateLogger() failed.";
+            FX_LOGS(ERROR) << "CreateLogger() failed.";
           }
         });
   } else {
@@ -179,7 +179,7 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
               OnConnectionError();
             }
           } else {
-            FXL_LOG(ERROR) << "CreateLoggerFromProjectName() failed";
+            FX_LOGS(ERROR) << "CreateLoggerFromProjectName() failed";
           }
         });
   }
@@ -196,7 +196,7 @@ void BaseCobaltLoggerImpl::OnTransitFail() {
 }
 
 void BaseCobaltLoggerImpl::OnConnectionError() {
-  FXL_LOG(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
+  FX_LOGS(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
   OnTransitFail();
   logger_.Unbind();
@@ -262,7 +262,7 @@ void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event,
     case Status::INVALID_ARGUMENTS:
     case Status::EVENT_TOO_BIG:  // fall through
       // Log the failure.
-      FXL_LOG(WARNING) << "Cobalt rejected event for metric: "
+      FX_LOGS(WARNING) << "Cobalt rejected event for metric: "
                        << event->metric_id()
                        << " with status: " << fidl::ToUnderlying(status);
     case Status::OK:  // fall through

@@ -18,10 +18,10 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/svc/cpp/services.h"
+#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
 
   bool test_for_prober = command_line.HasOption(kTestForProber);
   if (test_for_prober && !command_line.HasOption(kOverrideProberWarning)) {
-    FXL_LOG(ERROR) << "Running the testapp in prober mode outside of CI will "
+    FX_LOGS(ERROR) << "Running the testapp in prober mode outside of CI will "
                       "corrupt prober test output. If you need to do this, "
                       "pass the flag --override_prober_warning.";
     return 1;
@@ -55,9 +55,9 @@ int main(int argc, const char** argv) {
   cobalt::testapp::CobaltTestApp app(use_network, test_for_prober);
 
   if (!app.RunTests()) {
-    FXL_LOG(ERROR) << "FAIL";
+    FX_LOGS(ERROR) << "FAIL";
     return 1;
   }
-  FXL_LOG(INFO) << "PASS";
+  FX_LOGS(INFO) << "PASS";
   return 0;
 }

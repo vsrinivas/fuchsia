@@ -6,7 +6,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fsl/vmo/file.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/syslog/cpp/logger.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 
@@ -20,7 +20,7 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
     fuchsia::cobalt::ReleaseStage release_stage) {
   fsl::SizedVmo config_vmo;
   if (!fsl::VmoFromFilename(config_path, &config_vmo)) {
-    FXL_LOG(ERROR) << "Could not find config file at " << config_path;
+    FX_LOGS(ERROR) << "Could not find config file at " << config_path;
     return nullptr;
   }
 

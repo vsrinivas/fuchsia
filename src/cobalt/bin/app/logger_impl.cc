@@ -87,7 +87,7 @@ void LoggerImpl::LogIntHistogram(
     fuchsia::cobalt::LoggerSimple::LogIntHistogramCallback callback) {
   TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogIntHistogram");
   if (bucket_indices.size() != bucket_counts.size()) {
-    FXL_LOG(ERROR) << "[" << metric_id
+    FX_LOGS(ERROR) << "[" << metric_id
                    << "]: bucket_indices.size() != bucket_counts.size().";
     callback(Status::INVALID_ARGUMENTS);
     return;

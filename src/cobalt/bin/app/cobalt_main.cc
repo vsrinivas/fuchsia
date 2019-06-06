@@ -27,7 +27,6 @@
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
 #include "third_party/cobalt/encoder/memory_observation_store.h"
 #include "third_party/cobalt/util/posix_file_system.h"
@@ -210,7 +209,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  FXL_LOG(INFO) << "Cobalt is starting with the following parameters: "
+  FX_LOGS(INFO) << "Cobalt is starting with the following parameters: "
                 << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds, initial_interval=" << initial_interval.count()
@@ -223,7 +222,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(),
-                                      "cobalt_fidl_provider");
+                                              "cobalt_fidl_provider");
   cobalt::CobaltApp app(
       loop.dispatcher(), schedule_interval, min_interval, initial_interval,
       event_aggregator_backfill_days, start_event_aggregator_worker,

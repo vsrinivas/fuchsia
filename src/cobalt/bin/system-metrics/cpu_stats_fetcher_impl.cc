@@ -12,7 +12,7 @@
 #include <trace/event.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/logging.h"
+#include "lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 
@@ -32,7 +32,7 @@ bool CpuStatsFetcherImpl::FetchCpuPercentage(double *cpu_percentage) {
 
 bool CpuStatsFetcherImpl::FetchCpuStats() {
   if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FXL_LOG(ERROR) << "CpuStatsFetcherImpl: No root resource "
+    FX_LOGS(ERROR) << "CpuStatsFetcherImpl: No root resource "
                    << "present. Reconnecting...";
     InitializeRootResourceHandle();
     return false;
@@ -43,13 +43,13 @@ bool CpuStatsFetcherImpl::FetchCpuStats() {
       root_resource_handle_, ZX_INFO_CPU_STATS, &cpu_stats_[0],
       cpu_stats_.size() * sizeof(zx_info_cpu_stats_t), &actual, &available);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << "CpuStatsFetcherImpl: Fetching "
+    FX_LOGS(ERROR) << "CpuStatsFetcherImpl: Fetching "
                    << "ZX_INFO_CPU_STATS through syscall returns "
                    << zx_status_get_string(err);
     return false;
   }
   if (actual < available) {
-    FXL_LOG(WARNING) << "CpuStatsFetcherImpl:  actual CPUs reported " << actual
+    FX_LOGS(WARNING) << "CpuStatsFetcherImpl:  actual CPUs reported " << actual
                      << " is less than available CPUs " << available
                      << ". Please increase zx_info_cpu_stats_t vector size!"
                      << sizeof(cpu_stats_);
@@ -90,7 +90,7 @@ void CpuStatsFetcherImpl::InitializeRootResourceHandle() {
   static const char kSysInfo[] = "/dev/misc/sysinfo";
   int fd = open(kSysInfo, O_RDWR);
   if (fd < 0) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
         << "Cannot open sysinfo: " << strerror(errno);
     return;
@@ -99,7 +99,7 @@ void CpuStatsFetcherImpl::InitializeRootResourceHandle() {
   zx_status_t status =
       fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
         << "Cannot obtain sysinfo channel: " << zx_status_get_string(status);
     return;
@@ -107,17 +107,17 @@ void CpuStatsFetcherImpl::InitializeRootResourceHandle() {
   zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
       channel.get(), &status, &root_resource_handle_);
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
         << zx_status_get_string(fidl_status);
     return;
   } else if (status != ZX_OK) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Error getting root_resource_handle_. "
         << zx_status_get_string(status);
     return;
   } else if (root_resource_handle_ == ZX_HANDLE_INVALID) {
-    FXL_LOG(ERROR)
+    FX_LOGS(ERROR)
         << "Cobalt SystemMetricsDaemon: Failed to get root_resource_handle_.";
     return;
   }

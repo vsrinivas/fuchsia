@@ -15,10 +15,10 @@
 #include <sstream>
 #include <string>
 
+#include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "third_party/cobalt/util/clock.h"
@@ -36,7 +36,7 @@ class CobaltTestApp {
         test_for_prober_(test_for_prober) {
     clock_.reset(new util::SystemClock);
     if (test_for_prober) {
-      FXL_LOG(INFO) << "Running the Cobalt test app in prober mode";
+      FX_LOGS(INFO) << "Running the Cobalt test app in prober mode";
     }
   }
 

@@ -7,7 +7,7 @@
 #include <map>
 #include <string>
 
-#include "src/lib/fxl/logging.h"
+#include "lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace testapp {
@@ -17,9 +17,9 @@ using fuchsia::cobalt::Status;
 bool CobaltTestAppLogger::LogEvent(uint32_t metric_id, uint32_t index) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogEvent(metric_id, index, &status);
-  FXL_VLOG(1) << "LogEvent(" << index << ") => " << StatusToString(status);
+  FX_VLOGS(1) << "LogEvent(" << index << ") => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogEvent() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() => " << StatusToString(status);
     return false;
   }
   return true;
@@ -30,9 +30,9 @@ bool CobaltTestAppLogger::LogEventCount(uint32_t metric_id, uint32_t index,
                                         int64_t count) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogEventCount(metric_id, index, component, 0, count, &status);
-  FXL_VLOG(1) << "LogEventCount(" << index << ") => " << StatusToString(status);
+  FX_VLOGS(1) << "LogEventCount(" << index << ") => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogEventCount() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEventCount() => " << StatusToString(status);
     return false;
   }
   return true;
@@ -43,9 +43,9 @@ bool CobaltTestAppLogger::LogElapsedTime(uint32_t metric_id, uint32_t index,
                                          int64_t elapsed_micros) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogElapsedTime(metric_id, index, component, elapsed_micros, &status);
-  FXL_VLOG(1) << "LogElapsedTime() => " << StatusToString(status);
+  FX_VLOGS(1) << "LogElapsedTime() => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogElapsedTime() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogElapsedTime() => " << StatusToString(status);
     return false;
   }
   return true;
@@ -56,9 +56,9 @@ bool CobaltTestAppLogger::LogFrameRate(uint32_t metric_id, uint32_t index,
                                        float fps) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogFrameRate(metric_id, index, component, fps, &status);
-  FXL_VLOG(1) << "LogFrameRate() => " << StatusToString(status);
+  FX_VLOGS(1) << "LogFrameRate() => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogFrameRate() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogFrameRate() => " << StatusToString(status);
     return false;
   }
   return true;
@@ -69,9 +69,9 @@ bool CobaltTestAppLogger::LogMemoryUsage(uint32_t metric_id, uint32_t index,
                                          int64_t bytes) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogMemoryUsage(metric_id, index, component, bytes, &status);
-  FXL_VLOG(1) << "LogMemoryUsage() => " << StatusToString(status);
+  FX_VLOGS(1) << "LogMemoryUsage() => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogMemoryUsage() => " << StatusToString(status);
     return false;
   }
   return true;
@@ -81,9 +81,9 @@ bool CobaltTestAppLogger::LogString(uint32_t metric_id,
                                     const std::string& val) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogString(metric_id, val, &status);
-  FXL_VLOG(1) << "LogString(" << val << ") => " << StatusToString(status);
+  FX_VLOGS(1) << "LogString(" << val << ") => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogString() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogString() => " << StatusToString(status);
     return false;
   }
 
@@ -99,11 +99,11 @@ bool CobaltTestAppLogger::LogTimer(uint32_t metric_id, uint32_t start_time,
                       &status);
   logger_->EndTimer(timer_id, end_time, timeout_s, &status);
 
-  FXL_VLOG(1) << "LogTimer("
+  FX_VLOGS(1) << "LogTimer("
               << "timer_id:" << timer_id << ", start_time:" << start_time
               << ", end_time:" << end_time << ") => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogTimer() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogTimer() => " << StatusToString(status);
     return false;
   }
 
@@ -124,9 +124,9 @@ bool CobaltTestAppLogger::LogIntHistogram(
 
   logger_->LogIntHistogram(metric_id, index, component, std::move(histogram),
                            &status);
-  FXL_VLOG(1) << "LogIntHistogram() => " << StatusToString(status);
+  FX_VLOGS(1) << "LogIntHistogram() => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogIntHistogram() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogIntHistogram() => " << StatusToString(status);
     return false;
   }
 
@@ -137,9 +137,9 @@ bool CobaltTestAppLogger::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) {
   Status status = Status::INTERNAL_ERROR;
   logger_->LogCobaltEvent(std::move(event), &status);
 
-  FXL_VLOG(1) << "LogCobaltEvent() => " << StatusToString(status);
+  FX_VLOGS(1) << "LogCobaltEvent() => " << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogCobaltEvent() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogCobaltEvent() => " << StatusToString(status);
     return false;
   }
 
@@ -158,10 +158,10 @@ bool CobaltTestAppLogger::LogStringPair(uint32_t metric_id,
   parts.at(1).dimension_name = part1;
   parts.at(1).value.set_string_value(val1);
   logger_->LogCustomEvent(metric_id, std::move(parts), &status);
-  FXL_VLOG(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
+  FX_VLOGS(1) << "LogCustomEvent(" << val0 << ", " << val1 << ") => "
               << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogCustomEvent() => " << StatusToString(status);
     return false;
   }
 
@@ -180,12 +180,12 @@ bool CobaltTestAppLogger::LogCustomMetricsTestProto(
   parts.at(2).dimension_name = "response_code";
   parts.at(2).value.set_index_value(response_code_val);
   logger_->LogCustomEvent(metric_id, std::move(parts), &status);
-  FXL_VLOG(1) << "LogCustomEvent(query=" << query_val
+  FX_VLOGS(1) << "LogCustomEvent(query=" << query_val
               << ", wait_time_ms=" << wait_time_val
               << ", response_code=" << response_code_val << ") => "
               << StatusToString(status);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "LogCustomEvent() => " << StatusToString(status);
+    FX_LOGS(ERROR) << "LogCustomEvent() => " << StatusToString(status);
     return false;
   }
 
@@ -194,15 +194,15 @@ bool CobaltTestAppLogger::LogCustomMetricsTestProto(
 
 bool CobaltTestAppLogger::CheckForSuccessfulSend() {
   if (!use_network_) {
-    FXL_LOG(INFO) << "Not using the network because --no_network_for_testing "
+    FX_LOGS(INFO) << "Not using the network because --no_network_for_testing "
                      "was passed.";
     return true;
   }
 
   bool send_success = false;
-  FXL_VLOG(1) << "Invoking RequestSendSoon() now...";
+  FX_VLOGS(1) << "Invoking RequestSendSoon() now...";
   (*cobalt_controller_)->RequestSendSoon(&send_success);
-  FXL_VLOG(1) << "RequestSendSoon => " << send_success;
+  FX_VLOGS(1) << "RequestSendSoon => " << send_success;
   return send_success;
 }
 
