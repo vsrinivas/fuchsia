@@ -45,6 +45,7 @@ public:
             constraints->ram_domain_supported;
         constraints_.buffer_memory_constraints.cpu_domain_supported =
             constraints->cpu_domain_supported;
+        constraints_.buffer_memory_constraints.min_size_bytes = constraints->min_size_bytes;
     }
 
     Status
@@ -119,6 +120,11 @@ InitializeDescriptionFromSettings(const fuchsia::sysmem::SingleBufferSettings& s
     }
 
     description_out->is_secure = settings.buffer_settings.is_secure;
+
+    if (!settings.has_image_format_constraints) {
+        return MAGMA_STATUS_OK;
+    }
+
     description_out->has_format_modifier =
         settings.image_format_constraints.pixel_format.has_format_modifier;
     description_out->format_modifier =
@@ -183,9 +189,6 @@ public:
                             status, status2);
         }
 
-        if (!info.settings.has_image_format_constraints) {
-            return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-        }
         auto description = std::make_unique<PlatformBufferDescription>();
         Status magma_status = InitializeDescriptionFromSettings(info.settings, description.get());
         description->count = info.buffer_count;

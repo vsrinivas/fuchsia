@@ -37,6 +37,7 @@ public:
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
         buffer_constraints.cpu_domain_supported = true;
+        buffer_constraints.min_size_bytes = 0;
 
         std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
@@ -91,6 +92,7 @@ public:
         buffer_constraints.secure_permitted = false;
         buffer_constraints.secure_required = false;
         buffer_constraints.cpu_domain_supported = true;
+        buffer_constraints.min_size_bytes = 0;
 
         std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
         EXPECT_EQ(MAGMA_STATUS_OK,
@@ -115,6 +117,37 @@ public:
         EXPECT_TRUE(description->has_format_modifier);
         EXPECT_EQ(MAGMA_FORMAT_MODIFIER_INTEL_X_TILED, description->format_modifier);
     }
+
+    static void TestBuffer()
+    {
+        auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+
+        ASSERT_NE(nullptr, connection.get());
+
+        uint32_t token;
+        EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+        std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+        EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+        magma_buffer_format_constraints_t buffer_constraints{};
+        buffer_constraints.count = 2;
+        buffer_constraints.usage = 0;
+        buffer_constraints.secure_permitted = false;
+        buffer_constraints.secure_required = false;
+        buffer_constraints.cpu_domain_supported = true;
+        buffer_constraints.min_size_bytes = 1024;
+
+        std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+        EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+        std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+        EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
+
+        EXPECT_FALSE(description->has_format_modifier);
+        EXPECT_EQ(2u, description->count);
+    }
 };
 
 TEST(PlatformSysmemConnection, CreateBuffer) { TestPlatformSysmemConnection::TestCreateBuffer(); }
@@ -125,3 +158,5 @@ TEST(PlatformSysmemConnection, SetConstraints)
 }
 
 TEST(PlatformSysmemConnection, IntelTiling) { TestPlatformSysmemConnection::TestIntelTiling(); }
+
+TEST(PlatformSysmemConnection, Buffer) { TestPlatformSysmemConnection::TestBuffer(); }
