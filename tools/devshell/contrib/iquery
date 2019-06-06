@@ -1,15 +1,15 @@
 #!/bin/bash
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 ### generate a report with component exposed data
 
-## usage: fx debug-report [f|--format <FORMAT>]
-##                        [-s|--system-objects]
-##                        [--] [<REGEX> [...<REGEX>]]
+## usage: fx iquery [f|--format <FORMAT>]
+##                  [-s|--system-objects]
+##                  [--] [<REGEX> [...<REGEX>]]
 ##
-## Runs and generate a debug report from the selected components.
+## Runs and generate a report from the selected components.
 ##
 ##    -f|--format <FORMAT>  What formatter to be used for the output.
 ##                          These will be passed on to the underlying iquery
@@ -26,10 +26,6 @@
 ##            report.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-
-fx-warn "WARNING: fx debug-report is deprecated."
-fx-warn "WARNING: if you want to grab Inspect data from the device, switch to fx iquery."
-fx-warn "WARNING: if you want to snapshot the state of the device, switch to fx bugreport."
 
 # Defaults.
 system_objects=false
