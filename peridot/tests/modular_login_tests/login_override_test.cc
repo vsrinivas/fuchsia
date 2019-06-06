@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/auth/account/cpp/fidl.h>
+#include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -41,63 +43,65 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
       "fuchsia-pkg://fuchsia.com/single_user_base_shell#meta/"
       "single_user_base_shell.cmx";
 
-  fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.set_env_services_to_inherit(
-      {"fuchsia.setui.SetUiService", "fuchsia.auth.account.AccountManager",
-       "fuchsia.devicesettings.DeviceSettingsManager"});
+  modular::testing::TestHarnessBuilder builder;
+  builder.AddServiceFromServiceDirectory<fuchsia::setui::SetUiService>(
+      real_services());
+  builder
+      .AddServiceFromServiceDirectory<fuchsia::auth::account::AccountManager>(
+          real_services());
+  builder.AddServiceFromServiceDirectory<
+      fuchsia::devicesettings::DeviceSettingsManager>(real_services());
 
-  spec.mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->set_url(kSingleUserBaseShellUrl);
-
-  {
-    fuchsia::modular::testing::InterceptSpec intercept_spec;
-    intercept_spec.set_component_url(kSingleUserBaseShellUrl);
-    spec.mutable_components_to_intercept()->push_back(
-        std::move(intercept_spec));
-  }
-
-  // Listen for session shell interception.
   bool intercepted = false;
-  test_harness().events().OnNewComponent =
+  builder.InterceptBaseShell(
       [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
-        ASSERT_EQ(kSingleUserBaseShellUrl, startup_info.launch_info.url);
-        intercepted = true;
-      };
+              component) { intercepted = true; },
+      modular::testing::TestHarnessBuilder::InterceptOptions{
+          .url = kSingleUserBaseShellUrl});
 
-  SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER,
-                   [this, spec = std::move(spec)]() mutable {
-                     test_harness()->Run(std::move(spec));
-                   });
+  // Setting AUTH_PROVIDER should launch the configured base shell.
+  SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER, [&] {
+    test_harness().events().OnNewComponent =
+        builder.BuildOnNewComponentHandler();
+    test_harness()->Run(builder.BuildSpec());
+  });
 
   RunLoopUntil([&] { return intercepted; });
 }
 
-// Setting LoginOverride to AUTOLOGIN_GUEST should launch the session shell.
-TEST_F(LoginOverrideTest, AutoLoginGuestOverrideLaunchesSessionShell) {
-  fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.set_env_services_to_inherit(
-      {"fuchsia.setui.SetUiService", "fuchsia.auth.account.AccountManager",
-       "fuchsia.devicesettings.DeviceSettingsManager"});
+// Setting LoginOverride to AUTOLOGIN_GUEST should skip the base shell and
+// launch the session shell.
+TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
+  modular::testing::TestHarnessBuilder builder;
+  builder.AddServiceFromServiceDirectory<fuchsia::setui::SetUiService>(
+      real_services());
+  builder
+      .AddServiceFromServiceDirectory<fuchsia::auth::account::AccountManager>(
+          real_services());
+  builder.AddServiceFromServiceDirectory<
+      fuchsia::devicesettings::DeviceSettingsManager>(real_services());
 
-  // Listen for session shell interception.
-  auto intercepted_url = InterceptSessionShell(&spec);
-  bool intercepted = false;
-  test_harness().events().OnNewComponent =
+  // Base shell should never be launched, so |intercepted_base_shell| should
+  // remain false when the session shell launches.
+  bool intercepted_base_shell = false;
+  builder.InterceptBaseShell(
       [&](fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-              component) {
-        ASSERT_EQ(intercepted_url, startup_info.launch_info.url);
-        intercepted = true;
-      };
+              component) { intercepted_base_shell = true; });
 
-  SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST,
-                   [this, spec = std::move(spec)]() mutable {
-                     test_harness()->Run(std::move(spec));
-                   });
+  bool intercepted_session_shell = false;
+  builder.InterceptSessionShell(
+      [&](fuchsia::sys::StartupInfo startup_info,
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
+              component) { intercepted_session_shell = true; });
 
-  RunLoopUntil([&] { return intercepted; });
+  SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST, [&] {
+    test_harness().events().OnNewComponent =
+        builder.BuildOnNewComponentHandler();
+    test_harness()->Run(builder.BuildSpec());
+  });
+
+  RunLoopUntil([&] { return intercepted_session_shell; });
+  EXPECT_FALSE(intercepted_base_shell);
 }

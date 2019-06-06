@@ -17,6 +17,7 @@ executable("login_override_test") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.setui",
+    "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
