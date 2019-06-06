@@ -3,28 +3,34 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
+#include <fuchsia/hardware/audiocodec/c/fidl.h>
 #include <string.h>
-#include <zircon/device/audio-codec.h>
+#include <unistd.h>
+#include <zircon/status.h>
 
-static int cmd_enable(const char* dev, bool enable) {
-    int fd = open(dev, O_RDONLY);
-    if (fd < 0) {
-        printf("Error opening %s\n", dev);
-        return fd;
+static zx_status_t cmd_enable(const char* dev, bool enable) {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+        printf("Error creating channel: %s\n", zx_status_get_string(status));
+        return status;
     }
 
-    ssize_t rc = ioctl_audio_codec_enable(fd, &enable);
-    if (rc < 0) {
-        printf("Error enabling for %s (rc %zd)\n", dev, rc);
-        close(fd);
-        goto out;
+    status = fdio_service_connect(dev, remote.release());
+    if (status != ZX_OK) {
+        printf("Error opening %s: %s\n", dev, zx_status_get_string(status));
+        return status;
     }
 
-out:
-    close(fd);
-    return rc;
+    status = fuchsia_hardware_audiocodec_DeviceSetEnabled(local.get(), enable);
+    if (status != ZX_OK) {
+        printf("Error enabling for %s: %s\n", dev, zx_status_get_string(status));
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 int main(int argc, const char** argv) {

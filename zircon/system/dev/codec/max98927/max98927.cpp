@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "max98927.h"
+
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c-lib.h>
-#include <zircon/device/audio-codec.h>
-#include <zircon/assert.h>
-
+#include <endian.h>
 #include <fbl/alloc_checker.h>
-
-#include "max98927.h"
+#include <fuchsia/hardware/audiocodec/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
+#include <zircon/assert.h>
 #include "max98927-registers.h"
 
 namespace audio {
@@ -61,21 +62,21 @@ void Max98927Device::DumpRegs() {
     }
 }
 
-zx_status_t Max98927Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                     void* out_buf, size_t out_len, size_t* actual) {
-    if (op != IOCTL_AUDIO_CODEC_ENABLE) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    if (in_len < sizeof(bool)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    const bool* enable = static_cast<const bool*>(in_buf);
-    if (*enable) {
+zx_status_t Max98927Device::FidlSetEnabled(bool enable) {
+    if (enable) {
         Enable();
     } else {
         Disable();
     }
     return ZX_OK;
+}
+
+zx_status_t Max98927Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    using Binder = fidl::Binder<Max98927Device>;
+    static const fuchsia_hardware_audiocodec_Device_ops_t kOps = {
+        .SetEnabled = Binder::BindMember<&Max98927Device::FidlSetEnabled>,
+    };
+    return fuchsia_hardware_audiocodec_Device_dispatch(this, txn, msg, &kOps);
 }
 
 void Max98927Device::DdkUnbind() {

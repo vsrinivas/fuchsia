@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "alc5514.h"
+
 #include <ddk/debug.h>
-
 #include <ddk/protocol/i2c-lib.h>
-#include <zircon/device/audio-codec.h>
-#include <zircon/assert.h>
-
+#include <endian.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-
-#include "alc5514.h"
+#include <sys/types.h>
+#include <zircon/assert.h>
 #include "alc5514-registers.h"
 
 namespace audio {

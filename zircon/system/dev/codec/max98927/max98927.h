@@ -14,7 +14,7 @@ namespace audio {
 namespace max98927 {
 
 class Max98927Device;
-using DeviceType = ddk::Device<Max98927Device, ddk::Ioctlable, ddk::Unbindable>;
+using DeviceType = ddk::Device<Max98927Device, ddk::Messageable, ddk::Unbindable>;
 
 class Max98927Device : public DeviceType,
                        public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
@@ -28,12 +28,13 @@ public:
     zx_status_t Initialize();
 
     // Methods required by the ddk mixins
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkUnbind();
     void DdkRelease();
 
 private:
+    zx_status_t FidlSetEnabled(bool enable);
+
     // Play a test tone
     void Test();
 

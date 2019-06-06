@@ -4,10 +4,12 @@
 
 executable("audio-codec") {
   sources = [
-    "audio-codec.c",
+    "audio-codec.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-hardware-audiocodec:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }
