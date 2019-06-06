@@ -32,6 +32,14 @@
       "pattern": "^[0-9a-z_\\-\\.]+$",
       "minLength": 1,
       "maxLength": 100
+    },
+    "storage-type-clause": {
+      "type": "string",
+      "enum": [
+        "data",
+        "cache",
+        "meta"
+      ]
     }
   },
   "properties": {
@@ -92,6 +100,9 @@
           },
           {
             "required": [ "directory" ]
+          },
+          {
+            "required": [ "storage" ]
           }
         ],
         "properties": {
@@ -109,6 +120,14 @@
             "allOf": [{ "$ref": "#/definitions/path-clause" }],
             "examples": [
               "/data/assets/widgets"
+            ]
+          },
+          "storage": {
+            "title": "Used storage capability",
+            "description": "The type of storage which has been offered to this component",
+            "allOf": [{ "$ref": "#/definitions/storage-type-clause" }],
+            "examples": [
+              "data"
             ]
           },
           "as": {
@@ -195,6 +214,9 @@
           },
           {
             "required": [ "directory" ]
+          },
+          {
+            "required": [ "storage" ]
           }
         ],
         "properties": {
@@ -214,9 +236,17 @@
               "/svc/fuchsia.ui.Scenic"
             ]
           },
+          "storage": {
+            "title": "Offered storage type",
+            "description": "The storage type being offered. Must be one of \"data\", \"cache\", or \"meta\".",
+            "allOf": [{ "$ref": "#/definitions/storage-type-clause" }],
+            "examples": [
+              "data"
+            ]
+          },
           "from": {
             "title": "Offered capability source component",
-            "description": "The component which has the capability to offer. Either \"realm\", \"self\" or \"#$CHILD\".",
+            "description": "The component which has the capability to offer. For services and directories either \"realm\", \"self\" or \"#$CHILD\", for storage either \"realm\" or \"$STORAGE_SECTION_NAME\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
             "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
             "examples": [
@@ -248,7 +278,7 @@
                 },
                 "as": {
                   "title": "Offered capability target path",
-                  "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
+                  "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\"). Must be omitted for storage capabilities.",
                   "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
                   "examples": [
                     "/data/assets/widgets",
@@ -257,6 +287,51 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "array",
+      "title": "Storage capabilities",
+      "description": "Declared storage capabilities backed by a directories from which data, cache, or meta storage can be offered.",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "from",
+          "path"
+        ],
+        "properties": {
+          "from": {
+            "title": "Offered directory capability source component",
+            "description": "The component which has the directory capability to use for storage. Either \"realm\", \"self\" or \"#$CHILD\".",
+            "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
+            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "examples": [
+              "realm",
+              "self",
+              "#scenic"
+            ]
+          },
+          "name": {
+            "title": "Storage name",
+            "description": "The component's local name for this storage",
+            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "examples": [
+              "minfs",
+              "persistent_storage"
+            ]
+          },
+          "path": {
+            "title": "Offered directory capability source path",
+            "description": "The path of the directory capability. The path is either a path into the component's outgoing directory (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
+            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "examples": [
+              "/data/storage",
+              "/minfs"
+            ]
           }
         }
       }

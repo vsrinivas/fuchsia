@@ -74,7 +74,8 @@ pub struct UseDirectory {
 pub struct UseStorage {
     #[serde(rename = "type")]
     pub type_: StorageType,
-    pub target_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_path: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

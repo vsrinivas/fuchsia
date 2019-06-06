@@ -150,7 +150,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         decl,
         all_children: HashSet::new(),
         all_collections: HashSet::new(),
-        all_storage: HashSet::new(),
+        all_storage_and_sources: HashMap::new(),
         child_target_paths: HashMap::new(),
         collection_target_paths: HashMap::new(),
         errors: vec![],
@@ -162,7 +162,7 @@ struct ValidationContext<'a> {
     decl: &'a fsys::ComponentDecl,
     all_children: HashSet<&'a str>,
     all_collections: HashSet<&'a str>,
-    all_storage: HashSet<&'a str>,
+    all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     child_target_paths: PathMap<'a>,
     collection_target_paths: PathMap<'a>,
     errors: Vec<Error>,
@@ -298,19 +298,28 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
+        PATH.check(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
+        let source_child_name = match storage.source.as_ref() {
+            Some(fsys::Ref::Realm(_)) => None,
+            Some(fsys::Ref::Self_(_)) => None,
+            Some(fsys::Ref::Child(child)) => {
+                self.validate_source_child(child, "StorageDecl");
+                child.name.as_ref().map(|s| s.as_str())
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field("StorageDecl", "source"));
+                None
+            }
+            None => {
+                self.errors.push(Error::missing_field("StorageDecl", "source"));
+                None
+            }
+        };
         if NAME.check(storage.name.as_ref(), "StorageDecl", "name", &mut self.errors) {
             let name = storage.name.as_ref().unwrap();
-            if !self.all_storage.insert(name) {
+            if self.all_storage_and_sources.insert(name, source_child_name).is_some() {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
             }
-        }
-        PATH.check(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
-        match storage.source.as_ref() {
-            Some(fsys::Ref::Realm(_)) => {}
-            Some(fsys::Ref::Self_(_)) => {}
-            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, "StorageDecl"),
-            Some(_) => self.errors.push(Error::invalid_field("StorageDecl", "source")),
-            None => self.errors.push(Error::missing_field("StorageDecl", "source")),
         }
     }
 
@@ -341,7 +350,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_storage_source(&mut self, source: &fsys::StorageRef, decl_type: &str) {
         if NAME.check(source.name.as_ref(), decl_type, "source.storage.name", &mut self.errors) {
             if let Some(storage_name) = &source.name {
-                if !self.all_storage.contains(storage_name as &str) {
+                if !self.all_storage_and_sources.contains_key(storage_name as &str) {
                     self.errors.push(Error::invalid_storage(
                         format!("{} source", decl_type),
                         storage_name as &str,
@@ -475,20 +484,29 @@ impl<'a> ValidationContext<'a> {
         &mut self,
         decl: &str,
         type_: Option<&fsys::StorageType>,
-        source: Option<&fsys::Ref>,
+        source: Option<&'a fsys::Ref>,
         dests: Option<&'a Vec<fsys::Ref>>,
     ) {
         if type_.is_none() {
             self.errors.push(Error::missing_field(decl, "type"));
         }
-        match source {
-            Some(fsys::Ref::Realm(_)) => {}
-            Some(fsys::Ref::Storage(s)) => self.validate_storage_source(s, decl),
-            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
-            None => self.errors.push(Error::missing_field(decl, "source")),
-        }
+        let source_storage_name = match source {
+            Some(fsys::Ref::Realm(_)) => None,
+            Some(fsys::Ref::Storage(s)) => {
+                self.validate_storage_source(s, decl);
+                s.name.as_ref().map(|s| s.as_str())
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl, "source"));
+                None
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl, "source"));
+                None
+            }
+        };
         if let Some(dests) = dests {
-            self.validate_dests(decl, dests);
+            self.validate_storage_dests(decl, source_storage_name, dests);
         } else {
             self.errors.push(Error::missing_field(decl, "dests"));
         }
@@ -550,7 +568,12 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_dests(&mut self, decl: &str, dests: &'a Vec<fsys::Ref>) {
+    fn validate_storage_dests(
+        &mut self,
+        decl: &str,
+        source_storage_name: Option<&'a str>,
+        dests: &'a Vec<fsys::Ref>,
+    ) {
         if dests.is_empty() {
             self.errors.push(Error::empty_field(decl, "dests"));
         }
@@ -567,6 +590,11 @@ impl<'a> ValidationContext<'a> {
                     let name: &str = c.name.as_ref().unwrap();
                     if !self.all_children.contains(name) {
                         self.errors.push(Error::invalid_child(decl, name));
+                    }
+                    if let Some(source_name) = source_storage_name {
+                        if self.all_storage_and_sources.get(source_name) == Some(&Some(name)) {
+                            self.errors.push(Error::offer_target_equals_source(name));
+                        }
                     }
                 }
                 fsys::Ref::Collection(c) => {
@@ -701,7 +729,8 @@ mod tests {
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
             ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, OfferDecl, OfferDirectoryDecl,
             OfferServiceDecl, OfferStorageDecl, OfferTarget, RealmRef, Ref, SelfRef, StartupMode,
-            StorageDecl, StorageType, UseDecl, UseDirectoryDecl, UseServiceDecl, UseStorageDecl,
+            StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseServiceDecl,
+            UseStorageDecl,
         },
     };
 
@@ -1341,6 +1370,82 @@ mod tests {
                 Error::extraneous_field("OfferStorageDecl", "dest.child.collection"),
             ])),
         },
+        test_validate_offers_target_equals_source => {
+            input = ComponentDecl {
+                offers: Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: Some("logger".to_string()),
+                            collection: None,
+                        })),
+                        source_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                        targets: Some(vec![
+                            OfferTarget {
+                                target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                                dest: Some(Ref::Child(
+                                    ChildRef {
+                                        name: Some("logger".to_string()),
+                                        collection: None,
+                                    }
+                                )),
+                            }
+                        ]),
+                    })
+                ]),
+                children: Some(vec![
+                    ChildDecl{
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                    },
+                ]),
+                ..new_component_decl()
+            },
+            result = Err(ErrorList::new(vec![
+                Error::offer_target_equals_source("logger"),
+            ])),
+        },
+        test_validate_offers_storage_target_equals_source => {
+            input = ComponentDecl {
+                offers: Some(vec![
+                    OfferDecl::Storage(OfferStorageDecl {
+                        type_: Some(StorageType::Data),
+                        source: Some(Ref::Storage(StorageRef {
+                            name: Some("minfs".to_string()),
+                        })),
+                        dests: Some(vec![
+                            Ref::Child(
+                                ChildRef {
+                                    name: Some("logger".to_string()),
+                                    collection: None,
+                                }
+                            ),
+                        ]),
+                    })
+                ]),
+                children: Some(vec![
+                    ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                    },
+                ]),
+                storage: Some(vec![
+                    StorageDecl {
+                        name: Some("minfs".to_string()),
+                        source_path: Some("/minfs".to_string()),
+                        source: Some(Ref::Child(ChildRef {
+                            name: Some("logger".to_string()),
+                            collection: None,
+                        })),
+                    }
+                ]),
+                ..new_component_decl()
+            },
+            result = Err(ErrorList::new(vec![
+                Error::offer_target_equals_source("logger"),
+            ])),
+        },
         test_validate_offers_invalid_child => {
             input = {
                 let mut decl = new_component_decl();
@@ -1776,6 +1881,8 @@ mod tests {
                 Error::field_too_long("CollectionDecl", "name"),
             ])),
         },
+
+        // storage
         test_validate_storage_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
@@ -1787,8 +1894,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::field_too_long("StorageDecl", "name"),
                 Error::field_too_long("StorageDecl", "source_path"),
+                Error::field_too_long("StorageDecl", "name"),
             ])),
         },
     }

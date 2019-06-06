@@ -138,7 +138,7 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
     fn cm_into(self) -> Result<fsys::UseStorageDecl, Error> {
         Ok(fsys::UseStorageDecl {
             type_: Some(self.type_.cm_into()?),
-            target_path: Some(self.target_path),
+            target_path: self.target_path,
         })
     }
 }

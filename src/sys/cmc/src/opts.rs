@@ -28,7 +28,7 @@ pub enum Commands {
         /// extra JSON schema files to additionally validate against. A custom error message - to
         /// be displayed if the schema fails to validate - can be specified by adding a ':'
         /// separator and the message after the path.
-        extra_schemas: Vec<(PathBuf,Option<String>)>,
+        extra_schemas: Vec<(PathBuf, Option<String>)>,
     },
 
     #[structopt(name = "merge")]
@@ -76,7 +76,7 @@ pub enum Commands {
     },
 }
 
-fn parse_extra_schema_arg(src: &str) -> (PathBuf,Option<String>) {
+fn parse_extra_schema_arg(src: &str) -> (PathBuf, Option<String>) {
     let v: Vec<&str> = src.splitn(2, ':').collect();
     (Path::new(v[0]).to_path_buf(), v.get(1).map(|s| s.to_string()))
 }

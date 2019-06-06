@@ -8,6 +8,7 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
+use std::iter;
 use std::path::Path;
 
 /// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
@@ -39,6 +40,7 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
         document: &document,
         all_children: HashSet::new(),
         all_collections: HashSet::new(),
+        all_storage_and_sources: HashMap::new(),
     };
     ctx.validate()?;
     Ok(document)
@@ -100,15 +102,44 @@ struct ValidationContext<'a> {
     document: &'a cml::Document,
     all_children: HashSet<&'a str>,
     all_collections: HashSet<&'a str>,
+    all_storage_and_sources: HashMap<&'a str, &'a str>,
 }
 
 type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(&mut self) -> Result<(), Error> {
+        let all_children_names =
+            self.document.all_children_names().into_iter().zip(iter::repeat("children"));
+        let all_collection_names =
+            self.document.all_collection_names().into_iter().zip(iter::repeat("collections"));
+        let all_storage_names =
+            self.document.all_storage_names().into_iter().zip(iter::repeat("storage"));
+
+        let all_references =
+            all_children_names.chain(all_collection_names).chain(all_storage_names);
+        let mut seen_references = HashMap::new();
+
+        for (reference, reference_source) in all_references {
+            if let Some(preexisting_source) = seen_references.insert(reference, reference_source) {
+                return Err(Error::validate(format!(
+                    "identifier \"{}\" is defined twice, once in \"{}\" and once in \"{}\"",
+                    reference, reference_source, preexisting_source
+                )));
+            }
+        }
+
         // Populate the sets of children and collections.
-        self.all_children = self.document.all_children()?;
-        self.all_collections = self.document.all_collections()?;
+        self.all_children = self.document.all_children_names().into_iter().collect();
+        self.all_collections = self.document.all_collection_names().into_iter().collect();
+        self.all_storage_and_sources = self.document.all_storage_and_sources();
+
+        // Validate "use".
+        if let Some(uses) = self.document.r#use.as_ref() {
+            for use_ in uses.iter() {
+                self.validate_use(&use_)?;
+            }
+        }
 
         // Validate "expose".
         if let Some(exposes) = self.document.expose.as_ref() {
@@ -121,11 +152,40 @@ impl<'a> ValidationContext<'a> {
         // Validate "offer".
         if let Some(offers) = self.document.offer.as_ref() {
             let mut target_paths = HashMap::new();
+            let mut prev_storage_types = HashMap::new();
             for offer in offers.iter() {
-                self.validate_offer(&offer, &mut target_paths)?;
+                self.validate_offer(&offer, &mut target_paths, &mut prev_storage_types)?;
             }
         }
 
+        // Validate "storage".
+        if let Some(storage) = self.document.storage.as_ref() {
+            for s in storage.iter() {
+                self.validate_storage(&s)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_use(&self, use_: &cml::Use) -> Result<(), Error> {
+        match (use_.storage.as_ref().map(|s| s.as_str()), &use_.r#as) {
+            (Some("meta"), Some(_)) => {
+                Err(Error::validate("\"as\" field cannot be used with storage type \"meta\""))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    fn validate_storage(&self, storage: &cml::Storage) -> Result<(), Error> {
+        if let Some(caps) = cml::REFERENCE_RE.captures(&storage.from) {
+            if !self.all_children.contains(&caps[1]) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a \"storage\" source but it does not appear in \"children\"",
+                    storage.from,
+                )));
+            }
+        }
         Ok(())
     }
 
@@ -135,13 +195,21 @@ impl<'a> ValidationContext<'a> {
         prev_target_paths: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("expose", expose)?;
-        self.validate_target("expose", expose, expose, &mut HashSet::new(), prev_target_paths)
+        self.validate_target(
+            "expose",
+            expose,
+            expose,
+            &mut HashSet::new(),
+            prev_target_paths,
+            &mut HashMap::new(),
+        )
     }
 
     fn validate_offer(
         &self,
         offer: &'a cml::Offer,
         prev_target_paths: &mut PathMap<'a>,
+        prev_storage_types: &mut PathMap<'a>,
     ) -> Result<(), Error> {
         self.validate_source("offer", offer)?;
         let from_caps = cml::REFERENCE_RE.captures(&offer.from);
@@ -174,24 +242,42 @@ impl<'a> ValidationContext<'a> {
             }
 
             // Perform common target validation.
-            self.validate_target("offer", offer, to, &mut prev_targets, prev_target_paths)?;
+            self.validate_target(
+                "offer",
+                offer,
+                to,
+                &mut prev_targets,
+                prev_target_paths,
+                prev_storage_types,
+            )?;
         }
         Ok(())
     }
 
-    /// Validates that a source capability is valid, i.e. that any referenced child is valid.
+    /// Validates that a source capability is valid, i.e. that any referenced child or storage is
+    /// valid.
     /// - `keyword` is the keyword for the clause ("offer" or "expose").
     fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<(), Error>
     where
         T: cml::FromClause + cml::CapabilityClause,
     {
         if let Some(caps) = cml::REFERENCE_RE.captures(source_obj.from()) {
-            if !self.all_children.contains(&caps[1]) {
-                return Err(Error::validate(format!(
-                    "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
-                    source_obj.from(),
-                    keyword,
-                )));
+            if source_obj.storage().is_none() {
+                if !self.all_children.contains(&caps[1]) {
+                    return Err(Error::validate(format!(
+                        "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
+                        source_obj.from(),
+                        keyword,
+                    )));
+                }
+            } else {
+                if !self.all_storage_and_sources.contains_key(&caps[1]) {
+                    return Err(Error::validate(format!(
+                        "\"{}\" is an \"{}\" source but it does not appear in \"storage\"",
+                        source_obj.from(),
+                        keyword,
+                    )));
+                }
             }
         }
         Ok(())
@@ -212,9 +298,10 @@ impl<'a> ValidationContext<'a> {
         target_obj: &'a U,
         prev_targets: &mut HashSet<&'a str>,
         prev_target_paths: &mut PathMap<'a>,
+        prev_storage_types: &mut PathMap<'a>,
     ) -> Result<(), Error>
     where
-        T: cml::CapabilityClause,
+        T: cml::CapabilityClause + cml::FromClause,
         U: cml::DestClause + cml::AsClause,
     {
         // Get the source capability's path.
@@ -222,6 +309,8 @@ impl<'a> ValidationContext<'a> {
             p
         } else if let Some(p) = source_obj.directory().as_ref() {
             p
+        } else if source_obj.storage().is_some() {
+            return self.validate_storage_target(source_obj, target_obj, prev_storage_types);
         } else {
             return Err(Error::internal(format!("no capability path")));
         };
@@ -267,6 +356,55 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        Ok(())
+    }
+
+    /// Validates that a target for a storage capability offer is valid, i.e. that it does not
+    /// duplicate offers of any storage type to a single target and any referenced child is valid.
+    /// - `source_obj` is the object containing the source capability info. This is needed for the
+    ///   default path.
+    /// - `target_obj` is the object containing the target capability info.
+    /// - `prev_storage_types` holds storage types collected so far.
+    fn validate_storage_target<T, U>(
+        &self,
+        source_obj: &'a T,
+        target_obj: &'a U,
+        prev_storage_types: &mut PathMap<'a>,
+    ) -> Result<(), Error>
+    where
+        T: cml::CapabilityClause + cml::FromClause,
+        U: cml::DestClause + cml::AsClause,
+    {
+        let storage_type = match source_obj.storage().as_ref() {
+            Some(s) => s,
+            None => return Err(Error::internal("no storage type")),
+        };
+
+        if target_obj.r#as().is_some() {
+            return Err(Error::validate("\"as\" field cannot be used for storage offer targets"));
+        }
+
+        let target_name = target_obj.dest().unwrap_or("");
+
+        // Check that the source of this storage capability does not match the target
+        if let Some(f) = cml::REFERENCE_RE.captures(source_obj.from()).map(|c| c[1].to_string()) {
+            if self.all_storage_and_sources.get(f.as_str()) == Some(&target_name) {
+                return Err(Error::validate(format!(
+                    "Storage offer target \"{}\" is same as source",
+                    target_name
+                )));
+            }
+        }
+
+        // Check that target path is not a duplicate offer for this storage type
+        let types_for_target =
+            prev_storage_types.entry(target_name.to_string()).or_insert(HashSet::new());
+        if !types_for_target.insert(storage_type) {
+            return Err(Error::validate(format!(
+                "\"{}\" storage is offered to \"{}\" multiple times",
+                storage_type, target_name
+            )));
+        }
         Ok(())
     }
 }
@@ -403,6 +541,23 @@ mod tests {
                         "directory": {
                             "source_path": "/data/assets",
                             "target_path": "/data/kitten_assets"
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "target_path": "/data"
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "cache",
+                            "target_path": "/data"
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "meta"
                         }
                     }
                 ]
@@ -577,6 +732,26 @@ mod tests {
                                 }
                             ]
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "source": {
+                                "realm": {}
+                            },
+                            "dests": [
+                                {
+                                    "child": {
+                                        "name": "cat_viewer"
+                                    }
+                                },
+                                {
+                                    "collection": {
+                                        "name": "tests"
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ]
             }),
@@ -600,6 +775,23 @@ mod tests {
                                         "child": {
                                             "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                                         }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "cache",
+                            "source": {
+                                "child": {
+                                    "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
+                                }
+                            },
+                            "dests": [
+                                {
+                                    "child": {
+                                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                                     }
                                 }
                             ]
@@ -633,10 +825,23 @@ mod tests {
                                 }
                             ]
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "meta",
+                            "source": {},
+                            "dests": [
+                                {
+                                    "child": {
+                                        "name": "user_shell"
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/source, OneOf conditions are not met at /offers/1/storage/source")),
         },
         test_cm_offers_source_multiple_variants => {
             input = json!({
@@ -661,10 +866,28 @@ mod tests {
                                 }
                             ]
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "cache",
+                            "source": {
+                                "realm": {},
+                                "storage": {
+                                    "name": "foo"
+                                }
+                            },
+                            "dests": [
+                                {
+                                    "child": {
+                                        "name": "user_shell"
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/source")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/source, OneOf conditions are not met at /offers/1/storage/source")),
         },
         test_cm_offers_source_bad_child_name => {
             input = json!({
@@ -688,10 +911,27 @@ mod tests {
                                 }
                             ]
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "source": {
+                                "child": {
+                                    "name": "bad^"
+                                }
+                            },
+                            "dests": [
+                                {
+                                    "child": {
+                                        "name": "user_shell"
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/source/child/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/source/child/name, Pattern condition is not met at /offers/1/storage/source/child/name")),
         },
         test_cm_offers_target_missing_props => {
             input = json!({
@@ -731,10 +971,70 @@ mod tests {
                                 }
                             ]
                         }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "source": {
+                                "realm": {}
+                            },
+                            "dests": [
+                                {
+                                    "child": {
+                                        "name": "bad^"
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/targets/0/dest/child/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/targets/0/dest/child/name, Pattern condition is not met at /offers/1/storage/dests/0/child/name")),
+        },
+
+        // storage
+        test_cm_storage => {
+            input = json!({
+                "storage": [
+                    {
+                        "name": "foo",
+                        "source_path": "/minfs",
+                        "source": {
+                            "self": {}
+                        }
+                    },
+                    {
+                        "name": "bar",
+                        "source_path": "/minfs",
+                        "source": {
+                            "child": {
+                                "name": "minfs"
+                            }
+                        }
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cm_storage_missing_fields => {
+            input = json!({
+                "storage": [ { } ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /storage/0/name, This property is required at /storage/0/source, This property is required at /storage/0/source_path")),
+        },
+        test_cm_storage_invalid_child_name => {
+            input = json!({
+                "storage": [ {
+                    "name": "foo",
+                    "source_path": "/minfs",
+                    "source": {
+                        "child": {
+                            "name": "bad^"
+                        }
+                    }
+                } ]
+            }),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /storage/0/source/child/name")),
         },
 
         // children
@@ -1019,7 +1319,10 @@ mod tests {
             input = json!({
                 "use": [
                   { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                  { "directory": "/data/assets" }
+                  { "directory": "/data/assets" },
+                  { "storage": "data", "as": "/example" },
+                  { "storage": "cache", "as": "/tmp" },
+                  { "storage": "meta" }
                 ]
             }),
             result = Ok(()),
@@ -1029,6 +1332,12 @@ mod tests {
                 "use": [ { "as": "/svc/fuchsia.logger.Log" } ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0")),
+        },
+        test_cml_use_as_with_meta_storage => {
+            input = json!({
+                "use": [ { "storage": "meta", "as": "/meta" } ]
+            }),
+            result = Err(Error::validate("\"as\" field cannot be used with storage type \"meta\"")),
         },
 
         // expose
@@ -1148,6 +1457,14 @@ mod tests {
                             { "dest": "#modular" },
                         ]
                     },
+                    {
+                        "storage": "data",
+                        "from": "#minfs",
+                        "to": [
+                            { "dest": "#modular"},
+                            { "dest": "#logger"},
+                        ]
+                    }
                 ],
                 "children": [
                     {
@@ -1164,6 +1481,13 @@ mod tests {
                         "name": "modular",
                         "durability": "persistent",
                     },
+                ],
+                "storage": [
+                    {
+                        "name": "minfs",
+                        "from": "realm",
+                        "path": "/minfs",
+                    }
                 ]
             }),
             result = Ok(()),
@@ -1174,6 +1498,15 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "to": [
+                            {
+                                "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-to",
+                            },
+                        ],
+                    },
+                    {
+                        "storage": "data",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-storage",
                         "to": [
                             {
                                 "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-to",
@@ -1190,6 +1523,13 @@ mod tests {
                         "name": "abcdefghijklmnopqrstuvwxyz0123456789_-to",
                         "url": "https://www.google.com/gmail"
                     },
+                ],
+                "storage": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "path": "/example"
+                    }
                 ]
             }),
             result = Ok(()),
@@ -1212,6 +1552,18 @@ mod tests {
                 }),
             result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"children\"")),
         },
+        test_cml_storage_offer_missing_from => {
+            input = json!({
+                    "offer": [ {
+                        "storage": "cache",
+                        "from": "#missing",
+                        "to": [
+                            { "dest": "#echo_server" },
+                        ]
+                    } ]
+                }),
+            result = Err(Error::validate("\"#missing\" is an \"offer\" source but it does not appear in \"storage\"")),
+        },
         test_cml_offer_bad_from => {
             input = json!({
                     "offer": [ {
@@ -1223,6 +1575,22 @@ mod tests {
                     } ]
                 }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/from")),
+        },
+        test_cml_storage_offer_bad_to => {
+            input = json!({
+                    "offer": [ {
+                        "storage": "cache",
+                        "from": "realm",
+                        "to": [
+                            { "dest": "#logger", "as": "/invalid" },
+                        ]
+                    } ],
+                    "children": [ {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm"
+                    } ]
+                }),
+            result = Err(Error::validate("\"as\" field cannot be used for storage offer targets")),
         },
         test_cml_offer_empty_targets => {
             input = json!({
@@ -1289,6 +1657,27 @@ mod tests {
             }),
             result = Err(Error::validate("Offer target \"#logger\" is same as source")),
         },
+        test_cml_storage_offer_target_equals_from => {
+            input = json!({
+                "offer": [ {
+                    "storage": "data",
+                    "from": "#minfs",
+                    "to": [
+                        { "dest": "#logger" },
+                    ],
+                } ],
+                "children": [ {
+                    "name": "logger",
+                    "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                } ],
+                "storage": [ {
+                    "name": "minfs",
+                    "from": "#logger",
+                    "path": "/minfs",
+                } ],
+            }),
+            result = Err(Error::validate("Storage offer target \"#logger\" is same as source")),
+        },
         test_cml_offer_duplicate_target_paths => {
             input = json!({
                 "offer": [
@@ -1320,6 +1709,36 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate("\"/thing\" is a duplicate \"offer\" target path for \"#echo_server\"")),
+        },
+        test_cml_offer_duplicate_storage_types => {
+            input = json!({
+                "offer": [
+                    {
+                        "storage": "cache",
+                        "from": "realm",
+                        "to": [
+                            { "dest": "#echo_server" },
+                        ]
+                    },
+                    {
+                        "storage": "cache",
+                        "from": "#minfs",
+                        "to": [
+                            { "dest": "#echo_server" }
+                        ]
+                    }
+                ],
+                "storage": [ {
+                    "name": "minfs",
+                    "from": "self",
+                    "path": "/minfs"
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                } ]
+            }),
+            result = Err(Error::validate("\"cache\" storage is offered to \"#echo_server\" multiple times")),
         },
         test_cml_offer_ambient_target_path => {
             input = json!({
@@ -1383,7 +1802,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("Duplicate child name: \"logger\"")),
+            result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"children\" and once in \"children\"")),
         },
         test_cml_children_bad_startup => {
             input = json!({
@@ -1433,7 +1852,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("Duplicate collection name: \"modular\"")),
+            result = Err(Error::validate("identifier \"modular\" is defined twice, once in \"collections\" and once in \"collections\"")),
         },
         test_cml_collections_bad_durability => {
             input = json!({
@@ -1445,6 +1864,70 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /collections/0/durability")),
+        },
+
+        // storage
+        test_cml_storage => {
+            input = json!({
+                "storage": [
+                    {
+                        "name": "a",
+                        "from": "#minfs",
+                        "path": "/minfs"
+                    },
+                    {
+                        "name": "b",
+                        "from": "realm",
+                        "path": "/data"
+                    },
+                    {
+                        "name": "c",
+                        "from": "self",
+                        "path": "/storage"
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "minfs",
+                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_storage_all_valid_chars => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "url": "https://www.google.com/gmail"
+                    },
+                ],
+                "storage": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-storage",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
+                        "path": "/example"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_storage_missing_props => {
+            input = json!({
+                "storage": [ {} ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /storage/0/from, This property is required at /storage/0/name, This property is required at /storage/0/path")),
+        },
+        test_cml_storage_missing_from => {
+            input = json!({
+                    "storage": [ {
+                        "name": "minfs",
+                        "from": "#missing",
+                        "path": "/minfs"
+                    } ]
+                }),
+            result = Err(Error::validate("\"#missing\" is a \"storage\" source but it does not appear in \"children\"")),
         },
 
         // facets
@@ -1598,6 +2081,59 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "MaxLength condition is not met at /children/0/url")),
+        },
+        test_cml_duplicate_identifiers_children_collection => {
+           input = json!({
+               "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+               ],
+               "collections": [
+                   {
+                       "name": "logger",
+                       "durability": "transient"
+                   }
+               ]
+           }),
+           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"collections\" and once in \"children\"")),
+        },
+        test_cml_duplicate_identifiers_children_storage => {
+           input = json!({
+               "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+               ],
+               "storage": [
+                    {
+                        "name": "logger",
+                        "path": "/logs",
+                        "from": "realm"
+                    }
+                ]
+           }),
+           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"storage\" and once in \"children\"")),
+        },
+        test_cml_duplicate_identifiers_collection_storage => {
+           input = json!({
+               "collections": [
+                    {
+                        "name": "logger",
+                        "durability": "transient"
+                    }
+                ],
+                "storage": [
+                    {
+                        "name": "logger",
+                        "path": "/logs",
+                        "from": "realm"
+                    }
+                ]
+           }),
+           result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"storage\" and once in \"collections\"")),
         },
     }
 

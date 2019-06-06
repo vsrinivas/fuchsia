@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_json::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 lazy_static! {
     pub static ref REFERENCE_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
@@ -27,38 +26,41 @@ pub struct Document {
     pub offer: Option<Vec<Offer>>,
     pub children: Option<Vec<Child>>,
     pub collections: Option<Vec<Collection>>,
+    pub storage: Option<Vec<Storage>>,
     pub facets: Option<Map<String, Value>>,
 }
 
 impl Document {
-    pub fn all_children(&self) -> Result<HashSet<&str>, Error> {
-        let mut all_children = HashSet::new();
+    pub fn all_children_names(&self) -> Vec<&str> {
         if let Some(children) = self.children.as_ref() {
-            for child in children.iter() {
-                if !all_children.insert(&child.name as &str) {
-                    return Err(Error::validate(format!(
-                        "Duplicate child name: \"{}\"",
-                        &child.name
-                    )));
-                }
-            }
+            children.iter().map(|c| c.name.as_str()).collect()
+        } else {
+            vec![]
         }
-        Ok(all_children)
     }
 
-    pub fn all_collections(&self) -> Result<HashSet<&str>, Error> {
-        let mut all_collections = HashSet::new();
+    pub fn all_collection_names(&self) -> Vec<&str> {
         if let Some(collections) = self.collections.as_ref() {
-            for collection in collections.iter() {
-                if !all_collections.insert(&collection.name as &str) {
-                    return Err(Error::validate(format!(
-                        "Duplicate collection name: \"{}\"",
-                        &collection.name
-                    )));
-                }
-            }
+            collections.iter().map(|c| c.name.as_str()).collect()
+        } else {
+            vec![]
         }
-        Ok(all_collections)
+    }
+
+    pub fn all_storage_names(&self) -> Vec<&str> {
+        if let Some(storage) = self.storage.as_ref() {
+            storage.iter().map(|s| s.name.as_str()).collect()
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn all_storage_and_sources<'a>(&'a self) -> HashMap<&'a str, &'a str> {
+        if let Some(storage) = self.storage.as_ref() {
+            storage.iter().map(|s| (s.name.as_str(), s.from.as_str())).collect()
+        } else {
+            HashMap::new()
+        }
     }
 }
 
@@ -66,6 +68,7 @@ impl Document {
 pub struct Use {
     pub service: Option<String>,
     pub directory: Option<String>,
+    pub storage: Option<String>,
     pub r#as: Option<String>,
 }
 
@@ -81,6 +84,7 @@ pub struct Expose {
 pub struct Offer {
     pub service: Option<String>,
     pub directory: Option<String>,
+    pub storage: Option<String>,
     pub from: String,
     pub to: Vec<To>,
 }
@@ -104,6 +108,13 @@ pub struct Collection {
     pub durability: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Storage {
+    pub name: String,
+    pub from: String,
+    pub path: String,
+}
+
 pub trait FromClause {
     fn from(&self) -> &str;
 }
@@ -111,6 +122,7 @@ pub trait FromClause {
 pub trait CapabilityClause {
     fn service(&self) -> &Option<String>;
     fn directory(&self) -> &Option<String>;
+    fn storage(&self) -> &Option<String>;
 }
 
 pub trait AsClause {
@@ -126,6 +138,9 @@ impl CapabilityClause for Use {
     }
     fn directory(&self) -> &Option<String> {
         &self.directory
+    }
+    fn storage(&self) -> &Option<String> {
+        &self.storage
     }
 }
 
@@ -147,6 +162,9 @@ impl CapabilityClause for Expose {
     }
     fn directory(&self) -> &Option<String> {
         &self.directory
+    }
+    fn storage(&self) -> &Option<String> {
+        &None
     }
 }
 
@@ -175,6 +193,9 @@ impl CapabilityClause for Offer {
     fn directory(&self) -> &Option<String> {
         &self.directory
     }
+    fn storage(&self) -> &Option<String> {
+        &self.storage
+    }
 }
 
 impl AsClause for To {
@@ -186,5 +207,11 @@ impl AsClause for To {
 impl DestClause for To {
     fn dest(&self) -> Option<&str> {
         Some(&self.dest)
+    }
+}
+
+impl FromClause for Storage {
+    fn from(&self) -> &str {
+        &self.from
     }
 }

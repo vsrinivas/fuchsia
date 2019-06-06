@@ -76,8 +76,8 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
         out.exposes = Some(translate_expose(expose)?);
     }
     if let Some(offer) = document.offer.as_ref() {
-        let all_children = document.all_children()?;
-        let all_collections = document.all_collections()?;
+        let all_children = document.all_children_names().into_iter().collect();
+        let all_collections = document.all_collection_names().into_iter().collect();
         out.offers = Some(translate_offer(offer, &all_children, &all_collections)?);
     }
     if let Some(children) = document.children.as_ref() {
@@ -85,6 +85,9 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     }
     if let Some(collections) = document.collections.as_ref() {
         out.collections = Some(translate_collections(collections)?);
+    }
+    if let Some(storage) = document.storage.as_ref() {
+        out.storage = Some(translate_storage(storage)?);
     }
     if let Some(facets) = document.facets.as_ref() {
         out.facets = Some(facets.clone());
@@ -95,11 +98,18 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        let target_path = extract_target_path(use_, use_)?;
+        let target_path = extract_target_path(use_, use_);
         let out = if let Some(p) = use_.service() {
+            let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
             Ok(cm::Use::Service(cm::UseService { source_path: p.clone(), target_path }))
         } else if let Some(p) = use_.directory() {
+            let target_path = target_path.ok_or(Error::internal(format!("no capability")))?;
             Ok(cm::Use::Directory(cm::UseDirectory { source_path: p.clone(), target_path }))
+        } else if let Some(p) = use_.storage() {
+            Ok(cm::Use::Storage(cm::UseStorage {
+                type_: str_to_storage_type(p.as_str())?,
+                target_path,
+            }))
         } else {
             Err(Error::internal(format!("no capability")))
         }?;
@@ -112,7 +122,8 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let source = extract_expose_source(expose)?;
-        let target_path = extract_target_path(expose, expose)?;
+        let target_path =
+            extract_target_path(expose, expose).ok_or(Error::internal(format!("no capability")))?;
         let out = if let Some(p) = expose.service() {
             Ok(cm::Expose::Service(cm::ExposeService {
                 source,
@@ -140,12 +151,19 @@ fn translate_offer(
 ) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
-        let source = extract_offer_source(offer)?;
-        let targets = extract_targets(offer, all_children, all_collections)?;
         let out = if let Some(p) = offer.service() {
+            let source = extract_offer_source(offer)?;
+            let targets = extract_targets(offer, all_children, all_collections)?;
             Ok(cm::Offer::Service(cm::OfferService { source_path: p.clone(), source, targets }))
         } else if let Some(p) = offer.directory() {
+            let source = extract_offer_source(offer)?;
+            let targets = extract_targets(offer, all_children, all_collections)?;
             Ok(cm::Offer::Directory(cm::OfferDirectory { source_path: p.clone(), source, targets }))
+        } else if let Some(p) = offer.storage() {
+            let source = extract_offer_storage_source(offer)?;
+            let dests = extract_storage_dests(offer, all_children, all_collections)?;
+            let type_ = str_to_storage_type(p.as_str())?;
+            Ok(cm::Offer::Storage(cm::OfferStorage { type_, source, dests }))
         } else {
             Err(Error::internal(format!("no capability")))
         }?;
@@ -184,6 +202,19 @@ fn translate_collections(
         out_collections.push(cm::Collection { name: collection.name.clone(), durability });
     }
     Ok(out_collections)
+}
+
+fn translate_storage(storage_in: &Vec<cml::Storage>) -> Result<Vec<cm::Storage>, Error> {
+    storage_in
+        .iter()
+        .map(|storage| {
+            Ok(cm::Storage {
+                name: storage.name.clone(),
+                source_path: storage.path.clone(),
+                source: extract_offer_source(storage)?,
+            })
+        })
+        .collect()
 }
 
 fn extract_expose_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
@@ -226,6 +257,51 @@ where
     Ok(ret)
 }
 
+fn extract_offer_storage_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
+where
+    T: cml::FromClause,
+{
+    let from = in_obj.from().to_string();
+    if !cml::FROM_RE.is_match(&from) {
+        return Err(Error::internal(format!("invalid \"from\": {}", from)));
+    }
+    let ret = if from.starts_with("#") {
+        let (_, storage_name) = from.split_at(1);
+        cm::Ref::Storage(cm::StorageRef { name: storage_name.to_string() })
+    } else if from == "realm" {
+        cm::Ref::Realm(cm::RealmRef {})
+    } else {
+        return Err(Error::internal(format!("invalid \"from\" for \"offer\": {}", from)));
+    };
+    Ok(ret)
+}
+
+fn extract_storage_dests(
+    in_obj: &cml::Offer,
+    all_children: &HashSet<&str>,
+    all_collections: &HashSet<&str>,
+) -> Result<Vec<cm::Ref>, Error> {
+    in_obj
+        .to
+        .iter()
+        .map(|to| {
+            let caps = match cml::REFERENCE_RE.captures(&to.dest) {
+                Some(c) => Ok(c),
+                None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
+            }?;
+            let name = caps[1].to_string();
+
+            if all_children.contains(&name as &str) {
+                Ok(cm::Ref::Child(cm::ChildRef { name: name.to_string() }))
+            } else if all_collections.contains(&name as &str) {
+                Ok(cm::Ref::Collection(cm::CollectionRef { name: name.to_string() }))
+            } else {
+                Err(Error::internal(format!("dangling reference: \"{}\"", name)))
+            }
+        })
+        .collect()
+}
+
 fn extract_targets(
     in_obj: &cml::Offer,
     all_children: &HashSet<&str>,
@@ -233,7 +309,8 @@ fn extract_targets(
 ) -> Result<Vec<cm::Target>, Error> {
     let mut out_targets = vec![];
     for to in in_obj.to.iter() {
-        let target_path = extract_target_path(in_obj, to)?;
+        let target_path =
+            extract_target_path(in_obj, to).ok_or(Error::internal("no capability".to_string()))?;
         let caps = match cml::REFERENCE_RE.captures(&to.dest) {
             Some(c) => Ok(c),
             None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
@@ -251,21 +328,30 @@ fn extract_targets(
     Ok(out_targets)
 }
 
-fn extract_target_path<T, U>(in_obj: &T, to_obj: &U) -> Result<String, Error>
+fn extract_target_path<T, U>(in_obj: &T, to_obj: &U) -> Option<String>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause,
 {
     if let Some(as_) = to_obj.r#as() {
-        Ok(as_.clone())
+        Some(as_.clone())
     } else {
         if let Some(p) = in_obj.service() {
-            Ok(p.clone())
+            Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
-            Ok(p.clone())
+            Some(p.clone())
         } else {
-            Err(Error::internal(format!("no capability")))
+            None
         }
+    }
+}
+
+fn str_to_storage_type(s: &str) -> Result<cm::StorageType, Error> {
+    match s {
+        "data" => Ok(cm::StorageType::Data),
+        "cache" => Ok(cm::StorageType::Cache),
+        "meta" => Ok(cm::StorageType::Meta),
+        t => Err(Error::internal(format!("unknown storage type: {}", t))),
     }
 }
 
@@ -337,6 +423,8 @@ mod tests {
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                     { "service": "/svc/fuchsia.sys2.Realm" },
                     { "directory": "/data/assets" },
+                    { "storage": "meta" },
+                    { "storage": "cache", "as": "/tmp" },
                 ],
             }),
             output = r#"{
@@ -357,6 +445,17 @@ mod tests {
             "directory": {
                 "source_path": "/data/assets",
                 "target_path": "/data/assets"
+            }
+        },
+        {
+            "storage": {
+                "type": "meta"
+            }
+        },
+        {
+            "storage": {
+                "type": "cache",
+                "target_path": "/tmp"
             }
         }
     ]
@@ -432,6 +531,14 @@ mod tests {
                             { "dest": "#modular", "as": "/data" }
                         ]
                     },
+                    {
+                        "storage": "data",
+                        "from": "#logger-storage",
+                        "to": [
+                            { "dest": "#netstack" },
+                            { "dest": "#modular" }
+                        ]
+                    },
                 ],
                 "children": [
                     {
@@ -447,6 +554,13 @@ mod tests {
                     {
                         "name": "modular",
                         "durability": "persistent",
+                    },
+                ],
+                "storage": [
+                    {
+                        "name": "logger-storage",
+                        "path": "/minfs",
+                        "from": "#logger",
                     },
                 ],
             }),
@@ -505,6 +619,28 @@ mod tests {
                     }
                 ]
             }
+        },
+        {
+            "storage": {
+                "type": "data",
+                "source": {
+                    "storage": {
+                        "name": "logger-storage"
+                    }
+                },
+                "dests": [
+                    {
+                        "child": {
+                            "name": "netstack"
+                        }
+                    },
+                    {
+                        "collection": {
+                            "name": "modular"
+                        }
+                    }
+                ]
+            }
         }
     ],
     "children": [
@@ -523,6 +659,17 @@ mod tests {
         {
             "name": "modular",
             "durability": "persistent"
+        }
+    ],
+    "storage": [
+        {
+            "name": "logger-storage",
+            "source_path": "/minfs",
+            "source": {
+                "child": {
+                    "name": "logger"
+                }
+            }
         }
     ]
 }"#,
@@ -590,6 +737,44 @@ mod tests {
         {
             "name": "tests",
             "durability": "transient"
+        }
+    ]
+}"#,
+        },
+
+        test_compile_storage => {
+            input = json!({
+                "storage": [
+                    {
+                        "name": "mystorage",
+                        "path": "/storage",
+                        "from": "#minfs",
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "minfs",
+                        "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
+                    },
+                ]
+            }),
+            output = r#"{
+    "children": [
+        {
+            "name": "minfs",
+            "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
+            "startup": "lazy"
+        }
+    ],
+    "storage": [
+        {
+            "name": "mystorage",
+            "source_path": "/storage",
+            "source": {
+                "child": {
+                    "name": "minfs"
+                }
+            }
         }
     ]
 }"#,

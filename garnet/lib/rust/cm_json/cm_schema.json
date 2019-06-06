@@ -186,8 +186,7 @@
             "type": "object",
             "title": "Used storage capability",
             "required": [
-              "type",
-              "target_path"
+              "type"
             ],
             "properties": {
               "type": {
@@ -195,8 +194,9 @@
                 "allOf": [{ "$ref": "#/definitions/storage-type-clause" }]
               },
               "target_path": {
+                "title": "Used service target path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
-                "title": "Used service target path"
+                "type": ["null", "string"]
               }
             }
           }

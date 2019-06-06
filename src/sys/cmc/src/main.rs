@@ -27,7 +27,9 @@ fn main() {
 fn run_cmc() -> Result<(), Error> {
     let opt = opts::Opt::from_args();
     match opt.cmd {
-        opts::Commands::Validate { files, extra_schemas } => validate::validate(&files, &extra_schemas)?,
+        opts::Commands::Validate { files, extra_schemas } => {
+            validate::validate(&files, &extra_schemas)?
+        }
         opts::Commands::Merge { files, output } => merge::merge(files, output)?,
         opts::Commands::Format { file, pretty, output } => format::format(&file, pretty, output)?,
         opts::Commands::Compile { file, pretty, output } => {
