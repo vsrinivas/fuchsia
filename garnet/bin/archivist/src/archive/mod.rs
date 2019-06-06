@@ -258,6 +258,9 @@ impl ArchiveWriter {
     /// If the directory does not exist, it will be created.
     pub fn open(path: impl Into<PathBuf>) -> Result<Self, Error> {
         let path: PathBuf = path.into();
+        if !path.exists() {
+            fs::create_dir_all(&path)?;
+        }
         Ok(ArchiveWriter {
             archive: Archive::open(&path)?,
             open_log: EventFileGroupWriter::new(path)?,
@@ -633,7 +636,8 @@ mod tests {
     #[test]
     fn archive_writer() {
         let dir = tempfile::tempdir().unwrap();
-        let mut archive = ArchiveWriter::open(dir.path()).expect("failed to create archive");
+        let mut archive =
+            ArchiveWriter::open(dir.path().join("archive")).expect("failed to create archive");
 
         archive.get_log().new_event("START", "test", "0").build().expect("failed to write log");
         archive
