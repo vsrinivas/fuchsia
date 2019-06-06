@@ -8,10 +8,6 @@
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #endif
 
-#ifdef SCENIC_ENABLE_VIEWS_SUBSYSTEM
-#include "garnet/lib/ui/views/view_system.h"
-#endif
-
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
 #include "garnet/lib/ui/input/input_system.h"
 #endif
