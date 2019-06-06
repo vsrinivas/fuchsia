@@ -274,9 +274,10 @@ impl Executor {
     /// PollResult the future. If it is not ready, dispatch available packets and possibly try again.
     /// Timers will not fire. Never blocks.
     ///
-    /// Task-local data will not be persisted across different calls to this method.
-    ///
-    /// This is mainly intended for testing.
+    /// This function is for testing. DO NOT use this function in tests or applications that
+    /// involve any interaction with other threads or processes, as those interactions
+    /// may become stalled waiting for signals from "the outside world" which is beyond
+    /// the knowledge of the executor.
     ///
     /// Unpin: this function requires all futures to be `Unpin`able, so any `!Unpin`
     /// futures must first be pinned using the `pin_mut!` macro from the `pin-utils` crate.
