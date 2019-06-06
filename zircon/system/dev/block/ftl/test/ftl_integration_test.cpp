@@ -8,7 +8,7 @@
 #include "launch.h"
 
 // TODO(FLK-160): Re-enable when flakiness is fixed.
-#if 0
+#if !defined(__arm__) && !defined(__aarch64__)
 TEST(FtlTest, BlockTest) {
     const char* argv[] = {"/boot/bin/blktest", "-d", kTestDevice};
 

@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
+#include <fcntl.h>
+
+#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/namespace.h>
 #include <zxtest/zxtest.h>
@@ -28,8 +32,15 @@ FtlTestObserver::FtlTestObserver() {}
 
 void FtlTestObserver::OnProgramStart() {
     CreateDevice();
-    if (WaitForBlockDevice() == ZX_OK) {
+    if (WaitForBlockDevice() != ZX_OK) {
+        return;
+    }
+
+    fbl::unique_fd block(open(kTestDevice, O_RDWR));
+    if (block) {
         ok_ = true;
+    } else {
+        printf("Unable to open remapped device. Error: %d\n", errno);
     }
 }
 
