@@ -3,8 +3,6 @@ package metrics
 import (
 	"log"
 	"time"
-
-	"fidl/fuchsia/cobalt"
 )
 
 type metricID uint32
@@ -13,8 +11,27 @@ const (
 	_ metricID = iota
 	metricSystemUpToDate
 	metricOtaStart
-	metricOtaResult
+	metricOtaResultAttempt
+	metricOtaResultDuration
+	metricOtaResultFreeSpaceDelta
 )
+
+type Status uint32
+
+const (
+	// The names and integer values must correspond to the event_codes in the
+	// |status_codes| dimension of the metrics in our Cobalt registry at
+	// https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/fuchsia/software_delivery/config.yaml
+	StatusSuccess Status = iota
+	StatusFailure
+)
+
+func StatusFromError(err error) Status {
+	if err == nil {
+		return StatusSuccess
+	}
+	return StatusFailure
+}
 
 // Log synchronously submits the given metric to cobalt
 func Log(metric Metric) {
@@ -43,59 +60,58 @@ type SystemUpToDate struct {
 }
 
 func (m SystemUpToDate) log() {
-	logCustomEvent(metricSystemUpToDate, []cobalt.CustomEventValue{
-		newIndexValue("initiator", uint32(m.Initiator)),
-		newStringValue("version", m.Version),
-		newIndexValue("when", uint32(m.When.Local().Hour())),
-	})
+	logEventMulti(metricSystemUpToDate, []uint32{uint32(m.Initiator), uint32(m.When.Local().Hour())}, "")
 }
 
 type OtaStart struct {
 	Initiator Initiator
-	Source    string
 	Target    string
 	When      time.Time
 }
 
 func (m OtaStart) log() {
-	logCustomEvent(metricOtaStart, []cobalt.CustomEventValue{
-		newIndexValue("initiator", uint32(m.Initiator)),
-		newStringValue("source", m.Source),
-		newStringValue("target", m.Target),
-		newIndexValue("when", uint32(m.When.Local().Hour())),
-	})
+	logEventMulti(metricOtaStart, []uint32{uint32(m.Initiator), uint32(m.When.Local().Hour())}, m.Target)
 }
 
-type OtaResult struct {
+type OtaResultAttempt struct {
+	Initiator Initiator
+	Target    string
+	Attempt   int64
+	Phase     Phase
+	Status    Status
+}
+
+func (m OtaResultAttempt) log() {
+	logEventCountMulti(metricOtaResultAttempt, 0, m.Attempt,
+		[]uint32{uint32(m.Initiator), uint32(m.Phase), uint32(m.Status)},
+		m.Target)
+}
+
+type OtaResultDuration struct {
+	Initiator Initiator
+	Target    string
+	Duration  time.Duration
+	Phase     Phase
+	Status    Status
+}
+
+func (m OtaResultDuration) log() {
+	logElapsedTimeMulti(metricOtaResultDuration, m.Duration,
+		[]uint32{uint32(m.Initiator), uint32(m.Phase), uint32(m.Status)},
+		m.Target)
+}
+
+type OtaResultFreeSpaceDelta struct {
 	Initiator      Initiator
-	Source         string
 	Target         string
-	Attempt        int64
-	FreeSpaceStart int64
-	FreeSpaceEnd   int64
-	When           time.Time
+	FreeSpaceDelta int64
 	Duration       time.Duration
 	Phase          Phase
-	ErrorSource    string
-	ErrorText      string
-	ErrorCode      int64
+	Status         Status
 }
 
-func (m OtaResult) log() {
-	durationInMilliseconds := m.Duration.Nanoseconds() / time.Millisecond.Nanoseconds()
-
-	logCustomEvent(metricOtaResult, []cobalt.CustomEventValue{
-		newIndexValue("initiator", uint32(m.Initiator)),
-		newStringValue("source", m.Source),
-		newStringValue("target", m.Target),
-		newIntValue("attempt", m.Attempt),
-		newIntValue("free_space_start", m.FreeSpaceStart),
-		newIntValue("free_space_end", m.FreeSpaceEnd),
-		newIndexValue("when", uint32(m.When.Local().Hour())),
-		newIntValue("duration", durationInMilliseconds),
-		newIndexValue("phase", uint32(m.Phase)),
-		newStringValue("error_source", m.ErrorSource),
-		newStringValue("error_text", m.ErrorText),
-		newIntValue("error_code", m.ErrorCode),
-	})
+func (m OtaResultFreeSpaceDelta) log() {
+	logEventCountMulti(metricOtaResultFreeSpaceDelta, 0, m.FreeSpaceDelta,
+		[]uint32{uint32(m.Initiator), uint32(m.Phase), uint32(m.Status)},
+		m.Target)
 }

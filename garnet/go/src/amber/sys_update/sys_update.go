@@ -133,12 +133,6 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 			upMon.d.GC()
 
 			log.Println("System update starting...")
-			metrics.Log(metrics.OtaStart{
-				Initiator: initiator,
-				Source:    upMon.systemImageMerkle,
-				Target:    upMon.latestSystemImageMerkle,
-				When:      start,
-			})
 
 			launchDesc := sys.LaunchInfo{
 				Url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx",
@@ -154,12 +148,6 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 			}
 		} else {
 			log.Println("sys_upd_mon: no newer system version available")
-
-			metrics.Log(metrics.SystemUpToDate{
-				Initiator: initiator,
-				Version:   upMon.systemImageMerkle,
-				When:      start,
-			})
 		}
 
 		upMon.updateMerkle = latestUpdateMerkle

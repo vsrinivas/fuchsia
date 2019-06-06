@@ -10,6 +10,16 @@ import (
 	"fidl/fuchsia/cobalt"
 )
 
+const (
+	// This means that this code is considered GA (Generally Available) and so it
+	// will not be allowed to use any Cobalt metrics that are marked as being only
+	// for "DEBUG" or "FISHFOOD" etc.
+	releaseStage = cobalt.ReleaseStageGa
+	// This must match the name of our project as specified in Cobalt's metrics registry:
+	// https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+	projectName = "software_delivery"
+)
+
 var (
 	ctx              *context.Context
 	logger           cobalt.Logger
@@ -82,15 +92,41 @@ func newDoubleValue(name string, value float64) cobalt.CustomEventValue {
 	}
 }
 
+func connect() error {
+
+	factoryRequest, factory, err := cobalt.NewLoggerFactoryInterfaceRequest()
+	if err != nil {
+		return err
+	}
+	ctx.ConnectToEnvService(factoryRequest)
+	defer factory.Close()
+
+	loggerRequest, proxy, err := cobalt.NewLoggerInterfaceRequest()
+	if err != nil {
+		return err
+	}
+
+	status, err := factory.CreateLoggerFromProjectName(projectName, releaseStage, loggerRequest)
+	if err != nil {
+		proxy.Close()
+		return err
+	} else if err := mapErrCobalt(status); err != nil {
+		proxy.Close()
+		return err
+	}
+
+	logger = proxy
+
+	return nil
+}
+
 func ensureConnection() bool {
-	// Note(rudominer) Cobalt support for legacy 0.1 projects has been
-	// removed so we cannot log to Cobalt using Amber's old Cobalt 0.1 project
-	// or Cobalt will return an error. The following CL will move Amber to a new
-	// Cobalt 1.0 project:
-	// https://fuchsia-review.googlesource.com/c/fuchsia/+/272921.
-	// Until that CL can be submitted, we disable logging to Cobalt.
-	logger = nil
-	return false
+	if logger == nil {
+		if err := connect(); err != nil {
+			log.Printf("connect to cobalt: %s", err)
+		}
+	}
+	return logger != nil
 }
 
 func logString(metric metricID, value string) {
@@ -106,6 +142,41 @@ func logString(metric metricID, value string) {
 	}
 }
 
+// logEventMulti() invokes logEventCountMulti() using periodDurationMicros=0
+// and count=1. Cobalt's simple EVENT_OCCURRED metric type does not support
+// multiple dimensions of event codes or a component string. When one wants to
+// use these features one is supposed to use the EVENT_COUNT metric type,
+// always setting the count=1 and the duration=0.
+func logEventMulti(metric metricID, eventCodes []uint32, component string) {
+	logEventCountMulti(metric, 0, 1, eventCodes, component)
+}
+
+func logEventCountMulti(metric metricID, periodDurationMicros int64, count int64,
+	eventCodes []uint32, component string) {
+	if !ensureConnection() {
+		return
+	}
+
+	event := cobalt.CobaltEvent{
+		MetricId:   uint32(metric),
+		EventCodes: eventCodes,
+		Component:  &component,
+		Payload: cobalt.EventPayload{
+			EventPayloadTag: cobalt.EventPayloadEventCount,
+			EventCount: cobalt.CountEvent{
+				PeriodDurationMicros: periodDurationMicros,
+				Count:                count,
+			},
+		},
+	}
+	status, err := logger.LogCobaltEvent(event)
+	if err != nil {
+		log.Printf("logEventCountMulti: %s", err)
+	} else if err := mapErrCobalt(status); err != nil {
+		log.Printf("logEventCountMulti: %s", err)
+	}
+}
+
 func logElapsedTime(metric metricID, duration time.Duration, index uint32, component string) {
 	if !ensureConnection() {
 		return
@@ -118,6 +189,28 @@ func logElapsedTime(metric metricID, duration time.Duration, index uint32, compo
 		log.Printf("logElapsedTime: %s", err)
 	} else if err := mapErrCobalt(status); err != nil {
 		log.Printf("logElapsedTime: %s", err)
+	}
+}
+
+func logElapsedTimeMulti(metric metricID, duration time.Duration, eventCodes []uint32, component string) {
+	if !ensureConnection() {
+		return
+	}
+
+	event := cobalt.CobaltEvent{
+		MetricId:   uint32(metric),
+		EventCodes: eventCodes,
+		Component:  &component,
+		Payload: cobalt.EventPayload{
+			EventPayloadTag: cobalt.EventPayloadElapsedMicros,
+			ElapsedMicros:   duration.Nanoseconds() / time.Microsecond.Nanoseconds(),
+		},
+	}
+	status, err := logger.LogCobaltEvent(event)
+	if err != nil {
+		log.Printf("logElapsedTimeMulti: %s", err)
+	} else if err := mapErrCobalt(status); err != nil {
+		log.Printf("logElapsedTimeMulti: %s", err)
 	}
 }
 

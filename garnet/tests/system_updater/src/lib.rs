@@ -5,6 +5,7 @@
 #![feature(async_await, await_macro)]
 #![cfg(test)]
 use {
+    cobalt_sw_delivery_registry as metrics,
     failure::{bail, Error},
     fidl_fuchsia_pkg::PackageResolverRequestStream,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
@@ -202,12 +203,12 @@ struct CustomEvent {
 }
 
 struct MockLogger {
-    custom_events: Mutex<Vec<CustomEvent>>,
+    cobalt_events: Mutex<Vec<fidl_fuchsia_cobalt::CobaltEvent>>,
 }
 
 impl MockLogger {
     fn new() -> Self {
-        Self { custom_events: Mutex::new(vec![]) }
+        Self { cobalt_events: Mutex::new(vec![]) }
     }
 
     async fn run_logger(
@@ -216,17 +217,12 @@ impl MockLogger {
     ) -> Result<(), Error> {
         while let Some(event) = await!(stream.try_next())? {
             match event {
-                fidl_fuchsia_cobalt::LoggerRequest::LogCustomEvent {
-                    metric_id,
-                    event_values,
-                    responder,
-                } => {
-                    eprintln!("TEST: Got Logger request with metric_id {:?}", metric_id);
-                    self.custom_events.lock().push(CustomEvent { metric_id, values: event_values });
+                fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
+                    self.cobalt_events.lock().push(event);
                     responder.send(fidl_fuchsia_cobalt::Status::Ok)?;
                 }
                 _ => {
-                    bail!("unhandled Logger method {:?}", event);
+                    panic!("unhandled Logger method {:?}", event);
                 }
             }
         }
@@ -237,25 +233,33 @@ impl MockLogger {
 
 struct MockLoggerFactory {
     loggers: Mutex<Vec<Arc<MockLogger>>>,
+    broken: Mutex<bool>,
 }
 
 impl MockLoggerFactory {
     fn new() -> Self {
-        Self { loggers: Mutex::new(vec![]) }
+        Self { loggers: Mutex::new(vec![]), broken: Mutex::new(false) }
     }
 
     async fn run_logger_factory(
         self: Arc<Self>,
         mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
     ) -> Result<(), Error> {
+        if *self.broken.lock() {
+            bail!("This LoggerFactory is broken by order of the test.");
+        }
         while let Some(event) = await!(stream.try_next())? {
             match event {
-                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLogger {
-                    profile,
+                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectName {
+                    project_name,
+                    release_stage: _,
                     logger,
                     responder,
                 } => {
-                    eprintln!("TEST: Got CreateLogger request with profile {:?}", profile);
+                    eprintln!(
+                        "TEST: Got CreateLogger request with project_name {:?}",
+                        project_name
+                    );
                     let mock_logger = Arc::new(MockLogger::new());
                     self.loggers.lock().push(mock_logger.clone());
                     fasync::spawn(
@@ -266,12 +270,96 @@ impl MockLoggerFactory {
                     responder.send(fidl_fuchsia_cobalt::Status::Ok)?;
                 }
                 _ => {
-                    bail!("unhandled LoggerFactory method: {:?}", event);
+                    panic!("unhandled LoggerFactory method: {:?}", event);
                 }
             }
         }
 
         Ok(())
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct OtaMetrics {
+    initiator: u32,
+    phase: u32,
+    status_code: u32,
+    target: String,
+    // TODO: support free_space_delta assertions
+}
+
+impl OtaMetrics {
+    fn from_events(mut events: Vec<fidl_fuchsia_cobalt::CobaltEvent>) -> Self {
+        events.sort_by_key(|e| e.metric_id);
+
+        // expecting one of each event
+        assert_eq!(
+            events.iter().map(|e| e.metric_id).collect::<Vec<_>>(),
+            vec![
+                metrics::OTA_START_METRIC_ID,
+                metrics::OTA_RESULT_ATTEMPTS_METRIC_ID,
+                metrics::OTA_RESULT_DURATION_METRIC_ID,
+                metrics::OTA_RESULT_FREE_SPACE_DELTA_METRIC_ID
+            ]
+        );
+
+        // we just asserted that we have the exact 4 things we're expecting, so unwrap them
+        let mut iter = events.into_iter();
+        let start = iter.next().unwrap();
+        let attempt = iter.next().unwrap();
+        let duration = iter.next().unwrap();
+        let free_space_delta = iter.next().unwrap();
+
+        // Some basic sanity checks follow
+        assert_eq!(
+            attempt.payload,
+            fidl_fuchsia_cobalt::EventPayload::EventCount(fidl_fuchsia_cobalt::CountEvent {
+                period_duration_micros: 0,
+                count: 1
+            })
+        );
+
+        let fidl_fuchsia_cobalt::CobaltEvent { event_codes, component, .. } = attempt;
+
+        // metric event_codes and component should line up across all 3 result metrics
+        assert_eq!(&duration.event_codes, &event_codes);
+        assert_eq!(&duration.component, &component);
+        assert_eq!(&free_space_delta.event_codes, &event_codes);
+        assert_eq!(&free_space_delta.component, &component);
+
+        // OtaStart only has initiator and hour_of_day, so just check initiator.
+        assert_eq!(start.event_codes[0], event_codes[0]);
+        assert_eq!(&start.component, &component);
+
+        let target = component.expect("a target update merkle");
+
+        assert_eq!(event_codes.len(), 3);
+        let initiator = event_codes[0];
+        let phase = event_codes[1];
+        let status_code = event_codes[2];
+
+        match duration.payload {
+            fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(_time) => {
+                // Ignore the value since timing is not predictable.
+            }
+            other => {
+                panic!("unexpected duration payload {:?}", other);
+            }
+        }
+
+        // Ignore this for now, since it's using a shared tempdir, the values
+        // are not deterministic.
+        let _free_space_delta = match free_space_delta.payload {
+            fidl_fuchsia_cobalt::EventPayload::EventCount(fidl_fuchsia_cobalt::CountEvent {
+                period_duration_micros: 0,
+                count,
+            }) => count,
+            other => {
+                panic!("unexpected free space delta payload {:?}", other);
+            }
+        };
+
+        Self { initiator, phase, status_code, target }
     }
 }
 
@@ -293,9 +381,42 @@ async fn test_system_update() {
     ]);
 
     let loggers = env.logger_factory.loggers.lock().clone();
-    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
-    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
-    // is landed. This is being tracked by PKG-723.
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            target: "m3rk13".into(),
+        }
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_broken_logger() {
+    let env = TestEnv::new();
+
+    std::fs::write(
+        env.update_path.join("packages"),
+        "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+    )
+    .expect("create update/packages");
+
+    *env.logger_factory.broken.lock() = true;
+
+    await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }))
+        .expect("run system_updater");
+
+    assert_eq!(*env.resolver.resolved_uris.lock(), vec![
+        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
+    ]);
+
+    let loggers = env.logger_factory.loggers.lock().clone();
     assert_eq!(loggers.len(), 0);
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
@@ -322,10 +443,18 @@ async fn test_failing_package_fetch() {
     ]);
 
     let loggers = env.logger_factory.loggers.lock().clone();
-    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
-    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
-    // is landed. This is being tracked by PKG-723.
-    assert_eq!(loggers.len(), 0);
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            target: "m3rk13".into(),
+        }
+    );
 
     assert_eq!(*env.reboot_service.called.lock(), 0);
 }
@@ -342,10 +471,18 @@ async fn test_working_image_write() {
         .expect("success");
 
     let loggers = env.logger_factory.loggers.lock().clone();
-    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
-    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
-    // is landed. This is being tracked by PKG-723.
-    assert_eq!(loggers.len(), 0);
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            target: "m3rk13".into(),
+        }
+    );
 
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
@@ -366,10 +503,18 @@ async fn test_failing_image_write() {
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     let loggers = env.logger_factory.loggers.lock().clone();
-    // NOTE(rudominer) Logging to Cobalt from Amber has temporarily been disabled.
-    // It will be re-enabled when https://fuchsia-review.googlesource.com/c/fuchsia/+/272921
-    // is landed. This is being tracked by PKG-723.
-    assert_eq!(loggers.len(), 0);
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageWrite as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            target: "m3rk13".into(),
+        }
+    );
 
     assert_eq!(*env.reboot_service.called.lock(), 0);
 }
