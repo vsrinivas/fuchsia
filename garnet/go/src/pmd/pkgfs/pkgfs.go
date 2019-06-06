@@ -380,10 +380,15 @@ func (fs *Filesystem) GC() error {
 	// remove all the blobs we no longer need
 	log.Printf("GC: removing %d blobs from blobfs", len(installedBlobs))
 
+	i := 0
 	for m := range installedBlobs {
+		i += 1
 		e := os.Remove(path.Join("/blob", m))
 		if e != nil {
 			log.Printf("GC: error removing %s from blobfs: %s", m, e)
+		}
+		if i%100 == 0 {
+			log.Printf("GC: deleted %d of %d blobs in %.3fs", i, len(installedBlobs), time.Since(start).Seconds())
 		}
 	}
 	return nil
