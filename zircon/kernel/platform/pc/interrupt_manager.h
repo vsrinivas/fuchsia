@@ -10,9 +10,10 @@
 
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
+#include <bitmap/raw-bitmap.h>
+#include <bitmap/storage.h>
 #include <dev/interrupt.h>
 #include <err.h>
-#include <lib/pow2_range_allocator.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <pow2.h>
@@ -25,6 +26,7 @@ template <typename IoApic>
 class InterruptManager {
 public:
     InterruptManager() = default;
+    ~InterruptManager() = default;
     InterruptManager(const InterruptManager&) = delete;
     InterruptManager(InterruptManager&&) = delete;
     InterruptManager& operator=(InterruptManager&&) = delete;
@@ -32,22 +34,11 @@ public:
 
     static constexpr unsigned int kNumCpuVectors = X86_INT_PLATFORM_MAX - X86_INT_PLATFORM_BASE + 1;
 
-    ~InterruptManager() {
-        if (initialized_) {
-            p2ra_free(&x86_irq_vector_allocator_);
-        }
-    }
-
     // Initialize the x86 IRQ vector allocator and add the range of vectors to manage.
     zx_status_t Init() {
-        zx_status_t status = p2ra_init(&x86_irq_vector_allocator_, MAX_IRQ_BLOCK_SIZE);
-        if (status != ZX_OK) {
-            return status;
-        }
-        initialized_ = true;
-
-        return p2ra_add_range(&x86_irq_vector_allocator_,
-                              X86_INT_PLATFORM_BASE, kNumCpuVectors);
+        // This is a statically allocated vector so reset should not fail.
+        Guard<SpinLock, IrqSave> guard{&lock_};
+        return handler_allocated_.Reset(X86_INT_COUNT);
     }
 
     zx_status_t MaskInterrupt(unsigned int vector) {
@@ -124,7 +115,7 @@ public:
         if (x86_vector && !handler) {
             /* If the x86 vector is valid, and we are unregistering the handler,
              * return the x86 vector to the pool. */
-            p2ra_free_range(&x86_irq_vector_allocator_, x86_vector, 1);
+            FreeHandler(x86_vector, 1);
         } else if (!x86_vector && handler) {
             /* If the x86 vector is invalid, and we are registering a handler,
              * attempt to get a new x86 vector from the pool. */
@@ -134,7 +125,8 @@ public:
              * debug builds, we ASSERT that everything went well.  In release
              * builds, we log a message and then silently ignore the request to
              * register a new handler. */
-            result = p2ra_allocate_range(&x86_irq_vector_allocator_, 1, &range_start);
+
+            result = AllocHandler(1, &range_start);
 
             if (result != ZX_OK) {
                 TRACEF("Failed to allocate x86 IRQ vector for global IRQ (%u) when "
@@ -179,10 +171,13 @@ public:
         }
 
         zx_status_t res;
-        uint alloc_start;
+        uint alloc_start = 0;
         uint alloc_size = 1u << log2_uint_ceil(requested_irqs);
 
-        res = p2ra_allocate_range(&x86_irq_vector_allocator_, alloc_size, &alloc_start);
+        {
+            Guard<SpinLock, IrqSave> guard{&lock_};
+            res = AllocHandler(alloc_size, &alloc_start);
+        }
         if (res == ZX_OK) {
             // Compute the target address.
             // See section 10.11.1 of the Intel 64 and IA-32 Architectures Software
@@ -224,7 +219,10 @@ public:
     void MsiFreeBlock(msi_block_t* block) {
         DEBUG_ASSERT(block);
         DEBUG_ASSERT(block->allocated);
-        p2ra_free_range(&x86_irq_vector_allocator_, block->base_irq_id, block->num_irq);
+        {
+            Guard<SpinLock, IrqSave> guard{&lock_};
+            FreeHandler(block->base_irq_id, block->num_irq);
+        }
         memset(block, 0, sizeof(*block));
     }
 
@@ -289,15 +287,41 @@ private:
         void* arg_ TA_GUARDED(lock_) = nullptr;
     };
 
-    // This lock guards against concurrent access to the IOAPIC
-    DECLARE_SPINLOCK(InterruptManager) lock_;
+    void FreeHandler(uint base, uint count) TA_REQ(lock_) {
+        handler_allocated_.Clear(base, base + count);
+    }
 
-    // Representation of the state necessary for allocating and handling external
-    // interrupts.
-    p2ra_state_t x86_irq_vector_allocator_ = {};
+    // Allocates a range of handlers that are also aligned by the count, which must be a power of 2.
+    zx_status_t AllocHandler(uint count, uint *start) TA_REQ(lock_) {
+        DEBUG_ASSERT(fbl::is_pow2(count));
+        // This is the anchor of our search. We always start at the beginning.
+        size_t bitoff = X86_INT_PLATFORM_BASE;
+
+        zx_status_t result;
+        do {
+            // Round the start of our search up to count (which is also our alignment).
+            // Find will return an error if bitoff has exceeded the end of the range.
+            bitoff = ROUNDUP(bitoff, count);
+            result = handler_allocated_.Find(false, bitoff,
+                                             X86_INT_PLATFORM_MAX + 1, count, &bitoff);
+            // Bail early if we get any kind of error.
+            if (result != ZX_OK) {
+                return result;
+            }
+        } while((bitoff % count) != 0);
+        // Loop only exits if we found a valid range.
+        *start = (uint)bitoff;
+        return handler_allocated_.Set(bitoff, bitoff + count);
+    }
+    friend bool TestHandlerAllocationAlignment();
+
+    // This lock guards against concurrent access to the IOAPIC and handler allocation bitmap.
+    DECLARE_SPINLOCK(InterruptManager) lock_;
 
     // Handler table with one entry per CPU interrupt vector.
     InterruptTableEntry handler_table_[X86_INT_COUNT] = {};
 
-    bool initialized_ = false;
+    // Bitmap to track what entries in handler_table_ are in use.
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<X86_INT_COUNT>>
+        handler_allocated_ TA_GUARDED(lock_);
 };

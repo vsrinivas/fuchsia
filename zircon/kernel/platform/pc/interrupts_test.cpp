@@ -204,11 +204,61 @@ bool TestRegisterInterruptHandlerTooMany() {
     END_TEST;
 }
 
+} // namespace
+
+// This test isn't in the namespace so that the InterruptManager can friend it.
+bool TestHandlerAllocationAlignment() TA_NO_THREAD_SAFETY_ANALYSIS {
+    BEGIN_TEST;
+
+    fbl::AllocChecker ac;
+    auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
+    ASSERT_TRUE(ac.check(), "");
+    ASSERT_EQ(im->Init(), ZX_OK, "");
+
+    uint base = 0;
+
+    // Allocation in new IM should succeed and be correctly aligned.
+    zx_status_t status = im->AllocHandler(32, &base);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(base % 32, 0u, "");
+    im->FreeHandler(base, 32);
+
+    // Set a high bit such that our allocation just won't fit.
+    im->handler_allocated_.Set(X86_INT_PLATFORM_BASE + 31, X86_INT_PLATFORM_BASE + 31 + 1);
+    status = im->AllocHandler(32, &base);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_GT(base, X86_INT_PLATFORM_BASE + 31u, "");
+    EXPECT_EQ(base % 32, 0u, "");
+    im->FreeHandler(base, 32);
+    im->FreeHandler(X86_INT_PLATFORM_BASE + 31, 1);
+
+    // Set a low bit ensuring that allocation happens on the next roundup up block.
+    im->handler_allocated_.Set(X86_INT_PLATFORM_BASE, X86_INT_PLATFORM_BASE + 1);
+    status = im->AllocHandler(32, &base);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_EQ(base % 32, 0u, "");
+    im->FreeHandler(base, 32);
+    im->FreeHandler(X86_INT_PLATFORM_BASE, 1);
+
+    // Set two bits such that the distance between them is greater than our desired allocation
+    // but such that the only valid alignment requires an allocation in an even higher block.
+    im->handler_allocated_.Set(X86_INT_PLATFORM_BASE, X86_INT_PLATFORM_BASE + 1);
+    im->handler_allocated_.Set(X86_INT_PLATFORM_BASE + 34, X86_INT_PLATFORM_BASE + 34 + 1);
+    status = im->AllocHandler(32, &base);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_GT(base, X86_INT_PLATFORM_BASE + 34u, "");
+    EXPECT_EQ(base % 32, 0u, "");
+    im->FreeHandler(base, 32);
+    im->FreeHandler(X86_INT_PLATFORM_BASE, 1);
+    im->FreeHandler(X86_INT_PLATFORM_BASE + 34, 1);
+
+    END_TEST;
+}
+
 UNITTEST_START_TESTCASE(pc_interrupt_tests)
 UNITTEST("RegisterInterruptHandler", TestRegisterInterruptHandler)
 UNITTEST("RegisterInterruptHandlerTwice", TestRegisterInterruptHandlerTwice)
 UNITTEST("UnregisterInterruptHandlerNotRegistered", TestUnregisterInterruptHandlerNotRegistered)
 UNITTEST("RegisterInterruptHandlerTooMany", TestRegisterInterruptHandlerTooMany)
+UNITTEST("HandlerAllocationAlignment", TestHandlerAllocationAlignment)
 UNITTEST_END_TESTCASE(pc_interrupt_tests, "pc_interrupt", "Tests for external interrupts");
-
-} // namespace
