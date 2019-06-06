@@ -215,9 +215,15 @@ func (i *Instance) Kill() error {
 }
 
 // RunCommand runs the given command in the serial console for the QEMU instance.
-func (i *Instance) RunCommand(cmd string) error {
+func (i *Instance) RunCommand(cmd string) {
 	_, err := i.stdin.WriteString(fmt.Sprintf("%s\n", cmd))
-	return err
+	if err != nil {
+		panic(err)
+	}
+	err = i.stdin.Flush()
+	if err != nil {
+		panic(err)
+	}
 }
 
 // WaitForLogMessage reads log messages from the QEMU instance until it reads a
@@ -237,7 +243,7 @@ func (i *Instance) CheckForLogMessage(msg string) error {
 	for {
 		line, err := i.stdout.ReadString('\n')
 		if err != nil {
-			return err
+			panic(err)
 		}
 		if strings.Contains(line, msg) {
 			return nil
