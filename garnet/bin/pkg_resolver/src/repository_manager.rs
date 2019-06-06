@@ -5,11 +5,19 @@
 use {
     crate::amber_connector::AmberConnect,
     failure::Fail,
-    fidl_fuchsia_amber::{self, ControlProxy as AmberProxy},
+    fidl_fuchsia_amber::{
+        self, ControlProxy as AmberProxy, FetchResultEvent, FetchResultMarker,
+        OpenedRepositoryMarker, OpenedRepositoryProxy,
+    },
+    fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigs},
-    fuchsia_syslog::fx_log_err,
-    fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_async as fasync,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
+    futures::stream::StreamExt,
+    futures::Future,
+    parking_lot::RwLock,
     std::collections::btree_set,
     std::collections::hash_map::Entry,
     std::collections::{BTreeSet, HashMap},
@@ -17,6 +25,7 @@ use {
     std::fs,
     std::io,
     std::path::{Path, PathBuf},
+    std::sync::Arc,
 };
 
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
@@ -26,6 +35,7 @@ pub struct RepositoryManager<A: AmberConnect> {
     static_configs: HashMap<RepoUrl, RepositoryConfig>,
     dynamic_configs: HashMap<RepoUrl, RepositoryConfig>,
     amber: A,
+    conns: Arc<RwLock<HashMap<RepoUrl, OpenedRepositoryProxy>>>,
 }
 
 impl<A: AmberConnect> RepositoryManager<A> {
@@ -44,6 +54,11 @@ impl<A: AmberConnect> RepositoryManager<A> {
     /// and the old [RepositoryConfig] is returned. If this repository is a static config, the
     /// static config is shadowed by the dynamic config until it is removed.
     pub fn insert(&mut self, config: RepositoryConfig) -> Option<RepositoryConfig> {
+        // Clear any connections so we aren't talking to stale repositories.
+        if self.conns.write().remove(config.repo_url()).is_some() {
+            fx_log_info!("closing connection to {} repo because config changed", config.repo_url());
+        }
+
         let result = self.dynamic_configs.insert(config.repo_url().clone(), config);
         self.save();
         result
@@ -55,6 +70,14 @@ impl<A: AmberConnect> RepositoryManager<A> {
         repo_url: &RepoUrl,
     ) -> Result<Option<RepositoryConfig>, CannotRemoveStaticRepositories> {
         if let Some(config) = self.dynamic_configs.remove(repo_url) {
+            // Clear any connections so we aren't talking to stale repositories.
+            if self.conns.write().remove(repo_url).is_some() {
+                fx_log_info!(
+                    "closing connection to {} repo because config removed",
+                    config.repo_url()
+                );
+            }
+
             self.save();
             return Ok(Some(config));
         }
@@ -105,6 +128,125 @@ impl<A: AmberConnect> RepositoryManager<A> {
     /// Connect to the amber service.
     pub fn connect_to_amber(&self) -> Result<AmberProxy, Status> {
         self.amber.connect()
+    }
+
+    pub fn get_package<'a>(
+        &self,
+        url: &'a PkgUrl,
+    ) -> impl Future<Output = Result<BlobId, Status>> + 'a {
+        let repo = self.connect_to_repo(url.repo());
+        get_package(repo, url)
+    }
+
+    fn connect_to_repo(&self, url: &RepoUrl) -> Result<OpenedRepositoryProxy, Status> {
+        // Exit early if we've already connected to this repository.
+        if let Some(conn) = self.conns.read().get(url) {
+            if !conn.is_closed() {
+                return Ok(conn.clone());
+            }
+        }
+
+        // Next, check if we actually have a repository defined for this URI. If not, exit early
+        // with NOT_FOUND.
+        let config = if let Some(config) = self.get(url) {
+            config.clone()
+        } else {
+            return Err(Status::NOT_FOUND);
+        };
+
+        // Create the proxy to Amber. In order to minimize our time with the lock held, we'll
+        // create the proxy first, even if it proves to be redundant because we lost the race with
+        // another thread.
+        let (repo, repo_server_end) = fidl::endpoints::create_proxy::<OpenedRepositoryMarker>()
+            .map_err(|err| {
+                fx_log_err!("failed to create proxy: {}", err);
+                Status::INTERNAL
+            })?;
+
+        // The repo is defined, so we might actually need to connect to the device.
+        {
+            let mut conns = self.conns.write();
+
+            // It's still possible we raced with some other connection attempt, so exit early if
+            // they created a valid connection.
+            if let Some(conn) = conns.get(url) {
+                if !conn.is_closed() {
+                    return Ok(conn.clone());
+                }
+            }
+
+            conns.insert(url.clone(), repo.clone());
+        };
+
+        let amber = self.connect_to_amber()?;
+
+        // We'll actually do the connection in a separate async context. It will log any errors it
+        // finds.
+        fasync::spawn(async move {
+            let status = match await!(amber.open_repository(config.into(), repo_server_end)) {
+                Ok(status) => status,
+                Err(err) => {
+                    fx_log_err!("failed to open repository: {}", err);
+                    return;
+                }
+            };
+
+            if let Err(err) = Status::ok(status) {
+                fx_log_err!("failed to open repository: {}", err);
+            }
+        });
+
+        return Ok(repo);
+    }
+}
+
+async fn get_package(
+    repo: Result<OpenedRepositoryProxy, Status>,
+    url: &PkgUrl,
+) -> Result<BlobId, Status> {
+    let repo = repo?;
+
+    // While the fuchsia-pkg:// spec doesn't require a package name, we do.
+    let name = url.name().ok_or_else(|| {
+        fx_log_err!("package url is missing a package name: {}", url);
+        Err(Status::INVALID_ARGS)
+    })?;
+
+    let (result, result_server_end) = fidl::endpoints::create_proxy::<FetchResultMarker>()
+        .map_err(|err| {
+            fx_log_err!("failed to create proxy: {}", err);
+            Status::INTERNAL
+        })?;
+
+    // Ask amber to cache the package.
+    repo.get_update_complete(&name, url.variant(), url.package_hash(), result_server_end).map_err(
+        |err| {
+            fx_log_err!("error communicating with amber: {:?}", err);
+            Status::INTERNAL
+        },
+    )?;
+
+    match await!(result.take_event_stream().into_future()) {
+        (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
+            Ok(merkle) => Ok(merkle),
+            Err(err) => {
+                fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
+                return Err(Status::INTERNAL);
+            }
+        },
+        (Some(Ok(FetchResultEvent::OnError { result, message })), _) => {
+            let status = Status::from_raw(result);
+            fx_log_err!("error fetching package: {}: {}", status, message);
+            return Err(status);
+        }
+        (Some(Err(err)), _) => {
+            fx_log_err!("error communicating with amber: {}", err);
+            return Err(Status::INTERNAL);
+        }
+        (None, _) => {
+            fx_log_err!("amber unexpectedly closed fetch result channel");
+            return Err(Status::INTERNAL);
+        }
     }
 }
 
@@ -196,6 +338,7 @@ impl<A: AmberConnect> RepositoryManagerBuilder<A> {
             static_configs: self.static_configs,
             dynamic_configs: self.dynamic_configs,
             amber: self.amber,
+            conns: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }

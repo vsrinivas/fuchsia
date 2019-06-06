@@ -7,12 +7,14 @@ use failure::Error;
 use fidl::endpoints::{self, ServerEnd};
 use fidl_fuchsia_amber::{
     ControlMarker as AmberMarker, ControlProxy as AmberProxy, ControlRequest,
+    OpenedRepositoryMarker, OpenedRepositoryRequest,
 };
 use fidl_fuchsia_io::DirectoryProxy;
-use fidl_fuchsia_pkg::{self, PackageCacheRequest};
+use fidl_fuchsia_pkg::{self, PackageCacheRequest, RepositoryConfig};
 use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{Channel, Peered, Signals, Status};
+use futures::stream::TryStreamExt;
 use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json;
@@ -50,7 +52,7 @@ pub(crate) struct Package {
 #[derive(Debug, PartialEq)]
 pub(crate) enum PackageKind {
     Ok,
-    Error(String),
+    Error(Status, String),
 }
 
 impl Package {
@@ -67,10 +69,11 @@ impl Package {
 #[derive(Debug)]
 pub(crate) struct MockAmber {
     source: Repository,
+    repos: HashMap<String, (RepositoryConfig, Arc<Repository>)>,
 }
 
 impl MockAmber {
-    pub(crate) fn spawn(self: Arc<Self>) -> AmberProxy {
+    fn spawn(self: Arc<Self>) -> AmberProxy {
         endpoints::spawn_local_stream_handler(move |req| {
             let a = self.clone();
             async move { await!(a.process_amber_request(req)) }
@@ -84,7 +87,11 @@ impl MockAmber {
                 let c = self.get_update_complete(name, version).unwrap();
                 responder.send(c).expect("failed to send response");
             }
-            _ => unimplemented!("{:?}", req),
+            ControlRequest::OpenRepository { config, repo, responder } => {
+                self.open_repository(config, repo);
+                responder.send(Status::OK.into_raw()).expect("failed to send response");
+            }
+            _ => panic!("not implemented: {:?}", req),
         }
     }
 
@@ -97,7 +104,7 @@ impl MockAmber {
                 PackageKind::Ok => {
                     s.write(package.merkle.as_bytes(), &mut handles)?;
                 }
-                PackageKind::Error(ref msg) => {
+                PackageKind::Error(_, ref msg) => {
                     // Package not found, signal error.
                     s.signal_peer(Signals::NONE, Signals::USER_0)?;
                     s.write(msg.as_bytes(), &mut handles)?;
@@ -111,17 +118,70 @@ impl MockAmber {
 
         Ok(c)
     }
+
+    fn open_repository(&self, config: RepositoryConfig, repo: ServerEnd<OpenedRepositoryMarker>) {
+        let opened_repo = if let Some(ref repo_url) = config.repo_url {
+            let (opened_config, opened_repo) = self.repos.get(&**repo_url).expect("repo to exist");
+            assert_eq!(&config, opened_config);
+            opened_repo.clone()
+        } else {
+            panic!("repo does not exist");
+        };
+
+        fasync::spawn(async move {
+            let mut stream = repo.into_stream().unwrap();
+
+            while let Some(req) = await!(stream.try_next()).unwrap() {
+                Self::process_repo_request(&opened_repo, req).expect("amber failed");
+            }
+        });
+    }
+
+    fn process_repo_request(repo: &Repository, req: OpenedRepositoryRequest) -> Result<(), Error> {
+        match req {
+            OpenedRepositoryRequest::GetUpdateComplete {
+                name,
+                variant,
+                merkle: _,
+                result,
+                control_handle: _,
+            } => {
+                let variant = variant.unwrap_or_else(|| "0".to_string());
+
+                let (_, result_control_channel) = result.into_stream_and_control_handle()?;
+
+                if let Some(package) = repo.get(name, variant)? {
+                    match package.kind {
+                        PackageKind::Ok => {
+                            result_control_channel.send_on_success(&package.merkle)?;
+                        }
+                        PackageKind::Error(status, ref msg) => {
+                            result_control_channel.send_on_error(status.into_raw(), msg)?;
+                        }
+                    }
+                } else {
+                    result_control_channel.send_on_error(
+                        Status::NOT_FOUND.into_raw(),
+                        "merkle not found for package",
+                    )?;
+                }
+
+                Ok(())
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
 pub(crate) struct MockAmberBuilder {
     pkgfs: Arc<TempDir>,
     packages: Vec<Package>,
+    repos: HashMap<String, (RepositoryConfig, Arc<Repository>)>,
 }
 
 impl MockAmberBuilder {
     pub(crate) fn new(pkgfs: Arc<TempDir>) -> Self {
-        MockAmberBuilder { pkgfs, packages: vec![] }
+        MockAmberBuilder { pkgfs, packages: vec![], repos: HashMap::new() }
     }
 
     pub(crate) fn packages<I: IntoIterator<Item = Package>>(mut self, packages: I) -> Self {
@@ -129,8 +189,15 @@ impl MockAmberBuilder {
         self
     }
 
+    pub(crate) fn repo(mut self, config: RepositoryConfig, packages: Vec<Package>) -> Self {
+        let repo_url = config.repo_url.as_ref().unwrap();
+        let repo = Arc::new(Repository::new(self.pkgfs.clone(), packages));
+        self.repos.insert(repo_url.to_string(), (config, repo));
+        self
+    }
+
     pub(crate) fn build(self) -> MockAmber {
-        MockAmber { source: Repository::new(self.pkgfs, self.packages) }
+        MockAmber { source: Repository::new(self.pkgfs, self.packages), repos: self.repos }
     }
 }
 
@@ -201,7 +268,7 @@ impl MockPackageCache {
                 };
                 responder.send(status.into_raw()).expect("failed to send response");
             }
-            _ => {}
+            _ => panic!("not implemented: {:?}", req),
         }
     }
 }
@@ -215,6 +282,10 @@ impl MockAmberConnector {
     pub(crate) fn new(amber: MockAmber) -> Self {
         let amber = Arc::new(Mutex::new(Arc::new(amber)));
         MockAmberConnector { amber }
+    }
+
+    pub(crate) fn set_amber(&mut self, amber: MockAmber) {
+        *self.amber.lock() = Arc::new(amber);
     }
 }
 
