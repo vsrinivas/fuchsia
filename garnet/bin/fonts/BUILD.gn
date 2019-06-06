@@ -30,6 +30,7 @@ rustc_binary("font_server") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",

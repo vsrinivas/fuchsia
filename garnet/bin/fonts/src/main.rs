@@ -4,6 +4,7 @@
 
 #![feature(async_await, await_macro)]
 
+mod cache;
 mod collection;
 mod font_info;
 mod font_service;

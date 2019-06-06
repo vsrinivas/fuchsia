@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        cache::{Asset, AssetCache},
         collection::{Typeface, TypefaceCollection},
         font_info, manifest,
     },
@@ -15,6 +16,7 @@ use {
     fidl_fuchsia_mem as mem, fuchsia_async as fasync,
     futures::{prelude::*, FutureExt},
     log,
+    parking_lot::RwLock,
     std::{
         collections::BTreeMap,
         fs::File,
@@ -47,6 +49,7 @@ struct AssetCollection {
     id_to_path_map: BTreeMap<u32, PathBuf>,
     /// Next ID to assign, autoincremented from 0.
     next_id: u32,
+    cache: RwLock<AssetCache>,
 }
 
 /// Get `VMO` handle to the [`Asset`] at `path`.
@@ -57,12 +60,15 @@ fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
     Ok(mem::Buffer { vmo, size })
 }
 
+const CACHE_SIZE_BYTES: u64 = 4_000_000;
+
 impl AssetCollection {
     fn new() -> AssetCollection {
         AssetCollection {
             path_to_id_map: BTreeMap::new(),
             id_to_path_map: BTreeMap::new(),
             next_id: 0,
+            cache: RwLock::new(AssetCache::new(CACHE_SIZE_BYTES)),
         }
     }
 
@@ -83,11 +89,24 @@ impl AssetCollection {
         id
     }
 
-    /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`.
+    /// Get a `Buffer` holding the `Vmo` for the [`Asset`] corresponding to `id`, using the cache
+    /// if possible.
     fn get_asset(&self, id: u32) -> Result<mem::Buffer, Error> {
         if let Some(path) = self.id_to_path_map.get(&id) {
-            let buf = load_asset_to_vmo(path)
-                .with_context(|_| format!("Failed to load {}", path.to_string_lossy()))?;
+            let mut cache_writer = self.cache.write();
+            let buf = match cache_writer.get(id) {
+                Some(cached) => cached.buffer,
+                None => {
+                    cache_writer
+                        .push(Asset {
+                            id,
+                            buffer: load_asset_to_vmo(path).with_context(|_| {
+                                format!("Failed to load {}", path.to_string_lossy())
+                            })?,
+                        })
+                        .buffer
+                }
+            };
             return Ok(buf);
         }
         Err(format_err!("No asset found with id {}", id))
