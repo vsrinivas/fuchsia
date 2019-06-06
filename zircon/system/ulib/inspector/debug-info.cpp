@@ -57,13 +57,8 @@ static zx_koid_t get_koid(zx_handle_t handle) {
 } // namespace inspector
 
 __EXPORT void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread,
-                                         zx_excp_type_t* type,
                                          zx_thread_state_general_regs_t* regs) {
-    // If the caller didn't supply |type| or |regs| use a local copy.
-    zx_excp_type_t local_type;
-    if (!type) {
-        type = &local_type;
-    }
+    // If the caller didn't supply |regs| use a local copy.
     zx_thread_state_general_regs_t local_regs;
     if (!regs) {
         regs = &local_regs;
@@ -80,9 +75,7 @@ __EXPORT void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread
         return;
     }
 
-    *type = report.header.type;
-
-    if (!ZX_EXCP_IS_ARCH(*type) && *type != ZX_EXCP_POLICY_ERROR) {
+    if (!ZX_EXCP_IS_ARCH(report.header.type) && report.header.type != ZX_EXCP_POLICY_ERROR) {
         return;
     }
 
@@ -112,7 +105,7 @@ __EXPORT void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread
     const char* fatal = "fatal ";
     // We don't want to print "fatal" when we are printing the debug info from a
     // backtrace request as we will resume the thread at the end.
-    if (is_backtrace_request(*type, regs)) {
+    if (is_backtrace_request(report.header.type, regs)) {
         fatal = "";
     }
 

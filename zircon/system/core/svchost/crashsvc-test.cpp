@@ -18,7 +18,6 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
-#include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
@@ -83,13 +82,14 @@ void CreateAndBacktraceProcess(const zx::job& job, zx::process* process, zx::thr
 }
 
 TEST(crashsvc, ThreadCrashNoAnalyzer) {
-    zx::job job;
-    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    zx::job parent_job, job;
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+    ASSERT_OK(zx::job::create(parent_job, 0, &job));
 
-    // Catch exceptions on our job so that the crashing thread doesn't go all
-    // the way up to the system crashsvc.
+    // Catch exceptions on |parent_job| so that the crashing thread doesn't go
+    // all the way up to the system crashsvc when our local crashsvc is done.
     zx::channel exception_channel;
-    ASSERT_OK(job.create_exception_channel(0, &exception_channel));
+    ASSERT_OK(parent_job.create_exception_channel(0, &exception_channel));
 
     thrd_t cthread;
     zx::job job_copy;
@@ -109,11 +109,12 @@ TEST(crashsvc, ThreadCrashNoAnalyzer) {
 }
 
 TEST(crashsvc, ThreadBacktraceNoAnalyzer) {
-    zx::job job;
-    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    zx::job parent_job, job;
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+    ASSERT_OK(zx::job::create(parent_job, 0, &job));
 
     zx::channel exception_channel;
-    ASSERT_OK(job.create_exception_channel(0, &exception_channel));
+    ASSERT_OK(parent_job.create_exception_channel(0, &exception_channel));
 
     thrd_t cthread;
     zx::job job_copy;
@@ -222,10 +223,13 @@ private:
 
 // Creates a new thread, crashes it, and processes the resulting Analyzer FIDL
 // message from crashsvc according to |behavior|.
-void AnalyzeCrash(CrashAnalyzerStub* analyzer, async::Loop* loop, const zx::job& job,
-                  CrashAnalyzerStub::Behavior behavior) {
+//
+// |parent_job| is used to catch exceptions after they've been analyzed on |job|
+// so that they don't bubble up to the real crashsvc.
+void AnalyzeCrash(CrashAnalyzerStub* analyzer, async::Loop* loop, const zx::job& parent_job,
+                  const zx::job& job, CrashAnalyzerStub::Behavior behavior) {
     zx::channel exception_channel;
-    ASSERT_OK(job.create_exception_channel(0, &exception_channel));
+    ASSERT_OK(parent_job.create_exception_channel(0, &exception_channel));
 
     zx::process process;
     zx::thread thread;
@@ -241,8 +245,8 @@ void AnalyzeCrash(CrashAnalyzerStub* analyzer, async::Loop* loop, const zx::job&
     ASSERT_EQ(loop->Run(), ZX_ERR_CANCELED);
     ASSERT_OK(loop->ResetQuit());
 
-    // Kill the process so it doesn't bubble up to the real crashsvc when we
-    // close our exception channel.
+    // The exception is now waiting in |exception_channel|, kill the process
+    // before the channel closes to keep it from propagating further.
     ASSERT_OK(process.kill());
     ASSERT_OK(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
 }
@@ -254,14 +258,14 @@ TEST(crashsvc, ThreadCrashAnalyzerSuccess) {
     CrashAnalyzerStub analyzer;
     ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
 
-    zx::job job;
-    zx::job job_copy;
+    zx::job parent_job, job, job_copy;
     thrd_t cthread;
-    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+    ASSERT_OK(zx::job::create(parent_job, 0, &job));
     ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
     ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
 
-    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
+    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, parent_job, job,
                                           CrashAnalyzerStub::Behavior::kSuccess));
     EXPECT_EQ(1, analyzer.on_native_exception_count());
 
@@ -276,14 +280,14 @@ TEST(crashsvc, ThreadCrashAnalyzerFailure) {
     CrashAnalyzerStub analyzer;
     ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
 
-    zx::job job;
-    zx::job job_copy;
+    zx::job parent_job, job, job_copy;
     thrd_t cthread;
-    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+    ASSERT_OK(zx::job::create(parent_job, 0, &job));
     ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
     ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
 
-    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
+    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, parent_job, job,
                                           CrashAnalyzerStub::Behavior::kError));
     EXPECT_EQ(1, analyzer.on_native_exception_count());
 
@@ -298,21 +302,21 @@ TEST(crashsvc, MultipleThreadCrashAnalyzer) {
     CrashAnalyzerStub analyzer;
     ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
 
-    zx::job job;
-    zx::job job_copy;
+    zx::job parent_job, job, job_copy;
     thrd_t cthread;
-    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+    ASSERT_OK(zx::job::create(parent_job, 0, &job));
     ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
     ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
 
     // Make sure crashsvc continues to loop no matter what the analyzer does.
-    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
+    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, parent_job, job,
                                           CrashAnalyzerStub::Behavior::kSuccess));
-    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
+    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, parent_job, job,
                                           CrashAnalyzerStub::Behavior::kError));
-    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
+    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, parent_job, job,
                                           CrashAnalyzerStub::Behavior::kSuccess));
-    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, job,
+    ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&analyzer, &loop, parent_job, job,
                                           CrashAnalyzerStub::Behavior::kError));
     EXPECT_EQ(4, analyzer.on_native_exception_count());
 
@@ -327,10 +331,10 @@ TEST(crashsvc, ThreadBacktraceAnalyzer) {
     CrashAnalyzerStub analyzer;
     ASSERT_NO_FATAL_FAILURES(analyzer.Serve(loop.dispatcher(), &vfs, &client));
 
-    zx::job job;
-    zx::job job_copy;
+    zx::job parent_job, job, job_copy;
     thrd_t cthread;
-    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &job));
+    ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+    ASSERT_OK(zx::job::create(parent_job, 0, &job));
     ASSERT_OK(job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy));
     ASSERT_OK(start_crashsvc(std::move(job_copy), client.get(), &cthread));
 

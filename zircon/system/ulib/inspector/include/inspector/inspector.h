@@ -99,12 +99,11 @@ void inspector_print_memory(FILE* f, zx_handle_t process, zx_vaddr_t addr,
 // backtrace, etc.) of the given |thread| in |process|. The caller must be
 // holding |thread| in an exception while calling this function.
 //
-// If |type| or |regs| are non-null, also fills them with the information
-// extracted from |thread|.
+// If |regs| are non-null, also fills it with the information extracted from
+// |thread|.
 //
 // Does NOT close the handles nor resume the thread.
 void inspector_print_debug_info(zx_handle_t process, zx_handle_t thread,
-                                zx_excp_type_t* type,
                                 zx_thread_state_general_regs_t* regs);
 
 __END_CDECLS

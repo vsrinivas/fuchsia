@@ -448,7 +448,8 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
 
     zx::job root_job_copy;
     status = root_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY |
-                                    ZX_RIGHT_ENUMERATE | ZX_RIGHT_MANAGE_PROCESS,
+                                    ZX_RIGHT_ENUMERATE | ZX_RIGHT_MANAGE_PROCESS |
+                                    ZX_RIGHT_MANAGE_THREAD,
                                 &root_job_copy);
     if (status != ZX_OK) {
         return status;
