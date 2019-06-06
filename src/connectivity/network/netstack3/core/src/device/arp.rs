@@ -69,19 +69,26 @@ impl ArpHardwareType {
 
 /// The identifier for timer events in the ARP layer.
 ///
-/// This is used to retry sending ARP requests.
-#[derive(Copy, Clone, PartialEq)]
-pub(crate) struct ArpTimerId<P: PType> {
-    device_id: u64,
-    ip_addr: P,
+/// This is used to retry sending ARP requests and to expire existing ARP table entries.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum ArpTimerId<P: PType> {
+    RequestRetry { device_id: u64, ip_addr: P },
+    EntryExpiration { device_id: u64, ip_addr: P },
+}
+
+impl Into<TimerId> for ArpTimerId<Ipv4Addr> {
+    fn into(self) -> TimerId {
+        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(self)))
+    }
 }
 
 impl ArpTimerId<Ipv4Addr> {
-    fn new_ipv4_timer_id(device_id: u64, ip_addr: Ipv4Addr) -> TimerId {
-        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-            device_id,
-            ip_addr,
-        })))
+    fn new_request_retry_timer_id(device_id: u64, ip_addr: Ipv4Addr) -> TimerId {
+        ArpTimerId::RequestRetry { device_id, ip_addr }.into()
+    }
+
+    fn new_entry_expiration_timer_id(device_id: u64, ip_addr: Ipv4Addr) -> TimerId {
+        ArpTimerId::EntryExpiration { device_id, ip_addr }.into()
     }
 }
 
@@ -154,7 +161,42 @@ fn handle_timeout_inner<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<
     ctx: &mut Context<D>,
     id: ArpTimerId<P>,
 ) {
-    send_arp_request::<D, P, AD>(ctx, id.device_id, id.ip_addr);
+    match id {
+        ArpTimerId::RequestRetry { device_id, ip_addr } => {
+            send_arp_request::<D, P, AD>(ctx, device_id, ip_addr)
+        }
+        ArpTimerId::EntryExpiration { device_id, ip_addr } => {
+            AD::get_arp_state(ctx.state_mut(), device_id).table.remove(ip_addr);
+
+            // There are several things to notice:
+            // - Unlike when we send an ARP request in response to a lookup, here we
+            //   don't schedule a retry timer, so the request will be sent only once.
+            // - This is best-effort in the sense that the protocol is still correct
+            //   if we don't manage to send an ARP request or receive an ARP response.
+            // - The point of doing this is just to make it more likely for our ARP
+            //   cache to stay up to date; it's not actually a requirement of the
+            //   protocol. Note that the RFC does say "It may be desirable to have
+            //   table aging and/or timeouts".
+            if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx.state(), device_id) {
+                let self_hw_addr = AD::get_hardware_addr(ctx.state(), device_id);
+                AD::send_arp_frame(
+                    ctx,
+                    device_id,
+                    AD::BROADCAST,
+                    ArpPacketBuilder::new(
+                        ArpOp::Request,
+                        self_hw_addr,
+                        sender_protocol_addr,
+                        // This is meaningless, since RFC 826 does not specify the behaviour.
+                        // However, the broadcast address is sensible, as this is the actual
+                        // address we are sending the packet to.
+                        AD::BROADCAST,
+                        ip_addr,
+                    ),
+                );
+            }
+        }
+    }
 }
 
 /// Receive an ARP packet from a device.
@@ -193,7 +235,8 @@ pub(crate) fn receive_arp_packet<
 
     let addressed_to_me =
         Some(packet.target_protocol_address()) == AD::get_protocol_addr(ctx.state(), device_id);
-    let table = &mut AD::get_arp_state(ctx.state_mut(), device_id).table;
+    let (stack_state, dispatcher) = ctx.state_and_dispatcher();
+    let arp_state = AD::get_arp_state(stack_state, device_id);
 
     // The following logic is equivalent to the "ARP, Proxy ARP, and Gratuitous ARP"
     // section of RFC 2002.
@@ -201,7 +244,13 @@ pub(crate) fn receive_arp_packet<
     // Gratuitous ARPs, which have the same sender and target address, need to
     // be handled separately since they do not send a response.
     if packet.sender_protocol_address() == packet.target_protocol_address() {
-        table.insert_dynamic(packet.sender_protocol_address(), packet.sender_hardware_address());
+        insert_dynamic(
+            dispatcher,
+            arp_state,
+            device_id,
+            packet.sender_protocol_address(),
+            packet.sender_hardware_address(),
+        );
 
         increment_counter!(ctx, "arp::rx_gratuitous_resolve");
         // Notify device layer:
@@ -258,11 +307,17 @@ pub(crate) fn receive_arp_packet<
     // entry are the same, this can be implemented with two if statements (one
     // to update the table, and one to send a response).
 
-    if addressed_to_me || table.lookup(packet.sender_protocol_address()).is_some() {
-        table.insert_dynamic(packet.sender_protocol_address(), packet.sender_hardware_address());
+    if addressed_to_me || arp_state.table.lookup(packet.sender_protocol_address()).is_some() {
+        insert_dynamic(
+            dispatcher,
+            arp_state,
+            device_id,
+            packet.sender_protocol_address(),
+            packet.sender_hardware_address(),
+        );
         // Since we just got the protocol -> hardware address mapping, we can
         // cancel a timeout to resend a request.
-        ctx.dispatcher.cancel_timeout(ArpTimerId::new_ipv4_timer_id(
+        ctx.dispatcher.cancel_timeout(ArpTimerId::new_request_retry_timer_id(
             device_id,
             packet.sender_protocol_address().addr(),
         ));
@@ -307,10 +362,31 @@ pub(crate) fn insert_static<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDev
     net: P,
     hw: AD::HardwareAddr,
 ) {
-    // Cancel any outstanding timers for this entry, if none exists, this will be a noop.
-    // The timer could be a request retry timer or an entry expiration timer (not in this CL).
-    ctx.dispatcher.cancel_timeout(ArpTimerId::new_ipv4_timer_id(device_id, net.addr()));
+    // Cancel any outstanding timers for this entry; if none exist, this will be a no-op.
+    ctx.dispatcher.cancel_timeout(ArpTimerId::new_request_retry_timer_id(device_id, net.addr()));
+    ctx.dispatcher.cancel_timeout(ArpTimerId::new_entry_expiration_timer_id(device_id, net.addr()));
     AD::get_arp_state(ctx.state_mut(), device_id).table.insert_static(net, hw);
+}
+
+/// Insert a dynamic entry into this device's ARP table.
+///
+/// The entry will potentially be overwritten by any future static entry
+/// and the entry will not be successfully added into the table if there
+/// currently is a static entry.
+fn insert_dynamic<D: EventDispatcher, P: PType + Hash + Eq, AD: ArpDevice<P>>(
+    dispatcher: &mut D,
+    state: &mut ArpState<P, AD>,
+    device_id: u64,
+    net: P,
+    hw: AD::HardwareAddr,
+) {
+    // lets extend the expiration deadline by rescheduling the timer.
+    // it is ASSUMED that `EventDispatcher::schedule_timeout` will first cancel
+    // the timeout that is already there
+    let expiration = ArpTimerId::new_entry_expiration_timer_id(device_id, net.addr());
+    if state.table.insert_dynamic(net, hw) {
+        dispatcher.schedule_timeout(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
+    }
 }
 
 /// Look up the hardware address for a network protocol address.
@@ -340,7 +416,10 @@ pub(crate) fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>
 // the max number of tries, which is the initial remaining_tries.
 const DEFAULT_ARP_REQUEST_MAX_TRIES: usize = 4;
 // Currently at 20 seconds because that's what FreeBSD does.
-const DEFAULT_ARP_REQUEST_PERIOD: u64 = 20;
+const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
+// Based on standard implementations, 60 seconds is quite usual
+// to expire an ARP entry.
+const DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD: Duration = Duration::from_secs(60);
 
 fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
@@ -371,10 +450,10 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
             ),
         );
 
-        let id = ArpTimerId::new_ipv4_timer_id(device_id, lookup_addr.addr());
+        let id = ArpTimerId::new_request_retry_timer_id(device_id, lookup_addr.addr());
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timeout.
-            ctx.dispatcher.schedule_timeout(Duration::from_secs(DEFAULT_ARP_REQUEST_PERIOD), id);
+            ctx.dispatcher.schedule_timeout(DEFAULT_ARP_REQUEST_PERIOD, id);
             AD::get_arp_state(ctx.state_mut(), device_id)
                 .table
                 .set_waiting(lookup_addr, tries_remaining - 1);
@@ -435,7 +514,10 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
         self.table.insert(net, ArpValue::Static { hardware_addr: hw });
     }
 
-    fn insert_dynamic(&mut self, net: P, hw: H) {
+    /// This function tries to insert a dynamic entry into the ArpTable,
+    /// the bool returned from the function is used to indicate whether
+    /// the insertion is successful.
+    fn insert_dynamic(&mut self, net: P, hw: H) -> bool {
         // a dynamic entry should not override a static one, if that happens, don't do it.
         // if we want to handle this kind of situation in the future, we can make this
         // function return a `Result`
@@ -447,6 +529,7 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
                 match old_val {
                     ArpValue::Static { .. } => {
                         error!("Conflicting ARP entries: please check your manual configuration and hosts in your local network");
+                        return false;
                     }
                     _ => *old_val = new_val,
                 }
@@ -455,6 +538,7 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
                 entry.insert(new_val);
             }
         }
+        true
     }
 
     fn remove(&mut self, net: P) {
@@ -562,13 +646,19 @@ mod tests {
         false
     }
 
+    // set up a simple testing environment; return the context and
+    // the device id to the single ethernet device in the environment.
+    // The device has TEST_LOCAL_MAC as its MAC address.
+    fn set_up_simple_test_environment() -> (Context<DummyEventDispatcher>, u64) {
+        let mut state = StackState::default();
+        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU).id();
+        let ctx = Context::new(state, DummyEventDispatcher::default());
+        (ctx, dev_id)
+    }
+
     #[test]
     fn test_receive_gratuitous_arp_request() {
-        let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        let dispatcher = DummyEventDispatcher::default();
-        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        let device_id = dev_id.id();
+        let (mut ctx, device_id) = set_up_simple_test_environment();
         set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
         send_arp_packet(
@@ -595,11 +685,7 @@ mod tests {
 
     #[test]
     fn test_receive_gratuitous_arp_response() {
-        let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        let dispatcher = DummyEventDispatcher::default();
-        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        let device_id = dev_id.id();
+        let (mut ctx, device_id) = set_up_simple_test_environment();
         set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
         send_arp_packet(
@@ -627,11 +713,7 @@ mod tests {
     #[test]
     fn test_send_arp_request_on_cache_miss() {
         const NUM_ARP_REQUESTS: usize = DEFAULT_ARP_REQUEST_MAX_TRIES;
-        let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        let dispatcher = DummyEventDispatcher::default();
-        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        let device_id = dev_id.id();
+        let (mut ctx, device_id) = set_up_simple_test_environment();
 
         set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
@@ -642,7 +724,8 @@ mod tests {
             TEST_REMOTE_IPV4,
         );
 
-        let arp_timer_id = ArpTimerId::new_ipv4_timer_id(device_id, TEST_REMOTE_IPV4);
+        let request_retry_timer_id =
+            ArpTimerId::new_request_retry_timer_id(device_id, TEST_REMOTE_IPV4);
 
         // Check that we send the original packet, then resend a few times if
         // we don't receive a response.
@@ -661,7 +744,7 @@ mod tests {
                 ) {
                     cur_frame_num = frame_num + 1;
                     arp_request_num = arp_request_num + 1;
-                    testutil::trigger_timers_until(&mut ctx, |id| id == &arp_timer_id);
+                    testutil::trigger_timers_until(&mut ctx, |id| id == &request_retry_timer_id);
                     break;
                 }
             }
@@ -679,7 +762,7 @@ mod tests {
         );
 
         // Once an arp response is received, the arp timer event will be cancelled.
-        assert!(!ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id))
+        assert!(!ctx.dispatcher.timer_events().any(|(_, id)| id == &request_retry_timer_id))
     }
 
     #[test]
@@ -687,11 +770,7 @@ mod tests {
         //To fully test max retries of APR request, NUM_ARP_REQUEST should be
         // set >= DEFAULT_ARP_REQUEST_MAX_TRIES.
         const NUM_ARP_REQUESTS: usize = DEFAULT_ARP_REQUEST_MAX_TRIES + 1;
-        let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        let dispatcher = DummyEventDispatcher::default();
-        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        let device_id = dev_id.id();
+        let (mut ctx, device_id) = set_up_simple_test_environment();
 
         set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
@@ -702,7 +781,8 @@ mod tests {
             TEST_REMOTE_IPV4,
         );
 
-        let arp_timer_id = ArpTimerId::new_ipv4_timer_id(device_id, TEST_REMOTE_IPV4);
+        let request_retry_timer_id =
+            ArpTimerId::new_request_retry_timer_id(device_id, TEST_REMOTE_IPV4);
 
         // The above loopup sent one arp request already.
         let mut num_requests_sent: usize = 1;
@@ -720,7 +800,7 @@ mod tests {
                         .get_remaining_tries(TEST_REMOTE_IPV4),
                     Some(DEFAULT_ARP_REQUEST_MAX_TRIES - num_requests_sent)
                 );
-                assert!(ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id));
+                assert!(ctx.dispatcher.timer_events().any(|(_, id)| id == &request_retry_timer_id));
             } else {
                 assert_eq!(
                     EthernetArpDevice::get_arp_state(ctx.state_mut(), device_id)
@@ -728,7 +808,10 @@ mod tests {
                         .get_remaining_tries(TEST_REMOTE_IPV4),
                     None
                 );
-                assert!(!ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id));
+                assert!(!ctx
+                    .dispatcher
+                    .timer_events()
+                    .any(|(_, id)| id == &request_retry_timer_id));
             }
 
             for frame_num in cur_frame_num..ctx.dispatcher.frames_sent().len() {
@@ -744,7 +827,7 @@ mod tests {
                     cur_frame_num = frame_num + 1;
                     arp_request_num = arp_request_num + 1;
 
-                    testutil::trigger_timers_until(&mut ctx, |id| id == &arp_timer_id);
+                    testutil::trigger_timers_until(&mut ctx, |id| id == &request_retry_timer_id);
                     num_requests_sent += 1;
                     break;
                 }
@@ -754,11 +837,7 @@ mod tests {
 
     #[test]
     fn test_handle_arp_request() {
-        let mut state = StackState::default();
-        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        let dispatcher = DummyEventDispatcher::default();
-        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        let device_id = dev_id.id();
+        let (mut ctx, device_id) = set_up_simple_test_environment();
         set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
         send_arp_packet(
@@ -902,7 +981,15 @@ mod tests {
             TEST_LOCAL_MAC
         );
         // and the local timer should've been unscheduled:
-        assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
+        assert_eq!(
+            net.context("local")
+                .dispatcher
+                .timer_events()
+                .filter(|(_, id)| *id
+                    != &ArpTimerId::new_entry_expiration_timer_id(device_id.id(), remote_ip))
+                .count(),
+            0
+        );
 
         // upon link layer resolution, the original ping request should've been
         // sent out:
@@ -994,9 +1081,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_static_cancel_waiting_timer() {
-        let mut stack: StackState<DummyEventDispatcher> = StackState::default();
-        let dev_id = stack.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU).id();
-        let mut ctx = Context::new(stack, DummyEventDispatcher::default());
+        let (mut ctx, dev_id) = set_up_simple_test_environment();
         set_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
         // we don't have an answer at the time.
         assert_eq!(
@@ -1014,7 +1099,7 @@ mod tests {
             .get_remaining_tries(TEST_REMOTE_IPV4)
             .is_some());
         // the timer that we are interested in this particular test.
-        let related_timer = ArpTimerId::new_ipv4_timer_id(dev_id, TEST_REMOTE_IPV4);
+        let related_timer = ArpTimerId::new_request_retry_timer_id(dev_id, TEST_REMOTE_IPV4);
         // the previous lookup should have set a timer for us.
         assert_eq!(
             ctx.dispatcher().timer_events().filter(|(_, t)| { *t == &related_timer }).count(),
@@ -1031,5 +1116,190 @@ mod tests {
             ctx.dispatcher().timer_events().filter(|(_, t)| { *t == &related_timer }).count(),
             0
         );
+    }
+
+    #[test]
+    fn test_arp_table_static_cancel_expiration_timer() {
+        set_logger_for_test();
+        let (mut ctx, dev_id) = set_up_simple_test_environment();
+
+        let (stack_state, dispatcher) = ctx.state_and_dispatcher();
+        let state = EthernetArpDevice::get_arp_state(stack_state, dev_id);
+        insert_dynamic::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            dispatcher,
+            state,
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+        assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
+            .table
+            .lookup(TEST_REMOTE_IPV4)
+            .is_some());
+        // the timer that we are interested in this particular test.
+        let related_timer = ArpTimerId::new_entry_expiration_timer_id(dev_id, TEST_REMOTE_IPV4);
+        // the previous insert_dynamic should have set a timer for us.
+        assert_eq!(
+            ctx.dispatcher().timer_events().filter(|(_, t)| { *t == &related_timer }).count(),
+            1
+        );
+        insert_static::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+        // now since we have added a static entry, the timer should have gone.
+        assert_eq!(
+            ctx.dispatcher().timer_events().filter(|(_, t)| { *t == &related_timer }).count(),
+            0
+        );
+    }
+
+    #[test]
+    fn test_arp_entry_expiration() {
+        set_logger_for_test();
+        let (mut ctx, dev_id) = set_up_simple_test_environment();
+
+        // this test simply tests whether an entry gets expired after certain amount of time.
+
+        let start = ctx.dispatcher().current_time();
+        let (stack_state, dispatcher) = ctx.state_and_dispatcher();
+
+        insert_dynamic::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            dispatcher,
+            EthernetArpDevice::get_arp_state(stack_state, dev_id),
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+
+        // the entry should be here
+        assert!(lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            dev_id,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_IPV4
+        )
+        .is_some());
+
+        testutil::trigger_timers_until(&mut ctx, |id| {
+            id == &ArpTimerId::new_entry_expiration_timer_id(dev_id, TEST_REMOTE_IPV4)
+        });
+        // it should be gone by now
+        assert!(lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            dev_id,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_IPV4
+        )
+        .is_none());
+        // this exact amount of time should have elapsed
+        assert_eq!(ctx.dispatcher().current_time() - start, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD);
+    }
+
+    #[test]
+    fn test_arp_entry_expiration_should_not_expire_in_presence_of_gratuitous_arp() {
+        set_logger_for_test();
+        let (mut ctx, dev_id) = set_up_simple_test_environment();
+
+        // this test sets up the following scenario:
+        // 1. an arp entry is installed with default timeout at instant t
+        // 2. a gratuitous arp message is sent after 5 seconds (at instant t + 5)
+        // 3. check at instant t + default whether the entry is there (it should)
+        // 4. check whether the entry disappears at instant (t + default timeout + 5).
+
+        let (stack_state, dispatcher) = ctx.state_and_dispatcher();
+        insert_dynamic::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            dispatcher,
+            EthernetArpDevice::get_arp_state(stack_state, dev_id),
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+        let start = ctx.dispatcher().current_time();
+        // the following two timers are used to record the events
+        // the first one is used as a marker so that when gratuitous
+        // arp is received, the entry should not be invalidated after
+        // DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD has elapsed.
+        // the second one is solely used to update the time stored
+        // inside the dispatcher.
+        let expiration_period_from_now = TimerId(TimerIdInner::Nop(0));
+        ctx.dispatcher()
+            .schedule_timeout(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration_period_from_now);
+        let five_seconds_from_now = TimerId(TimerIdInner::Nop(1));
+        let five_seconds = Duration::from_secs(5);
+        ctx.dispatcher().schedule_timeout(five_seconds, five_seconds_from_now);
+
+        testutil::trigger_timers_until(&mut ctx, |id| id == &five_seconds_from_now);
+        assert_eq!(ctx.dispatcher().current_time() - start, five_seconds);
+        // the entry should be here
+        assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
+            .table
+            .lookup(TEST_REMOTE_IPV4)
+            .is_some());
+
+        // here we go the gratuitous arp
+        send_arp_packet(
+            &mut ctx,
+            dev_id,
+            ArpOp::Response,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+            TEST_REMOTE_MAC,
+        );
+
+        testutil::trigger_timers_until(&mut ctx, |id| id == &expiration_period_from_now);
+        assert_eq!(ctx.dispatcher().current_time() - start, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD);
+        // the entry should still be there.
+        assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
+            .table
+            .lookup(TEST_REMOTE_IPV4)
+            .is_some());
+
+        testutil::trigger_timers_until(&mut ctx, |id| {
+            id == &ArpTimerId::new_entry_expiration_timer_id(dev_id, TEST_REMOTE_IPV4)
+        });
+        // it should be gone
+        assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
+            .table
+            .lookup(TEST_REMOTE_IPV4)
+            .is_none());
+        assert_eq!(
+            ctx.dispatcher().current_time() - start,
+            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + five_seconds
+        );
+    }
+
+    #[test]
+    fn test_arp_table_dynamic_after_static_should_not_set_timer() {
+        set_logger_for_test();
+        let (mut ctx, dev_id) = set_up_simple_test_environment();
+
+        let start = ctx.dispatcher().current_time();
+        let related_timer = ArpTimerId::new_entry_expiration_timer_id(dev_id, TEST_REMOTE_IPV4);
+
+        insert_static::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+        assert_eq!(
+            ctx.dispatcher().timer_events().filter(|(_, id)| *id == &related_timer).count(),
+            0
+        );
+
+        let (stack_state, dispatcher) = ctx.state_and_dispatcher();
+
+        insert_dynamic::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            dispatcher,
+            EthernetArpDevice::get_arp_state(stack_state, dev_id),
+            dev_id,
+            TEST_REMOTE_IPV4,
+            TEST_REMOTE_MAC,
+        );
+        assert_eq!(dispatcher.timer_events().filter(|(_, id)| *id == &related_timer).count(), 0);
     }
 }

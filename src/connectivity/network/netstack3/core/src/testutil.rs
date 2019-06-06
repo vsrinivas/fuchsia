@@ -531,7 +531,7 @@ impl DummyEventDispatcher {
     }
 
     /// Get the current (fake) time
-    pub(crate) fn current_time(self) -> Instant {
+    pub(crate) fn current_time(&self) -> Instant {
         self.current_time
     }
 
