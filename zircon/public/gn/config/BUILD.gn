@@ -395,6 +395,10 @@ config("default_warnings") {
   }
 }
 
+config("default_template_backtrace_limit") {
+  cflags_cc = [ "-ftemplate-backtrace-limit=0" ]
+}
+
 config("icf") {
   # This changes C/C++ semantics and might be incompatible with third-party
   # code that relies on function pointers comparison.
