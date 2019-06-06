@@ -84,7 +84,8 @@ impl TestEnv {
         .expect("/data/amber to mount");
 
         let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg_resolver#meta/pkg_resolver.cmx".to_owned(),
+            "fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg_resolver_integration_test.cmx"
+                .to_owned(),
         );
 
         let mut fs = ServiceFs::new();

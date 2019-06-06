@@ -40,6 +40,7 @@ rustc_binary("bin") {
   ]
 }
 
+# Ensure the contents of this package stay in sync with //garnet/tests/amberctl:amberctl-tests
 package("pkg_resolver") {
   deps = [
     ":bin",

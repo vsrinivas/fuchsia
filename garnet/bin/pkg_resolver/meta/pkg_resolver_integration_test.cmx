@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/pkg_resolver"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.logger.LogSink",
+            "fuchsia.pkg.PackageCache"
+        ]
+    }
+}
