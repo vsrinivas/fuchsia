@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Adds an ELF binary to the .build-id directory by hard-linking.
+#
+# Parameters
+#
+#   debug
+#     Type: file
+#     Required: This file will be linked into the .build-id directory
+#     with the ".debug" extension
+#
+#   stripped
+#     Type: file
+#     Optional: If set this file will be linked into the .build-id directory
+#     with no extension
+template("build_id_entry") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                             "data_deps",
+                           ])
+    assert(defined(invoker.debug), "Must define debug")
+    sources = [
+      invoker.debug,
+    ]
+    stamp = "${invoker.debug}.build-id.stamp"
+    outputs = [
+      stamp,
+    ]
+
+    script = "//buildtools/${host_platform}/buildidtool"
+    args = [
+      "-entry",
+      ".debug=" + rebase_path(invoker.debug, root_build_dir),
+      "-build-id-dir",
+      ".build-id",
+      "-stamp",
+      rebase_path(stamp, root_build_dir),
+    ]
+    if (defined(invoker.stripped)) {
+      sources += [ invoker.stripped ]
+      args += [
+        "-entry",
+        "=" + rebase_path(invoker.stripped, root_build_dir),
+      ]
+    }
+  }
+}

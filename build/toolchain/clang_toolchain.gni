@@ -97,6 +97,8 @@ template("clang_toolchain") {
         strip = "xcrun strip"
       } else {
         strip = "${prefix}/llvm-objcopy"
+        buildidtool = rebase_path("//buildtools/${host_platform}/buildidtool",
+                                  root_build_dir)
       }
     }
 
@@ -202,16 +204,6 @@ template("clang_toolchain") {
         rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
         default_output_extension = ".so"
       }
-      if (use_strip) {
-        if (invoker.toolchain_os == "mac") {
-          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
-        } else {
-          command +=
-              " && $strip --strip-all" + " --build-id-link-dir=.build-id" +
-              " --build-id-link-input=.debug" + " --build-id-link-output=" +
-              " \"$unstripped_outfile\" \"$outfile\""
-        }
-      }
       description = "SOLINK $outfile"
       default_output_dir = "{{root_out_dir}}"
       output_prefix = "lib"
@@ -220,6 +212,18 @@ template("clang_toolchain") {
       ]
       if (outfile != unstripped_outfile) {
         outputs += [ unstripped_outfile ]
+      }
+      if (use_strip) {
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+          command +=
+              " && $buildidtool -build-id-dir .build-id" +
+              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+              " -entry \".debug=$unstripped_outfile\""
+        }
       }
     }
 
@@ -247,9 +251,11 @@ template("clang_toolchain") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all" + " --build-id-link-dir=.build-id" +
-              " --build-id-link-input=.debug" + " --build-id-link-output=" +
-              " \"$unstripped_outfile\" \"$outfile\""
+              " && $strip --strip-all" + " \"$unstripped_outfile\" \"$outfile\""
+          command +=
+              " && $buildidtool -build-id-dir .build-id" +
+              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+              " -entry \".debug=$unstripped_outfile\""
         }
       }
       description = "SOLINK $outfile"
@@ -281,11 +287,13 @@ template("clang_toolchain") {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
         } else {
+          command += " && " + "$strip --strip-sections" +
+                     " \"$unstripped_outfile\" \"$outfile\""
+
           command +=
-              " && " + "$strip --strip-sections" +
-              " --build-id-link-dir=.build-id" +
-              " --build-id-link-input=.debug" + " --build-id-link-output=" +
-              " \"$unstripped_outfile\" \"$outfile\""
+              " && $buildidtool -build-id-dir .build-id" +
+              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+              " -entry \".debug=$unstripped_outfile\""
         }
       }
       description = "LINK $outfile"

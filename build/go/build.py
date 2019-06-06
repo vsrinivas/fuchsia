@@ -15,7 +15,6 @@ import errno
 
 from gen_library_metadata import get_sources
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--godepfile', help='Path to godepfile tool', required=True)
@@ -37,6 +36,8 @@ def main():
                         choices=['x64', 'arm64'], required=True)
     parser.add_argument('--current-os', help='Target operating system.',
                         choices=['fuchsia', 'linux', 'mac', 'win'], required=True)
+    parser.add_argument('--buildidtool', help='The path to the buildidtool.', required=True)
+    parser.add_argument('--build-id-dir', help='The path to the .build-id directory.', required=True)
     parser.add_argument('--go-root', help='The go root to use for builds.', required=True)
     parser.add_argument('--go-cache', help='Cache directory to use for builds.',
                         required=False)
@@ -178,12 +179,22 @@ def main():
         else:
             retcode = subprocess.call([args.objcopy,
                                        '--strip-sections',
-                                       '--build-id-link-dir=%s' % build_id_dir,
-                                       '--build-id-link-input=.debug',
-                                       '--build-id-link-output=',
                                        output_name,
                                        stripped_output_name],
                                       env=env)
+
+    # If args.current_os == 'linux' then the go linker will be used which
+    # doesn't use the GNU build ID format.
+    if retcode == 0 and args.current_os == 'fuchsia' and args.unstripped_binname:
+        retcode = subprocess.call([args.buildidtool,
+                                   "-build-id-dir",
+                                   args.build_id_dir,
+                                   "-stamp",
+                                   output_name + ".build-id.stamp",
+                                   "-entry",
+                                   ".debug=" + args.unstripped_binname,
+                                   "-entry",
+                                   "=" + output_name])
 
     if retcode == 0:
         if args.depfile is not None:
