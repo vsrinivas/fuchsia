@@ -487,9 +487,12 @@ void MessageLoopTarget::RemoveExceptionHandler(const async_exception_t* key) {
 
 void MessageLoopTarget::AddException(const ExceptionHandler& handler,
                                     zx_koid_t thread_koid) {
-  FXL_DCHECK(thread_exception_map_.find(thread_koid) ==
-             thread_exception_map_.end());
-
+  // In the case of a "thread exiting" exception, it's possible the thread is
+  // already in an exception state. In this case, we want to overwrite the
+  // previous exception (which is now moot because the thread is gone). This
+  // can happen if an external thread or process kills the thread (e.g.
+  // Control-C) while the debugger is handling an exception (e.g. stopped on
+  // a breakpoint).
   Exception exception;
   exception.thread_koid = thread_koid;
   exception.exception_token = const_cast<async_exception_t*>(handler.handle());
