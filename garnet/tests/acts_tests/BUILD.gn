@@ -7,16 +7,18 @@ import("//build/testing/environments.gni")
 
 specs = [
   {
-    name="acts_bt1_test"
-    tags = ["acts-connectivity-bt1"]
-    testbed="bt_rf_chamber_nuc_phone"
-    tests="BleFuchsiaAndroidTest GattServerSetupTest NetstackFuchsiaTest"
+    name = "acts_bt1_test"
+    tags = [ "acts-connectivity-bt1" ]
+    testbed = "bt_rf_chamber_nuc_phone"
+    tests = "BleFuchsiaAndroidTest GattServerSetupTest NetstackFuchsiaTest"
+    timeout_minutes = 15
   },
   {
-    name="acts_wifi_test"
-    tags = ["acts-connectivity-wifi"]
-    testbed="wifi_rf_chamber_nuc"
-    tests="WlanScanTest"
+    name = "acts_wifi_test"
+    tags = [ "acts-connectivity-wifi" ]
+    testbed = "wifi_rf_chamber_nuc"
+    tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABG WlanPhyCompliance11NTest"
+    timeout_minutes = 360
   },
 ]
 
@@ -24,7 +26,9 @@ test_labels = []
 
 foreach(spec, specs) {
   dart_test(spec.name) {
-    sources = ["acts_test.dart"]
+    sources = [
+      "acts_test.dart",
+    ]
 
     deps = [
       "//third_party/dart-pkg/pub/archive",
@@ -39,14 +43,16 @@ foreach(spec, specs) {
         }
 
         tags = spec.tags
-      }
+      },
     ]
 
-    args = [ "--tests=${spec.tests}" ]
+    args = [
+      "--timeout=${spec.timeout_minutes}",
+      "--tests=${spec.tests}",
+    ]
   }
   test_labels += [ ":${spec.name}($host_toolchain)" ]
 }
-
 
 group("acts_tests") {
   testonly = true
