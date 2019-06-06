@@ -4,6 +4,7 @@
 
 library fuchsia.web;
 
+using fuchsia.media.sessions;
 using fuchsia.mem;
 using fuchsia.ui.views;
 
@@ -50,6 +51,12 @@ protocol Frame {
     ///
     /// |view_token|: Token for the new view.
     CreateView(fuchsia.ui.views.ViewToken view_token);
+
+    /// Returns a Session interface through which media (i.e. video/audio)
+    /// playback in the frame may be observed, and/or controlled. Only one
+    /// media Session may be active at a time, for each Frame.
+    [Transitional]
+    GetMediaSession(request<fuchsia.media.sessions.Session> session);
 
     /// Returns an interface through which the frame may be navigated to
     /// a desired URL, reloaded, etc.
