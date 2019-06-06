@@ -68,6 +68,7 @@ struct less<fuchsia::modular::LinkPath> {
 
 namespace modular {
 
+constexpr char kStoryEnvironmentLabelPrefix[] = "story-";
 constexpr auto kUpdateSnapshotTimeout = zx::sec(1);
 
 namespace {
@@ -208,8 +209,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       running_mod_info.module_controller_impl =
           std::make_unique<ModuleControllerImpl>(
               story_controller_impl_,
-              story_controller_impl_->story_provider_impl_->user_environment()
-                  ->GetLauncher(),
+              story_controller_impl_->story_environment_->GetLauncher(),
               std::move(module_config), running_mod_info.module_data.get(),
               std::move(service_list), std::move(view_token_));
     } else {
@@ -219,8 +219,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       running_mod_info.module_controller_impl =
           std::make_unique<ModuleControllerImpl>(
               story_controller_impl_,
-              story_controller_impl_->story_provider_impl_->user_environment()
-                  ->GetLauncher(),
+              story_controller_impl_->story_environment_->GetLauncher(),
               std::move(module_config), running_mod_info.module_data.get(),
               std::move(service_list), std::move(view_token));
       running_mod_info.module_pending_view_holder_token =
@@ -616,6 +615,8 @@ class StoryControllerImpl::StopCall : public Operation<> {
           story_controller_impl_->SetRuntimeState(
               fuchsia::modular::StoryState::STOPPED);
 
+          story_controller_impl_->DestroyStoryEnvironment();
+
           Done();
         });
   }
@@ -909,6 +910,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
     // module.
     storage_->ReadAllModuleData()->Then(
         [this, flow](std::vector<fuchsia::modular::ModuleData> data) {
+          story_controller_impl_->InitStoryEnvironment();
           for (auto& module_data : data) {
             // Don't start the module if it is embedded, or if it has been
             // marked deleted.
@@ -1473,6 +1475,26 @@ void StoryControllerImpl::RemoveModuleFromStory(
     const std::vector<std::string>& module_path) {
   operation_queue_.Add(std::make_unique<StopModuleAndStoryIfEmptyCall>(
       this, module_path, [] {}));
+}
+
+void StoryControllerImpl::InitStoryEnvironment() {
+  FXL_DCHECK(!story_environment_)
+      << "Story scope already running for story_id = " << story_id_;
+
+  static const auto* const kEnvServices =
+      new std::vector<std::string>{fuchsia::modular::ContextWriter::Name_};
+  story_environment_ = std::make_unique<Environment>(
+      story_provider_impl_->user_environment(),
+      kStoryEnvironmentLabelPrefix + story_id_.get(), *kEnvServices,
+      /* kill_on_oom = */ false);
+  story_environment_->AddService<fuchsia::modular::ContextWriter>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
+        intelligence_services_->GetContextWriter(std::move(request));
+      });
+}
+
+void StoryControllerImpl::DestroyStoryEnvironment() {
+  story_environment_.reset();
 }
 
 void StoryControllerImpl::StartOngoingActivity(

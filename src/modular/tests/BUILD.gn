@@ -9,7 +9,6 @@ group("tests") {
   testonly = true
   deps = [
     ":modular_integration_tests",
-    ":module_with_fake_runner",
 
     # modular_test_harness is a dep for any test that uses test_harness_fixture
     # (all of the tests below). Add it here so that an fx set --with
@@ -126,6 +125,8 @@ executable("module_output_test") {
 executable("story_shell_factory_test") {
   testonly = true
 
+  output_name = "story_shell_factory_test"
+
   sources = [
     "story_shell_factory_test.cc",
   ]
@@ -188,60 +189,6 @@ executable("story_shell_embedded_mod_test") {
   ]
 }
 
-executable("stories_share_session_runners_test") {
-  testonly = true
-
-  sources = [
-    "stories_share_session_runners_test.cc",
-  ]
-
-  deps = [
-    ":module_with_fake_runner",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
-executable("module_with_fake_runner_bin") {
-  testonly = true
-
-  output_name = "module_with_fake_runner"
-
-  sources = [
-    "module_with_fake_runner.cc",
-  ]
-
-  deps = [
-    "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/integration_testing/cpp",
-    "//sdk/fidl/fuchsia.modular",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-package("module_with_fake_runner") {
-  testonly = true
-
-  deps = [
-    ":module_with_fake_runner_bin",
-  ]
-
-  binaries = [
-    {
-      name = "module_with_fake_runner"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/module_with_fake_runner.cmx"
-      dest = "module_with_fake_runner.cmx"
-    },
-  ]
-}
-
 test_package("modular_integration_tests") {
   tests = [
     {
@@ -276,10 +223,6 @@ test_package("modular_integration_tests") {
       name = "story_shell_embedded_mod_test"
       environments = basic_envs
     },
-    {
-      name = "stories_share_session_runners_test"
-      environments = basic_envs
-    },
   ]
 
   deps = [
@@ -288,7 +231,6 @@ test_package("modular_integration_tests") {
     ":module_output_test",
     ":queue_persistence_test",
     ":session_shell_test",
-    ":stories_share_session_runners_test",
     ":story_shell_embedded_mod_test",
     ":story_shell_factory_test",
     ":story_shell_test",
