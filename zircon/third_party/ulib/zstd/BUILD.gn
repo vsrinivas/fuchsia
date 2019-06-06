@@ -2,6 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("zstd-config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "include/zstd",
+    "lib/common",
+    "lib/dictBuilder",
+  ]
+}
+
 library("zstd") {
   host = true
   sources = [
@@ -32,14 +42,12 @@ library("zstd") {
     "lib/dictBuilder/fastcover.c",
     "lib/dictBuilder/zdict.c",
   ]
-  include_dirs = [
-    "include/zstd",
-    "lib/common",
-    "lib/dictBuilder",
-  ]
+
   if (is_host) {
     defines = [ "ZSTD_MULTITHREAD" ]
   }
+
+  configs += [ ":zstd-config" ]
 }
 
 executable("zstdcli") {
@@ -56,12 +64,6 @@ executable("zstdcli") {
   deps = [
     ":zstd",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
   ]
-  include_dirs = [
-    "include/zstd",
-    "lib/common",
-    "lib/dictBuilder",
-    "programs",
-  ]
+  configs += [ ":zstd-config" ]
 }
