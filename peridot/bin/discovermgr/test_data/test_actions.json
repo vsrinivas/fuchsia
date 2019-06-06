@@ -2,7 +2,7 @@
    {
       "action_display" : {
         "display_info" : {
-           "title" : "Listen to $artist",
+           "title" : "Listen to {artist}",
            "icon" : "https://www.shareicon.net/download/128x128//2016/08/01/639870_internet_512x512.png"
         },
         "parameter_mapping" : [
@@ -41,7 +41,7 @@
       },
       "action_display" : {
         "display_info" : {
-           "title" : "Weather in $place",
+           "title" : "Weather in {place}",
            "icon" : "https://example.com/weather-icon"
         },
         "parameter_mapping" : [
@@ -63,7 +63,7 @@
     "action_display": {
       "display_info": {
         "icon" : "https://example.com/map-icon",
-        "title": "Directions from $origin to $destination"
+        "title": "Directions from {origin} to {destination}"
       },
       "parameter_mapping": [
         {

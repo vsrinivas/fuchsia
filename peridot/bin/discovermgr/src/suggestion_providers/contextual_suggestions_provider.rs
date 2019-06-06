@@ -4,12 +4,12 @@
 
 use {
     crate::{
-        models::{Action, AddMod, DisplayInfo, Intent, Suggestion},
+        models::{Action, AddMod, EntityMatching, Intent, Suggestion},
         story_context_store::{ContextEntity, Contributor},
         suggestions_manager::SearchSuggestionsProvider,
     },
     failure::Error,
-    futures::future::LocalFutureObj,
+    futures::future::{join_all, LocalFutureObj},
     itertools::Itertools,
     std::collections::{HashMap, HashSet},
 };
@@ -33,20 +33,18 @@ impl SearchSuggestionsProvider for ContextualSuggestionsProvider {
         context: &'a Vec<&'a ContextEntity>,
     ) -> LocalFutureObj<'a, Result<Vec<Suggestion>, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            Ok(self
+            let futs = self
                 .actions
                 .iter()
                 .filter_map(|action| ActionMatching::try_to_match(action.clone(), context))
-                .flat_map(|matching| matching.suggestions())
-                .collect::<Vec<Suggestion>>())
+                .map(|matching| matching.suggestions());
+            let result = await!(join_all(futs))
+                .into_iter()
+                .flat_map(|suggestions| suggestions.into_iter())
+                .collect::<Vec<Suggestion>>();
+            Ok(result)
         }))
     }
-}
-
-#[derive(Debug, Clone)]
-struct EntityMatching<'a> {
-    context_entity: &'a ContextEntity,
-    matching_type: String,
 }
 
 struct ActionMatching<'a> {
@@ -77,9 +75,9 @@ impl<'a> ActionMatching<'a> {
         Some(ActionMatching { action, parameters })
     }
 
-    pub fn suggestions(self) -> impl Iterator<Item = Suggestion> + 'a {
-        let action = self.action;
-        all_matches(self.parameters).filter_map(move |parameters| {
+    pub async fn suggestions(self) -> impl Iterator<Item = Suggestion> + 'a {
+        let action = &self.action;
+        let futs = all_matches(self.parameters).map(async move |parameters| {
             let mut intent = Intent::new().with_action(&action.name);
             if let Some(ref fulfillment) = action.fuchsia_fulfillment {
                 intent = intent.with_handler(&fulfillment.component_url);
@@ -100,9 +98,10 @@ impl<'a> ActionMatching<'a> {
                 }
             });
             let add_mod = AddMod::new(intent, story_name, None);
-            filled_display_info(&action, &parameters)
+            await!(action.load_display_info(parameters))
                 .map(|display_info| Suggestion::new(add_mod, display_info))
-        })
+        });
+        await!(join_all(futs)).into_iter().filter_map(|result| result)
     }
 }
 
@@ -134,47 +133,45 @@ fn all_matches(
     // different stories...
 }
 
-fn filled_display_info(
-    action: &Action,
-    _parameters: &HashMap<String, EntityMatching>,
-) -> Option<DisplayInfo> {
-    // TODO: fill with parameters
-    match action.action_display {
-        Some(ref action_display) => action_display.display_info.clone(),
-        None => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, maplit::hashset};
+    use {
+        super::*,
+        crate::{
+            models::DisplayInfo,
+            testing::{FakeEntityData, FakeEntityResolver},
+        },
+        fidl_fuchsia_modular::{EntityMarker, EntityResolverMarker},
+        fuchsia_async as fasync,
+        maplit::hashset,
+    };
 
     #[fasync::run_singlethreaded(test)]
     async fn get_suggestions() -> Result<(), Error> {
         let contextual_suggestions_provider =
             ContextualSuggestionsProvider::new(test_action_index());
-        let context = test_context();
+        let context = await!(test_context())?;
         let context_refs = context.iter().collect::<Vec<_>>();
         let results = await!(contextual_suggestions_provider.request("", &context_refs))?;
 
         let expected_results = vec![
             suggestion!(
                 action = "SHOW_WEATHER",
-                title = "Weather in $place",
+                title = "Weather in San Francisco",
                 icon = "https://example.com/weather-icon",
                 parameters = [(name = "Location", entity_reference = "foo-reference")],
                 story = "story1"
             ),
             suggestion!(
                 action = "SHOW_WEATHER",
-                title = "Weather in $place",
+                title = "Weather in Mountain View",
                 icon = "https://example.com/weather-icon",
                 parameters = [(name = "Location", entity_reference = "bar-reference")],
                 story = "story1"
             ),
             suggestion!(
                 action = "SHOW_DIRECTIONS",
-                title = "Directions from $origin to $destination",
+                title = "Directions from San Francisco to Mountain View",
                 icon = "https://example.com/map-icon",
                 parameters = [
                     (name = "origin", entity_reference = "foo-reference"),
@@ -184,7 +181,7 @@ mod tests {
             ),
             suggestion!(
                 action = "SHOW_DIRECTIONS",
-                title = "Directions from $origin to $destination",
+                title = "Directions from Mountain View to San Francisco",
                 icon = "https://example.com/map-icon",
                 parameters = [
                     (name = "origin", entity_reference = "bar-reference"),
@@ -210,24 +207,56 @@ mod tests {
         Ok(())
     }
 
-    fn test_context() -> Vec<ContextEntity> {
-        vec![
-            ContextEntity::new_test(
-                "foo-reference",
-                hashset!("https://schema.org/Place".to_string()),
+    // Creates a test context and spawns the fake entity resolver.
+    async fn test_context() -> Result<Vec<ContextEntity>, Error> {
+        let (entity_resolver, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
+        let mut fake_entity_resolver = FakeEntityResolver::new();
+        fake_entity_resolver.register_entity(
+            "foo-reference",
+            FakeEntityData::new(
+                vec!["https://schema.org/Place".into()],
+                include_str!("../../test_data/place1.json"),
+            ),
+        );
+        fake_entity_resolver.register_entity(
+            "baz-reference",
+            FakeEntityData::new(
+                vec!["https://schema.org/Person".into()],
+                include_str!("../../test_data/person.json"),
+            ),
+        );
+        fake_entity_resolver.register_entity(
+            "bar-reference",
+            FakeEntityData::new(
+                vec!["https://schema.org/Place".into()],
+                include_str!("../../test_data/place2.json"),
+            ),
+        );
+        fake_entity_resolver.spawn(request_stream);
+
+        let (entity_proxy1, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
+        entity_resolver.resolve_entity("foo-reference", server_end)?;
+        let (entity_proxy2, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
+        entity_resolver.resolve_entity("baz-reference", server_end)?;
+        let (entity_proxy3, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
+        entity_resolver.resolve_entity("bar-reference", server_end)?;
+
+        let futs = vec![
+            ContextEntity::from_entity(
+                entity_proxy1,
                 hashset!(Contributor::module_new("story1", "mod-a", "param-foo")),
             ),
-            ContextEntity::new_test(
-                "baz-reference",
-                hashset!("https://schema.org/Person".to_string()),
+            ContextEntity::from_entity(
+                entity_proxy2,
                 hashset!(Contributor::module_new("story1", "mod-a", "param-baz")),
             ),
-            ContextEntity::new_test(
-                "bar-reference",
-                hashset!("https://schema.org/Place".to_string()),
+            ContextEntity::from_entity(
+                entity_proxy3,
                 hashset!(Contributor::module_new("story1", "mod-b", "param-bar")),
             ),
-        ]
+        ];
+        Ok(await!(join_all(futs)).into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>())
     }
 
     fn test_action_index() -> Vec<Action> {

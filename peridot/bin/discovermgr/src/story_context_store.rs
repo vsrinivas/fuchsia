@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::utils,
     derivative::*,
     failure::Error,
     fidl_fuchsia_modular::{EntityMarker, EntityProxy, EntityResolverProxy},
+    fuchsia_syslog::macros::*,
+    serde_json,
     std::collections::{HashMap, HashSet},
 };
 
@@ -56,12 +59,49 @@ impl ContextEntity {
     }
 
     #[cfg(test)]
+    pub async fn from_entity(
+        entity: EntityProxy,
+        contributors: HashSet<Contributor>,
+    ) -> Result<Self, Error> {
+        use std::iter::FromIterator;
+        let reference = await!(entity.get_reference())?;
+        let types = HashSet::from_iter(await!(entity.get_types())?.into_iter());
+        Ok(ContextEntity { reference, types, contributors, entity: Some(entity) })
+    }
+
+    #[cfg(test)]
     pub fn new_test(
         reference: &str,
         types: HashSet<String>,
         contributors: HashSet<Contributor>,
     ) -> Self {
         ContextEntity { reference: reference.to_string(), types, contributors, entity: None }
+    }
+
+    pub async fn get_string_data<'a>(
+        &'a self,
+        path: Vec<&'a str>,
+        entity_type: &'a str,
+    ) -> Option<String> {
+        if self.entity.is_none() {
+            return None;
+        }
+        let data = await!(self.entity.as_ref().unwrap().get_data(entity_type)).ok()?;
+        data.and_then(|buffer| {
+            utils::vmo_buffer_to_string(buffer)
+                .map_err(|e| {
+                    fx_log_err!("Failed to fetch data for entity ref:{}", self.reference);
+                    e
+                })
+                .ok()
+        })
+        .and_then(|data| serde_json::from_str::<serde_json::Value>(&data).ok())
+        .and_then(|json_data| {
+            let result =
+                path.iter().fold(Some(&json_data), |data, part| data.and_then(|d| d.get(part)));
+            // TODO: support numeric types as well.
+            result.and_then(|r| r.as_str()).map(|s| s.to_string())
+        })
     }
 
     pub fn add_contributor(&mut self, contributor: Contributor) {
@@ -257,12 +297,39 @@ mod tests {
         Ok(())
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn get_string_data() -> Result<(), Error> {
+        let entity_resolver = test_entity_resolver();
+        let (entity_proxy, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
+        entity_resolver.resolve_entity("foo", server_end)?;
+
+        let context_entity = await!(ContextEntity::from_entity(entity_proxy, hashset!()))?;
+        // Verify successful case
+        assert_eq!(
+            await!(context_entity.get_string_data(vec!["a", "b", "c"], "foo-type")),
+            Some("1".to_string())
+        );
+
+        // Verify case with path that leads to an object, not a string node.
+        assert_eq!(await!(context_entity.get_string_data(vec!["a", "b"], "foo-type")), None);
+
+        // Verify case with unknown path
+        assert_eq!(await!(context_entity.get_string_data(vec!["a", "x", "c"], "foo-type")), None);
+
+        Ok(())
+    }
+
     fn test_entity_resolver() -> EntityResolverProxy {
         let (entity_resolver_client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
         let mut fake_entity_resolver = FakeEntityResolver::new();
-        fake_entity_resolver
-            .register_entity("foo", FakeEntityData::new(vec!["foo-type".into()], ""));
+        fake_entity_resolver.register_entity(
+            "foo",
+            FakeEntityData::new(
+                vec!["foo-type".into()],
+                include_str!("../test_data/nested-field.json"),
+            ),
+        );
         fake_entity_resolver
             .register_entity("bar", FakeEntityData::new(vec!["bar-type".into()], ""));
         fake_entity_resolver.spawn(request_stream);

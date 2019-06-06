@@ -4,6 +4,7 @@
 
 /// Deserialization of Actions.
 use {
+    crate::story_context_store::ContextEntity,
     fidl_fuchsia_app_discover::Suggestion as FidlSuggestion,
     fidl_fuchsia_modular::{
         AddMod as FidlAddMod, DisplayInfo as FidlDisplayInfo, Intent as FidlIntent,
@@ -12,7 +13,7 @@ use {
     },
     maplit::btreeset,
     serde_derive::Deserialize,
-    std::collections::BTreeSet,
+    std::collections::{BTreeSet, HashMap},
     uuid::Uuid,
 };
 
@@ -112,6 +113,65 @@ impl IntentParameter {
     }
 }
 
+impl Action {
+    pub async fn load_display_info<'a>(
+        &'a self,
+        parameters: HashMap<String, EntityMatching<'a>>,
+    ) -> Option<DisplayInfo> {
+        match self.action_display {
+            None => None,
+            Some(ref action_display) => await!(action_display.load_display_info(parameters)),
+        }
+    }
+}
+
+impl ActionDisplayInfo {
+    pub async fn load_display_info<'a>(
+        &'a self,
+        parameters: HashMap<String, EntityMatching<'a>>,
+    ) -> Option<DisplayInfo> {
+        match self.display_info {
+            None => None,
+            Some(ref display_info) => Some(DisplayInfo {
+                title: await!(self.interpolate(&display_info.title, &parameters)),
+                subtitle: await!(self.interpolate(&display_info.subtitle, &parameters)),
+                icon: await!(self.interpolate(&display_info.icon, &parameters)),
+            }),
+        }
+    }
+
+    async fn interpolate<'a>(
+        &'a self,
+        template: &'a Option<String>,
+        parameters: &'a HashMap<String, EntityMatching<'a>>,
+    ) -> Option<String> {
+        match template {
+            None => None,
+            Some(ref template_str) => {
+                let mut result = template_str.clone();
+                for parameter_mapping in &self.parameter_mapping {
+                    // Matches {name}. {{ is escaped {
+                    let template_part = format!("{{{name}}}", name = parameter_mapping.name);
+                    if !result.contains(&template_part)
+                        || parameter_mapping.parameter_property.is_empty()
+                    {
+                        continue;
+                    }
+                    let mut parts = parameter_mapping.parameter_property.split('.');
+                    let intent_param = parts.next().unwrap();
+                    let subfield_path = parts.collect::<Vec<&str>>();
+                    if let Some(matching) = parameters.get(intent_param) {
+                        if let Some(data) = await!(matching.get_data(subfield_path)) {
+                            result = result.replace(&template_part, &data);
+                        }
+                    }
+                }
+                Some(result)
+            }
+        }
+    }
+}
+
 impl DisplayInfo {
     pub fn new() -> Self {
         DisplayInfo { title: None, icon: None, subtitle: None }
@@ -124,9 +184,27 @@ impl DisplayInfo {
     }
 
     #[cfg(test)]
+    pub fn with_subtitle(mut self, subtitle: &str) -> Self {
+        self.subtitle = Some(subtitle.to_string());
+        self
+    }
+
+    #[cfg(test)]
     pub fn with_icon(mut self, icon: &str) -> Self {
         self.icon = Some(icon.to_string());
         self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EntityMatching<'a> {
+    pub context_entity: &'a ContextEntity,
+    pub matching_type: String,
+}
+
+impl<'a> EntityMatching<'a> {
+    async fn get_data(&'a self, path: Vec<&'a str>) -> Option<String> {
+        await!(self.context_entity.get_string_data(path, &self.matching_type))
     }
 }
 
@@ -267,7 +345,15 @@ impl Into<FidlAddMod> for AddMod {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::iter::FromIterator};
+    use {
+        super::*,
+        crate::testing::{FakeEntityData, FakeEntityResolver},
+        fidl_fuchsia_modular::{EntityMarker, EntityResolverMarker},
+        fuchsia_async as fasync,
+        futures::future::join_all,
+        maplit::{hashmap, hashset},
+        std::iter::FromIterator,
+    };
 
     #[test]
     fn test_from_assets() {
@@ -384,5 +470,119 @@ mod tests {
         params[2].entity_reference = "new-ref".to_string();
         intent.parameters = BTreeSet::from_iter(params.into_iter());
         assert_eq!(add_mod.intent, intent);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn load_display_info() {
+        let (entity_resolver, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
+        let mut fake_entity_resolver = FakeEntityResolver::new();
+        fake_entity_resolver.register_entity(
+            "foo",
+            FakeEntityData::new(
+                vec!["foo-type".into()],
+                include_str!("../test_data/nested-field.json"),
+            ),
+        );
+        fake_entity_resolver.register_entity(
+            "bar",
+            FakeEntityData::new(
+                vec!["bar-type".into()],
+                include_str!("../test_data/nested-field.json"),
+            ),
+        );
+        fake_entity_resolver.spawn(request_stream);
+
+        let futs = vec!["foo", "bar"].into_iter().map(|reference| {
+            let (entity_proxy, server_end) =
+                fidl::endpoints::create_proxy::<EntityMarker>().unwrap();
+            entity_resolver.resolve_entity(reference, server_end).unwrap();
+            ContextEntity::from_entity(entity_proxy, hashset!())
+        });
+        let entities =
+            await!(join_all(futs)).into_iter().map(|e| e.unwrap()).collect::<Vec<ContextEntity>>();
+        let parameters = hashmap!(
+            "param1".to_string() => EntityMatching {
+                context_entity: &entities[0],
+                matching_type: "foo-type".to_string(),
+            },
+            "param2".to_string() => EntityMatching {
+                context_entity: &entities[1],
+                matching_type: "bar-type".to_string(),
+            }
+        );
+
+        // Test successful case
+        let display_info = DisplayInfo::new()
+            .with_title("Hello {foo}")
+            .with_subtitle("Bye {bar}")
+            .with_icon("https://icon.com/{icon}");
+        let parameter_mapping = vec![
+            ParameterMapping {
+                name: "foo".to_string(),
+                parameter_property: "param1.a.b.c".to_string(),
+            },
+            ParameterMapping {
+                name: "bar".to_string(),
+                parameter_property: "param2.x.y".to_string(),
+            },
+            ParameterMapping {
+                name: "icon".to_string(),
+                parameter_property: "param1.a.b.c".to_string(),
+            },
+        ];
+        let action_display = ActionDisplayInfo {
+            display_info: Some(display_info.clone()),
+            parameter_mapping: parameter_mapping.clone(),
+        };
+        assert_eq!(
+            await!(action_display.load_display_info(parameters.clone())),
+            Some(
+                DisplayInfo::new()
+                    .with_title("Hello 1")
+                    .with_subtitle("Bye 2")
+                    .with_icon("https://icon.com/1")
+            )
+        );
+
+        // Without display info, nothing is returned.
+        let action_display =
+            ActionDisplayInfo { display_info: None, parameter_mapping: parameter_mapping.clone() };
+        assert_eq!(await!(action_display.load_display_info(parameters.clone())), None);
+
+        // Without parameter mapping, the same display info is returned
+        let action_display = ActionDisplayInfo {
+            display_info: Some(display_info.clone()),
+            parameter_mapping: vec![],
+        };
+        assert_eq!(
+            await!(action_display.load_display_info(parameters.clone())),
+            Some(display_info.clone())
+        );
+
+        // If some field is invalid or missing, it will just not be filled.
+        let parameter_mapping = vec![
+            ParameterMapping {
+                name: "foo".to_string(),
+                parameter_property: "param1.a.b.c".to_string(),
+            },
+            ParameterMapping {
+                name: "bar".to_string(),
+                parameter_property: "param2.a.x".to_string(),
+            },
+        ];
+        let action_display = ActionDisplayInfo {
+            display_info: Some(display_info.clone()),
+            parameter_mapping: parameter_mapping.clone(),
+        };
+        assert_eq!(
+            await!(action_display.load_display_info(parameters)),
+            Some(
+                DisplayInfo::new()
+                    .with_title("Hello 1")
+                    .with_subtitle("Bye {bar}")
+                    .with_icon("https://icon.com/{icon}")
+            )
+        );
     }
 }
