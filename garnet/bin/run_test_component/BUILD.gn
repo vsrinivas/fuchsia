@@ -22,6 +22,8 @@ source_set("lib") {
     "//garnet/lib/cmx",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/pkg_url",

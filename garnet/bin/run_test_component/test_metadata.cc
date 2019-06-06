@@ -22,11 +22,9 @@ constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
-    fuchsia::net::Connectivity::Name_,
-    fuchsia::net::SocketProvider::Name_,
-    fuchsia::net::stack::Stack::Name_,
-    fuchsia::netstack::Netstack::Name_,
-};
+    fuchsia::net::Connectivity::Name_,  fuchsia::net::SocketProvider::Name_,
+    fuchsia::net::stack::Stack::Name_,  fuchsia::netstack::Netstack::Name_,
+    fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_};
 }  // namespace
 
 TestMetadata::TestMetadata() {}

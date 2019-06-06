@@ -6,6 +6,8 @@
 #define GARNET_BIN_RUN_TEST_COMPONENT_TEST_METADATA_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include <string>
 #include <utility>

@@ -242,7 +242,9 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
         "fuchsia.net.Connectivity",
         "fuchsia.net.SocketProvider",
         "fuchsia.net.stack.Stack",
-        "fuchsia.netstack.Netstack"
+        "fuchsia.netstack.Netstack",
+        "fuchsia.ui.scenic.Scenic",
+        "fuchsia.ui.policy.Presenter"
       ]
     }
   })");
@@ -250,12 +252,14 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 4u);
+    EXPECT_EQ(tm.system_services().size(), 6u);
     EXPECT_THAT(tm.system_services(),
                 ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
                                        fuchsia::net::SocketProvider::Name_,
                                        fuchsia::net::stack::Stack::Name_,
-                                       fuchsia::netstack::Netstack::Name_));
+                                       fuchsia::netstack::Netstack::Name_,
+                                       fuchsia::ui::scenic::Scenic::Name_,
+                                       fuchsia::ui::policy::Presenter::Name_));
   }
 
   json = CreateManifestJson(R"(
