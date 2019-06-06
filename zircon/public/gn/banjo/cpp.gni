@@ -48,6 +48,12 @@ template("banjo_cpp_library") {
         "$gen_dir/include/${banjo_library_path}-internal.h",
       ]
     },
+    {
+      backend = "cpp_mock"
+      sources = [
+        "$gen_dir/include/mock/${banjo_library_path}.h",
+      ]
+    },
   ]
   gen_deps = []
   gen_sources = []

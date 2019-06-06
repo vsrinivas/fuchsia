@@ -4,6 +4,8 @@
 
 library("mock-function") {
   testonly = true
+  sdk = "source"
+  sdk_headers = [ "lib/mock-function/mock-function.h" ]
   sources = []
   public_deps = [
     "$zx/system/ulib/fbl",
