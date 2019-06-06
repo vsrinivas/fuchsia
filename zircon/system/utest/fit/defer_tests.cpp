@@ -554,6 +554,32 @@ bool target_destroyed_when_move_assigned() {
     END_TEST;
 }
 
+bool deferred_callback() {
+    BEGIN_TEST;
+
+    auto get_lambda = [](bool* b) {
+        return [b] {
+            *b = true;
+        };
+    };
+
+    bool called1 = false;
+    bool called2 = false;
+
+    {
+        auto deferred_action = fit::defer(get_lambda(&called1));
+        fit::deferred_callback deferred_callback = fit::defer_callback(get_lambda(&called2));
+
+        bool is_same_type = std::is_same<decltype(deferred_action), decltype(deferred_callback)>::value;
+        EXPECT_FALSE(is_same_type);
+
+        EXPECT_FALSE(called2);
+    }
+    EXPECT_TRUE(called2);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(defer_tests)
@@ -598,4 +624,5 @@ RUN_TEST(target_destroyed_when_called<fit::closure>)
 RUN_TEST(target_destroyed_when_canceled<fit::closure>)
 RUN_TEST(target_destroyed_when_move_constructed<fit::closure>)
 RUN_TEST(target_destroyed_when_move_assigned<fit::closure>)
+RUN_TEST(deferred_callback)
 END_TEST_CASE(defer_tests)

@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "function.h"
 #include "nullable.h"
 
 namespace fit {
@@ -131,6 +132,15 @@ bool operator!=(decltype(nullptr), const deferred_action<T>& action) {
 template <typename T>
 inline deferred_action<T> defer(T target) {
     return deferred_action<T>(std::move(target));
+}
+
+// Alias for a deferred_action using a fit::callback.
+using deferred_callback = deferred_action<fit::callback<void()>>;
+
+// Defers execution of a fit::callback with no arguments. See |fit::defer| for
+// details.
+inline deferred_callback defer_callback(fit::callback<void()> target) {
+    return deferred_callback(std::move(target));
 }
 
 } // namespace fit
