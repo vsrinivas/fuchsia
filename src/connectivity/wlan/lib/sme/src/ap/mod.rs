@@ -491,9 +491,7 @@ fn create_start_request(
 ) -> fidl_mlme::StartRequest {
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
-        if let Err(e) = rsne.write_into(&mut buf) {
-            error!("error writing RSNE into MLME-START.request: {}", e);
-        }
+        rsne.as_bytes(&mut buf);
         buf
     });
 

@@ -4,8 +4,7 @@
 
 use super::{akm, cipher, pmkid, suite_selector};
 
-use crate::appendable::{Appendable, BufferTooSmall};
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use nom::{
     call, cond, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse,
 };
@@ -91,64 +90,60 @@ impl Rsne {
         length
     }
 
-    pub fn write_into<A: Appendable>(&self, buf: &mut A) -> Result<(), BufferTooSmall> {
-        if !buf.can_append(self.len()) {
-            return Err(BufferTooSmall);
-        }
+    pub fn as_bytes(&self, buf: &mut Vec<u8>) {
+        buf.reserve(self.len());
 
-        buf.append_byte(ID)?;
-        buf.append_byte((self.len() - 2) as u8)?;
-        buf.append_value(&self.version)?;
+        buf.put_u8(ID);
+        buf.put_u8((self.len() - 2) as u8);
+        buf.put_u16_le(self.version);
 
         match self.group_data_cipher_suite.as_ref() {
-            None => return Ok(()),
+            None => return,
             Some(cipher) => {
-                buf.append_bytes(&cipher.oui[..])?;
-                buf.append_byte(cipher.suite_type)?;
+                buf.put_slice(&cipher.oui[..]);
+                buf.put_u8(cipher.suite_type);
             }
         };
 
         if self.pairwise_cipher_suites.is_empty() {
-            return Ok(());
+            return;
         }
-        buf.append_value(&(self.pairwise_cipher_suites.len() as u16))?;
+        buf.put_u16_le(self.pairwise_cipher_suites.len() as u16);
         for cipher in &self.pairwise_cipher_suites {
-            buf.append_bytes(&cipher.oui[..])?;
-            buf.append_byte(cipher.suite_type)?;
+            buf.put_slice(&cipher.oui[..]);
+            buf.put_u8(cipher.suite_type);
         }
 
         if self.akm_suites.is_empty() {
-            return Ok(());
+            return;
         }
-        buf.append_value(&(self.akm_suites.len() as u16))?;
+        buf.put_u16_le(self.akm_suites.len() as u16);
         for akm in &self.akm_suites {
-            buf.append_bytes(&akm.oui[..])?;
-            buf.append_byte(akm.suite_type)?;
+            buf.put_slice(&akm.oui[..]);
+            buf.put_u8(akm.suite_type);
         }
 
         match self.rsn_capabilities.as_ref() {
-            None => return Ok(()),
-            Some(caps) => buf.append_value(&caps.0)?,
+            None => return,
+            Some(caps) => buf.put_u16_le(caps.0),
         };
 
         if self.pmkids.is_empty() {
-            return Ok(());
+            return;
         }
-        buf.append_value(&(self.pmkids.len() as u16))?;
+        buf.put_u16_le(self.pmkids.len() as u16);
         for pmkid in &self.pmkids {
-            buf.append_bytes(&pmkid[..])?;
+            buf.put_slice(&pmkid[..]);
         }
 
         if let Some(cipher) = self.group_mgmt_cipher_suite.as_ref() {
-            buf.append_bytes(&cipher.oui[..])?;
-            buf.append_byte(cipher.suite_type)?;
+            buf.put_slice(&cipher.oui[..]);
+            buf.put_u8(cipher.suite_type);
         }
-
-        Ok(())
     }
 }
 
-fn read_suite_selector<T>(input: &[u8]) -> IResult<&[u8], T>
+fn read_suite_selector<'a, T>(input: &'a [u8]) -> IResult<&'a [u8], T>
 where
     T: suite_selector::Factory<Suite = T>,
 {
@@ -158,7 +153,7 @@ where
     return IResult::Done(i2, ctor_result);
 }
 
-fn read_pmkid(input: &[u8]) -> IResult<&[u8], pmkid::Pmkid> {
+fn read_pmkid<'a>(input: &'a [u8]) -> IResult<&'a [u8], pmkid::Pmkid> {
     let (i1, bytes) = try_parse!(input, take!(16));
     let pmkid_data = Bytes::from(bytes);
     let (i2, result) = try_parse!(i1, expr_res!(pmkid::new(pmkid_data)));
@@ -205,7 +200,6 @@ mod tests {
     use super::*;
     extern crate test;
     use self::test::Bencher;
-    use crate::test_utils::FixedSizedTestBuffer;
 
     #[bench]
     fn bench_parse_with_nom(b: &mut Bencher) {
@@ -219,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_into() {
+    fn test_as_bytes() {
         let frame: Vec<u8> = vec![
             0x30, 0x2A, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
             0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0xa8, 0x04, 0x01, 0x00, 0x01, 0x02, 0x03, 0x04,
@@ -230,7 +224,7 @@ mod tests {
         let result = from_bytes(&frame);
         assert!(result.is_done());
         let rsne = result.unwrap().1;
-        rsne.write_into(&mut buf).expect("failed writing RSNE");
+        rsne.as_bytes(&mut buf);
         let rsne_len = buf.len();
         let left_over = buf.split_off(rsne_len);
         assert_eq!(&buf[..], &frame[..]);
@@ -245,12 +239,15 @@ mod tests {
             0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x00, 0x0f,
             0xac, 0x04,
         ];
-        let mut buf = FixedSizedTestBuffer::new(32);
+        let mut buf = Vec::with_capacity(32);
         let result = from_bytes(&frame);
         assert!(result.is_done());
         let rsne = result.unwrap().1;
-        rsne.write_into(&mut buf).expect_err("expected writing RSNE to fail");
-        assert_eq!(buf.bytes_written(), 0);
+        rsne.as_bytes(&mut buf);
+        let rsne_len = buf.len();
+        let left_over = buf.split_off(rsne_len);
+        assert_eq!(&buf[..], &frame[..]);
+        assert!(left_over.iter().all(|b| *b == 0));
     }
 
     #[test]

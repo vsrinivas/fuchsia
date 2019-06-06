@@ -7,7 +7,7 @@ use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFra
 use crate::key::exchange::{compute_mic, Key};
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
-use crate::key_data::kde;
+use crate::key_data::{self, kde};
 use crate::keywrap::keywrap_algorithm;
 use crate::rsna::{
     derive_key_descriptor_version, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
@@ -243,10 +243,16 @@ fn create_message_3(
     krc: u64,
 ) -> Result<eapol::KeyFrame, failure::Error> {
     // Construct key data which contains the Beacon's RSNE and a GTK KDE.
-    let mut w = kde::Writer::new(vec![]);
-    w.write_rsne(&cfg.a_rsne)?;
-    w.write_gtk(&kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.tk()))?;
-    let key_data = w.finalize()?;
+    // Write RSNE to key data.
+    let mut key_data = vec![];
+    cfg.a_rsne.as_bytes(&mut key_data);
+
+    // Write GTK KDE to key data.
+    let gtk_kde = kde::Gtk::new(gtk.key_id(), kde::GtkInfoTx::BothRxTx, gtk.tk());
+    gtk_kde.as_bytes(&mut key_data);
+
+    // Add optional padding and encrypt the key data.
+    key_data::add_padding(&mut key_data);
     let encrypted_key_data =
         keywrap_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?.wrap(kek, &key_data[..])?;
 
