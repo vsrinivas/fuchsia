@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include "src/developer/debug/zxdb/client/remote_api.h"
-
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "garnet/third_party/libunwindstack/include/unwindstack/Regs.h"
+#include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "third_party/crashpad/snapshot/cpu_context.h"
 #include "third_party/crashpad/snapshot/memory_snapshot.h"
@@ -29,6 +28,9 @@ class MinidumpRemoteAPI : public RemoteAPI {
 
   Err Open(const std::string& path);
   Err Close();
+
+  // The process ID for the (presumably only) process in this dump.
+  uint64_t ProcessID() { return minidump_->ProcessID(); }
 
   // RemoteAPI implementation.
   void Hello(
@@ -77,8 +79,7 @@ class MinidumpRemoteAPI : public RemoteAPI {
       override;
   void SysInfo(
       const debug_ipc::SysInfoRequest& request,
-      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb)
-      override;
+      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) override;
   void ThreadStatus(
       const debug_ipc::ThreadStatusRequest& request,
       std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb)

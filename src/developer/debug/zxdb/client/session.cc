@@ -20,6 +20,8 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/logging/block_timer.h"
+#include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
@@ -34,9 +36,6 @@
 #include "src/developer/debug/zxdb/client/socket_connect.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
-#include "src/developer/debug/shared/logging/block_timer.h"
-#include "src/developer/debug/shared/logging/debug.h"
-#include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -416,7 +415,8 @@ void Session::OpenMinidump(const std::string& path,
 
   is_minidump_ = true;
   remote_api_ = std::make_unique<MinidumpRemoteAPI>(this);
-  Err err = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get())->Open(path);
+  auto minidump = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get());
+  Err err = minidump->Open(path);
 
   if (err.has_error()) {
     debug_ipc::MessageLoop::Current()->PostTask(
@@ -424,6 +424,9 @@ void Session::OpenMinidump(const std::string& path,
 
     return;
   }
+
+  system().GetTargets()[0]->Attach(
+      minidump->ProcessID(), [](fxl::WeakPtr<Target> target, const Err&) {});
 
   remote_api_->Hello(debug_ipc::HelloRequest(),
                      [callback, weak_this = GetWeakPtr()](
@@ -488,7 +491,8 @@ bool Session::ClearConnectionData() {
 
 void Session::DispatchNotifyThreadStarting(
     const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
+  ProcessImpl* process =
+      system_.ProcessImplFromKoid(notify.record.process_koid);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread starting notification for an "
@@ -525,7 +529,8 @@ void Session::DispatchNotifyThreadStarting(
 
 void Session::DispatchNotifyThreadExiting(
     const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
+  ProcessImpl* process =
+      system_.ProcessImplFromKoid(notify.record.process_koid);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread exiting notification for an "
@@ -657,7 +662,6 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
     case debug_ipc::NotifyIO::Type::kLast:
       FXL_NOTREACHED() << "Invalid notification type";
   }
-
 }
 
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
@@ -913,8 +917,7 @@ void Session::ConfigQuitAgent(bool quit,
     return;
 
   std::string value = quit ? "true" : "false";
-  actions->push_back({debug_ipc::ConfigAction::Type::kQuitOnExit,
-                             value});
+  actions->push_back({debug_ipc::ConfigAction::Type::kQuitOnExit, value});
 }
 
 }  // namespace zxdb
