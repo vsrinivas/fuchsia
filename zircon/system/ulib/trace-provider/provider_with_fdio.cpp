@@ -61,19 +61,3 @@ trace_provider_t* trace_provider_create_synchronously_with_fdio(
     return trace_provider_create_synchronously_etc(
         to_service, dispatcher, name, out_manager_is_tracing_already);
 }
-
-trace_provider_t* trace_provider_create_with_name(
-        async_dispatcher_t* dispatcher, const char* name) {
-    return trace_provider_create_with_name_fdio(dispatcher, name);
-}
-
-trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher) {
-    return trace_provider_create_with_fdio(dispatcher);
-}
-
-trace_provider_t* trace_provider_create_synchronously(
-        async_dispatcher_t* dispatcher, const char* name,
-        bool* out_manager_is_tracing_already) {
-    return trace_provider_create_synchronously_with_fdio(
-        dispatcher, name, out_manager_is_tracing_already);
-}

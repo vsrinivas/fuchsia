@@ -13,19 +13,9 @@ pub fn trace_provider_create_with_fdio() {
     }
 }
 
-// TODO(PT-63): Old version of function, to be deleted after soft-transition
-// to |trace_provider_create_with_fdio| has completed.
-pub fn trace_provider_create() {
-    unsafe {
-        sys::trace_provider_create_rust();
-    }
-}
-
 mod sys {
     #[link(name = "rust-trace-provider")]
     extern "C" {
         pub fn trace_provider_create_with_fdio_rust();
-        // TODO(PT-63): Delete when soft-transition completed.
-        pub fn trace_provider_create_rust();
     }
 }

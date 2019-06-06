@@ -121,16 +121,6 @@ trace_provider_t* trace_provider_create_synchronously_with_fdio(
     async_dispatcher_t* dispatcher, const char* name,
     bool* out_already_started);
 
-// Compatibility wrappers.
-// TODO(PT-63): Remove these (and the _etc suffixes on the above routines)
-// when all clients are updated.
-trace_provider_t* trace_provider_create_with_name(
-    async_dispatcher_t* dispatcher, const char* name);
-trace_provider_t* trace_provider_create(async_dispatcher_t* dispatcher);
-trace_provider_t* trace_provider_create_synchronously(
-    async_dispatcher_t* dispatcher, const char* name,
-    bool* out_already_started);
-
 // Destroys the trace provider.
 void trace_provider_destroy(trace_provider_t* provider);
 
@@ -232,11 +222,6 @@ private:
     explicit TraceProviderWithFdio(trace_provider_t* provider)
         : TraceProviderEtc(provider) {}
 };
-
-// Compatibility wrapper.
-// TODO(PT-63): Delete (and remove _etc from above version) when all clients
-// are updated.
-using TraceProvider = TraceProviderWithFdio;
 
 } // namespace trace
 

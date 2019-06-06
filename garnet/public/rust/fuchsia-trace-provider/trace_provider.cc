@@ -12,9 +12,6 @@ __BEGIN_CDECLS
 
 void trace_provider_create_with_fdio_rust() __attribute__((visibility("default")));
 
-// TODO(PT-63): Delete when soft-transition has completed.
-void trace_provider_create_rust() __attribute__((visibility("default")));
-
 __END_CDECLS
 
 // The C++ trace provider API depends on libasync. Create a new thread here
@@ -30,15 +27,4 @@ static void trace_provider_with_fdio_thread_entry() {
 
 void trace_provider_create_with_fdio_rust() {
   new std::thread(&trace_provider_with_fdio_thread_entry);
-}
-
-// TODO(PT-63): Delete when soft-transition has completed.
-static void trace_provider_thread_entry() {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  trace::TraceProvider trace_provider(loop.dispatcher());
-  loop.Run();
-}
-
-void trace_provider_create_rust() {
-  new std::thread(&trace_provider_thread_entry);
 }
