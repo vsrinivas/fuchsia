@@ -89,7 +89,6 @@ group("base") {
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
-    "//src/connectivity/wlan:service",
   ]
 }
 
