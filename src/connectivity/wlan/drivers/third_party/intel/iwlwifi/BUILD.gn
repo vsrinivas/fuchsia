@@ -149,6 +149,7 @@ source_set("iwlwifi_sim_trans_ss") {
   ]
 
   public_deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env:simenv",
     "//zircon/public/lib/ddk",
   ]
 }
