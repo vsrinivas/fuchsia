@@ -33,7 +33,7 @@ executable("scenic") {
 
   if (enable_input_subsystem) {
     defines += [ "SCENIC_ENABLE_INPUT_SUBSYSTEM" ]
-    deps += [ "//garnet/lib/ui/input" ]
+    deps += ["//garnet/lib/ui/input"]
   }
 
   # Extra stack needed to avoid crashes when loading vulkan validation layers

@@ -361,19 +361,35 @@ bool GfxCommandApplier::ApplyReleaseResourceCmd(
 }
 
 bool GfxCommandApplier::ApplyExportResourceCmd(
-    Session* session, fuchsia::ui::gfx::ExportResourceCmdDEPRECATED command) {
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::ApplyExportResourceCmd(): "
-         "obsolete command not supported.";
+    Session* session, fuchsia::ui::gfx::ExportResourceCmd command) {
+  if (!command.token) {
+    session->error_reporter()->ERROR()
+        << "scenic_impl::gfx::GfxCommandApplier::ApplyExportResourceCmd(): "
+           "no token provided.";
+    return false;
+  }
+  if (auto resource =
+          session->resources()->FindResource<Resource>(command.id)) {
+    return session->session_context().resource_linker->ExportResource(
+        resource.get(), std::move(command.token));
+  }
   return false;
 }
 
 bool GfxCommandApplier::ApplyImportResourceCmd(
-    Session* session, fuchsia::ui::gfx::ImportResourceCmdDEPRECATED command) {
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::ApplyImportResourceCmd(): "
-         "obsolete command not supported.";
-  return false;
+    Session* session, fuchsia::ui::gfx::ImportResourceCmd command) {
+  if (!command.token) {
+    session->error_reporter()->ERROR()
+        << "scenic_impl::gfx::GfxCommandApplier::ApplyImportResourceCmd(): "
+           "no token provided.";
+    return false;
+  }
+  auto import = fxl::MakeRefCounted<Import>(
+      session, command.id, command.spec,
+      session->session_context().resource_linker->GetWeakPtr());
+  return session->session_context().resource_linker->ImportResource(
+             import.get(), command.spec, std::move(command.token)) &&
+         session->resources()->AddResource(command.id, std::move(import));
 }
 
 bool GfxCommandApplier::ApplyAddChildCmd(

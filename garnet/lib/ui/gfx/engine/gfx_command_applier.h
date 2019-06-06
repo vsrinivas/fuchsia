@@ -67,9 +67,9 @@ class GfxCommandApplier {
   static bool ApplyReleaseResourceCmd(
       Session* session, fuchsia::ui::gfx::ReleaseResourceCmd command);
   static bool ApplyExportResourceCmd(
-      Session* session, fuchsia::ui::gfx::ExportResourceCmdDEPRECATED command);
+      Session* session, fuchsia::ui::gfx::ExportResourceCmd command);
   static bool ApplyImportResourceCmd(
-      Session* session, fuchsia::ui::gfx::ImportResourceCmdDEPRECATED command);
+      Session* session, fuchsia::ui::gfx::ImportResourceCmd command);
   static bool ApplyAddChildCmd(Session* session,
                                fuchsia::ui::gfx::AddChildCmd command);
   static bool ApplyAddPartCmd(Session* session,

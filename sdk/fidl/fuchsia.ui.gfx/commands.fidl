@@ -11,8 +11,8 @@ using fuchsia.mem;
 union Command {
     CreateResourceCmd create_resource;
     ReleaseResourceCmd release_resource;
-    ExportResourceCmdDEPRECATED export_resource;
-    ImportResourceCmdDEPRECATED import_resource;
+    ExportResourceCmd export_resource;
+    ImportResourceCmd import_resource;
 
     // Tagging commands.
     SetTagCmd set_tag;
@@ -122,7 +122,7 @@ struct ReleaseResourceCmd {
 // No specific mechanism is provided for transferring a token from an exporter
 // to an importer; collaborators may choose any out-of-band API they wish to do
 // so.
-struct ExportResourceCmdDEPRECATED {
+struct ExportResourceCmd {
     uint32 id;
     handle<eventpair> token;
 };
@@ -149,7 +149,7 @@ struct ExportResourceCmdDEPRECATED {
 // TODO: describe how the imported resource behaves if the exported resource
 // isn't yet available, or becomes unavailable (e.g. an imported Material might
 // act as a plain white texture).
-struct ImportResourceCmdDEPRECATED {
+struct ImportResourceCmd {
     uint32 id;
     handle<eventpair> token;
     ImportSpec spec;

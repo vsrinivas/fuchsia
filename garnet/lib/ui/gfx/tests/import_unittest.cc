@@ -31,7 +31,7 @@ class ImportTest : public SessionTest {
   std::unique_ptr<ResourceLinker> resource_linker_;
 };
 
-TEST_F(ImportTest, DISABLED_ExportsResourceViaCmd) {
+TEST_F(ImportTest, ExportsResourceViaCmd) {
   // Create the event pair.
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -50,7 +50,7 @@ TEST_F(ImportTest, DISABLED_ExportsResourceViaCmd) {
       Apply(scenic::NewExportResourceCmd(resource_id, std::move(source))));
 }
 
-TEST_F(ImportTest, DISABLED_ImportsUnlinkedImportViaCmd) {
+TEST_F(ImportTest, ImportsUnlinkedImportViaCmd) {
   // Create the event pair.
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -78,7 +78,7 @@ TEST_F(ImportTest, DISABLED_ImportsUnlinkedImportViaCmd) {
   ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
 }
 
-TEST_F(ImportTest, DISABLED_PerformsFullLinking) {
+TEST_F(ImportTest, PerformsFullLinking) {
   // Create the event pair.
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -149,7 +149,7 @@ TEST_F(ImportTest, DISABLED_PerformsFullLinking) {
   }
 }
 
-TEST_F(ImportTest, DISABLED_HandlesDeadSourceHandle) {
+TEST_F(ImportTest, HandlesDeadSourceHandle) {
   zx::eventpair source_out;
   zx::eventpair destination;
   {
@@ -165,7 +165,7 @@ TEST_F(ImportTest, DISABLED_HandlesDeadSourceHandle) {
                                                   std::move(source_out))));
 }
 
-TEST_F(ImportTest, DISABLED_HandlesDeadDestinationHandle) {
+TEST_F(ImportTest, HandlesDeadDestinationHandle) {
   zx::eventpair source_out;
   zx::eventpair destination_out;
   {
@@ -184,7 +184,7 @@ TEST_F(ImportTest, DISABLED_HandlesDeadDestinationHandle) {
       std::move(destination_out))));
 }
 
-TEST_F(ImportTest, DISABLED_DestroyingExportedResourceSendsEvent) {
+TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   zx::eventpair source;
   zx::eventpair destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -213,8 +213,7 @@ TEST_F(ImportTest, DISABLED_DestroyingExportedResourceSendsEvent) {
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
-TEST_F(ImportTest,
-       DISABLED_ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
+TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   zx::eventpair source;
   zx::eventpair destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -245,7 +244,7 @@ TEST_F(ImportTest,
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
-TEST_F(ImportTest, DISABLED_KillingImportedResourceEvictsFromResourceLinker) {
+TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
   bool called = false;
   resource_linker_->SetOnExpiredCallback(
       [&called](Resource*, ResourceLinker::ExpirationCause cause) {
@@ -304,8 +303,7 @@ TEST_F(ImportTest, DISABLED_KillingImportedResourceEvictsFromResourceLinker) {
 // For a given resource, export it and bind a node to it. Additionally, keep
 // an import handle open. Then, verify that the resource is not unexported until
 // both the import node and the import handle are released.
-TEST_F(ImportTest,
-       DISABLED_ResourceUnexportedAfterImportsAndImportHandlesDie1) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   ResourceId exported_node_id = 1;
   ResourceId import_node_id = 2;
 
@@ -393,8 +391,7 @@ TEST_F(ImportTest,
 // both the import node and the import handle are released.
 // This test is identical to the previous one except the order in which the
 // import node and import handle are released is switched.
-TEST_F(ImportTest,
-       DISABLED_ResourceUnexportedAfterImportsAndImportHandlesDie2) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   ResourceId exported_node_id = 1;
   ResourceId import_node_id = 2;
 
@@ -481,8 +478,7 @@ TEST_F(ImportTest,
 // until both the import node and all the import handles are released. This test
 // is identical to the previous one except there is an additional import handle
 // that must be destroyed.
-TEST_F(ImportTest,
-       DISABLED_ResourceUnexportedAfterImportsAndImportHandlesDie3) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   ResourceId exported_node_id = 1;
   ResourceId import_node_id = 2;
 
@@ -589,8 +585,7 @@ TEST_F(ImportTest,
 // until both the import nodes and all the import handles are released. This
 // test is identical to the previous one except there is an additional import
 // node that must be released.
-TEST_F(ImportTest,
-       DISABLED_ResourceUnexportedAfterImportsAndImportHandlesDie4) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   ResourceId exported_node_id = 1;
   ResourceId import_node_id1 = 2;
   ResourceId import_node_id2 = 3;
@@ -714,7 +709,7 @@ TEST_F(ImportTest,
 }
 
 TEST_F(ImportTest,
-       DISABLED_ProxiesCanBeFoundByTheirContainerOrTheirUnderlyingEntityType) {
+       ProxiesCanBeFoundByTheirContainerOrTheirUnderlyingEntityType) {
   // Create an unlinked import resource.
   zx::eventpair source, destination;
 
@@ -759,7 +754,7 @@ TEST_F(ImportTest,
   }
 }
 
-TEST_F(ImportTest, DISABLED_UnlinkedImportedResourceCanAcceptCommands) {
+TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
   // Create an unlinked import resource.
   zx::eventpair source, destination;
   {
@@ -800,7 +795,7 @@ TEST_F(ImportTest, DISABLED_UnlinkedImportedResourceCanAcceptCommands) {
   }
 }
 
-TEST_F(ImportTest, DISABLED_LinkedResourceShouldBeAbleToAcceptCommands) {
+TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   // Create the event pair.
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -871,7 +866,7 @@ TEST_F(ImportTest, DISABLED_LinkedResourceShouldBeAbleToAcceptCommands) {
   }
 }
 
-TEST_F(ImportTest, DISABLED_EmbedderCanEmbedNodesFromElsewhere) {
+TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
   // Create the token pair.
   zx::eventpair import_token, export_token;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &import_token, &export_token));
