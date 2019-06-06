@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
+#include "garnet/bin/ui/root_presenter/factory_reset_manager.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
 namespace root_presenter {
@@ -76,6 +77,7 @@ class App : public fuchsia::ui::policy::Presenter,
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;
   ui_input::InputReader input_reader_;
+  std::unique_ptr<FactoryResetManager> fdr_manager_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;

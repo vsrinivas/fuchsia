@@ -252,8 +252,11 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
 
 TEST_F(MediaButtonsListenerTest, MediaButtons) {
   // Set up inputs. Fires when display and content are available.
+  // Inject a media button input with all buttons but the factory reset button
+  // set. If fdr is set, FactoryResetManager will handle the buttons event
+  // instead of the MediaButtonListener, which we are testing.
   SetInjectInputCallback([this] {
-    InjectInput({"media_button", "1", "1", "1", "1", nullptr});
+    InjectInput({"media_button", "1", "1", "1", "0", nullptr});
   });
 
   // Set up expectations. Terminate when we see 1 message.

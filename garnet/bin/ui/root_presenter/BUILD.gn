@@ -24,17 +24,20 @@ executable("root_presenter") {
 
   deps = [
     ":displays",
+    ":factory_reset_manager",
     ":renderer_params",
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
     "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/input",
+    "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/ui/lib/glm_workaround",
@@ -72,5 +75,20 @@ source_set("renderer_params") {
   deps = [
     "//sdk/fidl/fuchsia.ui.gfx",
     "//src/lib/fxl",
+  ]
+}
+
+source_set("factory_reset_manager") {
+  sources = [
+    "factory_reset_manager.cc",
+    "factory_reset_manager.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/lib/sys/cpp",
   ]
 }

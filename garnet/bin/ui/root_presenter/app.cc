@@ -22,7 +22,9 @@ namespace root_presenter {
 
 App::App(const fxl::CommandLine& command_line)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      input_reader_(this) {
+      input_reader_(this),
+      fdr_manager_(
+          std::make_unique<FactoryResetManager>(startup_context_.get())) {
   FXL_DCHECK(startup_context_);
 
   input_reader_.Start();
@@ -194,6 +196,12 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
 
   FXL_DCHECK(active_presentation_idx_ < presentations_.size());
   FXL_VLOG(3) << "OnReport to " << active_presentation_idx_;
+
+  if (report.media_buttons) {
+    if (fdr_manager_->OnMediaButtonReport(*(report.media_buttons.get()))) {
+      return;
+    }
+  }
 
   // Input events are only reported to the active presentation.
   TRACE_FLOW_BEGIN("input", "report_to_presentation", report.trace_id);

@@ -98,7 +98,7 @@ test_package("scenic_tests") {
       environments = basic_envs
     },
     {
-      name = "root_presenter_unittests"
+      name = "root_presenter_tests"
       environments = basic_envs
     },
     {
