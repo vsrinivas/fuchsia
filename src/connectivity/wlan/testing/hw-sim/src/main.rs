@@ -10,8 +10,8 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as fidl_device,
     fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
-    futures::prelude::*,
     futures::future::join,
+    futures::prelude::*,
     std::sync::{Arc, Mutex},
     wlan_common::{appendable::Appendable, ie, mac, mgmt_writer},
     wlantap_client::Wlantap,
@@ -284,7 +284,10 @@ mod simulation_tests {
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
         ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
-        ok = run_test("rate_selection", minstrel::test_rate_selection) && ok;
+        if false {
+            // TODO(FLK-339): Enable after investigation
+            ok = run_test("rate_selection", minstrel::test_rate_selection) && ok;
+        }
 
         // ap tests
         ok = run_test("open_ap_connect", ap::tests::test_open_ap_connect) && ok;
