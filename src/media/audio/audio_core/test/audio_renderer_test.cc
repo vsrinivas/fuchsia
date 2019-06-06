@@ -3,10 +3,24 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/vmo.h>
 
 #include "src/media/audio/lib/test/audio_core_test_base.h"
 
 namespace media::audio::test {
+
+// Just an arbitrary |AudioStreamType| that is valid to be used. Intended for
+// tests that don't care about the specific audio frames being sent.
+constexpr fuchsia::media::AudioStreamType kTestStreamType = {
+    .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+    .channels = 2,
+    .frames_per_second = 48000,
+};
+
+// The following are valid/invalid when used with |kTestStreamType|.
+constexpr uint64_t kValidPayloadSize = sizeof(float) * kTestStreamType.channels;
+constexpr uint64_t kInvalidPayloadSize = kValidPayloadSize - 1;
+constexpr size_t kDefaultPayloadBufferSize = PAGE_SIZE;
 
 //
 // AudioRendererTest
@@ -17,6 +31,20 @@ class AudioRendererTest : public AudioCoreTestBase {
   void SetUp() override;
   void TearDown() override;
   void SetNegativeExpectations() override;
+
+  // Discards all in-flight packets and waits for the response from the audio
+  // renderer. This can be used as a simple round-trip through the audio
+  // renderer, indicating that all FIDL messages have been read out of the
+  // channel.
+  //
+  // In other words, calling this method also asserts that all prior FIDL
+  // messages have been handled successfully (no disconnect was triggered).
+  void AssertConnectedAndDiscardAllPackets();
+
+  // Creates a VMO with |buffer_size| and then passes it to
+  // |AudioRenderer::AddPayloadBuffer| with |id|. This is purely a convenience
+  // method and doesn't provide access to the buffer VMO.
+  void CreateAndAddPayloadBuffer(uint32_t id);
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::audio::GainControlPtr gain_control_;
@@ -48,17 +76,84 @@ void AudioRendererTest::SetNegativeExpectations() {
   bound_renderer_expected_ = false;
 }
 
+void AudioRendererTest::AssertConnectedAndDiscardAllPackets() {
+  audio_renderer_->DiscardAllPackets(CompletionCallback());
+
+  ExpectCallback();
+}
+
+void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
+  zx::vmo payload_buffer;
+  constexpr uint32_t kVmoOptionsNone = 0;
+  ASSERT_EQ(zx::vmo::create(kDefaultPayloadBufferSize, kVmoOptionsNone, &payload_buffer), ZX_OK);
+  audio_renderer_->AddPayloadBuffer(id, std::move(payload_buffer));
+}
+
 //
 // AudioRenderer implements the base classes StreamBufferSet and StreamSink.
 
 //
 // StreamBufferSet validation
 //
-// TODO(mpuryear): test AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
-// Also negative testing: bad id, null or bad handle
 
-// TODO(mpuryear): test RemovePayloadBuffer(uint32 id);
-// Also negative testing: unknown or already-removed id
+// Sanity test adding a payload buffer. Just verify we don't get a disconnect.
+TEST_F(AudioRendererTest, AddPayloadBuffer) {
+  CreateAndAddPayloadBuffer(0);
+
+  AssertConnectedAndDiscardAllPackets();
+}
+
+// TODO(tjdetwiler): This is out of spec but there are currently clients that
+// rely on this behavior. This test should be updated to fail once all clients
+// are fixed.
+TEST_F(AudioRendererTest, AddPayloadBufferDuplicateId) {
+  CreateAndAddPayloadBuffer(0);
+  CreateAndAddPayloadBuffer(0);
+
+  AssertConnectedAndDiscardAllPackets();
+}
+
+// AudioRenderer supports only a single payload buffer with id 0.
+//
+// TODO(tjdetwiler): This is an artificial restriction in AudioRenderer that
+// should be removed.
+TEST_F(AudioRendererTest, AddPayloadBufferInvalidIdCausesDisconnect) {
+  CreateAndAddPayloadBuffer(1);
+
+  ExpectDisconnect();
+}
+
+// It is invalid to add a payload buffer while the stream is 'operational'
+TEST_F(AudioRendererTest, AddPayloadBufferWhileOperationalCausesDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  AssertConnectedAndDiscardAllPackets();
+
+  // Send Packet moves connection into the operational state.
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  // Attempt to add new payload buffer while the packet is in flight. This
+  // should fail.
+  CreateAndAddPayloadBuffer(0);
+
+  ExpectDisconnect();
+}
+
+// AudioRenderer does not support removing buffers.
+//
+// TODO(tjdetwiler): This is an artificial restriction in AudioRenderer that
+// should be removed.
+TEST_F(AudioRendererTest, RemovePayloadBufferCausesDisconnect) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->RemovePayloadBuffer(0);
+
+  ExpectDisconnect();
+}
 
 //
 // StreamSink validation
@@ -67,8 +162,107 @@ void AudioRendererTest::SetNegativeExpectations() {
 // TODO(mpuryear): test SendPacket(StreamPacket packet) -> ();
 // Also negative testing: malformed packet
 
-// TODO(mpuryear): test SendPacketNoReply(StreamPacket packet);
-// Also negative testing: malformed packet
+//
+// SendPacketNoReply tests.
+//
+
+TEST_F(AudioRendererTest, SendPacketNoReply) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  AssertConnectedAndDiscardAllPackets();
+}
+
+// TODO(tjdetwiler): Start enforcing payload_buffer_id once we ensure all
+// clients are providing a valid value.
+TEST_F(AudioRendererTest, SendPacketNoReplyAcceptAnyPayloadBufferId) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 1234;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  AssertConnectedAndDiscardAllPackets();
+}
+
+// It is invalid to SendPacket before the stream type has been configured
+// (SetPcmStreamType).
+TEST_F(AudioRendererTest, SendPacketBeforeSetStreamTypeShouldDisconnect) {
+  // Add a payload buffer but no stream type.
+  CreateAndAddPayloadBuffer(0);
+
+  // SendPacket. This should trigger a disconnect due to a lack of a configured
+  // stream type.
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  ExpectDisconnect();
+}
+
+// SendPacket with a |payload_size| that is invalid.
+TEST_F(AudioRendererTest,
+       SendPacketNoReplyInvalidPayloadBufferSizeCausesDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send Packet moves connection into the operational state.
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kInvalidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  ExpectDisconnect();
+}
+
+TEST_F(AudioRendererTest, SendPacketNoReplyBufferOutOfBoundsCausesDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send Packet moves connection into the operational state.
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  // |payload_offset| is beyond the end of the payload buffer.
+  packet.payload_offset = kDefaultPayloadBufferSize;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  ExpectDisconnect();
+}
+
+TEST_F(AudioRendererTest, SendPacketNoReplyBufferOverrunCausesDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send Packet moves connection into the operational state.
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id= 0;
+  // |payload_offset| + |payload_size| is beyond the end of the payload buffer.
+  packet.payload_size = kValidPayloadSize * 2;
+  packet.payload_offset = kDefaultPayloadBufferSize - kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  ExpectDisconnect();
+}
 
 // TODO(mpuryear): test EndOfStream();
 // Also proper sequence of callbacks/completions
@@ -139,13 +333,54 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
 // TODO(mpuryear): test SetReferenceClock(handle reference_clock);
 // Also negative testing: null handle, bad handle, handle to something else
 
-// TODO(mpuryear): test Play(int64 ref_time, int64 med)->(int64 ref, int64 med);
-// Verify success after setting format and submitting buffers.
-// Also: when already in Play, very positive vals, very negative vals
+// TODO(mpuryear): Also: when already in Play, very positive vals, very negative
+// vals
+TEST_F(AudioRendererTest, Play) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
 
-// TODO(mpuryear): test PlayNoReply(int64 reference_time, int64 media_time);
-// Verify success after setting format and submitting buffers.
-// Also: when already in Play, very positive vals, very negative vals
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacket(std::move(packet), CompletionCallback());
+
+  int64_t ref_time_received = -1;
+  int64_t media_time_received = -1;
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
+                        fuchsia::media::NO_TIMESTAMP,
+                        [&ref_time_received, &media_time_received](
+                            auto ref_time, auto media_time) {
+                          ref_time_received = ref_time;
+                          media_time_received = media_time;
+                        });
+  // Note we expect that we receive the |Play| callback _before_ the
+  // |SendPacket| callback.
+  ExpectCallback();
+  ASSERT_NE(ref_time_received, -1);
+  ASSERT_NE(media_time_received, -1);
+}
+
+// TODO(mpuryear): Also: when already in Play, very positive vals, very negative
+// vals
+TEST_F(AudioRendererTest, PlayNoReply) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacket(std::move(packet), CompletionCallback());
+
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                               fuchsia::media::NO_TIMESTAMP);
+  ExpectCallback();
+}
 
 // TODO(mpuryear): test Pause()->(int64 reference_time, int64 media_time);
 // Verify success after setting format and submitting buffers.
