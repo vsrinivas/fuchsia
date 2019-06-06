@@ -49,7 +49,6 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let amber_connector = AmberConnector::new();
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
@@ -60,14 +59,15 @@ fn main() -> Result<(), Error> {
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
 
     let resolver_cb = {
-        // Capture a clone of rewrite_manager's Arc so the new client callback has a copy from
-        // which to make new clones.
+        // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
+        // from which to make new clones.
+        let repo_manager = repo_manager.clone();
         let rewrite_manager = rewrite_manager.clone();
         move |stream| {
             fasync::spawn(
                 resolver_service::run_resolver_service(
                     rewrite_manager.clone(),
-                    amber_connector.clone(),
+                    repo_manager.clone(),
                     cache.clone(),
                     stream,
                 )
@@ -112,10 +112,10 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn load_repo_manager() -> RepositoryManager {
+fn load_repo_manager() -> RepositoryManager<AmberConnector> {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
-    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH)
+    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH, AmberConnector::new())
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder

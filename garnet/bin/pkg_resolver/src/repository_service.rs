@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::amber_connector::AmberConnect;
 use crate::repository_manager::{CannotRemoveStaticRepositories, RepositoryManager};
 use fidl_fuchsia_pkg::{
     MirrorConfig as FidlMirrorConfig, RepositoryConfig as FidlRepositoryConfig,
@@ -21,12 +22,12 @@ use std::sync::Arc;
 
 const LIST_CHUNK_SIZE: usize = 100;
 
-pub struct RepositoryService {
-    repo_manager: Arc<RwLock<RepositoryManager>>,
+pub struct RepositoryService<A: AmberConnect> {
+    repo_manager: Arc<RwLock<RepositoryManager<A>>>,
 }
 
-impl RepositoryService {
-    pub fn new(repo_manager: Arc<RwLock<RepositoryManager>>) -> Self {
+impl<A: AmberConnect> RepositoryService<A> {
+    pub fn new(repo_manager: Arc<RwLock<RepositoryManager<A>>>) -> Self {
         RepositoryService { repo_manager: repo_manager }
     }
 
@@ -138,13 +139,17 @@ impl RepositoryService {
 mod tests {
     use super::*;
     use crate::repository_manager::RepositoryManagerBuilder;
+    use crate::test_util::ClosedAmberConnector;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_pkg::RepositoryIteratorMarker;
     use fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder};
     use fuchsia_url::pkg_url::RepoUrl;
     use std::convert::TryInto;
 
-    async fn list(service: &RepositoryService) -> Vec<RepositoryConfig> {
+    async fn list<A>(service: &RepositoryService<A>) -> Vec<RepositoryConfig>
+    where
+        A: AmberConnect,
+    {
         let (list_iterator, stream) =
             create_proxy_and_stream::<RepositoryIteratorMarker>().unwrap();
         service.serve_list(stream);
@@ -167,7 +172,9 @@ mod tests {
     async fn test_list_empty() {
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path, ClosedAmberConnector)
+            .unwrap()
+            .build();
         let service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         let results = await!(list(&service));
@@ -186,7 +193,7 @@ mod tests {
 
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path)
+        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path, ClosedAmberConnector)
             .unwrap()
             .static_configs(configs.clone())
             .build();
@@ -202,7 +209,9 @@ mod tests {
     async fn test_insert_list_remove() {
         let dynamic_dir = tempfile::tempdir().unwrap();
         let dynamic_configs_path = dynamic_dir.path().join("config");
-        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path).unwrap().build();
+        let mgr = RepositoryManagerBuilder::new(&dynamic_configs_path, ClosedAmberConnector)
+            .unwrap()
+            .build();
         let mut service = RepositoryService::new(Arc::new(RwLock::new(mgr)));
 
         // First, create a bunch of repo configs we're going to use for testing.

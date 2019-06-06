@@ -5,7 +5,9 @@
 use crate::amber_connector::AmberConnect;
 use failure::Error;
 use fidl::endpoints::{self, ServerEnd};
-use fidl_fuchsia_amber::{ControlProxy as AmberProxy, ControlRequest};
+use fidl_fuchsia_amber::{
+    ControlMarker as AmberMarker, ControlProxy as AmberProxy, ControlRequest,
+};
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_pkg::{self, PackageCacheRequest};
 use fidl_fuchsia_pkg_ext::BlobId;
@@ -19,9 +21,9 @@ use std::fs::{self, File};
 use std::io;
 use std::str;
 use std::sync::Arc;
-use tempfile::TempDir;
+use tempfile::{self, TempDir};
 
-pub(crate) fn create_dir<'a, T, S>(iter: T) -> tempfile::TempDir
+pub(crate) fn create_dir<'a, T, S>(iter: T) -> TempDir
 where
     T: IntoIterator<Item = (&'a str, S)>,
     S: Serialize,
@@ -219,5 +221,15 @@ impl MockAmberConnector {
 impl AmberConnect for MockAmberConnector {
     fn connect(&self) -> Result<AmberProxy, Status> {
         Ok(self.amber.lock().clone().spawn())
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ClosedAmberConnector;
+
+impl AmberConnect for ClosedAmberConnector {
+    fn connect(&self) -> Result<AmberProxy, Status> {
+        let (proxy, _) = fidl::endpoints::create_proxy::<AmberMarker>().unwrap();
+        Ok(proxy)
     }
 }

@@ -4,6 +4,7 @@
 
 use {
     crate::amber_connector::AmberConnect,
+    crate::repository_manager::RepositoryManager,
     crate::rewrite_manager::RewriteManager,
     failure::Error,
     fidl::endpoints::ServerEnd,
@@ -26,7 +27,7 @@ const PACKAGE_NOT_FOUND: &str = "merkle not found for package";
 
 pub async fn run_resolver_service<A>(
     rewrites: Arc<RwLock<RewriteManager>>,
-    amber_connector: A,
+    repo_manager: Arc<RwLock<RepositoryManager<A>>>,
     cache: PackageCacheProxy,
     mut stream: PackageResolverRequestStream,
 ) -> Result<(), Error>
@@ -44,7 +45,7 @@ where
 
         let status = await!(resolve(
             &rewrites,
-            &amber_connector,
+            &repo_manager,
             &cache,
             package_url,
             selectors,
@@ -64,7 +65,7 @@ where
 /// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
 async fn resolve<'a, A>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
-    amber_connector: &'a A,
+    repo_manager: &'a Arc<RwLock<RepositoryManager<A>>>,
     cache: &'a PackageCacheProxy,
     pkg_url: String,
     selectors: Vec<String>,
@@ -108,7 +109,7 @@ where
     // FIXME: use the package cache to fetch the package instead of amber.
 
     // Ask amber to cache the package.
-    let amber = amber_connector.connect()?;
+    let amber = repo_manager.read().connect_to_amber()?;
     let chan = await!(amber.get_update_complete(&name, url.variant(), url.package_hash()))
         .map_err(|err| {
             fx_log_err!("error communicating with amber: {:?}", err);
@@ -230,7 +231,7 @@ async fn wait_for_update_to_complete(chan: Channel, url: &PkgUrl) -> Result<Blob
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::amber_connector::AmberConnect;
+    use crate::repository_manager::RepositoryManagerBuilder;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
     use crate::test_util::{
         MockAmberBuilder, MockAmberConnector, MockPackageCache, Package, PackageKind,
@@ -249,8 +250,10 @@ mod tests {
     use tempfile::TempDir;
 
     struct ResolveTest {
+        _static_repo_dir: TempDir,
+        _dynamic_repo_dir: TempDir,
         rewrite_manager: Arc<RwLock<RewriteManager>>,
-        amber_connector: MockAmberConnector,
+        repo_manager: Arc<RwLock<RepositoryManager<MockAmberConnector>>>,
         cache_proxy: PackageCacheProxy,
         pkgfs: Arc<TempDir>,
     }
@@ -291,7 +294,7 @@ mod tests {
             merkle: Option<&'a str>,
             expected_res: Result<String, Status>,
         ) {
-            let amber = self.amber_connector.connect().unwrap();
+            let amber = self.repo_manager.read().connect_to_amber().unwrap();
             let chan = await!(amber.get_update_complete(name, variant, merkle))
                 .expect("error communicating with amber");
             let expected_res = expected_res.map(|r| r.parse().expect("could not parse blob"));
@@ -319,7 +322,7 @@ mod tests {
             let (package_dir_c, package_dir_s) = Channel::create().unwrap();
             let res = await!(resolve(
                 &self.rewrite_manager,
-                &self.amber_connector,
+                &self.repo_manager,
                 &self.cache_proxy,
                 url.to_string(),
                 selectors,
@@ -389,10 +392,22 @@ mod tests {
                 .static_rules(self.static_rewrite_rules)
                 .build();
 
+            let static_repo_dir = TempDir::new().unwrap();
+            let dynamic_repo_dir = TempDir::new().unwrap();
+
+            let dynamic_configs_path = dynamic_repo_dir.path().join("config");
+            let repo_manager = RepositoryManagerBuilder::new(dynamic_configs_path, amber_connector)
+                .unwrap()
+                .load_static_configs_dir(static_repo_dir.path())
+                .unwrap()
+                .build();
+
             ResolveTest {
+                _static_repo_dir: static_repo_dir,
+                _dynamic_repo_dir: dynamic_repo_dir,
                 rewrite_manager: Arc::new(RwLock::new(rewrite_manager)),
+                repo_manager: Arc::new(RwLock::new(repo_manager)),
                 pkgfs: self.pkgfs,
-                amber_connector,
                 cache_proxy,
             }
         }
