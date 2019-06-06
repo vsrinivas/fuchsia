@@ -106,6 +106,29 @@ executable("intents_test") {
   ]
 }
 
+executable("module_context_test") {
+  testonly = true
+
+  output_name = "module_context_test"
+
+  sources = [
+    "module_context_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 executable("module_output_test") {
   testonly = true
 
@@ -207,6 +230,10 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
+      name = "module_context_test"
+      environments = basic_envs
+    },
+    {
       name = "module_output_test"
       environments = basic_envs
     },
@@ -227,6 +254,7 @@ test_package("modular_integration_tests") {
   deps = [
     ":intents_test",
     ":last_focus_time_test",
+    ":module_context_test",
     ":module_output_test",
     ":queue_persistence_test",
     ":session_shell_test",

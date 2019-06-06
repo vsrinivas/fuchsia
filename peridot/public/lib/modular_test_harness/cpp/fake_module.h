@@ -50,7 +50,7 @@ class FakeModule : public modular::testing::FakeComponent,
 
  protected:
   // |FakeComponent|
-  virtual void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
 
  private:
   // |IntentHandler|
