@@ -9,6 +9,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <fstream>
+
 namespace cobalt {
 
 using encoder::SystemData;
@@ -21,21 +23,24 @@ class CobaltAppForTest {
  public:
   CobaltAppForTest(std::unique_ptr<sys::ComponentContext> context)
       : system_data_("test", "test"), context_(std::move(context)) {
-    system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
+    system_data_updater_impl_.reset(
+        new SystemDataUpdaterImpl(&system_data_, "/tmp/test_"));
 
     context_->outgoing()->AddPublicService(
         system_data_updater_bindings_.GetHandler(
             system_data_updater_impl_.get()));
   }
 
-  const SystemData& system_data() { return system_data_; }
+  void ClearData() { system_data_updater_impl_->ClearData(); }
+
+  const SystemData& system_make_data() { return system_data_; }
 
  private:
   SystemData system_data_;
 
   std::unique_ptr<sys::ComponentContext> context_;
 
-  std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
+  std::unique_ptr<SystemDataUpdaterImpl> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>
       system_data_updater_bindings_;
 };
@@ -48,6 +53,7 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
   }
 
   void TearDown() override {
+    cobalt_app_->ClearData();
     cobalt_app_.reset();
     TestLoopFixture::TearDown();
   }
@@ -60,11 +66,11 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
   }
 
   const std::vector<Experiment>& experiments() {
-    return cobalt_app_->system_data().experiments();
+    return cobalt_app_->system_make_data().experiments();
   }
 
   const std::string& channel() {
-    return cobalt_app_->system_data().system_profile().channel();
+    return cobalt_app_->system_make_data().system_profile().channel();
   }
 
   VectorPtr<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(
@@ -140,6 +146,38 @@ TEST_F(SystemDataUpdaterImplTests, SetChannel) {
   RunLoopUntilIdle();
 
   EXPECT_EQ(channel(), "fishfood");
+}
+
+namespace {
+
+std::unique_ptr<SystemData> make_data() {
+  return std::make_unique<SystemData>("test", "test");
+}
+
+std::unique_ptr<SystemDataUpdaterImpl> make_updater(SystemData* data) {
+  return std::make_unique<SystemDataUpdaterImpl>(data, "/tmp/test_");
+}
+
+}  // namespace
+
+TEST(SystemDataUpdaterImpl, TestPersistence) {
+  auto system_data = make_data();
+  auto updater = make_updater(system_data.get());
+
+  EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
+  updater->SetChannel("fishfood", [](Status s) {});
+  EXPECT_EQ(system_data->system_profile().channel(), "fishfood");
+
+  // Test restoring data.
+  system_data = make_data();
+  updater = make_updater(system_data.get());
+  EXPECT_EQ(system_data->system_profile().channel(), "fishfood");
+
+  // Test default behavior with no data.
+  updater->ClearData();
+  system_data = make_data();
+  updater = make_updater(system_data.get());
+  EXPECT_EQ(system_data->system_profile().channel(), "<unset>");
 }
 
 }  // namespace cobalt

@@ -38,9 +38,9 @@ constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 constexpr char kObservationStorePath[] = "/data/observation_store";
 constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
 constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
+constexpr char kSystemDataCachePrefix[] = "/data/system_data_";
 
 namespace {
-
 std::unique_ptr<ObservationStore> NewObservationStore(
     size_t max_bytes_per_event, size_t max_bytes_per_envelope,
     size_t max_bytes_total, std::string root_directory, std::string name_prefix,
@@ -138,7 +138,8 @@ CobaltApp::CobaltApp(
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
-  system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
+  system_data_updater_impl_.reset(
+      new SystemDataUpdaterImpl(&system_data_, kSystemDataCachePrefix));
   context_->outgoing()->AddPublicService(
       system_data_updater_bindings_.GetHandler(
           system_data_updater_impl_.get()));
