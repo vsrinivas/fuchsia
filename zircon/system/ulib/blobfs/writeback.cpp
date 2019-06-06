@@ -5,6 +5,7 @@
 #include <blobfs/writeback.h>
 
 #include <utility>
+#include <vector>
 
 namespace blobfs {
 
@@ -49,7 +50,8 @@ zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
     fs::Ticker ticker(transaction_manager->LocalMetrics().Collecting());
 
     // Update all the outgoing transactions to be in disk blocks.
-    block_fifo_request_t blk_reqs[operations.size()];
+    std::vector<block_fifo_request_t> blk_reqs;
+    blk_reqs.resize(operations.size());
     const uint32_t kDiskBlocksPerBlobfsBlock =
         transaction_manager->FsBlockSize() / transaction_manager->DeviceBlockSize();
     for (size_t i = 0; i < operations.size(); i++) {
@@ -66,7 +68,7 @@ zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
     }
 
     // Actually send the operations to the underlying block device.
-    zx_status_t status = transaction_manager->Transaction(blk_reqs, operations.size());
+    zx_status_t status = transaction_manager->Transaction(&blk_reqs[0], operations.size());
 
     if (transaction_manager->LocalMetrics().Collecting()) {
         uint64_t sum = 0;

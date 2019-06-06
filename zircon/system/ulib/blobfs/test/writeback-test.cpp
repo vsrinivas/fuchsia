@@ -155,6 +155,36 @@ TEST(FlushRequestsTest, FlushManyRequests) {
     EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
+// This acts as a regression test against a previous implementation of
+// "FlushWriteRequests", which could pop the stack with a large enough number
+// of requests. The new implementation utilizes heap allocation when necessary,
+// and should be able to withstand very large request counts.
+TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
+    static constexpr vmoid_t kVmoid = 7;
+    static constexpr size_t kOperationCount = 10000;
+    class TestTransactionManager : public MockTransactionManager {
+        zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
+            EXPECT_EQ(kOperationCount, count);
+            for (size_t i = 0; i < count; i++) {
+                EXPECT_EQ(i * 2 * kDiskBlockRatio, requests[i].vmo_offset);
+                EXPECT_EQ(i * 2 * kDiskBlockRatio, requests[i].dev_offset);
+                EXPECT_EQ(1 * kDiskBlockRatio, requests[i].length);
+                EXPECT_EQ(kVmoid, requests[i].vmoid);
+            }
+            return ZX_OK;
+        }
+    } manager;
+
+    fbl::Vector<BufferedOperation> operations;
+    for (size_t i = 0; i < kOperationCount; i++) {
+        operations.push_back(BufferedOperation {
+            kVmoid,
+            Operation { OperationType::kWrite, i * 2, i * 2, 1 }
+        });
+    }
+    EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
+}
+
 TEST(FlushRequestsTest, BadFlush) {
     class TestTransactionManager : public MockTransactionManager {
         zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {
