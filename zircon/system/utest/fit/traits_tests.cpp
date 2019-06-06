@@ -16,6 +16,27 @@ static_assert(std::is_same<fit::void_t<int>, void>::value, "");
 static_assert(std::is_same<fit::void_t<int, int>, void>::value, "");
 } // namespace test_void_t
 
+namespace test_logical_traits {
+static_assert(fit::conjunction_v<> == true, "");
+static_assert(fit::conjunction_v<std::false_type> == false, "");
+static_assert(fit::conjunction_v<std::true_type> == true, "");
+static_assert(fit::conjunction_v<std::false_type, std::false_type> == false, "");
+static_assert(fit::conjunction_v<std::false_type, std::true_type> == false, "");
+static_assert(fit::conjunction_v<std::true_type, std::false_type> == false, "");
+static_assert(fit::conjunction_v<std::true_type, std::true_type> == true, "");
+
+static_assert(fit::disjunction_v<> == false, "");
+static_assert(fit::disjunction_v<std::false_type> == false, "");
+static_assert(fit::disjunction_v<std::true_type> == true, "");
+static_assert(fit::disjunction_v<std::false_type, std::false_type> == false, "");
+static_assert(fit::disjunction_v<std::false_type, std::true_type> == true, "");
+static_assert(fit::disjunction_v<std::true_type, std::false_type> == true, "");
+static_assert(fit::disjunction_v<std::true_type, std::true_type> == true, "");
+
+static_assert(fit::negation_v<std::false_type> == true, "");
+static_assert(fit::negation_v<std::true_type> == false, "");
+} // namespace test_logical_traits
+
 namespace test_callables {
 template <typename Callable, typename... Args>
 void invoke_with_defaults(Callable c, fit::parameter_pack<Args...>) {

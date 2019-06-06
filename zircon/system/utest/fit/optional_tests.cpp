@@ -4,6 +4,8 @@
 
 #include <memory>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <lib/fit/optional.h>
 #include <unittest/unittest.h>
@@ -53,19 +55,212 @@ struct slot : base<define_assignment_operators> {
 
     bool operator==(const slot& other) const { return value == other.value; }
     bool operator!=(const slot& other) const { return value != other.value; }
+
+    void swap(slot& other) {
+        const int temp = value;
+        value = other.value;
+        other.value = temp;
+    }
 };
 template <>
 int slot<false>::balance = 0;
 template <>
 int slot<true>::balance = 0;
 
+template <bool assignment>
+void swap(slot<assignment>& a, slot<assignment>& b) {
+    a.swap(b);
+}
+
 // Test optional::value_type.
 static_assert(std::is_same<int, fit::optional<int>::value_type>::value, "");
 
-// TODO(US-90): Unfortunately fit::optional is not a literal type unlike
-// std::optional so expressions involving fit::optional are not constexpr.
-// Once we fix that, we should add static asserts to check cases where
-// fit::optional wraps a literal type.
+// Test basic constexpr context.
+static_assert(fit::optional<int>{}.has_value() == false, "");
+static_assert(fit::optional<int>{10}.has_value() == true, "");
+static_assert(fit::optional<int>{10U}.has_value() == true, "");
+
+// Test comparisons.
+namespace comparison_tests {
+struct greater {};
+struct less {};
+
+constexpr bool operator==(greater, greater) { return true; }
+constexpr bool operator<=(greater, greater) { return true; }
+constexpr bool operator>=(greater, greater) { return true; }
+constexpr bool operator!=(greater, greater) { return false; }
+constexpr bool operator<(greater, greater) { return false; }
+constexpr bool operator>(greater, greater) { return false; }
+
+constexpr bool operator==(less, less) { return true; }
+constexpr bool operator<=(less, less) { return true; }
+constexpr bool operator>=(less, less) { return true; }
+constexpr bool operator!=(less, less) { return false; }
+constexpr bool operator<(less, less) { return false; }
+constexpr bool operator>(less, less) { return false; }
+
+constexpr bool operator==(greater, less) { return false; }
+constexpr bool operator<=(greater, less) { return false; }
+constexpr bool operator>=(greater, less) { return true; }
+constexpr bool operator!=(greater, less) { return true; }
+constexpr bool operator<(greater, less) { return false; }
+constexpr bool operator>(greater, less) { return true; }
+
+constexpr bool operator==(less, greater) { return false; }
+constexpr bool operator<=(less, greater) { return true; }
+constexpr bool operator>=(less, greater) { return false; }
+constexpr bool operator!=(less, greater) { return true; }
+constexpr bool operator<(less, greater) { return true; }
+constexpr bool operator>(less, greater) { return false; }
+
+// Note these definitions match the empty-to-other, other-to-empty, and
+// empty-to-empty comparison behavior of fit::optional for convenience in
+// exhaustive testing.
+constexpr bool operator==(fit::nullopt_t, greater) { return false; }
+constexpr bool operator<=(fit::nullopt_t, greater) { return true; }
+constexpr bool operator>=(fit::nullopt_t, greater) { return false; }
+constexpr bool operator!=(fit::nullopt_t, greater) { return true; }
+constexpr bool operator<(fit::nullopt_t, greater) { return true; }
+constexpr bool operator>(fit::nullopt_t, greater) { return false; }
+
+constexpr bool operator==(greater, fit::nullopt_t) { return false; }
+constexpr bool operator<=(greater, fit::nullopt_t) { return false; }
+constexpr bool operator>=(greater, fit::nullopt_t) { return true; }
+constexpr bool operator!=(greater, fit::nullopt_t) { return true; }
+constexpr bool operator<(greater, fit::nullopt_t) { return false; }
+constexpr bool operator>(greater, fit::nullopt_t) { return true; }
+
+constexpr bool operator==(fit::nullopt_t, less) { return false; }
+constexpr bool operator<=(fit::nullopt_t, less) { return true; }
+constexpr bool operator>=(fit::nullopt_t, less) { return false; }
+constexpr bool operator!=(fit::nullopt_t, less) { return true; }
+constexpr bool operator<(fit::nullopt_t, less) { return true; }
+constexpr bool operator>(fit::nullopt_t, less) { return false; }
+
+constexpr bool operator==(less, fit::nullopt_t) { return false; }
+constexpr bool operator<=(less, fit::nullopt_t) { return false; }
+constexpr bool operator>=(less, fit::nullopt_t) { return true; }
+constexpr bool operator!=(less, fit::nullopt_t) { return true; }
+constexpr bool operator<(less, fit::nullopt_t) { return false; }
+constexpr bool operator>(less, fit::nullopt_t) { return true; }
+
+constexpr bool operator==(fit::nullopt_t, fit::nullopt_t) { return true; }
+constexpr bool operator<=(fit::nullopt_t, fit::nullopt_t) { return true; }
+constexpr bool operator>=(fit::nullopt_t, fit::nullopt_t) { return true; }
+constexpr bool operator!=(fit::nullopt_t, fit::nullopt_t) { return false; }
+constexpr bool operator<(fit::nullopt_t, fit::nullopt_t) { return false; }
+constexpr bool operator>(fit::nullopt_t, fit::nullopt_t) { return false; }
+
+template <typename T, typename U>
+constexpr bool match_comparisons(T lhs, U rhs) {
+    // Both optional operands.
+    static_assert((fit::optional<T>{lhs} == fit::optional<U>{rhs}) == (lhs == rhs), "");
+    static_assert((fit::optional<T>{lhs} != fit::optional<U>{rhs}) == (lhs != rhs), "");
+    static_assert((fit::optional<T>{lhs} <= fit::optional<U>{rhs}) == (lhs <= rhs), "");
+    static_assert((fit::optional<T>{lhs} >= fit::optional<U>{rhs}) == (lhs >= rhs), "");
+    static_assert((fit::optional<T>{lhs} < fit::optional<U>{rhs}) == (lhs < rhs), "");
+    static_assert((fit::optional<T>{lhs} > fit::optional<U>{rhs}) == (lhs > rhs), "");
+
+    static_assert((fit::optional<T>{} == fit::optional<U>{rhs}) == (fit::nullopt == rhs), "");
+    static_assert((fit::optional<T>{} != fit::optional<U>{rhs}) == (fit::nullopt != rhs), "");
+    static_assert((fit::optional<T>{} <= fit::optional<U>{rhs}) == (fit::nullopt <= rhs), "");
+    static_assert((fit::optional<T>{} >= fit::optional<U>{rhs}) == (fit::nullopt >= rhs), "");
+    static_assert((fit::optional<T>{} < fit::optional<U>{rhs}) == (fit::nullopt < rhs), "");
+    static_assert((fit::optional<T>{} > fit::optional<U>{rhs}) == (fit::nullopt > rhs), "");
+
+    static_assert((fit::optional<T>{lhs} == fit::optional<U>{}) == (lhs == fit::nullopt), "");
+    static_assert((fit::optional<T>{lhs} != fit::optional<U>{}) == (lhs != fit::nullopt), "");
+    static_assert((fit::optional<T>{lhs} <= fit::optional<U>{}) == (lhs <= fit::nullopt), "");
+    static_assert((fit::optional<T>{lhs} >= fit::optional<U>{}) == (lhs >= fit::nullopt), "");
+    static_assert((fit::optional<T>{lhs} < fit::optional<U>{}) == (lhs < fit::nullopt), "");
+    static_assert((fit::optional<T>{lhs} > fit::optional<U>{}) == (lhs > fit::nullopt), "");
+
+    static_assert((fit::optional<T>{} == fit::optional<U>{}) == (fit::nullopt == fit::nullopt), "");
+    static_assert((fit::optional<T>{} != fit::optional<U>{}) == (fit::nullopt != fit::nullopt), "");
+    static_assert((fit::optional<T>{} <= fit::optional<U>{}) == (fit::nullopt <= fit::nullopt), "");
+    static_assert((fit::optional<T>{} >= fit::optional<U>{}) == (fit::nullopt >= fit::nullopt), "");
+    static_assert((fit::optional<T>{} < fit::optional<U>{}) == (fit::nullopt < fit::nullopt), "");
+    static_assert((fit::optional<T>{} > fit::optional<U>{}) == (fit::nullopt > fit::nullopt), "");
+
+    // Right hand optional only.
+    static_assert((lhs == fit::optional<U>{rhs}) == (lhs == rhs), "");
+    static_assert((lhs != fit::optional<U>{rhs}) == (lhs != rhs), "");
+    static_assert((lhs <= fit::optional<U>{rhs}) == (lhs <= rhs), "");
+    static_assert((lhs >= fit::optional<U>{rhs}) == (lhs >= rhs), "");
+    static_assert((lhs < fit::optional<U>{rhs}) == (lhs < rhs), "");
+    static_assert((lhs > fit::optional<U>{rhs}) == (lhs > rhs), "");
+
+    static_assert((lhs == fit::optional<U>{}) == (lhs == fit::nullopt), "");
+    static_assert((lhs != fit::optional<U>{}) == (lhs != fit::nullopt), "");
+    static_assert((lhs <= fit::optional<U>{}) == (lhs <= fit::nullopt), "");
+    static_assert((lhs >= fit::optional<U>{}) == (lhs >= fit::nullopt), "");
+    static_assert((lhs < fit::optional<U>{}) == (lhs < fit::nullopt), "");
+    static_assert((lhs > fit::optional<U>{}) == (lhs > fit::nullopt), "");
+
+    // Left hand optional only.
+    static_assert((fit::optional<T>{lhs} == rhs) == (lhs == rhs), "");
+    static_assert((fit::optional<T>{lhs} != rhs) == (lhs != rhs), "");
+    static_assert((fit::optional<T>{lhs} <= rhs) == (lhs <= rhs), "");
+    static_assert((fit::optional<T>{lhs} >= rhs) == (lhs >= rhs), "");
+    static_assert((fit::optional<T>{lhs} < rhs) == (lhs < rhs), "");
+    static_assert((fit::optional<T>{lhs} > rhs) == (lhs > rhs), "");
+
+    static_assert((fit::optional<T>{} == rhs) == (fit::nullopt == rhs), "");
+    static_assert((fit::optional<T>{} != rhs) == (fit::nullopt != rhs), "");
+    static_assert((fit::optional<T>{} <= rhs) == (fit::nullopt <= rhs), "");
+    static_assert((fit::optional<T>{} >= rhs) == (fit::nullopt >= rhs), "");
+    static_assert((fit::optional<T>{} < rhs) == (fit::nullopt < rhs), "");
+    static_assert((fit::optional<T>{} > rhs) == (fit::nullopt > rhs), "");
+
+    return true;
+}
+
+static_assert(match_comparisons(greater{}, greater{}), "");
+static_assert(match_comparisons(greater{}, less{}), "");
+static_assert(match_comparisons(less{}, greater{}), "");
+static_assert(match_comparisons(less{}, less{}), "");
+} // namespace comparison_tests
+
+// Test trivial copy/move.
+namespace trivial_copy_move_tests {
+struct trivially_move_only {
+    constexpr trivially_move_only(const trivially_move_only&) = delete;
+    constexpr trivially_move_only& operator=(const trivially_move_only&) = delete;
+
+    constexpr trivially_move_only(trivially_move_only&&) = default;
+    constexpr trivially_move_only& operator=(trivially_move_only&&) = default;
+
+    int value;
+};
+
+struct trivially_copyable {
+    constexpr trivially_copyable(const trivially_copyable&) = default;
+    constexpr trivially_copyable& operator=(const trivially_copyable&) = default;
+
+    int value;
+};
+
+template <typename T>
+static inline constexpr fit::optional<T> Return(fit::optional<T> value, bool empty) {
+    if (empty) {
+        value.reset();
+    }
+    return value;
+}
+
+static_assert(Return(fit::optional<trivially_move_only>{trivially_move_only{10}},
+                     false).has_value() == true, "");
+static_assert(Return(fit::optional<trivially_move_only>{trivially_move_only{10}},
+                     false).value().value == 10, "");
+static_assert(Return(fit::optional<trivially_move_only>{trivially_move_only{10}},
+                     true).has_value() == false, "");
+static_assert(Return(fit::optional<trivially_copyable>{trivially_copyable{10}},
+                     false).has_value() == true, "");
+static_assert(Return(fit::optional<trivially_copyable>{trivially_copyable{10}},
+                     false).value().value == 10, "");
+static_assert(Return(fit::optional<trivially_copyable>{trivially_copyable{10}},
+                     true).has_value() == false, "");
+} // namespace trivial_copy_move_tests
 
 template <typename T>
 bool construct_without_value() {
@@ -130,7 +325,7 @@ bool construct_move() {
     fit::optional<T> b(std::move(a));
     fit::optional<T> c;
     fit::optional<T> d(std::move(c));
-    EXPECT_FALSE(a.has_value());
+    EXPECT_TRUE(a.has_value());
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(42, b.value().value);
     EXPECT_FALSE(c.has_value());
@@ -265,7 +460,7 @@ bool assign_move() {
     a = std::move(b);
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(55, a.value().value);
-    EXPECT_FALSE(b.has_value());
+    EXPECT_TRUE(b.has_value());
 
     b = std::move(c);
     EXPECT_FALSE(b.has_value());
@@ -278,14 +473,18 @@ bool assign_move() {
     b = std::move(a);
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
-    EXPECT_FALSE(a.has_value());
+    EXPECT_TRUE(a.has_value());
 
     b = std::move(b);
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
 
     a = std::move(a);
-    EXPECT_FALSE(a.has_value());
+    EXPECT_TRUE(a.has_value());
+    EXPECT_EQ(55, a.value().value);
+
+    c = std::move(c);
+    EXPECT_FALSE(c.has_value());
 
     END_TEST;
 }
@@ -414,6 +613,33 @@ bool balance() {
     END_TEST;
 }
 
+bool make_optional() {
+    BEGIN_TEST;
+
+    {
+        // Simple value.
+        auto value = fit::make_optional<int>(10);
+        static_assert(std::is_same<fit::optional<int>, decltype(value)>::value, "");
+        EXPECT_EQ(*value, 10);
+    }
+
+    {
+        // Multiple args.
+        auto value = fit::make_optional<std::pair<int, int>>(10, 20);
+        static_assert(std::is_same<fit::optional<std::pair<int, int>>, decltype(value)>::value, "");
+        EXPECT_TRUE((*value == std::pair<int, int>{10, 20}));
+    }
+
+    {
+        // Initializer list.
+        auto value = fit::make_optional<std::vector<int>>({10, 20, 30});
+        static_assert(std::is_same<fit::optional<std::vector<int>>, decltype(value)>::value, "");
+        EXPECT_TRUE((*value == std::vector<int>{{10, 20, 30}}));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(optional_tests)
@@ -428,11 +654,17 @@ RUN_TEST(construct_move<slot<false>>)
 RUN_TEST(construct_move<slot<true>>)
 RUN_TEST(accessors<slot<false>>)
 RUN_TEST(accessors<slot<true>>)
+#if 0 || TEST_DOES_NOT_COMPILE
 RUN_TEST(assign<slot<false>>)
+#endif
 RUN_TEST(assign<slot<true>>)
+#if 0 || TEST_DOES_NOT_COMPILE
 RUN_TEST(assign_copy<slot<false>>)
+#endif
 RUN_TEST(assign_copy<slot<true>>)
+#if 0 || TEST_DOES_NOT_COMPILE
 RUN_TEST(assign_move<slot<false>>)
+#endif
 RUN_TEST(assign_move<slot<true>>)
 RUN_TEST(emplace<slot<false>>)
 RUN_TEST(emplace<slot<true>>)
@@ -444,4 +676,5 @@ RUN_TEST(swapping<slot<false>>)
 RUN_TEST(swapping<slot<true>>)
 RUN_TEST(balance<slot<false>>)
 RUN_TEST(balance<slot<true>>)
+RUN_TEST(make_optional)
 END_TEST_CASE(optional_tests)

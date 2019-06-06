@@ -7,10 +7,12 @@ library("fit") {
   sdk_headers = [
     "lib/fit/bridge.h",
     "lib/fit/bridge_internal.h",
+    "lib/fit/constructors_internal.h",
     "lib/fit/defer.h",
     "lib/fit/function.h",
     "lib/fit/function_internal.h",
     "lib/fit/function_traits.h",
+    "lib/fit/in_place_internal.h",
     "lib/fit/nullable.h",
     "lib/fit/optional.h",
     "lib/fit/promise.h",
@@ -20,13 +22,16 @@ library("fit") {
     "lib/fit/scope.h",
     "lib/fit/sequencer.h",
     "lib/fit/single_threaded_executor.h",
+    "lib/fit/storage_internal.h",
     "lib/fit/thread_safety.h",
     "lib/fit/traits.h",
+    "lib/fit/utility_internal.h",
     "lib/fit/variant.h",
   ]
   host = true
   static = true
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_configs = [ "$zx/public/gn/config:no_maybe_uninitialized" ]
   sources = [
     "promise.cpp",
     "scheduler.cpp",

@@ -489,6 +489,13 @@ config("no_sanitizers") {
   configs = [ ":no_stack_protector" ]
 }
 
+# TODO(TC-539) Remove this once the warning with fit::variant/fit::optional is addressed.
+config("no_maybe_uninitialized") {
+  if (is_gcc) {
+    cflags = [ "-Wno-maybe-uninitialized" ]
+  }
+}
+
 # Compile code appropriately to be linked into a shared library.
 config("shared_library_config") {
   if (current_os != "mac") {

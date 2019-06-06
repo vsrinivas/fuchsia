@@ -33,7 +33,10 @@ public:
 
     // Creates a deferred action with a pending target moved from another
     // deferred action, leaving the other one without a pending target.
-    deferred_action(deferred_action&& other) = default;
+    deferred_action(deferred_action&& other)
+        : target_(std::move(other.target_)) {
+        other.target_.reset();
+    }
 
     // Invokes and releases the deferred action's pending target (if any).
     ~deferred_action() {
@@ -53,6 +56,7 @@ public:
             return *this;
         call();
         target_ = std::move(other.target_);
+        other.target_.reset();
         return *this;
     }
 

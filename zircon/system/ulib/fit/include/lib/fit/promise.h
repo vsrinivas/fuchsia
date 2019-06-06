@@ -322,6 +322,26 @@ public:
     promise_impl() = default;
     explicit promise_impl(decltype(nullptr)) {}
 
+    promise_impl(const promise_impl&) = delete;
+    promise_impl& operator=(const promise_impl&) = delete;
+
+    // Constructs the promise by taking the continuation from another promise,
+    // leaving the other promise empty.
+    promise_impl(promise_impl&& other)
+        : state_{std::move(other.state_)} {
+        other.state_.reset();
+    }
+
+    // Assigns the promise by taking the continuation from another promise,
+    // leaving the other promise empty.
+    promise_impl& operator=(promise_impl&& other) {
+        if (this != &other) {
+            state_ = std::move(other.state_);
+            other.state_.reset();
+        }
+        return *this;
+    }
+
     // Creates a promise with a continuation.
     // If |continuation| equals nullptr then the promise is empty.
     explicit promise_impl(continuation_type continuation)
@@ -343,17 +363,14 @@ public:
     //     fit::promise<> g = std::move(f);
     //
     template <typename OtherContinuation,
-              typename = std::enable_if_t<
+              std::enable_if_t<
+                  !std::is_same<continuation_type, OtherContinuation>::value &&
                   std::is_constructible<continuation_type,
-                                        OtherContinuation&&>::value>>
+                                        OtherContinuation&&>::value, bool> = true>
     promise_impl(promise_impl<OtherContinuation> other)
         : state_(other.state_.has_value()
                      ? state_type(continuation_type(std::move(*other.state_)))
                      : state_type()) {}
-
-    // Creates a promise by taking the continuation from another promise,
-    // leaving the other promise empty.
-    promise_impl(promise_impl&& other) = default;
 
     // Destroys the promise, releasing its continuation.
     ~promise_impl() = default;
@@ -374,8 +391,7 @@ public:
     //
     // Asserts that the promise is non-empty.
     result_type operator()(context& context) {
-        assert(state_.has_value());
-        result_type result = (*state_)(context);
+        result_type result = (state_.value())(context);
         if (!result.is_pending())
             state_.reset();
         return result;
@@ -384,15 +400,10 @@ public:
     // Takes the promise's continuation, leaving it in an empty state.
     // Asserts that the promise is non-empty.
     continuation_type take_continuation() {
-        assert(state_.has_value());
         auto continuation = std::move(state_.value());
         state_.reset();
         return continuation;
     }
-
-    // Assigns the promise by taking the continuation from another promise,
-    // leaving the other promise empty.
-    promise_impl& operator=(promise_impl&& other) = default;
 
     // Discards the promise's continuation, leaving it empty.
     promise_impl& operator=(decltype(nullptr)) {
@@ -741,9 +752,6 @@ public:
     promise_impl<function<result_type(context&)>> box() {
         return std::move(*this);
     }
-
-    promise_impl(const promise_impl&) = delete;
-    promise_impl& operator=(const promise_impl&) = delete;
 
 private:
     template <typename>
@@ -1321,9 +1329,7 @@ public:
     future_impl& operator=(const future_impl&) = delete;
 
 private:
-    ::fit::internal::variant<::fit::internal::monostate,
-                             promise_type, result_type>
-        state_;
+    variant<monostate, promise_type, result_type> state_;
 };
 
 template <typename Promise>

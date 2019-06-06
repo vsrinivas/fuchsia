@@ -36,7 +36,7 @@ fit::promise<int, std::string> pick_bananas(int hours) {
             // state (in |time| and |harvest|) from its prior execution.
             utils::resume_in_a_little_while(context.suspend_task());
             time++;
-            harvest += random() % 31;
+            harvest += static_cast<int>(random() % 31);
             return fit::pending();
         }
         return fit::ok(harvest);
@@ -61,7 +61,7 @@ fit::promise<void, std::string> eat_bananas(int appetite) {
 }
 
 fit::promise<> prepare_simulation() {
-    int hours = random() % 8;
+    int hours = static_cast<int>(random() % 8);
     return pick_bananas(hours)
         .and_then([](const int& harvest) -> fit::result<int, std::string> {
             printf("We picked %d bananas today!\n", harvest);
@@ -70,7 +70,7 @@ fit::promise<> prepare_simulation() {
             return fit::ok(harvest);
         })
         .and_then([](const int& harvest) {
-            int appetite = random() % 7;
+            int appetite = static_cast<int>(random() % 7);
             if (appetite > harvest)
                 appetite = harvest;
             return eat_bananas(appetite);

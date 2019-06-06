@@ -46,7 +46,7 @@ struct target<decltype(nullptr),
     final {
 
     static Result invoke(void* bits, Args... args) {
-        abort();
+        __builtin_abort();
     }
 
     static const target_ops<Result, Args...> ops;
@@ -405,6 +405,9 @@ protected:
     function_base(const function_base& other) = delete;
     function_base& operator=(const function_base& other) = delete;
 
+    // Move assignment must be provided by subclasses.
+    function_base& operator=(function_base&& other) = delete;
+
 private:
     // Implements the move operation, used by move construction and move
     // assignment. Leaves other target initialized to null.
@@ -464,8 +467,9 @@ private:
     template <typename Callable>
     void check_target_type() const {
         if (target_type<Callable>::ops.target_type_id(
-                nullptr, &target_type<Callable>::ops) != target_type_id())
-            abort();
+                nullptr, &target_type<Callable>::ops) != target_type_id()) {
+            __builtin_abort();
+        }
     }
 
     ops_type ops_;

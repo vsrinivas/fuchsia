@@ -35,6 +35,7 @@ test("fit") {
       "sequencer_tests.cpp",
       "single_threaded_executor_tests.cpp",
       "suspended_task_tests.cpp",
+      "utility_internal_tests.cpp",
       "variant_tests.cpp",
     ]
   }

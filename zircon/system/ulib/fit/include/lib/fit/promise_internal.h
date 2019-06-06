@@ -15,6 +15,7 @@
 #include "nullable.h"
 #include "result.h"
 #include "traits.h"
+#include "utility_internal.h"
 
 namespace fit {
 
@@ -54,6 +55,93 @@ struct is_continuation<
     fit::void_t<typename continuation_traits<Continuation>::type>>
     : std::true_type {};
 
+// Interposer type that provides uniform move construction/assignment for
+// callable types that may or may not be move assignable. Lambdas are not
+// typically move assignable, even though they may be move constructible.
+//
+// This type has a well-defined empty state. Instances of this type that are
+// the source of move operation are left in the empty state.
+template <typename Handler>
+class movable_handler {
+    static_assert(std::is_move_constructible<Handler>::value,
+                  "Handler must be move constructible!");
+
+    template <typename... Conditions>
+    using requires_conditions = ::fit::internal::requires_conditions<Conditions...>;
+
+    template <typename... Conditions>
+    using assignment_requires_conditions =
+        ::fit::internal::assignment_requires_conditions<movable_handler&,
+                                                        Conditions...>;
+
+    template <typename U>
+    using not_self_type = ::fit::internal::not_same_type<movable_handler, U>;
+
+public:
+    constexpr movable_handler() = default;
+
+    constexpr movable_handler(const movable_handler&) = delete;
+    constexpr movable_handler& operator=(const movable_handler&) = delete;
+
+    constexpr movable_handler(movable_handler&& other)
+        : handler_{std::move(other.handler_)} {
+        other.handler_.reset();
+    }
+
+    constexpr movable_handler& operator=(movable_handler&& other) {
+        if (this != &other) {
+            reset();
+            if (other.handler_.has_value()) {
+                handler_.emplace(std::move(other.handler_.value()));
+                other.handler_.reset();
+            }
+        }
+        return *this;
+    }
+
+    template <typename U = Handler,
+              requires_conditions<
+                  not_self_type<U>,
+                  std::is_constructible<Handler, U&&>,
+                  std::is_convertible<U&&, Handler>> = true>
+    constexpr movable_handler(U&& handler) {
+        if (!is_null(handler)) {
+            handler_.emplace(std::forward<U>(handler));
+        }
+    }
+
+    ~movable_handler() = default;
+
+    template <typename U>
+    constexpr assignment_requires_conditions<
+        not_self_type<U>,
+        std::is_constructible<Handler, U>,
+        std::is_assignable<Handler&, U>>
+    operator=(U&& handler) {
+        handler_.reset();
+        if (!is_null(handler)) {
+            handler_.emplace(std::forward<U>(handler));
+        }
+        return *this;
+    }
+
+    template <typename... Args>
+    constexpr auto operator()(Args&&... args) {
+        // Seamlessly handle void by casting call expression to return type.
+        using Return = typename callable_traits<Handler>::return_type;
+        return static_cast<Return>((handler_.value())(std::forward<Args>(args)...));
+    }
+
+    explicit constexpr operator bool() const { return handler_.has_value(); }
+
+    constexpr void reset() {
+        handler_.reset();
+    }
+
+private:
+    optional<Handler> handler_;
+};
+
 // Wraps a handler function and adapts its return type to a fit::result
 // via its specializations.
 template <typename Handler, typename DefaultV, typename DefaultE,
@@ -91,8 +179,14 @@ public:
         return ::fit::ok();
     }
 
+    result_adapter(const result_adapter&) = delete;
+    result_adapter& operator=(const result_adapter&) = delete;
+
+    result_adapter(result_adapter&&) = default;
+    result_adapter& operator=(result_adapter&&) = default;
+
 private:
-    Handler handler_;
+    movable_handler<Handler> handler_;
 };
 
 // Supports handlers that return pending_result.
@@ -101,7 +195,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::pending_result, false> 
 public:
     using result_type = ::fit::result<DefaultV, DefaultE>;
 
-    explicit result_adapter(Handler handler)
+    explicit result_adapter(movable_handler<Handler> handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -109,8 +203,14 @@ public:
         return handler_(std::forward<Args>(args)...);
     }
 
+    result_adapter(const result_adapter&) = delete;
+    result_adapter& operator=(const result_adapter&) = delete;
+
+    result_adapter(result_adapter&&) = default;
+    result_adapter& operator=(result_adapter&&) = default;
+
 private:
-    Handler handler_;
+    movable_handler<Handler> handler_;
 };
 
 // Supports handlers that return ok_result<V>.
@@ -120,7 +220,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::ok_result<V>, false> fi
 public:
     using result_type = ::fit::result<V, DefaultE>;
 
-    explicit result_adapter(Handler handler)
+    explicit result_adapter(movable_handler<Handler> handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -128,8 +228,14 @@ public:
         return handler_(std::forward<Args>(args)...);
     }
 
+    result_adapter(const result_adapter&) = delete;
+    result_adapter& operator=(const result_adapter&) = delete;
+
+    result_adapter(result_adapter&&) = default;
+    result_adapter& operator=(result_adapter&&) = default;
+
 private:
-    Handler handler_;
+    movable_handler<Handler> handler_;
 };
 
 // Supports handlers that return error_result<E>.
@@ -139,7 +245,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::error_result<E>, false>
 public:
     using result_type = ::fit::result<DefaultV, E>;
 
-    explicit result_adapter(Handler handler)
+    explicit result_adapter(movable_handler<Handler> handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -147,8 +253,14 @@ public:
         return handler_(std::forward<Args>(args)...);
     }
 
+    result_adapter(const result_adapter&) = delete;
+    result_adapter& operator=(const result_adapter&) = delete;
+
+    result_adapter(result_adapter&&) = default;
+    result_adapter& operator=(result_adapter&&) = default;
+
 private:
-    Handler handler_;
+    movable_handler<Handler> handler_;
 };
 
 // Supports handlers that return result<V, E>.
@@ -158,7 +270,7 @@ class result_adapter<Handler, DefaultV, DefaultE, ::fit::result<V, E>, false> fi
 public:
     using result_type = ::fit::result<V, E>;
 
-    explicit result_adapter(Handler handler)
+    explicit result_adapter(movable_handler<Handler> handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
@@ -166,8 +278,14 @@ public:
         return handler_(std::forward<Args>(args)...);
     }
 
+    result_adapter(const result_adapter&) = delete;
+    result_adapter& operator=(const result_adapter&) = delete;
+
+    result_adapter(result_adapter&&) = default;
+    result_adapter& operator=(result_adapter&&) = default;
+
 private:
-    Handler handler_;
+    movable_handler<Handler> handler_;
 };
 
 // Supports handlers that return continuations or promises.
@@ -185,24 +303,30 @@ class result_adapter<Handler, DefaultV, DefaultE, ReturnType, true> final {
 public:
     using result_type = typename continuation_traits::result_type;
 
-    explicit result_adapter(Handler handler)
+    explicit result_adapter(movable_handler<Handler> handler)
         : handler_(std::move(handler)) {}
 
     template <typename... Args>
     result_type call(::fit::context& context, Args... args) {
         if (handler_) {
-            continuation_ = (*handler_)(std::forward<Args>(args)...);
+            continuation_ = handler_(std::forward<Args>(args)...);
             handler_.reset();
         }
         if (!continuation_) {
             return ::fit::pending();
         }
-        return (*continuation_)(context);
+        return continuation_(context);
     }
 
+    result_adapter(const result_adapter&) = delete;
+    result_adapter& operator=(const result_adapter&) = delete;
+
+    result_adapter(result_adapter&&) = default;
+    result_adapter& operator=(result_adapter&&) = default;
+
 private:
-    ::fit::nullable<Handler> handler_;
-    ::fit::nullable<continuation_type> continuation_;
+    movable_handler<Handler> handler_;
+    movable_handler<continuation_type> continuation_;
 };
 
 // Wraps a handler that may or may not have a fit::context& as first argument.

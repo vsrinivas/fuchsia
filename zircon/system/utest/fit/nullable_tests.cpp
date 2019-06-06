@@ -23,8 +23,8 @@ struct nullable_struct {
         : value(value) {}
     constexpr explicit nullable_struct(decltype(nullptr))
         : value(-1) {}
-    nullable_struct(const nullable_struct& other) = default;
-    nullable_struct(nullable_struct&& other) = default;
+    constexpr nullable_struct(const nullable_struct& other) = default;
+    constexpr nullable_struct(nullable_struct&& other) = default;
 
     constexpr int get() const { return value; }
     constexpr int increment() { return ++value; }
@@ -33,9 +33,9 @@ struct nullable_struct {
     constexpr bool operator==(const nullable_struct& other) const { return value == other.value; }
     constexpr bool operator!=(const nullable_struct& other) const { return value != other.value; }
 
-    nullable_struct& operator=(const nullable_struct& other) = default;
-    nullable_struct& operator=(nullable_struct&& other) = default;
-    nullable_struct& operator=(decltype(nullptr)) {
+    constexpr nullable_struct& operator=(const nullable_struct& other) = default;
+    constexpr nullable_struct& operator=(nullable_struct&& other) = default;
+    constexpr nullable_struct& operator=(decltype(nullptr)) {
         value = -1;
         return *this;
     }
@@ -224,11 +224,23 @@ static_assert(void_a != fit::nullable<void*>(void_b), "");
 static_assert(void_a != fit::nullable<void*>(void_null), "");
 static_assert(void_null != fit::nullable<void*>(void_a), "");
 
-// TODO(US-90): Unfortunately fit::optional is not a literal type unlike
-// std::optional so values of type fit::nullable<T> when T is not nullable
-// are also not literal.  Once we fix fit::optional to allow literal types,
-// we can add constexpr tests for those types.
-// e.g. fit::nullable<int>.
+static_assert(fit::nullable<nullable_struct>{nullptr}.has_value() == false, "");
+static_assert(fit::nullable<nullable_struct>{1}.has_value() == true, "");
+static_assert(fit::nullable<nullable_struct>{nullptr} ==
+              fit::nullable<nullable_struct>{nullptr}, "");
+static_assert(fit::nullable<nullable_struct>{1} == fit::nullable<nullable_struct>{1}, "");
+static_assert(fit::nullable<nullable_struct>{nullptr} != fit::nullable<nullable_struct>{1}, "");
+static_assert(fit::nullable<nullable_struct>{1} != fit::nullable<nullable_struct>{nullptr}, "");
+static_assert(fit::nullable<nullable_struct>{2} != fit::nullable<nullable_struct>{1}, "");
+static_assert(fit::nullable<nullable_struct>{1} != fit::nullable<nullable_struct>{2}, "");
+static_assert(fit::nullable<nullable_struct>{nullptr} != nullable_struct{1}, "");
+static_assert(fit::nullable<nullable_struct>{1} == nullable_struct{1}, "");
+static_assert(fit::nullable<nullable_struct>{2} != nullable_struct{1}, "");
+static_assert(nullable_struct{1} != fit::nullable<nullable_struct>{nullptr}, "");
+static_assert(nullable_struct{1} == fit::nullable<nullable_struct>{1}, "");
+static_assert(nullable_struct{1} != fit::nullable<nullable_struct>{2}, "");
+static_assert(fit::nullable<nullable_struct>{1}.value() == nullable_struct{1}, "");
+static_assert(fit::nullable<nullable_struct>{2}.value() != nullable_struct{1}, "");
 
 bool is_null() {
     BEGIN_TEST;
@@ -350,7 +362,7 @@ bool construct_move() {
     fit::nullable<T> b(std::move(a));
     fit::nullable<T> c;
     fit::nullable<T> d(std::move(c));
-    EXPECT_FALSE(a.has_value());
+    EXPECT_TRUE(a.has_value());
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(42, b.value().value);
     EXPECT_FALSE(c.has_value());
@@ -477,7 +489,7 @@ bool assign_move() {
     a = std::move(b);
     EXPECT_TRUE(a.has_value());
     EXPECT_EQ(55, a.value().value);
-    EXPECT_FALSE(b.has_value());
+    EXPECT_TRUE(b.has_value());
 
     b = std::move(c);
     EXPECT_FALSE(b.has_value());
@@ -490,14 +502,18 @@ bool assign_move() {
     b = std::move(a);
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
-    EXPECT_FALSE(a.has_value());
+    EXPECT_TRUE(a.has_value());
 
     b = std::move(b);
     EXPECT_TRUE(b.has_value());
     EXPECT_EQ(55, b.value().value);
 
     a = std::move(a);
-    EXPECT_FALSE(a.has_value());
+    EXPECT_TRUE(a.has_value());
+    EXPECT_EQ(55, a.value().value);
+
+    c = std::move(c);
+    EXPECT_FALSE(c.has_value());
 
     END_TEST;
 }

@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "in_place_internal.h"
 #include "traits.h"
 #include "variant.h"
 
@@ -139,21 +140,19 @@ public:
 
     // Creates an ok result.
     constexpr result(ok_result<V> result)
-        : state_(::fit::internal::in_place_index<1>, std::move(result)) {}
+        : state_(in_place_index<1>, std::move(result)) {}
     template <typename OtherV,
               typename = std::enable_if_t<std::is_constructible<V, OtherV>::value>>
     constexpr result(ok_result<OtherV> other)
-        : state_(::fit::internal::in_place_index<1>,
-                 fit::ok<V>(std::move(other.value))) {}
+        : state_(in_place_index<1>, fit::ok<V>(std::move(other.value))) {}
 
     // Creates an error result.
     constexpr result(error_result<E> result)
-        : state_(::fit::internal::in_place_index<2>, std::move(result)) {}
+        : state_(in_place_index<2>, std::move(result)) {}
     template <typename OtherE,
               typename = std::enable_if_t<std::is_constructible<E, OtherE>::value>>
     constexpr result(error_result<OtherE> other)
-        : state_(::fit::internal::in_place_index<2>,
-                 fit::error<E>(std::move(other.error))) {}
+        : state_(in_place_index<2>, fit::error<E>(std::move(other.error))) {}
 
     // Copies another result (if copyable).
     result(const result& other) = default;
@@ -265,9 +264,7 @@ public:
 private:
     void reset() { state_.template emplace<0>(); }
 
-    ::fit::internal::variant<
-        ::fit::internal::monostate, ok_result<V>, error_result<E>>
-        state_;
+    variant<monostate, ok_result<V>, error_result<E>> state_;
 };
 
 template <typename V, typename E>
