@@ -15,7 +15,6 @@ rustc_library("driver") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_amber_ext",
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
-    "//garnet/lib/rust/fuchsia_uri_rewrite",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -24,6 +23,7 @@ rustc_library("driver") {
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
+    "//src/sys/lib/fuchsia_url_rewrite",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",

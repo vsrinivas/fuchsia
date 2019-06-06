@@ -21,8 +21,8 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_uri_rewrite::Rule,
     fuchsia_url::pkg_uri::RepoUri,
+    fuchsia_url_rewrite::Rule,
     futures::prelude::*,
     std::{convert::TryInto, fs::File},
 };

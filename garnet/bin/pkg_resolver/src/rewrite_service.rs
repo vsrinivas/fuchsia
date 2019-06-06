@@ -118,7 +118,7 @@ mod tests {
     macro_rules! rule {
         ($host_match:expr => $host_replacement:expr,
          $path_prefix_match:expr => $path_prefix_replacement:expr) => {
-            fuchsia_uri_rewrite::Rule::new(
+            fuchsia_url_rewrite::Rule::new(
                 $host_match.to_owned(),
                 $host_replacement.to_owned(),
                 $path_prefix_match.to_owned(),

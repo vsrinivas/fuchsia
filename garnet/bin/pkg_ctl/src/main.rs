@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
     files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_uri_rewrite::{Rule as RewriteRule, RuleConfig},
+    fuchsia_url_rewrite::{Rule as RewriteRule, RuleConfig},
     fuchsia_zircon as zx,
     futures::Future,
     serde_json,

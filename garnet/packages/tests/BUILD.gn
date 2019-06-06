@@ -1158,7 +1158,6 @@ group("rust_crates") {
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext:fidl_fuchsia_pkg_ext_tests",
     "//garnet/lib/rust/fuchsia_pkg:fuchsia_pkg_tests",
     "//garnet/lib/rust/fuchsia_pkg_testing:tests",
-    "//garnet/lib/rust/fuchsia_uri_rewrite:fuchsia_uri_rewrite_tests",
     "//garnet/lib/rust/io_util:io_util_tests",
     "//garnet/public/rust:rust-crates-tests",
     "//garnet/public/rust/fdio:tests",
@@ -1168,6 +1167,7 @@ group("rust_crates") {
     "//garnet/public/rust/fuchsia-zircon:fuchsia-zircon-tests",
     "//src/sys/cmc:cmc_integration_test",
     "//src/sys/lib/fuchsia_url:fuchsia_url_tests",
+    "//src/sys/lib/fuchsia_url_rewrite:fuchsia_url_rewrite_tests",
   ]
 }
 

@@ -575,7 +575,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_unknown_host() {
-        let rules = vec![fuchsia_uri_rewrite::Rule::new(
+        let rules = vec![fuchsia_url_rewrite::Rule::new(
             "example.com".to_owned(),
             "fuchsia.com".to_owned(),
             "/foo/".to_owned(),
