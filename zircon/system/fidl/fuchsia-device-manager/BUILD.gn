@@ -9,6 +9,5 @@ fidl_library("fuchsia-device-manager") {
     "administrator.fidl",
     "coordinator.fidl",
     "debug.fidl",
-    "dmctl.fidl",
   ]
 }

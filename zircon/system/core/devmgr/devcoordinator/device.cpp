@@ -320,8 +320,6 @@ static const fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .AddMetadata = fidl_AddMetadata,
     .PublishMetadata = fidl_PublishMetadata,
     .AddCompositeDevice = fidl_AddCompositeDevice,
-
-    .DmMexec = fidl_DmMexec,
     .DirectoryWatch = fidl_DirectoryWatch,
 };
 

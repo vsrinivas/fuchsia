@@ -956,11 +956,6 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
     return ZX_OK;
 }
 
-zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
-    // TODO(edcoyne): Delete Me.
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options,
                                 zx_handle_t raw_watcher, fidl_txn_t* txn) {
     auto dev = static_cast<Device*>(ctx);
@@ -1181,9 +1176,6 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
             // do not continue to suspend as this indicates a driver suspend
             // problem and should show as a bug
             log(ERROR, "devcoordinator: failed to suspend: %s\n", zx_status_get_string(status));
-            if (ctx.sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
-                ctx.kernel().signal(0, ZX_USER_SIGNAL_0);
-            }
             ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
             callback(status);
             return;
