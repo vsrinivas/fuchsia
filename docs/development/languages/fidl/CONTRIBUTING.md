@@ -101,7 +101,8 @@ fx run-host-tests fidlgen_golang_ir_test
 In `zircon/`:
 
 ```sh
-make && ./scripts/run-zircon -a x64 -c zircon.autorun.boot=/boot/test/sys/fidl-test
+./scripts/build-zircon-x64 && \
+./scripts/run-zircon-x64 -c zircon.autorun.boot=/boot/test/sys/fidl-test
 ```
 
 When the test completes, you're running in the QEMU emulator.
