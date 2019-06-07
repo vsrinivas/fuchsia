@@ -53,6 +53,8 @@ func TestEndpointAttributes(t *testing.T) {
 }
 
 func TestBridge(t *testing.T) {
+	t.Skip("Test is flaky. See: FLK-342")
+
 	// payload should be unique enough that it won't accidentally appear
 	// in TCP/IP packets.
 	const payload = "hello"
