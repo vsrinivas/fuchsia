@@ -75,6 +75,56 @@ async fn assert_close(file_proxy: &FileProxy) -> Result<(), Error> {
     Ok(())
 }
 
+#[run_until_stalled(test)]
+async fn open_remote_directory_files() -> Result<(), Error> {
+    let mut root = ServiceFs::new();
+    let mut fs = ServiceFs::new();
+    let (remote_proxy, remote_server_end) = create_proxy::<DirectoryMarker>()?;
+
+    let data = b"test";
+
+    let vmo = zx::Vmo::create(4096)?;
+    vmo.write(data, 0)?;
+
+    root.dir("files").add_vmo_file_at(
+        "test.txt",
+        vmo.duplicate_handle(zx::Rights::READ)?,
+        0,
+        data.len() as u64,
+    );
+    root.serve_connection(remote_server_end.into_channel())?;
+
+    // Add the remote as "test"
+    fs.add_remote("test", remote_proxy);
+    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    fs.serve_connection(dir_server_end.into_channel())?;
+
+    fuchsia_async::spawn(root.collect::<()>());
+    fuchsia_async::spawn(fs.collect::<()>());
+
+    // Open the test file
+    let (file_proxy, file_server_end) = create_proxy::<FileMarker>()?;
+    let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+    let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+    dir_proxy.open(flags, mode, "test/files/test.txt", file_server_end.into_channel().into())?;
+
+    // Open the top of the remote hierarchy.
+    let (top_proxy, top_end) = create_proxy::<DirectoryMarker>()?;
+    dir_proxy.open(
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+        "test",
+        top_end.into_channel().into(),
+    )?;
+    drop(dir_proxy);
+
+    // Check that we can read the contents of the file.
+    await!(assert_read(&file_proxy, data.len() as u64, data)).expect("read data did not match");
+    await!(top_proxy.read_dirents(128)).expect("failed to read top directory entries");
+
+    Ok(())
+}
+
 /// Sets up a new filesystem containing a vmofile.
 ///
 /// Returns a future which runs the filesystem, a proxy connected to the vmofile, and the data

@@ -12,10 +12,10 @@ use {
         endpoints::{Proxy as _, RequestStream, ServerEnd, ServiceMarker},
     },
     fidl_fuchsia_io::{
-        DirectoryObject, DirectoryRequest, DirectoryRequestStream, FileRequest, FileRequestStream,
-        NodeAttributes, NodeInfo, NodeMarker, NodeRequest, NodeRequestStream, SeekOrigin,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileRequest,
+        FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, NodeRequest, NodeRequestStream,
+        SeekOrigin, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys::{
         EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions, LauncherProxy,
@@ -44,17 +44,15 @@ pub use service::{FidlService, Service, ServiceObj, ServiceObjLocal, ServiceObjT
 mod stream_helpers;
 use stream_helpers::NextWith;
 
+enum Directory {
+    Local { children: HashMap<String, usize> },
+    Remote(DirectoryProxy),
+}
+
 enum ServiceFsNode<ServiceObjTy: ServiceObjTrait> {
-    Directory {
-        /// A map from filename to index in the parent `ServiceFs`.
-        children: HashMap<String, usize>,
-    },
+    Directory(Directory),
     Service(ServiceObjTy),
-    VmoFile {
-        vmo: zx::Vmo,
-        offset: u64,
-        length: u64,
-    },
+    VmoFile { vmo: zx::Vmo, offset: u64, length: u64 },
 }
 
 const NOT_A_DIR: &str = "ServiceFs expected directory";
@@ -69,7 +67,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
     }
 
     fn expect_dir(&self) -> &HashMap<String, usize> {
-        if let ServiceFsNode::Directory { children } = self {
+        if let ServiceFsNode::Directory(Directory::Local { children }) = self {
             children
         } else {
             panic!(NOT_A_DIR)
@@ -77,7 +75,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
     }
 
     fn expect_dir_mut(&mut self) -> &mut HashMap<String, usize> {
-        if let ServiceFsNode::Directory { children } = self {
+        if let ServiceFsNode::Directory(Directory::Local { children }) = self {
             children
         } else {
             panic!(NOT_A_DIR)
@@ -86,7 +84,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
 
     fn to_dirent_type(&self) -> u8 {
         match self {
-            ServiceFsNode::Directory { .. } => fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY,
+            ServiceFsNode::Directory(_) => fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY,
             ServiceFsNode::Service(_) => fidl_fuchsia_io::DIRENT_TYPE_SERVICE,
             ServiceFsNode::VmoFile { .. } => fidl_fuchsia_io::DIRENT_TYPE_FILE,
         }
@@ -140,7 +138,7 @@ impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
             dir_connections: FuturesUnordered::new(),
             file_connections: FuturesUnordered::new(),
             node_connections: FuturesUnordered::new(),
-            nodes: vec![ServiceFsNode::Directory { children: HashMap::new() }],
+            nodes: vec![ServiceFsNode::Directory(Directory::Local { children: HashMap::new() })],
         }
     }
 }
@@ -153,7 +151,7 @@ impl<'a, Output: 'a> ServiceFs<ServiceObj<'a, Output>> {
             dir_connections: FuturesUnordered::new(),
             file_connections: FuturesUnordered::new(),
             node_connections: FuturesUnordered::new(),
-            nodes: vec![ServiceFsNode::Directory { children: HashMap::new() }],
+            nodes: vec![ServiceFsNode::Directory(Directory::Local { children: HashMap::new() })],
         }
     }
 }
@@ -166,22 +164,47 @@ pub struct ServiceFsDir<'a, ServiceObjTy: ServiceObjTrait> {
     fs: &'a mut ServiceFs<ServiceObjTy>,
 }
 
+/// Finds the position at which a new directory should be added.
+fn find_dir_insert_position<ServiceObjTy: ServiceObjTrait>(
+    fs: &mut ServiceFs<ServiceObjTy>,
+    position: usize,
+    path: String,
+) -> usize {
+    let new_node_position = fs.nodes.len();
+    let self_dir = fs.nodes[position].expect_dir_mut();
+    let &mut position = self_dir.entry(path.clone()).or_insert(new_node_position);
+    if position != new_node_position {
+        if let ServiceFsNode::Service(_) = &fs.nodes[position] {
+            panic!("Error adding dir to ServiceFs: existing service at \"{}\"", path)
+        }
+    }
+    position
+}
+
 fn dir<'a, ServiceObjTy: ServiceObjTrait>(
     fs: &'a mut ServiceFs<ServiceObjTy>,
     position: usize,
     path: String,
 ) -> ServiceFsDir<'a, ServiceObjTy> {
     let new_node_position = fs.nodes.len();
-    let self_dir = fs.nodes[position].expect_dir_mut();
-    let &mut position = self_dir.entry(path.clone()).or_insert(new_node_position);
+    let position = find_dir_insert_position(fs, position, path);
     if position == new_node_position {
-        fs.nodes.push(ServiceFsNode::Directory { children: HashMap::new() });
-    } else {
-        if let ServiceFsNode::Service(_) = &fs.nodes[position] {
-            panic!("Error adding dir to ServiceFs: existing service at \"{}\"", path)
-        }
+        fs.nodes.push(ServiceFsNode::Directory(Directory::Local { children: HashMap::new() }));
     }
     ServiceFsDir { position, fs }
+}
+
+fn remote<'a, ServiceObjTy: ServiceObjTrait>(
+    fs: &'a mut ServiceFs<ServiceObjTy>,
+    position: usize,
+    name: String,
+    proxy: DirectoryProxy,
+) {
+    let new_node_position = fs.nodes.len();
+    let position = find_dir_insert_position(fs, position, name);
+    if position == new_node_position {
+        fs.nodes.push(ServiceFsNode::Directory(Directory::Remote(proxy)));
+    }
 }
 
 fn add_entry<ServiceObjTy: ServiceObjTrait>(
@@ -425,6 +448,13 @@ impl<'a, ServiceObjTy: ServiceObjTrait> ServiceFsDir<'a, ServiceObjTy> {
         dir(self.fs, self.position, path.into())
     }
 
+    /// Adds a new remote directory served over the given DirectoryProxy.
+    ///
+    /// The name must not contain any '/' characters.
+    pub fn add_remote(&mut self, name: impl Into<String>, proxy: DirectoryProxy) {
+        remote(self.fs, self.position, name.into(), proxy)
+    }
+
     fn add_entry_at(&mut self, path: String, entry: ServiceFsNode<ServiceObjTy>) -> &mut Self {
         add_entry(self.fs, self.position, path, entry);
         self
@@ -442,6 +472,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     /// Panics if a service has already been added at the given path.
     pub fn dir<'a>(&'a mut self, path: impl Into<String>) -> ServiceFsDir<'a, ServiceObjTy> {
         dir(self, ROOT_NODE, path.into())
+    }
+
+    /// Adds a new remote directory served over the given DirectoryProxy.
+    ///
+    /// The name must not contain any '/' characters.
+    pub fn add_remote(&mut self, name: impl Into<String>, proxy: DirectoryProxy) {
+        remote(self, ROOT_NODE, name.into(), proxy)
     }
 
     fn add_entry_at(&mut self, path: String, entry: ServiceFsNode<ServiceObjTy>) -> &mut Self {
@@ -743,6 +780,12 @@ fn into_async(chan: zx::Channel) -> Result<fasync::Channel, Error> {
     Ok(fasync::Channel::from_channel(chan).context("failure to convert to async channel")?)
 }
 
+#[derive(Debug)]
+enum DescendResult<'a> {
+    LocalChildren(&'a HashMap<String, usize>),
+    RemoteDir((&'a DirectoryProxy, String)),
+}
+
 impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     /// Removes the `DirectoryRequest` startup handle for the current
     /// component and adds connects it to this `ServiceFs` as a client.
@@ -774,6 +817,17 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         position: usize,
         flags: u32,
     ) -> Result<Option<ServiceObjTy::Output>, Error> {
+        let node = &self.nodes[position];
+
+        // Forward requests for a remote directory to that directory.
+        match node {
+            ServiceFsNode::Directory(Directory::Remote(proxy)) => {
+                proxy.clone(flags, object)?;
+                return Ok(None);
+            }
+            _ => {}
+        }
+
         // It is not an error if the other end of the channel is already
         // closed: the client may call Directory::Open, send a channel chan,
         // then write a request on their local end of chan. If the request
@@ -794,8 +848,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         } else {
             None
         };
-
-        let node = &self.nodes[position];
 
         let is_directory = if let ServiceFsNode::Directory { .. } = node { true } else { false };
         if (flags & OPEN_FLAG_DIRECTORY != 0) && !is_directory {
@@ -880,7 +932,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok((None, ConnectionState::Closed));
             }
-            DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
+            DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 let object =
                     handle_potentially_unsupported_flags(object, flags, OPEN_REQ_SUPPORTED_FLAGS)?;
 
@@ -899,21 +951,29 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let mut segments = path.rsplitn(2, "/");
                 let end_segment = segments.next().unwrap();
                 let directory_segment = segments.next();
-                let children = match self.descend(connection.position, directory_segment) {
-                    Ok(children) => children,
-                    Err(e) => {
-                        eprintln!("invalid path {} - {}", path, e);
+                let descend_result = match self.descend(connection.position, directory_segment) {
+                    Ok(r) => r,
+                    Err(_) => {
                         maybe_send_error(object, flags, zx::sys::ZX_ERR_BAD_PATH)?;
                         return Ok((None, ConnectionState::Open));
                     }
                 };
 
-                if let Some(&next_node_pos) = children.get(end_segment) {
-                    let output = self.serve_connection_at(object, next_node_pos, flags)?;
-                    return Ok((output, ConnectionState::Open));
-                } else {
-                    maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_FOUND)?;
-                    return Ok((None, ConnectionState::Open));
+                match descend_result {
+                    DescendResult::LocalChildren(children) => {
+                        if let Some(&next_node_pos) = children.get(end_segment) {
+                            let output = self.serve_connection_at(object, next_node_pos, flags)?;
+                            return Ok((output, ConnectionState::Open));
+                        } else {
+                            maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_FOUND)?;
+                            return Ok((None, ConnectionState::Open));
+                        }
+                    }
+                    DescendResult::RemoteDir((proxy, remaining_path)) => {
+                        let remaining_path = vec![remaining_path, end_segment.to_owned()].join("/");
+                        proxy.open(flags, mode, &remaining_path, object)?;
+                        return Ok((None, ConnectionState::Open));
+                    }
                 }
             }
             DirectoryRequest::Describe { responder } => {
@@ -931,7 +991,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             DirectoryRequest::Sync { responder } => unsupported!(responder)?,
             DirectoryRequest::Unlink { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
-                let children = self.open_dir(connection.position)?;
+                let children = self.children_for_dir(connection.position)?;
 
                 let dirents_buf = connection
                     .dirents_buf
@@ -1135,35 +1195,40 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         attrs
     }
 
-    /// Retrieve directory listing at |path| starting from node |start_pos|. If |path| is None,
-    /// simply return directory listing of node |start_pos|.
-    fn descend(
-        &self,
-        start_pos: usize,
-        path: Option<&str>,
-    ) -> Result<&HashMap<String, usize>, Error> {
+    /// Traverse directory listings at |path| starting from node |start_pos|, returning either
+    /// the index of the local directory given by the path or a reference to a proxy for a remote
+    /// directory, along with the remaining parts of the path.
+    fn descend(&self, start_pos: usize, path: Option<&str>) -> Result<DescendResult, Error> {
         let mut pos = start_pos;
-        let mut children = self.open_dir(pos)?;
 
         if let Some(path) = path {
-            for segment in path.split("/") {
+            for (index, segment) in path.split("/").enumerate() {
+                let children = self.children_for_dir(pos)?;
                 match children.get(segment) {
                     Some(next_pos) => pos = *next_pos,
                     _ => bail!("segment not found: {}", segment),
                 }
-                children =
-                    self.open_dir(pos).context(format!("cannot open segment {}", segment))?;
+                match self.nodes.get(pos).expect(&format!("missing node {}", pos)) {
+                    ServiceFsNode::Directory(Directory::Remote(proxy)) => {
+                        return Ok(DescendResult::RemoteDir((
+                            &proxy,
+                            path.split("/").skip(index + 1).collect::<Vec<&str>>().join("/"),
+                        )));
+                    }
+                    _ => {}
+                }
             }
         }
-        Ok(children)
+
+        Ok(DescendResult::LocalChildren(self.children_for_dir(pos)?))
     }
 
     /// Retrieve directory listing of node |pos|. Return an error if |pos| is not a directory
     /// node
-    fn open_dir(&self, pos: usize) -> Result<&HashMap<String, usize>, Error> {
+    fn children_for_dir(&self, pos: usize) -> Result<&HashMap<String, usize>, Error> {
         let node = self.nodes.get(pos).expect(&format!("missing node {}", pos));
         match node {
-            ServiceFsNode::Directory { children } => Ok(children),
+            ServiceFsNode::Directory(Directory::Local { children }) => Ok(children),
             _ => bail!("node not a directory: {}", pos),
         }
     }
