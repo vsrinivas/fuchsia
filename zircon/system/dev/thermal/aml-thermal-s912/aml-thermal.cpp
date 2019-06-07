@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "aml-thermal.h"
+
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -11,14 +14,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
-#include <string.h>
 #include <zircon/syscalls/port.h>
 
 namespace thermal {
 namespace {
-
-// Worker-thread's internal loop deadline in seconds.
-constexpr int kDeadline = 5;
 
 enum {
     COMPONENT_SCPI,
@@ -86,7 +85,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     }
 
     auto thermal = std::make_unique<AmlThermal>(device, fan0_gpio_proto, fan1_gpio_proto,
-                                                scpi_proto, sensor_id, port);
+                                                scpi_proto, sensor_id, std::move(port));
 
     status = thermal->DdkAdd("vim-thermal", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
@@ -124,15 +123,12 @@ zx_status_t AmlThermal::GetDeviceInfo(fidl_txn_t* txn) {
 zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
                                     fidl_txn_t* txn) {
     if (power_domain >= fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) {
-        fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_INVALID_ARGS, nullptr);
+        return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_INVALID_ARGS, nullptr);
     }
 
-    scpi_opp_t opps;
+    scpi_opp_t opps = {};
     auto status = scpi_.GetDvfsInfo(static_cast<uint8_t>(power_domain), &opps);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_OK, &opps);
+    return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, status, &opps);
 }
 
 zx_status_t AmlThermal::GetTemperature(fidl_txn_t* txn) {
@@ -157,10 +153,10 @@ zx_status_t AmlThermal::SetTrip(uint32_t id, uint32_t temp, fidl_txn_t* txn) {
 zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
                                               fidl_txn_t* txn) {
     if (power_domain == fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN) {
-        fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(
+        return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(
             txn, ZX_OK, static_cast<uint16_t>(cur_bigcluster_opp_idx_));
     } else if (power_domain == fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN) {
-        fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(
+        return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(
             txn, ZX_OK, static_cast<uint16_t>(cur_littlecluster_opp_idx_));
     }
 
@@ -197,18 +193,23 @@ zx_status_t AmlThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
         txn, SetFanLevel(static_cast<FanLevel>(fan_level)));
 }
 
+void AmlThermal::JoinWorkerThread() {
+    const auto status = thrd_join(worker_, nullptr);
+    if (status != thrd_success) {
+        THERMAL_ERROR("worker thread failed: %d\n", status);
+    }
+}
+
 void AmlThermal::DdkRelease() {
     if (worker_) {
-        const auto status = thrd_join(worker_, nullptr);
-        if (status != thrd_success) {
-            THERMAL_ERROR("worker thread failed: %d\n", status);
-        }
+        JoinWorkerThread();
     }
     delete this;
 }
 
 void AmlThermal::DdkUnbind() {
     sync_completion_signal(&quit_);
+    DdkRemove();
 }
 
 zx_status_t AmlThermal::Init(zx_device_t* dev) {
@@ -371,7 +372,7 @@ int AmlThermal::Worker() {
             }
         }
 
-    } while (sync_completion_wait(&quit_, ZX_SEC(kDeadline)) == ZX_ERR_TIMED_OUT);
+    } while (sync_completion_wait(&quit_, duration_.get()) == ZX_ERR_TIMED_OUT);
     return ZX_OK;
 }
 

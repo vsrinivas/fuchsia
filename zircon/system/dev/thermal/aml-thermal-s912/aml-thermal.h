@@ -17,6 +17,13 @@
 
 #pragma once
 
+namespace {
+
+// Worker-thread's internal loop wait duration in milliseconds.
+constexpr zx::duration kDuration = zx::sec(5);
+
+} // namespace
+
 namespace thermal {
 
 enum FanLevel {
@@ -36,14 +43,16 @@ public:
                const gpio_protocol_t& fan0_gpio_proto,
                const gpio_protocol_t& fan1_gpio_proto,
                const scpi_protocol_t& scpi_proto,
-               const uint32_t& sensor_id,
-               zx::port& port)
+               const uint32_t sensor_id,
+               zx::port port,
+               zx::duration duration = kDuration)
         : DeviceType(device),
           fan0_gpio_(&fan0_gpio_proto),
           fan1_gpio_(&fan1_gpio_proto),
           scpi_(&scpi_proto),
           sensor_id_(sensor_id),
-          port_(std::move(port)) {}
+          port_(std::move(port)),
+          duration_(duration) {}
 
     // Create and bind a driver instance.
     static zx_status_t Create(void* ctx, zx_device_t* device);
@@ -56,7 +65,7 @@ public:
     void DdkUnbind();
     void DdkRelease();
 
-private:
+    // Visible for testing.
     zx_status_t GetInfo(fidl_txn_t* txn);
     zx_status_t GetDeviceInfo(fidl_txn_t* txn);
     zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);
@@ -71,6 +80,8 @@ private:
                                       fidl_txn_t* txn);
     zx_status_t GetFanLevel(fidl_txn_t* txn);
     zx_status_t SetFanLevel(uint32_t fan_level, fidl_txn_t* txn);
+
+    void JoinWorkerThread();
 
     static constexpr fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
         .GetInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetInfo>,
@@ -89,6 +100,7 @@ private:
         .SetFanLevel = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetFanLevel>,
     };
 
+private:
     // Notification thread implementation.
     int Worker();
 
@@ -112,6 +124,7 @@ private:
     sync_completion quit_;
     uint32_t cur_bigcluster_opp_idx_ = 0;
     uint32_t cur_littlecluster_opp_idx_ = 0;
+    const zx::duration duration_;
 };
 
 } // namespace thermal

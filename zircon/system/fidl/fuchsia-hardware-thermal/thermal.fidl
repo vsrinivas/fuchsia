@@ -96,14 +96,14 @@ struct ThermalDeviceInfo {
 [Layout = "Simple"]
 protocol Device {
     /// Get information about the device's current state.
-    GetInfo() -> (zx.status status, ThermalInfo info);
+    GetInfo() -> (zx.status status, ThermalInfo? info);
 
     /// Get information about the device's thermal capabilities and trip points.
-    GetDeviceInfo() -> (zx.status status, ThermalDeviceInfo info);
+    GetDeviceInfo() -> (zx.status status, ThermalDeviceInfo? info);
 
     /// Get the device's operating points.
     /// TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
-    GetDvfsInfo(PowerDomain power_domain) -> (zx.status status, OperatingPoint info);
+    GetDvfsInfo(PowerDomain power_domain) -> (zx.status status, OperatingPoint? info);
 
     /// Get the current temperature.
     GetTemperature() -> (zx.status status, uint32 temp);
