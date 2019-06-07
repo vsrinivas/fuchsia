@@ -8,7 +8,6 @@ group("tools") {
   public_deps = [
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
     "//garnet/packages/prod:mediaplayer",
@@ -19,6 +18,7 @@ group("tools") {
     "//garnet/packages/products:devtools",
     "//garnet/packages/testing:run_test_component",
     "//peridot/packages/prod:sessionctl",
+    "//src/connectivity/network/mdns/bundles:utils",
     "//src/modular/bundles:framework",
     "//src/modular/bundles:tools",
     "//topaz/packages/prod:chromium",
