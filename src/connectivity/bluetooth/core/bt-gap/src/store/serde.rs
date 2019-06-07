@@ -53,7 +53,6 @@ struct SecurityPropertiesDef {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "AddressType")]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)] // Workaround for rustc warning
 enum AddressTypeDef {
     LePublic = 0,
     LeRandom = 1,
@@ -103,7 +102,6 @@ struct BredrDataDef {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "BondingData")]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)] // Workaround for rustc warning
 struct BondingDataDef {
     pub identifier: String,
     pub local_address: String,
