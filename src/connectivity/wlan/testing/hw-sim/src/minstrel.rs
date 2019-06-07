@@ -44,30 +44,62 @@ pub fn test_rate_selection() {
     const ALL_SUPPORTED_IDX: &[u16] = &[129, 130, 131, 132, 133, 134, 135, 136];
     const ERP_STARTING_IDX: u16 = 129;
     const MAX_SUCCESSFUL_IDX: u16 = 130;
+
     // Only the lowest ones can succeed in the simulated environment.
     let will_succeed = |idx| ERP_STARTING_IDX <= idx && idx <= MAX_SUCCESSFUL_IDX;
-    let is_done = |hm: &HashMap<u16, u64>| {
+
+    let mut tx_vec_count_map = HashMap::new();
+    let mut max_key_prev = std::u16::MAX;
+    let mut second_max_key_prev = max_key_prev;
+    let mut max_val_prev = 0u64;
+    let mut second_max_val_prev = 0u64;
+
+    // Check for convergence by taking snapshots. A snapshot is taken when "100
+    // frames (~4 minstrel cycles) are sent with the same tx vector index". we
+    // check the most used and the second most used tx vectors (aka data rates)
+    // since last snapshot.
+    //
+    // Once Minstrel converges, the optimal tx vector will remain unchanged for
+    // the rest of the time. And due to its "probing" mechanism, the second most
+    // used tx vector will also be used regularly (but much less frequently) to
+    // make sure it is still viable.
+    let mut is_converged = |hm: &HashMap<u16, u64>| {
         // Due to its randomness, Minstrel may skip 135. But the other 7 must be present.
         if hm.keys().len() < MUST_USE_IDX.len() {
             return false;
         }
         // safe to unwrap below because there are at least 7 entries
         let max_key = hm.keys().max_by_key(|k| hm[&k]).unwrap();
-        let second_largest =
-            hm.iter().map(|(k, v)| if k == max_key { 0 } else { *v }).max().unwrap();
+        let (second_max_key, second_max_val) =
+            hm.iter().filter(|(k, _v)| k != &max_key).max_by_key(|(_k, v)| *v).unwrap();
         let max_val = hm[&max_key];
+
+        let is_converged = if !(max_key == &max_key_prev && second_max_key == &second_max_key_prev)
+        {
+            // optimal values changed, not stabilized yet
+            false
+        } else {
+            // One tx vector has become dominant as the number of data frames transmitted with it
+            // is at least 15 times as large as anyone else. 15 is the number of non-probing data
+            // frames between 2 consecutive probing data frames.
+            const NORMAL_FRAMES_PER_PROBE: u64 = 15;
+            let diff_max = max_val - max_val_prev;
+            let diff_second_max = second_max_val - second_max_val_prev;
+            // second_max is used regularly (> 1) but still much less frequently than the dominant.
+            (diff_second_max > 1) && (diff_max >= NORMAL_FRAMES_PER_PROBE * diff_second_max)
+        };
+
+        // Take a snapshot every once in a while to reduce the effect of early fluctuations.
+        // This makes determining convergence more reliable.
         if max_val % 100 == 0 {
             println!("{:?}", hm);
+            max_key_prev = *max_key;
+            second_max_key_prev = *second_max_key;
+            max_val_prev = max_val;
+            second_max_val_prev = *second_max_val;
         }
-        // One tx vector has become dominant as the number of data frames transmitted with it
-        // is at least 15 times as large as anyone else. 15 is the number of non-probing data
-        // frames between 2 consecutive probing data frames.
-        const NORMAL_FRAMES_PER_PROBE: u64 = 15;
-        // Minstrel takes about 10 cycles to converge
-        // |second_largest| is a heuristic for number of cycles
-        second_largest >= 10 && max_val >= NORMAL_FRAMES_PER_PROBE * second_largest
+        is_converged
     };
-    let mut tx_vec_count_map = HashMap::new();
     helper
         .run(
             &mut exec,
@@ -80,7 +112,7 @@ pub fn test_rate_selection() {
                     &BSS_MINSTL,
                     &mut tx_vec_count_map,
                     will_succeed,
-                    is_done,
+                    &mut is_converged,
                     sender.clone(),
                 );
             },
@@ -101,12 +133,11 @@ pub fn test_rate_selection() {
     } else {
         assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
     }
-    let most_frequently_used_idx = tx_vec_count_map.iter().max_by_key(|&(_, v)| v).unwrap().0;
     println!(
         "If the test fails due to QEMU slowness outside of the scope of WLAN (See FLK-24, \
          DNO-389). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
     );
-    assert_eq!(most_frequently_used_idx, &MAX_SUCCESSFUL_IDX);
+    assert_eq!(max_key_prev, MAX_SUCCESSFUL_IDX);
 }
 
 fn handle_rate_selection_event<F, G>(
@@ -115,11 +146,11 @@ fn handle_rate_selection_event<F, G>(
     bssid: &[u8; 6],
     hm: &mut HashMap<u16, u64>,
     should_succeed: F,
-    is_done: G,
+    is_converged: &mut G,
     mut sender: mpsc::Sender<bool>,
 ) where
     F: Fn(u16) -> bool,
-    G: Fn(&HashMap<u16, u64>) -> bool,
+    G: FnMut(&HashMap<u16, u64>) -> bool,
 {
     match event {
         wlantap::WlantapPhyEvent::Tx { args } => {
@@ -134,7 +165,7 @@ fn handle_rate_selection_event<F, G>(
                 if *count == 1 {
                     println!("new tx_vec_idx: {} at #{}", tx_vec_idx, hm.values().sum::<u64>());
                 }
-                sender.try_send(is_done(hm)).expect("sending message to ethernet sender");
+                sender.try_send(is_converged(hm)).expect("sending message to ethernet sender");
             }
         }
         _ => {}

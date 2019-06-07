@@ -284,10 +284,7 @@ mod simulation_tests {
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
         ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
-        if false {
-            // TODO(FLK-339): Enable after investigation
-            ok = run_test("rate_selection", minstrel::test_rate_selection) && ok;
-        }
+        ok = run_test("rate_selection", minstrel::test_rate_selection) && ok;
 
         // ap tests
         ok = run_test("open_ap_connect", ap::tests::test_open_ap_connect) && ok;
