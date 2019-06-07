@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
+import("../../../../gn/build_rules.gni")
 
 #
 # Generates a Spinel target by performing the following steps:
@@ -65,13 +65,13 @@ template("spinel_target") {
   _spn_target_gen_includes = [ "$target_gen_dir/spn_modules.inl" ]
 
   _spn_target_includes = [
-                           "//src/graphics/lib/compute/common/macros.h",
-                           "//src/graphics/lib/compute/spinel/core.h",
-                           "//src/graphics/lib/compute/spinel/core_c.h",
-                           "//src/graphics/lib/compute/spinel/platforms/vk/core_vk.h",
-                           "//src/graphics/lib/compute/spinel/platforms/vk/spn_vk_target.h",
-                           "//src/graphics/lib/compute/spinel/platforms/vk/spn_vk_layouts.h",
-                           "//src/graphics/lib/compute/spinel/platforms/vk/targets/spn_target_push.inl",
+                           "${graphics_compute_dir}/common/macros.h",
+                           "${graphics_compute_dir}/spinel/core.h",
+                           "${graphics_compute_dir}/spinel/core_c.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/core_vk.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_target.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_layouts.h",
+                           "${graphics_compute_dir}/spinel/platforms/vk/targets/spn_target_push.inl",
                          ] + _spn_target_gen_includes
 
   _spn_target_sources = _spn_target_includes_public + _spn_target_includes +
@@ -83,10 +83,10 @@ template("spinel_target") {
   _spn_target_include_dirs = [
     target_gen_dir,
     _spn_target_dir,
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets",
-    "//src/graphics/lib/compute/spinel/platforms/vk",
-    "//src/graphics/lib/compute/spinel",
-    "//src/graphics/lib/compute",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets",
+    "${graphics_compute_dir}/spinel/platforms/vk",
+    "${graphics_compute_dir}/spinel",
+    "${graphics_compute_dir}",
   ]
 
   #
@@ -97,17 +97,17 @@ template("spinel_target") {
   # support this kind of build-time action
   #
   _spn_comp_names = read_file(
-          "//src/graphics/lib/compute/spinel/platforms/vk/targets/spinel_comp_names.txt",
+          "${graphics_compute_dir}/spinel/platforms/vk/targets/spinel_comp_names.txt",
           "list lines")
 
   _spn_comp_sources = process_file_template(
           _spn_comp_names,
-          "//src/graphics/lib/compute/spinel/platforms/vk/shaders/{{source_name_part}}.comp")
+          "${graphics_compute_dir}/spinel/platforms/vk/shaders/{{source_name_part}}.comp")
 
   _spn_comp_includes = [
     _spn_target_dir + "/spn_config.h",
-    "//src/graphics/lib/compute/hotsort/platforms/vk/targets/hs_glsl_macros.h",
-    "//src/graphics/lib/compute/spinel/platforms/vk/spn_vk_layouts.h",
+    "${graphics_compute_dir}/hotsort/platforms/vk/targets/hs_glsl_macros.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_layouts.h",
   ]
 
   #
@@ -127,19 +127,18 @@ template("spinel_target") {
       "--target-env",
       "vulkan1.1",
       "-I" +  # <hotsort src> -- hs_glsl_macros.h
-          rebase_path("//src/graphics/lib/compute/hotsort/platforms/vk/targets",
+          rebase_path("${graphics_compute_dir}/hotsort/platforms/vk/targets",
                       root_build_dir),
       "-I" +  # <hotsort gen> -- hs_config.h, hs_glsl_macros_config.h
           rebase_path("$target_gen_dir/hotsort", root_build_dir),
       "-I" + rebase_path(_spn_target_dir, root_build_dir),  # <spinel target> -- spn_config.h
       "-I" +  # <spinel shaders>
-          rebase_path("//src/graphics/lib/compute/spinel/platforms/vk/shaders",
+          rebase_path("${graphics_compute_dir}/spinel/platforms/vk/shaders",
                       root_build_dir),
       "-I" +  # <spinel/platforms/vk> -- spn_vk_layouts.h
-          rebase_path("//src/graphics/lib/compute/spinel/platforms/vk",
+          rebase_path("${graphics_compute_dir}/spinel/platforms/vk",
                       root_build_dir),
-      "-I" +  # <spinel> -- core.h
-          rebase_path("//src/graphics/lib/compute/spinel", root_build_dir),
+      "-I" + rebase_path("${graphics_compute_dir}/spinel", root_build_dir),  # <spinel> -- core.h
       "-o",
       rebase_path(outputs[0], root_build_dir),
       "{{source}}",
@@ -195,7 +194,7 @@ template("spinel_target") {
   # dump the modules as uint32_t literals
   #
   compiled_action("gen_modules") {
-    tool = "//src/graphics/lib/compute/spinel/platforms/vk/targets:spinel_modules_to_literals"
+    tool = "${graphics_compute_dir}/spinel/platforms/vk/targets:spinel_modules_to_literals"
     sources = get_target_outputs(":gen_remap")
     outputs = _spn_target_gen_includes
     args = rebase_path(outputs, root_build_dir) +
@@ -219,7 +218,7 @@ template("spinel_target") {
       sources = _spn_target_gen_sources
       include_dirs = _spn_target_include_dirs
       deps = [
-        "//third_party/vulkan_loader_and_validation_layers:vulkan",
+        graphics_compute_vulkan_loader_target,
       ]
       public_deps = [
         ":gen_modules",
@@ -256,7 +255,7 @@ template("spinel_target") {
       sources = _spn_target_sources
       include_dirs = _spn_target_include_dirs
       deps = [
-        "//third_party/vulkan_loader_and_validation_layers:vulkan",
+        graphics_compute_vulkan_loader_target,
       ]
       public_deps = [
         ":gen_modules",

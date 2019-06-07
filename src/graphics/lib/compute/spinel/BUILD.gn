@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("../gn/build_rules.gni")
+
 config("spinel_public_config") {
   # The sources and clients use 'spinel_xxx.h' to include the headers.
   include_dirs = [ "." ]
@@ -43,7 +45,7 @@ source_set("spinel") {
     "weakref.h",
   ]
   deps = [
-    "//src/graphics/lib/compute/common",
+    "${graphics_compute_dir}/common",
   ]
   public_configs = [ ":spinel_public_config" ]
 }

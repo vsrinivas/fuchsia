@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+import("../../../../../gn/build_rules.gni")
 import("../../targets/hotsort_target.gni")
 
 #
@@ -26,10 +25,7 @@ group("targets") {
 # hotsort_vk_bench: benchmark HotSort
 #
 
-package_name = "hotsort_vk_bench"
-
-executable("bin") {
-  output_name = package_name
+graphics_compute_vulkan_executable("hotsort_vk_bench") {
   sources = [
     "main.c",
     "sort.cpp",
@@ -37,38 +33,13 @@ executable("bin") {
   include_dirs = [ "$target_gen_dir" ]
   deps = [
     ":targets",
-    "//src/graphics/lib/compute/common",
-    "//src/graphics/lib/compute/common/vk",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
-    "//third_party/vulkan_loader_and_validation_layers:vulkan",
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    "${graphics_compute_dir}/hotsort/platforms/vk",
   ]
 }
 
-#
-#
-#
-
-package(package_name) {
-  deps = [
-    ":bin",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
-  ]
-
-  binary = package_name
-
-  meta = [
-    {
-      path = rebase_path("meta/$package_name.cmx")
-      dest = "$package_name.cmx"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-}
-
-_hotsort_targets_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets"
+_hotsort_targets_dir = "${graphics_compute_dir}/hotsort/platforms/vk/targets"
 
 #
 # configuration
@@ -77,9 +48,8 @@ _hotsort_targets_dir = "//src/graphics/lib/compute/hotsort/platforms/vk/targets"
 #
 
 hotsort_target("hs_amd_gcn3_u32") {
-  hotsort_target_config_files = [
-    "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h"
-  ]
+  hotsort_target_config_files =
+      [ "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h" ]
   hotsort_target_args = [
     # "-v",
     "-a", "glsl",
@@ -107,9 +77,8 @@ hotsort_target("hs_amd_gcn3_u32") {
 #
 
 hotsort_target("hs_amd_gcn3_u64") {
-  hotsort_target_config_files = [
-    "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h"
-  ]
+  hotsort_target_config_files =
+      [ "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h" ]
   hotsort_target_args = [
     # "-v",
     "-a", "glsl",
@@ -137,9 +106,8 @@ hotsort_target("hs_amd_gcn3_u64") {
 #
 
 hotsort_target("hs_intel_gen8_u32") {
-  hotsort_target_config_files = [
-    "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h"
-  ]
+  hotsort_target_config_files =
+      [ "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h" ]
   hotsort_target_args = [
     # "-v",
     "-a", "glsl",
@@ -168,9 +136,8 @@ hotsort_target("hs_intel_gen8_u32") {
 #
 
 hotsort_target("hs_intel_gen8_u64") {
-  hotsort_target_config_files = [
-    "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h"
-  ]
+  hotsort_target_config_files =
+      [ "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h" ]
   hotsort_target_args = [
     # "-v",
     "-a", "glsl",
@@ -200,9 +167,8 @@ hotsort_target("hs_intel_gen8_u64") {
 #
 
 hotsort_target("hs_nvidia_sm35_u32") {
-  hotsort_target_config_files = [
-    "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h"
-  ]
+  hotsort_target_config_files =
+      [ "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h" ]
   hotsort_target_args = [
     # "-v",
     "-a", "glsl",
@@ -233,9 +199,8 @@ hotsort_target("hs_nvidia_sm35_u32") {
 #
 
 hotsort_target("hs_nvidia_sm35_u64") {
-  hotsort_target_config_files = [
-    "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h"
-  ]
+  hotsort_target_config_files =
+      [ "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h" ]
   hotsort_target_args = [
     # "-v",
     "-a", "glsl",
@@ -257,4 +222,3 @@ hotsort_target("hs_nvidia_sm35_u64") {
     "-z",
   ]
 }
-

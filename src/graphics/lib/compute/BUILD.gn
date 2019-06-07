@@ -18,5 +18,6 @@ group("tests") {
   public_deps = [
     "hotsort:tests",
     "spinel:tests",
+    "tests/vk/vk_subgroup_info",
   ]
 }
