@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fs/vfs.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/memfs/cpp/vnode.h>
@@ -25,7 +26,7 @@ namespace devmgr {
 // in-memory filesystem.
 class FsManager {
 public:
-    static zx_status_t Create(zx::event fshost_event, fbl::unique_ptr<FsManager>* out);
+    static zx_status_t Create(zx::event fshost_event, std::unique_ptr<FsManager>* out);
 
     ~FsManager();
 
@@ -54,16 +55,6 @@ private:
     FsManager(zx::event fshost_event);
     zx_status_t Initialize();
 
-    zx_status_t ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server, uint32_t rights);
-
-    // Convenience wrapper for |ServeVnode| with maximum default permissions.
-    zx_status_t ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server) {
-        return ServeVnode(vn, std::move(server), ZX_FS_RIGHTS);
-    }
-
-    zx_status_t LocalMountReadOnly(memfs::VnodeDir* parent, const char* name,
-                                   fbl::RefPtr<memfs::VnodeDir>& subtree);
-
     // Event on which "FSHOST_SIGNAL_XXX" signals are set.
     // Communicates state changes to/from devmgr.
     zx::event event_;
@@ -75,11 +66,9 @@ private:
     // The Root VFS manages the following filesystems:
     // - The global root filesystem (including the mount points)
     // - "/tmp"
-    memfs::Vfs root_vfs_;
+    std::unique_ptr<memfs::Vfs> root_vfs_;
 
-    // The System VFS manages exclusively the system filesystem.
-    memfs::Vfs system_vfs_;
-    fbl::unique_ptr<async::Loop> global_loop_;
+    std::unique_ptr<async::Loop> global_loop_;
     async::Wait global_shutdown_;
 
     // The base, root directory which serves the rest of the fshost.

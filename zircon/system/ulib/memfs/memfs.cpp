@@ -26,47 +26,31 @@
 
 #include "dnode.h"
 
+namespace memfs {
 namespace {
 
 constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
 
-}
-
-namespace memfs {
-
-zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
-                               zx_handle_t vmo, zx_off_t off,
-                               zx_off_t len) {
-    fbl::AutoLock lock(&vfs_lock_);
-    return parent->CreateFromVmo(name, vmo, off, len);
-}
-
-void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
-    fbl::AutoLock lock(&vfs_lock_);
-    parent->MountSubtree(std::move(subtree));
-}
-
-zx_status_t Vfs::FillFsId() {
-    if (fs_id_) {
-        return ZX_OK;
-    }
-    zx::event event;
-    zx_status_t status = zx::event::create(0, &event);
+zx_status_t CreateID(uint64_t* out_id) {
+    zx::event id;
+    zx_status_t status = zx::event::create(0, &id);
     if (status != ZX_OK) {
         return status;
     }
     zx_info_handle_basic_t info;
-    status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    status = id.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
         return status;
     }
 
-    fs_id_ = info.koid;
+    *out_id = info.koid;
     return ZX_OK;
 }
 
+}
+
 zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size,
-                         size_t request_size, size_t* actual_size) {
+                                    size_t request_size, size_t* actual_size) {
     if (request_size <= current_size) {
         *actual_size = current_size;
         return ZX_OK;
@@ -99,6 +83,37 @@ void Vfs::WillFreeVMO(size_t vmo_size) {
     size_t freed_pages = vmo_size / kPageSize;
     ZX_DEBUG_ASSERT(freed_pages <= num_allocated_pages_);
     num_allocated_pages_ -= freed_pages;
+}
+
+zx_status_t Vfs::Create(const char* name, size_t pages_limit,
+                        std::unique_ptr<memfs::Vfs>* out_vfs,
+                        fbl::RefPtr<VnodeDir>* out_root) {
+    uint64_t id;
+    zx_status_t status = CreateID(&id);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    std::unique_ptr<memfs::Vfs> fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(pages_limit));
+    fs->fs_id_ = id;
+    fbl::RefPtr<VnodeDir> root = fbl::AdoptRef(new VnodeDir(fs.get()));
+    fbl::RefPtr<Dnode> dn = Dnode::Create(name, root);
+    root->dnode_ = dn;
+    *out_vfs = std::move(fs);
+    *out_root = std::move(root);
+    return ZX_OK;
+}
+
+zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
+                               zx_handle_t vmo, zx_off_t off,
+                               zx_off_t len) {
+    fbl::AutoLock lock(&vfs_lock_);
+    return parent->CreateFromVmo(name, vmo, off, len);
+}
+
+void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
+    fbl::AutoLock lock(&vfs_lock_);
+    parent->MountSubtree(std::move(subtree));
 }
 
 std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
@@ -139,27 +154,6 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
         return ZX_ERR_ALREADY_BOUND;
     }
     SetRemote(h.TakeChannel());
-    return ZX_OK;
-}
-
-zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out) {
-    zx_status_t status;
-    if ((status = vfs->FillFsId()) != ZX_OK) {
-        return status;
-    }
-    fbl::AllocChecker ac;
-    fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir(vfs));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    fbl::RefPtr<Dnode> dn = Dnode::Create(name, fs);
-    if (dn == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    fs->dnode_ = dn; // FS root is directory
-    *out = fs;
     return ZX_OK;
 }
 

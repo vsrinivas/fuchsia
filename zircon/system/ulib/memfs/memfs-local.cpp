@@ -24,9 +24,9 @@
 #include "dnode.h"
 
 struct memfs_filesystem {
-    memfs::Vfs vfs;
+    std::unique_ptr<memfs::Vfs> vfs;
 
-    explicit memfs_filesystem(size_t pages_limit): vfs(pages_limit) { }
+    explicit memfs_filesystem(std::unique_ptr<memfs::Vfs> fs) : vfs(std::move(fs)) {}
 };
 
 zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher,
@@ -53,14 +53,14 @@ zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatch
         return status;
     }
 
-    fbl::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(max_num_pages);
-    fs->vfs.SetDispatcher(dispatcher);
-
+    std::unique_ptr<memfs::Vfs> vfs;
     fbl::RefPtr<memfs::VnodeDir> root;
-    if ((status = memfs::CreateFilesystem("<tmp>", &fs->vfs, &root)) != ZX_OK) {
+    if ((status = memfs::Vfs::Create("<tmp>", max_num_pages, &vfs, &root)) != ZX_OK) {
         return status;
     }
-    if ((status = fs->vfs.ServeDirectory(std::move(root), std::move(server))) != ZX_OK) {
+    vfs->SetDispatcher(dispatcher);
+    fbl::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(std::move(vfs));
+    if ((status = fs->vfs->ServeDirectory(std::move(root), std::move(server))) != ZX_OK) {
         return status;
     }
 
@@ -103,7 +103,7 @@ zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher,
 
 void memfs_free_filesystem(memfs_filesystem_t* fs, sync_completion_t* unmounted) {
     ZX_DEBUG_ASSERT(fs != nullptr);
-    fs->vfs.Shutdown([fs, unmounted](zx_status_t status) {
+    fs->vfs->Shutdown([fs, unmounted](zx_status_t status) {
         delete fs;
         if (unmounted) {
             sync_completion_signal(unmounted);

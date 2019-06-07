@@ -25,12 +25,12 @@ zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher,
                                   fbl::RefPtr<BootfsService>* out) {
     auto svc = fbl::AdoptRef(new BootfsService());
 
-    zx_status_t status = memfs::CreateFilesystem("<root>", &svc->vfs_, &svc->root_);
+    zx_status_t status = memfs::Vfs::Create("<root>", UINT64_MAX, &svc->vfs_, &svc->root_);
     if (status != ZX_OK) {
         return status;
     }
 
-    svc->vfs_.SetDispatcher(dispatcher);
+    svc->vfs_->SetDispatcher(dispatcher);
     *out = std::move(svc);
     return ZX_OK;
 }
@@ -54,14 +54,14 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
 }
 
 zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
-    return CreateVnodeConnection(&vfs_, root_, out);
+    return CreateVnodeConnection(vfs_.get(), root_, out);
 }
 
 zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
     fbl::RefPtr<fs::Vnode> node;
     fbl::StringPiece path_out;
-    zx_status_t status = vfs_.Open(root_, &node, path, &path_out,
-                                   ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_NOREMOTE, 0);
+    zx_status_t status = vfs_->Open(root_, &node, path, &path_out,
+                                    ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_NOREMOTE, 0);
     if (status != ZX_OK) {
         return status;
     }
@@ -92,7 +92,7 @@ BootfsService::~BootfsService() {
         // we can safely close the VMOs
         parts.reset();
     };
-    vfs_.Shutdown(std::move(callback));
+    vfs_->Shutdown(std::move(callback));
 }
 
 zx_status_t BootfsService::PublishVmo(const char* path, zx::vmo vmo, zx_off_t off,
@@ -118,8 +118,8 @@ zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vm
             if (path[0] == 0) {
                 return ZX_ERR_INVALID_ARGS;
             }
-            return vnb->vfs()->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)),
-                                             vmo.get(), off, len);
+            return vfs_->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)), vmo.get(),
+                                       off, len);
         } else {
             if (nextpath == path) {
                 return ZX_ERR_INVALID_ARGS;

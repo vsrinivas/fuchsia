@@ -36,18 +36,17 @@ bool test_vmofile_basic() {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
-    memfs::Vfs vfs;
-    vfs.SetDispatcher(dispatcher);
-
+    std::unique_ptr<memfs::Vfs> vfs;
     fbl::RefPtr<memfs::VnodeDir> root;
-    ASSERT_EQ(memfs::CreateFilesystem("<tmp>", &vfs, &root), ZX_OK);
+    ASSERT_EQ(memfs::Vfs::Create("<tmp>", 1000, &vfs, &root), ZX_OK);
+    vfs->SetDispatcher(dispatcher);
 
     zx::vmo backing_vmo;
     ASSERT_EQ(zx::vmo::create(64, 0, &backing_vmo), ZX_OK);
     ASSERT_EQ(backing_vmo.write("hello, world!", 0, 13), ZX_OK);
-    ASSERT_EQ(vfs.CreateFromVmo(root.get(), "greeting", backing_vmo.get(), 0, 13),
+    ASSERT_EQ(vfs->CreateFromVmo(root.get(), "greeting", backing_vmo.get(), 0, 13),
               ZX_OK);
-    ASSERT_EQ(vfs.ServeDirectory(std::move(root), std::move(server)), ZX_OK);
+    ASSERT_EQ(vfs->ServeDirectory(std::move(root), std::move(server)), ZX_OK);
 
     zx::channel h, request;
     ASSERT_EQ(zx::channel::create(0, &h, &request), ZX_OK);
@@ -86,7 +85,7 @@ bool test_vmofile_basic() {
     h.reset();
 
     sync_completion_t completion;
-    vfs.Shutdown([&completion](zx_status_t status) {
+    vfs->Shutdown([&completion](zx_status_t status) {
         EXPECT_EQ(status, ZX_OK);
         sync_completion_signal(&completion);
     });

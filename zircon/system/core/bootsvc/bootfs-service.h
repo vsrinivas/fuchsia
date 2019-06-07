@@ -47,7 +47,7 @@ private:
     // owned_vmos contains all VMOs that are claimed by the underlying VFS
     fbl::Vector<zx::vmo> owned_vmos_;
 
-    memfs::Vfs vfs_;
+    std::unique_ptr<memfs::Vfs> vfs_;
     // root of the vfs
     fbl::RefPtr<memfs::VnodeDir> root_;
 };

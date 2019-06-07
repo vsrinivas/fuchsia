@@ -182,13 +182,8 @@ private:
 
 class Vfs : public fs::ManagedVfs {
 public:
-    // Creates a Vfs with practically unlimited pages upper bound.
-    Vfs()
-        : fs::ManagedVfs(), pages_limit_(UINT64_MAX), num_allocated_pages_(0) {}
-
-    // Creates a Vfs with the maximum |pages_limit| number of pages.
-    explicit Vfs(size_t pages_limit)
-        : fs::ManagedVfs(), pages_limit_(pages_limit), num_allocated_pages_(0) {}
+    static zx_status_t Create(const char* fs_name, size_t pages_limit,
+                              std::unique_ptr<Vfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root);
 
     // Creates a VnodeVmo under |parent| with |name| which is backed by |vmo|.
     // N.B. The VMO will not be taken into account when calculating
@@ -205,18 +200,6 @@ public:
 
     uint64_t GetFsId() const { return fs_id_; }
 
-private:
-    // Initialize fs_id_ on the first call.
-    // Calling more than once is a no-op.
-    zx_status_t FillFsId();
-
-    friend zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs,
-                                        fbl::RefPtr<VnodeDir>* out);
-
-    // Allows VnodeFile (and no other class) to manipulate number of allocated pages
-    // using GrowVMO and WillFreeVMO.
-    friend VnodeFile;
-
     // Increases the size of the |vmo| to at least |request_size| bytes.
     // If the VMO is invalid, it will try to create it.
     // |current_size| is the current size of the VMO in number of bytes. It should be
@@ -230,19 +213,20 @@ private:
     // |vmo_size| is the size of the owned vmo in bytes. It should be a multiple of page size.
     void WillFreeVMO(size_t vmo_size);
 
-    // Maximum number of pages available; fixed at Vfs creation time.
-    // Puts a bound on maximum memory usage.
-    const size_t pages_limit_;
-
-    // Number of pages currently in use by VnodeFiles.
-    size_t num_allocated_pages_;
+private:
+    // Creates a Vfs with the maximum |pages_limit| number of pages.
+    explicit Vfs(size_t pages_limit) : fs::ManagedVfs(), pages_limit_(pages_limit) {}
 
     uint64_t fs_id_ = 0;
-};
 
-// Initializes the Vfs object and names the root directory |name|. The Vfs object is considered
-// invalid prior to this call. Returns the root VnodeDir via |out|.
-zx_status_t CreateFilesystem(const char* name, memfs::Vfs* vfs, fbl::RefPtr<VnodeDir>* out);
+    // Maximum number of pages available; fixed at Vfs creation time.
+    // Puts a bound on maximum memory usage.
+    const size_t pages_limit_ = UINT64_MAX;
+
+    // Number of pages currently in use by VnodeFiles.
+    size_t num_allocated_pages_ = 0;
+
+};
 
 } // namespace memfs
 

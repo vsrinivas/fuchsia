@@ -31,42 +31,6 @@
 #define ZXDEBUG 0
 
 namespace devmgr {
-namespace {
-
-zx_status_t AddVmofile(fbl::RefPtr<memfs::VnodeDir> vnb, const char* path, zx_handle_t vmo,
-                       zx_off_t off, size_t len) {
-    zx_status_t r;
-    if ((path[0] == '/') || (path[0] == 0))
-        return ZX_ERR_INVALID_ARGS;
-    for (;;) {
-        const char* nextpath = strchr(path, '/');
-        if (nextpath == nullptr) {
-            if (path[0] == 0) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-            return vnb->vfs()->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)), vmo,
-                                             off, len);
-        } else {
-            if (nextpath == path) {
-                return ZX_ERR_INVALID_ARGS;
-            }
-
-            fbl::RefPtr<fs::Vnode> out;
-            r = vnb->Lookup(&out, fbl::StringPiece(path, nextpath - path));
-            if (r == ZX_ERR_NOT_FOUND) {
-                r = vnb->Create(&out, fbl::StringPiece(path, nextpath - path), S_IFDIR);
-            }
-
-            if (r < 0) {
-                return r;
-            }
-            vnb = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
-            path = nextpath + 1;
-        }
-    }
-}
-
-} // namespace
 
 // Must appear in the devmgr namespace.
 // Expected dependency of "shared/fdio.h".
@@ -115,8 +79,8 @@ FsManager::~FsManager() {
     }
 }
 
-zx_status_t FsManager::Create(zx::event fshost_event, fbl::unique_ptr<FsManager>* out) {
-    auto fs_manager = fbl::unique_ptr<FsManager>(new FsManager(std::move(fshost_event)));
+zx_status_t FsManager::Create(zx::event fshost_event, std::unique_ptr<FsManager>* out) {
+    auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(fshost_event)));
     zx_status_t status = fs_manager->Initialize();
     if (status != ZX_OK) {
         return status;
@@ -126,7 +90,11 @@ zx_status_t FsManager::Create(zx::event fshost_event, fbl::unique_ptr<FsManager>
 }
 
 zx_status_t FsManager::Initialize() {
-    zx_status_t status = CreateFilesystem("<root>", &root_vfs_, &global_root_);
+    uint64_t physmem_size = zx_system_get_physmem();
+    ZX_DEBUG_ASSERT(physmem_size % PAGE_SIZE == 0);
+    size_t page_limit = physmem_size / PAGE_SIZE;
+
+    zx_status_t status = memfs::Vfs::Create("<root>", page_limit, &root_vfs_, &global_root_);
     if (status != ZX_OK) {
         return status;
     }
@@ -140,69 +108,43 @@ zx_status_t FsManager::Initialize() {
     }
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         fbl::StringPiece pathout;
-        status = root_vfs_.Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]),
-                                &pathout,
-                                ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE,
-                                S_IFDIR);
+        status = root_vfs_->Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]),
+                                 &pathout,
+                                 ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE,
+                                 S_IFDIR);
         if (status != ZX_OK) {
             return status;
         }
     }
 
     global_loop_->StartThread("root-dispatcher");
-    root_vfs_.SetDispatcher(global_loop_->dispatcher());
-    system_vfs_.SetDispatcher(global_loop_->dispatcher());
+    root_vfs_->SetDispatcher(global_loop_->dispatcher());
     return ZX_OK;
 }
 
 zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         if (!strcmp(path, kMountPoints[n])) {
-            return root_vfs_.InstallRemote(mount_nodes[n], fs::MountChannel(std::move(h)));
+            return root_vfs_->InstallRemote(mount_nodes[n], fs::MountChannel(std::move(h)));
         }
     }
     return ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t FsManager::ServeRoot(zx::channel server) {
-    return ServeVnode(global_root_, std::move(server));
+    return root_vfs_->ServeDirectory(global_root_, std::move(server), ZX_FS_RIGHTS);
 }
 
 void FsManager::WatchExit() {
     global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
-        root_vfs_.UninstallAll(ZX_TIME_INFINITE);
-        system_vfs_.UninstallAll(ZX_TIME_INFINITE);
+        root_vfs_->UninstallAll(ZX_TIME_INFINITE);
         event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
     });
 
     global_shutdown_.set_object(event_.get());
     global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
     global_shutdown_.Begin(global_loop_->dispatcher());
-}
-
-zx_status_t FsManager::ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server,
-                                  uint32_t rights) {
-    return vn->vfs()->ServeDirectory(vn, std::move(server), rights);
-}
-
-zx_status_t FsManager::LocalMountReadOnly(memfs::VnodeDir* parent, const char* name,
-                                          fbl::RefPtr<memfs::VnodeDir>& subtree) {
-    fbl::RefPtr<fs::Vnode> vn;
-    zx_status_t status = parent->Lookup(&vn, fbl::StringPiece(name));
-    if (status != ZX_OK) {
-        return status;
-    }
-    zx::channel client, server;
-    status = zx::channel::create(0, &client, &server);
-    if (status != ZX_OK) {
-        return ZX_OK;
-    }
-    uint32_t rights = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN;
-    if ((status = ServeVnode(subtree, std::move(server), rights)) != ZX_OK) {
-        return status;
-    }
-    return parent->vfs()->InstallRemote(std::move(vn), fs::MountChannel(std::move(client)));
 }
 
 } // namespace devmgr
