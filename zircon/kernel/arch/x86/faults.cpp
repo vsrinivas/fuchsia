@@ -316,15 +316,6 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static void x86_iframe_process_pending_signals(x86_iframe_t* frame) {
-    thread_t* thread = get_current_thread();
-    if (unlikely(thread_is_signaled(thread))) {
-        x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
-        thread_process_pending_signals();
-        x86_reset_suspended_general_regs(&thread->arch);
-    }
-}
-
 static void handle_exception_types(x86_iframe_t* frame) {
     switch (frame->vector) {
     case X86_INT_DEBUG:
@@ -469,7 +460,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
         /* in the case of receiving a kill signal, this function may not return,
          * but the scheduler would have been invoked so it's fine.
          */
-        x86_iframe_process_pending_signals(frame);
+        arch_iframe_process_pending_signals(frame);
     }
 
     if (do_preempt)
@@ -485,6 +476,16 @@ void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs) {
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_SYSCALL, gregs);
     thread_process_pending_signals();
     x86_reset_suspended_general_regs(&thread->arch);
+}
+
+void arch_iframe_process_pending_signals(iframe_t* iframe) {
+    DEBUG_ASSERT(iframe != nullptr);
+    thread_t* thread = get_current_thread();
+    if (unlikely(thread_is_signaled(thread))) {
+        x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, iframe);
+        thread_process_pending_signals();
+        x86_reset_suspended_general_regs(&thread->arch);
+    }
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
@@ -533,3 +534,4 @@ void arch_install_context_regs(thread_t* thread, const arch_exception_context_t*
 void arch_remove_context_regs(thread_t* thread) {
     x86_reset_suspended_general_regs(&thread->arch);
 }
+

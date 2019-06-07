@@ -346,6 +346,9 @@ static inline bool thread_is_signaled(thread_t* t) {
     return t->signals != 0;
 }
 
+// Call the arch-specific signal handler.
+void arch_iframe_process_pending_signals(iframe_t* iframe);
+
 // process pending signals, may never return because of kill signal
 void thread_process_pending_signals(void);
 void dump_thread_locked(thread_t* t, bool full) TA_REQ(thread_lock);

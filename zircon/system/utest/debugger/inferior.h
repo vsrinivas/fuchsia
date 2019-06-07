@@ -13,9 +13,14 @@ constexpr char kTestSwbreakChildName[] = "swbreak";
 
 constexpr char kTestInferiorChildName[] = "inferior";
 
+// Test that the current suspension state is being preserved when a call is
+// made while the thread is in an starting exception.
+constexpr char kTestSuspendOnStart[] = "suspend-on-start";
+
 // The value returned by |test_inferior()|.
 constexpr int kInferiorReturnCode = 1234;
 
 int test_segfault();
 int test_sw_break();
 int test_inferior();
+int test_suspend_on_start();

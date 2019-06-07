@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-#include <string.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <lib/backtrace-request/backtrace-request.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/port.h>
-#include <zircon/status.h>
 #include <runtime/thread.h>
+#include <stdlib.h>
+#include <string.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/port.h>
 
 #define TU_FAIL_ERRCODE 10
 
@@ -417,4 +418,33 @@ int tu_run_command(const char* progname, const char* cmd)
     };
 
     return tu_run_program(progname, countof(argv), argv);
+}
+
+const char* tu_exception_to_string(uint32_t exception) {
+    switch (exception) {
+    case ZX_EXCP_GENERAL:
+        return "ZX_EXCP_GENERAL";
+    case ZX_EXCP_FATAL_PAGE_FAULT:
+        return "ZX_EXCP_FATAL_PAGE_FAULT";
+    case ZX_EXCP_UNDEFINED_INSTRUCTION:
+        return "ZX_EXCP_UNDEFINED_INSTRUCTION";
+    case ZX_EXCP_SW_BREAKPOINT:
+        return "ZX_EXCP_SW_BREAKPOINT";
+    case ZX_EXCP_HW_BREAKPOINT:
+        return "ZX_EXCP_HW_BREAKPOINT";
+    case ZX_EXCP_UNALIGNED_ACCESS:
+        return "ZX_EXCP_UNALIGNED_ACCESS";
+    case ZX_EXCP_THREAD_STARTING:
+        return "ZX_EXCP_THREAD_STARTING";
+    case ZX_EXCP_THREAD_EXITING:
+        return "ZX_EXCP_THREAD_EXITING";
+    case ZX_EXCP_POLICY_ERROR:
+        return "ZX_EXCP_POLICY_ERROR";
+    case ZX_EXCP_PROCESS_STARTING:
+        return "ZX_EXCP_PROCESS_STARTING";
+    default:
+        break;
+    }
+
+    return "<unknown>";
 }

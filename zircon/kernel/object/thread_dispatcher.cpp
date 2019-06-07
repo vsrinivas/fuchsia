@@ -528,7 +528,7 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     t->HandleSingleShotException(t->process_->exceptionate(Exceptionate::Type::kDebug),
                                  ZX_EXCP_THREAD_STARTING, context);
 
-    thread_process_pending_signals();
+    arch_iframe_process_pending_signals(&iframe);
 
     // switch to user mode and start the process
     arch_enter_uspace(&iframe);

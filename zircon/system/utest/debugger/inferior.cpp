@@ -18,6 +18,7 @@
 #include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
@@ -181,3 +182,88 @@ int test_inferior() {
     // This value is explicitly tested for.
     return kInferiorReturnCode;
 }
+
+// Suspend On Start ------------------------------------------------------------
+
+struct suspend_test_state_t {
+  std::atomic<bool> running = true;
+};
+
+static int suspend_on_start_thread_function(void* user) {
+  auto* test_state = reinterpret_cast<suspend_test_state_t*>(user);
+  while (test_state->running) {
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  }
+
+  return 0;
+}
+
+int test_suspend_on_start() {
+    BEGIN_HELPER;
+
+    unittest_printf("Starting second thread.\n");
+
+    suspend_test_state_t test_state = {};
+    test_state.running = true;
+
+    thrd_t thread;
+    thrd_create(&thread, suspend_on_start_thread_function, &test_state);
+    zx_handle_t thread_handle = 0;
+    thread_handle = thrd_get_zx_handle(thread);
+
+    unittest_printf("Suspending second thread.\n");
+
+    zx_status_t status;
+    zx_handle_t suspend_token;
+    status = zx_task_suspend(thread_handle, &suspend_token);
+    if (status != ZX_OK) {
+        unittest_printf("Watchpoint: Could not suspend thread: %s\n",
+                        zx_status_get_string(status));
+        exit(20);
+    }
+
+    // Verify that the thread is suspended.
+
+    zx_signals_t observed;
+    status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED,
+                                zx_deadline_after(ZX_TIME_INFINITE), &observed);
+    if (status != ZX_OK) {
+        unittest_printf("Watchpoint: Could not get suspended signal: %s\n",
+                        zx_status_get_string(status));
+        exit(20);
+    }
+    ASSERT_TRUE((observed & ZX_THREAD_SUSPENDED) != 0);
+
+    // Verify that the thread is suspended.
+    zx_info_thread thread_info;
+    status = zx_object_get_info(thread_handle, ZX_INFO_THREAD, &thread_info, sizeof(thread_info),
+                                nullptr, nullptr);
+    ASSERT_TRUE(status == ZX_OK);
+    ASSERT_TRUE(thread_info.state == ZX_THREAD_STATE_SUSPENDED);
+
+    unittest_printf("Obtaining general regs.\n");
+
+    // We should be able to read regs.
+    zx_thread_state_general_regs_t gregs;
+    status = zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS,
+                                  &gregs, sizeof(gregs));
+    if (status != ZX_OK) {
+        unittest_printf("Could not obtain general registers: %s\n", zx_status_get_string(status));
+        exit(20);
+    }
+
+    unittest_printf("Successfully got registers. Test successful.\n");
+
+    // Resume the second thread.
+    test_state.running = false;
+    zx_handle_close(suspend_token);
+
+    int res = 1;
+    thrd_join(thread, &res);
+    ASSERT_TRUE(res == 0);
+
+    return kInferiorReturnCode;
+
+    END_HELPER;
+}
+

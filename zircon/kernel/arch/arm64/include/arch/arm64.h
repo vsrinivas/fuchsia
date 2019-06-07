@@ -93,7 +93,6 @@ arm64_context_switch_frame* arm64_get_context_switch_frame(struct thread* thread
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
 void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr);
-void arm64_thread_process_pending_signals(arm64_iframe_t* iframe);
 
 void platform_irq(iframe_short_t* frame);
 void platform_fiq(iframe_short_t* frame);

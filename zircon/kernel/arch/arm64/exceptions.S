@@ -467,7 +467,7 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     // Check for pending signals. If none, just return.
     cbz  x1, arm64_exc_shared_restore_long
     mov  x0, sp
-    bl   arm64_thread_process_pending_signals
+    bl   arch_iframe_process_pending_signals
     b    arm64_exc_shared_restore_long
 END_FUNCTION(arm64_syscall_dispatcher)
 

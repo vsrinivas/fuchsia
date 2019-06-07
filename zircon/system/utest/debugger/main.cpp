@@ -27,14 +27,22 @@ int main(int argc, char** argv) {
     g_program_path = argv[0];
     scan_argv(argc, argv);
 
-    if (argc >= 2 && strcmp(argv[1], kTestInferiorChildName) == 0) {
-        return test_inferior();
-    }
-    if (argc >= 2 && strcmp(argv[1], kTestSegfaultChildName) == 0) {
-        return test_segfault();
-    }
-    if (argc >= 2 && strcmp(argv[1], kTestSwbreakChildName) == 0) {
-        return test_sw_break();
+    if (argc >= 2) {
+        if (strcmp(argv[1], kTestInferiorChildName) == 0) {
+            return test_inferior();
+        }
+
+        if (strcmp(argv[1], kTestSegfaultChildName) == 0) {
+            return test_segfault();
+        }
+
+        if (strcmp(argv[1], kTestSwbreakChildName) == 0) {
+            return test_sw_break();
+        }
+
+        if (strcmp(argv[1], kTestSuspendOnStart) == 0) {
+            return test_suspend_on_start();
+        }
     }
 
     bool success = unittest_run_all_tests(argc, argv);

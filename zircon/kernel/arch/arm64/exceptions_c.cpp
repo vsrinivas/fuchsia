@@ -331,7 +331,7 @@ extern "C" void arm64_sync_exception(
         /* in the case of receiving a kill signal, this function may not return,
          * but the scheduler would have been invoked so it's fine.
          */
-        arm64_thread_process_pending_signals(iframe);
+        arch_iframe_process_pending_signals(iframe);
     }
 
     /* if we're returning to kernel space, make sure we restore the correct x18 */
@@ -389,7 +389,7 @@ extern "C" void arm64_finish_user_irq(uint32_t exit_flags, arm64_iframe_t* ifram
      */
     if (unlikely(exit_flags & ARM64_IRQ_EXIT_THREAD_SIGNALED)) {
         DEBUG_ASSERT(iframe != nullptr);
-        arm64_thread_process_pending_signals(iframe);
+        arch_iframe_process_pending_signals(iframe);
     }
 
     /* preempt the thread if the interrupt has signaled it */
@@ -409,14 +409,16 @@ extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int whi
 }
 
 /* called from assembly */
-extern "C" void arm64_thread_process_pending_signals(arm64_iframe_t* iframe) {
-    thread_t* thread = get_current_thread();
+extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe) {
     DEBUG_ASSERT(iframe != nullptr);
-    DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
+    thread_t* thread = get_current_thread();
+    if (unlikely(thread_is_signaled(thread))) {
+        DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
 
-    thread->arch.suspended_general_regs = iframe;
-    thread_process_pending_signals();
-    thread->arch.suspended_general_regs = nullptr;
+        thread->arch.suspended_general_regs = iframe;
+        thread_process_pending_signals();
+        thread->arch.suspended_general_regs = nullptr;
+    }
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {

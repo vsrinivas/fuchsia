@@ -196,4 +196,6 @@ int tu_run_command(const char* progname, const char* cmd);
 
 int tu_set_timeout_scale(int scale);
 
+const char* tu_exception_to_string(uint32_t exception);
+
 __END_CDECLS
