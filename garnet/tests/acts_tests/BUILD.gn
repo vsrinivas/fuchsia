@@ -18,7 +18,7 @@ specs = [
     tags = [ "acts-connectivity-wifi" ]
     testbed = "wifi_rf_chamber_nuc"
     tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABG WlanPhyCompliance11NTest"
-    timeout_minutes = 360
+    timeout_minutes = 1070  # 18 hours less 10 minutes for output processing in Dart script
   },
 ]
 
