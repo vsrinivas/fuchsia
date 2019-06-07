@@ -29,6 +29,9 @@ group("end_to_end_deps") {
     # SL4F to translate JSON-RPC to calls.
     "//garnet/packages/tools:sl4f",
 
+    # Needed for performance testing.
+    "//garnet/packages/prod:tracing",
+
     # Needed for file exist verification.
     "//third_party/sbase:ls",
   ]
