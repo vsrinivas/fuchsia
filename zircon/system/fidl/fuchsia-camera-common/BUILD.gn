@@ -8,6 +8,7 @@ fidl_library("fuchsia-camera-common") {
   sdk = true
   sources = [
     "common.fidl",
+    "virtual.fidl",
   ]
 
   public_deps = [

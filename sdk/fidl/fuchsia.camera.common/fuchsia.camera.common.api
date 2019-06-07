@@ -1,3 +1,4 @@
 {
-  "fidl/fuchsia.camera.common/common.fidl": "8e6cdf28de214cae6dfac08c81cf08b4"
+  "fidl/fuchsia.camera.common/common.fidl": "e742c3492aa53e6dd36f1875e7ff1df7",
+  "fidl/fuchsia.camera.common/virtual.fidl": "7220a753e7614bf20f9cca9b0b222e51"
 }

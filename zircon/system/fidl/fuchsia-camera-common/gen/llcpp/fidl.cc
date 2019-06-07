@@ -269,6 +269,127 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 }
 
 
+auto ::fuchsia::camera::common::VirtualStreamConfig::which() const -> Tag {
+  switch (ordinal_) {
+  case Tag::kArtificialConfig:
+  case Tag::kRealWorldConfig:
+    return ordinal_;
+  default:
+    return Tag::kUnknown;
+  }
+}
+
+void ::fuchsia::camera::common::VirtualStreamConfig::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(VirtualStreamConfig) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(VirtualStreamConfig, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(VirtualStreamConfig, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint32_t kVirtualCameraFactory_CreateDevice_Ordinal = 2009870148u;
+extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDeviceRequestTable;
+
+}  // namespace
+
+zx_status_t VirtualCameraFactory::SyncClient::CreateDevice(VirtualCameraConfig config) {
+  return VirtualCameraFactory::Call::CreateDevice(zx::unowned_channel(this->channel_), std::move(config));
+}
+
+zx_status_t VirtualCameraFactory::Call::CreateDevice(zx::unowned_channel _client_end, VirtualCameraConfig config) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateDeviceRequest>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  CreateDeviceRequest _request = {};
+  _request._hdr.ordinal = kVirtualCameraFactory_CreateDevice_Ordinal;
+  _request.config = std::move(config);
+  auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
+                                                                         _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    return _linearize_result.status;
+  }
+  ::fidl::DecodedMessage<CreateDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+zx_status_t VirtualCameraFactory::SyncClient::CreateDevice(::fidl::BytePart _request_buffer, VirtualCameraConfig config) {
+  return VirtualCameraFactory::Call::CreateDevice(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config));
+}
+
+zx_status_t VirtualCameraFactory::Call::CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, VirtualCameraConfig config) {
+  if (_request_buffer.capacity() < CreateDeviceRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  CreateDeviceRequest _request = {};
+  _request._hdr.ordinal = kVirtualCameraFactory_CreateDevice_Ordinal;
+  _request.config = std::move(config);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    return _linearize_result.status;
+  }
+  ::fidl::DecodedMessage<CreateDeviceRequest> _decoded_request = std::move(_linearize_result.message);
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+zx_status_t VirtualCameraFactory::SyncClient::CreateDevice(::fidl::DecodedMessage<CreateDeviceRequest> params) {
+  return VirtualCameraFactory::Call::CreateDevice(zx::unowned_channel(this->channel_), std::move(params));
+}
+
+zx_status_t VirtualCameraFactory::Call::CreateDevice(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceRequest> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kVirtualCameraFactory_CreateDevice_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+}
+
+
+bool VirtualCameraFactory::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kVirtualCameraFactory_CreateDevice_Ordinal: {
+      auto result = ::fidl::DecodeAs<CreateDeviceRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->CreateDevice(std::move(message->config),
+        Interface::CreateDeviceCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool VirtualCameraFactory::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
 }  // namespace common
 }  // namespace camera
 }  // namespace fuchsia
