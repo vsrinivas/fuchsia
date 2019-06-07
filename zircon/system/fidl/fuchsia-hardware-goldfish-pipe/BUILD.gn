@@ -5,6 +5,7 @@
 import("$zx/public/gn/fidl.gni")
 
 fidl_library("fuchsia-hardware-goldfish-pipe") {
+  sdk = true
   sources = [
     "goldfish-pipe.fidl",
   ]

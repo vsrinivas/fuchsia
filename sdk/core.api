@@ -19,6 +19,9 @@ sdk://fidl/fuchsia.developer.tiles
 sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
 sdk://fidl/fuchsia.hardware.ethernet
+sdk://fidl/fuchsia.hardware.goldfish.address.space
+sdk://fidl/fuchsia.hardware.goldfish.control
+sdk://fidl/fuchsia.hardware.goldfish.pipe
 sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
