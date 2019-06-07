@@ -104,7 +104,8 @@ public:
     Promise<void> DoOpen(const std::string& path, fidl::InterfacePtr<fuchsia::io::Node>* client);
 
     // Waits for the given |path| relative to devfs to be available.  Currently
-    // waiting for paths below subdirectories is not supported.
+    // waiting for paths in which non-terminal directories don't yet exist is
+    // not supported.
     Promise<void> DoWaitForPath(const std::string& path);
 
     // Joins two promises and collapses the results such that if either failed
