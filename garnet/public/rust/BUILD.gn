@@ -7,21 +7,21 @@ import("//build/testing/environments.gni")
 
 unittest_package("rust-crates-tests") {
   deps = [
-    "fuchsia-archive",
+    "fuchsia-archive:fuchsia-archive_test",
     "fuchsia-component:fuchsia-component-blackbox-unit-tests",
-    "fuchsia-cprng",
+    "fuchsia-cprng:fuchsia-cprng_test",
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
-    "fuchsia-inspect",
-    "fuchsia-inspect-contrib",
-    "fuchsia-merkle",
-    "fuchsia-trace",
-    "fuchsia-vfs/pseudo-fs",
-    "mapped-vmo",
-    "mundane",
-    "packet",
-    "shared-buffer",
-    "zerocopy",
+    "fuchsia-inspect:fuchsia-inspect_test",
+    "fuchsia-inspect-contrib:fuchsia-inspect-contrib_test",
+    "fuchsia-merkle:fuchsia-merkle_test",
+    "fuchsia-trace:fuchsia-trace_test",
+    "fuchsia-vfs/pseudo-fs:pseudo-fs_test",
+    "mapped-vmo:mapped-vmo_test",
+    "mundane:mundane_test",
+    "packet:packet_test",
+    "shared-buffer:shared-buffer_test",
+    "zerocopy:zerocopy_test",
   ]
 
   tests = [
@@ -30,7 +30,7 @@ unittest_package("rust-crates-tests") {
       environments = basic_envs
     },
     {
-      name = "fuchsia_component_blackbox_unit_tests_lib_test"
+      name = "fuchsia_component_blackbox_unit_tests"
       environments = basic_envs
     },
     {

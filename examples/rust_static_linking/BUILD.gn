@@ -21,7 +21,7 @@ static_library("static") {
 
 unittest_package("static_linking_tests") {
   deps = [
-    ":static_linking",
+    ":static_linking_test",
   ]
   tests = [
     {

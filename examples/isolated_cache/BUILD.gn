@@ -54,7 +54,7 @@ package("isolated_cache_example") {
 
 test_package("isolated_cache_example_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
   tests = [
     {

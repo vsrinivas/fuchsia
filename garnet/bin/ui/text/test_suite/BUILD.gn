@@ -48,7 +48,7 @@ package("text_test_suite") {
 
 test_package("text_test_suite_tests") {
   deps = [
-    ":test_suite",
+    ":test_suite_test",
   ]
 
   tests = [

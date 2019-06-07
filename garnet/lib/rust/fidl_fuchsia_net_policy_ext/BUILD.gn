@@ -20,7 +20,7 @@ rustc_library("fidl_fuchsia_net_policy_ext") {
 
 unittest_package("fidl_fuchsia_net_policy_ext_tests") {
   deps = [
-    ":fidl_fuchsia_net_policy_ext",
+    ":fidl_fuchsia_net_policy_ext_test",
   ]
   tests = [
     {

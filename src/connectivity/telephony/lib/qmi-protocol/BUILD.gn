@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
 # Generate the rust sources using the gen.
 compiled_action("gen_qmi_protocol_source") {
@@ -67,10 +68,8 @@ if (host_toolchain == current_toolchain) {
     ]
   }
 
-  rustc_library("qmigen_unittests") {
+  rustc_test("qmigen_unittests") {
     edition = "2018"
-    with_unit_tests = true
-    testonly = true
 
     deps = [
       ":qmigen",

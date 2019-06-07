@@ -49,7 +49,7 @@ unittest_package("ril-qmi-tests") {
   package_name = "ril-qmi-tests"
 
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

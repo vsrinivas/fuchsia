@@ -32,7 +32,7 @@ test_package("tests") {
   package_name = "fdio_rust_tests"
 
   deps = [
-    ":fdio",
+    ":fdio_test",
     ":spawn_test_target_bin",
   ]
 

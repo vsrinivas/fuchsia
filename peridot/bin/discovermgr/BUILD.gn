@@ -55,7 +55,7 @@ package("discovermgr") {
 
 test_package("discovermgr_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   resources = [

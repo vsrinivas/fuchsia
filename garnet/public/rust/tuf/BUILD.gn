@@ -35,7 +35,7 @@ rustc_library("tuf") {
 
 test_package("tuf-tests") {
   deps = [
-    ":tuf",
+    ":tuf_test",
   ]
 
   tests = [

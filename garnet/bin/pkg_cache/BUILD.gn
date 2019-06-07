@@ -48,7 +48,7 @@ package("pkg_cache") {
 
 test_package("pkg_cache_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

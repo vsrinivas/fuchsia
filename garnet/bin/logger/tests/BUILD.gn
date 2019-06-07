@@ -19,7 +19,7 @@ test_package("logger_integration_tests") {
   deps = [
     "cpp:logger_integration_cpp_tests",
     "go/src:logger_integration_go_tests",
-    "rust:bin",
+    "rust:bin_test",
   ]
 
   tests = [

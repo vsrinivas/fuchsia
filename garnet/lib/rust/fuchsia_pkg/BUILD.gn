@@ -31,7 +31,7 @@ rustc_library("fuchsia_pkg") {
 
 test_package("fuchsia_pkg_tests") {
   deps = [
-    ":fuchsia_pkg",
+    ":fuchsia_pkg_test",
   ]
 
   tests = [

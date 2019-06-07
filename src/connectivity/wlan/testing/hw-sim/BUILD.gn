@@ -54,7 +54,7 @@ package("wlan-hw-sim") {
 
 test_package("wlan-hw-sim-tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

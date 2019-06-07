@@ -100,8 +100,8 @@ rustc_test("font_provider_test") {
 
 test_package("font_provider_tests") {
   deps = [
-    ":font_provider_test",
-    ":font_server",
+    ":font_provider_test_test",
+    ":font_server_test",
   ]
 
   tests = [

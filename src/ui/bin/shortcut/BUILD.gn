@@ -57,7 +57,7 @@ package("shortcut") {
 
 test_package("shortcut_test") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

@@ -54,9 +54,9 @@ package("netstack3") {
 
 test_package("netstack3_tests") {
   deps = [
-    ":bin",
-    "core:netstack3-core",
-    "core/specialize-ip-macro/test:lib",
+    ":bin_test",
+    "core:netstack3-core_test",
+    "core/specialize-ip-macro/test:lib_test",
   ]
   tests = [
     {

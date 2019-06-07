@@ -21,7 +21,7 @@ rustc_library("char_collection") {
 
 test_package("char_collection_tests") {
   deps = [
-    ":char_collection",
+    ":char_collection_test",
   ]
 
   tests = [

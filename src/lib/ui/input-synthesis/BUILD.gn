@@ -21,7 +21,7 @@ rustc_library("input-synthesis") {
 package("input-synthesis-tests") {
   testonly = true
   deps = [
-    ":input-synthesis",
+    ":input-synthesis_test",
   ]
   tests = [
     {

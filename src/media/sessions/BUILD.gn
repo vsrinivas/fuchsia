@@ -65,7 +65,7 @@ rustc_binary("bin") {
 
 test_package("mediasession_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

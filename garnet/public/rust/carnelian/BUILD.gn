@@ -332,7 +332,7 @@ package("drawing_rs") {
 
 unittest_package("carnelian_tests") {
   deps = [
-    ":carnelian",
+    ":carnelian_test",
   ]
 
   tests = [

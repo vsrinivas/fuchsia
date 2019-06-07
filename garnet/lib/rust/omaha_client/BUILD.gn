@@ -29,7 +29,7 @@ rustc_library("omaha_client") {
 
 test_package("omaha_client_lib_tests") {
   deps = [
-    ":omaha_client",
+    ":omaha_client_test",
   ]
 
   tests = [

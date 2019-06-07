@@ -33,7 +33,7 @@ fidl("fidl.rust.test.compilation") {
 
 test_package("rust_fidl_tests") {
   deps = [
-    ":fidl",
+    ":fidl_test",
     ":fidl.rust.test.compilation-rustc",
     "//garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests",
   ]

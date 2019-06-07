@@ -55,7 +55,7 @@ package("kms") {
 
 test_package("kms_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
   tests = [
     {

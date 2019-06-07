@@ -50,10 +50,10 @@ test_package("netemul_sandbox_test") {
     "inheritance",
     "netstack_intermediary",
     "netstack_socks",
-    "sandbox_service",
+    "sandbox_service:sandbox_service_test",
     "svc_list",
     "//src/connectivity/network/testing/netemul/runner:sandbox_unittest",
-    "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings",
+    "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test",
     "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
   ]
 

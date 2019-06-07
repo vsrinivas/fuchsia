@@ -64,7 +64,7 @@ package("voila") {
 
 test_package("voila_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
     "//peridot/bin/voila/testing/session_shell",
   ]
   tests = [

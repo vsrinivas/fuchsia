@@ -22,7 +22,7 @@ rustc_library("fuchsia-syslog") {
 
 test_package("fuchsia-syslog-tests") {
   deps = [
-    ":fuchsia-syslog",
+    ":fuchsia-syslog_test",
   ]
 
   tests = [

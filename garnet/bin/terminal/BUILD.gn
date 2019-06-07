@@ -61,7 +61,7 @@ config_data("tiles_with_terminal_config") {
 
 test_package("terminal_tests") {
   deps = [
-    "third_party/term-model",
+    "third_party/term-model:term-model_test",
   ]
   tests = [
     {

@@ -491,8 +491,6 @@ template("rustc_artifact") {
 
   if (with_unit_tests) {
     action(build_test_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
       script = rustc_target_script
       pool = rustc_target_pool
 
@@ -510,7 +508,7 @@ template("rustc_artifact") {
         test_output_file,
       ]
 
-      # TODO(tmandry): Add `testonly = true` here once tests only depend on the test group.
+      testonly = true
       depfile = test_depfile
       deps = rustc_target_deps
       if (is_linux || is_mac) {
@@ -627,8 +625,7 @@ template("rustc_artifact") {
     test_output_path = "${root_out_dir}/${test_filename}"
 
     copy_with_build_id(strip_test_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
+      testonly = true
       deps = [
         ":${build_test_target_name}",
       ]
@@ -704,12 +701,13 @@ template("rustc_artifact") {
   if (with_unit_tests) {
     test_target_name = "${target_name}_test"
     group(test_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      testonly = true
       public_deps = test_group_deps
     }
 
-    # TODO(tmandry): Remove this once we have everyone depending on the right group.
-    group_deps += [ ":${test_target_name}" ]
+    if (only_unit_tests) {
+      group_deps += [ ":${test_target_name}" ]
+    }
   }
 
   group(target_name) {

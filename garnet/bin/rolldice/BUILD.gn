@@ -49,7 +49,7 @@ package("rolldice") {
 
 unittest_package("rolldice-tests") {
   deps = [
-    ":lib",
+    ":lib_test",
   ]
 
   tests = [

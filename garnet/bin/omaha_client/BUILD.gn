@@ -57,7 +57,7 @@ package("omaha_client") {
 
 test_package("omaha_client_service_bin_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

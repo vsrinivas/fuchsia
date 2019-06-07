@@ -61,7 +61,7 @@ package("pkg_resolver") {
 
 test_package("pkg_resolver_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

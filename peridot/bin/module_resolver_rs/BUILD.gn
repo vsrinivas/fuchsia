@@ -39,7 +39,7 @@ package("module_resolver_rs") {
 
 unittest_package("module_resolver_rs_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

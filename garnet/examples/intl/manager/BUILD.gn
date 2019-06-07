@@ -49,7 +49,7 @@ package("intl_property_manager") {
 
 test_package("intl_property_manager_tests") {
   deps = [
-    ":intl_property_manager_bin",
+    ":intl_property_manager_bin_test",
   ]
 
   tests = [

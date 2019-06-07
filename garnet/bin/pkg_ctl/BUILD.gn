@@ -53,7 +53,7 @@ package("pkg_ctl") {
 
 test_package("pkg_ctl_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

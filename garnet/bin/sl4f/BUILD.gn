@@ -80,7 +80,7 @@ package("sl4f") {
 
 unittest_package("sl4f-tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

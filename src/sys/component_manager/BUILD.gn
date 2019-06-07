@@ -97,7 +97,7 @@ package("component_manager") {
 
 test_package("component_manager_tests") {
   deps = [
-    ":lib",
+    ":lib_test",
     "//examples/components/basic:hello_world_bin",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",

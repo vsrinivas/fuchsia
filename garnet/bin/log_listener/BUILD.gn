@@ -73,7 +73,7 @@ package("log_listener") {
 
 test_package("log_listener_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

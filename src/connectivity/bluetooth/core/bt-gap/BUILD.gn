@@ -59,7 +59,7 @@ test_package("tests") {
   package_name = "bt-gap-tests"
 
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

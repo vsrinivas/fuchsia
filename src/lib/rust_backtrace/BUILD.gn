@@ -20,7 +20,7 @@ package("rust_backtrace_tests") {
   testonly = true
 
   deps = [
-    ":rust_backtrace",
+    ":rust_backtrace_test",
   ]
 
   tests = [

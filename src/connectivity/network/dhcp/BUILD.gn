@@ -24,7 +24,7 @@ rustc_library("dhcp") {
 
 unittest_package("dhcp_tests") {
   deps = [
-    ":dhcp",
+    ":dhcp_test",
   ]
   tests = [
     {

@@ -28,7 +28,7 @@ test_package("tests") {
   package_name = "bt-avctp-tests"
 
   deps = [
-    ":bt-avctp",
+    ":bt-avctp_test",
   ]
 
   tests = [

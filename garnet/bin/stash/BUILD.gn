@@ -55,7 +55,7 @@ package("stash") {
 
 test_package("stash_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

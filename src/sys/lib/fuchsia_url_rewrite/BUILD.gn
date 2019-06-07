@@ -25,7 +25,7 @@ rustc_library("fuchsia_url_rewrite") {
 
 test_package("fuchsia_url_rewrite_tests") {
   deps = [
-    ":fuchsia_url_rewrite",
+    ":fuchsia_url_rewrite_test",
   ]
 
   tests = [

@@ -42,7 +42,7 @@ rustc_library("stream_processor_test_lib") {
 
 test_package("stream_processor_lib_test") {
   deps = [
-    ":stream_processor_test_lib",
+    ":stream_processor_test_lib_test",
   ]
 
   tests = [
@@ -87,12 +87,10 @@ rustc_library("stream_processor_encoder_factory_lib") {
   ]
 }
 
-rustc_library("audio_encoder_test_lib") {
+rustc_test("audio_encoder_test_bin") {
   name = "audio_encoder_test"
   edition = "2018"
   source_root = "audio_encoder_test/lib.rs"
-  testonly = true
-  with_unit_tests = true
 
   deps = [
     ":stream_processor_encoder_factory_lib",
@@ -110,18 +108,19 @@ rustc_library("audio_encoder_test_lib") {
 
 test_package("audio_encoder_test") {
   deps = [
-    ":audio_encoder_test_lib",
+    ":audio_encoder_test_bin",
   ]
 
   tests = [
     {
-      name = "audio_encoder_test_lib_test"
+      name = "audio_encoder_test"
       environments = basic_envs
     },
   ]
 }
 
 rustc_test("h264_decoder_test_bin") {
+  name = "h264_decoder_test"
   edition = "2018"
   source_root = "h264_decoder_test/lib.rs"
 
@@ -146,7 +145,7 @@ test_package("h264_decoder_test") {
 
   tests = [
     {
-      name = "h264_decoder_test_bin"
+      name = "h264_decoder_test"
       environments = basic_envs
     },
   ]

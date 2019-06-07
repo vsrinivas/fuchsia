@@ -22,7 +22,7 @@ rustc_library("io_util") {
 
 test_package("io_util_tests") {
   deps = [
-    ":io_util",
+    ":io_util_test",
   ]
 
   tests = [

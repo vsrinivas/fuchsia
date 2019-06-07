@@ -65,7 +65,7 @@ package("vsock_service") {
 
 test_package("vsock_service-tests") {
   deps = [
-    ":lib",
+    ":lib_test",
   ]
 
   tests = [

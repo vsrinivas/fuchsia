@@ -29,7 +29,7 @@ rustc_library("connectivity-testing") {
 
 unittest_package("connectivity-testing-tests") {
   deps = [
-    ":connectivity-testing",
+    ":connectivity-testing_test",
   ]
   tests = [
     {

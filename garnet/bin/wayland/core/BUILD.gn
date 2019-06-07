@@ -22,7 +22,8 @@ rustc_library("core") {
 }
 
 group("tests") {
+  testonly = true
   public_deps = [
-    ":core",
+    ":core_test",
   ]
 }

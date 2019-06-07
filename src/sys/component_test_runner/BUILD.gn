@@ -50,7 +50,7 @@ package("component_test_runner") {
 
 test_package("component_test_runner_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

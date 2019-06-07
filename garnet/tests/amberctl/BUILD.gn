@@ -3,14 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("driver") {
-  name = "amberctl-tests"
+rustc_test("driver") {
+  name = "amberctl-test"
   edition = "2018"
-  with_unit_tests = true
 
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_amber_ext",
@@ -87,7 +86,7 @@ test_package("amberctl-tests") {
 
   tests = [
     {
-      name = "amberctl_tests_lib_test"
+      name = "amberctl_test"
       environments = basic_envs
     },
   ]

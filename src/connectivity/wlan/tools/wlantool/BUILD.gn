@@ -48,7 +48,7 @@ package("wlan") {
 
 test_package("wlan-tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

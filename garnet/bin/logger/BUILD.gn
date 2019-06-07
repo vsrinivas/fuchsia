@@ -48,7 +48,7 @@ package("logger") {
 
 test_package("logger_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

@@ -67,7 +67,7 @@ test_package("tests") {
   package_name = "bt-a2dp-sink-tests"
 
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

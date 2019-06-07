@@ -55,7 +55,7 @@ package("hello_world_rust") {
 
 test_package("hello_world_rust_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
   tests = [
     {

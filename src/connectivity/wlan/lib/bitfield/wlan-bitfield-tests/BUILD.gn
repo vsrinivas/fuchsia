@@ -19,7 +19,7 @@ rustc_library("wlan-bitfield-wrapper") {
 
 test_package("wlan-bitfield-tests") {
   deps = [
-    ":wlan-bitfield-wrapper",
+    ":wlan-bitfield-wrapper_test",
   ]
 
   tests = [

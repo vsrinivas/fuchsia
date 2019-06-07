@@ -73,7 +73,7 @@ package("system_recovery") {
 
 unittest_package("system_recovery_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

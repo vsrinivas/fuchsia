@@ -42,7 +42,7 @@ package("cloud_provider_memory_diff") {
 
 test_package("cloud_provider_memory_diff_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
     "validation",
   ]
 

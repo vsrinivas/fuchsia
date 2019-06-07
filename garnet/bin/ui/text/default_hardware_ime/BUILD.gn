@@ -57,7 +57,7 @@ test_package("default_hardware_ime_tests") {
   ]
 
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

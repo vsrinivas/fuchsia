@@ -19,7 +19,7 @@ rustc_library("ramdevice-client") {
 
 test_package("ramdevice-client-test") {
   deps = [
-    ":ramdevice-client",
+    ":ramdevice-client_test",
   ]
   tests = [
     {

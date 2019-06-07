@@ -54,7 +54,7 @@ package("device_settings_manager") {
 
 unittest_package("device_settings_manager_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

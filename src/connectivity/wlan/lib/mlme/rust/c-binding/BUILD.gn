@@ -30,7 +30,7 @@ rustc_staticlib("wlan-mlme-c") {
 
 unittest_package("wlan-mlme-c-tests") {
   deps = [
-    ":wlan-mlme-c",
+    ":wlan-mlme-c_test",
   ]
 
   tests = [

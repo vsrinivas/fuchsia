@@ -28,7 +28,7 @@ rustc_library("fuchsia-async") {
 
 test_package("fuchsia-async-tests") {
   deps = [
-    ":fuchsia-async",
+    ":fuchsia-async_test",
   ]
 
   tests = [

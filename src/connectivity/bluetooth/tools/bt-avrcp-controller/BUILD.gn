@@ -31,7 +31,7 @@ test_package("tests") {
   package_name = "bt-avrcp-controller-tests"
 
   deps = [
-    ":bt-avrcp-controller",
+    ":bt-avrcp-controller_test",
   ]
 
   tests = [

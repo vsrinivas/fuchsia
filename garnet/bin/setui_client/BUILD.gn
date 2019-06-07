@@ -46,7 +46,7 @@ package("setui_client") {
 
 unittest_package("setui_client_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

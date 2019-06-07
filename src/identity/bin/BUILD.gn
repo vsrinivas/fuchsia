@@ -21,12 +21,12 @@ group("tests") {
 
 test_package("identity_bin_unittests") {
   deps = [
-    "account_handler:bin",
-    "account_manager:bin",
-    "dev_auth_provider:bin",
-    "dev_auth_provider_iotid:bin",
+    "account_handler:bin_test",
+    "account_manager:bin_test",
+    "dev_auth_provider:bin_test",
+    "dev_auth_provider_iotid:bin_test",
     "google_auth_provider:google_auth_provider_unittests",
-    "google_auth_provider_rust:bin",
+    "google_auth_provider_rust:bin_test",
   ]
 
   tests = [

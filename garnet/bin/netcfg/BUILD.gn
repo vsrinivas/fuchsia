@@ -78,7 +78,7 @@ config_data("config") {
 
 test_package("netcfg_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
   tests = [
     {

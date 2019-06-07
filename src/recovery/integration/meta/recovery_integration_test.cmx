@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/recovery_integration_lib_test"
+        "binary": "test/recovery_integration_test"
     },
     "sandbox": {
         "services": [

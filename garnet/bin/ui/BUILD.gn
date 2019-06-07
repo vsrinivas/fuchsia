@@ -159,7 +159,7 @@ package("ime_service") {
 
 test_package("ime_service_tests") {
   deps = [
-    "ime",
+    "ime:ime_test",
     "//garnet/bin/ui/text/test_suite:test_suite",
   ]
 

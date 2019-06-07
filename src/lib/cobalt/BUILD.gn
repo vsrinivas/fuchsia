@@ -29,7 +29,7 @@ unittest_package("cobalt_lib_tests") {
   deps = [
     ":unittests",
     "//src/lib/cobalt/cpp:test_metrics_registry",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/cobalt/rust:fuchsia-cobalt_test",
   ]
 
   tests = [

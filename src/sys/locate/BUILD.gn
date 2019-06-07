@@ -45,7 +45,6 @@ package("locate") {
 
 rustc_binary("locate_integration_test_bin") {
   name = "locate_integration_test"
-  with_unit_tests = true
   edition = "2018"
   source_root = "src/locate_integration_test.rs"
   deps = [

@@ -37,7 +37,7 @@ test_package("tests") {
   package_name = "bluetooth-crate-tests"
 
   deps = [
-    ":fuchsia-bluetooth",
+    ":fuchsia-bluetooth_test",
   ]
 
   tests = [

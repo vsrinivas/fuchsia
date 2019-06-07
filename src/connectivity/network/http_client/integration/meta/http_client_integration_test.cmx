@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/http_client_integration_lib_test"
+        "binary": "test/http_client_integration_test"
     },
     "sandbox": {
         "services": [

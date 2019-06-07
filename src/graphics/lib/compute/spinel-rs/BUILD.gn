@@ -28,7 +28,7 @@ rustc_library("spinel-rs") {
 package("spinel-rs-tests") {
   testonly = true
   deps = [
-    ":spinel-rs",
+    ":spinel-rs_test",
   ]
   tests = [
     {

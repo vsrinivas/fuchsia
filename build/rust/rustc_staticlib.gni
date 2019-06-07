@@ -110,4 +110,14 @@ template("rustc_staticlib") {
       ":$rustc_target",
     ]
   }
+
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests) {
+    test_target_name = "${target_name}_test"
+    group(test_target_name) {
+      testonly = true
+      public_deps = [
+        ":${rustc_target}_test",
+      ]
+    }
+  }
 }

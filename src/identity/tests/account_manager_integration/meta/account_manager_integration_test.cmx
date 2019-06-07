@@ -1,14 +1,11 @@
 {
     "program": {
-        "binary": "test/amberctl_tests_lib_test"
+        "binary": "test/account_manager_integration_test"
     },
     "sandbox": {
-        "features": [
-            "system-temp"
-        ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"
         ]
     }

@@ -56,7 +56,7 @@ package("archivist") {
 
 test_package("archivist_tests") {
   deps = [
-    ":bin",
+    ":bin_test",
   ]
 
   tests = [

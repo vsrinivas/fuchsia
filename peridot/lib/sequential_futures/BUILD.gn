@@ -31,7 +31,8 @@ rustc_library("sequential_futures") {
 }
 
 group("tests") {
+  testonly = true
   public_deps = [
-    ":sequential_futures",
+    ":sequential_futures_test",
   ]
 }

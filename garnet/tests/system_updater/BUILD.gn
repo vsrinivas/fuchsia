@@ -3,14 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("driver") {
-  name = "system_updater_tests"
+rustc_test("driver") {
+  name = "system_updater_v2_test"
   edition = "2018"
-  with_unit_tests = true
 
   deps = [
     "//garnet/go/src/amber:cobalt_sw_delivery_registry_rustlib",
@@ -72,7 +71,7 @@ test_package("systemupdater-tests") {
 
   tests = [
     {
-      name = "system_updater_tests_lib_test"
+      name = "system_updater_v2_test"
       environments = basic_envs
     },
   ]
