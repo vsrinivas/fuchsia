@@ -172,6 +172,7 @@ TEST_F(PrinterUnitTest, OutputSummaryKernel) {
         .mmu_overhead_bytes = 30,
         .ipc_bytes = 40,
         .other_bytes = 50,
+        .vmo_bytes = 60,
     },
   });
   Summary s(c);
@@ -181,12 +182,13 @@ TEST_F(PrinterUnitTest, OutputSummaryKernel) {
 
   p.OutputSummary(s, SORTED, ZX_KOID_INVALID);
   ConfirmLines(oss, {
-    "1234,1,kernel,150,150,150",
+    "1234,1,kernel,210,210,210",
   });
 
   oss.str("");
   p.OutputSummary(s, SORTED, ProcessSummary::kKernelKoid);
   ConfirmLines(oss, {
+    "1234,1,vmo,60,60,60",
     "1234,1,other,50,50,50",
     "1234,1,ipc,40,40,40",
     "1234,1,mmu,30,30,30",

@@ -12,7 +12,7 @@ Summary::Summary(const Capture& capture)
       vmo_to_processes;
   auto const& koid_to_vmo = capture.koid_to_vmo();
 
-  ProcessSummary kernel_summary(kstats_);
+  ProcessSummary kernel_summary(kstats_, koid_to_vmo);
   process_summaries_.push_back(kernel_summary);
 
   for (auto const& pair : capture.koid_to_process()) {
@@ -57,20 +57,30 @@ Summary::Summary(const Capture& capture)
 
 const zx_koid_t ProcessSummary::kKernelKoid = 1;
 
-ProcessSummary::ProcessSummary(const zx_info_kmem_stats_t& kmem) :
-    koid_(kKernelKoid), name_("kernel") {
+ProcessSummary::ProcessSummary(
+    const zx_info_kmem_stats_t& kmem,
+    const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& koid_to_vmo)
+    : koid_(kKernelKoid), name_("kernel") {
+  uint64_t vmo_bytes = 0;
+  for (const auto& pair : koid_to_vmo) {
+    vmo_bytes += pair.second.committed_bytes;
+  }
+  auto kmem_vmo_bytes =
+      kmem.vmo_bytes < vmo_bytes ? 0 : kmem.vmo_bytes - vmo_bytes;
   name_to_sizes_.emplace("heap", kmem.total_heap_bytes);
   name_to_sizes_.emplace("wired", kmem.wired_bytes);
   name_to_sizes_.emplace("mmu", kmem.mmu_overhead_bytes);
   name_to_sizes_.emplace("ipc", kmem.ipc_bytes);
   name_to_sizes_.emplace("other", kmem.other_bytes);
+  name_to_sizes_.emplace("vmo", kmem_vmo_bytes);
 
   sizes_.private_bytes = sizes_.scaled_bytes = sizes_.total_bytes =
     kmem.wired_bytes +
     kmem.total_heap_bytes +
     kmem.mmu_overhead_bytes +
     kmem.ipc_bytes +
-    kmem.other_bytes;
+    kmem.other_bytes +
+    kmem_vmo_bytes;
 }
 
 const Sizes& ProcessSummary::GetSizes(std::string name) const {

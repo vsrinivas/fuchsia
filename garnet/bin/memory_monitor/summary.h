@@ -38,7 +38,9 @@ class ProcessSummary {
 
  private:
   ProcessSummary(zx_koid_t koid, std::string name) : koid_(koid), name_(name) {}
-  ProcessSummary(const zx_info_kmem_stats_t& kmem);
+  ProcessSummary(
+      const zx_info_kmem_stats_t& kmem,
+      const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& koid_to_vmo);
 
   zx_koid_t koid_;
   std::string name_;

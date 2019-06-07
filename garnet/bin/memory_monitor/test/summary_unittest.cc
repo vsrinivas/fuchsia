@@ -325,25 +325,26 @@ TEST_F(SummaryUnitTest, Kernel) {
   Capture c;
   TestUtils::CreateCapture(c, {
     .kmem = {
-        .wired_bytes = 10,
-        .total_heap_bytes = 20,
-        .mmu_overhead_bytes = 30,
-        .ipc_bytes = 40,
-        .other_bytes = 50,
+      .wired_bytes = 10,
+      .total_heap_bytes = 20,
+      .mmu_overhead_bytes = 30,
+      .ipc_bytes = 40,
+      .other_bytes = 50,
+      .vmo_bytes = 60,
     },
   });
-   Summary s(c);
+  Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(1U, process_summaries.size());
   ProcessSummary ps = process_summaries.at(0);
   EXPECT_EQ(ProcessSummary::kKernelKoid, ps.koid());
   EXPECT_STREQ("kernel", ps.name().c_str());
   Sizes sizes = ps.sizes();
-  EXPECT_EQ(150U, sizes.private_bytes);
-  EXPECT_EQ(150U, sizes.scaled_bytes);
-  EXPECT_EQ(150U, sizes.total_bytes);
+  EXPECT_EQ(210U, sizes.private_bytes);
+  EXPECT_EQ(210U, sizes.scaled_bytes);
+  EXPECT_EQ(210U, sizes.total_bytes);
 
-  EXPECT_EQ(5U, ps.name_to_sizes().size());
+  EXPECT_EQ(6U, ps.name_to_sizes().size());
 
   sizes = ps.GetSizes("wired");
   EXPECT_EQ(10U, sizes.private_bytes);
@@ -365,6 +366,42 @@ TEST_F(SummaryUnitTest, Kernel) {
   EXPECT_EQ(50U, sizes.private_bytes);
   EXPECT_EQ(50U, sizes.scaled_bytes);
   EXPECT_EQ(50U, sizes.total_bytes);
+  sizes = ps.GetSizes("vmo");
+  EXPECT_EQ(60U, sizes.private_bytes);
+  EXPECT_EQ(60U, sizes.scaled_bytes);
+  EXPECT_EQ(60U, sizes.total_bytes);
+}
+
+TEST_F(SummaryUnitTest, KernelVmo) {
+  // Test kernel that kernel vmo memory that isn't found in
+  // user space vmos is listed under the kernel.
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .kmem = {
+      .vmo_bytes = 110,
+    },
+    .vmos = {
+      {.koid = 1, .name = "v1", .committed_bytes = 100},
+    },
+    .processes = {
+      {.koid = 2, .name = "p1", .vmos = {1}},
+    },
+  });
+  Summary s(c);
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(2U, process_summaries.size());
+  ProcessSummary ps = process_summaries.at(0);
+  EXPECT_EQ(ProcessSummary::kKernelKoid, ps.koid());
+  EXPECT_STREQ("kernel", ps.name().c_str());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(10U, sizes.private_bytes);
+  EXPECT_EQ(10U, sizes.scaled_bytes);
+  EXPECT_EQ(10U, sizes.total_bytes);
+
+  sizes = ps.GetSizes("vmo");
+  EXPECT_EQ(10U, sizes.private_bytes);
+  EXPECT_EQ(10U, sizes.scaled_bytes);
+  EXPECT_EQ(10U, sizes.total_bytes);
 }
 
 }  // namespace test
