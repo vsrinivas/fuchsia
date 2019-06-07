@@ -50,7 +50,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:47
+From //BUILD.gn:16
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
@@ -58,7 +58,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:47
+From //BUILD.gn:16
 
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -250,7 +250,7 @@ From //products/core.gni:29
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:24
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -258,7 +258,7 @@ From //products/core.gni:29
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:24
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -333,7 +333,7 @@ From //build/config/BUILD.gn:9
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3e5da31f900c9b1f2dfa9766fd7e051265900fb5/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e0e83ad18af41dba0ae10e0204193ec9074aeb2a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 TODO(scottmg): https://crbug.com/crashpad/266 fuchsia:DX-690: BoringSSL
@@ -342,7 +342,7 @@ a BoringSSL lib again.
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/3e5da31f900c9b1f2dfa9766fd7e051265900fb5/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/e0e83ad18af41dba0ae10e0204193ec9074aeb2a/util/net/tls.gni#21)
 
 ### create_kernel_service_snapshot
 
@@ -373,7 +373,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -432,7 +432,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -440,7 +440,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -490,7 +490,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -721,19 +721,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", "release", "dynamic_profile", or "dynamic_release")
@@ -747,7 +747,7 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
@@ -759,7 +759,7 @@ From //third_party/flutter/third_party/txt/BUILD.gn:16
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1223,13 +1223,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/02f6b14b69f6768ae949745496e5fe14658d8194/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -1911,17 +1911,6 @@ From //third_party/skia/BUILD.gn:36
 
 From //third_party/flutter/shell/version/version.gni:8
 
-### support_insecure_wep
-Enable WEP support.
-Use temporarily for testing driver WEP support.
-This build flag will be replaced by providing
-dedicated WEP specific WLAN targets which products
-can depend on.
-
-**Current value (from the default):** `false`
-
-From //src/connectivity/wlan/lib/wep_deprecated/BUILD.gn:15
-
 ### symbol_level
 How many symbols to include in the build. This affects the performance of
 the build since the symbols are large and dealing with them is slow.
@@ -2057,7 +2046,7 @@ From //products/core.gni:31
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:63
+From //BUILD.gn:32
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:vboot_reference", "//bundles:tools"]`
 
@@ -2065,7 +2054,7 @@ From //products/core.gni:31
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:63
+From //BUILD.gn:32
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -2200,7 +2189,7 @@ From //build/images/BUILD.gn:45
 
 **Current value (from the default):** `"warn,error"`
 
-From [//third_party/vulkan_loader_and_validation_layers/loader/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/5aa2763f1d0a436644207f3ab56f40cfbf9bb760/loader/BUILD.gn#26)
+From [//third_party/vulkan_loader_and_validation_layers/loader/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers/+/bf4d5844eda6edd5b4566750ee2763ca943a7e6a/loader/BUILD.gn#26)
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
@@ -2276,7 +2265,7 @@ silently clobber the default value shown here.
 }
 ```
 
-From //build/config/fuchsia/zircon.gni:50
+From //BUILD.gn:81
 
 ### zircon_asserts
 
@@ -2306,7 +2295,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //build/config/fuchsia/zircon.gni:32
+From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2314,7 +2303,7 @@ From //products/core.gni:9
 
 **Overridden from the default:** `false`
 
-From //build/config/fuchsia/zircon.gni:32
+From //BUILD.gn:53
 
 ### zircon_enable_netsvc_debugging_features
 
@@ -2324,7 +2313,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `false`
 
-From //build/config/fuchsia/zircon.gni:33
+From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -2332,7 +2321,7 @@ From //products/core.gni:10
 
 **Overridden from the default:** `false`
 
-From //build/config/fuchsia/zircon.gni:33
+From //BUILD.gn:54
 
 ### zircon_extra_args
 [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
@@ -2349,7 +2338,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //build/config/fuchsia/zircon.gni:27
+From //BUILD.gn:45
+
+### zircon_extra_ninja_targets
+Additional targets to pass to the Zircon Ninja build.
+
+**Current value (from the default):** `[]`
+
+From //BUILD.gn:49
 
 ### zircon_r_partition
 
@@ -2363,7 +2359,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //build/config/fuchsia/zircon.gni:37
+From //BUILD.gn:58
 
 ### zxcrypt_key_source
 This argument specifies from where the system should obtain the zxcrypt
