@@ -4,11 +4,12 @@
 
 # Three copies of libtrace-provider are built:
 # (1) libtrace-provider.a: Static copy that uses libtrace-engine.so
-#     (or libdriver.so for DDK).
-# (2) libtrace-provider.without-fdio.a: Static copy that uses
+#     (or libdriver.so for DDK). This copy does not use fdio to connect to
+#     trace-manager, the client must provide its own connection.
+# (2) libtrace-provider-with-fdio.a: Static copy that uses
 #     libtrace-engine.so but does not contain fdio support for connect to
 #     trace-manager; instead the client must make its own connection.
-# (3) libtrace-provider.with-static-engine.a: Static copy that uses
+# (3) libtrace-provider-with-static-engine.a: Static copy that uses
 #     libtrace-engine.static.a.
 #
 # N.B. Please DO NOT use (3) unless you KNOW you need to. Generally you do not.
@@ -51,21 +52,17 @@ source_set("handler") {
 }
 
 # The default version for the normal case.
-# TODO(PT-63): Remove fdio dependency.
 library("trace-provider") {
   sdk = "static"
   sdk_headers = [
-    "trace-provider/fdio_connect.h",
     "trace-provider/handler.h",
     "trace-provider/provider.h",
   ]
   sources = []
   deps = [
     ":common",
-    ":common.fdio-connect",
     "$zx/system/fidl/fuchsia-tracelink:c",
     "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/fdio",
   ]
   public_deps = [
     # <trace-provider/provider.h> has #include <fbl/unique_ptr.h>.
@@ -113,24 +110,6 @@ library("trace-provider-with-fdio") {
     "$zx/system/ulib/trace-engine:headers",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
-}
-
-# Same as the default version with the fdio dependency removed.
-# TODO(PT-63): This will be removed (the default case will become this)
-# when all clients are updated.
-library("trace-provider-without-fdio") {
-  sdk = "static"
-  sdk_headers = [
-    "trace-provider/handler.h",
-    "trace-provider/provider.h",
-  ]
-  sources = []
-  deps = [
-    ":common",
-    "$zx/system/fidl/fuchsia-tracelink:c",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/trace-engine",
-  ]
 }
 
 # A special version for programs and shared libraries that can't use

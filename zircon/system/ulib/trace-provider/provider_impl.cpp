@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(PT-63): Remove the "_etc" suffix on all API functions.
-
 #include "provider_impl.h"
 
 #include <stdio.h>
@@ -181,7 +179,7 @@ void TraceProviderImpl::Connection::Close() {
 } // namespace internal
 } // namespace trace
 
-trace_provider_t* trace_provider_create_with_name_etc(
+trace_provider_t* trace_provider_create_with_name(
         zx_handle_t to_service_h, async_dispatcher_t* dispatcher,
         const char* name) {
     zx::channel to_service(to_service_h);
@@ -216,8 +214,8 @@ trace_provider_t* trace_provider_create_with_name_etc(
         dispatcher, std::move(provider_service));
 }
 
-trace_provider_t* trace_provider_create_etc(zx_handle_t to_service,
-                                            async_dispatcher_t* dispatcher) {
+trace_provider_t* trace_provider_create(zx_handle_t to_service,
+                                        async_dispatcher_t* dispatcher) {
     auto self = zx::process::self();
     char name[ZX_MAX_NAME_LEN];
     auto status = self->get_property(ZX_PROP_NAME, name, sizeof(name));
@@ -226,10 +224,10 @@ trace_provider_t* trace_provider_create_etc(zx_handle_t to_service,
                 status, zx_status_get_string(status));
         name[0] = '\0';
     }
-    return trace_provider_create_with_name_etc(to_service, dispatcher, name);
+    return trace_provider_create_with_name(to_service, dispatcher, name);
 }
 
-trace_provider_t* trace_provider_create_synchronously_etc(
+trace_provider_t* trace_provider_create_synchronously(
         zx_handle_t to_service_h, async_dispatcher_t* dispatcher,
         const char* name, bool* out_manager_is_tracing_already) {
     zx::channel to_service(to_service_h);

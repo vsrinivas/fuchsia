@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(PT-63): This file contains wrappers that use fdio to connect to
-// trace manager. An open question is whether to keep them.
-
 #include <stdio.h>
 
 #include <lib/zx/process.h>
@@ -26,7 +23,7 @@ trace_provider_t* trace_provider_create_with_name_fdio(
         return nullptr;
     }
 
-    return trace_provider_create_with_name_etc(to_service, dispatcher, name);
+    return trace_provider_create_with_name(to_service, dispatcher, name);
 }
 
 trace_provider_t* trace_provider_create_with_fdio(
@@ -58,6 +55,6 @@ trace_provider_t* trace_provider_create_synchronously_with_fdio(
         return nullptr;
     }
 
-    return trace_provider_create_synchronously_etc(
+    return trace_provider_create_synchronously(
         to_service, dispatcher, name, out_manager_is_tracing_already);
 }

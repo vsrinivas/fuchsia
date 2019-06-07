@@ -92,14 +92,14 @@ typedef struct trace_provider trace_provider_t;
 // Switch to passively exporting the trace provider via the "hub" through
 // the process's exported directory once that stuff is implemented.  We'll
 // probably need to pass some extra parameters to the trace provider then.
-trace_provider_t* trace_provider_create_with_name_etc(
+trace_provider_t* trace_provider_create_with_name(
     zx_handle_t to_service, async_dispatcher_t* dispatcher, const char* name);
 
 // Wrapper around trace_provider_create_with_name for backward compatibility.
 // TODO(DX-422): Update all providers to use create_with_name, then change this
 // to also take a name, then update all providers to call this one, and then
 // delete trace_provider_create_with_name.
-trace_provider_t* trace_provider_create_etc(
+trace_provider_t* trace_provider_create(
     zx_handle_t to_service, async_dispatcher_t* dispatcher);
 
 // Same as trace_provider_create_with_name except does not return until the
@@ -108,7 +108,7 @@ trace_provider_t* trace_provider_create_etc(
 // already started tracing, which is a hint to the provider to wait for the
 // Start() message before continuing if it wishes to not drop trace records
 // before Start() is received.
-trace_provider_t* trace_provider_create_synchronously_etc(
+trace_provider_t* trace_provider_create_synchronously(
     zx_handle_t to_service, async_dispatcher_t* dispatcher, const char* name,
     bool* out_already_started);
 
@@ -138,8 +138,7 @@ __END_CDECLS
 namespace trace {
 
 // Convenience RAII wrapper for creating and destroying a trace provider.
-// TODO(PT-63): Remove Etc suffix when all clients are updated.
-class TraceProviderEtc {
+class TraceProvider {
 public:
     // Create a trace provider synchronously, and return an indicator of
     // whether tracing has started already in |*out_already_started|.
@@ -150,30 +149,30 @@ public:
             zx::channel to_service,
             async_dispatcher_t* dispatcher,
             const char* name,
-            std::unique_ptr<TraceProviderEtc>* out_provider,
+            std::unique_ptr<TraceProvider>* out_provider,
             bool* out_already_started) {
-        auto provider = trace_provider_create_synchronously_etc(
+        auto provider = trace_provider_create_synchronously(
             to_service.release(), dispatcher, name, out_already_started);
         if (!provider)
             return false;
-        *out_provider = std::unique_ptr<TraceProviderEtc>(
-            new TraceProviderEtc(provider));
+        *out_provider = std::unique_ptr<TraceProvider>(
+            new TraceProvider(provider));
         return true;
     }
 
     // Creates a trace provider.
-    TraceProviderEtc(zx::channel to_service, async_dispatcher_t* dispatcher)
-        : provider_(trace_provider_create_etc(to_service.release(),
-                                              dispatcher)) {}
+    TraceProvider(zx::channel to_service, async_dispatcher_t* dispatcher)
+        : provider_(trace_provider_create(to_service.release(),
+                                          dispatcher)) {}
 
     // Creates a trace provider.
-    TraceProviderEtc(zx::channel to_service, async_dispatcher_t* dispatcher,
-                     const char* name)
-        : provider_(trace_provider_create_with_name_etc(to_service.release(),
-                                                        dispatcher, name)) {}
+    TraceProvider(zx::channel to_service, async_dispatcher_t* dispatcher,
+                  const char* name)
+        : provider_(trace_provider_create_with_name(to_service.release(),
+                                                    dispatcher, name)) {}
 
     // Destroys a trace provider.
-    ~TraceProviderEtc() {
+    ~TraceProvider() {
         if (provider_)
             trace_provider_destroy(provider_);
     }
@@ -184,14 +183,14 @@ public:
     }
 
 protected:
-    explicit TraceProviderEtc(trace_provider_t* provider)
+    explicit TraceProvider(trace_provider_t* provider)
         : provider_(provider) {}
 
 private:
     trace_provider_t* const provider_;
 };
 
-class TraceProviderWithFdio : public TraceProviderEtc {
+class TraceProviderWithFdio : public TraceProvider {
 public:
     static bool CreateSynchronously(
             async_dispatcher_t* dispatcher,
@@ -220,7 +219,7 @@ public:
 
 private:
     explicit TraceProviderWithFdio(trace_provider_t* provider)
-        : TraceProviderEtc(provider) {}
+        : TraceProvider(provider) {}
 };
 
 } // namespace trace
