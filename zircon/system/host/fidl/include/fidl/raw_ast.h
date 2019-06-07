@@ -361,20 +361,18 @@ public:
 class InterfaceMethod : public SourceElement {
 public:
     InterfaceMethod(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                    std::unique_ptr<Ordinal> ordinal,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
                     std::unique_ptr<ParameterList> maybe_response,
                     std::unique_ptr<TypeConstructor> maybe_error_ctor)
         : SourceElement(element), attributes(std::move(attributes)),
-          ordinal(std::move(ordinal)), identifier(std::move(identifier)),
+          identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)),
           maybe_error_ctor(std::move(maybe_error_ctor)) {}
 
     void Accept(TreeVisitor* visitor) const;
 
     std::unique_ptr<AttributeList> attributes;
-    std::unique_ptr<Ordinal> ordinal;
     std::unique_ptr<Identifier> identifier;
     std::unique_ptr<ParameterList> maybe_request;
     std::unique_ptr<ParameterList> maybe_response;

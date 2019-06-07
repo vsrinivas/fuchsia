@@ -173,9 +173,6 @@ void InterfaceMethod::Accept(TreeVisitor* visitor) const {
     if (attributes != nullptr) {
         visitor->OnAttributeList(attributes);
     }
-    if (ordinal != nullptr) {
-        visitor->OnOrdinal(*ordinal);
-    }
     visitor->OnIdentifier(identifier);
     if (maybe_request != nullptr) {
         visitor->OnParameterList(maybe_request);

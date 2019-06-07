@@ -318,8 +318,8 @@ void JSONGenerator::Generate(const flat::Interface::Method* method) {
     assert(method != nullptr);
     const auto& value = *method;
     GenerateObject([&]() {
-        GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
-        GenerateObjectMember("generated_ordinal", value.generated_ordinal);
+        GenerateObjectMember("ordinal", value.generated_ordinal32, Position::kFirst);
+        GenerateObjectMember("generated_ordinal", value.generated_ordinal32);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("location", NameLocation(value.name));
         GenerateObjectMember("has_request", value.maybe_request != nullptr);

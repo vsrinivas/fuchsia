@@ -818,9 +818,9 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
             const auto& method = *method_pointer;
             NamedMethod named_method;
             std::string method_name = NameMethod(named_interface.c_name, method);
-            named_method.ordinal = method.ordinal->value;
+            named_method.ordinal = method.generated_ordinal32->value;
             named_method.ordinal_name = NameOrdinal(method_name);
-            named_method.generated_ordinal = method.generated_ordinal->value;
+            named_method.generated_ordinal = method.generated_ordinal32->value;
             named_method.generated_ordinal_name = NameGenOrdinal(method_name);
             named_method.identifier = NameIdentifier(method.name);
             named_method.c_name = method_name;

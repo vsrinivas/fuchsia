@@ -27,14 +27,6 @@ raw::Ordinal GetGeneratedOrdinal(const std::vector<std::string_view>& library_na
                                  const std::string_view& interface_name,
                                  const raw::InterfaceMethod& method);
 
-// Retrieves the correct ordinal for this method.
-//
-// If |method.ordinal| is not null, this method will return |method.ordinal|.
-// Otherwise, the ordinal value is computed with GetGeneratedOrdinal.
-raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
-                        const std::string_view& interface_name,
-                        const raw::InterfaceMethod& method);
-
 // Retrieves the correct ordinal for |xunion_member|, following the same
 // algorithm as GetOrdinal() for interface methods above.
 raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,

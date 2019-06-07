@@ -857,14 +857,12 @@ struct Interface : public TypeDecl {
         Method& operator=(Method&&) = default;
 
         Method(std::unique_ptr<raw::AttributeList> attributes,
-               std::unique_ptr<raw::Ordinal> ordinal,
-               std::unique_ptr<raw::Ordinal> generated_ordinal,
+               std::unique_ptr<raw::Ordinal> generated_ordinal32,
                SourceLocation name,
                Struct* maybe_request,
                Struct* maybe_response)
             : attributes(std::move(attributes)),
-              ordinal(std::move(ordinal)),
-              generated_ordinal(std::move(generated_ordinal)),
+              generated_ordinal32(std::move(generated_ordinal32)),
               name(std::move(name)),
               maybe_request(maybe_request),
               maybe_response(maybe_response) {
@@ -872,8 +870,7 @@ struct Interface : public TypeDecl {
         }
 
         std::unique_ptr<raw::AttributeList> attributes;
-        std::unique_ptr<raw::Ordinal> ordinal;
-        std::unique_ptr<raw::Ordinal> generated_ordinal;
+        std::unique_ptr<raw::Ordinal> generated_ordinal32;
         SourceLocation name;
         Struct* maybe_request;
         Struct* maybe_response;

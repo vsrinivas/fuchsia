@@ -599,8 +599,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
 }
 
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-    std::unique_ptr<raw::Ordinal> ordinal) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
 
     ConsumeToken(OfKind(Token::Kind::kArrow));
     if (!Ok())
@@ -639,7 +638,6 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
 
     return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
                                                   std::move(attributes),
-                                                  std::move(ordinal),
                                                   std::move(method_name),
                                                   nullptr /* maybe_request */,
                                                   std::move(response),
@@ -648,7 +646,6 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
 
 std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-    std::unique_ptr<raw::Ordinal> ordinal,
     std::unique_ptr<raw::Identifier> method_name) {
 
     auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
@@ -687,7 +684,6 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
 
     return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
                                                   std::move(attributes),
-                                                  std::move(ordinal),
                                                   std::move(method_name),
                                                   std::move(request),
                                                   std::move(maybe_response),
@@ -701,7 +697,7 @@ void Parser::ParseProtocolMember(
 
     switch (Peek().kind()) {
         case Token::Kind::kArrow: {
-            auto event = ParseProtocolEvent(std::move(attributes), scope, nullptr /* ordinal */);
+            auto event = ParseProtocolEvent(std::move(attributes), scope);
             methods->push_back(std::move(event));
             break;
         }
@@ -711,7 +707,7 @@ void Parser::ParseProtocolMember(
                 break;
             if (Peek().kind() == Token::Kind::kLeftParen) {
                 auto method = ParseProtocolMethod(
-                    std::move(attributes), scope, nullptr /* ordinal */, std::move(identifier));
+                    std::move(attributes), scope, std::move(identifier));
                 methods->push_back(std::move(method));
                 break;
             } else if (identifier->location().data() == "compose") {

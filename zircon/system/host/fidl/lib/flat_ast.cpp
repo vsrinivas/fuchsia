@@ -1798,8 +1798,6 @@ bool Library::ConsumeInterfaceDeclaration(
 
     std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->methods) {
-        std::unique_ptr<raw::Ordinal> ordinal_literal =
-            std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *method));
         std::unique_ptr<raw::Ordinal> generated_ordinal =
             std::make_unique<raw::Ordinal>(fidl::ordinals::GetGeneratedOrdinal(library_name_, name.name_part(), *method));
         auto attributes = std::move(method->attributes);
@@ -1829,7 +1827,6 @@ bool Library::ConsumeInterfaceDeclaration(
         assert(maybe_request != nullptr || maybe_response != nullptr);
         methods.emplace_back(std::move(attributes),
                              std::move(generated_ordinal),
-                             std::move(ordinal_literal),
                              std::move(method_name),
                              std::move(maybe_request),
                              std::move(maybe_response));
@@ -3026,17 +3023,17 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 return Fail(method.name,
                             "Multiple methods with the same name in an interface; last occurrence was at " +
                                 name_result.previous_occurrence().position_str());
-            auto ordinal_result = method_scope.ordinals.Insert(method.ordinal->value, method.name);
-            if (method.ordinal->value == 0)
-                return Fail(method.ordinal->location(), "Ordinal value 0 disallowed.");
+            auto ordinal_result = method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
+            if (method.generated_ordinal32->value == 0)
+                return Fail(method.generated_ordinal32->location(), "Ordinal value 0 disallowed.");
             if (!ordinal_result.ok()) {
                 std::string replacement_method(
                     fidl::ordinals::GetSelector(method.attributes.get(), method.name));
                 replacement_method.push_back('_');
-                return Fail(method.ordinal->location(),
+                return Fail(method.generated_ordinal32->location(),
                             "Multiple methods with the same ordinal in an interface; previous was at " +
-                                ordinal_result.previous_occurrence().position_str() + ". If these " +
-                                "were automatically generated, consider using attribute " +
+                                ordinal_result.previous_occurrence().position_str() +
+                                ". Consider using attribute " +
                                 "[Selector=\"" + replacement_method + "\"] to change the " +
                                 "name used to calculate the ordinal.");
             }

@@ -174,7 +174,7 @@ protocol b {
     uint32_t expected_hash = *(reinterpret_cast<uint32_t*>(digest)) & 0x7fffffff;
 
     const fidl::flat::Interface* iface = library.LookupInterface("b");
-    uint32_t actual_hash = iface->methods[0].ordinal->value;
+    uint32_t actual_hash = iface->methods[0].generated_ordinal32->value;
     ASSERT_EQ(actual_hash, expected_hash, "Expected hash is not correct");
     END_TEST;
 }

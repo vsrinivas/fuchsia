@@ -73,15 +73,6 @@ raw::Ordinal GetGeneratedOrdinal(const std::vector<std::string_view>& library_na
 }
 
 raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
-                        const std::string_view& interface_name,
-                        const raw::InterfaceMethod& method) {
-    if (method.ordinal != nullptr)
-        return *method.ordinal;
-
-    return GetGeneratedOrdinal(library_name, interface_name, method);
-}
-
-raw::Ordinal GetOrdinal(const std::vector<std::string_view>& library_name,
                         const std::string_view& xunion_declaration_name,
                         const raw::XUnionMember& xunion_member) {
     // Note that this ordinal hashing for xunion members uses the same ordinal
