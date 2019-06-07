@@ -55,8 +55,14 @@ have_libvulkan = build_libvulkan != [] || have_prebuilt_libvulkan_arm
 # Target environments with an Intel GPU.
 intel_gpu_envs = [ nuc_env ]
 
+# Target environments with an ARM Mali GPU.
+arm_gpu_envs = [
+  astro_env,
+  vim2_env,
+]
+
 # General hardware environments for magma tests to target.
-magma_hardware_envs = intel_gpu_envs
+magma_hardware_envs = intel_gpu_envs + arm_gpu_envs
 
 template("magma_pci_entry") {
   source_set(target_name) {
