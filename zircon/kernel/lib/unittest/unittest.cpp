@@ -87,7 +87,8 @@ static void usage(const char* progname) {
            "%s <case>\n"
            "  where case is a specific testcase name, or...\n"
            "  all : run all tests\n"
-           "  ?   : list tests\n",
+           "  ?   : list tests\n"
+           "  [-r num]  : repeat a test case num times\n",
            progname);
 }
 
@@ -224,7 +225,7 @@ static bool run_testcase_in_thread(const unittest_testcase_registration_t* testc
 static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags)
     TA_REQ(UnittestLock::Get()) {
     DEBUG_ASSERT(UnittestLock::Get()->lock().IsHeld());
-    if (argc != 2) {
+    if (argc < 2) {
         usage(argv[0].str);
         return 0;
     }
@@ -234,6 +235,15 @@ static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags)
     if (!strcmp(casename, "?")) {
         list_cases();
         return 0;
+    }
+    unsigned long repeat = 1;
+    if (!strcmp(casename, "-r")) {
+        if (argc < 4) {
+            usage(argv[0].str);
+            return 0;
+        }
+        repeat = argv[2].u;
+        casename = argv[3].str;
     }
 
     bool run_all = !strcmp(casename, "all");
@@ -255,7 +265,17 @@ static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags)
             if (run_all || !strcmp(casename, testcase->name)) {
                 chosen++;
 
-                if (run_testcase_in_thread(testcase)) {
+                bool all_repeats_passed = true;
+                for (unsigned long i = 0; i < repeat; i++) {
+                    printf("Test %s [%lu / %lu]\n", testcase->name, i+1, repeat);
+                    bool status = run_testcase_in_thread(testcase);
+                    all_repeats_passed &= status;
+                    if (!status) {
+                        break;
+                    }
+                    printf("\n");
+                }
+                if (all_repeats_passed) {
                     passed++;
                 } else {
                     *fn++ = testcase->name;
