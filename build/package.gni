@@ -678,6 +678,22 @@ template("package") {
       } else {
         dest = test.name
       }
+
+      # Check that all tests are components with cmx files at the expected path.
+      if (!pkg.deprecated_system_image && !bootfs_only && !is_disabled &&
+          (!defined(require_bare_tests_allowlist) ||
+           !require_bare_tests_allowlist)) {
+        require_bare_tests_allowlist = true
+        foreach(meta, pkg.meta) {
+          if (get_path_info(meta.dest, "extension") == "cmx") {
+            meta_name = get_path_info(meta.dest, "name")
+            if (dest == meta_name) {
+              require_bare_tests_allowlist = false
+            }
+          }
+        }
+      }
+
       if (is_disabled) {
         dest = "disabled/${dest}"
       }
@@ -923,6 +939,10 @@ template("package") {
           deps += [
             "${pkg.deprecated_misc_storage}:deprecated_misc_storage_allowlist",
           ]
+        }
+        if (defined(require_bare_tests_allowlist) &&
+            require_bare_tests_allowlist) {
+          deps += [ "//build:deprecated_bare_tests_allowlist" ]
         }
       }
     }

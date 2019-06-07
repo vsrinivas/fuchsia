@@ -15,7 +15,35 @@ group("deprecated_misc_storage_allowlist") {
   # This is an allowlist of packages that have components manifests that include
   # the "deprecated-misc-storage" feature. This is only intended to be used as
   # a temporary hack for OTAs. Do not add to this list.
+  visibility = [ "//garnet/go/src/amber:amber" ]
+}
+
+group("deprecated_bare_tests_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of packages that have bare tests which haven't been converted to components yet.
+  # This is only intended to be used as a temporary allowlist. Do not add to this list.
   visibility = [
-    "//garnet/go/src/amber:amber",
+    "//src/ledger/cloud_provider_memory_diff:cloud_provider_memory_diff_tests",
+    "//peridot/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
+    "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_test",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
+    "//src/ledger:ledger_tests",
+    "//third_party/leveldb:leveldb_tests",
+    "//peridot/tests:modular_tests",
+    "//topaz/runtime/dart/utils:run_vmservice_object_tests",
+    "//src/connectivity/wlan/wlanstack:wlanstack-tests",
+    "//garnet/bin/zircon_benchmarks:zircon_benchmarks",
+    "//src/graphics/lib/compute/spinel-rs:spinel-rs-tests",
+    "//src/lib/ui/input-synthesis:input-synthesis-tests",
+    "//garnet/tests/zircon/bringup:bringup_bootfs_test",
+    "//garnet/drivers/video/amlogic-decoder:test_amlogic_codec_factory_package",
+    "//src/lib/rust_backtrace:rust_backtrace_tests",
   ]
 }
