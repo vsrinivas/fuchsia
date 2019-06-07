@@ -203,3 +203,52 @@ fuzzer("packet_reader_fuzzer") {
 fuzzers_package("mdns_fuzzers") {
   fuzzers = [ ":packet_reader_fuzzer" ]
 }
+
+executable("mdns_netemul_test_agent") {
+  testonly = true
+
+  sources = [
+    "test/mdns_netemul_test_agent.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.net",
+    "//garnet/public/lib/fostr/fidl/fuchsia.net.mdns",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.net.mdns",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("mdns_netemul_tests") {
+  deps = [
+    ":mdns_netemul_test_agent",
+    ":netemul_empty_binaries",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mdns_netemul_test_agent.cmx")
+      dest = "mdns_netemul_test_agent.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "mdns_netemul_test_agent"
+    },
+  ]
+
+  tests = [
+    {
+      name = "mdns_netemul_test"
+    },
+  ]
+}
+
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/mdns_netemul_test", "")
+}

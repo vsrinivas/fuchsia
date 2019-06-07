@@ -90,6 +90,8 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
  protected:
   MdnsAgent(Host* host) : host_(host) { FXL_DCHECK(host_); }
 
+  bool started() const { return addresses_ != nullptr; }
+
   const MdnsAddresses& addresses() const {
     FXL_DCHECK(addresses_);
     return *addresses_;
@@ -140,7 +142,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
  private:
   Host* host_;
-  const MdnsAddresses* addresses_;
+  const MdnsAddresses* addresses_ = nullptr;
 };
 
 }  // namespace mdns

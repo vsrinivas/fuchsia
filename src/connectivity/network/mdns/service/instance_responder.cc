@@ -79,6 +79,14 @@ void InstanceResponder::ReportSuccess(bool success) {
 }
 
 void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
+  if (!started()) {
+    // This agent isn't started, so we can't announce yet. There's no need to
+    // remove old subtypes, because no subtypes have been announced yet.
+    // |Reannounce| will be called by |Start|.
+    subtypes_ = std::move(subtypes);
+    return;
+  }
+
   // Initiate four announcements with intervals of 1, 2 and 4 seconds. If we
   // were already announcing, the sequence restarts now. The first announcement
   // contains PTR records for the removed subtypes with TTL of zero.
@@ -161,6 +169,8 @@ void InstanceResponder::SendPublication(
   auto srv_resource =
       std::make_shared<DnsResource>(instance_full_name_, DnsType::kSrv);
   srv_resource->time_to_live_ = publication.srv_ttl_seconds_;
+  srv_resource->srv_.priority_ = publication.srv_priority_;
+  srv_resource->srv_.weight_ = publication.srv_weight_;
   srv_resource->srv_.port_ = publication.port_;
   srv_resource->srv_.target_ = host_full_name_;
   SendResource(srv_resource, MdnsResourceSection::kAdditional, reply_address);
