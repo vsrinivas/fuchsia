@@ -117,7 +117,7 @@ mod tests {
                 let pkg_resolver = MockPackageResolver {};
                 let mut stream = server.into_stream().unwrap();
                 while let Some(PackageResolverRequest::Resolve {
-                    package_uri: package_url,
+                    package_url,
                     dir,
                     responder,
                     ..

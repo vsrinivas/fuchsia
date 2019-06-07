@@ -137,13 +137,13 @@ struct SystemUpdaterArgs<'a> {
 }
 
 struct MockResolverService {
-    resolved_uris: Mutex<Vec<String>>,
+    resolved_urls: Mutex<Vec<String>>,
     expectations: Mutex<HashMap<String, Status>>,
 }
 
 impl MockResolverService {
     fn new() -> Self {
-        Self { resolved_uris: Mutex::new(vec![]), expectations: Mutex::new(HashMap::new()) }
+        Self { resolved_urls: Mutex::new(vec![]), expectations: Mutex::new(HashMap::new()) }
     }
     async fn run_resolver_service(
         self: Arc<Self>,
@@ -151,24 +151,24 @@ impl MockResolverService {
     ) -> Result<(), Error> {
         while let Some(event) = await!(stream.try_next())? {
             let fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
-                package_uri,
+                package_url,
                 selectors: _,
                 update_policy: _,
                 dir: _,
                 responder,
             } = event;
-            eprintln!("TEST: Got resolve request for {:?}", package_uri);
+            eprintln!("TEST: Got resolve request for {:?}", package_url);
             let response =
-                self.expectations.lock().get(&package_uri).cloned().unwrap_or(Status::OK);
-            self.resolved_uris.lock().push(package_uri);
+                self.expectations.lock().get(&package_url).cloned().unwrap_or(Status::OK);
+            self.resolved_urls.lock().push(package_url);
             responder.send(response.into_raw())?;
         }
 
         Ok(())
     }
 
-    fn mock_package_result(&self, uri: impl Into<String>, response_code: Status) {
-        self.expectations.lock().insert(uri.into(), response_code);
+    fn mock_package_result(&self, url: impl Into<String>, response_code: Status) {
+        self.expectations.lock().insert(url.into(), response_code);
     }
 }
 
@@ -376,7 +376,7 @@ async fn test_system_update() {
     await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }))
         .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_uris.lock(), vec![
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
         "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
     ]);
 
@@ -412,7 +412,7 @@ async fn test_broken_logger() {
     await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }))
         .expect("run system_updater");
 
-    assert_eq!(*env.resolver.resolved_uris.lock(), vec![
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
         "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
     ]);
 
@@ -438,7 +438,7 @@ async fn test_failing_package_fetch() {
         await!(env.run_system_updater(SystemUpdaterArgs { initiator: "manual", target: "m3rk13" }));
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
-    assert_eq!(*env.resolver.resolved_uris.lock(), vec![
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
         "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296"
     ]);
 

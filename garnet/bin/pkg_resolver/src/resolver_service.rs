@@ -36,7 +36,7 @@ pub async fn run_resolver_service(
 
     while let Some(event) = await!(stream.try_next())? {
         let PackageResolverRequest::Resolve {
-            package_uri: package_url,
+            package_url,
             selectors,
             update_policy,
             dir,

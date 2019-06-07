@@ -46,8 +46,8 @@ async fn run_resolver_service(
 ) -> Result<(), Error> {
     fx_log_info!("running mock resolver service");
     while let Some(event) = await!(stream.try_next())? {
-        let fpkg::PackageResolverRequest::Resolve { package_uri, dir, responder, .. } = event;
-        let status = await!(resolve(package_uri, dir, packages_to_mock.clone()));
+        let fpkg::PackageResolverRequest::Resolve { package_url, dir, responder, .. } = event;
+        let status = await!(resolve(package_url, dir, packages_to_mock.clone()));
         responder.send(Status::from(status).into_raw())?;
         if let Err(s) = status {
             fx_log_err!("request failed: {}", s);
@@ -57,12 +57,12 @@ async fn run_resolver_service(
 }
 
 async fn resolve(
-    package_uri: String,
+    package_url: String,
     dir: ServerEnd<DirectoryMarker>,
     packages_to_mock: Vec<String>,
 ) -> Result<(), Status> {
-    let uri = PkgUrl::parse(&package_uri).map_err(|_| Err(Status::INVALID_ARGS))?;
-    let name = uri.name().ok_or_else(|| Err(Status::INVALID_ARGS))?;
+    let url = PkgUrl::parse(&package_url).map_err(|_| Err(Status::INVALID_ARGS))?;
+    let name = url.name().ok_or_else(|| Err(Status::INVALID_ARGS))?;
     if !packages_to_mock.contains(&name.to_string()) {
         return Err(Status::NOT_FOUND);
     }
