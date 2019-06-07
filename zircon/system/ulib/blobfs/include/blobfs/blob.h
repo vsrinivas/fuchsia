@@ -32,11 +32,16 @@
 #include <blobfs/compression/blob-compressor.h>
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
+#include <blobfs/format-assertions.h>
 #include <blobfs/format.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
 
 #include <atomic>
+
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_FORMAT_ASSERTIONS_
+static_assert(false, "blobfs/format-assertions.h not included");
+#endif
 
 namespace blobfs {
 
