@@ -146,7 +146,7 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
     return std::make_unique<raw::NumericLiteral>(scope.GetSourceElement());
 }
 
-std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
+std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
     ASTScope scope(this);
 
     ConsumeToken(OfKind(Token::Kind::kNumericLiteral));
@@ -167,7 +167,7 @@ std::unique_ptr<raw::Ordinal> Parser::ParseOrdinal() {
     if (!Ok())
         return Fail();
 
-    return std::make_unique<raw::Ordinal>(scope.GetSourceElement(), ordinal);
+    return std::make_unique<raw::Ordinal32>(scope.GetSourceElement(), ordinal);
 }
 
 std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {
@@ -856,7 +856,7 @@ Parser::ParseTableMember() {
     if (!Ok())
         return Fail();
 
-    auto ordinal = ParseOrdinal();
+    auto ordinal = ParseOrdinal32();
     if (!Ok())
         return Fail();
 

@@ -72,7 +72,11 @@ public:
         element.Accept(this);
     }
 
-    virtual void OnOrdinal(Ordinal& element) {
+    virtual void OnOrdinal32(Ordinal32& element) {
+        element.Accept(this);
+    }
+
+    virtual void OnOrdinal64(Ordinal64& element) {
         element.Accept(this);
     }
 

@@ -72,8 +72,11 @@ private:
     std::map<T, SourceLocation> scope_;
 };
 
+using Ordinal32Scope = Scope<uint32_t>;
+using Ordinal64Scope = Scope<uint64_t>;
+
 struct MethodScope {
-    Scope<uint32_t> ordinals;
+    Ordinal64Scope ordinals;
     Scope<std::string_view> names;
     Scope<const Interface*> interfaces;
 };
@@ -1798,8 +1801,10 @@ bool Library::ConsumeInterfaceDeclaration(
 
     std::vector<Interface::Method> methods;
     for (auto& method : interface_declaration->methods) {
-        std::unique_ptr<raw::Ordinal> generated_ordinal =
-            std::make_unique<raw::Ordinal>(fidl::ordinals::GetGeneratedOrdinal(library_name_, name.name_part(), *method));
+        auto generated_ordinal32 = std::make_unique<raw::Ordinal32>(
+            fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *method));
+        auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
+            fidl::ordinals::GetGeneratedOrdinal64(library_name_, name.name_part(), *method));
         auto attributes = std::move(method->attributes);
         SourceLocation method_name = method->identifier->location();
 
@@ -1826,7 +1831,8 @@ bool Library::ConsumeInterfaceDeclaration(
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
         methods.emplace_back(std::move(attributes),
-                             std::move(generated_ordinal),
+                             std::move(generated_ordinal32),
+                             std::move(generated_ordinal64),
                              std::move(method_name),
                              std::move(maybe_request),
                              std::move(maybe_response));
@@ -1950,8 +1956,8 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
 
     std::vector<XUnion::Member> members;
     for (auto& member : xunion_declaration->members) {
-        std::unique_ptr<raw::Ordinal> ordinal =
-            std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *member));
+        auto ordinal = std::make_unique<raw::Ordinal32>(
+            fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
 
         auto location = member->identifier->location();
         std::unique_ptr<TypeConstructor> type_ctor;
@@ -3104,7 +3110,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
 
 bool Library::CompileTable(Table* table_declaration) {
     Scope<std::string_view> name_scope;
-    Scope<uint32_t> ordinal_scope;
+    Ordinal32Scope ordinal_scope;
 
     uint32_t max_member_handles = 0;
     for (auto& member : table_declaration->members) {
@@ -3124,7 +3130,7 @@ bool Library::CompileTable(Table* table_declaration) {
         }
     }
 
-    uint32_t last_ordinal_seen = 0;
+    uint64_t last_ordinal_seen = 0;
     for (const auto& ordinal_and_loc : ordinal_scope) {
         if (ordinal_and_loc.first != last_ordinal_seen + 1) {
             return Fail(ordinal_and_loc.second,
@@ -3182,7 +3188,7 @@ bool Library::CompileUnion(Union* union_declaration) {
 
 bool Library::CompileXUnion(XUnion* xunion_declaration) {
     Scope<std::string_view> scope;
-    Scope<uint32_t> ordinal_scope;
+    Ordinal32Scope ordinal_scope;
 
     for (auto& member : xunion_declaration->members) {
         auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->location());

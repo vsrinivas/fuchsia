@@ -126,14 +126,24 @@ public:
     void Accept(TreeVisitor* visitor) const;
 };
 
-class Ordinal final : public SourceElement {
+class Ordinal32 final : public SourceElement {
 public:
-    Ordinal(SourceElement const& element, uint32_t value)
+    Ordinal32(SourceElement const& element, uint32_t value)
         : SourceElement(element), value(value) {}
 
     void Accept(TreeVisitor* visitor) const;
 
     const uint32_t value;
+};
+
+class Ordinal64 final : public SourceElement {
+public:
+    Ordinal64(SourceElement const& element, uint64_t value)
+        : SourceElement(element), value(value) {}
+
+    void Accept(TreeVisitor* visitor) const;
+
+    const uint64_t value;
 };
 
 class TrueLiteral final : public Literal {
@@ -442,7 +452,7 @@ public:
 };
 
 struct TableMember final : public SourceElement {
-    TableMember(SourceElement const& element, std::unique_ptr<Ordinal> ordinal,
+    TableMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
                 std::unique_ptr<TypeConstructor> type_ctor,
                 std::unique_ptr<Identifier> identifier,
                 std::unique_ptr<Constant> maybe_default_value,
@@ -451,12 +461,12 @@ struct TableMember final : public SourceElement {
           maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
                                             std::move(maybe_default_value), std::move(attributes))) {}
 
-    TableMember(SourceElement const& element, std::unique_ptr<Ordinal> ordinal)
+    TableMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
         : SourceElement(element), ordinal(std::move(ordinal)) {}
 
     void Accept(TreeVisitor* visitor) const;
 
-    std::unique_ptr<Ordinal> ordinal;
+    std::unique_ptr<Ordinal32> ordinal;
     // A used member is not 'reserved'
     struct Used {
         Used(std::unique_ptr<TypeConstructor> type_ctor,

@@ -160,22 +160,29 @@ protocol b {
 bool ordinal_value_is_sha256() {
     BEGIN_TEST;
     TestLibrary library(R"FIDL(
-library a;
+library a.b.c;
 
-protocol b {
-    potato(string s, bool b) -> (int32 i);
+protocol protocol {
+    selector(string s, bool b) -> (int32 i);
 };
 )FIDL");
     ASSERT_TRUE(library.Compile());
 
-    const char hash_name[] = "a.b/potato";
-    uint8_t digest[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const uint8_t*>(hash_name), strlen(hash_name), digest);
-    uint32_t expected_hash = *(reinterpret_cast<uint32_t*>(digest)) & 0x7fffffff;
+    const char hash_name32[] = "a.b.c.protocol/selector";
+    uint8_t digest32[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const uint8_t*>(hash_name32), strlen(hash_name32), digest32);
+    uint64_t expected_hash32 = *(reinterpret_cast<uint64_t*>(digest32)) & 0x7fffffff;
 
-    const fidl::flat::Interface* iface = library.LookupInterface("b");
-    uint32_t actual_hash = iface->methods[0].generated_ordinal32->value;
-    ASSERT_EQ(actual_hash, expected_hash, "Expected hash is not correct");
+    const char hash_name64[] = "a.b.c/protocol.selector";
+    uint8_t digest64[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const uint8_t*>(hash_name64), strlen(hash_name64), digest64);
+    uint64_t expected_hash64 = *(reinterpret_cast<uint64_t*>(digest64)) & 0x7fffffffffffffff;
+
+    const fidl::flat::Interface* iface = library.LookupInterface("protocol");
+    uint64_t actual_hash32 = iface->methods[0].generated_ordinal32->value;
+    ASSERT_EQ(actual_hash32, expected_hash32, "Expected 32bits hash is not correct");
+    uint64_t actual_hash64 = iface->methods[0].generated_ordinal64->value;
+    ASSERT_EQ(actual_hash64, expected_hash64, "Expected 64bits hash is not correct");
     END_TEST;
 }
 

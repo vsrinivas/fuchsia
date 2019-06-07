@@ -100,7 +100,8 @@ public:
     void Generate(const raw::TypeConstructor& value);
     void Generate(const raw::Attribute& value);
     void Generate(const raw::AttributeList& value);
-    void Generate(const raw::Ordinal& value);
+    void Generate(const raw::Ordinal32& value);
+    void Generate(const raw::Ordinal64& value);
 
     void Generate(const flat::Name& value);
     void Generate(const flat::Type* value);

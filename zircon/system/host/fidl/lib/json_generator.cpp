@@ -236,7 +236,11 @@ void JSONGenerator::Generate(const raw::AttributeList& value) {
     Generate(value.attributes);
 }
 
-void JSONGenerator::Generate(const raw::Ordinal& value) {
+void JSONGenerator::Generate(const raw::Ordinal32& value) {
+    EmitNumeric(value.value);
+}
+
+void JSONGenerator::Generate(const raw::Ordinal64& value) {
     EmitNumeric(value.value);
 }
 

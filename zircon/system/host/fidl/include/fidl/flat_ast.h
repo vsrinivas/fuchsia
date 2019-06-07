@@ -767,7 +767,7 @@ struct Struct : public TypeDecl {
 
 struct Table : public TypeDecl {
     struct Member {
-        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<TypeConstructor> type,
+        Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type,
                SourceLocation name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<raw::AttributeList> attributes)
@@ -775,10 +775,10 @@ struct Table : public TypeDecl {
               maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
                                                 std::move(maybe_default_value),
                                                 std::move(attributes))) {}
-        Member(std::unique_ptr<raw::Ordinal> ordinal, SourceLocation location)
+        Member(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
             : ordinal(std::move(ordinal)),
               maybe_location(std::make_unique<SourceLocation>(location)) {}
-        std::unique_ptr<raw::Ordinal> ordinal;
+        std::unique_ptr<raw::Ordinal32> ordinal;
         // The location for reserved table members.
         std::unique_ptr<SourceLocation> maybe_location;
         struct Used {
@@ -832,11 +832,11 @@ struct Union : public TypeDecl {
 
 struct XUnion : public TypeDecl {
     struct Member {
-        Member(std::unique_ptr<raw::Ordinal> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+        Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
                SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
             : ordinal(std::move(ordinal)), type_ctor(std::move(type_ctor)), name(std::move(name)),
               attributes(std::move(attributes)) {}
-        std::unique_ptr<raw::Ordinal> ordinal;
+        std::unique_ptr<raw::Ordinal32> ordinal;
         std::unique_ptr<TypeConstructor> type_ctor;
         SourceLocation name;
         std::unique_ptr<raw::AttributeList> attributes;
@@ -857,12 +857,14 @@ struct Interface : public TypeDecl {
         Method& operator=(Method&&) = default;
 
         Method(std::unique_ptr<raw::AttributeList> attributes,
-               std::unique_ptr<raw::Ordinal> generated_ordinal32,
+               std::unique_ptr<raw::Ordinal32> generated_ordinal32,
+               std::unique_ptr<raw::Ordinal64> generated_ordinal64,
                SourceLocation name,
                Struct* maybe_request,
                Struct* maybe_response)
             : attributes(std::move(attributes)),
               generated_ordinal32(std::move(generated_ordinal32)),
+              generated_ordinal64(std::move(generated_ordinal64)),
               name(std::move(name)),
               maybe_request(maybe_request),
               maybe_response(maybe_response) {
@@ -870,7 +872,9 @@ struct Interface : public TypeDecl {
         }
 
         std::unique_ptr<raw::AttributeList> attributes;
-        std::unique_ptr<raw::Ordinal> generated_ordinal32;
+        // To be removed when FIDL-524 has completed.
+        std::unique_ptr<raw::Ordinal32> generated_ordinal32;
+        std::unique_ptr<raw::Ordinal64> generated_ordinal64;
         SourceLocation name;
         Struct* maybe_request;
         Struct* maybe_response;

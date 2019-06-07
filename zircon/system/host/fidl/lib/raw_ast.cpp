@@ -61,7 +61,11 @@ void LiteralConstant::Accept(TreeVisitor* visitor) const {
     visitor->OnLiteral(literal);
 }
 
-void Ordinal::Accept(TreeVisitor* visitor) const {
+void Ordinal32::Accept(TreeVisitor* visitor) const {
+    SourceElementMark sem(visitor, *this);
+}
+
+void Ordinal64::Accept(TreeVisitor* visitor) const {
     SourceElementMark sem(visitor, *this);
 }
 
@@ -240,7 +244,7 @@ void TableMember::Accept(TreeVisitor* visitor) const {
             visitor->OnAttributeList(maybe_used->attributes);
         }
     }
-    visitor->OnOrdinal(*ordinal);
+    visitor->OnOrdinal32(*ordinal);
     if (maybe_used != nullptr) {
         visitor->OnTypeConstructor(maybe_used->type_ctor);
         visitor->OnIdentifier(maybe_used->identifier);
