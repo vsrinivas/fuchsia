@@ -11,14 +11,16 @@
 ##   -N run with emulated nic via tun/tap
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
+##   --audio run with audio hardware added to the virtual machine
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
-KVM=""
-NET=""
+KVM=0
+NET=0
+AUDIO=0
 HEADLESS=""
 AEMU_DIR=""
 UPSCRIPT=no
@@ -46,6 +48,9 @@ while [[ $# -ge 1 ]]; do
     shift
     AEMU_DIR="$1"
     ;;
+  --audio)
+    AUDIO=1
+    ;;
   *)
     break
   esac
@@ -72,6 +77,11 @@ ARGS+=("-machine" "q35")
 ARGS+=("-device" "isa-debug-exit,iobase=0xf4,iosize=0x04")
 ARGS+=("-device" "virtio-keyboard-pci")
 ARGS+=("-device" "virtio_input_multi_touch_pci_1")
+
+if (( $AUDIO )); then
+  ARGS+=("-soundhw" "hda")
+fi
+
 if (( $KVM )); then
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
 else
