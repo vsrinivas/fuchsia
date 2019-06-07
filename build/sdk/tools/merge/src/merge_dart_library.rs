@@ -6,7 +6,7 @@ use sdk_metadata::DartLibrary;
 
 use crate::app::Result;
 use crate::file_provider::FileProvider;
-use crate::tarball::{OutputTarball, SourceTarball};
+use crate::tarball::{InputTarball, OutputTarball};
 
 impl FileProvider for DartLibrary {
     fn get_common_files(&self) -> Vec<String> {
@@ -14,8 +14,9 @@ impl FileProvider for DartLibrary {
     }
 }
 
-pub fn merge_dart_library(
-    meta_path: &str, base: &SourceTarball, _complement: &SourceTarball, output: &mut OutputTarball,
+pub fn merge_dart_library<F>(
+    meta_path: &str, base: &impl InputTarball<F>, _complement: &impl InputTarball<F>,
+    output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     // For now, just copy the base version.
     // TODO(DX-495): verify that contents are the exact same.

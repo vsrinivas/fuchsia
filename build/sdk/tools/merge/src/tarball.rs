@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file
+// found in the LICENSE file.
 
 use std::collections::HashSet;
 use std::convert::TryFrom;
@@ -20,6 +20,17 @@ use sdk_metadata::JsonObject;
 use crate::app::{Error, Result};
 
 /// A tarball that can be read from.
+pub trait InputTarball<F> {
+    /// Reads a file from the tarball.
+    fn get_file<R>(&self, path: &str, reader: R) -> Result<()>
+    where
+        R: FnOnce(&mut F) -> Result<()>;
+
+    /// Reads a metadata object from the tarball.
+    fn get_metadata<T: JsonObject>(&self, path: &str) -> Result<T>;
+}
+
+/// Implementation of |InputTarball| for the |File| type.
 pub struct SourceTarball {
     base: TempDir,
 }
@@ -34,11 +45,12 @@ impl SourceTarball {
         archive.unpack(tempdir.path())?;
         Ok(SourceTarball { base: tempdir })
     }
+}
 
-    /// Reads a file from the tarball.
-    pub fn get_file<F>(&self, path: &str, reader: F) -> Result<()>
+impl InputTarball<File> for SourceTarball {
+    fn get_file<R>(&self, path: &str, reader: R) -> Result<()>
     where
-        F: FnOnce(&mut File) -> Result<()>,
+        R: FnOnce(&mut File) -> Result<()>,
     {
         let mut file =
             File::open(self.base.path().join(path)).or(Err(Error::ArchiveFileNotFound {
@@ -50,8 +62,7 @@ impl SourceTarball {
         reader(&mut file)
     }
 
-    /// Reads a metadata object from the tarball.
-    pub fn get_metadata<T: JsonObject>(&self, path: &str) -> Result<T> {
+    fn get_metadata<T: JsonObject>(&self, path: &str) -> Result<T> {
         let mut contents = String::new();
         self.get_file(path, |file| {
             file.read_to_string(&mut contents)?;
@@ -62,21 +73,34 @@ impl SourceTarball {
 }
 
 /// A tarball that can be written into.
-pub struct OutputTarball {
+pub trait OutputTarball<F> {
+    /// Writes the given content to the given path in the tarball.
+    ///
+    /// It is an error to write to the same path twice.
+    fn write_json<T: JsonObject>(&mut self, path: &str, content: &T) -> Result<()>;
+
+    /// Writes the given file to the given path in the tarball.
+    ///
+    /// It is an error to write to the same path twice.
+    fn write_file(&mut self, path: &str, file: &mut F) -> Result<()>;
+}
+
+/// Implementation of |OutputTarball| for the |File| type.
+pub struct ResultTarball {
     paths: HashSet<String>,
     builder: Builder<GzEncoder<File>>,
 }
 
-impl OutputTarball {
+impl ResultTarball {
     /// Creates a new tarball.
-    pub fn new(path: &str) -> Result<OutputTarball> {
+    pub fn new(path: &str) -> Result<ResultTarball> {
         let output_path = Path::new(&path);
         if output_path.exists() {
             std::fs::remove_file(output_path)?;
         }
         let tar = File::create(&path)?;
         let tar_gz = GzEncoder::new(tar, Compression::default());
-        Ok(OutputTarball {
+        Ok(ResultTarball {
             paths: HashSet::new(),
             builder: Builder::new(tar_gz),
         })
@@ -92,10 +116,14 @@ impl OutputTarball {
         })?
     }
 
-    /// Writes the given content to the given path in the tarball.
-    ///
-    /// It is an error to write to the same path twice.
-    pub fn write_json<T: JsonObject>(&mut self, path: &str, content: &T) -> Result<()> {
+    /// Wraps up the creation of the tarball.
+    pub fn export(&mut self) -> Result<()> {
+        Ok(self.builder.finish()?)
+    }
+}
+
+impl OutputTarball<File> for ResultTarball {
+    fn write_json<T: JsonObject>(&mut self, path: &str, content: &T) -> Result<()> {
         self.add_path(path)?;
         let string = content.to_string()?;
         let bytes = string.as_bytes();
@@ -112,16 +140,52 @@ impl OutputTarball {
         Ok(self.builder.append_data(&mut header, path, bytes)?)
     }
 
-    /// Writes the given file to the given path in the tarball.
-    ///
-    /// It is an error to write to the same path twice.
-    pub fn write_file(&mut self, path: &str, file: &mut File) -> Result<()> {
+    fn write_file(&mut self, path: &str, file: &mut File) -> Result<()> {
         self.add_path(path)?;
         Ok(self.builder.append_file(path, file)?)
     }
+}
 
-    /// Wraps up the creation of the tarball.
-    pub fn export(&mut self) -> Result<()> {
-        Ok(self.builder.finish()?)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_packing_unpacking() {
+        let content_path = "some/thing.txt";
+        let content = "yay it worked!";
+
+        let tempdir = tempfile::Builder::new()
+            .prefix("test_tarballs")
+            .tempdir()
+            .unwrap();
+
+        // Write the file to add to a tarball.
+        let file_path = tempdir.path().join("file.txt");
+        let file_path_str = file_path.to_str().unwrap();
+        std::fs::write(&file_path_str, content).unwrap();
+
+        let tarball_path = tempdir.path().join("tarball.tar.gz");
+        let tarball_path_str = tarball_path.to_str().unwrap();
+
+        // Generate the tarball.
+        {
+            // The scope is needed in order for the tarball to get properly written...
+            let mut output = ResultTarball::new(tarball_path_str).unwrap();
+            let mut content_file = File::open(&file_path_str).unwrap();
+            output.write_file(content_path, &mut content_file).unwrap();
+            output.export().unwrap();
+        }
+
+        // Unpack the tarball.
+        let input = SourceTarball::new(&tarball_path_str).unwrap();
+        let mut read_content = String::new();
+        input
+            .get_file(content_path, |file| {
+                file.read_to_string(&mut read_content)?;
+                Ok(())
+            })
+            .unwrap();
+        assert_eq!(content, read_content);
     }
 }

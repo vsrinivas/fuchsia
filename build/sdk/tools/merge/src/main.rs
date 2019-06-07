@@ -19,7 +19,7 @@ mod tarball;
 use crate::app::{Error, Result};
 use crate::file_provider::FileProvider;
 use crate::merge_dart_library::merge_dart_library;
-use crate::tarball::{OutputTarball, SourceTarball};
+use crate::tarball::{InputTarball, OutputTarball, ResultTarball, SourceTarball};
 
 const MANIFEST_PATH: &str = "meta/manifest.json";
 
@@ -110,8 +110,9 @@ fn is_kind_supported(kind: &ElementType) -> bool {
     }
 }
 
-fn merge_common_part(
-    part: &Part, base: &SourceTarball, complement: &SourceTarball, output: &mut OutputTarball,
+fn merge_common_part<F>(
+    part: &Part, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
+    output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     if !is_kind_supported(&part.kind) {
         println!("Skipping {}", part);
@@ -123,7 +124,9 @@ fn merge_common_part(
     }
 }
 
-fn copy_part_as_is(part: &Part, source: &SourceTarball, output: &mut OutputTarball) -> Result<()> {
+fn copy_part_as_is<F>(
+    part: &Part, source: &impl InputTarball<F>, output: &mut impl OutputTarball<F>,
+) -> Result<()> {
     if !is_kind_supported(&part.kind) {
         println!("Skipping {}", part);
         return Ok(());
@@ -147,7 +150,7 @@ fn main() -> Result<()> {
 
     let base = SourceTarball::new(&flags.base)?;
     let complement = SourceTarball::new(&flags.complement)?;
-    let mut output = OutputTarball::new(&flags.output)?;
+    let mut output = ResultTarball::new(&flags.output)?;
 
     let base_manifest: Manifest = base.get_metadata(MANIFEST_PATH)?;
     let complement_manifest: Manifest = complement.get_metadata(MANIFEST_PATH)?;
