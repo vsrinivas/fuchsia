@@ -1,5 +1,57 @@
 {
     "facets": {
+        "fuchsia.modular": {
+            "@version": 2,
+            "binary": "collection_mod",
+            "intent_filters": [
+                {
+                    "action": "VIEW_COLLECTION",
+                    "action_display": {
+                        "display_info": {
+                            "icon": "http://shortn/_xgVpQkE0qu",
+                            "subtitle": "",
+                            "title": "View collection"
+                        }
+                    },
+                    "parameters": [
+                        {
+                            "name": "query",
+                            "type": "string"
+                        },
+                        {
+                            "name": "selected",
+                            "type": "https://schema.org/Thing"
+                        }
+                    ]
+                },
+                {
+                    "action": "VIEW_BOOKS_BY_AUTHOR",
+                    "action_display": {
+                        "display_info": {
+                            "icon": "http://shortn/_xgVpQkE0qu",
+                            "subtitle": "",
+                            "title": "View Books by ${name}"
+                        },
+                        "parameter_mapping": [
+                            {
+                                "name": "name",
+                                "parameter_property": "author.name"
+                            }
+                        ]
+                    },
+                    "parameters": [
+                        {
+                            "name": "author",
+                            "type": "https://schema.org/BookAuthor"
+                        },
+                        {
+                            "name": "selected",
+                            "type": "https://schema.org/Book"
+                        }
+                    ]
+                }
+            ]
+        },
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
@@ -16,7 +68,11 @@
     },
     "sandbox": {
         "features": [],
+        "pkgfs": [
+            "packages"
+        ],
         "services": [
+            "fuchsia.sys.Loader",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Launcher"
         ]

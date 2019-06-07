@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        cloud_action_provider::get_actions,
+        cloud_action_provider::get_cloud_actions,
         mod_manager::ModManager,
         story_context_store::StoryContextStore,
         suggestion_providers::{ContextualSuggestionsProvider, PackageSuggestionsProvider},
@@ -29,6 +29,8 @@ mod testing;
 mod action_match;
 mod cloud_action_provider;
 mod discover_registry;
+mod indexing;
+mod local_action_provider;
 mod mod_manager;
 mod models;
 mod module_output;
@@ -75,7 +77,7 @@ async fn main() -> Result<(), Error> {
     let mut suggestions_manager = SuggestionsManager::new(mod_manager.clone());
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
 
-    let actions = await!(get_actions()).unwrap_or_else(|e| {
+    let actions = await!(get_cloud_actions()).unwrap_or_else(|e| {
         fx_log_err!("Error fetching actions index: {}", e);
         vec![]
     });

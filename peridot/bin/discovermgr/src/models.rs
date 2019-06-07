@@ -23,7 +23,7 @@ pub struct Action {
     #[serde(default)]
     pub parameters: Vec<Parameter>,
     pub action_display: Option<ActionDisplayInfo>,
-    web_fulfillment: Option<WebFulfillment>,
+    pub web_fulfillment: Option<WebFulfillment>,
     pub fuchsia_fulfillment: Option<FuchsiaFulfillment>,
 }
 
@@ -34,7 +34,7 @@ pub struct Parameter {
     pub name: String,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq)]
 pub struct ActionDisplayInfo {
     pub display_info: Option<DisplayInfo>,
     #[serde(default)]
@@ -48,7 +48,7 @@ pub struct DisplayInfo {
     pub subtitle: Option<String>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq)]
 pub struct ParameterMapping {
     name: String,
     parameter_property: String,

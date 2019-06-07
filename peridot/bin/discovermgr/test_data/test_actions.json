@@ -114,7 +114,7 @@
       "component_url": "fuchsia-pkg://fuchsia.com/collections#meta/collections.cmx"
     },
     "name": "VIEW_COLLECTION",
-    "display_info" : {
+    "action_display" : {
     },
     "parameters": [
       {

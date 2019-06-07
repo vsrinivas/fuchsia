@@ -76,7 +76,7 @@ async fn get_actions_http(url: &str) -> Result<Vec<Action>, Error> {
 }
 
 /// Fetch actions from cloud.
-pub async fn get_actions() -> Result<Vec<Action>, Error> {
+pub async fn get_cloud_actions() -> Result<Vec<Action>, Error> {
     // Configuration struct for this module contain the default cloud url
     let config: Config =
         serde_json::from_str(include_str!("../config/cloud_discover.json")).unwrap();
@@ -96,7 +96,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_http_get() -> Result<(), Error> {
         // Check for default url, expect an Err()
-        assert!(await!(get_actions()).is_err());
+        assert!(await!(get_cloud_actions()).is_err());
 
         // Check for bad url, expect an Err()
         assert!(await!(get_actions_http("http://example.com")).is_err());
