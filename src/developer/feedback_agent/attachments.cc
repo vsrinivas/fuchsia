@@ -80,13 +80,13 @@ fit::promise<fuchsia::mem::Buffer> VmoFromFilename(
 
 fit::promise<fuchsia::mem::Buffer> BuildValue(
     const std::string& key, std::shared_ptr<::sys::ServiceDirectory> services) {
-  if (key == "build.snapshot") {
+  if (key == "build.snapshot.xml") {
     return VmoFromFilename("/config/build-info/snapshot");
-  } else if (key == "log.kernel") {
+  } else if (key == "log.kernel.txt") {
     return GetKernelLog();
-  } else if (key == "log.system") {
+  } else if (key == "log.system.txt") {
     return CollectSystemLog(services, kAttachmentTimeout);
-  } else if (key == "inspect") {
+  } else if (key == "inspect.json") {
     return CollectInspectData(kAttachmentTimeout);
   } else {
     FX_LOGS(WARNING) << "Unknown attachment " << key;

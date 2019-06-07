@@ -155,7 +155,7 @@ TEST_F(BugReportClientTest, ProcessBugReport_ValidDocument) {
 })");
 
   auto attachment1 = targets->at(1);
-  EXPECT_EQ(attachment1.name, "attachment.1.key.json");
+  EXPECT_EQ(attachment1.name, "attachment.1.key");
   EXPECT_EQ(attachment1.contents,
             R"({
     "embedded": [
@@ -165,7 +165,7 @@ TEST_F(BugReportClientTest, ProcessBugReport_ValidDocument) {
 })");
 
   auto attachment2 = targets->at(2);
-  EXPECT_EQ(attachment2.name, "attachment.2.key.txt");
+  EXPECT_EQ(attachment2.name, "attachment.2.key");
   EXPECT_EQ(attachment2.contents, "attachment.2.value");
 }
 
@@ -177,7 +177,6 @@ TEST_F(BugReportClientTest, ProcessBugReport_EdgeCases) {
   EXPECT_FALSE(ProcessBugReport(kWrongAnnotationType));
   EXPECT_FALSE(ProcessBugReport(kWrongAttachmentType));
 }
-
 
 TEST_F(BugReportClientTest, Export) {
   ASSERT_TRUE(SetupTempFiles());

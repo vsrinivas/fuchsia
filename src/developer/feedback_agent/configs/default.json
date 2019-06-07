@@ -7,9 +7,9 @@
         "device.board-name"
     ],
     "attachment_allowlist": [
-        "build.snapshot",
-        "inspect",
-        "log.kernel",
-        "log.system"
+        "build.snapshot.xml",
+        "inspect.json",
+        "log.kernel.txt",
+        "log.system.txt"
     ]
 }

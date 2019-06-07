@@ -137,10 +137,10 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(),
               testing::UnorderedElementsAreArray({
-                  MatchesKey("build.snapshot"),
-                  MatchesKey("log.kernel"),
-                  MatchesKey("log.system"),
-                  MatchesKey("inspect"),
+                  MatchesKey("build.snapshot.xml"),
+                  MatchesKey("log.kernel.txt"),
+                  MatchesKey("log.system.txt"),
+                  MatchesKey("inspect.json"),
               }));
 }
 
@@ -177,7 +177,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_ValidInspectJson) {
 
   bool found_inspect_attachment = false;
   for (const auto& attachment : out_result.response().data.attachments()) {
-    if (attachment.key.compare("inspect") != 0) {
+    if (attachment.key.compare("inspect.json") != 0) {
       continue;
     }
     found_inspect_attachment = true;

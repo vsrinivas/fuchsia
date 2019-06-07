@@ -44,9 +44,9 @@ const std::set<std::string> kDefaultAnnotations = {
     "build.version", "device.board-name",
 };
 const std::set<std::string> kDefaultAttachments = {
-    "build.snapshot",
-    "log.kernel",
-    "log.system",
+    "build.snapshot.xml",
+    "log.kernel.txt",
+    "log.system.txt",
 };
 const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 
@@ -401,10 +401,10 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   // As we control the system log attachment, we can expect it to be present and
   // with a particular value.
   ASSERT_TRUE(result.response().data.has_attachments());
-  EXPECT_THAT(
-      result.response().data.attachments(),
-      testing::Contains(MatchesAttachment(
-          "log.system", "[15604.000][07559][07687][foo] INFO: log message\n")));
+  EXPECT_THAT(result.response().data.attachments(),
+              testing::Contains(MatchesAttachment(
+                  "log.system.txt",
+                  "[15604.000][07559][07687][foo] INFO: log message\n")));
   // There is nothing else we can assert here as no missing annotation nor
   // attachment is fatal.
 }

@@ -4,11 +4,11 @@
 
 #include "src/developer/bugreport/bug_report_client.h"
 
-#include <fstream>
-
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/schema.h>
+
+#include <fstream>
 
 #include "src/developer/bugreport/bug_report_schema.h"
 #include "src/lib/fxl/logging.h"
@@ -78,13 +78,12 @@ std::optional<std::vector<Target>> ParseAttachments(
     rapidjson::Document target_doc;
     target_doc.Parse(attachment.GetString());
 
+    target.name = key;
     if (target_doc.HasParseError()) {
       // Simple string.
-      target.name = fxl::StringPrintf("%s.txt", key);
       target.contents = attachment.GetString();
     } else {
       // It's a valid json object.
-      target.name = fxl::StringPrintf("%s.json", key);
       auto content = PrettyPrintJson(target_doc);
       // If pretty printing failed, we add the incoming string.
       if (!content) {
