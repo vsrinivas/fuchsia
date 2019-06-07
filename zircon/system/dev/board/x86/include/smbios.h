@@ -15,4 +15,7 @@ __BEGIN_CDECLS
 zx_status_t smbios_get_board_name(char* board_name_buffer, size_t board_name_size,
                                   size_t* board_name_actual);
 
+// Check if we consider the given product name to be valid.
+bool smbios_product_name_is_valid(const char* product_name);
+
 __END_CDECLS

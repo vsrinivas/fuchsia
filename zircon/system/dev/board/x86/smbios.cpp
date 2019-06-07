@@ -104,12 +104,14 @@ zx_status_t SmbiosState::LoadFromFirmware() {
     return ZX_OK;
 }
 
-zx_status_t ValidateProductName(const char* product_name) {
-    if (product_name == nullptr || !strcmp(product_name, "<null>")) {
-        return ZX_ERR_NOT_FOUND;
+} // namespace
+
+bool smbios_product_name_is_valid(const char* product_name) {
+    if (product_name == nullptr || !strcmp(product_name, "<null>") || strlen(product_name) == 0) {
+        return false;
     }
     // Check if the product name is all spaces (seen on some devices)
-    const size_t product_name_len = strlen(product_name) + 1;
+    const size_t product_name_len = strlen(product_name);
     bool nonspace_found = false;
     for (size_t i = 0; i < product_name_len; ++i) {
         if (product_name[i] != ' ') {
@@ -119,13 +121,11 @@ zx_status_t ValidateProductName(const char* product_name) {
     }
 
     if (!nonspace_found) {
-        return ZX_ERR_NOT_FOUND;
+        return false;
     }
 
-    return ZX_OK;
+    return true;
 }
-
-} // namespace
 
 zx_status_t smbios_get_board_name(char* board_name_buffer, size_t board_name_size,
                                   size_t* board_name_actual) {
@@ -137,16 +137,23 @@ zx_status_t smbios_get_board_name(char* board_name_buffer, size_t board_name_siz
     }
 
     // Search for the product name
-    const char* product_name = nullptr;
-    auto struct_walk_cb = [&product_name](smbios::SpecVersion version, const smbios::Header* h,
-                                          const smbios::StringTable& st) -> zx_status_t {
+    const char* sys_product_name = nullptr;
+    const char* baseboard_product_name = nullptr;
+    auto struct_walk_cb = [&sys_product_name, &baseboard_product_name]
+            (smbios::SpecVersion version, const smbios::Header* h,
+             const smbios::StringTable& st) -> zx_status_t {
         if (h->type == smbios::StructType::SystemInfo && version.IncludesVersion(2, 0)) {
             auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_0*>(h);
-            zx_status_t status = st.GetString(entry->product_name_str_idx, &product_name);
+            zx_status_t status = st.GetString(entry->product_name_str_idx, &sys_product_name);
             if (status != ZX_OK) {
-                return status;
+                sys_product_name = nullptr;
             }
-            return ZX_ERR_STOP;
+        } else if (h->type == smbios::StructType::Baseboard) {
+            auto entry = reinterpret_cast<const smbios::BaseboardInformationStruct*>(h);
+            zx_status_t status = st.GetString(entry->product_name_str_idx, &baseboard_product_name);
+            if (status != ZX_OK) {
+                baseboard_product_name = nullptr;
+            }
         }
         return ZX_OK;
     };
@@ -155,9 +162,15 @@ zx_status_t smbios_get_board_name(char* board_name_buffer, size_t board_name_siz
         return status;
     }
 
-    status = ValidateProductName(product_name);
-    if (status != ZX_OK) {
-        return status;
+    const char* product_name = nullptr;
+    for (auto possible_name : { sys_product_name, baseboard_product_name }) {
+        if (smbios_product_name_is_valid(possible_name)) {
+            product_name = possible_name;
+            break;
+        }
+    }
+    if (product_name == nullptr) {
+        return ZX_ERR_NOT_FOUND;
     }
 
     size_t product_name_len = strlen(product_name) + 1;

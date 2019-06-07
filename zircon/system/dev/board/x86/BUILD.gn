@@ -27,6 +27,25 @@ config("config") {
   cflags_c = [ "-fno-strict-aliasing" ]
 }
 
+source_set("smbios") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "smbios.cpp",
+  ]
+
+  configs += [ ":config" ]
+
+  deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/smbios:static",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
 driver("platform-bus-x86") {
   sources = [
     "acpi-dev/dev-battery.c",
@@ -46,7 +65,6 @@ driver("platform-bus-x86") {
     "pciroot.cpp",
     "power.c",
     "resources.c",
-    "smbios.cpp",
     "sysmem.c",
     "util.c",
     "x86.c",
@@ -62,6 +80,7 @@ driver("platform-bus-x86") {
   }
   configs += [ ":config" ]
   deps = [
+    ":smbios",
     "$zx/system/banjo/ddk.protocol.acpi",
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.pciroot",
@@ -76,11 +95,9 @@ driver("platform-bus-x86") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fzl",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/pci",
     "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/smbios:static",
     "$zx/system/ulib/zircon",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
@@ -117,5 +134,18 @@ test("x86-battery-test") {
     "$zx/system/ulib/zxtest",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
+  ]
+}
+
+test("x86-board-test") {
+  test_group = "ddk"
+  sources = [
+    "smbios-test.cpp",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    ":smbios",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
   ]
 }
