@@ -125,16 +125,13 @@ protocol Host {
     // error Status will be returned and neither transport will be connected.
     Connect(string device_id) -> (fuchsia.bluetooth.Status status);
 
-    /// Deletes a peer from the Bluetooth host. If the peer is connected, it
-    /// will be disconnected, then OnDeviceUpdated will be sent. No
-    /// OnBondRemoved will be sent. |device_id| will no longer to refer to any
-    /// peer, even if the same device is discovered again.
+    /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected,
+    /// then OnDeviceUpdated will be sent. OnDeviceRemoved will be sent. |device_id| will no longer
+    /// refer to any peer, even if a device with the same address(es) is discovered again.
     ///
-    /// Returns a success only if the peer was found and it contained bond data
-    /// that was deleted.
-    ///
-    /// TODO(BT-824): Delete peer immediately, not eventually.
-    /// TODO(BT-562): Respond when disconnection completes, not immediately.
+    /// Returns success after no peer exists that's identified by |device_id| (even if it didn't
+    /// exist before Forget), failure if the peer specified by |device_id| could not be
+    /// disconnected or deleted and still exists.
     Forget(string device_id) -> (fuchsia.bluetooth.Status status);
 
     // Enable or disable a passive LE background scan. When enabled, the bt-host

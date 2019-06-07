@@ -83,6 +83,13 @@ impl HostDriverHarness {
             .on_timeout(timeout_duration().after_now(), move || Err(BtError::new(&err_msg).into())))
     }
 
+    // Returns a future that resolves when a peer matching `id` is not present on the host.
+    pub async fn expect_no_peer(&self, id: String) -> Result<(), Error> {
+        let err_msg = format!("timed out waiting for peer to be removed");
+        await!(RemoteDeviceStateFuture::new(self.clone(), Some(id), None)
+            .on_timeout(timeout_duration().after_now(), move || Err(BtError::new(&err_msg).into())))
+    }
+
     pub fn host_proxy(&self) -> MappedRwLockReadGuard<HostProxy> {
         RwLockReadGuard::map(self.0.read(), |host| &host.host_proxy)
     }

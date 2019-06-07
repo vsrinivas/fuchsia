@@ -125,7 +125,7 @@ pub async fn test_list_devices(test_state: HostDriverHarness) -> Result<(), Erro
 }
 
 pub async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
-    // Start discovery and let bt-host process the fake LE devices.
+    // Start discovery and let bt-host process the fake devices.
     await!(test_state.host_proxy().start_discovery())?;
 
     let le_dev = expectation::peer::address(FAKE_LE_DEVICE_ADDR);
@@ -156,6 +156,34 @@ pub async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
     expect_true!(status.error.is_none())?;
     await!(test_state
         .expect_peer(Some(success_dev.identifier.clone()), expectation::peer::connected(true)))?;
+
+    Ok(())
+}
+
+pub async fn test_forget(test_state: HostDriverHarness) -> Result<(), Error> {
+    // Start discovery and let bt-host process the fake peers.
+    await!(test_state.host_proxy().start_discovery())?;
+
+    let peers = await!(test_state.host_proxy().list_devices())?;
+
+    // Obtain bt-host assigned IDs of the peer.
+    let le_peer = peers
+        .iter()
+        .find(|x| x.address == FAKE_LE_DEVICE_ADDR)
+        .ok_or(BtError::new("success peer not found"))?;
+
+    // Connecting to the peer should return success and the peer should become connected.
+    let mut status = await!(test_state.host_proxy().connect(&le_peer.identifier))?;
+    expect_true!(status.error.is_none())?;
+    await!(test_state
+        .expect_peer(Some(le_peer.identifier.clone()), expectation::peer::connected(true)))?;
+
+    // Forgetting the peer should result in its removal.
+    status = await!(test_state.host_proxy().forget(&le_peer.identifier))?;
+    expect_true!(status.error.is_none())?;
+    await!(test_state.expect_no_peer(le_peer.identifier.clone()))?;
+
+    // TODO(BT-879): Test that the link closes by querying fake HCI.
 
     Ok(())
 }
