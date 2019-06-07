@@ -385,3 +385,9 @@ mod kernel {
         KernelSubtype::Numbers
     );
 }
+
+mod syzkaller {
+    use super::*;
+
+    codegen_test!(empty, SyzkallerBackend, ["banjo/empty.test.banjo"], "syzkaller/empty.txt");
+}

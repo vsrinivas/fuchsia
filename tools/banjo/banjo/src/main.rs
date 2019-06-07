@@ -30,6 +30,7 @@ enum BackendName {
     Ast,
     Abigen,
     Kernel(backends::KernelSubtype),
+    Syzkaller,
 }
 
 impl FromStr for BackendName {
@@ -47,6 +48,7 @@ impl FromStr for BackendName {
             "abigen" => Ok(BackendName::Abigen),
             "kernelnumbers" => Ok(BackendName::Kernel(backends::KernelSubtype::Numbers)),
             "kerneltrace" => Ok(BackendName::Kernel(backends::KernelSubtype::Trace)),
+            "syzkaller" => Ok(BackendName::Syzkaller),
             _ => Err(format!(
                 "Unrecognized backend for banjo. Current valid ones are: \
                  C, Cpp, CppMock, Rust, Ast, Abigen, KernelNumbers, KernelTrace"
@@ -179,6 +181,7 @@ fn main() -> Result<(), Error> {
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
         BackendName::Abigen => Box::new(AbigenBackend::new(&mut output)),
         BackendName::Kernel(subtype) => Box::new(KernelBackend::new(&mut output, subtype)),
+        BackendName::Syzkaller => Box::new(SyzkallerBackend::new(&mut output)),
         e => {
             eprintln!("{:?} backend is not yet implemented", e);
             ::std::process::exit(1);
