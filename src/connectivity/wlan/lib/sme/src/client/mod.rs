@@ -28,7 +28,7 @@ use wlan_inspect::wrappers::InspectWlanChan;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
-use self::bss::{get_best_bss, get_channel_map, get_standard_map, group_networks};
+use self::bss::{get_channel_map, get_standard_map};
 use self::event::Event;
 use self::rsn::get_rsna;
 use self::scan::{DiscoveryScan, JoinScan, JoinScanFailure, ScanResult, ScanScheduler};
@@ -39,7 +39,7 @@ use crate::responder::Responder;
 use crate::sink::{InfoSink, MlmeSink};
 use crate::timer::{self, TimedEvent};
 
-pub use self::bss::{BssInfo, EssInfo};
+pub use self::bss::{BssInfo, ClientConfig, EssInfo};
 pub use self::scan::DiscoveryError;
 
 // This is necessary to trick the private-in-public checker.
@@ -82,6 +82,7 @@ pub type ConnectionAttemptId = u64;
 pub type ScanTxnId = u64;
 
 pub struct ClientSme {
+    cfg: ClientConfig,
     state: Option<State>,
     scan_sched: ScanScheduler<Responder<EssDiscoveryResult>, ConnectConfig>,
     context: Context,
@@ -157,6 +158,7 @@ pub enum Standard {
 
 impl ClientSme {
     pub fn new(
+        cfg: ClientConfig,
         info: DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
@@ -168,7 +170,8 @@ impl ClientSme {
         iface_tree_holder.place_iface_subtree(inspect.clone());
         (
             ClientSme {
-                state: Some(State::Idle),
+                cfg,
+                state: Some(State::Idle { cfg }),
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
@@ -267,9 +270,9 @@ impl super::Station for ClientSme {
                     ScanResult::None => state,
                     ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
                         let mut inspect_msg: Option<String> = None;
-                        let new_state = match get_best_bss(&bss_list) {
+                        let new_state = match self.cfg.get_best_bss(&bss_list) {
                             // BSS found and compatible.
-                            Some(best_bss) if bss::is_bss_compatible(best_bss) => {
+                            Some(best_bss) if self.cfg.is_bss_compatible(best_bss) => {
                                 match get_protection(
                                     &self.context.device_info,
                                     &token.credential,
@@ -358,7 +361,7 @@ impl super::Station for ClientSme {
                             Ok(bss_list) => {
                                 let bss_count = bss_list.len();
 
-                                let ess_list = group_networks(&bss_list);
+                                let ess_list = self.cfg.group_networks(&bss_list);
                                 let ess_count = ess_list.len();
 
                                 let num_bss_by_standard = get_standard_map(&bss_list);
@@ -450,6 +453,7 @@ pub fn get_protection(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Config as SmeConfig;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
     use std::error::Error;
@@ -515,9 +519,8 @@ mod tests {
             .expect_err("protected network requires password");
     }
 
-    #[cfg(feature = "wep_enabled")]
     #[test]
-    fn test_get_protection_wep_supported() {
+    fn test_get_protection_wep() {
         let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
 
         // WEP-40 with credentials:
@@ -546,17 +549,6 @@ mod tests {
         let bss = fake_wep_bss_description(b"wep".to_vec());
         get_protection(&dev_info, &credential, &bss)
             .expect_err("expected error for invalid WEP credentials");
-    }
-
-    #[cfg(not(feature = "wep_enabled"))]
-    #[test]
-    fn test_get_protection_wep_unsupported() {
-        let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
-
-        // WEP-40 with credentials:
-        let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
-        let bss = fake_wep_bss_description(b"wep40".to_vec());
-        get_protection(&dev_info, &credential, &bss).expect_err("WEP is not supported");
     }
 
     #[test]
@@ -605,10 +597,15 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "wep_enabled")]
     #[test]
     fn connecting_to_wep_network_supported() {
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        let inspector = finspect::vmo::Inspector::new().expect("unable to create Inspector");
+        let sme_root_node = inspector.root().create_child("sme");
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = ClientSme::new(
+            ClientConfig::from_config(SmeConfig::with_wep_support()),
+            test_utils::fake_device_info(CLIENT_ADDR),
+            Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
+        );
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         // Issue a connect command and verify that connecting_to status is changed for upper
@@ -644,7 +641,6 @@ mod tests {
         }
     }
 
-    #[cfg(not(feature = "wep_enabled"))]
     #[test]
     fn connecting_to_wep_network_unsupported() {
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
@@ -908,6 +904,7 @@ mod tests {
         let inspector = finspect::vmo::Inspector::new().expect("unable to create Inspector");
         let sme_root_node = inspector.root().create_child("sme");
         ClientSme::new(
+            ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
         )

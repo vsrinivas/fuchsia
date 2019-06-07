@@ -51,7 +51,10 @@ pub async fn serve<S>(
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
-    let (sme, mlme_stream, info_stream, time_stream) = Sme::new(device_info, iface_tree_holder);
+    // TODO(hahnr): Use configuration spawned by wlanstack.
+    let cfg = client_sme::ClientConfig::default();
+    let (sme, mlme_stream, info_stream, time_stream) =
+        Sme::new(cfg, device_info, iface_tree_holder);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy,

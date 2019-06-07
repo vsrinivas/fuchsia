@@ -6,15 +6,6 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-declare_args() {
-  # Enable WEP support.
-  # Use temporarily for testing driver WEP support.
-  # This build flag will be replaced by providing
-  # dedicated WEP specific WLAN targets which products
-  # can depend on.
-  support_insecure_wep = false
-}
-
 rustc_library("wep_deprecated") {
   name = "wep_deprecated"
   version = "0.1.0"
@@ -28,10 +19,6 @@ rustc_library("wep_deprecated") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",
   ]
-
-  if (support_insecure_wep) {
-    features = [ "wep_enabled" ]
-  }
 }
 
 unittest_package("wep-deprecated-tests") {

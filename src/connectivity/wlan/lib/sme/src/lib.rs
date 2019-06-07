@@ -24,6 +24,17 @@ use crate::timer::TimedEvent;
 pub type Ssid = Vec<u8>;
 pub type MacAddr = [u8; 6];
 
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Config {
+    pub wep_supported: bool,
+}
+
+impl Config {
+    pub fn with_wep_support() -> Self {
+        Self { wep_supported: true }
+    }
+}
+
 pub struct DeviceInfo {
     pub addr: [u8; 6],
     pub bands: Vec<fidl_mlme::BandCapabilities>,

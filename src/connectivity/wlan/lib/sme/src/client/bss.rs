@@ -12,7 +12,78 @@ use wlan_common::ie::rsn::rsne;
 use super::rsn::is_rsn_compatible;
 use crate::client::Standard;
 use crate::clone_utils::clone_bss_desc;
+use crate::Config;
 use crate::Ssid;
+
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ClientConfig(Config);
+
+impl ClientConfig {
+    pub fn from_config(cfg: Config) -> Self {
+        Self(cfg)
+    }
+
+    /// Converts a given BssDescription into a BssInfo.
+    pub fn convert_bss_description(&self, bss: &BssDescription) -> BssInfo {
+        BssInfo {
+            bssid: bss.bssid.clone(),
+            ssid: bss.ssid.clone(),
+            rx_dbm: get_rx_dbm(bss),
+            channel: bss.chan.primary,
+            protected: bss.cap.privacy,
+            compatible: self.is_bss_compatible(bss),
+        }
+    }
+
+    /// Compares two BSS based on
+    /// (1) their compatibility
+    /// (2) their security protocol
+    /// (3) their Beacon's RSSI
+    pub fn compare_bss(&self, left: &BssDescription, right: &BssDescription) -> Ordering {
+        self.is_bss_compatible(left)
+            .cmp(&self.is_bss_compatible(right))
+            .then(get_protection(left).cmp(&get_protection(right)))
+            .then(get_rx_dbm(left).cmp(&get_rx_dbm(right)))
+    }
+
+    /// Determines whether a given BSS is compatible with this client SME configuration.
+    pub fn is_bss_compatible(&self, bss: &BssDescription) -> bool {
+        match get_protection(bss) {
+            Protection::Open => true,
+            Protection::Wep => self.0.wep_supported,
+            // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
+            // compatiblity.
+            Protection::Rsna => match bss.rsn.as_ref() {
+                Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
+                    Ok(a_rsne) => is_rsn_compatible(&a_rsne),
+                    _ => false,
+                },
+                _ => false,
+            },
+        }
+    }
+
+    /// Returns the 'best' BSS from a given BSS list. The 'best' BSS is determined by comparing
+    /// all BSS with `compare_bss(BssDescription, BssDescription)`.
+    pub fn get_best_bss<'a>(&self, bss_list: &'a [BssDescription]) -> Option<&'a BssDescription> {
+        bss_list.iter().max_by(|x, y| self.compare_bss(x, y))
+    }
+
+    /// Converts a given BSS list into a list of ESS.
+    pub fn group_networks(&self, bss_set: &[BssDescription]) -> Vec<EssInfo> {
+        let mut bss_by_ssid: HashMap<Ssid, Vec<BssDescription>> = HashMap::new();
+
+        for bss in bss_set.iter() {
+            bss_by_ssid.entry(bss.ssid.clone()).or_insert(vec![]).push(clone_bss_desc(bss));
+        }
+
+        bss_by_ssid
+            .values()
+            .filter_map(|bss_list| self.get_best_bss(bss_list))
+            .map(|bss| EssInfo { best_bss: self.convert_bss_description(&bss) })
+            .collect()
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BssInfo {
@@ -34,24 +105,6 @@ pub enum Protection {
     Open = 0,
     Wep = 1,
     Rsna = 2,
-}
-
-pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
-    BssInfo {
-        bssid: bss.bssid.clone(),
-        ssid: bss.ssid.clone(),
-        rx_dbm: get_rx_dbm(bss),
-        channel: bss.chan.primary,
-        protected: bss.cap.privacy,
-        compatible: is_bss_compatible(bss),
-    }
-}
-
-pub fn compare_bss(left: &BssDescription, right: &BssDescription) -> Ordering {
-    is_bss_compatible(left)
-        .cmp(&is_bss_compatible(right))
-        .then(get_protection(left).cmp(&get_protection(right)))
-        .then(get_rx_dbm(left).cmp(&get_rx_dbm(right)))
 }
 
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
@@ -78,47 +131,6 @@ pub fn get_protection(bss: &BssDescription) -> Protection {
             }
         }
     }
-}
-
-pub fn is_bss_compatible(bss: &BssDescription) -> bool {
-    match get_protection(bss) {
-        Protection::Open => true,
-        Protection::Wep => wep_deprecated::is_supported(),
-        // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
-        // compatiblity.
-        Protection::Rsna => match bss.rsn.as_ref() {
-            Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
-                Ok(a_rsne) => is_rsn_compatible(&a_rsne),
-                _ => false,
-            },
-            _ => false,
-        },
-    }
-}
-
-pub fn get_best_bss(bss_list: &[BssDescription]) -> Option<&BssDescription> {
-    bss_list.iter().max_by(|x, y| compare_bss(x, y))
-}
-
-pub fn group_networks(bss_set: &[BssDescription]) -> Vec<EssInfo> {
-    let mut bss_by_ssid: HashMap<Ssid, Vec<BssDescription>> = HashMap::new();
-
-    for bss in bss_set.iter() {
-        match bss_by_ssid.entry(bss.ssid.clone()) {
-            Entry::Vacant(e) => {
-                e.insert(vec![clone_bss_desc(bss)]);
-            }
-            Entry::Occupied(mut e) => {
-                e.get_mut().push(clone_bss_desc(bss));
-            }
-        };
-    }
-
-    bss_by_ssid
-        .values()
-        .filter_map(|bss_list| get_best_bss(bss_list))
-        .map(|bss| EssInfo { best_bss: convert_bss_description(&bss) })
-        .collect()
 }
 
 pub fn get_standard_map(bss_list: &Vec<BssDescription>) -> HashMap<Standard, usize> {
@@ -184,43 +196,65 @@ mod tests {
     #[test]
     fn compare() {
         //  BSSes with the same RCPI, RSSI, and protection are equivalent.
+        let cfg = ClientConfig::default();
         assert_eq!(
             Ordering::Equal,
-            compare_bss(&bss(-10, -30, ProtectionCfg::Wpa2), &bss(-10, -30, ProtectionCfg::Wpa2))
+            cfg.compare_bss(
+                &bss(-10, -30, ProtectionCfg::Wpa2),
+                &bss(-10, -30, ProtectionCfg::Wpa2)
+            )
         );
         // Compatibility takes priority over everything else
-        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wpa1), &bss(-50, -50, ProtectionCfg::Wpa2));
+        assert_bss_cmp(
+            &cfg,
+            &bss(-10, -10, ProtectionCfg::Wpa1),
+            &bss(-50, -50, ProtectionCfg::Wpa2),
+        );
         // Higher security is better.
-        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Open), &bss(-50, -50, ProtectionCfg::Wpa2));
+        assert_bss_cmp(
+            &cfg,
+            &bss(-10, -10, ProtectionCfg::Open),
+            &bss(-50, -50, ProtectionCfg::Wpa2),
+        );
 
         // RCPI in dBmh takes priority over RSSI in dBmh
-        assert_bss_cmp(&bss(-20, -30, ProtectionCfg::Wpa2), &bss(-30, -20, ProtectionCfg::Wpa2));
+        assert_bss_cmp(
+            &cfg,
+            &bss(-20, -30, ProtectionCfg::Wpa2),
+            &bss(-30, -20, ProtectionCfg::Wpa2),
+        );
         // Compare RSSI if RCPI is absent
-        assert_bss_cmp(&bss(-30, 0, ProtectionCfg::Wpa2), &bss(-20, 0, ProtectionCfg::Wpa2));
+        assert_bss_cmp(&cfg, &bss(-30, 0, ProtectionCfg::Wpa2), &bss(-20, 0, ProtectionCfg::Wpa2));
         // Having an RCPI measurement is always better than not having any measurement
-        assert_bss_cmp(&bss(0, 0, ProtectionCfg::Wpa2), &bss(0, -200, ProtectionCfg::Wpa2));
+        assert_bss_cmp(&cfg, &bss(0, 0, ProtectionCfg::Wpa2), &bss(0, -200, ProtectionCfg::Wpa2));
         // Having an RSSI measurement is always better than not having any measurement
-        assert_bss_cmp(&bss(0, 0, ProtectionCfg::Wpa2), &bss(-100, 0, ProtectionCfg::Wpa2));
+        assert_bss_cmp(&cfg, &bss(0, 0, ProtectionCfg::Wpa2), &bss(-100, 0, ProtectionCfg::Wpa2));
     }
 
-    #[cfg(feature = "wep_enabled")]
     #[test]
     fn compare_wep() {
-        assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wep), &bss(-50, -50, ProtectionCfg::Wpa2));
+        let cfg = ClientConfig::from_config(Config::with_wep_support());
+        assert_bss_cmp(
+            &cfg,
+            &bss(-10, -10, ProtectionCfg::Wep),
+            &bss(-50, -50, ProtectionCfg::Wpa2),
+        );
     }
 
     #[test]
     fn get_best_bss_empty_list() {
-        assert!(get_best_bss(&vec![]).is_none());
+        let cfg = ClientConfig::default();
+        assert!(cfg.get_best_bss(&vec![]).is_none());
     }
 
     #[test]
     fn get_best_bss_nonempty_list() {
+        let cfg = ClientConfig::default();
         let bss1 = bss(-30, -10, ProtectionCfg::Wep);
         let bss2 = bss(-20, -10, ProtectionCfg::Wpa2);
         let bss3 = bss(-80, -80, ProtectionCfg::Wpa2);
         let bss_list = vec![bss1, bss2, bss3];
-        assert_eq!(get_best_bss(&bss_list), Some(&bss_list[1]));
+        assert_eq!(cfg.get_best_bss(&bss_list), Some(&bss_list[1]));
     }
 
     #[test]
@@ -239,27 +273,28 @@ mod tests {
     #[test]
     fn verify_compatibility() {
         // Compatible:
-        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Open)));
-        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2)));
-        assert!(is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode)));
+        let cfg = ClientConfig::default();
+        assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Open)));
+        assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2)));
+        assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2Wpa3MixedMode)));
 
         // Not compatible:
-        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
-        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
-        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
-        assert!(!is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
+        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
+        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
+        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
+        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
 
-        // WEP support can be conditionally turned off via BUILD arguments:
-        assert_eq!(
-            wep_deprecated::is_supported(),
-            is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep))
-        );
+        // WEP support is configurable to be on or off:
+        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
+        let cfg = ClientConfig::from_config(Config::with_wep_support());
+        assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
     }
 
     #[test]
     fn convert_bss() {
+        let cfg = ClientConfig::default();
         assert_eq!(
-            convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2)),
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2)),
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
@@ -271,33 +306,51 @@ mod tests {
         );
 
         assert_eq!(
-            convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rx_dbm: -5,
                 channel: 1,
                 protected: true,
-                compatible: wep_deprecated::is_supported(),
+                compatible: false,
+            }
+        );
+
+        let cfg = ClientConfig::from_config(Config::with_wep_support());
+        assert_eq!(
+            cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
+            BssInfo {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rx_dbm: -5,
+                channel: 1,
+                protected: true,
+                compatible: true,
             }
         );
     }
 
     #[test]
     fn group_networks_by_ssid() {
+        let cfg = ClientConfig::default();
         let bss1 = fake_bss_with_bssid(b"foo".to_vec(), [1, 1, 1, 1, 1, 1]);
         let bss2 = fake_bss_with_bssid(b"bar".to_vec(), [2, 2, 2, 2, 2, 2]);
         let bss3 = fake_bss_with_bssid(b"foo".to_vec(), [3, 3, 3, 3, 3, 3]);
-        let ess_list = group_networks(&vec![bss1, bss2, bss3]);
+        let ess_list = cfg.group_networks(&vec![bss1, bss2, bss3]);
 
         let mut ssid_list = ess_list.into_iter().map(|ess| ess.best_bss.ssid).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"bar".to_vec(), b"foo".to_vec()], ssid_list);
     }
 
-    fn assert_bss_cmp(worse: &fidl_mlme::BssDescription, better: &fidl_mlme::BssDescription) {
-        assert_eq!(Ordering::Less, compare_bss(worse, better));
-        assert_eq!(Ordering::Greater, compare_bss(better, worse));
+    fn assert_bss_cmp(
+        cfg: &ClientConfig,
+        worse: &fidl_mlme::BssDescription,
+        better: &fidl_mlme::BssDescription,
+    ) {
+        assert_eq!(Ordering::Less, cfg.compare_bss(worse, better));
+        assert_eq!(Ordering::Greater, cfg.compare_bss(better, worse));
     }
 
     fn bss(_rssi_dbm: i8, _rcpi_dbmh: i16, protection: ProtectionCfg) -> fidl_mlme::BssDescription {
