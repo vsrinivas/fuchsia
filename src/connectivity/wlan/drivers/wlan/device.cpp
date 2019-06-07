@@ -42,9 +42,11 @@ namespace wlan {
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
 // Remedy for FLK-24 (DNO-389)
-// See |MINSTREL_DATA_FRAME_INTERVAL_NANOS| in
-// //garnet/bin/wlan-hw-sim/src/main.rs For the test, ensure at least one probe
-// frame (generated every 16 data frames) in every cycle, 16 <=
+// See |DATA_FRAME_INTERVAL_NANOS|
+// in //src/connectivity/wlan/testing/hw-sim/src/minstrel.rs
+// Ensure at least one probe frame (generated every 16 data frames)
+// in every cycle:
+// 16 <=
 // (kMinstrelUpdateIntervalForHwSim / MINSTREL_DATA_FRAME_INTERVAL_NANOS * 1e6)
 // < 32.
 static constexpr zx::duration kMinstrelUpdateIntervalForHwSim = zx::msec(83);
