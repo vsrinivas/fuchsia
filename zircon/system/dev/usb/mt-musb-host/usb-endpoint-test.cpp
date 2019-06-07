@@ -83,10 +83,9 @@ private:
 class TransactionEndpointTest : public zxtest::Test {
 protected:
     void SetUp() {
-        auto status = zx::vmo::create(4096, 0, &vmo_);
-        ASSERT_OK(status);
-        status = ddk::MmioBuffer::Create(0, 4096, std::move(vmo_), ZX_CACHE_POLICY_CACHED, &mmio_);
-        ASSERT_OK(status);
+        ASSERT_OK(zx::vmo::create(4096, 0, &vmo_));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 4096, std::move(vmo_),
+                                          ZX_CACHE_POLICY_CACHED, &mmio_));
     }
 
     zx::vmo vmo_;

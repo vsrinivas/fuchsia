@@ -19,11 +19,9 @@ namespace regs = board_mt8167;
 class ControlTest: public zxtest::Test {
 protected:
     void SetUp() {
-        auto status = zx::vmo::create(0x731, 0, &vmo_);
-        ASSERT_EQ(status, ZX_OK);
-
-        status = ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_), ZX_CACHE_POLICY_CACHED, &usb_);
-        ASSERT_EQ(status, ZX_OK);
+        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo_));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_),
+                                          ZX_CACHE_POLICY_CACHED, &usb_));
     }
 
     zx::vmo vmo_;
@@ -39,24 +37,24 @@ TEST_F(ControlTest, TestZeroSuccess) {
     Control ctl(ControlType::ZERO, v.View(0), req, &buf, sizeof(buf), max_pkt_sz, 123);
 
     ctl.Advance(); // SETUP -> irq wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(0).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).setuppkt());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
-    ASSERT_EQ(ControlState::SETUP_IRQ, ctl.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(0).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).setuppkt());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
+    EXPECT_EQ(ControlState::SETUP_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> SETUP_IRQ -> IN_STATUS -> irq wait.
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).reqpkt());
-    ASSERT_EQ(ControlState::IN_STATUS_IRQ, ctl.state());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).reqpkt());
+    EXPECT_EQ(ControlState::IN_STATUS_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> IN_STATUS_IRQ -> SUCCESS.
-    ASSERT_EQ(0, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
-    ASSERT_EQ(0, regs::CSR0_HOST::Get().ReadFrom(&v).rxpktrdy());
-    ASSERT_EQ(ControlState::SUCCESS, ctl.state());
-    ASSERT_TRUE(ctl.Ok());
+    EXPECT_EQ(0, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
+    EXPECT_EQ(0, regs::CSR0_HOST::Get().ReadFrom(&v).rxpktrdy());
+    EXPECT_EQ(ControlState::SUCCESS, ctl.state());
+    EXPECT_TRUE(ctl.Ok());
 }
 
 TEST_F(ControlTest, TestReadSuccess) {
@@ -68,29 +66,29 @@ TEST_F(ControlTest, TestReadSuccess) {
     Control ctl(ControlType::READ, v.View(0), req, &buf, sizeof(buf), max_pkt_sz, 123);
 
     ctl.Advance(); // SETUP -> irq wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(0).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).setuppkt());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
-    ASSERT_EQ(ControlState::SETUP_IRQ, ctl.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(0).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).setuppkt());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
+    EXPECT_EQ(ControlState::SETUP_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> SETUP_IRQ -> IN_DATA -> irq wait.
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).reqpkt());
-    ASSERT_EQ(ControlState::IN_DATA_IRQ, ctl.state());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).reqpkt());
+    EXPECT_EQ(ControlState::IN_DATA_IRQ, ctl.state());
 
     regs::RXCOUNT::Get(0).FromValue(0).set_rxcount(sizeof(buf)).WriteTo(&v);
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> IN_DATA_IRQ -> OUT_STATUS -> irq wait.
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
-    ASSERT_EQ(ControlState::OUT_STATUS_IRQ, ctl.state());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
+    EXPECT_EQ(ControlState::OUT_STATUS_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> OUT_STATUS_IRQ -> SUCCESS.
-    ASSERT_EQ(ControlState::SUCCESS, ctl.state());
-    ASSERT_TRUE(ctl.Ok());
+    EXPECT_EQ(ControlState::SUCCESS, ctl.state());
+    EXPECT_TRUE(ctl.Ok());
 }
 
 TEST_F(ControlTest, TestWriteSuccess) {
@@ -102,28 +100,28 @@ TEST_F(ControlTest, TestWriteSuccess) {
     Control ctl(ControlType::WRITE, v.View(0), req, &buf, sizeof(buf), max_pkt_sz, 123);
 
     ctl.Advance(); // SETUP -> irq wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(0).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).setuppkt());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
-    ASSERT_EQ(ControlState::SETUP_IRQ, ctl.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(0).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).setuppkt());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
+    EXPECT_EQ(ControlState::SETUP_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> SETUP_IRQ -> OUT_DATA -> irq wait.
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
-    ASSERT_EQ(ControlState::OUT_DATA_IRQ, ctl.state());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).disping());
+    EXPECT_EQ(ControlState::OUT_DATA_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> OUT_DATA_IRQ -> IN_STATUS -> irq wait.
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
-    ASSERT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).reqpkt());
-    ASSERT_EQ(ControlState::IN_STATUS_IRQ, ctl.state());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).statuspkt());
+    EXPECT_EQ(1, regs::CSR0_HOST::Get().ReadFrom(&v).reqpkt());
+    EXPECT_EQ(ControlState::IN_STATUS_IRQ, ctl.state());
 
     regs::CSR0_HOST::Get().FromValue(0).WriteTo(&v);
     ctl.Advance(true); // irq wait -> IN_STATUS_IRQ -> SUCCESS.
-    ASSERT_EQ(ControlState::SUCCESS, ctl.state());
-    ASSERT_TRUE(ctl.Ok());
+    EXPECT_EQ(ControlState::SUCCESS, ctl.state());
+    EXPECT_TRUE(ctl.Ok());
 }
 
 TEST_F(ControlTest, TestControlCancel) {
@@ -136,17 +134,15 @@ TEST_F(ControlTest, TestControlCancel) {
 
     ctl.Advance();
     ctl.Cancel();
-    ASSERT_EQ(ControlState::CANCEL, ctl.state());
+    EXPECT_EQ(ControlState::CANCEL, ctl.state());
 }
 
 class BulkTest: public zxtest::Test {
 protected:
     void SetUp() {
-        auto status = zx::vmo::create(0x731, 0, &vmo_);
-        ASSERT_EQ(status, ZX_OK);
-
-        status = ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_), ZX_CACHE_POLICY_CACHED, &usb_);
-        ASSERT_EQ(status, ZX_OK);
+        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo_));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_),
+                                          ZX_CACHE_POLICY_CACHED, &usb_));
     }
 
     zx::vmo vmo_;
@@ -179,27 +175,27 @@ TEST_F(BulkTest, TestReadSuccess) {
     Bulk blk(v.View(0), 123, &buf, sizeof(buf), in_descriptor_);
 
     blk.Advance(); // SETUP -> SETUP_IN -> RECV -> irq_wait.
-    ASSERT_EQ(123, regs::RXFUNCADDR::Get(ep).ReadFrom(&v).rx_func_addr());
-    ASSERT_EQ(255, regs::RXINTERVAL::Get(ep).ReadFrom(&v).rx_polling_interval_nak_limit_m());
-    ASSERT_EQ(2, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_protocol());
-    ASSERT_EQ(ep, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_target_ep_number());
-    ASSERT_EQ(512, regs::RXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
-    ASSERT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
-    ASSERT_EQ(BulkState::RECV_IRQ, blk.state());
+    EXPECT_EQ(123, regs::RXFUNCADDR::Get(ep).ReadFrom(&v).rx_func_addr());
+    EXPECT_EQ(255, regs::RXINTERVAL::Get(ep).ReadFrom(&v).rx_polling_interval_nak_limit_m());
+    EXPECT_EQ(2, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_protocol());
+    EXPECT_EQ(ep, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_target_ep_number());
+    EXPECT_EQ(512, regs::RXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
+    EXPECT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
+    EXPECT_EQ(BulkState::RECV_IRQ, blk.state());
 
     // First bulk read (512 bytes).
     regs::RXCOUNT::Get(ep).FromValue(ep).set_rxcount(512).WriteTo(&v);
     regs::RXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> RECV_IRQ -> RECV -> irq wait.
-    ASSERT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
-    ASSERT_EQ(BulkState::RECV_IRQ, blk.state());
+    EXPECT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
+    EXPECT_EQ(BulkState::RECV_IRQ, blk.state());
 
     // Second bulk read (511 bytes).
     regs::RXCOUNT::Get(ep).FromValue(ep).set_rxcount(511).WriteTo(&v);
     regs::RXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> RECV_IRQ -> SUCCESS.
-    ASSERT_EQ(BulkState::SUCCESS, blk.state());
-    ASSERT_TRUE(blk.Ok());
+    EXPECT_EQ(BulkState::SUCCESS, blk.state());
+    EXPECT_TRUE(blk.Ok());
 }
 
 TEST_F(BulkTest, TestWriteSuccess) {
@@ -210,25 +206,25 @@ TEST_F(BulkTest, TestWriteSuccess) {
     Bulk blk(v.View(0), 123, &buf, sizeof(buf), out_descriptor_);
 
     blk.Advance(); // SETUP -> SETUP_OUT -> SEND -> irq_wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(255, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
-    ASSERT_EQ(2, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
-    ASSERT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
-    ASSERT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, blk.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(255, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
+    EXPECT_EQ(2, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
+    EXPECT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
+    EXPECT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, blk.state());
 
     // First bulk write (512 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> SEND_IRQ -> SEND -> irq wait.
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, blk.state());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, blk.state());
 
     // Second bulk write (511 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> SEND_IRQ -> SUCCESS.
-    ASSERT_EQ(BulkState::SUCCESS, blk.state());
-    ASSERT_TRUE(blk.Ok());
+    EXPECT_EQ(BulkState::SUCCESS, blk.state());
+    EXPECT_TRUE(blk.Ok());
 }
 
 TEST_F(BulkTest, TestWriteSuccess_ZLP) {
@@ -239,31 +235,31 @@ TEST_F(BulkTest, TestWriteSuccess_ZLP) {
     Bulk blk(v.View(0), 123, &buf, sizeof(buf), out_descriptor_);
 
     blk.Advance(); // SETUP -> SETUP_OUT -> SEND -> irq_wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(255, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
-    ASSERT_EQ(2, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
-    ASSERT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
-    ASSERT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, blk.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(255, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
+    EXPECT_EQ(2, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
+    EXPECT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
+    EXPECT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, blk.state());
 
     // First bulk write (512 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> SEND_IRQ -> SEND -> irq wait.
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, blk.state());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, blk.state());
 
     // Second bulk write (512 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> SEND_IRQ -> SEND -> irq wait.
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, blk.state());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, blk.state());
 
     // Third bulk write (zlp).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     blk.Advance(true); // irq_wait -> SEND_IRQ -> SUCCESS.
-    ASSERT_EQ(BulkState::SUCCESS, blk.state());
-    ASSERT_TRUE(blk.Ok());
+    EXPECT_EQ(BulkState::SUCCESS, blk.state());
+    EXPECT_TRUE(blk.Ok());
 }
 
 TEST_F(BulkTest, TestBulkCancel) {
@@ -274,17 +270,15 @@ TEST_F(BulkTest, TestBulkCancel) {
 
     blk.Advance();
     blk.Cancel();
-    ASSERT_EQ(BulkState::CANCEL, blk.state());
+    EXPECT_EQ(BulkState::CANCEL, blk.state());
 }
 
 class InterruptTest: public zxtest::Test {
 protected:
     void SetUp() {
-        auto status = zx::vmo::create(0x731, 0, &vmo_);
-        ASSERT_EQ(status, ZX_OK);
-
-        status = ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_), ZX_CACHE_POLICY_CACHED, &usb_);
-        ASSERT_EQ(status, ZX_OK);
+        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo_));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_),
+                                          ZX_CACHE_POLICY_CACHED, &usb_));
     }
 
     zx::vmo vmo_;
@@ -317,27 +311,27 @@ TEST_F(InterruptTest, TestReadSuccess) {
     Interrupt itr(v.View(0), 123, &buf, sizeof(buf), in_descriptor_);
 
     itr.Advance(); // SETUP -> SETUP_IN -> RECV -> irq_wait.
-    ASSERT_EQ(123, regs::RXFUNCADDR::Get(ep).ReadFrom(&v).rx_func_addr());
-    ASSERT_EQ(16, regs::RXINTERVAL::Get(ep).ReadFrom(&v).rx_polling_interval_nak_limit_m());
-    ASSERT_EQ(3, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_protocol());
-    ASSERT_EQ(ep, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_target_ep_number());
-    ASSERT_EQ(512, regs::RXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
-    ASSERT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
-    ASSERT_EQ(BulkState::RECV_IRQ, itr.state());
+    EXPECT_EQ(123, regs::RXFUNCADDR::Get(ep).ReadFrom(&v).rx_func_addr());
+    EXPECT_EQ(16, regs::RXINTERVAL::Get(ep).ReadFrom(&v).rx_polling_interval_nak_limit_m());
+    EXPECT_EQ(3, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_protocol());
+    EXPECT_EQ(ep, regs::RXTYPE::Get(ep).ReadFrom(&v).rx_target_ep_number());
+    EXPECT_EQ(512, regs::RXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
+    EXPECT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
+    EXPECT_EQ(BulkState::RECV_IRQ, itr.state());
 
     // First bulk read (512 bytes).
     regs::RXCOUNT::Get(ep).FromValue(ep).set_rxcount(512).WriteTo(&v);
     regs::RXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> RECV_IRQ -> RECV -> irq wait.
-    ASSERT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
-    ASSERT_EQ(BulkState::RECV_IRQ, itr.state());
+    EXPECT_EQ(1, regs::RXCSR_HOST::Get(ep).ReadFrom(&v).reqpkt());
+    EXPECT_EQ(BulkState::RECV_IRQ, itr.state());
 
     // Second bulk read (511 bytes).
     regs::RXCOUNT::Get(ep).FromValue(ep).set_rxcount(511).WriteTo(&v);
     regs::RXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> RECV_IRQ -> SUCCESS.
-    ASSERT_EQ(BulkState::SUCCESS, itr.state());
-    ASSERT_TRUE(itr.Ok());
+    EXPECT_EQ(BulkState::SUCCESS, itr.state());
+    EXPECT_TRUE(itr.Ok());
 }
 
 TEST_F(InterruptTest, TestWriteSuccess) {
@@ -348,25 +342,25 @@ TEST_F(InterruptTest, TestWriteSuccess) {
     Interrupt itr(v.View(0), 123, &buf, sizeof(buf), out_descriptor_);
 
     itr.Advance(); // SETUP -> SETUP_OUT -> SEND -> irq_wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(16, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
-    ASSERT_EQ(3, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
-    ASSERT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
-    ASSERT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, itr.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(16, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
+    EXPECT_EQ(3, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
+    EXPECT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
+    EXPECT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, itr.state());
 
     // First bulk write (512 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> SEND_IRQ -> SEND -> irq wait.
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, itr.state());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, itr.state());
 
     // Second bulk write (511 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> SEND_IRQ -> SUCCESS.
-    ASSERT_EQ(BulkState::SUCCESS, itr.state());
-    ASSERT_TRUE(itr.Ok());
+    EXPECT_EQ(BulkState::SUCCESS, itr.state());
+    EXPECT_TRUE(itr.Ok());
 }
 
 TEST_F(InterruptTest, TestWriteSuccess_ZLP) {
@@ -377,31 +371,31 @@ TEST_F(InterruptTest, TestWriteSuccess_ZLP) {
     Interrupt itr(v.View(0), 123, &buf, sizeof(buf), out_descriptor_);
 
     itr.Advance(); // SETUP -> SETUP_OUT -> SEND -> irq_wait.
-    ASSERT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
-    ASSERT_EQ(16, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
-    ASSERT_EQ(3, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
-    ASSERT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
-    ASSERT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, itr.state());
+    EXPECT_EQ(123, regs::TXFUNCADDR::Get(ep).ReadFrom(&v).tx_func_addr());
+    EXPECT_EQ(16, regs::TXINTERVAL::Get(ep).ReadFrom(&v).tx_polling_interval_nak_limit_m());
+    EXPECT_EQ(3, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_protocol());
+    EXPECT_EQ(ep, regs::TXTYPE::Get(ep).ReadFrom(&v).tx_target_ep_number());
+    EXPECT_EQ(512, regs::TXMAP::Get(ep).ReadFrom(&v).maximum_payload_transaction());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, itr.state());
 
     // First bulk write (512 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> SEND_IRQ -> SEND -> irq wait.
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, itr.state());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, itr.state());
 
     // Second bulk write (512 bytes).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> SEND_IRQ -> SEND -> irq wait.
-    ASSERT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
-    ASSERT_EQ(BulkState::SEND_IRQ, itr.state());
+    EXPECT_EQ(1, regs::TXCSR_HOST::Get(ep).ReadFrom(&v).txpktrdy());
+    EXPECT_EQ(BulkState::SEND_IRQ, itr.state());
 
     // Third bulk write (zlp).
     regs::TXCSR_HOST::Get(ep).FromValue(0).WriteTo(&v);
     itr.Advance(true); // irq_wait -> SEND_IRQ -> SUCCESS.
-    ASSERT_EQ(BulkState::SUCCESS, itr.state());
-    ASSERT_TRUE(itr.Ok());
+    EXPECT_EQ(BulkState::SUCCESS, itr.state());
+    EXPECT_TRUE(itr.Ok());
 }
 
 TEST_F(InterruptTest, TestInterruptCancel) {
@@ -412,7 +406,7 @@ TEST_F(InterruptTest, TestInterruptCancel) {
 
     itr.Advance();
     itr.Cancel();
-    ASSERT_EQ(BulkState::CANCEL, itr.state());
+    EXPECT_EQ(BulkState::CANCEL, itr.state());
 }
 
 } // namespace mt_usb_hci
