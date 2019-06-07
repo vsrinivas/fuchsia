@@ -1,5 +1,4 @@
 
-
 <!--
     (C) Copyright 2018 The Fuchsia Authors. All rights reserved.
     Use of this source code is governed by a BSD-style license that can be
@@ -19,6 +18,8 @@ This Driver Development Kit (*DDK*) tutorial documentation section consists of:
 *   [Ethernet Devices](ethernet.md) &mdash; walkthrough of Intel Ethernet driver
 *   [Advanced Topics and Tips](advanced.md) &mdash; hints for experienced driver writers
     and comments on unusual situations
+*   [Composite Devices](composite.md) &mdash; talks about devices that are composed
+    of other devices
 *   [Tracing](tracing.md) &mdash; monitoring driver performance with tracing
 *	[C++ DDKTL](using-ddktl.md) &mdash; Using the C++ DDK Template Library
 *   [Reference](reference.md) &mdash; helper functions, data structures, manifest constants
