@@ -61,20 +61,28 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener_h;
   binding_.Bind(log_listener_h.NewRequest());
   binding_.set_error_handler([this](zx_status_t status) {
+    if (!done_ || !done_->completer) {
+      return;
+    }
+
     FX_PLOGS(ERROR, status) << "LogListener error";
     done_->completer.complete_error();
     Reset();
   });
 
-  fuchsia::logger::LogPtr logger = services_->Connect<fuchsia::logger::Log>();
-  logger.set_error_handler([this](zx_status_t status) {
+  logger_ = services_->Connect<fuchsia::logger::Log>();
+  logger_.set_error_handler([this](zx_status_t status) {
+    if (!done_ || !done_->completer) {
+      return;
+    }
+
     FX_PLOGS(ERROR, status) << "Lost connection to Log service";
     done_->completer.complete_error();
     Reset();
   });
   // Resets |log_many_called_| for the new call to DumpLogs().
   log_many_called_ = false;
-  logger->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
+  logger_->DumpLogs(std::move(log_listener_h), /*options=*/nullptr);
 
   // fit::promise does not have the notion of a timeout. So we post a delayed
   // task that will call the completer after the timeout and return an error.
@@ -82,12 +90,12 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
   // We wrap the delayed task in a CancelableClosure so we can cancel it when
   // the fit::bridge is completed by Done() or another error.
   done_after_timeout_.Reset([done = done_] {
-    // Check that the fit::bridge was not already completed by Done() or
-    // another error.
-    if (done->completer) {
-      FX_LOGS(ERROR) << "System log collection timed out";
-      done->completer.complete_error();
+    if (!done || !done->completer) {
+      return;
     }
+
+    FX_LOGS(ERROR) << "System log collection timed out";
+    done->completer.complete_error();
   });
   const zx_status_t post_status = async::PostDelayedTask(
       async_get_default_dispatcher(),
@@ -142,6 +150,10 @@ void LogListener::Log(fuchsia::logger::LogMessage message) {
 }
 
 void LogListener::Done() {
+  if (!done_ || !done_->completer) {
+    return;
+  }
+
   if (!log_many_called_) {
     FX_LOGS(WARNING) << "Done() was called before any calls to LogMany()";
   }
@@ -151,17 +163,15 @@ void LogListener::Done() {
         << "Done() was called, but no logs have been collected yet";
   }
 
-  // Check that the fit::bridge was not already completed, e.g., by the
-  // timeout task.
-  if (done_->completer) {
-    done_->completer.complete_ok();
-  }
+  done_->completer.complete_ok();
   Reset();
 }
 
 void LogListener::Reset() {
   done_.reset();
   done_after_timeout_.Cancel();
+  binding_.Unbind();
+  logger_.Unbind();
 }
 
 }  // namespace feedback

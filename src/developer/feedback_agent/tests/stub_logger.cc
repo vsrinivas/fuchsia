@@ -43,11 +43,17 @@ void StubLogger::DumpLogs(
   log_listener_ptr->Done();
 }
 
+void StubLoggerClosesConnection::DumpLogs(
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  CloseAllConnections();
+}
+
 void StubLoggerNeverBindsToLogListener::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {}
 
-void StubLoggerUnbindsAfterOneMessage::DumpLogs(
+void StubLoggerUnbindsFromLogListenerAfterOneMessage::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   FXL_CHECK(messages_.size() > 1u)

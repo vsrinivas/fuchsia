@@ -130,9 +130,10 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 )"));
 }
 
-TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsAfterOneMessage) {
+TEST_F(CollectSystemLogTest,
+       Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
   std::unique_ptr<StubLogger> stub_logger =
-      std::make_unique<StubLoggerUnbindsAfterOneMessage>();
+      std::make_unique<StubLoggerUnbindsFromLogListenerAfterOneMessage>();
   stub_logger->set_messages({
       BuildLogMessage(FX_LOG_INFO,
                       "this line should appear in the partial logs"),
@@ -192,6 +193,14 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
   ASSERT_TRUE(result.is_error());
 }
 
+TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
+  ResetStubLogger(std::make_unique<StubLoggerClosesConnection>());
+
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+
+  ASSERT_TRUE(result.is_error());
+}
+
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
   ResetStubLogger(std::make_unique<StubLoggerNeverBindsToLogListener>());
 
@@ -206,6 +215,42 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
+}
+
+class LogListenerTest : public gtest::RealLoopFixture {
+ public:
+  LogListenerTest()
+      : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+
+ protected:
+  async::Executor executor_;
+  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+};
+
+// DX-1602
+TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
+  std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
+  stub_logger->set_messages({
+      BuildLogMessage(FX_LOG_INFO, "msg"),
+  });
+  FXL_CHECK(service_directory_provider_.AddService(
+                stub_logger->GetHandler(dispatcher())) == ZX_OK);
+
+  fit::result<void> result;
+  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(
+      service_directory_provider_.service_directory());
+  executor_.schedule_task(log_listener->CollectLogs(/*timeout=*/zx::sec(1))
+                              .then([&result](const fit::result<void>& res) {
+                                result = std::move(res);
+                              }));
+  RunLoopUntil([&result] { return !!result; });
+
+  // First, we check we have had a successful flow.
+  ASSERT_TRUE(result.is_ok());
+
+  // Then, we check that if the logger closes the connection (and triggers the
+  // error handler on the LogListener side), we don't crash (cf. DX-1602).
+  stub_logger->CloseAllConnections();
 }
 
 }  // namespace

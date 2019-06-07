@@ -44,11 +44,13 @@ class LogListener : public fuchsia::logger::LogListener {
   void Log(fuchsia::logger::LogMessage log) override;
   void Done() override;
 
-  // Resets |done_| and |done_after_timeout_|.
+  // Resets |done_|, |done_after_timeout_| and logger_.
   void Reset();
 
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
+
+  fuchsia::logger::LogPtr logger_;
 
   // Wether LogMany() was called since the last call to CollectLogs().
   // This is to help debug FLK-179.

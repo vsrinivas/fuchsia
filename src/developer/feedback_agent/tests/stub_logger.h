@@ -53,11 +53,18 @@ class StubLogger : public fuchsia::logger::Log {
     messages_ = messages;
   }
 
- protected:
-  std::vector<fuchsia::logger::LogMessage> messages_;
+  void CloseAllConnections() { bindings_.CloseAll(); }
 
- private:
+ protected:
   fidl::BindingSet<fuchsia::logger::Log> bindings_;
+  std::vector<fuchsia::logger::LogMessage> messages_;
+};
+
+class StubLoggerClosesConnection : public StubLogger {
+ public:
+  void DumpLogs(
+      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
 class StubLoggerNeverBindsToLogListener : public StubLogger {
@@ -67,7 +74,7 @@ class StubLoggerNeverBindsToLogListener : public StubLogger {
       std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
-class StubLoggerUnbindsAfterOneMessage : public StubLogger {
+class StubLoggerUnbindsFromLogListenerAfterOneMessage : public StubLogger {
  public:
   void DumpLogs(
       fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
