@@ -5,7 +5,11 @@
 mod library_loader;
 
 use {
-    crate::{constants::PKG_PATH, model::{Runner, RunnerError}},
+    crate::{
+        constants::PKG_PATH,
+        model::{Runner, RunnerError},
+        startup::{Arguments, BuiltinRootServices},
+    },
     cm_rust::data::DictionaryExt,
     failure::{err_msg, format_err, Error, ResultExt},
     fdio::fdio_sys,
@@ -13,15 +17,18 @@ use {
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::FutureObj,
     std::path::PathBuf,
+    std::sync::Arc,
 };
 
 /// Runs components with ELF binaries.
-pub struct ElfRunner {}
+pub struct ElfRunner {
+    launcher_connector: ProcessLauncherConnector,
+}
 
 fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
     match &start_info.resolved_url {
@@ -89,9 +96,8 @@ async fn load_launch_info(
 ) -> Result<fproc::LaunchInfo, Error> {
     let bin_path =
         get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
-    let bin_arg = &[String::from(
-        PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?,
-    )];
+    let bin_arg =
+        &[String::from(PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?)];
     let args = get_program_args(&start_info)?;
 
     let name = PathBuf::from(url)
@@ -178,15 +184,17 @@ async fn load_launch_info(
 }
 
 impl ElfRunner {
-    pub fn new() -> ElfRunner {
-        ElfRunner {}
+    pub fn new(launcher_connector: ProcessLauncherConnector) -> ElfRunner {
+        ElfRunner { launcher_connector }
     }
 
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
         let resolved_url =
             get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
-        let launcher = connect_to_service::<fproc::LauncherMarker>()
+        let launcher = self
+            .launcher_connector
+            .connect()
             .context("failed to connect to launcher service")
             .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
 
@@ -214,43 +222,126 @@ impl Runner for ElfRunner {
     }
 }
 
+/// Connects to the appropriate fuchsia.process.Launcher service based on the options provided in
+/// [ProcessLauncherConnector::new].
+///
+/// This exists so that callers can make a new connection to fuchsia.process.Launcher for each use
+/// because the service is stateful per connection, so it is not safe to share a connection between
+/// multiple asynchronous process launchers.
+///
+/// If [LibraryOpts::use_builtin_process_launcher] is true, this will connect to the built-in
+/// fuchsia.process.Launcher service using the provided BuiltinRootServices. Otherwise, this connects
+/// to the launcher service under /svc in component_manager's namespace.
+pub struct ProcessLauncherConnector {
+    // If Some(_), connect to the built-in service. Otherwise connect to a launcher from the
+    // namespace.
+    builtin: Option<Arc<BuiltinRootServices>>,
+}
+
+impl ProcessLauncherConnector {
+    pub fn new(args: &Arguments, builtin: Arc<BuiltinRootServices>) -> ProcessLauncherConnector {
+        let builtin = match args.use_builtin_process_launcher {
+            true => Some(builtin),
+            false => None,
+        };
+        ProcessLauncherConnector { builtin }
+    }
+
+    pub fn connect(&self) -> Result<fproc::LauncherProxy, Error> {
+        let proxy = match &self.builtin {
+            Some(builtin) => builtin
+                .connect_to_service::<fproc::LauncherMarker>()
+                .context("failed to connect to builtin launcher service")?,
+            None => client::connect_to_service::<fproc::LauncherMarker>()
+                .context("failed to connect to external launcher service")?,
+        };
+        Ok(proxy)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use {crate::elf_runner::*, fidl::endpoints::ClientEnd, fuchsia_async as fasync, io_util};
+    use {super::*, fidl::endpoints::ClientEnd, fuchsia_async as fasync, io_util};
 
-    #[test]
-    fn hello_world_test() {
-        let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(async {
-            // Get a handle to /pkg
-            let pkg_path = "/pkg".to_string();
-            let pkg_chan = io_util::open_directory_in_namespace("/pkg")
-                .unwrap()
-                .into_channel()
-                .unwrap()
-                .into_zx_channel();
-            let pkg_handle = ClientEnd::new(pkg_chan);
+    // Rust's test harness does not allow passing through arbitrary arguments, so to get coverage
+    // for the different LibraryOpts configurations (which would normally be set based on
+    // arguments) we switch based on the test binary name.
+    fn should_use_builtin_process_launcher() -> bool {
+        // This is somewhat fragile but intentionally so, so that this will fail if the binary
+        // names change and get updated properly.
+        let bin = std::env::args().next();
+        match bin.as_ref().map(String::as_ref) {
+            Some("/pkg/test/component_manager_tests") => false,
+            Some("/pkg/test/component_manager_boot_env_tests") => true,
+            _ => panic!("Unexpected test binary name {:?}", bin),
+        }
+    }
 
-            let ns =
-                fsys::ComponentNamespace { paths: vec![pkg_path], directories: vec![pkg_handle] };
+    fn hello_world_startinfo() -> fsys::ComponentStartInfo {
+        // Get a handle to /pkg
+        let pkg_path = "/pkg".to_string();
+        let pkg_chan = io_util::open_directory_in_namespace("/pkg")
+            .unwrap()
+            .into_channel()
+            .unwrap()
+            .into_zx_channel();
+        let pkg_handle = ClientEnd::new(pkg_chan);
 
-            let start_info = fsys::ComponentStartInfo {
-                resolved_url: Some(
-                    "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm".to_string(),
-                ),
-                program: Some(fdata::Dictionary {
-                    entries: vec![fdata::Entry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
-                    }],
-                }),
-                ns: Some(ns),
-                outgoing_dir: None,
-            };
+        let ns = fsys::ComponentNamespace { paths: vec![pkg_path], directories: vec![pkg_handle] };
 
-            let runner = ElfRunner::new();
-            await!(runner.start_async(start_info)).unwrap();
-        });
+        fsys::ComponentStartInfo {
+            resolved_url: Some(
+                "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm".to_string(),
+            ),
+            program: Some(fdata::Dictionary {
+                entries: vec![fdata::Entry {
+                    key: "binary".to_string(),
+                    value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
+                }],
+            }),
+            ns: Some(ns),
+            outgoing_dir: None,
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn hello_world_test() -> Result<(), Error> {
+        let start_info = hello_world_startinfo();
+
+        let args = Arguments {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
+        let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+        let runner = ElfRunner::new(launcher_connector);
+
+        // TODO: This test currently results in a bunch of log spew when this test process exits
+        // because this does not stop the component, which means its loader service suddenly goes
+        // away. Stop the component when the Runner trait provides a way to do so.
+        await!(runner.start_async(start_info)).expect("hello_world_test start failed");
+        Ok(())
+    }
+
+    // This test checks that starting a component fails if we use the wrong built-in process
+    // launcher setting for the test environment. This helps ensure that the test above isn't
+    // succeeding for an unexpected reason, e.g. that it isn't using a fuchsia.process.Launcher
+    // from the test's namespace instead of serving and using a built-in one.
+    #[fasync::run_singlethreaded(test)]
+    async fn hello_world_fail_test() -> Result<(), Error> {
+        let start_info = hello_world_startinfo();
+
+        // Note that value of should_use... is negated
+        let args = Arguments {
+            use_builtin_process_launcher: !should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
+        let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+        let runner = ElfRunner::new(launcher_connector);
+        await!(runner.start_async(start_info))
+            .expect_err("hello_world_fail_test succeeded unexpectedly");
+        Ok(())
     }
 
     fn new_args_set(args: Vec<Option<Box<fdata::Value>>>) -> fsys::ComponentStartInfo {

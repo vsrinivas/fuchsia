@@ -7,7 +7,7 @@
 use {
     component_manager_lib::{
         ambient::RealAmbientEnvironment,
-        elf_runner::ElfRunner,
+        elf_runner::{ElfRunner, ProcessLauncherConnector},
         klog,
         model::{AbsoluteMoniker, Model, ModelParams},
         startup,
@@ -16,38 +16,33 @@ use {
     fuchsia_async as fasync,
     futures::prelude::*,
     log::*,
-    std::{env, process, sync::Arc},
+    std::{process, sync::Arc},
 };
 
 const NUM_THREADS: usize = 2;
 
-struct Opt {
-    pub root_component_url: String,
-}
-
-fn parse_args() -> Result<Opt, Error> {
-    let mut args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        println!("Usage: {} <root-component-url>", &args[0]);
-        return Err(failure::err_msg("Invalid arguments"));
-    }
-    Ok(Opt { root_component_url: args.remove(1) })
-}
-
 fn main() -> Result<(), Error> {
     klog::KernelLogger::init().expect("Failed to initialize logger");
-    let opt = parse_args()?;
+    let args = match startup::Arguments::from_args() {
+        Ok(args) => args,
+        Err(err) => {
+            error!("{}\n{}", err, startup::Arguments::usage());
+            return Err(err);
+        }
+    };
 
     info!("Component manager is starting up...");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
     let resolver_registry = startup::available_resolvers()?;
+    let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
+    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
     let mut params = ModelParams {
         ambient: Box::new(RealAmbientEnvironment::new()),
-        root_component_url: opt.root_component_url,
+        root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
-        root_default_runner: Box::new(ElfRunner::new()),
+        root_default_runner: Box::new(ElfRunner::new(launcher_connector)),
         hooks: Vec::new(),
     };
     startup::install_hub_if_possible(&mut params)?;

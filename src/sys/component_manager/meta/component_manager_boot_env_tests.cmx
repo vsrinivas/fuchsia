@@ -7,9 +7,15 @@
         }
     },
     "program": {
-        "binary": "test/component_manager_tests"
+        "args": [
+            "/pkg/test/component_manager_boot_env_tests"
+        ],
+        "binary": "bin/root_job_test_runner"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "services": [
             "fuchsia.process.Launcher",
             "fidl.examples.echo.Echo"

@@ -18,11 +18,37 @@
 
 use {
     failure::{err_msg, format_err, Error, ResultExt},
-    fdio, fidl_fuchsia_sysinfo as fsysinfo, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl::endpoints::ServiceMarker,
+    fidl_fidl_examples_echo::EchoMarker,
+    fidl_fuchsia_sysinfo as fsysinfo, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_zircon::{self as zx, HandleBased},
+    futures::prelude::*,
     std::env,
     std::ffi::{CStr, CString},
-    std::path::Path,
+    std::fs,
+    std::path::{Path, PathBuf},
 };
+
+/// Create a ServiceFs that proxies through limited services from our namespace. Specifically, we
+/// don't pass through fuchsia.process.Launcher, which this process needs to use fdio_spawn but
+/// which we don't want in the actual test process' namespace to ensure the test process isn't
+/// incorrectly using it rather than serving its own.
+fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
+    let mut fs = ServiceFs::new_local();
+
+    // This can be expanded to proxy additional services as needed, though it's not totally clear
+    // how to generalize this to loop over a set over markers.
+    let echo_path = PathBuf::from(format!("/svc/{}", EchoMarker::NAME));
+    if echo_path.exists() {
+        fs.add_proxy_service::<EchoMarker, _>();
+    }
+
+    let (client, server) = zx::Channel::create().expect("Failed to create channel");
+    fs.serve_connection(server)?;
+    fasync::spawn_local(fs.collect());
+    Ok(client)
+}
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -36,15 +62,28 @@ async fn main() -> Result<(), Error> {
         return Err(format_err!("Test binary '{}' does not exist in namespace", path));
     }
 
+    // Provide the test process with a namespace containing only /pkg and a more limited /svc.
+    let svc_str = CString::new("/svc")?;
+    let pkg_str = CString::new("/pkg")?;
+    let pkg_dir = fs::File::open("/pkg")?;
+    let mut actions = vec![
+        fdio::SpawnAction::add_namespace_entry(&svc_str, serve_proxy_svc_dir()?.into_handle()),
+        fdio::SpawnAction::add_namespace_entry(&pkg_str, fdio::transfer_fd(pkg_dir)?),
+    ];
+
     let root_job = await!(get_root_job())?;
     let argv: Vec<CString> =
         args.into_iter().skip(1).map(CString::new).collect::<Result<_, _>>()?;
     let argv_ref: Vec<&CStr> = argv.iter().map(|a| &**a).collect();
+    let options = fdio::SpawnOptions::CLONE_ALL & !fdio::SpawnOptions::CLONE_NAMESPACE;
     let process =
-        fdio::spawn(&root_job, fdio::SpawnOptions::CLONE_ALL, argv_ref[0], argv_ref.as_slice())?;
+        fdio::spawn_etc(&root_job, options, argv_ref[0], argv_ref.as_slice(), None, &mut actions)
+            .map_err(|(status, errmsg)| {
+            format_err!("fdio::spawn_etc failed: {}, {}", status, errmsg)
+        })?;
 
-    // Wait for the process to terminate, since it may want to use things out of this component's
-    // namespace (like /svc), which will go away if we exit before it.
+    // Wait for the process to terminate. We're hosting it's /svc directory, which will go away if
+    // we exit before it.
     await!(fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED))?;
 
     // Return the same code as the test process, in case it failed.
