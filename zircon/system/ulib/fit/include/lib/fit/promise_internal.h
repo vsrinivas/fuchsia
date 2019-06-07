@@ -297,11 +297,11 @@ class result_adapter<Handler, DefaultV, DefaultE, ReturnType, true> final {
     // If the handler doesn't actually return a continuation then the
     // compilation will fail here which is slightly easier to diagnose
     // than if we dropped the result_adapter specialization entirely.
-    using continuation_traits = continuation_traits<ReturnType>;
-    using continuation_type = typename continuation_traits::type;
+    using result_continuation_traits = continuation_traits<ReturnType>;
+    using continuation_type = typename result_continuation_traits::type;
 
 public:
-    using result_type = typename continuation_traits::result_type;
+    using result_type = typename result_continuation_traits::result_type;
 
     explicit result_adapter(movable_handler<Handler> handler)
         : handler_(std::move(handler)) {}

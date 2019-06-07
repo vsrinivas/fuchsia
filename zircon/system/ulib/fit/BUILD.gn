@@ -39,10 +39,4 @@ library("fit") {
     "sequencer.cpp",
     "single_threaded_executor.cpp",
   ]
-
-  if (is_fuchsia) {
-    # Disabled for now because libstdc++ isn't available for Zircon targets yet.
-    # We need the target to exist for the SDK to pick it up though.
-    defines = [ "FIT_NO_STD_FOR_ZIRCON_USERSPACE" ]
-  }
 }

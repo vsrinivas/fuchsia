@@ -587,8 +587,6 @@ bool overload_resolution() {
     END_TEST;
 }
 
-// We don't have std::shared in Zircon yet.
-#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 bool sharing() {
     BEGIN_TEST;
 
@@ -699,7 +697,6 @@ bool sharing() {
 
     END_TEST;
 }
-#endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE
 
 struct Obj {
     void Call() {
@@ -741,8 +738,6 @@ bool bind_member() {
     END_TEST;
 }
 
-// We don't have std::shared in Zircon yet.
-#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 bool callback_once() {
     BEGIN_TEST;
 
@@ -920,7 +915,6 @@ bool callback_once() {
 
     END_TEST;
 }
-#endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE
 
 } // namespace
 
@@ -975,9 +969,7 @@ RUN_TEST(inline_function_size_bounds)
 RUN_TEST(move_only_argument_and_result)
 RUN_TEST(implicit_construction)
 RUN_TEST(overload_resolution)
-#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
 RUN_TEST(sharing)
 RUN_TEST(callback_once)
-#endif
 RUN_TEST(bind_member);
 END_TEST_CASE(function_tests)

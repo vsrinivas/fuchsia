@@ -23,7 +23,7 @@ namespace subtle {
 class scheduler final {
 public:
     using task_queue = std::queue<pending_task>;
-    using ref_count = uint32_t;
+    using ref_count_type = uint32_t;
 
     scheduler();
     ~scheduler();
@@ -40,7 +40,7 @@ public:
     //
     // Preconditions:
     // - |initial_refs| must be at least 1
-    suspended_task::ticket obtain_ticket(ref_count initial_refs = 1);
+    suspended_task::ticket obtain_ticket(ref_count_type initial_refs = 1);
 
     // Updates a ticket after one run of a task's continuation according
     // to the state of the task after its run.  The executor must call this
@@ -125,11 +125,11 @@ public:
 
 private:
     struct ticket_record {
-        ticket_record(ref_count initial_refs)
+        ticket_record(ref_count_type initial_refs)
             : ref_count(initial_refs), was_resumed(false) {}
 
         // The current reference count.
-        ref_count ref_count;
+        ref_count_type ref_count;
 
         // True if the task has been resumed using |resume_task_with_ticket()|.
         bool was_resumed;

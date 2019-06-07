@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Can't compile this for Zircon userspace yet since libstdc++ isn't available.
-#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
-
 #include <lib/fit/scope.h>
 
 namespace fit {
@@ -94,66 +91,64 @@ scope::promise_handle scope::state::adopt_promise(
 }
 
 void scope::state::drop_promise(promise_handle promise_handle) {
-    if (!promise_handle.promise_holder) {
+    if (!promise_handle.promise_holder_) {
         return; // invalid handle, nothing to do
     }
 
     {
-        std::lock_guard<std::mutex> lock(promise_handle.state->mutex_);
+        std::lock_guard<std::mutex> lock(promise_handle.state_->mutex_);
 
         // If the scope hasn't been exited yet, unlink the promise and
         // prepare to destroy it.  Otherwise, it's already been unlinked
         // and destroyed so release the handle but don't touch the pointer!
-        assert(promise_handle.state->promise_handle_count_ > 0);
-        promise_handle.state->promise_handle_count_--;
-        if (!promise_handle.state->exited()) {
-            if (promise_handle.promise_holder->next) {
-                promise_handle.promise_holder->next->prev =
-                    promise_handle.promise_holder->prev;
+        assert(promise_handle.state_->promise_handle_count_ > 0);
+        promise_handle.state_->promise_handle_count_--;
+        if (!promise_handle.state_->exited()) {
+            if (promise_handle.promise_holder_->next) {
+                promise_handle.promise_holder_->next->prev =
+                    promise_handle.promise_holder_->prev;
             }
-            if (promise_handle.promise_holder->prev) {
-                promise_handle.promise_holder->prev->next =
-                    promise_handle.promise_holder->next;
+            if (promise_handle.promise_holder_->prev) {
+                promise_handle.promise_holder_->prev->next =
+                    promise_handle.promise_holder_->next;
             } else {
-                promise_handle.state->head_promise_holder_ =
-                    promise_handle.promise_holder->next;
+                promise_handle.state_->head_promise_holder_ =
+                    promise_handle.promise_holder_->next;
             }
             // Fallthrough to delete the promise.
-        } else if (!promise_handle.state->should_delete_self()) {
+        } else if (!promise_handle.state_->should_delete_self()) {
             return;
         } else {
             // Fallthrough to delete self.
-            promise_handle.promise_holder = nullptr;
+            promise_handle.promise_holder_ = nullptr;
         }
     }
 
     // Delete the promise or scope outside of the lock.
-    if (promise_handle.promise_holder) {
-        delete promise_handle.promise_holder;
+    if (promise_handle.promise_holder_) {
+        delete promise_handle.promise_holder_;
     } else {
-        delete promise_handle.state;
+        delete promise_handle.state_;
     }
 }
 
 scope::promise_holder_base* scope::state::try_acquire_promise(
     promise_handle promise_handle) {
-    if (promise_handle.promise_holder) {
-        uint64_t prior_count = promise_handle.state->acquired_promise_count_.fetch_add(
+    if (promise_handle.promise_holder_) {
+        uint64_t prior_count = promise_handle.state_->acquired_promise_count_.fetch_add(
             1u, std::memory_order_relaxed);
         if (!(prior_count & scope_exited)) {
-            return promise_handle.promise_holder;
+            return promise_handle.promise_holder_;
         }
-        promise_handle.state->acquired_promise_count_.fetch_sub(
+        promise_handle.state_->acquired_promise_count_.fetch_sub(
             1u, std::memory_order_relaxed);
     }
     return nullptr;
 }
 
 void scope::state::release_promise(promise_handle promise_handle) {
-    promise_handle.state->acquired_promise_count_.fetch_sub(
+    promise_handle.state_->acquired_promise_count_.fetch_sub(
         1u, std::memory_order_relaxed);
 }
 
 } // namespace fit
-
-#endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE

@@ -126,10 +126,10 @@ private:
         // also non-null.
         friend state;
         promise_handle(state* state, promise_holder_base* promise_holder)
-            : state(state), promise_holder(promise_holder) {}
+            : state_(state), promise_holder_(promise_holder) {}
 
-        state* state = nullptr;
-        promise_holder_base* promise_holder = nullptr;
+        state* state_ = nullptr;
+        promise_holder_base* promise_holder_ = nullptr;
     };
 
     // Holds the shared state of the scope.

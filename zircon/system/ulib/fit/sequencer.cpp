@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Can't compile this for Zircon userspace yet since libstdc++ isn't available.
-#ifndef FIT_NO_STD_FOR_ZIRCON_USERSPACE
-
 #include <lib/fit/sequencer.h>
 
 namespace fit {
@@ -27,5 +24,3 @@ fit::consumer<> sequencer::swap_prior(fit::consumer<> new_prior) {
 }
 
 } // namespace fit
-
-#endif // FIT_NO_STD_FOR_ZIRCON_USERSPACE

@@ -213,29 +213,29 @@ private:
 // The callback produced by |completer::bind()|.
 template <typename V, typename E>
 class bridge_bind_callback final {
-    using bridge_state = bridge_state<V, E>;
+    using callback_bridge_state = bridge_state<V, E>;
 
 public:
-    explicit bridge_bind_callback(typename bridge_state::completion_ref ref)
+    explicit bridge_bind_callback(typename callback_bridge_state::completion_ref ref)
         : ref_(std::move(ref)) {}
 
     template <typename VV = V,
               typename = std::enable_if_t<std::is_void<VV>::value>>
     void operator()() {
-        bridge_state* state = ref_.get();
+        callback_bridge_state* state = ref_.get();
         state->complete_or_abandon(std::move(ref_), ::fit::ok());
     }
 
     template <typename VV = V,
               typename = std::enable_if_t<!std::is_void<VV>::value>>
     void operator()(VV value) {
-        bridge_state* state = ref_.get();
+        callback_bridge_state* state = ref_.get();
         state->complete_or_abandon(std::move(ref_),
                                    ::fit::ok<V>(std::forward<VV>(value)));
     }
 
 private:
-    typename bridge_state::completion_ref ref_;
+    typename callback_bridge_state::completion_ref ref_;
 };
 
 // The callback produced by |completer::bind_tuple()|.
@@ -243,21 +243,21 @@ template <typename V, typename E>
 class bridge_bind_tuple_callback;
 template <typename... Args, typename E>
 class bridge_bind_tuple_callback<std::tuple<Args...>, E> final {
-    using bridge_state = bridge_state<std::tuple<Args...>, E>;
+    using tuple_callback_bridge_state = bridge_state<std::tuple<Args...>, E>;
 
 public:
-    explicit bridge_bind_tuple_callback(typename bridge_state::completion_ref ref)
+    explicit bridge_bind_tuple_callback(typename tuple_callback_bridge_state::completion_ref ref)
         : ref_(std::move(ref)) {}
 
     void operator()(Args... args) {
-        bridge_state* state = ref_.get();
+        tuple_callback_bridge_state* state = ref_.get();
         state->complete_or_abandon(
             std::move(ref_),
             ::fit::ok(std::make_tuple<Args...>(std::forward<Args>(args)...)));
     }
 
 private:
-    typename bridge_state::completion_ref ref_;
+    typename tuple_callback_bridge_state::completion_ref ref_;
 };
 
 template <typename V, typename E>
