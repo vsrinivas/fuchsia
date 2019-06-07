@@ -8,8 +8,8 @@ mod managed;
 pub use list::BoundedListNode;
 pub use managed::{ManagedNode, NodeWriter};
 
-use fuchsia_inspect::vmo::Node;
-use fuchsia_inspect::vmo::{Property, StringProperty};
+use fuchsia_inspect::Node;
+use fuchsia_inspect::{Property, StringProperty};
 use fuchsia_zircon as zx;
 
 pub trait NodeExt {
@@ -55,7 +55,7 @@ fn format_time(timestamp: zx::Time) -> String {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, vmo::Inspector};
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
 
     #[test]
     fn test_time_metadata_format() {

@@ -4,7 +4,7 @@
 
 use super::{ManagedNode, NodeWriter};
 
-use fuchsia_inspect::vmo::Node;
+use fuchsia_inspect::Node;
 use std::collections::VecDeque;
 
 /// This struct is intended to represent a list node in Inspect, which doesn't support list
@@ -55,7 +55,7 @@ impl BoundedListNode {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, vmo::Inspector};
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
 
     #[test]
     fn test_bounded_list_node_basic() {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{
+    crate::{
         block::{Block, PropertyFormat},
         block_type::BlockType,
         constants,
@@ -19,7 +19,7 @@ use {
 /// Wraps a heap and implements the Inspect VMO API on top of it at a low level.
 #[derive(Debug)]
 pub struct State {
-    pub(in crate::vmo) heap: Heap,
+    pub(in crate) heap: Heap,
     header: Block<Arc<Mapping>>,
 }
 
@@ -280,7 +280,7 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::vmo::reader::snapshot::Snapshot, failure::bail, std::convert::TryFrom};
+    use {super::*, crate::reader::snapshot::Snapshot, failure::bail, std::convert::TryFrom};
 
     #[test]
     fn test_create() {

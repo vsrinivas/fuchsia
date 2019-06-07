@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_inspect::vmo::Node;
+use fuchsia_inspect::Node;
 use fuchsia_inspect_contrib::nodes::BoundedListNode;
 use parking_lot::Mutex;
 use wlan_inspect::iface_mgr::IfaceTree;

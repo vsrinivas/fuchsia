@@ -8,7 +8,7 @@
 
 use account_common::{AccountAuthState, FidlAccountAuthState, LocalAccountId};
 use fidl_fuchsia_auth_account::{AccountListenerOptions, AccountListenerProxy};
-use fuchsia_inspect::vmo::{Node, NumericProperty, Property};
+use fuchsia_inspect::{Node, NumericProperty, Property};
 use futures::future::*;
 use futures::lock::Mutex;
 use std::pin::Pin;
@@ -140,7 +140,7 @@ mod tests {
     use fidl::endpoints::*;
     use fidl_fuchsia_auth::AuthChangeGranularity;
     use fidl_fuchsia_auth_account::{AccountListenerMarker, AccountListenerRequest};
-    use fuchsia_inspect::vmo::Inspector;
+    use fuchsia_inspect::Inspector;
     use futures::prelude::*;
     use lazy_static::lazy_static;
 

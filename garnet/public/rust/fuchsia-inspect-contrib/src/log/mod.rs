@@ -131,7 +131,7 @@ mod tests {
 
     use fuchsia_inspect::{
         assert_inspect_tree,
-        vmo::{testing::AnyProperty, Inspector},
+        {testing::AnyProperty, Inspector},
     };
     use parking_lot::Mutex;
 

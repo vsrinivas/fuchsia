@@ -1,856 +1,715 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(async_await, await_macro)]
-#![deny(warnings)]
+#![feature(async_await)]
 
-use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServerEnd};
-use fidl_fuchsia_inspect::{
-    InspectMarker, InspectRequest, InspectRequestStream, Metric, Object, Property,
+use {
+    crate::{block::PropertyFormat, heap::Heap, state::State},
+    failure::{format_err, Error},
+    fuchsia_component::server::{ServiceFs, ServiceObjTrait},
+    fuchsia_syslog::macros::*,
+    fuchsia_zircon::{self as zx, HandleBased},
+    mapped_vmo::Mapping,
+    parking_lot::Mutex,
+    paste,
+    std::{cmp::max, sync::Arc},
 };
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
-use futures::{TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
-use std::collections::HashSet;
-use std::sync::Arc;
 
-use self::object::ObjectUtil;
-use self::objectwrapper::{MetricValueWrapper, ObjectWrapper, PropertyValueWrapper};
+mod bitfields;
+mod block;
+mod block_type;
+mod constants;
+mod heap;
+pub mod reader;
+#[macro_use]
+pub mod testing;
+mod state;
+mod utils;
 
-pub mod object;
-mod objectwrapper;
-pub mod vmo;
+/// Root of the Inspect API
+pub struct Inspector {
+    /// The root node.
+    root_node: Node,
 
-pub use self::objectwrapper::{MetricValueGenerator, PropertyValueGenerator};
-
-/// InspectService handles requests for fuchsia.inspect.Inspect on a given channel.
-///
-/// Contrived example usage:
-///
-///     let root_node = ObjectTreeNode::new_root();
-///     let services =
-///             fuchsia_app::server::ServicesServer::new()
-///                 .add_service((InspectMarker::NAME, move |channel| {
-///                     InspectService::new(root_node.clone(), channel)
-///                 })).start()?;
-///     fuchsia_async::Executor::new()?.run_singlethreaded(services)?;
-#[derive(Clone)]
-pub struct InspectService {
-    current_node: Arc<Mutex<ObjectTreeNode>>,
+    /// The VMO backing the inspector
+    pub(in crate) vmo: Option<zx::Vmo>,
 }
 
-impl InspectService {
-    /// Creates a handler for the Inspect service on the given channel. Requires a clone of a
-    /// Arc<Mutex<ObjectTreeNode>>, which should be created with a call to
-    /// ObjectTreeNode::new_root().
-    pub fn new(node: Arc<Mutex<ObjectTreeNode>>, chan: fasync::Channel) {
-        let service = InspectService { current_node: node };
-        InspectService::spawn(service, chan);
+/// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
+/// the root node.
+impl Inspector {
+    /// Create a new Inspect VMO object with the default maximum size.
+    pub fn new() -> Self {
+        Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES)
     }
 
-    /// Spawns a new async to respond to requests querying inspect_service over chan
-    fn spawn(service: InspectService, chan: fasync::Channel) {
-        let stream = InspectRequestStream::from_channel(chan);
-        let fut = serve_request_stream(service.current_node.clone(), stream);
-        fasync::spawn(fut.unwrap_or_else(|e: failure::Error| {
-            fx_log_err!("error running inspect interface: {:?}", e)
-        }))
+    /// True if the Inspector was created successfully (it's not No-Op)
+    pub fn is_valid(&self) -> bool {
+        self.vmo.is_some() && self.root_node.is_valid()
     }
 
-    // Serves a new connection on the given ServerEnd that can be used to interact with the named
-    // child.
-    fn open_child(
-        &self,
-        child_name: &str,
-        server_end: ServerEnd<InspectMarker>,
-    ) -> Result<bool, Error> {
-        match self.current_node.lock().get_child(child_name) {
-            None => Ok(false),
-            Some(child_node) => {
-                let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
-                InspectService::new(child_node, server_chan);
-                Ok(true)
+    /// Create a new Inspect VMO object with the given maximum size. If the
+    /// given size is less than 4K, it will be made 4K which is the minimum size
+    /// the VMO should have.
+    pub fn new_with_size(max_size: usize) -> Self {
+        match Inspector::new_root(max_size) {
+            Ok((vmo, root_node)) => Inspector { vmo: Some(vmo), root_node },
+            Err(e) => {
+                fx_log_err!("Failed to create root node. Error: {}", e);
+                Inspector::new_no_op()
             }
         }
     }
+
+    /// Exports the VMO backing this Inspector at the standard location in the
+    /// supplied ServiceFs.
+    pub fn export<ServiceObjTy: ServiceObjTrait>(&self, service_fs: &mut ServiceFs<ServiceObjTy>) {
+        self.vmo
+            .as_ref()
+            .ok_or(format_err!("Cannot expose No-Op Inspector"))
+            .and_then(|vmo| {
+                service_fs.dir("objects").add_vmo_file_at(
+                    "root.inspect",
+                    vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
+                    0, /* vmo offset */
+                    vmo.get_size()?,
+                );
+                Ok(())
+            })
+            .unwrap_or_else(|e| {
+                fx_log_err!("Failed to expose vmo. Error: {:?}", e);
+            });
+    }
+
+    /// Get the root of the VMO object.
+    pub fn root(&self) -> &Node {
+        &self.root_node
+    }
+
+    /// Creates a new No-Op inspector
+    fn new_no_op() -> Self {
+        Inspector { vmo: None, root_node: Node::new_no_op() }
+    }
+
+    /// Allocates a new VMO and initializes it.
+    fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
+        let mut size = max(constants::MINIMUM_VMO_SIZE_BYTES, max_size);
+        // If the size is not a multiple of 4096, round up.
+        if size % constants::MINIMUM_VMO_SIZE_BYTES != 0 {
+            size =
+                (1 + size / constants::MINIMUM_VMO_SIZE_BYTES) * constants::MINIMUM_VMO_SIZE_BYTES;
+        }
+        let (mapping, vmo) = Mapping::allocate(size)
+            .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
+        let heap = Heap::new(Arc::new(mapping))?;
+        let state = State::create(heap)?;
+        let root_node = Node::allocate(
+            Arc::new(Mutex::new(state)),
+            constants::ROOT_NAME,
+            constants::ROOT_PARENT_INDEX,
+        );
+        Ok((vmo, root_node))
+    }
 }
 
-pub async fn serve_request_stream(
-    node: Arc<Mutex<ObjectTreeNode>>,
-    mut stream: InspectRequestStream,
-) -> Result<(), Error> {
-    while let Some(req) = await!(stream.try_next()).context("error running inspect service")? {
-        match req {
-            InspectRequest::ReadData { responder } => {
-                responder.send(&mut node.lock().evaluate())?;
-            }
-            InspectRequest::ListChildren { responder } => {
-                responder.send(Some(&mut node.lock().get_children_names().iter().map(|x| &**x)))?
-            }
-            InspectRequest::OpenChild { child_name, child_channel, responder } => {
-                let service = InspectService { current_node: node.clone() };
-                responder.send(service.open_child(&child_name, child_channel)?)?
-            }
-        }
-    }
-    Ok(())
+/// Trait implemented by all inspect types. It provides constructor functions that are not
+/// intended for use outside the crate.
+trait InspectType {
+    type Inner;
+
+    fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self;
+    fn new_no_op() -> Self;
+    fn is_valid(&self) -> bool;
+    fn unwrap_ref(&self) -> &Self::Inner;
 }
 
-pub type ChildrenGenerator = Box<FnMut() -> Vec<Arc<Mutex<ObjectTreeNode>>> + Send + 'static>;
+/// Utility for generating the implementation of all inspect types:
+///  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
+///    appropiate internal constructors.
+///  - All Inspect Types derive PartialEq, Eq. This generates the dummy implementation
+///    for the wrapped type.
+macro_rules! inspect_type_impl {
+    ($(#[$attr:meta])* struct $name:ident) => {
+        paste::item! {
+            $(#[$attr])*
+            /// NOTE: do not rely on PartialEq implementation for true comparison.
+            /// Instead leverage the reader.
+            #[derive(Debug, PartialEq, Eq)]
+            pub struct $name {
+                inner: Option<[<Inner $name>]>,
+            }
 
-/// ObjectTreeNode is a node in the tree exposed by InspectService. Each node holds one Object, and
-/// 0 or more children nodes.
-pub struct ObjectTreeNode {
-    object: ObjectWrapper,
-    children: Vec<Arc<Mutex<ObjectTreeNode>>>,
-    child_generator: Option<ChildrenGenerator>,
+            #[cfg(test)]
+            impl $name {
+                fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                    self.inner.as_ref().and_then(|inner| {
+                        inner.state.lock().heap.get_block(inner.block_index).ok()
+                    })
+                }
+            }
+
+            impl InspectType for $name {
+                type Inner = [<Inner $name>];
+
+                fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
+                    Self {
+                        inner: Some([<Inner $name>] {
+                            state, block_index
+                        })
+                    }
+                }
+
+                fn is_valid(&self) -> bool {
+                    self.inner.is_some()
+                }
+
+                fn new_no_op() -> Self {
+                    Self { inner: None }
+                }
+
+                fn unwrap_ref(&self) -> &Self::Inner {
+                    self.inner.as_ref().unwrap()
+                }
+            }
+
+            #[derive(Debug)]
+            struct [<Inner $name>] {
+                /// Index of the block in the VMO.
+                block_index: u32,
+
+                /// Reference to the VMO heap.
+                state: Arc<Mutex<State>>,
+            }
+
+            /// Inspect API types implement Eq,PartialEq returning true all the time so that
+            /// structs embedding inspect types can derive these traits as well.
+            /// IMPORTANT: Do not rely on these traits implementations for real comparisons
+            /// or validation tests, instead leverage the reader.
+            impl PartialEq for [<Inner $name>] {
+                fn eq(&self, _other: &[<Inner $name>]) -> bool {
+                    true
+                }
+            }
+
+            impl Eq for [<Inner $name>] {}
+        }
+    }
 }
 
-impl ObjectTreeNode {
-    /// Creates a new root ObjectTreeNode, for passing to new InspectServices
-    pub fn new_root() -> Arc<Mutex<ObjectTreeNode>> {
-        ObjectTreeNode::new(Object::new("objects".to_string()))
-    }
-
-    /// Creates a new ObjectTreeNode with a given object and no children
-    pub fn new(obj: Object) -> Arc<Mutex<ObjectTreeNode>> {
-        Arc::new(Mutex::new(ObjectTreeNode {
-            object: ObjectWrapper::from_object(obj),
-            children: Vec::new(),
-            child_generator: None,
-        }))
-    }
-
-    /// Evaluates this node into an Object. All dynamic properties and metrics are evaluated to
-    /// produce static values.
-    pub fn evaluate(&mut self) -> Object {
-        self.object.evaluate()
-    }
-
-    /// Adds a child to this node. The child by default will have no properties or metrics. If a
-    /// child with the given name already exists, it will be removed from the tree and returned.
-    /// Note that this ignores dynamic children.
-    pub fn add_child(&mut self, name: String) -> Option<Arc<Mutex<ObjectTreeNode>>> {
-        self.add_child_tree(ObjectTreeNode::new(Object::new(name)))
-    }
-
-    /// Adds a child tree to this node. The child will be a static node with the given name and no
-    /// properties or metrics. If a child with the given name already exists, it will be removed
-    /// from the tree and returned. Note that this ignores dynamic children.
-    pub fn add_child_tree(
-        &mut self,
-        otn: Arc<Mutex<ObjectTreeNode>>,
-    ) -> Option<Arc<Mutex<ObjectTreeNode>>> {
-        let name = otn.lock().get_name();
-        if let Some(i) = self.children.iter().position(|child| child.lock().get_name() == name) {
-            self.children.push(otn);
-            Some(self.children.swap_remove(i))
-        } else {
-            self.children.push(otn);
-            None
-        }
-    }
-
-    /// Adds a child tree to this node, not checking whether a child with the same name previously
-    /// exists. This is intended to be used when the client is sure that a name collision would
-    /// not occur.
-    ///
-    /// If this method is called while a child with the same name exists, the subsequent behaviors
-    /// for `get_child`, `get_children_names`, `get_num_children`, and `remove_child` are not
-    /// defined.
-    pub fn add_child_tree_unchecked(&mut self, otn: Arc<Mutex<ObjectTreeNode>>) {
-        self.children.push(otn);
-    }
-
-    /// Sets this node to also include a set of children that are generated dynamically via the
-    /// given function. This dynamic set of children is generated and appended to the static set of
-    /// children whenever this node is being interacted with, except where documented as otherwise.
-    /// If a child generator is already set, it is overwritten with the new one.
-    pub fn add_dynamic_children(&mut self, child_gen: ChildrenGenerator) {
-        self.child_generator = Some(child_gen);
-    }
-
-    /// Disables any dynamic generation of children on this node.
-    pub fn clear_dynamic_children(&mut self) {
-        self.child_generator = None;
-    }
-
-    /// Gets the number of children of this node.
-    pub fn get_num_children(&mut self) -> usize {
-        let mut dyn_child_count = 0;
-        if let Some(child_gen) = &mut self.child_generator {
-            dyn_child_count = child_gen().len();
-        }
-        self.children.len() + dyn_child_count
-    }
-
-    /// Gets the names of all the children of this node.
-    pub fn get_children_names(&mut self) -> Vec<String> {
-        let names: HashSet<String> =
-            self.children.iter().map(|child| child.lock().get_name()).collect();
-        if let Some(child_gen) = &mut self.child_generator {
-            let dyn_names: HashSet<String> =
-                child_gen().iter_mut().map(|child| child.lock().get_name()).collect();
-            return names.union(&dyn_names).cloned().collect();
-        }
-        names.iter().cloned().collect()
-    }
-
-    /// Gets a reference to a child of this node. Will return None if the child doesn't exist.
-    pub fn get_child(&mut self, name: &str) -> Option<Arc<Mutex<ObjectTreeNode>>> {
-        let optional_child_position = self
-            .children
-            .iter()
-            .map(|child| child.lock().get_name())
-            .position(|c_name| c_name == name);
-
-        if let Some(i) = optional_child_position {
-            return Some(self.children[i].clone());
-        } else if let Some(child_gen) = &mut self.child_generator {
-            let dyn_children = child_gen();
-            let optional_dynamic_child_position = dyn_children
-                .iter()
-                .map(|child| child.lock().get_name())
-                .position(|c_name| c_name == name);
-            if let Some(i) = optional_dynamic_child_position {
-                return Some(dyn_children[i].clone());
+/// Utility for generating functions to create a numeric property.
+///   `name`: identifier for the name (example: double)
+///   `type`: the type of the numeric property (example: f64)
+macro_rules! create_numeric_property_fn {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
+                -> [<$name_cap Property>] {
+                    self.inner.as_ref().and_then(|inner| {
+                        inner.state
+                            .lock()
+                            .[<create_ $name _metric>](name.as_ref(), value, inner.block_index)
+                            .map(|block| {
+                                [<$name_cap Property>]::new(inner.state.clone(), block.index())
+                            })
+                            .ok()
+                    })
+                    .unwrap_or([<$name_cap Property>]::new_no_op())
             }
         }
-        None
+    };
+}
+
+inspect_type_impl!(
+    /// Inspect API Node data type.
+    struct Node
+);
+
+impl Node {
+    /// Allocate a new NODE object. Called through Inspector.
+    pub(in crate) fn allocate(state: Arc<Mutex<State>>, name: &str, parent_index: u32) -> Node {
+        state
+            .lock()
+            .create_node(name, parent_index)
+            .map(|block| Node::new(state.clone(), block.index()))
+            .unwrap_or(Node::new_no_op())
     }
 
-    /// Removes a child from this node, returning the child node if it existed. Doesn't affect
-    /// dynamically generated children.
-    pub fn remove_child(&mut self, name: &str) -> Option<Arc<Mutex<ObjectTreeNode>>> {
-        self.children
-            .iter()
-            .position(|child| child.lock().get_name() == name)
-            .map(|i| self.children.remove(i))
+    /// Add a child to this node.
+    pub fn create_child(&self, name: impl AsRef<str>) -> Node {
+        self.inner
+            .as_ref()
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_node(name.as_ref(), inner.block_index)
+                    .map(|block| Node::new(inner.state.clone(), block.index()))
+                    .ok()
+            })
+            .unwrap_or(Node::new_no_op())
     }
 
-    /// Returns the name of the current object.
-    pub fn get_name(&self) -> String {
-        self.object.name.clone()
+    /// Add a numeric property to this node: create_int, create_double,
+    /// create_uint.
+    create_numeric_property_fn!(int, Int, i64);
+    create_numeric_property_fn!(uint, Uint, u64);
+    create_numeric_property_fn!(double, Double, f64);
+
+    /// Add a string property to this node.
+    pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
+        self.inner
+            .as_ref()
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_property(
+                        name.as_ref(),
+                        value.as_ref().as_bytes(),
+                        PropertyFormat::String,
+                        inner.block_index,
+                    )
+                    .map(|block| StringProperty::new(inner.state.clone(), block.index()))
+                    .ok()
+            })
+            .unwrap_or(StringProperty::new_no_op())
     }
 
-    /// Adds the given property. If a property with this key already exists, it is replaced.
-    pub fn add_property(&mut self, prop: Property) {
-        self.object.properties.insert(prop.key, PropertyValueWrapper::Static(prop.value));
-    }
-
-    /// Adds a property to the Object held by this node, whose value is lazily generated when
-    /// needed. If a property with this key already exists, it is replaced.
-    pub fn add_dynamic_property(&mut self, key: String, value_func: PropertyValueGenerator) {
-        self.object.properties.insert(key, PropertyValueWrapper::Dynamic(value_func));
-    }
-
-    /// Removes the property with the given key. Returns true if the removed value existed.
-    pub fn remove_property(&mut self, key: &str) -> bool {
-        self.object.properties.remove(key).is_some()
-    }
-
-    /// Adds a metric to the Object held by this node. If a metric with this key already exists, it
-    /// is replaced.
-    pub fn add_metric(&mut self, metric: Metric) {
-        self.object.metrics.insert(metric.key, MetricValueWrapper::Static(metric.value));
-    }
-
-    /// Adds a metric to the Object held by this node, whose value is lazily generated when needed.
-    /// If a metric with this key already exists, it is replaced.
-    pub fn add_dynamic_metric(&mut self, key: String, value_func: MetricValueGenerator) {
-        self.object.metrics.insert(key, MetricValueWrapper::Dynamic(value_func));
-    }
-
-    /// Removes the metric with the given key. Returns true if the removed value existed.
-    pub fn remove_metric(&mut self, key: &str) -> bool {
-        self.object.metrics.remove(key).is_some()
+    /// Add a byte vector property to this node.
+    pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
+        self.inner
+            .as_ref()
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_property(
+                        name.as_ref(),
+                        value.as_ref(),
+                        PropertyFormat::Bytes,
+                        inner.block_index,
+                    )
+                    .map(|block| BytesProperty::new(inner.state.clone(), block.index()))
+                    .ok()
+            })
+            .unwrap_or(BytesProperty::new_no_op())
     }
 }
+
+impl Drop for Node {
+    fn drop(&mut self) {
+        self.inner.as_ref().map(|inner| {
+            inner
+                .state
+                .lock()
+                .free_value(inner.block_index)
+                .expect(&format!("Failed to free node index={}", inner.block_index));
+        });
+    }
+}
+
+/// Trait implemented by properties.
+pub trait Property<'t> {
+    type Type;
+
+    /// Set the property value to |value|.
+    fn set(&'t self, value: Self::Type);
+}
+
+/// Trait implemented by numeric properties.
+pub trait NumericProperty {
+    /// The type the property is handling.
+    type Type;
+
+    /// Add the given |value| to the property current value.
+    fn add(&self, value: Self::Type);
+
+    /// Subtract the given |value| from the property current value.
+    fn subtract(&self, value: Self::Type);
+
+    /// Return the current value of the property for testing.
+    /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
+    /// It will be replaced by a more comprehensive Read API implementation.
+    fn get(&self) -> Result<Self::Type, Error>;
+}
+
+/// Utility for generating numeric property functions (example: set, add, subtract)
+///   `fn_name`: the name of the function to generate (example: set)
+///   `type`: the type of the argument of the function to generate (example: f64)
+///   `name`: the readble name of the type of the function (example: double)
+macro_rules! numeric_property_fn {
+    ($fn_name:ident, $type:ident, $name:ident) => {
+        paste::item! {
+            fn $fn_name(&self, value: $type) {
+                if let Some(ref inner) = self.inner {
+                    inner.state.lock().[<$fn_name _ $name _metric>](inner.block_index, value)
+                        .unwrap_or_else(|e| {
+                            fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
+                        });
+                }
+            }
+        }
+    };
+}
+
+/// Utility for generating a numeric property datatype impl
+///   `name`: the readble name of the type of the function (example: double)
+///   `type`: the type of the argument of the function to generate (example: f64)
+macro_rules! numeric_property {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            inspect_type_impl!(
+                /// Inspect API Numeric Property data type.
+                struct [<$name_cap Property>]
+            );
+
+            impl<'t> Property<'t> for [<$name_cap Property>] {
+                type Type = $type;
+
+                numeric_property_fn!(set, $type, $name);
+            }
+
+            impl NumericProperty for [<$name_cap Property>] {
+                type Type = $type;
+                numeric_property_fn!(add, $type, $name);
+                numeric_property_fn!(subtract, $type, $name);
+
+                fn get(&self) -> Result<$type, Error> {
+                    if let Some(ref inner) = self.inner {
+                        inner.state.lock().[<get_ $name _metric>](inner.block_index)
+                    } else {
+                        Err(format_err!("Property is No-Op"))
+                    }
+                }
+            }
+
+            impl Drop for [<$name_cap Property>] {
+                fn drop(&mut self) {
+                    self.inner.as_ref().map(|inner| {
+                        inner.state
+                            .lock()
+                            .free_value(inner.block_index)
+                            .expect(&format!("Failed to free property index={}", inner.block_index));
+                    });
+                }
+            }
+        }
+    };
+}
+
+numeric_property!(int, Int, i64);
+numeric_property!(uint, Uint, u64);
+numeric_property!(double, Double, f64);
+
+/// Utility for generating a numeric property datatype impl
+///   `name`: the readble name of the type of the function (example: double)
+///   `type`: the type of the argument of the function to generate (example: f64)
+///   `bytes`: an expression to get the bytes of the property
+macro_rules! property {
+    ($name:ident, $type:expr, $bytes:expr) => {
+        paste::item! {
+            inspect_type_impl!(
+                /// Inspect API Property data type.
+                struct [<$name Property>]
+            );
+
+            impl [<$name Property>] {
+                /// FOR TEST ONLY. Excavates block_index from [<$name Property>].
+                #[cfg(test)]
+                pub fn block_index(&self) -> u32 {
+                    self.inner.as_ref().unwrap().block_index
+                }
+            }
+
+            impl<'t> Property<'t> for [<$name Property>] {
+                type Type = &'t $type;
+
+                fn set(&'t self, value: &'t $type) {
+                    if let Some(ref inner) = self.inner {
+                        inner.state.lock().set_property(inner.block_index, $bytes)
+                            .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
+                    }
+                }
+
+            }
+
+            impl Drop for [<$name Property>] {
+                fn drop(&mut self) {
+                    self.inner.as_ref().map(|inner| {
+                        inner.state
+                            .lock()
+                            .free_property(inner.block_index)
+                            .expect(&format!("Failed to free property index={}", inner.block_index));
+                    });
+                }
+            }
+        }
+    };
+}
+
+property!(String, str, value.as_bytes());
+property!(Bytes, [u8], value);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl::endpoints::create_proxy;
-    use fidl_fuchsia_inspect::{MetricValue, PropertyValue};
+    use {
+        super::*,
+        crate::{block_type::BlockType, constants, heap::Heap},
+        fuchsia_async::{self as fasync, futures::StreamExt},
+        mapped_vmo::Mapping,
+    };
 
-    mod object_tree_node_tests {
-        use super::*;
-
-        // Objects as returned by evaluate() aren't guaranteed to have the same ordering of
-        // metrics/properties as was originally supplied.
-        fn sort_keys(mut obj: Object) -> Object {
-            obj.properties
-                .as_mut()
-                .map(|properties| properties.sort_unstable_by(|a, b| a.key.cmp(&b.key)));
-            obj.metrics.as_mut().map(|metrics| metrics.sort_unstable_by(|a, b| a.key.cmp(&b.key)));
-            obj
-        }
-
-        fn initialize_children(otn: &mut ObjectTreeNode, names: Vec<&str>) {
-            for n in names {
-                otn.add_child(n.to_string());
-            }
-        }
-
-        #[test]
-        fn new_root() {
-            let root_node = ObjectTreeNode::new_root();
-            assert_eq!("objects", root_node.lock().get_name());
-            assert_eq!(None, root_node.lock().evaluate().properties);
-            assert_eq!(None, root_node.lock().evaluate().metrics);
-            assert_eq!(0, root_node.lock().get_num_children());
-        }
-
-        #[test]
-        fn new() {
-            let obj = Object::new("test".to_string());
-            let otn = ObjectTreeNode::new(obj.clone());
-            let mut otn = otn.lock();
-            assert_eq!(obj, otn.evaluate());
-            assert_eq!(0, otn.get_num_children());
-        }
-
-        #[test]
-        fn evaluate() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_property(Property {
-                key: "1".to_string(),
-                value: PropertyValue::Str("1".to_string()),
-            });
-            otn.add_dynamic_property(
-                "2".to_string(),
-                Box::new(|| PropertyValue::Str("2".to_string())),
-            );
-
-            otn.add_metric(Metric { key: "3".to_string(), value: MetricValue::UintValue(3) });
-            otn.add_dynamic_metric("4".to_string(), Box::new(|| MetricValue::IntValue(4)));
-
-            let mut expected_object = Object::new("test".to_string());
-            expected_object.add_property(Property {
-                key: "1".to_string(),
-                value: PropertyValue::Str("1".to_string()),
-            });
-            expected_object.add_property(Property {
-                key: "2".to_string(),
-                value: PropertyValue::Str("2".to_string()),
-            });
-            expected_object
-                .add_metric(Metric { key: "3".to_string(), value: MetricValue::UintValue(3) });
-            expected_object
-                .add_metric(Metric { key: "4".to_string(), value: MetricValue::IntValue(4) });
-
-            assert_eq!(expected_object, sort_keys(otn.evaluate()));
-        }
-
-        #[test]
-        fn add_child() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            assert!(otn.add_child("test_child_1".to_string()).is_none());
-            assert_eq!(1, otn.children.len());
-            assert_eq!("test_child_1", otn.children[0].lock().get_name());
-
-            assert!(otn.add_child("test_child_2".to_string()).is_none());
-            assert_eq!(2, otn.children.len());
-            assert_eq!("test_child_2", otn.children[1].lock().get_name());
-
-            let res = otn.add_child("test_child_1".to_string());
-            assert_eq!(res.unwrap().lock().evaluate(), Object::new("test_child_1".to_string()));
-        }
-
-        #[test]
-        fn add_child_tree() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            assert!(otn
-                .add_child_tree(ObjectTreeNode::new(Object::new("test_child_1".to_string())))
-                .is_none());
-            assert_eq!(1, otn.children.len());
-            assert_eq!("test_child_1", otn.children[0].lock().get_name());
-
-            assert!(otn
-                .add_child_tree(ObjectTreeNode::new(Object::new("test_child_2".to_string())))
-                .is_none());
-            assert_eq!(2, otn.children.len());
-            assert_eq!("test_child_2", otn.children[1].lock().get_name());
-
-            let mut obj = Object::new("test_child_1".to_string());
-            obj.add_metric(Metric {
-                key: "metric".to_string(),
-                value: MetricValue::DoubleValue(0.0001),
-            });
-
-            let res = otn.add_child_tree(ObjectTreeNode::new(obj));
-            assert_eq!(res.unwrap().lock().evaluate(), Object::new("test_child_1".to_string()));
-        }
-
-        #[test]
-        fn add_clear_dynamic_children() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_child("test_child_1".to_string());
-            otn.add_dynamic_children(Box::new(|| {
-                vec![
-                    ObjectTreeNode::new(Object::new("test_child_2".to_string())),
-                    ObjectTreeNode::new(Object::new("test_child_3".to_string())),
-                ]
-            }));
-            let mut names = otn.get_children_names();
-            names.sort_unstable();
-            assert_eq!(names, vec!["test_child_1", "test_child_2", "test_child_3"]);
-
-            otn.clear_dynamic_children();
-            assert_eq!(otn.get_children_names(), vec!["test_child_1"]);
-        }
-
-        #[test]
-        fn get_num_children() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            assert_eq!(0, otn.get_num_children());
-            otn.add_child("0".to_string());
-            assert_eq!(1, otn.get_num_children());
-            otn.add_child("1".to_string());
-            assert_eq!(2, otn.get_num_children());
-            otn.add_child("2".to_string());
-            assert_eq!(3, otn.get_num_children());
-
-            otn.add_dynamic_children(Box::new(|| {
-                vec![
-                    ObjectTreeNode::new(Object::new("3".to_string())),
-                    ObjectTreeNode::new(Object::new("4".to_string())),
-                ]
-            }));
-            assert_eq!(5, otn.get_num_children());
-        }
-
-        #[test]
-        fn get_children_names() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            assert_eq!(vec![] as Vec<String>, otn.get_children_names());
-
-            otn.add_child("0".to_string());
-            assert_eq!(vec!["0"], otn.get_children_names());
-
-            otn.add_child("1".to_string());
-            let mut names = otn.get_children_names();
-            names.sort_unstable();
-            assert_eq!(vec!["0", "1"], names);
-
-            otn.add_dynamic_children(Box::new(|| {
-                vec![
-                    ObjectTreeNode::new(Object::new("2".to_string())),
-                    ObjectTreeNode::new(Object::new("3".to_string())),
-                ]
-            }));
-
-            let mut names = otn.get_children_names();
-            names.sort_unstable();
-            assert_eq!(vec!["0", "1", "2", "3"], names);
-        }
-
-        #[test]
-        fn get_child() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            initialize_children(&mut otn, vec!["0", "1", "2"]);
-            otn.add_dynamic_children(Box::new(|| {
-                vec![
-                    ObjectTreeNode::new(Object::new("3".to_string())),
-                    ObjectTreeNode::new(Object::new("4".to_string())),
-                ]
-            }));
-
-            assert!(otn.get_child("-1").is_none());
-            assert_eq!(otn.get_child("0").unwrap().lock().object.name, "0".to_string());
-            assert_eq!(otn.get_child("1").unwrap().lock().object.name, "1".to_string());
-            assert_eq!(otn.get_child("2").unwrap().lock().object.name, "2".to_string());
-            assert_eq!(otn.get_child("3").unwrap().lock().object.name, "3".to_string());
-            assert_eq!(otn.get_child("4").unwrap().lock().object.name, "4".to_string());
-
-            otn.get_child("1").unwrap().lock().add_child("test_child".to_string());
-            assert_eq!(
-                otn.get_child("1").unwrap().lock().children[0].lock().evaluate(),
-                Object::new("test_child".to_string())
-            )
-        }
-
-        #[test]
-        fn remove_child() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            initialize_children(&mut otn, vec!["0", "1", "2"]);
-            assert_eq!(None, otn.remove_child("-1").map(|child| child.lock().evaluate()));
-            assert_eq!(
-                Some(Object::new("0".to_string())),
-                otn.remove_child("0").map(|child| child.lock().evaluate())
-            );
-            assert_eq!(None, otn.remove_child("0").map(|child| child.lock().evaluate()));
-            assert_eq!(
-                Some(Object::new("2".to_string())),
-                otn.remove_child("2").map(|child| child.lock().evaluate())
-            );
-            assert_eq!(None, otn.remove_child("2").map(|child| child.lock().evaluate()));
-            assert_eq!(vec!["1"], otn.get_children_names());
-        }
-
-        #[test]
-        fn get_name() {
-            assert_eq!(
-                "test",
-                &ObjectTreeNode::new(Object::new("test".to_string())).lock().get_name()
-            );
-        }
-
-        #[test]
-        fn add_property() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_property(Property {
-                key: "1".to_string(),
-                value: PropertyValue::Str("1".to_string()),
-            });
-
-            let mut expected_object = Object::new("test".to_string());
-            expected_object.add_property(Property {
-                key: "1".to_string(),
-                value: PropertyValue::Str("1".to_string()),
-            });
-
-            assert_eq!(expected_object, otn.evaluate());
-        }
-
-        #[test]
-        fn add_dynamic_property() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_dynamic_property(
-                "1".to_string(),
-                Box::new(|| PropertyValue::Str("1".to_string())),
-            );
-
-            let mut expected_object = Object::new("test".to_string());
-            expected_object.add_property(Property {
-                key: "1".to_string(),
-                value: PropertyValue::Str("1".to_string()),
-            });
-
-            assert_eq!(expected_object, otn.evaluate());
-        }
-
-        #[test]
-        fn remove_property() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_property(Property {
-                key: "1".to_string(),
-                value: PropertyValue::Str("1".to_string()),
-            });
-            otn.add_dynamic_property(
-                "2".to_string(),
-                Box::new(|| PropertyValue::Str("2".to_string())),
-            );
-
-            assert!(otn.remove_property("1"));
-            assert!(otn.remove_property("2"));
-
-            let expected_object = Object::new("test".to_string());
-            assert_eq!(expected_object, otn.evaluate());
-        }
-
-        #[test]
-        fn add_metric() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_metric(Metric { key: "1".to_string(), value: MetricValue::IntValue(1) });
-
-            let mut expected_object = Object::new("test".to_string());
-            expected_object
-                .add_metric(Metric { key: "1".to_string(), value: MetricValue::IntValue(1) });
-
-            assert_eq!(expected_object, otn.evaluate());
-        }
-
-        #[test]
-        fn add_dynamic_metric() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_dynamic_metric("1".to_string(), Box::new(|| MetricValue::UintValue(1)));
-
-            let mut expected_object = Object::new("test".to_string());
-            expected_object
-                .add_metric(Metric { key: "1".to_string(), value: MetricValue::UintValue(1) });
-
-            assert_eq!(expected_object, otn.evaluate());
-        }
-
-        #[test]
-        fn remove_metric() {
-            let otn = ObjectTreeNode::new(Object::new("test".to_string()));
-            let mut otn = otn.lock();
-            otn.add_metric(Metric { key: "1".to_string(), value: MetricValue::IntValue(1) });
-            otn.add_dynamic_metric("2".to_string(), Box::new(|| MetricValue::UintValue(2)));
-
-            assert!(otn.remove_metric("1"));
-            assert!(otn.remove_metric("2"));
-
-            let expected_object = Object::new("test".to_string());
-            assert_eq!(expected_object, otn.evaluate());
-        }
+    #[test]
+    fn inspector_new() {
+        let test_object = Inspector::new();
+        assert_eq!(
+            test_object.vmo.as_ref().unwrap().get_size().unwrap(),
+            constants::DEFAULT_VMO_SIZE_BYTES as u64
+        );
+        let root_name_block =
+            test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
+        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
-    mod inspect_service_tests {
-        use super::*;
+    #[test]
+    fn no_op() {
+        let inspector = Inspector::new_with_size(4096);
+        // Make the VMO full.
+        let nodes = (0..126).map(|_| inspector.root().create_child("test")).collect::<Vec<Node>>();
+        let root_block = inspector.root().get_block().unwrap();
 
-        #[test]
-        fn kitchen_sink() {
-            let mut exec = fasync::Executor::new().unwrap();
-
-            // Create a new root node
-            let root_node = ObjectTreeNode::new_root();
-            {
-                let mut root_node = root_node.lock();
-
-                // That root node has a child named `test_child`
-                root_node.add_child("test_child".to_string());
-                let test_child = root_node.get_child("test_child").unwrap();
-                // The node `test_child` has a metric `test_metric=int(4)`
-                test_child.lock().add_metric(Metric {
-                    key: "test_metric".to_string(),
-                    value: MetricValue::IntValue(4),
-                });
-
-                // The root node also has a child named `child_with_dyn_property`
-                root_node.add_child("child_with_dyn_property".to_string());
-                let child_with_dyn_property =
-                    root_node.get_child("child_with_dyn_property").unwrap();
-                // The node `child_with_dyn_property` has a dynamic property, that always is
-                // `test_property=str(test_value`
-                child_with_dyn_property.lock().add_dynamic_property(
-                    "test_property".to_string(),
-                    Box::new(|| PropertyValue::Str("test_value".to_string())),
-                );
-
-                // The root node shall also have dynamic children
-                root_node.add_dynamic_children(Box::new(|| {
-                    // There's only one dynamic child of the root node, named
-                    // `dynamic_child`
-                    let dynamic_child =
-                        ObjectTreeNode::new(Object::new("dynamic_child".to_string()));
-                    // The `test_child_child_dyn` node has a dynamic metric, that is always
-                    // `test_metric=int(1)`
-                    dynamic_child.lock().add_dynamic_metric(
-                        "test_metric".to_string(),
-                        Box::new(|| MetricValue::IntValue(1)),
-                    );
-
-                    // The `dynamic_child` node also has dynamic children
-                    dynamic_child.lock().add_dynamic_children(Box::new(|| {
-                        // There's only one dynamic child of the `dynamic_child node, named
-                        // `sub_dynamic_child`
-                        let sub_dynamic_child =
-                            ObjectTreeNode::new(Object::new("sub_dynamic_child".to_string()));
-                        // The `test_child_child_dyn` node has a dynamic metric, that is always
-                        // `test_metric=int(2)`
-                        sub_dynamic_child.lock().add_dynamic_metric(
-                            "test_metric".to_string(),
-                            Box::new(|| MetricValue::IntValue(2)),
-                        );
-                        vec![sub_dynamic_child]
-                    }));
-                    vec![dynamic_child]
-                }));
-            }
-            let (inspect_proxy, server_end) = create_proxy::<InspectMarker>().unwrap();
-            let server_channel = fasync::Channel::from_channel(server_end.into_channel()).unwrap();
-            InspectService::new(root_node.clone(), server_channel);
-
-            // We should be able to call read_data to get the root Object
-            let expected_object = &root_node.lock().evaluate().clone();
-            assert_eq!(
-                expected_object,
-                &exec.run_singlethreaded(inspect_proxy.read_data()).unwrap()
-            );
-
-            // There should be one child with the name "test_child"
-            let mut names =
-                exec.run_singlethreaded(inspect_proxy.list_children()).unwrap().unwrap();
-            names.sort_unstable();
-            assert_eq!(
-                vec![
-                    "child_with_dyn_property".to_string(),
-                    "dynamic_child".to_string(),
-                    "test_child".to_string()
-                ],
-                names
-            );
-
-            // We shouldn't be able to open a child that doesn't exist
-            let (_, server_end) = create_proxy::<InspectMarker>().unwrap();
-            assert_eq!(
-                false,
-                exec.run_singlethreaded(inspect_proxy.open_child("nonexistent", server_end))
-                    .unwrap()
-            );
-
-            // We should be able to open a child that exists
-            let (child_inspect_proxy, child_server_end) = create_proxy::<InspectMarker>().unwrap();
-            assert_eq!(
-                true,
-                exec.run_singlethreaded(inspect_proxy.open_child("test_child", child_server_end))
-                    .unwrap()
-            );
-
-            // We should be able to call read_data to get the child's Object
-            let expected_object =
-                root_node.lock().get_child("test_child").unwrap().lock().evaluate();
-            assert_eq!(
-                expected_object,
-                exec.run_singlethreaded(child_inspect_proxy.read_data()).unwrap()
-            );
-
-            // If the child we've opened is removed, we should still be able to read its data
-            // because we have an open connection to it
-            assert!(root_node.lock().remove_child("test_child").is_some());
-            assert_eq!(
-                expected_object,
-                exec.run_singlethreaded(child_inspect_proxy.read_data()).unwrap()
-            );
-
-            // There should be no children of this child
-            assert_eq!(
-                Some(vec![]),
-                exec.run_singlethreaded(child_inspect_proxy.list_children()).unwrap()
-            );
-
-            // We shouldn't be able to open any of the nonexistent children
-            let (_, server_end) = create_proxy::<InspectMarker>().unwrap();
-            assert_eq!(
-                false,
-                exec.run_singlethreaded(child_inspect_proxy.open_child("nonexistent", server_end))
-                    .unwrap()
-            );
-
-            // We should be able to open and read the data of a child with a dynamic property
-            let (child_inspect_proxy, child_server_end) = create_proxy::<InspectMarker>().unwrap();
-            assert_eq!(
-                true,
-                exec.run_singlethreaded(
-                    inspect_proxy.open_child("child_with_dyn_property", child_server_end)
-                )
-                .unwrap()
-            );
-            let expected_object = &root_node
-                .lock()
-                .get_child("child_with_dyn_property")
-                .unwrap()
-                .lock()
-                .evaluate()
-                .clone();
-            assert_eq!(
-                expected_object,
-                &exec.run_singlethreaded(child_inspect_proxy.read_data()).unwrap()
-            );
-
-            // We should be able to open a dynamic child and read its data, which includes a
-            // dynamic property.
-            let (dynamic_child_inspect_proxy, dynamic_child_server_end) =
-                create_proxy::<InspectMarker>().unwrap();
-            assert_eq!(
-                true,
-                exec.run_singlethreaded(
-                    inspect_proxy.open_child("dynamic_child", dynamic_child_server_end)
-                )
-                .unwrap()
-            );
-            let expected_object =
-                &root_node.lock().get_child("dynamic_child").unwrap().lock().evaluate().clone();
-            assert_eq!(
-                expected_object,
-                &exec.run_singlethreaded(dynamic_child_inspect_proxy.read_data()).unwrap()
-            );
-
-            // We should be able to open a dynamic child of that last dynamic child and read its
-            // data, which includes a dynamic metric.
-            let (sub_dynamic_child_inspect_proxy, sub_dynamic_child_server_end) =
-                create_proxy::<InspectMarker>().unwrap();
-            assert_eq!(
-                true,
-                exec.run_singlethreaded(
-                    dynamic_child_inspect_proxy
-                        .open_child("sub_dynamic_child", sub_dynamic_child_server_end)
-                )
-                .unwrap()
-            );
-            let expected_object = &root_node
-                .lock()
-                .get_child("dynamic_child")
-                .unwrap()
-                .lock()
-                .get_child("sub_dynamic_child")
-                .unwrap()
-                .lock()
-                .evaluate()
-                .clone();
-            assert_eq!(
-                expected_object,
-                &exec.run_singlethreaded(sub_dynamic_child_inspect_proxy.read_data()).unwrap()
-            );
-        }
-
-        #[test]
-        fn counter() {
-            // As a fun test, we should be able to make a dynamic node that returns one more than
-            // before for each time it is called.
-            let mut exec = fasync::Executor::new().unwrap();
-
-            let root_node = ObjectTreeNode::new_root();
-
-            let mut counter = 0;
-            root_node.lock().add_dynamic_metric(
-                "counter".to_string(),
-                Box::new(move || {
-                    counter += 1;
-                    MetricValue::UintValue(counter)
-                }),
-            );
-
-            let (inspect_proxy, server_end) = create_proxy::<InspectMarker>().unwrap();
-            let server_channel = fasync::Channel::from_channel(server_end.into_channel()).unwrap();
-            InspectService::new(root_node.clone(), server_channel);
-
-            let mut expected_object = Object::new("objects".to_string());
-            expected_object.add_metric(Metric {
-                key: "counter".to_string(),
-                value: MetricValue::UintValue(1),
-            });
-            assert_eq!(
-                expected_object,
-                exec.run_singlethreaded(inspect_proxy.read_data()).unwrap()
-            );
-
-            expected_object.add_metric(Metric {
-                key: "counter".to_string(),
-                value: MetricValue::UintValue(2),
-            });
-            assert_eq!(
-                expected_object,
-                exec.run_singlethreaded(inspect_proxy.read_data()).unwrap()
-            );
-
-            expected_object.add_metric(Metric {
-                key: "counter".to_string(),
-                value: MetricValue::UintValue(3),
-            });
-            assert_eq!(
-                expected_object,
-                exec.run_singlethreaded(inspect_proxy.read_data()).unwrap()
-            );
-        }
+        assert!(nodes.iter().all(|node| node.is_valid()));
+        assert_eq!(root_block.child_count().unwrap(), 126);
+        let no_op_node = inspector.root().create_child("no-op-child");
+        assert!(!no_op_node.is_valid());
     }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn new_no_op() -> Result<(), Error> {
+        let mut fs = ServiceFs::new();
+
+        let inspector = Inspector::new_no_op();
+        assert!(!inspector.is_valid());
+        assert!(!inspector.root().is_valid());
+
+        // Ensure export doesn't crash on a No-Op inspector
+        inspector.export(&mut fs);
+
+        fs.take_and_serve_directory_handle()?;
+        fasync::spawn(fs.collect());
+        Ok(())
+    }
+
+    #[test]
+    fn inspector_new_with_size() {
+        let test_object = Inspector::new_with_size(8192);
+        assert_eq!(test_object.vmo.as_ref().unwrap().get_size().unwrap(), 8192);
+        let root_name_block =
+            test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
+        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+
+        // If size is not a multiple of 4096, it'll be rounded up.
+        let test_object = Inspector::new_with_size(10000);
+        assert_eq!(test_object.vmo.unwrap().get_size().unwrap(), 12288);
+
+        // If size is less than the minimum size, the minimum will be set.
+        let test_object = Inspector::new_with_size(2000);
+        assert_eq!(test_object.vmo.unwrap().get_size().unwrap(), 4096);
+    }
+
+    #[test]
+    fn inspector_new_root() {
+        // Note, the small size we request should be rounded up to a full 4kB page.
+        let (vmo, root_node) = Inspector::new_root(100).unwrap();
+        assert_eq!(vmo.get_size().unwrap(), 4096);
+        let root_name_block = root_node.unwrap_ref().state.lock().heap.get_block(2).unwrap();
+        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+    }
+
+    #[test]
+    fn node() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block = node.get_block().unwrap();
+        assert_eq!(node_block.block_type(), BlockType::NodeValue);
+        assert_eq!(node_block.child_count().unwrap(), 0);
+        {
+            let child = node.create_child("child");
+            let child_block = child.get_block().unwrap();
+            assert_eq!(child_block.block_type(), BlockType::NodeValue);
+            assert_eq!(child_block.child_count().unwrap(), 0);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn double_property() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block = node.get_block().unwrap();
+        {
+            let property = node.create_double("property", 1.0);
+            let property_block = property.get_block().unwrap();
+            assert_eq!(property_block.block_type(), BlockType::DoubleValue);
+            assert_eq!(property_block.double_value().unwrap(), 1.0);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+
+            property.set(2.0);
+            assert_eq!(property_block.double_value().unwrap(), 2.0);
+            assert_eq!(property.get().unwrap(), 2.0);
+
+            property.subtract(5.5);
+            assert_eq!(property_block.double_value().unwrap(), -3.5);
+
+            property.add(8.1);
+            assert_eq!(property_block.double_value().unwrap(), 4.6);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn int_property() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block = node.get_block().unwrap();
+        {
+            let property = node.create_int("property", 1);
+            let property_block = property.get_block().unwrap();
+            assert_eq!(property_block.block_type(), BlockType::IntValue);
+            assert_eq!(property_block.int_value().unwrap(), 1);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+
+            property.set(2);
+            assert_eq!(property_block.int_value().unwrap(), 2);
+            assert_eq!(property.get().unwrap(), 2);
+
+            property.subtract(5);
+            assert_eq!(property_block.int_value().unwrap(), -3);
+
+            property.add(8);
+            assert_eq!(property_block.int_value().unwrap(), 5);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn uint_property() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block = node.get_block().unwrap();
+        {
+            let property = node.create_uint("property", 1);
+            let property_block = property.get_block().unwrap();
+            assert_eq!(property_block.block_type(), BlockType::UintValue);
+            assert_eq!(property_block.uint_value().unwrap(), 1);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+
+            property.set(5);
+            assert_eq!(property_block.uint_value().unwrap(), 5);
+            assert_eq!(property.get().unwrap(), 5);
+
+            property.subtract(3);
+            assert_eq!(property_block.uint_value().unwrap(), 2);
+
+            property.add(8);
+            assert_eq!(property_block.uint_value().unwrap(), 10);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn string_property() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block = node.get_block().unwrap();
+        {
+            let property = node.create_string("property", "test");
+            let property_block = property.get_block().unwrap();
+            assert_eq!(property_block.block_type(), BlockType::PropertyValue);
+            assert_eq!(property_block.property_total_length().unwrap(), 4);
+            assert_eq!(property_block.property_format().unwrap(), PropertyFormat::String);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+
+            property.set("test-set");
+            assert_eq!(property_block.property_total_length().unwrap(), 8);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn bytes_property() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block = node.get_block().unwrap();
+        {
+            let property = node.create_bytes("property", b"test");
+            let property_block = property.get_block().unwrap();
+            assert_eq!(property_block.block_type(), BlockType::PropertyValue);
+            assert_eq!(property_block.property_total_length().unwrap(), 4);
+            assert_eq!(property_block.property_format().unwrap(), PropertyFormat::Bytes);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+
+            property.set(b"test-set");
+            assert_eq!(property_block.property_total_length().unwrap(), 8);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn owned_method_argument_properties() {
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let node_block =
+            node.unwrap_ref().state.lock().heap.get_block(node.unwrap_ref().block_index).unwrap();
+        {
+            let _string_property =
+                node.create_string(String::from("string_property"), String::from("test"));
+            let _bytes_property =
+                node.create_bytes(String::from("bytes_property"), vec![0, 1, 2, 3]);
+            let _double_property = node.create_double(String::from("double_property"), 1.0);
+            let _int_property = node.create_int(String::from("int_property"), 1);
+            let _uint_property = node.create_uint(String::from("uint_property"), 1);
+            assert_eq!(node_block.child_count().unwrap(), 5);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn dummy_partialeq() -> Result<(), Error> {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+
+        // Types should all be equal to another type. This is to enable clients
+        // with inspect types in their structs be able to derive PartialEq and
+        // Eq smoothly.
+        assert_eq!(root, &root.create_child("child1"));
+        assert_eq!(root.create_int("property1", 1), root.create_int("property2", 2));
+        assert_eq!(root.create_double("property1", 1.0), root.create_double("property2", 2.0));
+        assert_eq!(root.create_uint("property1", 1), root.create_uint("property2", 2));
+        assert_eq!(
+            root.create_string("property1", "value1"),
+            root.create_string("property2", "value2")
+        );
+        assert_eq!(
+            root.create_bytes("property1", b"value1"),
+            root.create_bytes("property2", b"value2")
+        );
+
+        Ok(())
+    }
+
+    fn get_state(mapping: Arc<Mapping>) -> Arc<Mutex<State>> {
+        let heap = Heap::new(mapping).unwrap();
+        Arc::new(Mutex::new(State::create(heap).unwrap()))
+    }
+
 }

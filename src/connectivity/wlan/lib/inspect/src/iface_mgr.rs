@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_inspect::vmo::Node;
+use fuchsia_inspect::Node;
 use parking_lot::Mutex;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
@@ -75,10 +75,7 @@ pub trait IfaceTree {}
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{
-        assert_inspect_tree,
-        vmo::{Inspector, StringProperty},
-    };
+    use fuchsia_inspect::{assert_inspect_tree, Inspector, StringProperty};
 
     #[test]
     fn test_iface_manager_eviction() {

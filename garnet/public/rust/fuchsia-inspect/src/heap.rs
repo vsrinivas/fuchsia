@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{block::Block, block_type::BlockType, constants, utils},
+    crate::{block::Block, block_type::BlockType, constants, utils},
     failure::{format_err, Error},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
@@ -92,7 +92,7 @@ impl Heap {
 
     /// The bytes in this heap.
     #[cfg(test)]
-    pub(in crate::vmo) fn bytes(&self) -> Vec<u8> {
+    pub(in crate) fn bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; self.current_size_bytes];
         self.mapping.read(&mut result[..]);
         result
@@ -189,7 +189,7 @@ impl Heap {
 mod tests {
     use {
         super::*,
-        crate::vmo::{
+        crate::{
             bitfields::{BlockHeader, Payload},
             reader::snapshot::BlockIterator,
         },

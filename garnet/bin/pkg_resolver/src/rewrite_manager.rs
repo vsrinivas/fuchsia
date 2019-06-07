@@ -4,7 +4,7 @@
 
 use {
     failure::Fail,
-    fuchsia_inspect::vmo::{self as inspect, Property},
+    fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_url_rewrite::{Rule, RuleConfig, RuleInspectState},
@@ -37,8 +37,8 @@ struct RewriteManagerInspectState {
     static_rules_states: Vec<RuleInspectState>,
     dynamic_rules_node: inspect::Node,
     dynamic_rules_states: Vec<RuleInspectState>,
-    generation_property: fuchsia_inspect::vmo::UintProperty,
-    dynamic_rules_path_property: fuchsia_inspect::vmo::StringProperty,
+    generation_property: fuchsia_inspect::UintProperty,
+    dynamic_rules_path_property: fuchsia_inspect::StringProperty,
     node: inspect::Node,
 }
 
@@ -309,7 +309,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_empty_configs() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let config = make_rule_config(vec![]);
 
@@ -324,7 +324,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_load_single_static_rule() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let rules = vec![rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice")];
 
@@ -341,7 +341,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_load_single_dynamic_rule() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let rules = vec![rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice")];
 
@@ -353,7 +353,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rejects_invalid_static_config() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let rules = vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")];
         let dynamic_config = make_rule_config(rules.clone());
@@ -378,7 +378,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_recovers_from_invalid_dynamic_config() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let dynamic_config = make_temp_file(|writer| write!(writer, "invalid"));
         let rule = rule!("test.com" => "test.com", "/a" => "/b");
@@ -404,7 +404,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rewrite_identity_if_no_rules_match() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/a" => "/aa"),
@@ -420,7 +420,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rewrite_first_rule_wins() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/package" => "/remapped"),
@@ -436,7 +436,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rewrite_dynamic_rules_override_static_rules() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
 
         let dynamic_config = make_rule_config(vec![
@@ -457,7 +457,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rewrite_with_pending_transaction() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let override_rule = rule!("fuchsia.com" => "fuchsia.com", "/a" => "/c");
         let dynamic_config =
@@ -479,7 +479,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_commit_additional_rule() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let existing_rule = rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice");
         let new_rule = rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/");
@@ -508,7 +508,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_erase_all_dynamic_rules() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
 
         let rules = vec![
@@ -535,7 +535,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_building_rewrite_manager_populates_inspect() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("rewrite_manager");
         let dynamic_rules = vec![
             rule!("this.example.com" => "that.example.com", "/this_rolldice" => "/that_rolldice"),
@@ -580,7 +580,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_transaction_updates_inspect() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new();
+        let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("rewrite_manager");
         let dynamic_config = make_rule_config(vec![]);
         let mut manager = RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build();

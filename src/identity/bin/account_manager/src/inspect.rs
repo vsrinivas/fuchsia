@@ -7,7 +7,7 @@
 //! This module defines the format and meaning of all the inspect information published by
 //! account_manager.
 
-use fuchsia_inspect::vmo::{Node, StringProperty, UintProperty};
+use fuchsia_inspect::{Node, StringProperty, UintProperty};
 
 /// An abstraction over the properties of the account set that we expose via fuchsia-inspect.
 pub struct Accounts {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{
+    crate::{
         block::PropertyFormat,
         block_type::BlockType,
         reader::snapshot::{ScannedBlock, Snapshot},
@@ -293,7 +293,7 @@ impl<'a> ScanResult<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::vmo::constants};
+    use {super::*, crate::constants};
 
     #[test]
     fn read_vmo() {

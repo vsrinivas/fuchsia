@@ -27,7 +27,7 @@ use fidl_fuchsia_auth::AuthProviderConfig;
 use fuchsia_async as fasync;
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect::vmo::Inspector;
+use fuchsia_inspect::Inspector;
 use futures::StreamExt;
 use lazy_static::lazy_static;
 use log::{error, info};

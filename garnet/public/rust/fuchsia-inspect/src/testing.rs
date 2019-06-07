@@ -120,7 +120,7 @@ macro_rules! assert_inspect_tree {
 
     // Entry points
     ($node_hierarchy:expr, var $key:ident: { $($sub:tt)* }) => {{
-        use $crate::vmo::testing::{NodeHierarchyGetter, TreeAssertion};
+        use $crate::testing::{NodeHierarchyGetter, TreeAssertion};
         #[allow(unused_mut)]
         let mut tree_assertion = TreeAssertion::new($key, true);
         assert_inspect_tree!(@build tree_assertion, $($sub)*);
@@ -129,7 +129,7 @@ macro_rules! assert_inspect_tree {
         }
     }};
     ($node_hierarchy:expr, var $key:ident: contains { $($sub:tt)* }) => {{
-        use $crate::vmo::testing::{NodeHierarchyGetter, TreeAssertion};
+        use $crate::testing::{NodeHierarchyGetter, TreeAssertion};
         #[allow(unused_mut)]
         let mut tree_assertion = TreeAssertion::new($key, false);
         assert_inspect_tree!(@build tree_assertion, $($sub)*);

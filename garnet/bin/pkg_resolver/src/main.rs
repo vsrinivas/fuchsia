@@ -12,7 +12,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::vmo as inspect,
+    fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{StreamExt, TryFutureExt},
     parking_lot::RwLock,
@@ -52,7 +52,7 @@ fn main() -> Result<(), Error> {
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
-    let inspector = fuchsia_inspect::vmo::Inspector::new();
+    let inspector = fuchsia_inspect::Inspector::new();
     let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
 
     let repo_manager = Arc::new(RwLock::new(load_repo_manager()));

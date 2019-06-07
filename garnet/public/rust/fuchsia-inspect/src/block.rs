@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::{
+    crate::{
         bitfields::{BlockHeader, Payload},
         block_type::BlockType,
         constants, utils,
@@ -562,7 +562,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     }
 
     /// Writes the given header and payload to the block in the container.
-    pub(in crate::vmo) fn write(&self, header: BlockHeader, payload: Payload) {
+    pub(in crate) fn write(&self, header: BlockHeader, payload: Payload) {
         self.write_header(header);
         self.write_payload(payload);
     }

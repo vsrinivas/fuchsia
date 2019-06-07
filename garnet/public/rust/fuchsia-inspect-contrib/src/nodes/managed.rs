@@ -4,7 +4,7 @@
 
 use crate::nodes::NodeExt;
 
-use fuchsia_inspect::vmo::{
+use fuchsia_inspect::{
     BytesProperty, DoubleProperty, IntProperty, Node, StringProperty, UintProperty,
 };
 use std::sync::Arc;
@@ -92,7 +92,7 @@ impl<'c> NodeWriter<'c> {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{assert_inspect_tree, vmo::Inspector};
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
 
     #[test]
     fn test_node_writer() {

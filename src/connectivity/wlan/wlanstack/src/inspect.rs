@@ -4,7 +4,7 @@
 
 use failure::Error;
 use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
-use fuchsia_inspect::vmo::Inspector;
+use fuchsia_inspect::Inspector;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use wlan_inspect::iface_mgr::{IfaceTreeHolder, IfacesTrees};

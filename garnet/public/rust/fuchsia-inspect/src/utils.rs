@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::vmo::constants,
+    crate::constants,
     num_traits::ToPrimitive,
     std::cmp::{max, min},
 };

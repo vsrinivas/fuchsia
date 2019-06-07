@@ -841,7 +841,7 @@ fn handle_supplicant_start_failure(
 mod tests {
     use super::*;
     use failure::format_err;
-    use fuchsia_inspect::vmo::Inspector;
+    use fuchsia_inspect::Inspector;
     use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
