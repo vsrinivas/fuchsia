@@ -56,6 +56,7 @@ hierarchy::Node FidlObjectToNode(fuchsia::inspect::Object obj) {
                          std::move(metrics));
 }
 
+// TODO(crjohns, nathaniel): Needs to be asynchronous to use a ChildrenManager.
 ObjectHierarchy Read(std::shared_ptr<component::Object> object_root,
                      int depth) {
   if (depth == 0) {

@@ -4,6 +4,8 @@
 
 #include "lib/inspect/inspect.h"
 
+#include <lib/syslog/cpp/logger.h>
+
 #include "lib/inspect-vmo/block.h"
 
 using component::ObjectDir;
@@ -123,6 +125,23 @@ Node::Node(vmo::Object object) {
 Node::Node(component::ExposedObject object) {
   object_.template emplace<kComponentVariant>(std::move(object));
 }
+
+Node::~Node() {
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    // TODO(nathaniel): Does this if have to be here? Is object being assigned
+    // to an empty shared_ptr a rough edge that can be sanded down? See
+    // discussion near the end of
+    // https://fuchsia-review.googlesource.com/c/fuchsia/+/288093.
+    if (object) {
+      for (auto& detacher : object_.template get<kComponentVariant>()
+                                .object()
+                                ->TakeDetachers()) {
+        detacher.cancel();
+      }
+    }
+  }
+};
 
 fuchsia::inspect::Object Node::object() const {
   if (object_.index() == kComponentVariant) {
@@ -377,6 +396,16 @@ ChildrenCallback Node::CreateChildrenCallback(
     return ChildrenCallback(object);
   }
   return ChildrenCallback();
+}
+
+fit::deferred_callback Node::SetChildrenManager(
+    ChildrenManager* children_manager) {
+  FX_CHECK(children_manager) << "children_manager must be non-null!";
+  FX_CHECK(object_.index() == kComponentVariant)
+      << "SetChildrenManager not yet implemented in VMO-world!";
+  auto object = object_.template get<kComponentVariant>().object();
+  object->SetChildrenManager(children_manager);
+  return fit::defer_callback([object] { object->SetChildrenManager(nullptr); });
 }
 
 namespace internal {

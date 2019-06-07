@@ -5,6 +5,7 @@
 #ifndef LIB_INSPECT_INSPECT_H_
 #define LIB_INSPECT_INSPECT_H_
 
+#include <lib/fit/defer.h>
 #include <lib/fit/variant.h>
 #include <lib/inspect-vmo/inspect.h>
 #include <lib/inspect/deprecated/exposed_object.h>
@@ -450,6 +451,8 @@ class ChildrenCallback final {
   std::shared_ptr<::component::Object> parent_obj_;
 };
 
+using ChildrenManager = ::component::ChildrenManager;
+
 // An object under which properties, metrics, and other objects may be nested.
 class Node final {
  public:
@@ -467,7 +470,7 @@ class Node final {
   // Construct a Node wrapping the given VMO Object.
   explicit Node(vmo::Object object);
 
-  ~Node() = default;
+  ~Node();
 
   // Output the contents of this node as a FIDL struct.
   // For Nodes stored in a VMO, this method returns a default value.
@@ -581,11 +584,28 @@ class Node final {
   [[nodiscard]] LazyMetric CreateLazyMetric(std::string name,
                                             component::Metric::ValueCallback);
 
+  // No new uses of this method, please. Use |SetChildrenManager| instead. Note
+  // that use of |SetChildrenManager| is incompatible with use of this method.
+  //
   // Create a new |ChildrenCallback| that dynamically adds children to the
   // object at runtime.
   // For Nodes stored in a VMO, this method has no effect.
   [[nodiscard]] ChildrenCallback CreateChildrenCallback(
       ChildrenCallbackFunction callback);
+
+  // Register a |ChildrenManager| that dynamically manages children of the
+  // object.
+  //
+  // The inspected system must ensure that the pointed-to ChildrenManager
+  // outlives the returned fit::deferred_action. The inspected system must
+  // ensure that this Node outlives the returned fit::deferred_action.
+  //
+  // For Nodes stored in a VMO, this method's effect is yet to be implemented.
+  //
+  // Use of this method is incompatible with the older and deprecated "lazy
+  // children" mechanism that has |CreateChildrenCallback| as its entry point.
+  [[nodiscard]] fit::deferred_callback SetChildrenManager(
+      ChildrenManager* children_manager);
 
  private:
   static const int kComponentVariant = 1;

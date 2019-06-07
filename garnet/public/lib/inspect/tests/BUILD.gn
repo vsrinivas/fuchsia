@@ -11,6 +11,7 @@ executable("bin") {
   output_name = "inspect_unittests"
   testonly = true
   sources = [
+    "children_manager_unittest.cc",
     "expose_unittest.cc",
     "hierarchy_unittest.cc",
     "inspect_fidl_unittest.cc",
@@ -20,6 +21,9 @@ executable("bin") {
   ]
   deps = [
     "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/callback",
+    "//peridot/lib/rng:testing",
+    "//src/lib/fxl",
     "//zircon/public/lib/inspect-vmo",
   ]
   public_deps = [

@@ -90,10 +90,10 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo);
 // given VMO Snapshot.
 fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot);
 
-// Construct a new object hierarchy by directly reading objects from the
-// given given inspect::Object.
-// Will only read |depth| levels past the immediate object, or all levels if
-// |depth| is -1.
+// TODO(crjohns, nathaniel): Needs to be asynchronous use of a ChildrenManager.
+// Construct a new object hierarchy by directly reading objects
+// from the given given inspect::Object. Will only read |depth| levels past the
+// immediate object, or all levels if |depth| is -1.
 ObjectHierarchy ReadFromObject(const Node& object_root, int depth = -1);
 
 // Construct a new object hierarchy by reading the contents of a FIDL wrapper.

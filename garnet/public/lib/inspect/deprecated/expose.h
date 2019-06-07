@@ -12,11 +12,14 @@
 #include <fs/pseudo-file.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
+#include <mutex>
 #include <set>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 namespace component {
 
@@ -164,6 +167,58 @@ Metric UIntMetric(uint64_t value);
 Metric DoubleMetric(double value);
 Metric CallbackMetric(Metric::ValueCallback callback);
 
+// An interface for dynamic management of an Inspect hierarchy. Implementations
+// of this interface are provided by components integrating with Inspect and are
+// called by Inspect during inspections to modify the Inspect hierarchy,
+// typically by adding or "pinning" nodes of the hierarchy in place for the
+// duration of the inspection.
+class ChildrenManager {
+ public:
+  ChildrenManager() = default;
+  virtual ~ChildrenManager() = default;
+
+  // Specifies to Inspect the names of children available under
+  // the node with which this ChildrenExpansionFunctions object
+  // is registered. The names passed by the inspected system to
+  // the callback need not include or exclude the names of
+  // child structures already resident in memory and
+  // maintaining a static Inspect node under the node with
+  // which this ChildrenExpansionFunctions object is
+  // registered. The inspected system’s including a name among
+  // those passed to the callback is not a guarantee that a
+  // child with that name will be found resultant from a later
+  // call to Attach.
+  //
+  // NOTE(crjohns, jeffbrown, nathaniel): This method is likely
+  // to be fit::promise-ified in the future.
+  virtual void GetNames(
+      fit::function<void(std::vector<std::string>)> callback) = 0;
+
+  // Directs the system under inspection to
+  //   (1) if the structure for the given child is not already
+  //     resident in memory and maintaining a static Inspect
+  //     node in the Inspect hierarchy, bring that structure
+  //     into memory such that it attaches its static node to
+  //     the hierarchy,
+  //   (2) provide to Inspect a closure that Inspect will call
+  //     at a later time to indicate that it is no longer
+  //     examining the portion of the hierarchy with which the
+  //     structure is associated (the system under inspection
+  //     is responsible for ensuring that the closure remains
+  //     safe to call until (a) it is called or (b) the
+  //     ChildrenManager in response to a call on which the
+  //     closure was created is removed from Inspect (at which
+  //     time the closure will be called)), and
+  //   (3) Make a best-effort attempt to retain in memory the
+  //     structure associated with the given child name.
+  // This method is also best-effort in its overall function;
+  // systems under inspection may do nothing and pass a no-op
+  // closure to the callback and doing so will simply
+  // indicate “no such child” to Inspect.
+  virtual void Attach(std::string name,
+                      fit::function<void(fit::closure)> callback) = 0;
+};
+
 // A component |Object| is any named entity that a component wishes to expose
 // for inspection. An |Object| consists of any number of string |Property| and
 // numeric |Metric| values. They may also have any number of uniquely named
@@ -185,6 +240,8 @@ class Object : public fuchsia::inspect::Inspect {
   using ObjectVector = std::vector<std::shared_ptr<Object>>;
   using ChildrenCallback = fit::function<void(ObjectVector*)>;
   using StringOutputVector = fidl::VectorPtr<std::string>;
+
+  ~Object();
 
   // Makes a new shared pointer to an Object.
   static std::shared_ptr<Object> Make(std::string name) {
@@ -218,6 +275,18 @@ class Object : public fuchsia::inspect::Inspect {
   // Clears the callback for dynamic children. After calling this function, the
   // returned children will consist only of children contained by this object.
   void ClearChildrenCallback();
+
+  // Sets (if |children_manager| is not null) or clears (if |children_manager|
+  // is null) the ChildrenManager to be used to dynamically expand the inspect
+  // hierarchy below this Object. The pointed-to ChildrenManager must live until
+  // another call to this method assigns a different ChildrenManager (or no
+  // ChildrenManager) or until this Object is deleted.
+  void SetChildrenManager(ChildrenManager* children_manager);
+
+  // Called by this Object's parent Object when its ChildrenManager is being
+  // reset and the detachers consequent from the being-reset ChildrenManager
+  // need to be destroyed earlier than they otherwise would be.
+  std::vector<fit::deferred_callback> TakeDetachers();
 
   // Remove a property from the object, returning true if it was found and
   // removed.
@@ -283,18 +352,37 @@ class Object : public fuchsia::inspect::Inspect {
   // Every object requires a name, and names for children must be unique.
   explicit Object(std::string name);
 
-  // Helper function to populate an output vector of children objects.
-  void PopulateChildVector(StringOutputVector* out_vector)
-      __TA_EXCLUDES(mutex_);
+  // The common implementation of the two AddBinding overloads.
+  void InnerAddBinding(fidl::InterfaceRequest<Inspect> chan)
+      __TA_REQUIRES(mutex_);
 
   // Adds a new binding.
   void AddBinding(fidl::InterfaceRequest<Inspect> chan);
 
-  // Mutex protecting fields below.
-  mutable std::mutex mutex_;
+  // Adds a new binding and a behavior to be called when this Object's binding
+  // set becomes empty. The behavior may be related to the life cycle of this
+  // Object and calling it may have the effect of deleting this object. Because
+  // this method is the only means of adding these behaviors to this Object, it
+  // is invariant that detachers_ is only ever non-empty when bindings_ is
+  // non-empty.
+  void AddBinding(fidl::InterfaceRequest<Inspect> chan,
+                  fit::deferred_callback detacher);
+
+  std::shared_ptr<Object> GetUnmanagedChild(std::string name);
+
+  fidl::VectorPtr<std::string> ListUnmanagedChildNames();
 
   // The name of this object.
   std::string name_;
+
+  // Because the function of ChildrenManager is to potentially mutate children_
+  // when asked, the lock protecting ChildrenManager is not the same as the lock
+  // protecting the things they change.
+  mutable std::mutex children_manager_mutex_;
+  ChildrenManager* children_manager_ __TA_GUARDED(children_manager_mutex_);
+
+  // Mutex protecting fields below.
+  mutable std::mutex mutex_;
 
   // |Property| for this object, keyed by name.
   std::unordered_map<std::string, Property> properties_ __TA_GUARDED(mutex_);
@@ -306,6 +394,10 @@ class Object : public fuchsia::inspect::Inspect {
   // iteration.
   std::map<std::string, std::shared_ptr<Object>> children_ __TA_GUARDED(mutex_);
 
+  // TODO(crjohns): Convert all remaining uses of ChildrenCallback (who are
+  // indirectly users of lazy_object_callback_) to use ChildrenManager and
+  // remove ChildrenCallback.
+  //
   // Callback for retrieving lazily generated children. May be empty.
   ChildrenCallback lazy_object_callback_ __TA_GUARDED(mutex_);
 
@@ -313,6 +405,7 @@ class Object : public fuchsia::inspect::Inspect {
   // owned by |self_if_bindings_| below.
   fidl::BindingSet<fuchsia::inspect::Inspect, Object*> bindings_
       __TA_GUARDED(mutex_);
+  std::vector<fit::deferred_callback> detachers_ __TA_GUARDED(mutex_);
 
   // A self shared_ptr, held only if |bindings_| is non-empty. Allows avoiding
   // circular ownership. Recursive destruction is impossible because the object

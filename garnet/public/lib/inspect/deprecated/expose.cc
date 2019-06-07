@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs/service.h>
+#include <lib/fit/defer.h>
 #include <lib/inspect/deprecated/expose.h>
 #include <lib/syslog/cpp/logger.h>
 
@@ -125,22 +126,30 @@ Metric CallbackMetric(Metric::ValueCallback callback) {
   return ret;
 }
 
-Object::Object(std::string name) : name_(name) {
+Object::Object(std::string name)
+    : name_(std::move(name)), children_manager_(nullptr) {
   FX_CHECK(std::find(name_.begin(), name_.end(), '\0') == name_.end())
       << "Object name cannot contain null bytes";
   bindings_.set_empty_set_handler([this] {
     std::shared_ptr<Object> self_if_bindings;
-    std::lock_guard lock(mutex_);
-    FX_DCHECK(self_if_bindings_);
-    self_if_bindings = std::move(self_if_bindings_);
-    self_if_bindings_ = nullptr;
-    // The reference is dropped after the mutex is released, so the Object is
-    // still alive when the mutex is released.
+    std::vector<fit::deferred_callback> detachers;
+    {
+      std::lock_guard lock(mutex_);
+      FX_DCHECK(self_if_bindings_);
+      detachers_.swap(detachers);
+      self_if_bindings = std::move(self_if_bindings_);
+      self_if_bindings_ = nullptr;
+    }
   });
 }
 
-void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan) {
-  std::lock_guard<std::mutex> lock(mutex_);
+Object::~Object() {
+  std::lock_guard lock(mutex_);
+  FX_CHECK(detachers_.empty());
+}
+
+void Object::InnerAddBinding(
+    fidl::InterfaceRequest<fuchsia::inspect::Inspect> chan) {
   if (!self_if_bindings_) {
     FX_DCHECK(bindings_.size() == 0);
     self_if_bindings_ = self_weak_ptr_.lock();
@@ -148,28 +157,68 @@ void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan) {
   bindings_.AddBinding(this, std::move(chan));
 }
 
+void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  InnerAddBinding(std::move(chan));
+}
+
+void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan,
+                        fit::deferred_callback detacher) {
+  std::lock_guard lock(mutex_);
+  InnerAddBinding(std::move(chan));
+  detachers_.push_back(std::move(detacher));
+}
+
 void Object::ReadData(ReadDataCallback callback) { callback(ToFidl()); }
 
-void Object::ListChildren(ListChildrenCallback callback) {
-  StringOutputVector out;
-  PopulateChildVector(&out);
-  callback(std::move(out));
-}
-
-void Object::OpenChild(std::string name,
-                       ::fidl::InterfaceRequest<Inspect> child_channel,
-                       OpenChildCallback callback) {
-  auto child = GetChild(name.data());
-  if (!child) {
-    callback(false);
-    return;
+fidl::VectorPtr<std::string> Object::ListUnmanagedChildNames() {
+  StringOutputVector child_names;
+  // Lock the local child vector. No need to lock children since we are only
+  // reading their constant name.
+  std::lock_guard lock(mutex_);
+  for (const auto& [child_name_as_map_key, child] : children_) {
+    child_names.push_back(child->name());
   }
-
-  child->AddBinding(std::move(child_channel));
-  callback(true);
+  // TODO(crjohns): lazy_object_callback_ should not be carried over into the
+  // new implementation.
+  if (lazy_object_callback_) {
+    ObjectVector lazy_objects;
+    lazy_object_callback_(&lazy_objects);
+    for (const auto& obj : lazy_objects) {
+      child_names.push_back(obj->name());
+    }
+  }
+  return child_names;
 }
 
-std::shared_ptr<Object> Object::GetChild(std::string name) {
+void Object::ListChildren(ListChildrenCallback callback) {
+  std::lock_guard children_manager_lock(children_manager_mutex_);
+  if (children_manager_) {
+    children_manager_->GetNames(
+        [this, callback = std::move(callback)](
+            std::vector<std::string> children_manager_child_names) {
+          std::set<std::string> all_child_names(
+              children_manager_child_names.begin(),
+              children_manager_child_names.end());
+          {
+            std::lock_guard lock(mutex_);
+            for (const auto& [unused_child_name_as_map_key, child] :
+                 children_) {
+              all_child_names.insert(child->name());
+            }
+          }
+          StringOutputVector child_names;
+          for (const auto& child_name : all_child_names) {
+            child_names.push_back(child_name);
+          }
+          callback(std::move(child_names));
+        });
+  } else {
+    callback(ListUnmanagedChildNames());
+  }
+}
+
+std::shared_ptr<Object> Object::GetUnmanagedChild(std::string name) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = children_.find(name.data());
   if (it != children_.end()) {
@@ -189,6 +238,55 @@ std::shared_ptr<Object> Object::GetChild(std::string name) {
 
   // Child not found.
   return std::shared_ptr<Object>();
+}
+
+void Object::OpenChild(std::string name,
+                       ::fidl::InterfaceRequest<Inspect> child_channel,
+                       OpenChildCallback callback) {
+  std::lock_guard children_manager_lock(children_manager_mutex_);
+  if (children_manager_) {
+    children_manager_->Attach(
+        name, [this, name, child_channel = std::move(child_channel),
+               callback = std::move(callback)](fit::closure detacher) mutable {
+          // Upon calling of this callback passed to Attached, the
+          // component-under-inspection has either added a child to the
+          // hierarchy with name |name| or not, and the detacher passed to this
+          // callback is our means of reporting to the
+          // component-under-inspection that we no longer have an active
+          // in the child. In the case of child-not-present, we call the
+          // detacher right away - our interest in "nothing" ended the moment it
+          // started. In the case of child-is-present, we make the binding to
+          // the child that was the reason for calling OpenChild in the first
+          // place and we pass the detacher to the child to be called when the
+          // child's binding set is empty (because our interest in the child
+          // ends when all bindings to it are unbound).
+          auto deferred_detacher = fit::defer_callback(std::move(detacher));
+          auto child = GetUnmanagedChild(name);
+          if (!child) {
+            callback(false);
+
+          } else {
+            child->AddBinding(std::move(child_channel),
+                              std::move(deferred_detacher));
+            callback(true);
+          }
+        });
+  } else {
+    auto child = GetUnmanagedChild(name);
+    if (!child) {
+      callback(false);
+      return;
+    }
+    child->AddBinding(std::move(child_channel));
+    callback(true);
+  }
+}
+
+std::shared_ptr<Object> Object::GetChild(std::string name) {
+  std::lock_guard<std::mutex> children_manager_lock(children_manager_mutex_);
+  FX_CHECK(!children_manager_)
+      << "GetChild not yet supported with a ChildrenManager!";
+  return GetUnmanagedChild(name);
 }
 
 void Object::SetChild(std::shared_ptr<Object> child) {
@@ -213,7 +311,10 @@ std::shared_ptr<Object> Object::TakeChild(std::string name) {
 }
 
 void Object::SetChildrenCallback(ChildrenCallback callback) {
+  std::lock_guard<std::mutex> children_manager_lock(children_manager_mutex_);
   std::lock_guard<std::mutex> lock(mutex_);
+  FX_CHECK(!children_manager_) << "Simultaneous use of children callback "
+                                  "and children manager not supported!";
   lazy_object_callback_ = std::move(callback);
 }
 
@@ -221,6 +322,34 @@ void Object::ClearChildrenCallback() {
   std::lock_guard<std::mutex> lock(mutex_);
   ChildrenCallback temp;
   lazy_object_callback_.swap(temp);
+}
+
+void Object::SetChildrenManager(ChildrenManager* children_manager) {
+  std::vector<std::vector<fit::deferred_callback>> detachers;
+  std::lock_guard<std::mutex> children_manager_lock(children_manager_mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
+  FX_CHECK(!lazy_object_callback_) << "Simultaneous use of children callback "
+                                      "and children manager not supported!";
+  FX_CHECK(!children_manager || !children_manager_)
+      << "At least one of children_manager and children_manager_ must be null!";
+  children_manager_ = children_manager;
+
+  // Detachers provided to Inspect in response to a call on the being-replaced
+  // ChildrenManager should not be retained by Inspect now that the
+  // being-replaced ChildrenManager is being replaced, so gather those detachers
+  // up now and (after releasing all locks) destroy them (which can have any
+  // component-implemented effect up to and including destroying this object).
+  detachers.reserve(children_.size());
+  for (auto& [unused_child_name_as_map_key, child] : children_) {
+    detachers.emplace_back(child->TakeDetachers());
+  }
+}
+
+std::vector<fit::deferred_callback> Object::TakeDetachers() {
+  std::vector<fit::deferred_callback> detachers;
+  std::lock_guard lock(mutex_);
+  detachers_.swap(detachers);
+  return detachers;
 }
 
 bool Object::RemoveProperty(const std::string& name) {
@@ -263,23 +392,6 @@ bool Object::SetMetric(const std::string& name, Metric metric) {
   return true;
 }
 
-void Object::PopulateChildVector(StringOutputVector* out_vector)
-    __TA_EXCLUDES(mutex_) {
-  // Lock the local child vector. No need to lock children since we are only
-  // reading their constant name.
-  std::lock_guard lock(mutex_);
-  for (const auto& it : children_) {
-    out_vector->push_back(it.second->name().data());
-  }
-  if (lazy_object_callback_) {
-    ObjectVector lazy_objects;
-    lazy_object_callback_(&lazy_objects);
-    for (const auto& obj : lazy_objects) {
-      out_vector->push_back(obj->name().data());
-    }
-  }
-}
-
 fuchsia::inspect::Object Object::ToFidl() {
   std::lock_guard lock(mutex_);
   fuchsia::inspect::Object ret;
@@ -294,9 +406,7 @@ fuchsia::inspect::Object Object::ToFidl() {
 }
 
 Object::StringOutputVector Object::GetChildren() {
-  Object::StringOutputVector ret;
-  PopulateChildVector(&ret);
-  return ret;
+  return ListUnmanagedChildNames();
 }
 
 }  // namespace component
