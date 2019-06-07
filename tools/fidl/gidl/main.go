@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	fidlir "fidl/compiler/backend/types"
+	gidlcpp "gidl/cpp"
 	gidlgolang "gidl/golang"
 	gidlir "gidl/ir"
 	gidlparser "gidl/parser"
@@ -21,13 +22,13 @@ import (
 
 // GIDLFlags for GIDL backends.
 //
-// --json <path> path to the JSON IR
-// --gidl <path> path to the GIDL file
-//
-// TODO: specifcy backend to generate tests, e.g. go, rust, c++, etc.
+// --json <path>  path to the JSON IR
+// --gidl <path>  path to the GIDL file
+// --language (go|cpp)  language to output
 type GIDLFlags struct {
 	JSONPath *string
 	GIDLPath *string
+	Language *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -41,6 +42,7 @@ var flags = func() GIDLFlags {
 			"relative path to the FIDL intermediate representation."),
 		GIDLPath: flag.String("gidl", "",
 			"relative path to the GIDL source."),
+		Language: flag.String("language", "", "target language (go/cpp)"),
 	}
 }()
 
@@ -95,13 +97,26 @@ func main() {
 			strings.Join(libs, ",")))
 	}
 
-	// Generate Go code.
 	buf := new(bytes.Buffer)
-	err := gidlgolang.Generate(buf, gidl, fidl)
-	if err != nil {
-		panic(err)
+
+	switch language := *flags.Language; language {
+	case "go":
+		err := gidlgolang.Generate(buf, gidl, fidl)
+		if err != nil {
+			panic(err)
+		}
+	case "cpp":
+		err := gidlcpp.Generate(buf, gidl, fidl)
+		if err != nil {
+			panic(err)
+		}
+	case "":
+		panic("must specify --language")
+	default:
+		panic(fmt.Sprintf("unknown language: %s", language))
 	}
-	_, err = os.Stdout.Write(buf.Bytes())
+
+	_, err := os.Stdout.Write(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}

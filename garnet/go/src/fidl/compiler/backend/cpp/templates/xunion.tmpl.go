@@ -306,12 +306,13 @@ struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
   }
 
   static void Decode(Decoder* decoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
-    value->reset(new {{ .Namespace }}::{{ .Name }});
-
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
+      value->reset(nullptr);
       return;
     }
+
+    value->reset(new {{ .Namespace }}::{{ .Name }});
 
     {{ .Namespace }}::{{ .Name }}::Decode(decoder, value->get(), offset);
   }

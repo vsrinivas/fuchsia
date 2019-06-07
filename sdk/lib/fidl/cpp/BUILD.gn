@@ -127,6 +127,19 @@ sdk_source_set("cpp_base") {
   }
 }
 
+source_set("test_util") {
+  testonly = true
+
+  sources = [
+    "test/test_util.cpp",
+    "test/test_util.h",
+  ]
+
+  public_deps = [
+    ":cpp_base",
+  ]
+}
+
 source_set("test_support") {
   testonly = true
 
@@ -139,6 +152,23 @@ source_set("test_support") {
   ]
 }
 
+# TODO(FIDL-658): There should be a better long-term solution for build rules
+# for GIDL's .fidl files. In the meantime, we keep the build rule for it with
+# the language bindings (i.e. here), rather than in the GIDL directory.
+fidl("conformance_fidl") {
+  name = "conformance"
+
+  testonly = true
+
+  sources = [
+    "//tools/fidl/gidl-conformance-suite/mix_and_match.test.fidl",
+    "//tools/fidl/gidl-conformance-suite/optionals.test.fidl",
+    "//tools/fidl/gidl-conformance-suite/structs.test.fidl",
+    "//tools/fidl/gidl-conformance-suite/tables.test.fidl",
+    "//tools/fidl/gidl-conformance-suite/xunion.test.fidl",
+  ]
+}
+
 fidl("fidl_test") {
   name = "fidl.test.misc"
 
@@ -146,6 +176,22 @@ fidl("fidl_test") {
 
   sources = [
     "fidl_test.test.fidl",
+  ]
+}
+
+source_set("conformance_test_sources") {
+  testonly = true
+
+  sources = [
+    "conformance_test.cc",
+  ]
+
+  deps = [
+    ":conformance_fidl",
+    ":cpp_base",
+    ":fidl_test",
+    ":test_util",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -169,6 +215,7 @@ source_set("host_test_sources") {
   deps = [
     ":cpp_base",
     ":fidl_test",
+    ":test_util",
     "//third_party/googletest:gtest",
   ]
 }
@@ -207,6 +254,24 @@ source_set("test_sources") {
   public_configs = [ "//sdk/config" ]
 }
 
+executable("conformance_test") {
+  testonly = true
+
+  sources = [
+    "test/async_loop_for_test.cc",
+  ]
+
+  deps = [
+    ":conformance_test_sources",
+    ":test_support",
+    "//sdk/lib/fidl/cpp/test",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
 executable("fidl_cpp_unittests") {
   testonly = true
 
@@ -228,12 +293,17 @@ executable("fidl_cpp_unittests") {
 
 unittest_package("fidl_tests") {
   deps = [
+    ":conformance_test",
     ":fidl_cpp_unittests",
   ]
 
   tests = [
     {
       name = "fidl_cpp_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "conformance_test"
       environments = basic_envs
     },
   ]
@@ -248,8 +318,19 @@ if (is_linux || is_mac) {
     ]
   }
 }
+
+if (is_linux || is_mac) {
+  test("fidl_cpp_host_conformance_test") {
+    deps = [
+      ":conformance_test_sources",
+      "//third_party/googletest:gtest",
+      "//third_party/googletest:gtest_main",
+    ]
+  }
+}
 # group("host_tests") {
 #   deps = [
+#     ":fidl_cpp_host_conformance_test($host_toolchain)",
 #     ":fidl_cpp_host_unittests($host_toolchain)",
 #   ]
 #   testonly = true

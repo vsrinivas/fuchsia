@@ -1,0 +1,34 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This is intended to ensure that the GIDL-generated test code produces the
+// correct syntax for C++ bindings, which needs to distinguish between e.g.
+// using "Foo foo;" vs "std::unique_ptr<Foo> foo;" for optional (nullable)
+// fields, "object.foo()" vs "object->foo()" vs "object.set_foo()", etc.
+
+library conformance;
+
+table TableWithEmptyStruct {
+    1: EmptyStruct s;
+};
+
+xunion XUnionWithEmptyStruct {
+    EmptyStruct s;
+};
+
+union UnionWithEmptyStruct {
+    EmptyStruct s;
+    EmptyStruct? s2;
+};
+
+struct StructWithOptionals {
+    EmptyStruct s;
+    EmptyStruct? s2;
+    TableWithEmptyStruct t;
+    // nullable tables are not allowed.
+    XUnionWithEmptyStruct xu;
+    XUnionWithEmptyStruct? xu2;
+    UnionWithEmptyStruct u;
+    UnionWithEmptyStruct? u2;
+};

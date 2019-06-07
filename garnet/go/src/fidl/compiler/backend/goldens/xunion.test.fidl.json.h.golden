@@ -193,12 +193,13 @@ struct CodingTraits<std::unique_ptr<::test::name::OlderSimpleUnion>> {
   }
 
   static void Decode(Decoder* decoder, std::unique_ptr<::test::name::OlderSimpleUnion>* value, size_t offset) {
-    value->reset(new ::test::name::OlderSimpleUnion);
-
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
+      value->reset(nullptr);
       return;
     }
+
+    value->reset(new ::test::name::OlderSimpleUnion);
 
     ::test::name::OlderSimpleUnion::Decode(decoder, value->get(), offset);
   }
@@ -247,12 +248,13 @@ struct CodingTraits<std::unique_ptr<::test::name::NewerSimpleUnion>> {
   }
 
   static void Decode(Decoder* decoder, std::unique_ptr<::test::name::NewerSimpleUnion>* value, size_t offset) {
-    value->reset(new ::test::name::NewerSimpleUnion);
-
     fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
+      value->reset(nullptr);
       return;
     }
+
+    value->reset(new ::test::name::NewerSimpleUnion);
 
     ::test::name::NewerSimpleUnion::Decode(decoder, value->get(), offset);
   }

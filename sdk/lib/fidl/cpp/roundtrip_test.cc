@@ -9,6 +9,7 @@
 #include <iostream>
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/test/test_util.h"
 
 namespace fidl {
 namespace test {
@@ -16,78 +17,12 @@ namespace misc {
 
 namespace {
 
-template <class Output, class Input>
-Output RoundTrip(const Input& input) {
-  const size_t input_encoded_size = CodingTraits<Input>::encoded_size;
-  const size_t input_padding_size =
-      FIDL_ALIGN(input_encoded_size) - input_encoded_size;
-  const ::fidl::FidlStructField fake_input_interface_fields[] = {
-      ::fidl::FidlStructField(Input::FidlType, 16, input_padding_size),
-  };
-  const fidl_type_t fake_input_interface_struct{
-      ::fidl::FidlCodedStruct(fake_input_interface_fields, 1,
-                              16 + input_encoded_size, "Input")};
-  const size_t output_encoded_size = CodingTraits<Input>::encoded_size;
-  const size_t output_padding_size =
-      FIDL_ALIGN(output_encoded_size) - output_encoded_size;
-  const ::fidl::FidlStructField fake_output_interface_fields[] = {
-      ::fidl::FidlStructField(Output::FidlType, 16, output_padding_size),
-  };
-  const fidl_type_t fake_output_interface_struct{::fidl::FidlCodedStruct(
-      fake_output_interface_fields, 1, 16 + output_encoded_size,
-      "Output")};
-
-  fidl::Encoder enc(0xfefefefe);
-  auto ofs = enc.Alloc(input_encoded_size);
-  fidl::Clone(input).Encode(&enc, ofs);
-  auto msg = enc.GetMessage();
-
-  const char* err_msg = nullptr;
-  EXPECT_EQ(ZX_OK, msg.Validate(&fake_input_interface_struct, &err_msg))
-      << err_msg;
-  EXPECT_EQ(ZX_OK, msg.Decode(&fake_output_interface_struct, &err_msg))
-      << err_msg;
-  fidl::Decoder dec(std::move(msg));
-  Output output;
-  Output::Decode(&dec, &output, ofs);
-  return output;
-}
+using fidl::test::util::RoundTrip;
+using fidl::test::util::ValueToBytes;
 
 TEST(SimpleStruct, SerializeAndDeserialize) {
   Int64Struct input{1};
   EXPECT_TRUE(fidl::Equals(input, RoundTrip<Int64Struct>(input)));
-}
-
-bool cmp_payload(const uint8_t* actual, size_t actual_size,
-                 const uint8_t* expected, size_t expected_size) {
-  bool pass = true;
-  for (size_t i = 0; i < actual_size && i < expected_size; i++) {
-    if (actual[i] != expected[i]) {
-      pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex
-                << "actual=0x" << +actual[i] << " "
-                << "expected=0x" << +expected[i] << "\n";
-    }
-  }
-  if (actual_size != expected_size) {
-    pass = false;
-    std::cout << std::dec << "element[...]: "
-              << "actual.size=" << +actual_size << " "
-              << "expected.size=" << +expected_size << "\n";
-  }
-  return pass;
-}
-
-template <class Input>
-bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
-  fidl::Encoder enc(0xfefefefe);
-  auto offset = enc.Alloc(CodingTraits<Input>::encoded_size);
-  fidl::Clone(input).Encode(&enc, offset);
-  auto msg = enc.GetMessage();
-  auto payload = msg.payload();
-  return cmp_payload(
-      reinterpret_cast<const uint8_t*>(payload.data()), payload.actual(),
-      reinterpret_cast<const uint8_t*>(expected.data()), expected.size());
 }
 
 TEST(SimpleTable, CheckEmptyTable) {
@@ -399,10 +334,7 @@ TEST(OptionalXUnionInStruct, SerializeAndDeserializeAbsent) {
 
   OptionalXUnionInStruct output = RoundTrip<OptionalXUnionInStruct>(input);
 
-  // We cannot byte-wise compare |input| with |output|, since both xunions will
-  // have uninitialized memory in their internal xunions, and are not guaranteed
-  // to be zeroed.
-  EXPECT_EQ(output.xu->Which(), SampleXUnion::Tag::Empty);
+  EXPECT_EQ(output.xu.get(), nullptr);
 }
 
 TEST(OptionalXUnionInStruct, SerializeAndDeserializePresent) {
