@@ -7,19 +7,16 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool EmptyIteratorTest() {
-    BEGIN_TEST;
+TEST(PhyIterTests, EmptyIteratorTest) {
     ddk::PhysIter phys_iter(phys_iter_buffer_t{}, 0);
     EXPECT_TRUE(phys_iter.begin() == phys_iter.end());
-    END_TEST;
 }
 
-bool SimpleIterationTest() {
-    BEGIN_TEST;
+TEST(PhyIterTests, SimpleIterationTest) {
 
     constexpr zx_paddr_t kPhysList[] = {
         2 * ZX_PAGE_SIZE,
@@ -53,12 +50,9 @@ bool SimpleIterationTest() {
         EXPECT_EQ(size, ZX_PAGE_SIZE);
     }
     EXPECT_EQ(count, 1);
-
-    END_TEST;
 }
 
-bool ContiguousTest() {
-    BEGIN_TEST;
+TEST(PhyIterTests, ContiguousTest) {
 
     constexpr zx_paddr_t kPhysList[] = {
         0 * ZX_PAGE_SIZE,
@@ -87,13 +81,9 @@ bool ContiguousTest() {
 
     ++iter;
     EXPECT_TRUE(iter == end);
-
-    END_TEST;
 }
 
-bool DiscontiguousTest() {
-    BEGIN_TEST;
-
+TEST(PhyIterTests, DiscontiguousTest) {
     constexpr zx_paddr_t kPhysList[] = {
         1 * ZX_PAGE_SIZE,
         3 * ZX_PAGE_SIZE,
@@ -139,12 +129,9 @@ bool DiscontiguousTest() {
 
     ++iter;
     EXPECT_TRUE(iter == end);
-
-    END_TEST;
 }
 
-bool UnalignedTest() {
-    BEGIN_TEST;
+TEST(PhyIterTests, UnalignedTest) {
 
     constexpr zx_paddr_t kPhysList[] = {
         2 * ZX_PAGE_SIZE,
@@ -181,12 +168,9 @@ bool UnalignedTest() {
 
     ++iter;
     EXPECT_TRUE(iter == end);
-
-    END_TEST;
 }
 
-bool ScatterGatherTest() {
-    BEGIN_TEST;
+TEST(PhyIterTests, ScatterGatherTest) {
 
     constexpr zx_paddr_t kPhysList[] = {
         1 * ZX_PAGE_SIZE,
@@ -259,17 +243,6 @@ bool ScatterGatherTest() {
 
     ++iter;
     EXPECT_TRUE(iter == end);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(PhyIterTests)
-RUN_TEST_SMALL(EmptyIteratorTest)
-RUN_TEST_SMALL(SimpleIterationTest)
-RUN_TEST_SMALL(ContiguousTest)
-RUN_TEST_SMALL(DiscontiguousTest)
-RUN_TEST_SMALL(UnalignedTest)
-RUN_TEST_SMALL(ScatterGatherTest)
-END_TEST_CASE(PhyIterTests)
