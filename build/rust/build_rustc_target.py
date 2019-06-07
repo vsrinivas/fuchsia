@@ -296,7 +296,7 @@ def main():
     stdout, stderr = depfile_job.communicate()
     if depfile_job.returncode != 0:
         print(stdout + stderr)
-        return build_job.returncode
+        return depfile_job.returncode
     fix_depfile(args.depfile, os.getcwd(), args.output_file)
 
     stdout, stderr = build_job.communicate()
