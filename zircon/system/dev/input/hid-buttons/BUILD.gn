@@ -31,11 +31,11 @@ test("hid-buttons-test") {
     "hid-buttons.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/mock-gpio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

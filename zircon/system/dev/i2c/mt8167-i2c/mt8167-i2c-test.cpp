@@ -6,7 +6,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <lib/mock-gpio/mock-gpio.h>
+#include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 
 namespace mt8167_i2c {
@@ -21,7 +21,7 @@ public:
         mock_i2c_impl_transact_.VerifyAndClear();
     }
 
-    void SetI2cGpios(const mock_gpio::MockGpio gpios[], size_t count) {
+    void SetI2cGpios(const ddk::MockGpio gpios[], size_t count) {
         fbl::AllocChecker ac;
         gpios_.reset(new (&ac) ddk::GpioProtocolClient[count], count);
         ASSERT_TRUE(ac.check());
@@ -57,7 +57,7 @@ private:
 TEST(Mt8167I2cTest, DummyTransactions) {
     Mt8167I2cTest dut(3);
 
-    mock_gpio::MockGpio gpios[6];
+    ddk::MockGpio gpios[6];
     dut.SetI2cGpios(gpios, fbl::count_of(gpios));
 
     gpios[0].ExpectSetAltFunction(ZX_OK, 0).ExpectSetAltFunction(ZX_OK, 1);

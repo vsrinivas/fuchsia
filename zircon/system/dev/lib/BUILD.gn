@@ -15,7 +15,6 @@ group("lib") {
     "focaltech",
     "hi3660",
     "mmio",
-    "mock-gpio",
     "mock-hidbus-ifc",
     "mock-i2c",
     "mock-mmio-reg",

@@ -36,7 +36,6 @@ test("mt8167-i2c-test") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mock-gpio",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
