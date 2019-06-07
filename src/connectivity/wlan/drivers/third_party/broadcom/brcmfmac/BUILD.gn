@@ -21,6 +21,7 @@ import("//build/test.gni")
 brcmf_core_srcs = [
   "bcdc.cc",
   "bcdc.h",
+  "bcmsdh.cc",
   "btcoex.cc",
   "btcoex.h",
   "bus.h",
@@ -67,6 +68,7 @@ brcmf_core_srcs = [
   "pno.h",
   "proto.cc",
   "proto.h",
+  "sdio.cc",
   "sdio.h",
   "usb.h",
   "utils.cc",
@@ -104,10 +106,8 @@ source_set("brcmfmac_drvr_srcs") {
   ]
 
   sources = brcmf_core_srcs + [
-              "bcmsdh.cc",
               "binding.cc",
               "pcie.cc",
-              "sdio.cc",
               "usb.cc",
             ]
 
@@ -117,11 +117,13 @@ source_set("brcmfmac_drvr_srcs") {
 }
 
 source_set("brcmfmac_test_srcs") {
+  testonly = true
+
   defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
 
   sources = brcmf_core_srcs + [ "sim.cc" ]
 
-  deps = brcmf_core_deps
+  deps = brcmf_core_deps + [ "//zircon/public/lib/fake_ddk" ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

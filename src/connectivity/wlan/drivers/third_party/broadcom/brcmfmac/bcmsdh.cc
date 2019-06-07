@@ -174,9 +174,8 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
         }
 
         /* must configure SDIO_CCCR_INT_ENABLE to enable irq */
-        data = brcmf_sdiod_func0_rb(sdiodev, SDIO_CCCR_INT_ENABLE, &ret);
-        data |= SDIO_CCCR_IEN_FUNC1 | SDIO_CCCR_IEN_FUNC2 | SDIO_CCCR_IEN_FUNC0;
-        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_INT_ENABLE, data, &ret);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
 
         /* redirect, configure and enable io for interrupt signal */
         data = SDIO_CCCR_BRCM_SEPINT_MASK | SDIO_CCCR_BRCM_SEPINT_OE;
@@ -211,7 +210,8 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
         pdata = &sdiodev->settings->bus.sdio;
         sdio_claim_host(sdiodev->func1);
         brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
-        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_INT_ENABLE, 0, NULL);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
         sdio_release_host(sdiodev->func1);
 
         sdiodev->oob_irq_requested = false;
@@ -295,7 +295,13 @@ static uint8_t brcmf_sdiod_func_rb(struct brcmf_sdio_dev* sdiodev, uint8_t func,
 
 uint8_t brcmf_sdiod_func0_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
                              zx_status_t* result_out) {
-    return brcmf_sdiod_func_rb(sdiodev, SDIO_FN_0, addr, result_out);
+    uint8_t data = 0;
+    zx_status_t result;
+    result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto, false, addr, 0, &data);
+    if (result_out != NULL) {
+        *result_out = result;
+    }
+    return data;
 }
 
 uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
@@ -306,7 +312,7 @@ uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
 void brcmf_sdiod_func0_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
                              zx_status_t* result_out) {
     zx_status_t result;
-    result = brcmf_sdiod_transfer(sdiodev, SDIO_FN_0, addr, true, &data, sizeof(data), false);
+    result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto, true, addr, data, NULL);
     if (result_out != NULL) {
         *result_out = result;
     }
@@ -662,7 +668,7 @@ zx_status_t brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func) {
     brcmf_dbg(SDIO, "Enter\n");
 
     /* Issue abort cmd52 command through F0 */
-    brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_ABORT_RESET, func, NULL);
+    sdio_io_abort(&sdiodev->sdio_proto, func);
 
     brcmf_dbg(SDIO, "Exit\n");
     return ZX_OK;

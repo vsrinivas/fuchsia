@@ -58,11 +58,34 @@ executable("netbuf_test") {
   ]
 }
 
+executable("sdio_test") {
+  output_name = "sdio_test"
+  testonly = true
+
+  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
+
+  sources = [
+    "sdio_test.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/protocol",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
+    "//zircon/public/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
+    "//zircon/public/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/broadcom",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
 
   deps = [
     ":netbuf_test",
+    ":sdio_test",
     ":workqueue_test",
   ]
 
@@ -73,6 +96,10 @@ unittest_package("brcmfmac_test") {
     },
     {
       name = "netbuf_test"
+      environments = basic_envs
+    },
+    {
+      name = "sdio_test"
       environments = basic_envs
     },
   ]

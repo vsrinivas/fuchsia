@@ -3302,7 +3302,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 
     /* Poll period: check device if appropriate. */
     if (!bus->sr_enabled && bus->poll && (++bus->polltick >= bus->pollrate)) {
-        uint32_t intstatus = 0;
+        bool intstatus = false;
 
         /* Reset poll tick */
         bus->polltick = 0;
@@ -3310,13 +3310,15 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
         /* Check device if no interrupts */
         if (!bus->intr || (bus->sdcnt.intrcount == bus->sdcnt.lastintrs)) {
             if (!bus->dpc_triggered.load()) {
-                uint8_t devpend;
+                bool func1_pend;
+                bool func2_pend;
 
                 sdio_claim_host(bus->sdiodev->func1);
 
-                devpend = brcmf_sdiod_func0_rb(bus->sdiodev, SDIO_CCCR_INTx, NULL);
+                sdio_intr_pending(&bus->sdiodev->sdio_proto, SDIO_FN_1, &func1_pend);
+                sdio_intr_pending(&bus->sdiodev->sdio_proto, SDIO_FN_2, &func2_pend);
                 sdio_release_host(bus->sdiodev->func1);
-                intstatus = devpend & (INTR_STATUS_FUNC1 | INTR_STATUS_FUNC2);
+                intstatus = func1_pend || func2_pend;
             }
 
             /* If there is something, make like the ISR and
