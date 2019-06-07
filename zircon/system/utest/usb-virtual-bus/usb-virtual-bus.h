@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <zircon/types.h>
-#include <lib/driver-integration-test/fixture.h>
 #include <fbl/string.h>
+#include <lib/driver-integration-test/fixture.h>
+#include <zircon/types.h>
 
 namespace usb_virtual_bus {
 
@@ -23,6 +23,9 @@ public:
 
     // Initialize a Usb HID device. Asserts on failure.
     void InitUsbHid(fbl::String* devpath);
+
+    // Initialize an FTDI device. Asserts on failure.
+    void InitFtdi(fbl::String* devpath);
 
     void GetHandles(zx::unowned_channel* peripheral, zx::unowned_channel* bus);
 

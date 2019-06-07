@@ -6,6 +6,7 @@ group("serial") {
   deps = [
     "aml-uart",
     "ftdi",
+    "ftdi:ftdi-fake-usb",
     "serial",
   ]
   if (current_cpu == "x64") {

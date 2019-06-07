@@ -4,7 +4,7 @@
 
 driver("ftdi") {
   sources = [
-    "ftdi.c",
+    "ftdi.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.serial",
@@ -15,6 +15,25 @@ driver("ftdi") {
     "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-hardware-serial:c",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+driver("ftdi-fake-usb") {
+  sources = [
+    "ftdi-function.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.usb",
+    "$zx/system/banjo/ddk.protocol.usb.function",
+    "$zx/system/banjo/ddk.protocol.usb.request",
+    "$zx/system/dev/lib/usb",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
 }

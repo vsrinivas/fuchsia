@@ -5,6 +5,7 @@
 group("test") {
   testonly = true
   deps = [
+    ":usb-virtual-bus-ftdi",
     ":usb-virtual-bus-hid",
   ]
 }
@@ -48,6 +49,32 @@ test("usb-virtual-bus-hid") {
   deps = [
     ":main",
     "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c",
+    "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("usb-virtual-bus-ftdi") {
+  sources = [
+    "ftdi-test.cpp",
+  ]
+  deps = [
+    ":main",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c",
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",
     "$zx/system/ulib/async-loop",
