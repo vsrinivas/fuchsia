@@ -69,6 +69,7 @@ struct x86_percpu bp_percpu = {
     .gpf_return_target = {},
 
     .cpu_num = 0,
+    .num_spinlocks = 0,
 
     .default_tss = {},
     .interrupt_stacks = {},

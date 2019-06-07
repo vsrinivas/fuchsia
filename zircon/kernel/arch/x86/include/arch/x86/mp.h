@@ -68,6 +68,9 @@ struct x86_percpu {
     /* CPU number */
     cpu_num_t cpu_num;
 
+    /* Number of spinlocks currently held */
+    uint32_t num_spinlocks;
+
     /* This CPU's default TSS */
     tss_t default_tss __ALIGNED(16);
 

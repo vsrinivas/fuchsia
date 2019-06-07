@@ -800,6 +800,8 @@ void sched_resched_internal() {
 
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    // Aside from the thread_lock, spinlocks should never be held over a reschedule.
+    DEBUG_ASSERT(arch_num_spinlocks_held() == 1);
     DEBUG_ASSERT_MSG(current_thread->state != THREAD_RUNNING, "state %d\n", current_thread->state);
     DEBUG_ASSERT(!arch_blocking_disallowed());
 

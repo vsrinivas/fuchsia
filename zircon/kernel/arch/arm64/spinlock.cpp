@@ -26,6 +26,7 @@ void arch_spin_lock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
         : [temp] "=&r"(temp)
         : [lock] "r"(&lock->value), [val] "r"(val)
         : "cc", "memory");
+    WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) + 1);
 }
 
 int arch_spin_trylock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -41,9 +42,13 @@ int arch_spin_trylock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
         : [lock] "r"(&lock->value), [val] "r"(val)
         : "cc", "memory");
 
+    if (out == 0) {
+        WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) + 1);
+    }
     return (int)out;
 }
 
 void arch_spin_unlock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
+   WRITE_PERCPU_FIELD32(num_spinlocks, READ_PERCPU_FIELD32(num_spinlocks) - 1);
     __atomic_store_n(&lock->value, 0UL, __ATOMIC_SEQ_CST);
 }

@@ -80,6 +80,10 @@ static inline void arch_set_blocking_disallowed(bool value) {
     WRITE_PERCPU_FIELD32(blocking_disallowed, value);
 }
 
+static inline uint32_t arch_num_spinlocks_held(void) {
+    return READ_PERCPU_FIELD32(num_spinlocks);
+}
+
 __END_CDECLS
 
 #endif // !__ASSEMBLER__
