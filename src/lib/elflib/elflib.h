@@ -89,6 +89,14 @@ class ElfLib {
   // symbols could not be loaded.
   std::optional<std::map<std::string, Elf64_Sym>> GetAllDynamicSymbols();
 
+  // Attempt to discern whether this file has debug symbols (otherwise it is
+  // presumably stripped).
+  bool ProbeHasDebugInfo();
+
+  // Attempt to discern whether this file has the actual program contents. It
+  // may not if it is a split debug info file.
+  bool ProbeHasProgramBits();
+
   // Create a new ElfLib object for reading a file. If take_ownership is set to
   // true, the given handle will be closed when the ElfLib object is destroyed.
   static std::unique_ptr<ElfLib> Create(FILE* fp, Ownership owned);

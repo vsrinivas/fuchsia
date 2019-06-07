@@ -552,13 +552,14 @@ void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
 }
 
 void DumpBuildIdIndex(SystemSymbols* system_symbols, OutputBuffer* out) {
-  const auto& build_id_to_file =
-      system_symbols->build_id_index().build_id_to_file();
-  if (build_id_to_file.empty()) {
+  const auto& build_id_to_files =
+    system_symbols->build_id_index().build_id_to_files();
+  if (build_id_to_files.empty()) {
     out->Append(Syntax::kError, "  No build IDs found.\n");
   } else {
-    for (const auto& [id, file] : build_id_to_file)
-      out->Append(fxl::StringPrintf("%s %s\n", id.c_str(), file.c_str()));
+    for (const auto& [id, files] : build_id_to_files)
+      out->Append(fxl::StringPrintf("%s %s\n", id.c_str(),
+                                    files.debug_info.c_str()));
   }
   out->Append("\n");
 }

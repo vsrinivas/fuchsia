@@ -72,8 +72,10 @@ TEST(ProcessSymbols, SetModules) {
   std::string fake_build_id_2 = "67890";
   std::string test_file_name = TestSymbolModule::GetTestFileName();
   SystemSymbols system(nullptr);
-  system.build_id_index().AddBuildIDMapping(fake_build_id_1, test_file_name);
-  system.build_id_index().AddBuildIDMapping(fake_build_id_2, test_file_name);
+  system.build_id_index().AddBuildIDMapping(fake_build_id_1, test_file_name,
+                                            DebugSymbolFileType::kDebugInfo);
+  system.build_id_index().AddBuildIDMapping(fake_build_id_2, test_file_name,
+                                            DebugSymbolFileType::kDebugInfo);
 
   TargetSymbols target(&system);
 

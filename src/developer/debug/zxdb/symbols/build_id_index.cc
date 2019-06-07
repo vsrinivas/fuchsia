@@ -51,10 +51,16 @@ std::string BuildIDIndex::FileForBuildID(const std::string& build_id,
 
   const std::string* to_find = &build_id;
 
-  auto found = build_id_to_file_.find(*to_find);
-  if (found == build_id_to_file_.end())
+
+  auto found = build_id_to_files_.find(*to_find);
+  if (found == build_id_to_files_.end())
     return SearchRepoSources(*to_find, file_type);
-  return found->second;
+
+  if (file_type == DebugSymbolFileType::kDebugInfo) {
+    return found->second.debug_info;
+  } else {
+    return found->second.binary;
+  }
 }
 
 std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
@@ -72,12 +78,17 @@ std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
 }
 
 void BuildIDIndex::AddBuildIDMapping(const std::string& build_id,
-                                     const std::string& file_name) {
-  // This map saves the manual mapping across cache updates.
-  manual_mappings_[build_id] = file_name;
-
-  // Don't bother marking the cache dirty since we can just add it.
-  build_id_to_file_[build_id] = file_name;
+                                     const std::string& file_name,
+                                     DebugSymbolFileType file_type) {
+  if (file_type == DebugSymbolFileType::kDebugInfo) {
+    // This map saves the manual mapping across cache updates.
+    manual_mappings_[build_id].debug_info = file_name;
+    // Don't bother marking the cache dirty since we can just add it.
+    build_id_to_files_[build_id].debug_info = file_name;
+  } else {
+    manual_mappings_[build_id].binary = file_name;
+    build_id_to_files_[build_id].binary = file_name;
+  }
 }
 
 void BuildIDIndex::AddBuildIDMappingFile(const std::string& id_file_name) {
@@ -110,7 +121,7 @@ BuildIDIndex::StatusList BuildIDIndex::GetStatus() {
 }
 
 void BuildIDIndex::ClearCache() {
-  build_id_to_file_.clear();
+  build_id_to_files_.clear();
   status_.clear();
   cache_dirty_ = true;
 }
@@ -145,10 +156,13 @@ int BuildIDIndex::ParseIDs(const std::string& input,
           path = containing_dir / path;
         }
 
+        BuildIDIndex::MapEntry entry;
+        entry.debug_info = path;
+
         added++;
         output->emplace(std::piecewise_construct,
                         std::forward_as_tuple(build_id.data(), build_id.size()),
-                        std::forward_as_tuple(path));
+                        std::forward_as_tuple(entry));
       }
     }
 
@@ -203,7 +217,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 
   fclose(id_file);
 
-  int added = ParseIDs(contents, containing_dir, &build_id_to_file_);
+  int added = ParseIDs(contents, containing_dir, &build_id_to_files_);
   status_.emplace_back(file_name, added);
   if (!added)
     LogMessage("No mappings found in build ID file: " + file_name);
@@ -247,11 +261,21 @@ bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path) {
     return false;
 
   std::string build_id = elf->GetGNUBuildID();
-  if (!build_id.empty()) {
-    build_id_to_file_[build_id] = file_path;
-    return true;
+  if (build_id.empty()) {
+    return false;
   }
-  return false;
+
+  auto ret = false;
+  if (elf->ProbeHasDebugInfo()) {
+    build_id_to_files_[build_id].debug_info = file_path;
+    ret = true;
+  }
+  if (elf->ProbeHasProgramBits()) {
+    build_id_to_files_[build_id].binary = file_path;
+    ret = true;
+  }
+
+  return ret;
 }
 
 void BuildIDIndex::EnsureCacheClean() {
@@ -265,7 +289,7 @@ void BuildIDIndex::EnsureCacheClean() {
     IndexOneSourcePath(source);
 
   for (const auto& mapping : manual_mappings_)
-    build_id_to_file_.insert(mapping);
+    build_id_to_files_.insert(mapping);
 
   for (const auto& path : repo_sources_) {
     std::error_code ec;

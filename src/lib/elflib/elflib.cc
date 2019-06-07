@@ -1007,4 +1007,41 @@ std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllDynamicSymbols() {
                                           .size = *dynstr_.size});
 }
 
+bool ElfLib::ProbeHasDebugInfo() {
+  if (!header_.e_shnum) {
+    // No sections, no debug info.
+    return false;
+  }
+
+  LoadSectionNames();
+
+  for (const auto& [name, _] : section_names_) {
+    if (name.substr(0, 6) == ".debug") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool ElfLib::ProbeHasProgramBits() {
+  if (!header_.e_shnum) {
+    // No sections, so either this is *just* the text, or it's a very broken
+    // file.
+    return true;
+  }
+
+  for (size_t i = 0; i < header_.e_shnum; i++) {
+    if (auto section = GetSectionHeader(i)) {
+      if (section->sh_type == SHT_DYNAMIC) {
+        // If the program data is present, this section will be here. It
+        // becomes a NOBITS section in the split debug info.
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 }  // namespace elflib

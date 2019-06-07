@@ -131,9 +131,8 @@ class TestData {
     DataAt<Elf64_Ehdr>(0)->e_phoff = phnote_hdr;
 
     if (with_symbols) {
-      DataAt<Elf64_Shdr>(shstrtab_hdr)->sh_offset =
-          PushData("\0.shstrtab\0.stuff\0.strtab\0.symtab\0.null\0.nobits\0",
-                   48);
+      DataAt<Elf64_Shdr>(shstrtab_hdr)->sh_offset = PushData(
+          "\0.shstrtab\0.stuff\0.strtab\0.symtab\0.null\0.nobits\0", 48);
     }
 
     DataAt<Elf64_Shdr>(stuff_hdr)->sh_offset = PushData("This is a test.", 15);
@@ -420,4 +419,25 @@ TEST(ElfLib, GetPLTFromStrippedDebug) {
     }
   }
 }
+
+TEST(ElfLib, DetectUnstripped) {
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(
+      GetTestBinaryPath(std::string(kUnstrippedExampleFileBase) + ".elf"));
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  EXPECT_TRUE(elf->ProbeHasDebugInfo());
+  EXPECT_TRUE(elf->ProbeHasProgramBits());
+}
+
+TEST(ElfLib, DetectStripped) {
+  std::unique_ptr<ElfLib> elf = ElfLib::Create(GetTestBinaryPath(
+      std::string(kUnstrippedExampleFileStrippedBase) + ".elf"));
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  EXPECT_FALSE(elf->ProbeHasDebugInfo());
+  EXPECT_TRUE(elf->ProbeHasProgramBits());
+}
+
 }  // namespace elflib

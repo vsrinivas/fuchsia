@@ -286,7 +286,8 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
           if (err.has_error()) {
             // If we got a path but still had an error, something went wrong
             // with the cache repo. Add the path manually.
-            symbols.build_id_index().AddBuildIDMapping(build_id, path);
+            symbols.build_id_index().AddBuildIDMapping(
+                build_id, path, DebugSymbolFileType::kDebugInfo);
           }
 
           for (const auto& target : weak_this->targets_) {

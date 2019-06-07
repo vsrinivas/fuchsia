@@ -22,7 +22,11 @@ namespace zxdb {
 // files and index.
 class BuildIDIndex {
  public:
-  using IDMap = std::map<std::string, std::string>;
+  struct MapEntry {
+    std::string debug_info;
+    std::string binary;
+  };
+  using IDMap = std::map<std::string, MapEntry>;
 
   // Lists symbol sources and the number of ELF files indexed at that location.
   using StatusList = std::vector<std::pair<std::string, int>>;
@@ -43,9 +47,10 @@ class BuildIDIndex {
   std::string FileForBuildID(const std::string& build_id,
                              DebugSymbolFileType file_type);
 
-  // Manually inserts a mapping of
+  // Manually inserts a mapping of a build ID to a file name.
   void AddBuildIDMapping(const std::string& build_id,
-                         const std::string& file_name);
+                         const std::string& file_name,
+                         DebugSymbolFileType file_type);
 
   // Adds an "ids.txt" file that maps build ID to file paths.
   // Will verify that the path is already there and ignore it if so.
@@ -84,10 +89,12 @@ class BuildIDIndex {
   }
   const std::vector<std::string>& sources() const { return sources_; }
 
-  const IDMap& build_id_to_file() const { return build_id_to_file_; }
+  const IDMap& build_id_to_files() const {
+    return build_id_to_files_;
+  }
 
  private:
-  // Updates the build_id_to_file_ cache if necessary.
+  // Updates the build_id_to_files_ cache if necessary.
   void EnsureCacheClean();
 
   // Logs an informational message.
@@ -121,7 +128,7 @@ class BuildIDIndex {
   // Maintains the logs of how many symbols were indexed for each location.
   StatusList status_;
 
-  // Indicates if build_id_to_file_ is up-to-date. This is necessary to
+  // Indicates if build_id_to_files_ is up-to-date. This is necessary to
   // disambiguate whether an empty cache means "not scanned" or "nothing found".
   bool cache_dirty_ = true;
 
@@ -130,7 +137,7 @@ class BuildIDIndex {
   IDMap manual_mappings_;
 
   // Index of build IDs to local file paths.
-  IDMap build_id_to_file_;
+  IDMap build_id_to_files_;
 };
 
 }  // namespace zxdb
