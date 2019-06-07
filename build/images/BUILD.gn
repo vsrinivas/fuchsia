@@ -139,7 +139,7 @@ group("packages") {
     ":universe_packages",
   ]
 
-  if (enable_netboot) {
+  if (enable_netboot || bootfs_only) {
     data_deps = [
       ":netboot",
       ":netboot-script",
