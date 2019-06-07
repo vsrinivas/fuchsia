@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.policy.accessibility;
+
+using fuchsia.ui.input.accessibility;
+
+[Discoverable]
+protocol PointerEventRegistry {
+    /// Registers a listener with Scenic which will receive accessibility
+    /// pointer events. These events will be handled by the accessibility
+    /// listener, which will have the chance to either consume or reject them.
+    /// If rejected, they will continue their normal flow. Only one listener can
+    /// be registered.
+    Register(
+        fuchsia.ui.input.accessibility.PointerEventListener
+        pointer_event_listener) -> (bool success);
+};

@@ -1,0 +1,65 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input.accessibility;
+
+using fuchsia.math;
+using fuchsia.ui.input;
+using zx;
+
+/// Possible ways an accessibility listener can process pointer events.
+enum EventHandling {
+    /// The listener will continue to consume the remaining pointer events for
+    /// (device_id, pointer_id) until the next UP event.
+    CONSUMED = 1;
+    /// The listener rejects the remaining pointer events for (device_id,
+    /// pointer_id), and observed (past) and expected (future) pointer events
+    ///  are to be sent for regular input dispatch.
+    REJECTED = 2;
+};
+
+/// A PointerEvent is a privileged pointer event that has local view and global
+/// screen coordinates as well as some metadata about the event type.
+table PointerEvent {
+    /// Time the event was delivered. The time is in nanoseconds and corresponds
+    /// to the uptime of the machine.
+    1: uint64 event_time;
+    /// ID of the device that captured this event.
+    2: uint32 device_id;
+    /// ID of the pointer that identifies this event.
+    3: uint32 pointer_id;
+    /// Type of this event, e.g. touch, mouse, etc.
+    4: fuchsia.ui.input.PointerEventType type;
+    /// Phase of this event, e.g. add, down, etc.
+    5: fuchsia.ui.input.PointerEventPhase phase;
+    /// The point of this pointer event in global screen coordinates.
+    6: fuchsia.math.PointF global_point;
+    /// The viewref koid of the top most view hit for this pointer event.
+    /// This field is set to ZX_KOID_INVALID when there is no view hit and
+    /// |local_point| is undefined.
+    7: zx.koid viewref_koid;
+    /// The point of this pointer event in local view coordinates.
+    8: fuchsia.math.PointF local_point;
+};
+
+/// PointerEventRegistration allows an accessibility service to register a
+/// pointer event listener, so that it can intercept pointer events before they
+/// reach clients.
+[Discoverable]
+protocol PointerEventRegistry {
+    /// Registers a listener to start receiving incoming pointer events. For
+    /// now, only one listener is allowed and the first to register is honored.
+    Register(PointerEventListener pointer_event_listener);
+};
+
+/// A PointerEventListener receives pointer events and decides to consume them
+/// or not.
+protocol PointerEventListener {
+    /// Sends a PointerEvent to an accessibility service. A callback is return
+    /// to indicate whether the pointer event was consumed / rejected for a
+    /// particular stream of pointer events related to a |device_id| and a
+    /// |pointer_id|.
+    OnEvent(PointerEvent pointer_event)
+        -> (uint32 device_id, uint32 pointer_id, EventHandling handled);
+};
