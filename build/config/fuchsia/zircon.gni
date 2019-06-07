@@ -3,67 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
-import("//build/toolchain/goma.gni")
-
-_zircon_variants = []
-foreach(selector, select_variant) {
-  if (selector == "$selector") {
-    _zircon_variants += [ selector ]
-  }
-}
-
-declare_args() {
-  # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
-  # This is included in the default value of [`zircon_args`](#zircon_args) so
-  # you can set this to add things there without wiping out the defaults.
-  # When you set `zircon_args` directly, then this has no effect at all.
-  # Arguments you set here override any arguments in the default
-  # `zircon_args`.  There is no way to append to a value from the defaults.
-  # Note that for just setting simple (string-only) values in Zircon GN's
-  # [`variants`](../../../zircon/docs/gen/build_arguments.md#variants), the
-  # default [`zircon_args`](#zircon_args) uses a `variants` value derived from
-  # [`select_variant`](#select_variant) so for simple cases there is no need
-  # to explicitly set Zircon's `variants` here.
-  zircon_extra_args = {
-  }
-
-  # Whether to include various features (non-shipping, insecure, etc.) in the
-  # kernel or netsvc builds.
-  zircon_enable_kernel_debugging_features = false
-  zircon_enable_netsvc_debugging_features = false
-
-  # Where to emit a tracelog from Zircon's GN run. No trace will be produced if
-  # given the empty string. Path can be source-absolute or system-absolute.
-  zircon_tracelog = ""
-}
-
-declare_args() {
-  # [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
-  # The default passes through GOMA settings and
-  # [`select_variant`](#select_variant) shorthand selectors.
-  # **Only set this if you want to wipe out all the defaults that
-  # propagate from Fuchsia GN to Zircon GN.**  The default value
-  # folds in [`zircon_extra_args`](#zircon_extra_args), so usually
-  # it's better to just set `zircon_extra_args` and leave `zircon_args` alone.
-  # Any individual Zircon build argument set in `zircon_extra_args` will
-  # silently clobber the default value shown here.
-  zircon_args = {
-    use_goma = use_goma
-    goma_dir = goma_dir
-    if (clang_prefix != default_clang_prefix) {
-      # Propagate a custom value to override Zircon's default.  But don't
-      # propagate the default because Zircon has proper incremental build
-      # dependencies on toolchain updates only if it knows it's using the
-      # prebuilt.
-      clang_tool_dir = clang_prefix
-    }
-    variants = _zircon_variants
-    default_deps = [ ":legacy-$target_cpu" ]
-    enable_kernel_debugging_features = zircon_enable_kernel_debugging_features
-    enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
-    forward_variables_from(zircon_extra_args, "*")
-  }
-}
 
 # This is $root_build_dir in the Zircon GN build.
 # **NOTE!** This is not a subdirectory of $root_build_dir because that
