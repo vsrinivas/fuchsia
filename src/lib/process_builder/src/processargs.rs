@@ -9,8 +9,15 @@
 // directly, or maybe a new Tricium linter like IfThisThenThat.
 
 use {
-    failure::Fail, fuchsia_runtime::HandleInfo, fuchsia_zircon as zx, std::convert::TryFrom,
-    std::ffi::CString, std::fmt, std::mem, std::num, zerocopy::AsBytes,
+    failure::Fail,
+    fuchsia_runtime::HandleInfo,
+    fuchsia_zircon as zx,
+    std::convert::TryFrom,
+    std::ffi::CString,
+    std::fmt,
+    std::mem,
+    std::num,
+    zerocopy::{AsBytes, FromBytes},
 };
 
 /// Possible errors that can occur during processargs startup message construction
@@ -19,15 +26,16 @@ use {
 pub enum ProcessargsError {
     TryFromInt(#[cause] num::TryFromIntError),
     SizeTooLarge(usize),
+    TooManyHandles(usize),
 }
 
 impl ProcessargsError {
     /// Returns an appropriate zx::Status code for the given error.
     pub fn as_zx_status(&self) -> zx::Status {
         match self {
-            ProcessargsError::TryFromInt(_) | ProcessargsError::SizeTooLarge(_) => {
-                zx::Status::INVALID_ARGS
-            }
+            ProcessargsError::TryFromInt(_)
+            | ProcessargsError::SizeTooLarge(_)
+            | ProcessargsError::TooManyHandles(_) => zx::Status::INVALID_ARGS,
         }
     }
 }
@@ -41,9 +49,15 @@ impl fmt::Display for ProcessargsError {
             }
             ProcessargsError::SizeTooLarge(v) => write!(
                 f,
-                "Cannot build processargs message, size too large ({} > {})",
+                "Cannot build processargs message, byte size too large ({} > {})",
                 v,
                 zx::sys::ZX_CHANNEL_MAX_MSG_BYTES
+            ),
+            ProcessargsError::TooManyHandles(v) => write!(
+                f,
+                "Cannot build processargs message, too many handles ({} > {})",
+                v,
+                zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES
             ),
         }
     }
@@ -53,28 +67,28 @@ const ZX_PROCARGS_PROTOCOL: u32 = 0x4150585d;
 const ZX_PROCARGS_VERSION: u32 = 0x00001000;
 
 /// Header for bootstrap message following the processargs protocol.
-#[derive(AsBytes, Default)]
+#[derive(FromBytes, AsBytes, Default)]
 #[repr(C)]
-struct MessageHeader {
+pub(crate) struct MessageHeader {
     // Protocol and version identifiers to allow for different process start message protocols and
     // versioning of the same.
-    protocol: u32,
-    version: u32,
+    pub protocol: u32,
+    pub version: u32,
 
     // Offset from start of message to handle info array, which contains one HandleInfo as a u32
     // per handle passed along with the message.
-    handle_info_off: u32,
+    pub handle_info_off: u32,
 
     // Offset from start of message to arguments and count of arguments. Arguments are provided as
     // a set of null-terminated UTF-8 strings, one after the other.
-    args_off: u32,
-    args_num: u32,
+    pub args_off: u32,
+    pub args_num: u32,
 
     // Offset from start of message to environment strings and count of them.  Environment entries
     // are provided as a set of null-terminated UTF-8 strings, one after the other. Canonically
     // each string has the form "NAME=VALUE", but nothing enforces this.
-    environ_off: u32,
-    environ_num: u32,
+    pub environ_off: u32,
+    pub environ_num: u32,
 
     // Offset from start of message to namespace path strings and count of them. These strings are
     // packed similar to the argument strings, but are referenced by NamespaceDirectory (PA_NS_DIR)
@@ -174,6 +188,11 @@ impl Message {
     /// Builds the processargs message header for the given config, as well as calculates the total
     /// message size.
     fn build_header(config: &MessageContents) -> Result<(MessageHeader, usize), ProcessargsError> {
+        let num_handles = config.handles.len();
+        if num_handles > zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize {
+            return Err(ProcessargsError::TooManyHandles(num_handles));
+        }
+
         let mut header = MessageHeader {
             protocol: ZX_PROCARGS_PROTOCOL,
             version: ZX_PROCARGS_VERSION,
@@ -183,7 +202,7 @@ impl Message {
         let mut size = mem::size_of_val(&header);
         let mut f = || {
             header.handle_info_off = u32::try_from(size)?;
-            size += mem::size_of::<HandleInfoRaw>() * config.handles.len();
+            size += mem::size_of::<HandleInfoRaw>() * num_handles;
 
             header.args_off = u32::try_from(size)?;
             header.args_num = u32::try_from(config.args.len())?;
@@ -221,34 +240,44 @@ impl Message {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::Error, fuchsia_runtime::HandleType, fuchsia_zircon::HandleBased};
+    use {
+        super::*,
+        failure::Error,
+        fuchsia_runtime::HandleType,
+        fuchsia_zircon::{AsHandleRef, HandleBased},
+        std::iter,
+    };
 
     #[test]
-    fn test_build_and_write_message() -> Result<(), Error> {
+    fn build_and_write_message() -> Result<(), Error> {
         // We need some dummy handles to use in the message below, since you can't send an invalid
         // handle in a channel. We just use VMOs since they're easy to create, even though they're
         // not semantically valid for a processargs handle type like PA_NS_DIR.
         let (dum0, dum1, dum2) = (zx::Vmo::create(1)?, zx::Vmo::create(1)?, zx::Vmo::create(1)?);
+        let handles = vec![
+            StartupHandle {
+                handle: dum0.into_handle(),
+                info: HandleInfo::new(HandleType::User1, 0x1234),
+            },
+            StartupHandle {
+                handle: dum1.into_handle(),
+                info: HandleInfo::new(HandleType::NamespaceDirectory, 0),
+            },
+            StartupHandle {
+                handle: dum2.into_handle(),
+                info: HandleInfo::new(HandleType::NamespaceDirectory, 1),
+            },
+        ];
+        let handle_koids: Vec<zx::Koid> =
+            handles.iter().map(|h| h.handle.get_koid()).collect::<Result<_, _>>()?;
 
         let config = MessageContents {
             args: vec![CString::new("arg1")?, CString::new("arg2")?, CString::new("arg3")?],
             environment_vars: vec![CString::new("FOO=BAR")?],
             namespace_paths: vec![CString::new("/data")?, CString::new("/pkg")?],
-            handles: vec![
-                StartupHandle {
-                    handle: dum0.into_handle(),
-                    info: HandleInfo::new(HandleType::User1, 0x1234),
-                },
-                StartupHandle {
-                    handle: dum1.into_handle(),
-                    info: HandleInfo::new(HandleType::NamespaceDirectory, 0),
-                },
-                StartupHandle {
-                    handle: dum2.into_handle(),
-                    info: HandleInfo::new(HandleType::NamespaceDirectory, 1),
-                },
-            ],
+            handles,
         };
+
         let calculated_size = Message::calculate_size(&config)?;
         let message = Message::build(config)?;
         assert_eq!(calculated_size, message.bytes.len());
@@ -258,6 +287,7 @@ mod tests {
         message.write(&chan_wr)?;
         let mut read_buf = zx::MessageBuf::new();
         chan_rd.read(&mut read_buf)?;
+        let (read_bytes, read_handles) = read_buf.split();
 
         // concat! doesn't work for byte literals and there's no concat_bytes! (yet), so we just
         // build this in a Vec instead since it's a test.
@@ -281,7 +311,81 @@ mod tests {
         correct.extend_from_slice(b"/data\0"); // namespace paths
         correct.extend_from_slice(b"/pkg\0");
 
-        assert_eq!(read_buf.bytes(), correct.as_bytes());
+        assert_eq!(read_bytes.len(), calculated_size);
+        assert_eq!(read_bytes, correct);
+
+        let read_koids: Vec<zx::Koid> =
+            read_handles.iter().map(|h| h.get_koid()).collect::<Result<_, _>>()?;
+        assert_eq!(read_koids, handle_koids);
+
+        Ok(())
+    }
+
+    #[test]
+    fn byte_limit() -> Result<(), Error> {
+        const LIMIT: usize = zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize;
+        const ARG_LIMIT: usize = LIMIT - 1 - mem::size_of::<MessageHeader>();
+
+        let (chan_wr, chan_rd) = zx::Channel::create()?;
+        let mut read_buf = zx::MessageBuf::new();
+
+        let make_bytes = iter::repeat_with(|| b'a');
+        let arg: CString = CString::new(make_bytes.take(ARG_LIMIT).collect::<Vec<u8>>())?;
+        let config = MessageContents { args: vec![arg], ..Default::default() };
+
+        // Should succeed at limit.
+        Message::build(config)?.write(&chan_wr)?;
+        chan_rd.read(&mut read_buf)?;
+        assert_eq!(read_buf.bytes().len(), LIMIT);
+
+        // Should fail to build just over limit.
+        let arg2: CString = CString::new(make_bytes.take(ARG_LIMIT + 1).collect::<Vec<u8>>())?;
+        let config2 = MessageContents { args: vec![arg2], ..Default::default() };
+        let result = Message::build(config2);
+        match result {
+            Err(ProcessargsError::SizeTooLarge(_)) => {}
+            Err(err) => {
+                panic!("Unexpected error type: {}", err);
+            }
+            Ok(_) => {
+                panic!("build message unexpectedly succeeded with too large argument");
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn handle_limit() -> Result<(), Error> {
+        const LIMIT: usize = zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize;
+
+        let make_handles = iter::repeat_with(|| StartupHandle {
+            handle: zx::Vmo::create(1).expect("Failed to create VMO").into_handle(),
+            info: HandleInfo::new(HandleType::User1, 0),
+        });
+        let handles: Vec<StartupHandle> = make_handles.take(LIMIT).collect();
+
+        let config = MessageContents { handles, ..Default::default() };
+
+        // Should succeed at limit.
+        let (chan_wr, chan_rd) = zx::Channel::create()?;
+        Message::build(config)?.write(&chan_wr)?;
+        let mut read_buf = zx::MessageBuf::new();
+        chan_rd.read(&mut read_buf)?;
+        assert_eq!(read_buf.n_handles(), LIMIT);
+
+        // Should fail to build with one more handle.
+        let handles2: Vec<StartupHandle> = make_handles.take(LIMIT + 1).collect();
+        let config2 = MessageContents { handles: handles2, ..Default::default() };
+        let result = Message::build(config2);
+        match result {
+            Err(ProcessargsError::TooManyHandles(_)) => {}
+            Err(err) => {
+                panic!("Unexpected error type: {}", err);
+            }
+            Ok(_) => {
+                panic!("build message unexpectedly succeeded with too many handles");
+            }
+        }
         Ok(())
     }
 }

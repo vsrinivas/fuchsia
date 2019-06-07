@@ -884,7 +884,7 @@ impl From<processargs::ProcessargsError> for ProcessBuilderError {
 mod tests {
     use {
         super::*,
-        failure::{Error, ResultExt},
+        failure::{err_msg, Error, ResultExt},
         fidl::endpoints::{Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -894,7 +894,9 @@ mod tests {
         },
         std::fs::File,
         std::iter,
+        std::mem,
         std::path::Path,
+        zerocopy::LayoutVerified,
     };
 
     extern "C" {
@@ -918,16 +920,25 @@ mod tests {
         Ok(UtilProxy::from_channel(fasync::Channel::from_channel(proxy)?))
     }
 
-    // Common builder setup for all tests that start a test util process.
-    fn create_test_util_builder() -> Result<(ProcessBuilder, UtilProxy), Error> {
+    fn create_test_util_builder() -> Result<ProcessBuilder, Error> {
         const TEST_UTIL_BIN: &'static str = "/pkg/bin/process_builder_test_util";
         let binpath = Path::new(TEST_UTIL_BIN);
         let vmo = fdio::get_vmo_copy_from_file(&File::open(binpath)?)?.replace_as_executable()?;
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_UTIL_BIN.to_owned())?;
-        let mut builder = ProcessBuilder::new(&procname, &job, vmo)?;
-        builder.set_loader_service(clone_loader_service()?)?;
+        Ok(ProcessBuilder::new(&procname, &job, vmo)?)
+    }
+
+    // Common builder setup for all tests that start a test util process.
+    fn setup_test_util_builder(set_loader: bool) -> Result<(ProcessBuilder, UtilProxy), Error> {
+        let mut builder = create_test_util_builder()?;
+        if set_loader {
+            builder.add_handles(vec![StartupHandle {
+                handle: clone_loader_service()?.into_handle(),
+                info: HandleInfo::new(HandleType::LdsvcLoader, 0),
+            }])?;
+        }
 
         let (dir_client, dir_server) = zx::Channel::create()?;
         builder.add_handles(vec![StartupHandle {
@@ -939,33 +950,90 @@ mod tests {
         Ok((builder, proxy))
     }
 
+    fn check_process_running(process: &zx::Process) -> Result<(), Error> {
+        let info = process.info()?;
+        assert_eq!(
+            info,
+            zx::ProcessInfo {
+                return_code: 0,
+                started: true,
+                exited: false,
+                debugger_attached: false
+            }
+        );
+        Ok(())
+    }
+
+    async fn check_process_exited_ok(process: &zx::Process) -> Result<(), Error> {
+        await!(fasync::OnSignals::new(process, zx::Signals::PROCESS_TERMINATED))?;
+
+        let info = process.info()?;
+        assert_eq!(
+            info,
+            zx::ProcessInfo {
+                return_code: 0,
+                started: true,
+                exited: true,
+                debugger_attached: false
+            }
+        );
+        Ok(())
+    }
+
     // These start_util_with_* tests cover the most common paths through ProcessBuilder and
     // exercise most of its functionality. They verifies that we can create a new process for a
     // "standard" dynamically linked executable and that we can provide arguments, environment
     // variables, namespace entries, and other handles to it through the startup processargs
     // message. The test communicates with the test util process it creates over a test-only FIDL
     // API to verify that arguments and whatnot were passed correctly.
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fasync::run_singlethreaded(test)]
     async fn start_util_with_args() -> Result<(), Error> {
         let test_args = vec!["arg0", "arg1", "arg2"];
         let test_args_cstr =
             test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
 
-        let (mut builder, proxy) = create_test_util_builder()?;
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_arguments(test_args_cstr);
-        await!(builder.build())?.start()?;
+        let process = await!(builder.build())?.start()?;
+        check_process_running(&process)?;
 
         // Use the util protocol to confirm that the new process was set up correctly. A successful
         // connection to the util validates that handles are passed correctly to the new process,
         // since the DirectoryRequest handle made it.
         let proc_args = await!(proxy.get_arguments()).context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
+
+        mem::drop(proxy);
+        await!(check_process_exited_ok(&process))?;
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    // Verify that a loader service handle is properly handled if passed directly to
+    // set_loader_service instead of through add_handles.
+    #[fasync::run_singlethreaded(test)]
+    async fn set_loader_directly() -> Result<(), Error> {
+        let test_args = vec!["arg0", "arg1", "arg2"];
+        let test_args_cstr =
+            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+
+        let (mut builder, proxy) = setup_test_util_builder(false)?;
+        builder.set_loader_service(clone_loader_service()?)?;
+        builder.add_arguments(test_args_cstr);
+        let process = await!(builder.build())?.start()?;
+        check_process_running(&process)?;
+
+        // Use the util protocol to confirm that the new process was set up correctly. A successful
+        // connection to the util validates that handles are passed correctly to the new process,
+        // since the DirectoryRequest handle made it.
+        let proc_args = await!(proxy.get_arguments()).context("failed to get args from util")?;
+        assert_eq!(proc_args, test_args);
+
+        mem::drop(proxy);
+        await!(check_process_exited_ok(&process))?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn start_util_with_env() -> Result<(), Error> {
         let test_env = vec![("VAR1", "value2"), ("VAR2", "value2")];
         let test_env_cstr = test_env
@@ -973,19 +1041,22 @@ mod tests {
             .map(|v| CString::new(format!("{}={}", v.0, v.1)))
             .collect::<Result<_, _>>()?;
 
-        let (mut builder, proxy) = create_test_util_builder()?;
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_environment_variables(test_env_cstr);
-        await!(builder.build())?.start()?;
+        let process = await!(builder.build())?.start()?;
+        check_process_running(&process)?;
 
         let proc_env = await!(proxy.get_environment()).context("failed to get env from util")?;
         let proc_env_tuple: Vec<(&str, &str)> =
             proc_env.iter().map(|v| (&*v.key, &*v.value)).collect();
         assert_eq!(proc_env_tuple, test_env);
+
+        mem::drop(proxy);
+        await!(check_process_exited_ok(&process))?;
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fasync::run_singlethreaded(test)]
     async fn start_util_with_namespace_entries() -> Result<(), Error> {
         let mut randbuf = [0; 8];
         zx::cprng_draw(&mut randbuf)?;
@@ -1025,12 +1096,13 @@ mod tests {
             panic!("Psuedo dir stopped serving!");
         });
 
-        let (mut builder, proxy) = create_test_util_builder()?;
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
         builder.add_namespace_entries(vec![
             NamespaceEntry { path: CString::new("/dir1")?, directory: ClientEnd::new(dir1_client) },
             NamespaceEntry { path: CString::new("/dir2")?, directory: ClientEnd::new(dir2_client) },
         ])?;
-        await!(builder.build())?.start()?;
+        let process = await!(builder.build())?.start()?;
+        check_process_running(&process)?;
 
         let namespace_dump = await!(proxy.dump_namespace()).context("failed to dump namespace")?;
         assert_eq!(namespace_dump, "/dir1, /dir1/test_file1, /dir2, /dir2/test_file2");
@@ -1041,6 +1113,182 @@ mod tests {
         let dir2_contents =
             await!(proxy.read_file("/dir2/test_file2")).context("failed to read file via util")?;
         assert_eq!(dir2_contents, test_content2);
+
+        mem::drop(proxy);
+        await!(check_process_exited_ok(&process))?;
+        Ok(())
+    }
+
+    // Trying to start a dynamically linked process without providing a loader service should
+    // fail. This verifies that nothing is automatically cloning a loader.
+    #[fasync::run_singlethreaded(test)]
+    async fn start_util_with_no_loader_fails() -> Result<(), Error> {
+        let (builder, _) = setup_test_util_builder(false)?;
+        let result = await!(builder.build());
+
+        match result {
+            Err(ProcessBuilderError::LoaderMissing()) => {}
+            Err(err) => {
+                panic!("Unexpected error type: {}", err);
+            }
+            Ok(_) => {
+                panic!("Unexpectedly succeeded to build process without loader");
+            }
+        }
+        Ok(())
+    }
+
+    // Checks that, for dynamically linked binaries, the lower half of the address space is
+    // reserved for sanitizers.
+    #[fasync::run_singlethreaded(test)]
+    async fn verify_low_address_range_reserved() -> Result<(), Error> {
+        let (builder, _) = setup_test_util_builder(true)?;
+        let built = await!(builder.build())?;
+
+        // This ends up being the same thing ReservationVmar does, but it's not reused here so that
+        // this catches bugs or bad changes to ReservationVmar itself.
+        let info = built.root_vmar.info()?;
+        let lower_half_len = util::page_end((info.base + info.len) / 2) - info.base;
+        built
+            .root_vmar
+            .allocate(0, lower_half_len, zx::VmarFlags::SPECIFIC)
+            .context("Unable to allocate lower address range of new process")?;
+        Ok(())
+    }
+
+    // Parses the given channel message as a processargs message and returns the HandleInfo's
+    // contained in it.
+    fn parse_handle_info_from_message(message: &zx::MessageBuf) -> Result<Vec<HandleInfo>, Error> {
+        let bytes = message.bytes();
+        let header = LayoutVerified::<&[u8], processargs::MessageHeader>::new_from_prefix(bytes)
+            .ok_or(err_msg("Failed to parse processargs header"))?
+            .0;
+
+        let offset = header.handle_info_off as usize;
+        let len = mem::size_of::<u32>() * message.n_handles();
+        let info_bytes = &bytes[offset..offset + len];
+        let raw_info = LayoutVerified::<&[u8], [u32]>::new_slice(info_bytes)
+            .ok_or(err_msg("Failed to parse raw handle info"))?;
+
+        Ok(raw_info.iter().map(|raw| HandleInfo::try_from(*raw)).collect::<Result<_, _>>()?)
+    }
+
+    const LINKER_MESSAGE_HANDLES: &[HandleType] = &[
+        HandleType::ProcessSelf,
+        HandleType::ThreadSelf,
+        HandleType::RootVmar,
+        HandleType::LdsvcLoader,
+        HandleType::LoadedVmar,
+        HandleType::ExecutableVmo,
+    ];
+
+    const MAIN_MESSAGE_HANDLES: &[HandleType] = &[
+        HandleType::ProcessSelf,
+        HandleType::ThreadSelf,
+        HandleType::RootVmar,
+        HandleType::VdsoVmo,
+        HandleType::StackVmo,
+    ];
+
+    #[fasync::run_singlethreaded(test)]
+    async fn correct_handles_present() -> Result<(), Error> {
+        let mut builder = create_test_util_builder()?;
+        builder.set_loader_service(clone_loader_service()?)?;
+        let built = await!(builder.build())?;
+
+        for correct in &[LINKER_MESSAGE_HANDLES, MAIN_MESSAGE_HANDLES] {
+            let mut msg_buf = zx::MessageBuf::new();
+            built.bootstrap.read(&mut msg_buf)?;
+            let handle_info = parse_handle_info_from_message(&msg_buf)?;
+
+            assert_eq!(handle_info.len(), correct.len());
+            for correct_type in *correct {
+                // Should only be one of each of these handles present.
+                assert_eq!(
+                    1,
+                    handle_info.iter().filter(|info| &info.handle_type() == correct_type).count()
+                );
+            }
+        }
+        Ok(())
+    }
+
+    // Verify that [ProcessBuilder::add_handles()] rejects handle types that are added
+    // automatically by the builder.
+    #[fasync::run_singlethreaded(test)]
+    async fn add_handles_rejects_automatic_handle_types() -> Result<(), Error> {
+        // The VMO doesn't need to be valid since we're not calling build.
+        let vmo = zx::Vmo::create(1)?;
+        let job = fuchsia_runtime::job_default();
+        let procname = CString::new("dummy_name")?;
+        let mut builder = ProcessBuilder::new(&procname, &job, vmo)?;
+
+        // There's some duplicates between these slices but just checking twice is easier than
+        // deduping these.
+        for handle_type in LINKER_MESSAGE_HANDLES.iter().chain(MAIN_MESSAGE_HANDLES) {
+            if *handle_type == HandleType::LdsvcLoader {
+                // Skip LdsvcLoader, which is required in the linker message but is not added
+                // automatically. The user must supply it.
+                continue;
+            }
+
+            // Another dummy VMO, just to have a valid handle.
+            let dummy_vmo = zx::Vmo::create(1)?;
+            let result = builder.add_handles(vec![StartupHandle {
+                handle: dummy_vmo.into_handle(),
+                info: HandleInfo::new(*handle_type, 0),
+            }]);
+            match result {
+                Err(ProcessBuilderError::InvalidArg(_)) => {}
+                Err(err) => {
+                    panic!("Unexpected error type, should be invalid arg: {}", err);
+                }
+                Ok(_) => {
+                    panic!("add_handle unexpectedly succeeded for type {:?}", handle_type);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // Verify that invalid handles are correctly rejected.
+    #[fasync::run_singlethreaded(test)]
+    async fn rejects_invalid_handles() -> Result<(), Error> {
+        let invalid = || zx::Handle::invalid();
+        let assert_invalid_arg = |result| match result {
+            Err(ProcessBuilderError::BadHandle(_)) => {}
+            Err(err) => {
+                panic!("Unexpected error type, should be BadHandle: {}", err);
+            }
+            Ok(_) => {
+                panic!("API unexpectedly accepted invalid handle");
+            }
+        };
+
+        // The VMO doesn't need to be valid since we're not calling build with this.
+        let vmo = zx::Vmo::create(1)?;
+        let job = fuchsia_runtime::job_default();
+        let procname = CString::new("dummy_name")?;
+
+        assert_invalid_arg(ProcessBuilder::new(&procname, &invalid().into(), vmo).map(|_| ()));
+        assert_invalid_arg(ProcessBuilder::new(&procname, &job, invalid().into()).map(|_| ()));
+
+        let (mut builder, _) = setup_test_util_builder(true)?;
+
+        assert_invalid_arg(builder.set_loader_service(invalid().into()));
+        assert_invalid_arg(builder.add_handles(vec![StartupHandle {
+            handle: invalid().into(),
+            info: HandleInfo::new(HandleType::User0, 0),
+        }]));
+        assert_invalid_arg(builder.add_handles(vec![StartupHandle {
+            handle: invalid().into(),
+            info: HandleInfo::new(HandleType::User0, 0),
+        }]));
+        assert_invalid_arg(builder.add_namespace_entries(vec![NamespaceEntry {
+            path: CString::new("/dir")?,
+            directory: invalid().into(),
+        }]));
+
         Ok(())
     }
 
