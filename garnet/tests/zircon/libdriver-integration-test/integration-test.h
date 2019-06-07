@@ -123,11 +123,6 @@ public:
     }
 
     // Run the given promise and transform its error case into a test failure.
-    // Fail the test if we hit the deadline.
-    void RunPromise(Promise<void> promise, zx::time deadline);
-
-    // Same as RunPromise, but defaults the deadline to be kDefaultTimeout in
-    // the future.
     void RunPromise(Promise<void> promise);
 protected:
     static void DoSetup(bool should_create_composite);
@@ -141,9 +136,6 @@ private:
     // Function that will be called whenever we see an exception from devmgr
     void DevmgrException(async_dispatcher_t* dispatcher, async::ExceptionBase* exception,
                          zx_status_t status, const zx_port_packet_t* report);
-
-    // Default timeout for RunPromise
-    static const zx::duration kDefaultTimeout;
 
     async::ExceptionMethod<IntegrationTest, &IntegrationTest::DevmgrException> devmgr_exception_;
 };

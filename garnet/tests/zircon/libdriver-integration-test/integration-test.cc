@@ -19,7 +19,6 @@
 namespace libdriver_integration_test {
 
 IntegrationTest::IsolatedDevmgr IntegrationTest::devmgr_;
-const zx::duration IntegrationTest::kDefaultTimeout = zx::sec(5);
 
 void IntegrationTest::SetUpTestCase() {
     DoSetup(false /* should_create_composite */);
@@ -97,10 +96,6 @@ void IntegrationTest::DevmgrException(async_dispatcher_t* dispatcher,
 }
 
 void IntegrationTest::RunPromise(Promise<void> promise) {
-    RunPromise(std::move(promise), zx::deadline_after(kDefaultTimeout));
-}
-
-void IntegrationTest::RunPromise(Promise<void> promise, zx::time deadline) {
     async::Executor executor(loop_.dispatcher());
 
     auto new_promise = promise.then([&](Promise<void>::result_type& result) {
@@ -113,7 +108,7 @@ void IntegrationTest::RunPromise(Promise<void> promise, zx::time deadline) {
 
     executor.schedule_task(std::move(new_promise));
 
-    zx_status_t status = loop_.Run(deadline);
+    zx_status_t status = loop_.Run();
     ASSERT_EQ(status, ZX_ERR_CANCELED);
 }
 
