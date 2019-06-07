@@ -137,7 +137,8 @@ void StorageWatchdog::CheckStorage(async_dispatcher_t* dispatcher) {
 
   if (use_percentage >= 95) {
     FXL_LOG(INFO)
-        << "storage usage has reached 95%% capacity, purging the cache now";
+        << "storage usage has reached " << use_percentage
+        << "%% capacity, purging the cache now";
     this->PurgeCache();
   }
   async::PostDelayedTask(
@@ -156,8 +157,16 @@ void StorageWatchdog::PurgeCache() {
   // Walk the directory tree from `path_to_clean_`.
   int dir_fd = open(path_to_clean_.c_str(), O_DIRECTORY);
   if (dir_fd == -1) {
-    FXL_LOG(ERROR) << "error opening directory: " << errno;
+    if (errno == ENOENT) {
+      FXL_LOG(INFO) << "nothing in cache to purge";
+    } else {
+      FXL_LOG(ERROR) << "error opening directory: " << errno;
+    }
     return;
   }
   PurgeCacheIn(dir_fd);
+  size_t use_percentage = this->GetStorageUsage();
+  FXL_LOG(INFO)
+    << "cache purge is complete, new storage usage is at "
+    << use_percentage << "%% capacity";
 }
