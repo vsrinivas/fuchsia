@@ -129,9 +129,10 @@ if [[ "$has_debug_logfile" -eq 1 ]]; then
   metrics-set-debug-logfile "$debug_logfile"
 fi
 
-# Read config, but doesn't exit (because of "set -e") if config file
-# doesn't exist
-metrics-read-config || true
+# Read config in a way that exit code is preserved but doesn't exit because
+# of "set -e" if config file doesn't exist
+__successfully_read_config=0
+metrics-read-config || __successfully_read_config=$?
 
 if [[ $action == "status" ]]; then
   echo "Collection of metrics is currently $(styled-status "$METRICS_ENABLED") for ${FUCHSIA_DIR}"
@@ -162,6 +163,11 @@ if [[ $action == "enable" ]]; then
   metrics-maybe-log "Metrics collection enabled at user's request"
 elif [[ $action == "disable" ]]; then
   if [[ $METRICS_ENABLED -eq 0 ]]; then
+    if [[ "${__successfully_read_config}" -ne 0 ]]; then
+      # if metrics is already disabled but the config file does not exist or
+      # is inconsistent, we rewrite the file before exiting
+      metrics-write-config "${METRICS_ENABLED}" "${METRICS_UUID}"
+    fi
     echo "Metrics collection is already disabled."
     exit 0
   fi
