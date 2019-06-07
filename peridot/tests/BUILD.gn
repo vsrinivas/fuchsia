@@ -58,8 +58,6 @@ group("tests") {
     "component_context",
     "modular_config",
     "modular_login_tests",
-    "module_context",
-    "parent_child",
     "sessionctl",
     "trigger",
   ]
