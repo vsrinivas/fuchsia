@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/kernel/c/fidl.h>
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
 #include <lib/fdio/fd.h>
@@ -254,55 +255,43 @@ static zx_status_t do_dmctl_mexec() {
         return status;
     }
 
-    zx_handle_t wait_handle;
-    status = zx_handle_duplicate(kernel, ZX_RIGHT_SAME_RIGHTS, &wait_handle);
+    zx::channel local, remote;
+    status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
-        return status;
-    }
-
-    int fd = open("/dev/misc/dmctl", O_WRONLY);
-    if (fd < 0) {
         return ZX_ERR_INTERNAL;
     }
 
-    zx_handle_t dmctl;
-    status = fdio_get_service_handle(fd, &dmctl);
+    status = fdio_service_connect("/svc/fuchsia.kernel.MexecBroker", remote.release());
     if (status != ZX_OK) {
-        return status;
-    }
-    status = fuchsia_device_manager_ExternalControllerPerformMexec(dmctl, kernel, bootdata);
-    zx_handle_close(dmctl);
-    if (status != ZX_OK) {
-        return status;
+        return ZX_ERR_INTERNAL;
     }
 
-    status = zx_object_wait_one(wait_handle, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
-    zx_handle_close(wait_handle);
+    status = fuchsia_kernel_MexecBrokerPerformMexec(local.get(), kernel, bootdata);
     if (status != ZX_OK) {
-        return status;
+        return ZX_ERR_INTERNAL;
     }
-    // if we get here, mexec failed
+
+    // Wait for the world to end.
+    zx_nanosleep(ZX_TIME_INFINITE);
     return ZX_ERR_INTERNAL;
 }
 
 static zx_status_t reboot() {
-    zx_handle_t local, remote;
-    zx_status_t status = zx_channel_create(0, &local, &remote);
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
 
-    status = fdio_service_connect("/svc/fuchsia.device.manager.Administrator", remote);
+    status = fdio_service_connect("/svc/fuchsia.device.manager.Administrator", remote.release());
     if (status != ZX_OK) {
-        zx_handle_close(local);
         return ZX_ERR_INTERNAL;
     }
 
     zx_status_t call_status;
-    status = fuchsia_device_manager_AdministratorSuspend(local,
+    status = fuchsia_device_manager_AdministratorSuspend(local.get(),
                                                          fuchsia_device_manager_SUSPEND_FLAG_REBOOT,
                                                          &call_status);
-    zx_handle_close(local);
     if (status != ZX_OK) {
         return status;
     }

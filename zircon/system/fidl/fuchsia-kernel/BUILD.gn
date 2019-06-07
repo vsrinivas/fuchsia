@@ -7,5 +7,6 @@ import("$zx/public/gn/fidl.gni")
 fidl_library("fuchsia-kernel") {
   sources = [
     "kernel-debug.fidl",
+    "kernel-mexec.fidl",
   ]
 }
