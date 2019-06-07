@@ -2,30 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
+#include <lib/zx/process.h>
+#include <zircon/errors.h>
+#include <zircon/rights.h>
+#include <zxtest/zxtest.h>
 
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
+namespace {
 
 // zx_object_get_child(ZX_HANDLE_INVALID) should return
 // ZX_ERR_BAD_HANDLE. ZX-1702
-bool handle_invalid() {
-    zx_handle_t process;
-    zx_status_t status;
+TEST(ObjectChildTest, InvalidHandleReturnsBadHandle) {
+    zx::unowned_process self = zx::process::self();
     zx_info_handle_basic_t info;
-    zx_handle_t myself = zx_process_self();
+    zx_handle_t process;
 
-    status = zx_object_get_info(myself, ZX_INFO_HANDLE_BASIC,
-                                &info, sizeof(info), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(self->get_info(ZX_INFO_HANDLE_BASIC,
+              &info, sizeof(info), nullptr, nullptr));
 
-    status = zx_object_get_child(ZX_HANDLE_INVALID, info.koid,
-                                 ZX_RIGHT_SAME_RIGHTS, &process);
-    ASSERT_EQ(status, ZX_ERR_BAD_HANDLE);
-    return true;
+    EXPECT_EQ(zx_object_get_child(ZX_HANDLE_INVALID, info.koid,
+                               ZX_RIGHT_SAME_RIGHTS, &process), ZX_ERR_BAD_HANDLE);
 }
 
-BEGIN_TEST_CASE(object_get_child_tests)
-RUN_TEST(handle_invalid);
-END_TEST_CASE(object_get_child_tests)
+} // namespace
