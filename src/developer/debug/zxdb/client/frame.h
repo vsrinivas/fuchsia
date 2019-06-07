@@ -82,6 +82,10 @@ class Frame : public ClientObject {
   // Returns the stack pointer at this location.
   virtual uint64_t GetStackPointer() const = 0;
 
+  // The canonical frame address is the stack pointer immediately before
+  // calling into the current frame. This will be 0 if unknown.
+  virtual uint64_t GetCanonicalFrameAddress() const = 0;
+
   // Returns the SymbolDataProvider that can be used to evaluate symbols
   // in the context of this frame.
   virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const = 0;

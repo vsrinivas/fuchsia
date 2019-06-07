@@ -97,6 +97,8 @@ bool Deserialize(MessageReader* reader, StackFrame* frame) {
     return false;
   if (!reader->ReadUint64(&frame->sp))
     return false;
+  if (!reader->ReadUint64(&frame->cfa))
+    return false;
   return Deserialize(reader, &frame->regs);
 }
 

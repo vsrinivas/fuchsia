@@ -99,6 +99,7 @@ void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
 void Serialize(const StackFrame& frame, MessageWriter* writer) {
   writer->WriteUint64(frame.ip);
   writer->WriteUint64(frame.sp);
+  writer->WriteUint64(frame.cfa);
   Serialize(frame.regs, writer);
 }
 

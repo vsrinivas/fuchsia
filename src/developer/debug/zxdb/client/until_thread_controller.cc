@@ -11,8 +11,8 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/thread.h"
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -117,7 +117,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     SetInlineFrameIfAmbiguous(InlineFrameIs::kOneBefore, threshold_frame_);
 
   // Check frames.
-  FrameFingerprint current_frame = *stack.GetFrameFingerprint(0);
+  FrameFingerprint current_frame = stack.GetFrameFingerprint(0);
   if (FrameFingerprint::Newer(current_frame, threshold_frame_)) {
     Log("In newer frame, ignoring.");
     return kContinue;

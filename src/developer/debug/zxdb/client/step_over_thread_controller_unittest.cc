@@ -177,7 +177,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   //   Top
   mock_frames = GetStack();
   mock_frames[0] = std::make_unique<MockFrame>(
-      nullptr, nullptr, second_inline_loc, kTopSP, std::vector<Register>(),
+      nullptr, nullptr, second_inline_loc, kTopSP, 0, std::vector<Register>(),
       kTopSP, mock_frames[1].get(), true);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,

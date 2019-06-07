@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/thread_controller.h"
+
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -94,9 +95,9 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   ASSERT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   ASSERT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 
-  FrameFingerprint inline_2_fingerprint = *stack.GetFrameFingerprint(0);
-  FrameFingerprint inline_1_fingerprint = *stack.GetFrameFingerprint(1);
-  FrameFingerprint physical_fingerprint = *stack.GetFrameFingerprint(2);
+  FrameFingerprint inline_2_fingerprint = stack.GetFrameFingerprint(0);
+  FrameFingerprint inline_1_fingerprint = stack.GetFrameFingerprint(1);
+  FrameFingerprint physical_fingerprint = stack.GetFrameFingerprint(2);
 
   // Supply a frame fingerprint that's not in the stack. This should be
   // ignored.

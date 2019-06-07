@@ -8,8 +8,8 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -89,18 +89,7 @@ void FinishPhysicalFrameThreadController::InitWithThread(
     Log("Finshing unsymbolized function");
 #endif
 
-  auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_);
-  if (!found_fingerprint) {
-    // This can happen if the creator of this class requested that we finish
-    // the bottom-most stack frame available, without having all stack frames
-    // available. That's not allowed and any code doing that should be fixed.
-    FXL_NOTREACHED();
-    cb(
-        Err("Trying to step out of a frame with insufficient context.\n"
-            "Please file a bug with a repro."));
-    return;
-  }
-  InitWithFingerprint(*found_fingerprint);
+  InitWithFingerprint(stack.GetFrameFingerprint(frame_to_finish_));
   cb(Err());
 }
 

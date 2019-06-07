@@ -105,10 +105,10 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<MockFrame>(
       nullptr, nullptr, Location(Location::State::kSymbolized, 0x1234),
-      kStack0SP, frame0_regs, kStack0SP));
+      kStack0SP, 0, frame0_regs, kStack0SP));
   frames.push_back(std::make_unique<MockFrame>(
       nullptr, nullptr, Location(Location::State::kSymbolized, 0x1234),
-      kStack1SP, frame1_regs, kStack1SP));
+      kStack1SP, 0, frame1_regs, kStack1SP));
 
   // Stack to hold our mock frames. This stack doesn't need to do anything
   // other than return the frames again, so the delegate can be null.

@@ -41,6 +41,8 @@ void SymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
       FROM_HERE, [cb = std::move(cb)]() { cb(NoFrameErr(), 0); });
 }
 
+uint64_t SymbolDataProvider::GetCanonicalFrameAddress() const { return 0; }
+
 void SymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                         GetMemoryCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(

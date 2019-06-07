@@ -81,10 +81,10 @@ TEST_F(VerbsMemoryTest, Stack) {
   constexpr uint64_t kSP1 = kSP0 + 0x10;
   std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<MockFrame>(
-      &session(), thread, Location(Location::State::kSymbolized, kIP0), kSP0,
+      &session(), thread, Location(Location::State::kSymbolized, kIP0), kSP0, 0,
       std::vector<Register>{Register(debug_ipc::RegisterID::kX64_rsp, kSP0)}));
   frames.push_back(std::make_unique<MockFrame>(
-      &session(), thread, Location(Location::State::kSymbolized, kIP1), kSP1,
+      &session(), thread, Location(Location::State::kSymbolized, kIP1), kSP1, 0,
       std::vector<Register>{
           Register(debug_ipc::RegisterID::kX64_rsp, kSP1),
           Register(debug_ipc::RegisterID::kX64_rax, kSP0 + 0x20)}));

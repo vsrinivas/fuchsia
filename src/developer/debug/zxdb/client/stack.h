@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STACK_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STACK_H_
 
 #include <functional>
 #include <optional>
 #include <vector>
 
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -105,22 +106,8 @@ class Stack {
   // index. The index must be valid in the current set of frames in this stack
   // object.
   //
-  // To be synchronously available, the synchronous getter requires that there
-  // be a physical frame before the most recent physical frame (the fingerprint
-  // is based on the calling physical frame's stack pointer) or the frame is
-  // known to be the oldest item in the stack (the fingerprint is special-cased
-  // for this entry). Frame 0 should always be synchronously available since
-  // the agent should send the top two physical frames for every stop.
-  //
-  // The asynchonous version will request more stack frames if necessary from
-  // the agent. If the requested frame changes, moves, or is deleted during the
-  // request, or if the Stack object is deleted, the callback will be issued
-  // with an error.
-  //
-  // See frame.h for a discussion on stack frames.
-  std::optional<FrameFingerprint> GetFrameFingerprint(size_t frame_index) const;
-  void GetFrameFingerprint(
-      size_t frame_index, std::function<void(const Err&, FrameFingerprint)> cb);
+  // See frame_fingerprint.h for a discussion on fingerprints.
+  FrameFingerprint GetFrameFingerprint(size_t frame_index) const;
 
   // Sets the number of inline frames at the top of the stack to show. See the
   // class-level comment above for more.
@@ -210,3 +197,5 @@ class Stack {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_STACK_H_

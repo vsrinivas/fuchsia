@@ -141,6 +141,13 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
       fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
                         frame->GetAddress(), frame->GetStackPointer())));
 
+  // Base pointer.
+  // TODO(brettw) make this work when the frame base is asynchronous.
+  if (auto bp = frame->GetBasePointer()) {
+    out->Append(OutputBuffer(Syntax::kComment,
+                             fxl::StringPrintf(", base = 0x%" PRIx64, *bp)));
+  }
+
   if (location.symbol()) {
     const Function* func = location.symbol().Get()->AsFunction();
     if (func) {

@@ -23,6 +23,7 @@ FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame,
     : Frame(thread->session()),
       thread_(thread),
       sp_(stack_frame.sp),
+      cfa_(stack_frame.cfa),
       location_(std::move(location)) {
   registers_.reserve(stack_frame.regs.size());
   for (const auto& r : stack_frame.regs)
@@ -76,6 +77,8 @@ void FrameImpl::GetBasePointerAsync(std::function<void(uint64_t bp)> cb) {
 }
 
 uint64_t FrameImpl::GetStackPointer() const { return sp_; }
+
+uint64_t FrameImpl::GetCanonicalFrameAddress() const { return cfa_; }
 
 void FrameImpl::EnsureSymbolized() const {
   if (location_.is_symbolized())

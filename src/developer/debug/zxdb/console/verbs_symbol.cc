@@ -94,7 +94,7 @@ void DumpVariableInfo(const SymbolContext& symbol_context,
   out->Append("\n");
   out->Append(fxl::StringPrintf("Type: %s\n",
                                 GetTypeDescription(variable->type()).c_str()));
-  out->Append(fxl::StringPrintf("DWARF tag: 0x%x\n",
+  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n",
                                 static_cast<unsigned>(variable->tag())));
   DumpVariableLocation(symbol_context, variable->location(), out);
 }
@@ -107,7 +107,7 @@ void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
       "Type: %s\n", GetTypeDescription(data_member->type()).c_str()));
   out->Append(fxl::StringPrintf("Offset within container: %" PRIu32 "\n",
                                 data_member->member_location()));
-  out->Append(fxl::StringPrintf("DWARF tag: 0x%x\n",
+  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n",
                                 static_cast<unsigned>(data_member->tag())));
 }
 

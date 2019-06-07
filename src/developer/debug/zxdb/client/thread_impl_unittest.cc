@@ -78,15 +78,18 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_TRUE(thread->GetStack().empty());
   EXPECT_FALSE(thread->GetStack().has_all_frames());
 
-  // Notify of thread stop.
   constexpr uint64_t kAddress1 = 0x12345678;
   constexpr uint64_t kStack1 = 0x7890;
+  constexpr uint64_t kAddress2 = 0x34567890;
+  constexpr uint64_t kStack2 = 0x7800;
+
+  // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
   break_notification.type = debug_ipc::NotifyException::Type::kSoftware;
   break_notification.thread.process_koid = kProcessKoid;
   break_notification.thread.thread_koid = kThreadKoid;
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  break_notification.thread.frames.emplace_back(kAddress1, kStack1);
+  break_notification.thread.frames.emplace_back(kAddress1, kStack1, kStack2);
   InjectException(break_notification);
 
   // There should be one frame with the address of the stop.
@@ -98,13 +101,11 @@ TEST_F(ThreadImplTest, Frames) {
 
   // Construct what the full stack will be returned to the thread. The top
   // element should match the one already there.
-  constexpr uint64_t kAddress2 = 0x34567890;
-  constexpr uint64_t kStack2 = 0x7800;
   debug_ipc::ThreadStatusReply expected_reply;
   expected_reply.record = break_notification.thread;  // Copies existing frame.
   expected_reply.record.stack_amount =
       debug_ipc::ThreadRecord::StackAmount::kFull;
-  expected_reply.record.frames.emplace_back(kAddress2, kStack2);
+  expected_reply.record.frames.emplace_back(kAddress2, kStack2, 0);
   mock_remote_api().set_thread_status_reply(expected_reply);
 
   // Asynchronously request the frames.

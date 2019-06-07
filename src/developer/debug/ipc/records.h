@@ -55,12 +55,14 @@ struct Register {
 
 struct StackFrame {
   StackFrame() = default;
-  StackFrame(uint64_t ip, uint64_t sp, std::vector<Register> r = {})
-      : ip(ip), sp(sp), regs(std::move(r)) {}
+  StackFrame(uint64_t ip, uint64_t sp, uint64_t cfa = 0,
+             std::vector<Register> r = {})
+      : ip(ip), sp(sp), cfa(cfa), regs(std::move(r)) {}
 
   // Comparisons (primarily for tests).
   bool operator==(const StackFrame& other) const {
-    return ip == other.ip && sp == other.sp && regs == other.regs;
+    return ip == other.ip && sp == other.sp && cfa == other.cfa &&
+           regs == other.regs;
   }
   bool operator!=(const StackFrame& other) const { return !operator==(other); }
 
@@ -69,6 +71,10 @@ struct StackFrame {
 
   // Stack pointer.
   uint64_t sp = 0;
+
+  // Canonical frame address. This is the stack pointer of the previous
+  // frame at the time of the call. 0 if unknown.
+  uint64_t cfa = 0;
 
   // Known general registers for this stack frame. See IsGeneralRegister() for
   // which registers are counted as "general".

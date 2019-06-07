@@ -848,14 +848,14 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
     // References a valid frame. Now check that the frame index references
     // the top physical frame (or one of its inline expansions above it) or
     // all frames are synced.
-    //
-    // Computing frame fingerprints (required by some step operations) require
-    // that the previous physical frame is available. The step operations
-    // require that the fingerprints be synchronously available, so we want
-    // to be sure that any frame that one references has a fingerprint
-    // available. Since this is not a performance-sensitive code path, save
-    // logic by just validating the fingerprint is available.
-    if (stack.GetFrameFingerprint(frame_id)) {
+    bool top_physical_frame = true;
+    for (int i = 0; i < frame_id; i++) {
+      if (!stack[i]->IsInline()) {
+        top_physical_frame = false;
+        break;
+      }
+    }
+    if (top_physical_frame || stack.has_all_frames()) {
       cmd->set_frame(stack[frame_id]);
       return Err();
     }

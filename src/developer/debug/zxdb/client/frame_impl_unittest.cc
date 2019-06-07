@@ -110,7 +110,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   std::vector<debug_ipc::Register> frame_regs;
   frame_regs.emplace_back(RegisterID::kX64_rax, kAddress);
 
-  const debug_ipc::StackFrame stack(0x12345678, 0x7890, frame_regs);
+  const debug_ipc::StackFrame stack(0x12345678, 0x7890, 0, frame_regs);
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // Set the memory pointed to by the register.

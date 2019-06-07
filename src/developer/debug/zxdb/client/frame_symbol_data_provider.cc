@@ -126,6 +126,12 @@ void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
       [cb = std::move(cb)](uint64_t value) { cb(Err(), value); });
 }
 
+uint64_t FrameSymbolDataProvider::GetCanonicalFrameAddress() const {
+  if (!frame_)
+    return 0;
+  return frame_->GetCanonicalFrameAddress();
+}
+
 bool FrameSymbolDataProvider::IsInTopPhysicalFrame() const {
   if (!frame_)
     return false;

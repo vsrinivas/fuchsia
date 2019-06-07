@@ -487,11 +487,11 @@ TEST(Protocol, ThreadStatusReply) {
   initial.record.state = ThreadRecord::State::kRunning;
   initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
   initial.record.frames.emplace_back(
-      1234, 9875,
+      1234, 9875, 89236413,
       std::vector<Register>{{RegisterID::kX64_rsi, 12},
                             {RegisterID::kX64_rdi, 0}});
   initial.record.frames.emplace_back(
-      71562341, 89236413,
+      71562341, 89236413, 0,
       std::vector<Register>{{RegisterID::kX64_rsi, 11},
                             {RegisterID::kX64_rdi, 1}});
 

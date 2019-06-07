@@ -38,6 +38,7 @@ class FrameImpl final : public Frame {
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
+  uint64_t GetCanonicalFrameAddress() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   fxl::RefPtr<EvalContext> GetEvalContext() const override;
   bool IsAmbiguousInlineLocation() const override;
@@ -55,6 +56,7 @@ class FrameImpl final : public Frame {
   Thread* thread_;
 
   uint64_t sp_;
+  uint64_t cfa_;
   std::vector<Register> registers_;
 
   mutable Location location_;  // Lazily symbolized.

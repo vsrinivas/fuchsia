@@ -55,7 +55,7 @@ void StepThreadController::InitWithThread(Thread* thread,
       Log("Stepping in empty range, likely to step into an inline routine.");
     }
 
-    original_frame_fingerprint_ = *thread->GetStack().GetFrameFingerprint(0);
+    original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
   } else {
     // In the "else" cases, the range will already have been set up.
     Log("Stepping in %s", current_ranges_.ToString().c_str());
@@ -314,7 +314,7 @@ StepThreadController::OnThreadStopOnUnsymbolizedCode() {
     return kContinue;
   }
 
-  if (FrameFingerprint::Newer(*thread()->GetStack().GetFrameFingerprint(0),
+  if (FrameFingerprint::Newer(thread()->GetStack().GetFrameFingerprint(0),
                               original_frame_fingerprint_)) {
     // Called a new stack frame that has no symbols. We need to "finish" to
     // step over the unsymbolized code to automatically step over the

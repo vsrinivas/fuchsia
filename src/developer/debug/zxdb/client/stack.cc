@@ -49,6 +49,9 @@ class InlineFrame final : public Frame {
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override {
     return physical_frame_->GetBasePointerAsync(std::move(cb));
   }
+  uint64_t GetCanonicalFrameAddress() const override {
+    return physical_frame_->GetCanonicalFrameAddress();
+  }
   uint64_t GetStackPointer() const override {
     return physical_frame_->GetStackPointer();
   }
@@ -140,8 +143,7 @@ size_t Stack::InlineDepthForIndex(size_t index) const {
   return 0;
 }
 
-std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
-    size_t virtual_frame_index) const {
+FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
   size_t frame_index = virtual_frame_index + hide_ambiguous_inline_frame_count_;
 
   // Should reference a valid index in the array.
@@ -154,76 +156,8 @@ std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
   // index to the current physical frame.
   size_t inline_count = InlineDepthForIndex(frame_index);
 
-  // The stack pointer we want is the one from right before the current
-  // physical frame (see frame_fingerprint.h).
-  size_t before_physical_frame_index = frame_index + inline_count + 1;
-  if (before_physical_frame_index == frames_.size()) {
-    if (!has_all_frames())
-      return std::nullopt;  // Not synchronously available.
-
-    // For the bottom frame, this returns the frame base pointer instead which
-    // will at least identify the frame in some ways, and can be used to see if
-    // future frames are younger.
-    return FrameFingerprint(frames_[frame_index]->GetStackPointer(), 0);
-  }
-
-  return FrameFingerprint(
-      frames_[before_physical_frame_index]->GetStackPointer(), inline_count);
-}
-
-void Stack::GetFrameFingerprint(
-    size_t virtual_frame_index,
-    std::function<void(const Err&, FrameFingerprint)> cb) {
-  size_t frame_index = virtual_frame_index + hide_ambiguous_inline_frame_count_;
-  FXL_DCHECK(frame_index < frames_.size());
-
-  // Identify the frame in question across the async call by its combination of
-  // IP, SP, and inline nesting count. If anything changes we don't want to
-  // issue the callback.
-  uint64_t ip = frames_[frame_index]->GetAddress();
-  uint64_t sp = frames_[frame_index]->GetStackPointer();
-  size_t inline_count = InlineDepthForIndex(frame_index);
-
-  // This callback is issued when the full stack is available.
-  auto on_full_stack = [weak_stack = GetWeakPtr(), frame_index, ip, sp,
-                        inline_count, cb = std::move(cb)](const Err& err) {
-    if (err.has_error()) {
-      cb(err, FrameFingerprint());
-      return;
-    }
-    if (!weak_stack) {
-      cb(Err("Thread destroyed."), FrameFingerprint());
-      return;
-    }
-    const auto& frames = weak_stack->frames_;
-
-    if (frame_index >= frames.size() ||
-        frames[frame_index]->GetAddress() != ip ||
-        frames[frame_index]->GetStackPointer() != sp ||
-        weak_stack->InlineDepthForIndex(frame_index) != inline_count) {
-      // Something changed about this stack item since the original call.
-      // Count the request as invalid.
-      cb(Err("Stack changed across queries."), FrameFingerprint());
-      return;
-    }
-
-    // Should always have a fingerprint after syncing the stack.
-    auto found_fingerprint = weak_stack->GetFrameFingerprint(frame_index);
-    FXL_DCHECK(found_fingerprint);
-    cb(Err(), *found_fingerprint);
-  };
-
-  if (has_all_frames()) {
-    // All frames are available, don't force a recomputation of the stack. But
-    // the caller still expects an async response. Calling the full callback
-    // is important for the checking in case the frames changed while the
-    // async task is pending.
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [on_full_stack = std::move(on_full_stack)]() { on_full_stack(Err()); });
-  } else {
-    SyncFrames(std::move(on_full_stack));
-  }
+  return FrameFingerprint(frames_[frame_index]->GetCanonicalFrameAddress(),
+                          inline_count);
 }
 
 size_t Stack::GetAmbiguousInlineFrameCount() const {
@@ -251,6 +185,13 @@ void Stack::SyncFrames(std::function<void(const Err&)> callback) {
 
 void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
                       const std::vector<debug_ipc::StackFrame>& new_frames) {
+#ifndef NDEBUG
+  // Validate the CFAs are consistent with the previous frames' SP.
+  for (int i = 0; i < static_cast<int>(new_frames.size()) - 1; i++) {
+    FXL_DCHECK(new_frames[i].cfa == new_frames[i + 1].sp);
+  }
+#endif
+
   // See if the new frames are an extension of the existing frames or are a
   // replacement.
   size_t appending_from = 0;  // First index in new_frames to append.

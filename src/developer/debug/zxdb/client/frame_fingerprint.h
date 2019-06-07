@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_FINGERPRINT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_FINGERPRINT_H_
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -52,11 +53,12 @@ namespace zxdb {
 // from Location.function().
 //
 // Their "stack_addr" for the function being called in this example will be
-// 0x1000 which is the SP from right before the call instruction. We can get
-// this by looking at the previous frame's SP.
+// 0x1000 which is the SP from right before the call instruction. This is
+// called the frame's "canonical frame address" in DWARF. We can get this by
+// looking at the previous frame's SP.
 //
-// Because the "frame address" is actually the stack pointer of the previous
-// frame, the getter for this object is on the Stack (GetFrameFingerprint).
+// Because the inline count depends on other frames, the getter for this object
+// is on the Stack (Stack::GetFrameFingerprint).
 //
 // INLINE FUNCTIONS
 // ----------------
@@ -105,3 +107,5 @@ class FrameFingerprint {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FRAME_FINGERPRINT_H_

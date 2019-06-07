@@ -81,6 +81,10 @@ void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
       });
 }
 
+uint64_t MockSymbolDataProvider::GetCanonicalFrameAddress() const {
+  return cfa_;
+}
+
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   std::vector<uint8_t> result = memory_.ReadMemory(address, size);

@@ -11,9 +11,9 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/address_ranges.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -41,7 +41,7 @@ void StepOverThreadController::InitWithThread(
   // Save the info for the frame we're stepping inside of for future possible
   // stepping out.
   Stack& stack = thread->GetStack();
-  frame_fingerprint_ = *stack.GetFrameFingerprint(0);
+  frame_fingerprint_ = stack.GetFrameFingerprint(0);
   if (step_mode_ == StepMode::kSourceLine) {
     // Always take the file/line from the frame rather than from LineDetails.
     // In the case of ambiguous inline locations, the LineDetails will contain
@@ -90,7 +90,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // that case.
   Stack& stack = thread()->GetStack();
   FrameFingerprint current_fingerprint =
-      *thread()->GetStack().GetFrameFingerprint(0);
+      thread()->GetStack().GetFrameFingerprint(0);
   if (step_mode_ == StepMode::kSourceLine &&
       current_fingerprint == frame_fingerprint_ &&
       file_line_ == stack[0]->GetLocation().file_line()) {
@@ -108,7 +108,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
 
     // The step controller may have tweaked the stack, recompute the current
     // fingerprint.
-    current_fingerprint = *thread()->GetStack().GetFrameFingerprint(0);
+    current_fingerprint = thread()->GetStack().GetFrameFingerprint(0);
   }
 
   // If we get here the thread is no longer in range but could be in a sub-

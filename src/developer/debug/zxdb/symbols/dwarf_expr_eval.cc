@@ -258,7 +258,11 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_call4:     // 4-byte offset of DIE.
     case llvm::dwarf::DW_OP_call_ref:  // 4- or 8-byte offset of DIE.
     case llvm::dwarf::DW_OP_form_tls_address:
-    case llvm::dwarf::DW_OP_call_frame_cfa:  // TODO(DX-1510).
+      // TODO(brettw) implement these.
+      ReportUnimplementedOpcode(op);
+      return Completion::kSync;
+    case llvm::dwarf::DW_OP_call_frame_cfa:
+      return OpCFA();
     case llvm::dwarf::DW_OP_bit_piece:       // ULEB128 size + ULEB128 offset.
     case llvm::dwarf::DW_OP_implicit_value:  // ULEB128 size + block of size.
       // TODO(brettw) implement these.
@@ -269,6 +273,22 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_GNU_push_tls_address:
       // TODO(DX-694) support TLS.
       ReportError("TLS not currently supported. See DX-694.");
+      return Completion::kSync;
+
+    case 0xf3:  // DW_OP_GNU_entry_value
+      // This GNU extension is a ULEB128 length followed by a sub-expression
+      // of that length. This sub-expression is supposed to be evaluated in
+      // a separate stack using the register values that were present at the
+      // beginning of the function:
+      // https://gcc.gnu.org/ml/gcc-patches/2010-08/txt00152.txt
+      //
+      // Generally if the registers were saved registers it would just encode
+      // those locations. This is really used for non-saved registers and
+      // requires that the debugger have previously saved those registers
+      // separately. This isn't something that we currently do, and can't be
+      // done in general (it could be implemented if you previously single-
+      // stepped into that function though).
+      ReportError("Optimized out");
       return Completion::kSync;
 
     default:
@@ -450,6 +470,14 @@ DwarfExprEval::Completion DwarfExprEval::OpBreg(uint8_t op) {
 
   result_type_ = ResultType::kPointer;
   return PushRegisterWithOffset(reg_index, offset);
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpCFA() {
+  if (uint64_t cfa = data_provider_->GetCanonicalFrameAddress())
+    Push(cfa);
+  else
+    ReportError("Frame address is 0.");
+  return Completion::kSync;
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpDiv() {

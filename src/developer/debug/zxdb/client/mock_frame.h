@@ -28,7 +28,7 @@ class MockFrame : public Frame {
   // The pointer must outlive this class (normally both are owned by the
   // Stack). A null physical frame indicates that this is not inline.
   MockFrame(Session* session, Thread* thread, const Location& location,
-            uint64_t sp, std::vector<Register> regs = {},
+            uint64_t sp, uint64_t cfa = 0, std::vector<Register> regs = {},
             uint64_t frame_base = 0, const Frame* physical_frame = nullptr,
             bool is_ambiguous_inline = false);
 
@@ -59,6 +59,7 @@ class MockFrame : public Frame {
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(std::function<void(uint64_t bp)> cb) override;
   uint64_t GetStackPointer() const override;
+  uint64_t GetCanonicalFrameAddress() const override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   fxl::RefPtr<EvalContext> GetEvalContext() const override;
   bool IsAmbiguousInlineLocation() const override;
@@ -67,6 +68,7 @@ class MockFrame : public Frame {
   Thread* thread_;
 
   uint64_t sp_;
+  uint64_t cfa_;
   std::vector<Register> registers_;
   uint64_t frame_base_;
   const Frame* physical_frame_;  // Null if non-inlined.

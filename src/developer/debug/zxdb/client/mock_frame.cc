@@ -11,12 +11,13 @@
 namespace zxdb {
 
 MockFrame::MockFrame(Session* session, Thread* thread, const Location& location,
-                     uint64_t sp, std::vector<Register> regs,
+                     uint64_t sp, uint64_t cfa, std::vector<Register> regs,
                      uint64_t frame_base, const Frame* physical_frame,
                      bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
       sp_(sp),
+      cfa_(cfa),
       registers_(std::move(regs)),
       frame_base_(frame_base),
       physical_frame_(physical_frame),
@@ -58,6 +59,7 @@ void MockFrame::GetBasePointerAsync(std::function<void(uint64_t)> cb) {
       FROM_HERE, [bp = frame_base_, cb]() { cb(bp); });
 }
 uint64_t MockFrame::GetStackPointer() const { return sp_; }
+uint64_t MockFrame::GetCanonicalFrameAddress() const { return cfa_; }
 
 fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
   if (!symbol_data_provider_)

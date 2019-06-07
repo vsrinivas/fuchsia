@@ -68,15 +68,13 @@ void ThreadController::SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
   for (size_t i = 0; i < stack.size(); i++) {
     const Frame* frame = stack[i];
     auto found = stack.GetFrameFingerprint(i);
-    if (!found)
-      break;  // Got to bottom of computable fingerprints, give up.
 
     // To be ambiguous, all frames to here need to be at the same address and
     // all inline frames need to be at the beginning of one of their ranges.
     // (the physical frame also needs matching but its range doesn't count).
     bool is_inline = frame->IsInline();
 
-    if (*found == fingerprint) {
+    if (found == fingerprint) {
       // Found it.
       if (comparison == InlineFrameIs::kEqual) {
         // Make this one the top of the stack.

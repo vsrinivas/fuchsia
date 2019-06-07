@@ -53,7 +53,7 @@ std::string SyncFormatFrameLong(const Frame* frame,
 TEST(FormatFrame, Unsymbolized) {
   MockFrame frame(nullptr, nullptr,
                   Location(Location::State::kSymbolized, 0x12345678), 0x567890,
-                  std::vector<Register>(), 0xdeadbeef);
+                  0, std::vector<Register>(), 0xdeadbeef);
 
   OutputBuffer out;
 
@@ -62,7 +62,7 @@ TEST(FormatFrame, Unsymbolized) {
   EXPECT_EQ("0x12345678", out.AsString());
 
   // Long version should do the same (not duplicate it).
-  EXPECT_EQ("\n      IP = 0x12345678, SP = 0x567890",
+  EXPECT_EQ("\n      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
             SyncFormatFrameLong(&frame, FormatExprValueOptions()));
 
   // With index.
@@ -86,12 +86,12 @@ TEST(FormatFrame, Inline) {
   MockFrame inline_frame(nullptr, nullptr,
                          Location(0x12345678, FileLine("file.cc", 22), 0,
                                   symbol_context, LazySymbol(function)),
-                         0x567890, std::vector<Register>(), 0xdeadbeef,
+                         0x567890, 0, std::vector<Register>(), 0xdeadbeef,
                          &physical_frame);
 
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"
-      "      IP = 0x12345678, SP = 0x567890",
+      "      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
       SyncFormatFrameLong(&inline_frame, FormatExprValueOptions()));
 }
 

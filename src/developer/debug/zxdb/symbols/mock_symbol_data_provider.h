@@ -23,6 +23,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   void set_ip(uint64_t ip) { ip_ = ip; }
   void set_bp(uint64_t bp) { bp_ = bp; }
+  void set_cfa(uint64_t cfa) { cfa_ = cfa; }
 
   // Adds the given canned result for the given register. Set synchronous if
   // the register contents should be synchronously available, false if it
@@ -47,6 +48,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
                         GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
+  uint64_t GetCanonicalFrameAddress() const override;
   void GetMemoryAsync(uint64_t address, uint32_t size,
                       GetMemoryCallback callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
@@ -63,6 +65,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;
+  uint64_t cfa_ = 0;
   std::map<debug_ipc::RegisterID, RegData> regs_;
 
   MockMemory memory_;

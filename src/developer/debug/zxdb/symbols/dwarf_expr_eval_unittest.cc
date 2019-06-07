@@ -288,6 +288,17 @@ TEST_F(DwarfExprEvalTest, Bregx) {
              DwarfExprEval::ResultType::kPointer);
 }
 
+TEST_F(DwarfExprEvalTest, CFA) {
+  constexpr uint64_t kCFA = 0xdeadbeef;
+  provider()->set_cfa(kCFA);
+
+  // Most expressions involving the CFA are just the CFA itself (GCC likes
+  // to declare the function frame base as being equal to the CFA).
+  DoEvalTest({llvm::dwarf::DW_OP_call_frame_cfa}, true,
+             DwarfExprEval::Completion::kSync, kCFA,
+             DwarfExprEval::ResultType::kPointer);
+}
+
 TEST_F(DwarfExprEvalTest, Const1s) {
   DoEvalTest({llvm::dwarf::DW_OP_const1s, static_cast<uint8_t>(-3)}, true,
              DwarfExprEval::Completion::kSync, static_cast<uint64_t>(-3),

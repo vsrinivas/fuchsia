@@ -9,9 +9,9 @@
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -79,7 +79,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
 
   // See if there's an inline frame that needs stepping out of.
   Stack& stack = thread()->GetStack();
-  FrameFingerprint current_fingerprint = *stack.GetFrameFingerprint(0);
+  FrameFingerprint current_fingerprint = stack.GetFrameFingerprint(0);
   if (!FrameFingerprint::NewerOrEqual(current_fingerprint,
                                       from_inline_frame_fingerprint_)) {
     Log("Not in a newer frame than the target, stopping.");
@@ -122,18 +122,7 @@ void FinishThreadController::InitWithThread(
     Log("Finishing inline %s", function->GetFullName().c_str());
 #endif
 
-  auto found_fingerprint = stack.GetFrameFingerprint(frame_to_finish_);
-  if (!found_fingerprint) {
-    // This can happen if the creator of this class requested that we finish
-    // the bottom-most stack frame available, without having all stack frames
-    // available. That's not allowed and any code doing that should be fixed.
-    FXL_NOTREACHED();
-    cb(
-        Err("Trying to step out of an inline frame with insufficient context.\n"
-            "Please file a bug with a repro."));
-    return;
-  }
-  from_inline_frame_fingerprint_ = *found_fingerprint;
+  from_inline_frame_fingerprint_ = stack.GetFrameFingerprint(frame_to_finish_);
 
   // Find the next physical frame above the one being stepped out of.
   std::optional<size_t> found_physical_index;

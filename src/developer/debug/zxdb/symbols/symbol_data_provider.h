@@ -79,6 +79,10 @@ class SymbolDataProvider
   // Asynchronous version of GetFrameBase.
   virtual void GetFrameBaseAsync(GetRegisterCallback callback);
 
+  // Returns the canonical frame address of the current frame. Returns 0 if
+  // it is not known. See Frame::GetCanonicalFrameAddress().
+  virtual uint64_t GetCanonicalFrameAddress() const;
+
   // Request to retrieve a memory block from the debugged process. On success,
   // the implementation will call the callback with the retrieved data pointer.
   //
