@@ -3,7 +3,7 @@
 #include "stdio_impl.h"
 
 int __lockfile(FILE* f) {
-    int owner, tid = __thread_get_tid();
+    int owner, tid = __thread_get_tid_for_filelock();
     if (atomic_load(&f->lock) == tid)
         return 0;
     while ((owner = a_cas_shim(&f->lock, 0, tid)))

@@ -14,5 +14,8 @@ test("stdio") {
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+
+    # For unittests of _impl.h headers.
+    "$zx/third_party/ulib/musl:musl_internal_testing",
   ]
 }

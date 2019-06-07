@@ -3,7 +3,7 @@
 #include <limits.h>
 
 int ftrylockfile(FILE* f) {
-    int tid = __thread_get_tid();
+    int tid = __thread_get_tid_for_filelock();
     if (f->lock == tid) {
         if (f->lockcount == LONG_MAX)
             return -1;
