@@ -17,8 +17,6 @@
 
 namespace netemul {
 
-static constexpr int BufferSize = 4096;
-
 static std::string ExtractLabel(const std::string& url) {
   size_t last_slash = url.rfind('/');
   if (last_slash == std::string::npos || last_slash + 1 == url.length())
@@ -28,12 +26,12 @@ static std::string ExtractLabel(const std::string& url) {
 
 ManagedLogger::ManagedLogger(
     std::string name, bool is_err,
-    std::shared_ptr<internal::LogListenerImpl> loglistener_impl)
+    std::shared_ptr<fuchsia::logger::LogListener> loglistener)
     : dispatcher_(async_get_default_dispatcher()),
       name_(std::move(name)),
       is_err_(is_err),
       wait_(this),
-      loglistener_impl_(std::move(loglistener_impl)) {}
+      loglistener_(std::move(loglistener)) {}
 
 zx::handle ManagedLogger::CreateHandle() {
   ZX_ASSERT(!out_.is_valid());
@@ -82,7 +80,7 @@ void ManagedLogger::OnRx(async_dispatcher_t* dispatcher, async::WaitBase* wait,
 
 void ManagedLogger::ConsumeBuffer() {
   // Do nothing if we dont have a log listener to output to
-  if (!loglistener_impl_) {
+  if (!loglistener_) {
     buffer_pos_ = 0;
     return;
   }
@@ -128,15 +126,15 @@ void ManagedLogger::LogMessage(std::string msg) {
   m.pid = 0;
   m.tid = 0;
   m.time = zx_clock_get_monotonic();
-  m.severity = (int32_t)(is_err_ ? fuchsia::logger::LogLevelFilter::INFO
-                                 : fuchsia::logger::LogLevelFilter::ERROR);
+  m.severity = (int32_t)(is_err_ ? fuchsia::logger::LogLevelFilter::ERROR
+                                 : fuchsia::logger::LogLevelFilter::INFO);
   m.dropped_logs = 0;
-  m.tags = std::vector<std::string>{"@" + name_};
+  m.tags = std::vector<std::string>{name_};
   m.msg = std::move(msg);
 
-  // Should never end up here if loglistener_impl_ is a nullptr
-  ZX_ASSERT(loglistener_impl_);
-  loglistener_impl_->Log(std::move(m));
+  // Should never end up here if loglistener_ is a nullptr
+  ZX_ASSERT(loglistener_);
+  loglistener_->Log(std::move(m));
 }
 
 void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
@@ -150,7 +148,7 @@ void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
 fuchsia::sys::FileDescriptorPtr ManagedLoggerCollection::CreateLogger(
     const std::string& url, bool err) {
   auto& logger = loggers_.emplace_back(std::make_unique<ManagedLogger>(
-      ExtractLabel(url).c_str(), err, loglistener_impl_));
+      ExtractLabel(url).c_str(), err, loglistener_));
 
   auto handle = logger->CreateHandle();
   logger->Start([this](ManagedLogger* logger) {

@@ -29,6 +29,8 @@ class TestListener : public fuchsia::logger::LogListener {
         [](zx_status_t s) { FAIL() << "Connection to test listener closed"; });
   }
 
+  TestListener() : binding_(this) {}
+
   void Log(fuchsia::logger::LogMessage log) override {
     if (observer_callback_) {
       observer_callback_(log);

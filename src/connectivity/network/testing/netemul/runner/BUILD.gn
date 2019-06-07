@@ -110,6 +110,7 @@ executable("sandbox_unittest") {
     "log_listener_test_helpers.cc",
     "log_listener_test_helpers.h",
     "logger_unittest.cc",
+    "managed_logger_unittest.cc",
     "sandbox_unittest.cc",
   ]
 

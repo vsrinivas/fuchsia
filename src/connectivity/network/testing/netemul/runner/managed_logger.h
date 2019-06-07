@@ -20,11 +20,13 @@ namespace netemul {
 
 class ManagedLogger {
  public:
+  static constexpr int BufferSize = 4096;
+
   using Ptr = std::unique_ptr<ManagedLogger>;
   using ClosedCallback = fit::function<void(ManagedLogger*)>;
 
   ManagedLogger(std::string name, bool is_err,
-                std::shared_ptr<internal::LogListenerImpl> loglistener_impl);
+                std::shared_ptr<fuchsia::logger::LogListener> loglistener);
 
   zx::handle CreateHandle();
 
@@ -48,17 +50,17 @@ class ManagedLogger {
   std::unique_ptr<char[]> buffer_;
   size_t buffer_pos_;
   async::WaitMethod<ManagedLogger, &ManagedLogger::OnRx> wait_;
-  std::shared_ptr<internal::LogListenerImpl> loglistener_impl_;
+  std::shared_ptr<fuchsia::logger::LogListener> loglistener_;
 };
 
 class ManagedLoggerCollection {
  public:
   explicit ManagedLoggerCollection(
       std::string environment_name,
-      std::shared_ptr<internal::LogListenerImpl> loglistener_impl)
+      std::shared_ptr<fuchsia::logger::LogListener> loglistener)
       : environment_name_(std::move(environment_name)),
         counter_(0),
-        loglistener_impl_(std::move(loglistener_impl)) {}
+        loglistener_(std::move(loglistener)) {}
 
   void IncrementCounter() { counter_++; }
   fuchsia::sys::FileDescriptorPtr CreateLogger(const std::string& url,
@@ -67,7 +69,7 @@ class ManagedLoggerCollection {
  private:
   std::string environment_name_;
   uint32_t counter_;
-  std::shared_ptr<internal::LogListenerImpl> loglistener_impl_;
+  std::shared_ptr<fuchsia::logger::LogListener> loglistener_;
   std::vector<ManagedLogger::Ptr> loggers_;
 };
 
