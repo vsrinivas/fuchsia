@@ -44,7 +44,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -52,7 +52,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:47
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/config:kernel_crash_checker", "//garnet/packages/prod:crashpad_agent", "//garnet/packages/prod:feedback_agent", "//garnet/packages/prod:kernel_crash_checker", "//garnet/packages/products:base", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/wlan:service", "//src/recovery/factory_reset", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -246,7 +246,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:27
+From //products/core.gni:29
 
 **Overridden from the default:** `[]`
 
@@ -254,7 +254,7 @@ From //BUILD.gn:55
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:27
+From //products/core.gni:29
 
 **Overridden from the default:** `[]`
 
@@ -373,7 +373,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -432,7 +432,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -440,7 +440,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -490,7 +490,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -721,19 +721,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", "release", "dynamic_profile", or "dynamic_release")
@@ -747,7 +747,7 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
@@ -759,7 +759,7 @@ From //third_party/flutter/third_party/txt/BUILD.gn:16
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -894,7 +894,7 @@ true or false in similar circumstances.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:15](https://fuchsia.googlesource.com/third_party/icu/+/65e4aa3b8cc6b41cf31136b9474a9c97bdc27739/config.gni#15)
+From [//third_party/icu/config.gni:15](https://fuchsia.googlesource.com/third_party/icu/+/1aa5008165095c7651f500f77e04336cd2748660/config.gni#15)
 
 ### is_debug
 Debug build.
@@ -1223,13 +1223,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/459c75aa97dd0aaa6b5a78587df942c5e05e703a/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/0ec5c0049fc27027add8d84e2e1a8072671733e3/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -2053,7 +2053,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:vboot_reference", "//bundles:tools"]`
 
-From //products/core.gni:29
+From //products/core.gni:31
 
 **Overridden from the default:** `[]`
 
@@ -2061,7 +2061,7 @@ From //BUILD.gn:63
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:vboot_reference", "//bundles:tools"]`
 
-From //products/core.gni:29
+From //products/core.gni:31
 
 **Overridden from the default:** `[]`
 
