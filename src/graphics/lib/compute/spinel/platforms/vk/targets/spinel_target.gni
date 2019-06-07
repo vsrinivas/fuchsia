@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../../../../gn/build_rules.gni")
+import("../../../../gn/glsl_shader_rules.gni")
 
 #
 # Generates a Spinel target by performing the following steps:
@@ -110,40 +110,38 @@ template("spinel_target") {
     "${graphics_compute_dir}/spinel/platforms/vk/spn_vk_layouts.h",
   ]
 
+  _spn_comp_include_dirs = [
+    # <hotsort src> -- hs_glsl_macros.h
+    "${graphics_compute_dir}/hotsort/platforms/vk/targets",
+
+    # <hotsort gen> -- hs_config.h, hs_glsl_macros_config.h
+    "$target_gen_dir/hotsort",
+
+    _spn_target_dir,  # <spinel target> -- spn_config.h
+
+    # <spinel shaders>
+    "${graphics_compute_dir}/spinel/platforms/vk/shaders",
+
+    # <spinel/platforms/vk> -- spn_vk_layouts.h
+    "${graphics_compute_dir}/spinel/platforms/vk",
+    "${graphics_compute_dir}/spinel",  # <spinel> -- core.h
+  ]
+
   #
   # compile the .comp shaders to SPIR-V modules
   #
-  compiled_action_foreach("gen_spv") {
-    tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
+  graphics_compute_compile_glsl_shader_foreach("gen_spv") {
     sources = _spn_comp_sources
     inputs = _spn_comp_includes
     outputs = [
       "$target_gen_dir/spv/{{source_name_part}}.spv",
     ]
+    debug_outputs = [ "$target_gen_dir/debug/{{source_name_part}}.comp" ]
     args = [
-      "-s",  # Note: '-s' silences glslangValidator printing filename
-             # but detailed error messages are also silenced
-
       "--target-env",
       "vulkan1.1",
-      "-I" +  # <hotsort src> -- hs_glsl_macros.h
-          rebase_path("${graphics_compute_dir}/hotsort/platforms/vk/targets",
-                      root_build_dir),
-      "-I" +  # <hotsort gen> -- hs_config.h, hs_glsl_macros_config.h
-          rebase_path("$target_gen_dir/hotsort", root_build_dir),
-      "-I" + rebase_path(_spn_target_dir, root_build_dir),  # <spinel target> -- spn_config.h
-      "-I" +  # <spinel shaders>
-          rebase_path("${graphics_compute_dir}/spinel/platforms/vk/shaders",
-                      root_build_dir),
-      "-I" +  # <spinel/platforms/vk> -- spn_vk_layouts.h
-          rebase_path("${graphics_compute_dir}/spinel/platforms/vk",
-                      root_build_dir),
-      "-I" + rebase_path("${graphics_compute_dir}/spinel", root_build_dir),  # <spinel> -- core.h
-      "-o",
-      rebase_path(outputs[0], root_build_dir),
-      "{{source}}",
     ]
-
+    include_dirs = _spn_comp_include_dirs
     if (defined(invoker.public_deps)) {
       public_deps = invoker.public_deps
     }

@@ -1,0 +1,153 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("build_settings.gni")
+
+import("//build/compiled_action.gni")
+
+declare_args() {
+  # Set to true in your args.gn file to generate pre-processed and
+  # auto-formatted shaders under the "debug" sub-directory of hotsort and spinel
+  # target generation output directories.
+  #
+  # These are never used, but can be reviewed manually to verify the impact of
+  # configuration parameters, or when modifying hotsort.
+  #
+  # Example results:
+  #
+  #   out/default/
+  #     gen/src/graphics/lib/compute/
+  #        hotsort/targets/hs_amd_gcn3_u64/
+  #           comp/
+  #             hs_transpose.comp   -> normal shader.
+  #           debug/
+  #             hs_transpose.comp   -> same, but much easier to read!
+  #
+  graphics_compute_generate_debug_shaders = true
+}
+
+# Generate a human-readable version of a set of compute shaders.
+# These are pre-processed and auto-formatted to make them easier to read
+# and compare during development.
+#
+# Variables:
+#    sources: list of source .comp shader files.
+#    inputs: list of other input files (headers included by the main shaders).
+#    outputs: list of output file templates.
+#    include_dirs: list of additional include directories passed to the
+#      pre-processor.
+#
+template("graphics_compute_generate_debug_glsl_shader_foreach") {
+  _include_dirs = []
+  if (defined(invoker.include_dirs)) {
+    _include_dirs += invoker.include_dirs
+  }
+
+  # Locate glslangValidator host executable. This is similar to what
+  # compiled_action() does.
+  _host_glslang_target =
+      "${graphics_compute_glslangValidator_tool_target}($host_toolchain)"
+  _host_glslang_name = get_label_info(_host_glslang_target, "name")
+  _host_glslang_out_dir = get_label_info(_host_glslang_target, "root_out_dir")
+  _host_glslang_executable = "${_host_glslang_out_dir}/${_host_glslang_name}"
+
+  action_foreach(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "inputs",
+                             "outputs",
+                             "public_deps",
+                             "sources",
+                           ])
+    script =
+        "${graphics_compute_dir}/scripts/preprocess_and_format_glsl_shader.py"
+    args = [
+      "--clang-format-tool",
+      rebase_path(graphics_compute_clang_format_host_tool, root_build_dir),
+      "--glslangValidator-tool",
+      rebase_path(_host_glslang_executable, root_build_dir),
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+      "{{source}}",
+    ]
+    foreach(include_dir, _include_dirs) {
+      args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
+    }
+  }
+}
+
+# Compile a set of glsl shaders, each into a SPIR-V module.
+#
+# Variables:
+#    sources: list of source .comp shader files.
+#    inputs: list of other input files (headers included by the main shaders).
+#    outputs: list of output file templates.
+#    debug_outputs: list of debug output file templates, only used if
+#      graphics_compute_generate_debug_shaders is true.
+#    include_dirs: list of additional include directories passed to the
+#      pre-processor.
+#
+template("graphics_compute_compile_glsl_shader_foreach") {
+  if (graphics_compute_generate_debug_shaders) {
+    _gen_debug_target_name = "gen_debug_${target_name}"
+    graphics_compute_generate_debug_glsl_shader_foreach(
+        _gen_debug_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "include_dirs",
+                               "inputs",
+                               "public_deps",
+                               "sources",
+                             ])
+      outputs = invoker.debug_outputs
+    }
+  } else {
+    # Make GN quiet about this variable.
+    assert(defined(invoker.debug_outputs) || !defined(invoker.debug_outputs))
+  }
+
+  compiled_action_foreach(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "inputs",
+                             "outputs",
+                             "public_deps",
+                             "sources",
+                           ])
+    tool = graphics_compute_glslangValidator_tool_target
+    args = [
+      "-s",  # Note: '-s' silences glslangValidator printing filename
+             # but detailed error messages are also silenced
+
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+      "{{source}}",
+    ]
+    foreach(include_dir, invoker.include_dirs) {
+      args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
+    }
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
+    if (graphics_compute_generate_debug_shaders) {
+      # Force debug shader generation.
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":${_gen_debug_target_name}" ]
+    }
+  }
+}
+
+# TODO(digit): Consider implementing these to simplify both
+# hotsort_target.gni and spinel_target.gni
+
+template("graphics_compute_optimize_glsl_shader_foreach") {
+}
+
+template("graphics_compute_remap_glsl_shader_foreach") {
+}

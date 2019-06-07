@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(SPN-35): Move these to a build_overrides/ file to support the
+# standalone build as well.
+
+# Top-level directory of the graphics compute source repository.
+graphics_compute_dir = "//src/graphics/lib/compute"
+
+# A target providing access to Vulkan at compile time when added to deps.
+# TODO(SPN-14): Change this to a more recent upstream.
+graphics_compute_vulkan_loader_target =
+    "//third_party/vulkan_loader_and_validation_layers:vulkan"
+
+# A GN target used in compiled_action() targets to invoke the glslangValidator
+# host tool at build time.
+graphics_compute_glslangValidator_tool_target =
+    "//third_party/shaderc/third_party/glslang:glslangValidator"
+
+# Path to the 'clang-format' host tool. Only used to generate debug shaders.
+graphics_compute_clang_format_host_tool =
+    "//buildtools/${host_os}-${host_cpu}/clang/bin/clang-format"

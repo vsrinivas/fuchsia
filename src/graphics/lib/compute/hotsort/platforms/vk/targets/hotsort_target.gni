@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("../../../../gn/build_rules.gni")
+import("../../../../gn/glsl_shader_rules.gni")
 
 _hotsort_dir = "${graphics_compute_dir}/hotsort"
 
@@ -168,8 +168,7 @@ template("hotsort_target") {
   # compile the .comp shaders to SPIR-V modules
   #
   _gen_spv_target_name = "gen_spv_${_hs_target_name}"
-  compiled_action_foreach(_gen_spv_target_name) {
-    tool = "//third_party/shaderc/third_party/glslang:glslangValidator"
+  graphics_compute_compile_glsl_shader_foreach(_gen_spv_target_name) {
     sources = _hs_comp_sources
     inputs = [ "${_hotsort_dir}/platforms/vk/targets/hs_glsl_macros.h" ] +
              _hs_target_gen_includes +
@@ -177,19 +176,12 @@ template("hotsort_target") {
     outputs = [
       "${_hs_output_dir}/spv/{{source_name_part}}.spv",
     ]
+    debug_outputs = [ "${_hs_output_dir}/debug/{{source_name_part}}.comp" ]
     args = [
-      "-s",  # Note: '-s' silences glslangValidator printing filename
-             # but detailed error messages are also silenced
-
       "--target-env",
       "vulkan1.1",
-      "-o",
-      rebase_path(outputs[0], root_build_dir),
-      "{{source}}",
     ]
-    foreach(include_dir, _hs_target_include_dirs) {
-      args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
-    }
+    include_dirs = _hs_target_include_dirs
     deps = [
       ":${_gen_comp_target_name}",
       ":${_gen_copy_target_name}",
