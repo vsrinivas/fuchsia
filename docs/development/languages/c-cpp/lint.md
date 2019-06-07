@@ -59,6 +59,9 @@ This list tracks the reasons for which we disabled in particular [checks]:
     braced initialization list for constructor arguments, prefer to use a
     constructor explicitly
  - `modernize-use-equals-delete` - flagging all gtest TEST_F
+ - `modernize-use-trailing-return-type` - Fuchsia C++ code typically uses the
+   `int foo()` style of defining functions, and not the `auto foo() -> int`
+   style as recommended by this check.
  - `readability-implicit-bool-conversion` - Fuchsia C++ code commonly uses implicit
    bool cast of pointers and numbers
  - `readability-isolate-declaration` - Zircon code commonly uses paired declarations.
