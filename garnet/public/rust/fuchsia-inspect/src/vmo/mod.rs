@@ -34,43 +34,6 @@ pub struct Inspector {
     pub(super) vmo: zx::Vmo,
 }
 
-/// Trait implemented by properties.
-pub trait Property<'t> {
-    type Type;
-
-    /// Set the property value to |value|.
-    fn set(&'t self, value: Self::Type);
-}
-
-/// Trait implemented by numeric properties.
-pub trait NumericProperty {
-    /// The type the property is handling.
-    type Type;
-
-    /// Add the given |value| to the property current value.
-    fn add(&self, value: Self::Type);
-
-    /// Subtract the given |value| from the property current value.
-    fn subtract(&self, value: Self::Type);
-
-    /// Return the current value of the property for testing.
-    /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
-    /// It will be replaced by a more comprehensive Read API implementation.
-    fn get(&self) -> Result<Self::Type, Error>;
-}
-
-/// Inspect API Node data type.
-/// NOTE: do not rely on PartialEq implementation for true comparison. Instead
-/// leverage the reader.
-#[derive(Debug)]
-pub struct Node {
-    /// Index of the block in the VMO.
-    block_index: Option<u32>,
-
-    /// Reference to the VMO heap.
-    state: Option<Arc<Mutex<State>>>,
-}
-
 /// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
 /// the root node.
 impl Inspector {
@@ -127,6 +90,85 @@ impl Inspector {
     }
 }
 
+/// Trait implemented by all inspect types. It provides constructor functions that are not
+/// intended for use outside the crate.
+trait InspectType {
+    type Inner;
+
+    fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self;
+    fn new_no_op() -> Self;
+    fn unwrap_ref(&self) -> &Self::Inner;
+}
+
+/// Utility for generating the implementation of all inspect types:
+///  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
+///    appropiate internal constructors.
+///  - All Inspect Types derive PartialEq, Eq. This generates the dummy implementation
+///    for the wrapped type.
+macro_rules! inspect_type_impl {
+    ($(#[$attr:meta])* struct $name:ident) => {
+        paste::item! {
+            $(#[$attr])*
+            /// NOTE: do not rely on PartialEq implementation for true comparison.
+            /// Instead leverage the reader.
+            #[derive(Debug, PartialEq, Eq)]
+            pub struct $name {
+                inner: Option<[<Inner $name>]>,
+            }
+
+            #[cfg(test)]
+            impl $name {
+                fn get_block(&self) -> Option<crate::vmo::block::Block<Arc<Mapping>>> {
+                    self.inner.as_ref().and_then(|inner| {
+                        inner.state.lock().heap.get_block(inner.block_index).ok()
+                    })
+                }
+            }
+
+            impl InspectType for $name {
+                type Inner = [<Inner $name>];
+
+                fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
+                    Self {
+                        inner: Some([<Inner $name>] {
+                            state, block_index
+                        })
+                    }
+                }
+
+                fn new_no_op() -> Self {
+                    Self { inner: None }
+                }
+
+                fn unwrap_ref(&self) -> &Self::Inner {
+                    self.inner.as_ref().unwrap()
+                }
+            }
+
+            #[derive(Debug)]
+            struct [<Inner $name>] {
+                /// Index of the block in the VMO.
+                block_index: u32,
+
+                /// Reference to the VMO heap.
+                state: Arc<Mutex<State>>,
+            }
+
+            /// Inspect API types implement Eq,PartialEq returning true all the time so that
+            /// structs embedding inspect types can derive these traits as well.
+            /// IMPORTANT: Do not rely on these traits implementations for real comparisons
+            /// or validation tests, instead leverage the reader.
+            impl PartialEq for [<Inner $name>] {
+                fn eq(&self, _other: &[<Inner $name>]) -> bool {
+                    true
+                }
+            }
+
+            impl Eq for [<Inner $name>] {}
+        }
+    }
+}
+
 /// Utility for generating functions to create a numeric property.
 ///   `name`: identifier for the name (example: double)
 ///   `type`: the type of the numeric property (example: f64)
@@ -135,22 +177,25 @@ macro_rules! create_numeric_property_fn {
         paste::item! {
             pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
                 -> [<$name_cap Property>] {
-                self.state
-                    .as_ref()
-                    .ok_or(format_err!("No-Op node"))
-                    .and_then(|state| {
-                        state
+                    self.inner.as_ref().and_then(|inner| {
+                        inner.state
                             .lock()
-                            .[<create_ $name _metric>](name.as_ref(), value, self.block_index.unwrap())
+                            .[<create_ $name _metric>](name.as_ref(), value, inner.block_index)
+                            .map(|block| {
+                                [<$name_cap Property>]::new(inner.state.clone(), block.index())
+                            })
+                            .ok()
                     })
-                    .map(|block| {
-                        [<$name_cap Property>] {state: self.state.clone(), block_index: Some(block.index()) }
-                    })
-                    .unwrap_or([<$name_cap Property>] { state: None, block_index: None })
+                    .unwrap_or([<$name_cap Property>]::new_no_op())
             }
         }
     };
 }
+
+inspect_type_impl!(
+    /// Inspect API Node data type.
+    struct Node
+);
 
 impl Node {
     /// Allocate a new NODE object. Called through Inspector.
@@ -162,18 +207,23 @@ impl Node {
         state
             .lock()
             .create_node(name, parent_index)
-            .map(|block| Node { state: Some(state.clone()), block_index: Some(block.index()) })
-            .unwrap_or(Node { state: None, block_index: None })
+            .map(|block| Node::new(state.clone(), block.index()))
+            .unwrap_or(Node::new_no_op())
     }
 
     /// Add a child to this node.
     pub fn create_child(&self, name: impl AsRef<str>) -> Node {
-        self.state
+        self.inner
             .as_ref()
-            .ok_or(format_err!("No-Op node"))
-            .and_then(|state| state.lock().create_node(name.as_ref(), self.block_index.unwrap()))
-            .map(|block| Node { state: self.state.clone(), block_index: Some(block.index()) })
-            .unwrap_or(Node { state: None, block_index: None })
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_node(name.as_ref(), inner.block_index)
+                    .map(|block| Node::new(inner.state.clone(), block.index()))
+                    .ok()
+            })
+            .unwrap_or(Node::new_no_op())
     }
 
     /// Add a numeric property to this node: create_int, create_double,
@@ -184,73 +234,81 @@ impl Node {
 
     /// Add a string property to this node.
     pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
-        self.state
+        self.inner
             .as_ref()
-            .ok_or(format_err!("No-Op node"))
-            .and_then(|state| {
-                state.lock().create_property(
-                    name.as_ref(),
-                    value.as_ref().as_bytes(),
-                    PropertyFormat::String,
-                    self.block_index.unwrap(),
-                )
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_property(
+                        name.as_ref(),
+                        value.as_ref().as_bytes(),
+                        PropertyFormat::String,
+                        inner.block_index,
+                    )
+                    .map(|block| StringProperty::new(inner.state.clone(), block.index()))
+                    .ok()
             })
-            .map(|block| StringProperty {
-                state: self.state.clone(),
-                block_index: Some(block.index()),
-            })
-            .unwrap_or(StringProperty { state: None, block_index: None })
+            .unwrap_or(StringProperty::new_no_op())
     }
 
     /// Add a byte vector property to this node.
     pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
-        self.state
+        self.inner
             .as_ref()
-            .ok_or(format_err!("No-Op node"))
-            .and_then(|state| {
-                state.lock().create_property(
-                    name.as_ref(),
-                    value.as_ref(),
-                    PropertyFormat::Bytes,
-                    self.block_index.unwrap(),
-                )
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_property(
+                        name.as_ref(),
+                        value.as_ref(),
+                        PropertyFormat::Bytes,
+                        inner.block_index,
+                    )
+                    .map(|block| BytesProperty::new(inner.state.clone(), block.index()))
+                    .ok()
             })
-            .map(|block| BytesProperty {
-                state: self.state.clone(),
-                block_index: Some(block.index()),
-            })
-            .unwrap_or(BytesProperty { state: None, block_index: None })
+            .unwrap_or(BytesProperty::new_no_op())
     }
 }
 
 impl Drop for Node {
     fn drop(&mut self) {
-        self.state.as_ref().map(|state| {
-            state
+        self.inner.as_ref().map(|inner| {
+            inner
+                .state
                 .lock()
-                .free_value(self.block_index.unwrap())
-                .expect(&format!("Failed to free node index={}", self.block_index.unwrap()));
+                .free_value(inner.block_index)
+                .expect(&format!("Failed to free node index={}", inner.block_index));
         });
     }
 }
 
-macro_rules! dummy_trait_impls {
-    ($type:ident) => {
-        /// Inspect API types implement Eq,PartialEq returning true all the time so that
-        /// structs embedding inspect types can derive these traits as well.
-        /// IMPORTANT: Do not rely on these traits implementations for real comparisons
-        /// or validation tests, instead leverage the reader.
-        impl PartialEq for $type {
-            fn eq(&self, _other: &$type) -> bool {
-                true
-            }
-        }
+/// Trait implemented by properties.
+pub trait Property<'t> {
+    type Type;
 
-        impl Eq for $type {}
-    };
+    /// Set the property value to |value|.
+    fn set(&'t self, value: Self::Type);
 }
 
-dummy_trait_impls!(Node);
+/// Trait implemented by numeric properties.
+pub trait NumericProperty {
+    /// The type the property is handling.
+    type Type;
+
+    /// Add the given |value| to the property current value.
+    fn add(&self, value: Self::Type);
+
+    /// Subtract the given |value| from the property current value.
+    fn subtract(&self, value: Self::Type);
+
+    /// Return the current value of the property for testing.
+    /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
+    /// It will be replaced by a more comprehensive Read API implementation.
+    fn get(&self) -> Result<Self::Type, Error>;
+}
 
 /// Utility for generating numeric property functions (example: set, add, subtract)
 ///   `fn_name`: the name of the function to generate (example: set)
@@ -260,8 +318,8 @@ macro_rules! numeric_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::item! {
             fn $fn_name(&self, value: $type) {
-                if let Some(ref state) = self.state {
-                    state.lock().[<$fn_name _ $name _metric>](self.block_index.unwrap(), value)
+                if let Some(ref inner) = self.inner {
+                    inner.state.lock().[<$fn_name _ $name _metric>](inner.block_index, value)
                         .unwrap_or_else(|e| {
                             fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
@@ -277,17 +335,10 @@ macro_rules! numeric_property_fn {
 macro_rules! numeric_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
-            /// Inspect API Numeric Property data type.
-            /// NOTE: do not rely on PartialEq implementation for true comparison.
-            /// Instead leverage the reader.
-            #[derive(Debug)]
-            pub struct [<$name_cap Property>] {
-                /// Index of the block in the VMO.
-                block_index: Option<u32>,
-
-                /// Reference to the VMO heap.
-                state: Option<Arc<Mutex<State>>>,
-            }
+            inspect_type_impl!(
+                /// Inspect API Numeric Property data type.
+                struct [<$name_cap Property>]
+            );
 
             impl<'t> Property<'t> for [<$name_cap Property>] {
                 type Type = $type;
@@ -301,74 +352,21 @@ macro_rules! numeric_property {
                 numeric_property_fn!(subtract, $type, $name);
 
                 fn get(&self) -> Result<$type, Error> {
-                    if let Some(ref state) = self.state {
-                        state.lock().[<get_ $name _metric>](self.block_index.unwrap())
+                    if let Some(ref inner) = self.inner {
+                        inner.state.lock().[<get_ $name _metric>](inner.block_index)
                     } else {
                         Err(format_err!("Property is No-Op"))
                     }
                 }
             }
 
-            dummy_trait_impls!([<$name_cap Property>]);
-
             impl Drop for [<$name_cap Property>] {
                 fn drop(&mut self) {
-                    self.state.as_ref().map(|state| {
-                        state
+                    self.inner.as_ref().map(|inner| {
+                        inner.state
                             .lock()
-                            .free_value(self.block_index.unwrap())
-                            .expect(&format!("Failed to free property index={}", self.block_index.unwrap()));
-                    });
-                }
-            }
-        }
-    };
-}
-
-macro_rules! property {
-    ($name:ident, $type:expr, $bytes:expr) => {
-        paste::item! {
-            /// Inspect API Property data type.
-            /// NOTE: do not rely on PartialEq implementation for true comparison.
-            /// Instead leverage the reader.
-            #[derive(Debug)]
-            pub struct [<$name Property>] {
-                /// Index of the block in the VMO.
-                block_index: Option<u32>,
-
-                /// Reference to the VMO heap.
-                state: Option<Arc<Mutex<State>>>,
-            }
-
-            impl [<$name Property>] {
-                /// FOR TEST ONLY. Excavates block_index from [<$name Property>].
-                #[cfg(test)]
-                pub fn block_index(&self) -> u32 {
-                    self.block_index.unwrap()
-                }
-            }
-
-            impl<'t> Property<'t> for [<$name Property>] {
-                type Type = &'t $type;
-
-                fn set(&'t self, value: &'t $type) {
-                    if let Some(ref state) = self.state {
-                        state.lock().set_property(self.block_index.unwrap(), $bytes)
-                            .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
-                    }
-                }
-
-            }
-
-            dummy_trait_impls!([<$name Property>]);
-
-            impl Drop for [<$name Property>] {
-                fn drop(&mut self) {
-                    self.state.as_ref().map(|state| {
-                        state
-                            .lock()
-                            .free_property(self.block_index.unwrap())
-                            .expect(&format!("Failed to free property index={}", self.block_index.unwrap()));
+                            .free_value(inner.block_index)
+                            .expect(&format!("Failed to free property index={}", inner.block_index));
                     });
                 }
             }
@@ -379,6 +377,52 @@ macro_rules! property {
 numeric_property!(int, Int, i64);
 numeric_property!(uint, Uint, u64);
 numeric_property!(double, Double, f64);
+
+/// Utility for generating a numeric property datatype impl
+///   `name`: the readble name of the type of the function (example: double)
+///   `type`: the type of the argument of the function to generate (example: f64)
+///   `bytes`: an expression to get the bytes of the property
+macro_rules! property {
+    ($name:ident, $type:expr, $bytes:expr) => {
+        paste::item! {
+            inspect_type_impl!(
+                /// Inspect API Property data type.
+                struct [<$name Property>]
+            );
+
+            impl [<$name Property>] {
+                /// FOR TEST ONLY. Excavates block_index from [<$name Property>].
+                #[cfg(test)]
+                pub fn block_index(&self) -> u32 {
+                    self.inner.as_ref().unwrap().block_index
+                }
+            }
+
+            impl<'t> Property<'t> for [<$name Property>] {
+                type Type = &'t $type;
+
+                fn set(&'t self, value: &'t $type) {
+                    if let Some(ref inner) = self.inner {
+                        inner.state.lock().set_property(inner.block_index, $bytes)
+                            .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
+                    }
+                }
+
+            }
+
+            impl Drop for [<$name Property>] {
+                fn drop(&mut self) {
+                    self.inner.as_ref().map(|inner| {
+                        inner.state
+                            .lock()
+                            .free_property(inner.block_index)
+                            .expect(&format!("Failed to free property index={}", inner.block_index));
+                    });
+                }
+            }
+        }
+    };
+}
 
 property!(String, str, value.as_bytes());
 property!(Bytes, [u8], value);
@@ -396,8 +440,22 @@ mod tests {
         let test_object = Inspector::new().unwrap();
         assert_eq!(test_object.vmo.get_size().unwrap(), constants::DEFAULT_VMO_SIZE_BYTES as u64);
         let root_name_block =
-            test_object.root().state.as_ref().unwrap().lock().heap.get_block(2).unwrap();
+            test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+    }
+
+    #[test]
+    fn test_no_op() {
+        let inspector = Inspector::new_with_size(4096).unwrap();
+        // Make the VMO full.
+        let nodes = (0..126).map(|_| inspector.root().create_child("test")).collect::<Vec<Node>>();
+        let root_block = inspector.root().get_block().unwrap();
+
+        assert!(nodes.iter().all(|node| node.inner.is_some()));
+        assert_eq!(root_block.child_count().unwrap(), 126);
+        assert!(nodes.iter().all(|node| node.inner.is_some()));
+        let no_op_node = inspector.root().create_child("no-op-child");
+        assert!(no_op_node.inner.is_none());
     }
 
     #[test]
@@ -405,7 +463,7 @@ mod tests {
         let test_object = Inspector::new_with_size(8192).unwrap();
         assert_eq!(test_object.vmo.get_size().unwrap(), 8192);
         let root_name_block =
-            test_object.root().state.as_ref().unwrap().lock().heap.get_block(2).unwrap();
+            test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
 
         // If size is not a multiple of 4096, it'll be rounded up.
@@ -422,7 +480,7 @@ mod tests {
         // Note, the small size we request should be rounded up to a full 4kB page.
         let (vmo, root_node) = Inspector::new_root(100).unwrap();
         assert_eq!(vmo.get_size().unwrap(), 4096);
-        let root_name_block = root_node.state.as_ref().unwrap().lock().heap.get_block(2).unwrap();
+        let root_name_block = root_node.unwrap_ref().state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
@@ -431,20 +489,12 @@ mod tests {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        let node_block = node.get_block().unwrap();
         assert_eq!(node_block.block_type(), BlockType::NodeValue);
         assert_eq!(node_block.child_count().unwrap(), 0);
         {
             let child = node.create_child("child");
-            let child_block = node
-                .state
-                .as_ref()
-                .unwrap()
-                .lock()
-                .heap
-                .get_block(child.block_index.unwrap())
-                .unwrap();
+            let child_block = child.get_block().unwrap();
             assert_eq!(child_block.block_type(), BlockType::NodeValue);
             assert_eq!(child_block.child_count().unwrap(), 0);
             assert_eq!(node_block.child_count().unwrap(), 1);
@@ -457,18 +507,10 @@ mod tests {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        let node_block = node.get_block().unwrap();
         {
             let property = node.create_double("property", 1.0);
-            let property_block = node
-                .state
-                .as_ref()
-                .unwrap()
-                .lock()
-                .heap
-                .get_block(property.block_index.unwrap())
-                .unwrap();
+            let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::DoubleValue);
             assert_eq!(property_block.double_value().unwrap(), 1.0);
             assert_eq!(node_block.child_count().unwrap(), 1);
@@ -491,18 +533,10 @@ mod tests {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        let node_block = node.get_block().unwrap();
         {
             let property = node.create_int("property", 1);
-            let property_block = node
-                .state
-                .as_ref()
-                .unwrap()
-                .lock()
-                .heap
-                .get_block(property.block_index.unwrap())
-                .unwrap();
+            let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::IntValue);
             assert_eq!(property_block.int_value().unwrap(), 1);
             assert_eq!(node_block.child_count().unwrap(), 1);
@@ -525,18 +559,10 @@ mod tests {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        let node_block = node.get_block().unwrap();
         {
             let property = node.create_uint("property", 1);
-            let property_block = node
-                .state
-                .as_ref()
-                .unwrap()
-                .lock()
-                .heap
-                .get_block(property.block_index.unwrap())
-                .unwrap();
+            let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::UintValue);
             assert_eq!(property_block.uint_value().unwrap(), 1);
             assert_eq!(node_block.child_count().unwrap(), 1);
@@ -559,18 +585,10 @@ mod tests {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        let node_block = node.get_block().unwrap();
         {
             let property = node.create_string("property", "test");
-            let property_block = node
-                .state
-                .as_ref()
-                .unwrap()
-                .lock()
-                .heap
-                .get_block(property.block_index.unwrap())
-                .unwrap();
+            let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
             assert_eq!(property_block.property_format().unwrap(), PropertyFormat::String);
@@ -587,18 +605,10 @@ mod tests {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+        let node_block = node.get_block().unwrap();
         {
             let property = node.create_bytes("property", b"test");
-            let property_block = node
-                .state
-                .as_ref()
-                .unwrap()
-                .lock()
-                .heap
-                .get_block(property.block_index.unwrap())
-                .unwrap();
+            let property_block = property.get_block().unwrap();
             assert_eq!(property_block.block_type(), BlockType::PropertyValue);
             assert_eq!(property_block.property_total_length().unwrap(), 4);
             assert_eq!(property_block.property_format().unwrap(), PropertyFormat::Bytes);
@@ -616,7 +626,7 @@ mod tests {
         let state = get_state(mapping.clone());
         let node = Node::allocate(state, "root", constants::HEADER_INDEX);
         let node_block =
-            node.state.as_ref().unwrap().lock().heap.get_block(node.block_index.unwrap()).unwrap();
+            node.unwrap_ref().state.lock().heap.get_block(node.unwrap_ref().block_index).unwrap();
         {
             let _string_property =
                 node.create_string(String::from("string_property"), String::from("test"));
