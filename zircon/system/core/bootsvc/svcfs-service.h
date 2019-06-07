@@ -11,6 +11,7 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
 
 #include "util.h"
 
@@ -48,6 +49,9 @@ fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, 
 // Create a service to retrieve ZBI items.
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map);
+
+// Create a service to provide the kernel log.
+fbl::RefPtr<fs::Service> CreateLogService(async_dispatcher_t* dispatcher, const zx::debuglog& log);
 
 // Create a service to provide the root job.
 fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);

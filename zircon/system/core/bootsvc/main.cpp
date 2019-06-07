@@ -29,18 +29,22 @@
 namespace {
 
 // Wire up stdout so that printf() and friends work.
-void SetupStdout() {
-    zx::debuglog h;
-    if (zx::debuglog::create(zx::resource(), 0, &h) < 0) {
-        return;
+zx_status_t SetupStdout(const zx::debuglog& log) {
+    zx::debuglog dup;
+    zx_status_t status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+    if (status != ZX_OK) {
+        return status;
     }
     fdio_t* logger = nullptr;
-    zx_status_t status = fdio_create(h.release(), &logger);
+    status = fdio_create(dup.release(), &logger);
     if (status != ZX_OK) {
-        return;
+        return status;
     }
-    close(1);
-    fdio_bind_to_fd(logger, 1, 0);
+    int fd = fdio_bind_to_fd(logger, 1, 0);
+    if (fd != 1) {
+        return ZX_ERR_BAD_STATE;
+    }
+    return ZX_OK;
 }
 
 // Load the boot arguments from bootfs and environment variables.
@@ -107,7 +111,8 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::
 //   BOOTSVC_ROOT_RESOURCE_CHANNEL_HND
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
-                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc) {
+                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
+                       const zx::debuglog& log) {
     const char* bootsvc_next = getenv("bootsvc.next");
     if (bootsvc_next == nullptr) {
         bootsvc_next = "bin/devcoordinator";
@@ -172,12 +177,12 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
     ZX_ASSERT(count <= fbl::count_of(nametable));
     launchpad_set_nametable(lp, count, nametable);
 
-    zx::debuglog debuglog;
-    status = zx::debuglog::create(zx::resource(), 0, &debuglog);
+    zx::debuglog log_dup;
+    status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
     if (status != ZX_OK) {
-        launchpad_abort(lp, status, "bootsvc: cannot create debuglog handle");
+        launchpad_abort(lp, status, "bootsvc: cannot duplicate debuglog handle");
     } else {
-        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO | 0));
+        launchpad_add_handle(lp, log_dup.release(), PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO));
     }
 
     const char* errmsg;
@@ -193,7 +198,15 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
 } // namespace
 
 int main(int argc, char** argv) {
-    SetupStdout();
+    // NOTE: This will be the only source of zx::debuglog in the system.
+    // Eventually, we will receive this through a startup handle from userboot.
+    zx::debuglog log;
+    zx_status_t status = zx::debuglog::create(zx::resource(), 0, &log);
+    ZX_ASSERT(status == ZX_OK);
+
+    status = SetupStdout(log);
+    ZX_ASSERT(status == ZX_OK);
+
     printf("bootsvc: Starting...\n");
 
     // Close the loader-service channel so the service can go away.
@@ -208,7 +221,7 @@ int main(int argc, char** argv) {
     // Set up the bootfs service
     printf("bootsvc: Creating bootfs service...\n");
     fbl::RefPtr<bootsvc::BootfsService> bootfs_svc;
-    zx_status_t status = bootsvc::BootfsService::Create(loop.dispatcher(), &bootfs_svc);
+    status = bootsvc::BootfsService::Create(loop.dispatcher(), &bootfs_svc);
     ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
                   zx_status_get_string(status));
     status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
@@ -239,6 +252,7 @@ int main(int argc, char** argv) {
     svcfs_svc->AddService(fuchsia_boot_Items_Name,
                           bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo),
                                                       std::move(item_map)));
+    svcfs_svc->AddService(fuchsia_boot_Log_Name, bootsvc::CreateLogService(loop.dispatcher(), log));
     zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
     svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
                           bootsvc::CreateRootJobService(loop.dispatcher()));
@@ -261,7 +275,7 @@ int main(int argc, char** argv) {
     // it may issue requests to the loader, which runs in the async loop that
     // starts running after this.
     printf("bootsvc: Launching next process...\n");
-    std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc).detach();
+    std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::cref(log)).detach();
 
     // Begin serving the bootfs fileystem and loader
     loop.Run();

@@ -72,6 +72,21 @@ constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
 };
 
+zx_status_t LogGet(void* ctx, fidl_txn_t* txn) {
+    auto log = static_cast<const zx::debuglog*>(ctx);
+    zx::debuglog dup;
+    zx_status_t status = log->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to duplicate kernel log: %s\n", zx_status_get_string(status));
+        return status;
+    }
+    return fuchsia_boot_LogGet_reply(txn, dup.release());
+}
+
+constexpr fuchsia_boot_Log_ops kLogOps = {
+    .Get = LogGet,
+};
+
 zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
     zx::job dup;
     zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
@@ -136,6 +151,14 @@ fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::
             auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
             return fidl_bind(dispatcher, channel.release(), dispatch, &data, &kItemsOps);
         });
+}
+
+fbl::RefPtr<fs::Service> CreateLogService(async_dispatcher_t* dispatcher, const zx::debuglog& log) {
+    return fbl::MakeRefCounted<fs::Service>([dispatcher, &log](zx::channel channel) {
+        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Log_dispatch);
+        return fidl_bind(dispatcher, channel.release(), dispatch, const_cast<zx::debuglog*>(&log),
+                         &kLogOps);
+    });
 }
 
 fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher) {

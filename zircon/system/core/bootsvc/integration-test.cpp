@@ -18,6 +18,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
 #include <lib/zx/vmo.h>
 #include <unittest/unittest.h>
@@ -42,6 +43,7 @@ namespace {
 
 constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
+constexpr char kLogPath[] = "/bootsvc/" fuchsia_boot_Log_Name;
 constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
 
@@ -168,6 +170,27 @@ bool TestBootItems() {
     END_TEST;
 }
 
+// Make sure the fuchsia.boot.Log service works
+bool TestBootLog() {
+    BEGIN_TEST;
+
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we can open the fuchsia.boot.Log service.
+    status = fdio_service_connect(kLogPath, remote.release());
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we received a debuglog from the service.
+    zx::debuglog log;
+    status = fuchsia_boot_LogGet(local.get(), log.reset_and_get_address());
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_TRUE(log.is_valid());
+
+    END_TEST;
+}
+
 // Make sure the fuchsia.boot.RootJob service works
 bool TestBootRootJob() {
     BEGIN_TEST;
@@ -245,6 +268,7 @@ RUN_TEST(TestNamespace)
 RUN_TEST(TestArguments)
 RUN_TEST(TestBootArguments)
 RUN_TEST(TestBootItems)
+RUN_TEST(TestBootLog)
 RUN_TEST(TestBootRootJob)
 RUN_TEST(TestBootRootResource)
 RUN_TEST(TestVdsosPresent)

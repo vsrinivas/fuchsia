@@ -1,0 +1,12 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.boot;
+
+/// Protocol for providing the kernel log.
+[Discoverable, Layout = "Simple"]
+protocol Log {
+    /// Get the kernel |log|.
+    Get() -> (handle<debuglog> log);
+};
