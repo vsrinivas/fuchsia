@@ -9,6 +9,7 @@ group("experiences") {
   ]
 }
 
+# All of the tests to run for the experiences repo
 group("tests") {
   testonly = true
   deps = [
@@ -16,6 +17,7 @@ group("tests") {
   ]
 }
 
+# Dart unit tests which can run on the host or target
 group("dart_unittests") {
   testonly = true
   deps = [
