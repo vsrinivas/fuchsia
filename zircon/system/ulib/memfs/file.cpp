@@ -78,6 +78,7 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
     if ((status = vmo_.write(data, offset, writelen)) != ZX_OK) {
         return status;
     }
+    UpdateModified();
     *out_actual = writelen;
 
     if (newlen > length_) {
@@ -87,7 +88,6 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
         // short write because we're beyond the end of the permissible length
         return ZX_ERR_FILE_BIG;
     }
-    UpdateModified();
     return ZX_OK;
 }
 
