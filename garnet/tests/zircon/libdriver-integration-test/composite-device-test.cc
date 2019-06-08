@@ -84,10 +84,12 @@ TEST_F(CompositeDeviceTest, CreateTest) {
     RunPromise(std::move(promise));
 }
 
+// TODO(FLK-344): Re-enable once flake is fixed.
+//
 // This test creates the well-known composite, and force binds a test driver
 // stack to the composite.  It then forces one of the components to unbind.
 // It verifies that the composite mock-device's unbind hook is called.
-TEST_F(CompositeDeviceTest, UnbindComponent) {
+TEST_F(CompositeDeviceTest, DISABLED_UnbindComponent) {
     std::unique_ptr<RootMockDevice> root_device, composite_mock;
     std::unique_ptr<MockDevice> child_device1, child_device2, composite_child_device;
     fidl::InterfacePtr<fuchsia::io::Node> client;
