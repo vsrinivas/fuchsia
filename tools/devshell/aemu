@@ -5,10 +5,11 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-k] [-l] [-N] [-u <path>] [-e <directory>]
+## usage: fx aemu [-k] [-l] [-N [-I <ifname>]] [-u <path>] [-e <directory>] [--audio]
 ##   -k use KVM
 ##   -l run headless
 ##   -N run with emulated nic via tun/tap
+##   -I <ifname> Uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
 ##   --audio run with audio hardware added to the virtual machine
@@ -20,6 +21,7 @@ source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 KVM=0
 NET=0
+IFNAME=""
 AUDIO=0
 HEADLESS=""
 AEMU_DIR=""
@@ -39,6 +41,10 @@ while [[ $# -ge 1 ]]; do
     ;;
   -N)
     NET=1
+    ;;
+  -I)
+    shift
+    IFNAME="$1"
     ;;
   -u)
     shift
@@ -89,9 +95,10 @@ else
 fi
 
 if (( $NET )); then
-  IFNAME=""
   if [[ "$(uname -s)" == "Darwin" ]]; then
-    IFNAME="tap0"
+    if [ -z "$IFNAME" ]; then
+      IFNAME="tap0"
+    fi
     if [[ ! -c "/dev/$IFNAME" ]]; then
       echo "To use aemu with networking on macOS, install the tun/tap driver:"
       echo "http://tuntaposx.sourceforge.net/download.xhtml"
@@ -103,7 +110,9 @@ if (( $NET )); then
       exit 1
     fi
   else
-    IFNAME="qemu"
+    if [ -z "$IFNAME" ]; then
+      IFNAME="qemu"
+    fi
     TAP_IFS=$(ip tuntap show 2>/dev/null)
     if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
       echo "To use aemu with networking on Linux, configure tun/tap:"
