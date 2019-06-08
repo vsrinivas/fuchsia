@@ -85,11 +85,12 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 
 	// TODO: pass this directly from a file.
 	config := target.QEMUConfig{
-		CPU:    cmd.cpu,
-		Memory: cmd.memory,
-		Path:   cmd.qemuBinDir,
-		Target: cmd.targetArch,
-		KVM:    cmd.enableKVM,
+		CPU:            cmd.cpu,
+		Memory:         cmd.memory,
+		Path:           cmd.qemuBinDir,
+		Target:         cmd.targetArch,
+		KVM:            cmd.enableKVM,
+		UserNetworking: true,
 	}
 	if cmd.minFSImage != "" {
 		config.MinFS = &target.MinFS{

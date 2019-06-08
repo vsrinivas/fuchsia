@@ -66,6 +66,9 @@ type QEMUConfig struct {
 	// KVM specifies whether to enable hardware virtualization acceleration.
 	KVM bool `json:"kvm"`
 
+	// Whether User networking is enabled; if false, a Tap interface will be used.
+	UserNetworking bool `json:"user_networking"`
+
 	// MinFS is the filesystem to mount as a device.
 	MinFS *MinFS `json:"minfs,omitempty"`
 }
@@ -162,15 +165,18 @@ func (t *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 		})
 	}
 
-	networks := []qemu.Netdev{
-		qemu.Netdev{
-			ID: "net0",
-			Tap: &qemu.NetdevTap{
-				Name: defaultInterfaceName,
-			},
-			MAC: defaultMACAddr,
-		},
+	netdev := qemu.Netdev{
+		ID:  "net0",
+		MAC: defaultMACAddr,
 	}
+	if t.config.UserNetworking {
+		netdev.User = &qemu.NetdevUser{}
+	} else {
+		netdev.Tap = &qemu.NetdevTap{
+			Name: defaultInterfaceName,
+		}
+	}
+	networks := []qemu.Netdev{netdev}
 
 	config := qemu.Config{
 		Binary:   qemuSystem,
