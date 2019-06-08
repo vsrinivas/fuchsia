@@ -216,7 +216,6 @@ group("all") {
     "//garnet/packages/prod:bluetooth_intel",
     "//garnet/packages/prod:bluetooth_profiles",
     "//garnet/packages/prod:broadcom",
-    "//garnet/packages/prod:build_info",
     "//garnet/packages/prod:chrealm",
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:cobalt_client",
@@ -496,13 +495,6 @@ group("cmdutils") {
     "//garnet/bin/uname",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:vim",
-  ]
-}
-
-group("build_info") {
-  testonly = true
-  public_deps = [
-    "//garnet:build-info",
   ]
 }
 

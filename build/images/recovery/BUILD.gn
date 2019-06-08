@@ -7,7 +7,7 @@ import("//build/images/assemble_system.gni")
 import("//garnet/build/pkgfs.gni")
 
 recovery_packages = [
-  "//garnet:build-info",
+  "//build/info:build-info",
   "//garnet/bin/appmgr:appmgr_scheme_config",
   "//garnet/bin/appmgr",
   "//garnet/bin/netcfg:config",

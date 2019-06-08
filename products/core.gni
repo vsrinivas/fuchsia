@@ -15,6 +15,7 @@ meta_package_labels += [
 ]
 
 base_package_labels += [
+  "//build/info:build-info",
   "//garnet/packages/config:kernel_crash_checker",
   "//garnet/packages/prod:crashpad_agent",
   "//garnet/packages/prod:feedback_agent",
