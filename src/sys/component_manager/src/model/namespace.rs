@@ -188,27 +188,22 @@ impl IncomingNamespace {
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let capability: cm_rust::Capability = use_.clone().into();
-        let route_open_fn = Box::new(
-            move |_flags: u32,
-                  _mode: u32,
-                  _relative_path: String,
-                  server_end: ServerEnd<NodeMarker>| {
-                let capability = capability.clone();
-                let model = model.clone();
-                let abs_moniker = abs_moniker.clone();
-                fasync::spawn(async move {
-                    let res = await!(route_service(
-                        &model,
-                        &capability,
-                        abs_moniker.clone(),
-                        server_end.into_channel()
-                    ));
-                    if let Err(e) = res {
-                        error!("failed to route service for component {}: {:?}", abs_moniker, e);
-                    }
-                });
-            },
-        );
+        let route_service_fn = Box::new(move |server_end: ServerEnd<NodeMarker>| {
+            let capability = capability.clone();
+            let model = model.clone();
+            let abs_moniker = abs_moniker.clone();
+            fasync::spawn(async move {
+                let res = await!(route_service(
+                    &model,
+                    &capability,
+                    abs_moniker.clone(),
+                    server_end.into_channel()
+                ));
+                if let Err(e) = res {
+                    error!("failed to route service for component {}: {:?}", abs_moniker, e);
+                }
+            });
+        });
 
         let service_dir = svc_dirs
             .entry(use_.target_path.dirname.clone())
@@ -216,7 +211,7 @@ impl IncomingNamespace {
         service_dir
             .add_entry(
                 &use_.target_path.basename,
-                directory_broker::DirectoryBroker::new(route_open_fn),
+                directory_broker::DirectoryBroker::new_service_broker(route_service_fn),
             )
             .map_err(|(status, _)| status)
             .expect("could not add service to directory");

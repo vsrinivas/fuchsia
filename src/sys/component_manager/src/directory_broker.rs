@@ -18,22 +18,19 @@ use {
 /// request for this directory entry is received the given ServerEnd is passed into the closure,
 /// which will presumably make an open request somewhere else and forward on the ServerEnd.
 pub struct DirectoryBroker {
-    /// The parameters are as follows:
-    ///  flags: u32
-    ///  mode: u32
-    ///  relative_path: String
-    ///  server_end: ServerEnd<NodeMarker>
-    route_open: Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>,
+    route_service: Box<FnMut(ServerEnd<NodeMarker>) + Send>,
     entry_info: fvfs::directory::entry::EntryInfo,
 }
 
 impl DirectoryBroker {
-    /// new will create a new DirectoryBroker to forward directory open requests.
-    pub fn new(
-        route_open: Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>,
+    /// new_service_broker will create a new DirectoryBroker to proxy service requests. Whenever an
+    /// open call is received the given closure is called with the new ServerEnd. If the entry_info
+    /// of this node is inspected, it will tell the caller that it is a service node.
+    pub fn new_service_broker(
+        route_service: Box<FnMut(ServerEnd<NodeMarker>) + Send>,
     ) -> DirectoryBroker {
         return DirectoryBroker {
-            route_open,
+            route_service,
             entry_info: fvfs::directory::entry::EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_SERVICE),
         };
     }
@@ -41,15 +38,19 @@ impl DirectoryBroker {
 impl DirectoryEntry for DirectoryBroker {
     fn open(
         &mut self,
-        flags: u32,
-        mode: u32,
+        _flags: u32,
+        _mode: u32,
         path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let relative_path = path.collect::<Vec<&str>>().join("/");
-        (self.route_open)(flags, mode, relative_path, server_end);
+        if let Some(_) = path.next() {
+            // Services do not support nested paths, so we just are going to close server_end.
+            // It will be closed by the destructor as it will go out of scope.
+            // TODO: we probably want to support nested paths
+            return;
+        }
+        (self.route_service)(server_end);
     }
-
     fn entry_info(&self) -> fvfs::directory::entry::EntryInfo {
         return fvfs::directory::entry::EntryInfo::new(
             self.entry_info.inode(),

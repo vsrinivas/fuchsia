@@ -108,7 +108,7 @@ impl OutDir {
                     pseudo_dir.add_entry("svc",
                             pseudo_directory! {
                                 "foo" =>
-                                    directory_broker::DirectoryBroker::new(Box::new(echo_server_fn)),
+                                    directory_broker::DirectoryBroker::new_service_broker(Box::new(echo_server_fn)),
                             })
                         .map_err(|(s,_)| s)
                         .expect("failed to add svc entry");
@@ -151,12 +151,7 @@ fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
 }
 
 /// Hosts a new service on server_end that implements fidl.examples.echo.Echo
-fn echo_server_fn(
-    _flags: u32,
-    _mode: u32,
-    _relative_path: String,
-    server_end: ServerEnd<NodeMarker>,
-) {
+fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
     fasync::spawn(async move {
         let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
