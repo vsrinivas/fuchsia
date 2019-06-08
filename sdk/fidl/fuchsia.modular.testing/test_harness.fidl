@@ -136,14 +136,6 @@ table TestHarnessSpec {
     /// Optional.
     6: EnvironmentServicesSpec env_services;
 
-    /// Suffix to the environment name.
-    /// The default environment name is 'mth_{random number from 0 to 99999}'.
-    /// When provided, the environment_suffix additionally appends a '_' and
-    /// the string to the end of the environment name.
-    ///
-    /// Optional.
-    7: string environment_suffix;
-
     /// DEPRECATED. Use |env_services.service_dir| to pass through services from
     /// parent environment.
     3: vector<string> env_services_to_inherit;

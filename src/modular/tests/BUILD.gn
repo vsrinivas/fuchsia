@@ -63,23 +63,6 @@ executable("queue_persistence_test") {
   ]
 }
 
-executable("sessionctl_test_v2") {
-  testonly = true
-  output_name = "sessionctl_test_v2"
-  sources = [
-    "sessionctl_test.cc",
-  ]
-  deps = [
-    "//peridot/bin/sessionctl:lib",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
 executable("session_shell_test") {
   testonly = true
 
@@ -260,7 +243,7 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "sessionctl_test_v2"
+      name = "story_shell_test"
       environments = basic_envs
     },
     {
@@ -277,7 +260,6 @@ test_package("modular_integration_tests") {
     ":queue_persistence_test",
     ":session_shell_test",
     ":story_shell_embedded_mod_test",
-    ":sessionctl_test_v2",
     ":story_shell_factory_test",
     ":story_shell_test",
     "//garnet/public/lib/callback",
