@@ -42,20 +42,23 @@ fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
     return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
   }
 
+  // zx_log_record_t has a flexible array member, so we need to allocate the
+  // buffer explicitly.
+  char buf[ZX_LOG_RECORD_MAX + 1];
+  zx_log_record_t* record = reinterpret_cast<zx_log_record_t*>(buf);
   std::string kernel_log;
-  zx_log_record_t record;
-  while (log.read(/*options=*/0, /*buffer=*/&record,
+  while (log.read(/*options=*/0, /*buffer=*/record,
                   /*buffer_size=*/ZX_LOG_RECORD_MAX) > 0) {
-    if (record.datalen && (record.data[record.datalen - 1] == '\n')) {
-      record.datalen--;
+    if (record->datalen && (record->data[record->datalen - 1] == '\n')) {
+      record->datalen--;
     }
-    record.data[record.datalen] = 0;
+    record->data[record->datalen] = 0;
 
     kernel_log += fxl::StringPrintf(
         "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-        static_cast<int>(record.timestamp / 1000000000ULL),
-        static_cast<int>((record.timestamp / 1000000ULL) % 1000ULL), record.pid,
-        record.tid, record.data);
+        static_cast<int>(record->timestamp / 1000000000ULL),
+        static_cast<int>((record->timestamp / 1000000ULL) % 1000ULL),
+        record->pid, record->tid, record->data);
   }
 
   fsl::SizedVmo vmo;
