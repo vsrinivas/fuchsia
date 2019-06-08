@@ -1121,9 +1121,9 @@ void OnRegsComplete(const Err& cmd_err, const RegisterSet& register_set,
   // because the register wasn't saved.
   if (show_non_topmost_warning) {
     OutputBuffer warning_out;
-    warning_out.Append(Syntax::kWarning, "⚠️  ");
+    warning_out.Append(Syntax::kWarning, GetExclamation());
     warning_out.Append(
-        "Stack frame is not topmost. Only saved registers will be "
+        " Stack frame is not topmost. Only saved registers will be "
         "available.\n");
     console->Output(warning_out);
   }

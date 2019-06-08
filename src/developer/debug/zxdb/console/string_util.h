@@ -21,6 +21,10 @@ std::string GetDisabledBreakpointMarker();
 // Returns a Unicode bullet in UTF-8.
 std::string GetBullet();
 
+// Returns the exclamation-point-in-triangle emoji. This includes a space
+// after it since this character is a wide emoji.
+std::string GetExclamation();
+
 // Returns the number of Unicode characters in the given UTF-8 string. This
 // attempts to predict how many spaces the given string will take up when
 // printed to a Unicode-aware text console.

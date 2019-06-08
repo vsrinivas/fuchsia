@@ -29,6 +29,13 @@ std::string GetBullet() {
   return std::string("\xe2\x80\xa2");
 }
 
+std::string GetExclamation() {
+  // U+26A0 WARNING SIGN, U+FE0F VARIATION SELECTOR 16
+  // (Without the variation selector this looks like a small black-and-white
+  // version. The variation selector selects the colored emoji variant.)
+  return std::string("⚠️ ");
+}
+
 size_t UnicodeCharWidth(const std::string& str) {
   size_t result = 0;
 

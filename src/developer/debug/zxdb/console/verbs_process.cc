@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -249,8 +250,8 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
     return err;
 
   // Output warning about this possibly not working.
-  OutputBuffer warning(Syntax::kWarning, "⚠  Warning: ");
-  warning.Append("Run won't work for many processes and components. "
+  OutputBuffer warning(Syntax::kWarning, GetExclamation());
+  warning.Append(" Run won't work for many processes and components. "
                  "See \"help run\".\n");
   Console::get()->Output(warning);
 
