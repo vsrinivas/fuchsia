@@ -163,6 +163,28 @@ enum Fruit : uint64 {
     END_TEST;
 }
 
+bool BadEnumShantBeNullable() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+enum NotNullable {
+    MEMBER = 1;
+};
+
+struct Struct {
+    NotNullable? not_nullable;
+};
+)FIDL");
+    ASSERT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_GE(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "example/NotNullable cannot be nullable");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(enums_tests)
@@ -175,5 +197,6 @@ RUN_TEST(BadEnumTestInferredUnsignedWithNegativeMember)
 RUN_TEST(BadEnumTestMemberOverflow)
 RUN_TEST(BadEnumTestDuplicateMember)
 RUN_TEST(GoodEnumTestKeywordNames)
+RUN_TEST(BadEnumShantBeNullable)
 
 END_TEST_CASE(enums_tests)

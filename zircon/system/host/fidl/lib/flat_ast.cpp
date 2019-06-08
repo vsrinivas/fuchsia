@@ -735,6 +735,7 @@ public:
             // inlined).
             break;
 
+        case Decl::Kind::kEnum:
         case Decl::Kind::kTable:
             if (nullability == types::Nullability::kNullable)
                 return CannotBeNullable(maybe_location);
