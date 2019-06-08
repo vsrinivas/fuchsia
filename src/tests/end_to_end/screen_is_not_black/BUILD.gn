@@ -27,6 +27,9 @@ dart_test("screen_is_not_black_test") {
 
     # Also runs on fyi builders in NUC environments, so it doesn't look empty
     # there, and we have a second data set of flakiness information if needed.
+    #
+    # TODO(INTK-1143): `e2e-terminal` will be changed to `e2e-fyi` soon. Once
+    # that ticket is closed, remove the `e2e-terminal` variant.
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
@@ -35,14 +38,33 @@ dart_test("screen_is_not_black_test") {
         "e2e-terminal",
       ]
     },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [
+        "e2e-fyi",
+      ]
+    },
 
     # The astro environment has tags as it is still to be run on an FYI builder.
+    #
+    # TODO(INTK-1143): `e2e-terminal` will be changed to `e2e-fyi` soon. Once
+    # that ticket is closed, remove the `e2e-terminal` variant.
     {
       dimensions = {
         device_type = "Astro"
       }
       tags = [
         "e2e-terminal",
+      ]
+    },
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+      tags = [
+        "e2e-fyi",
       ]
     },
   ]

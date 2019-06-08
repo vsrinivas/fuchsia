@@ -22,7 +22,7 @@ dart_test("voila_hello_world_test") {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
       }
-      tags = [ "e2e-workstation" ]
+      tags = [ "e2e-fyi" ]
     },
   ]
 }
