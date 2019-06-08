@@ -152,13 +152,16 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_list() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
         let dynamic_config = make_rule_config(rules.clone());
-        let state =
-            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+        ));
 
         let expected = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice").into(),
@@ -169,13 +172,16 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_reset_all() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
         let dynamic_config = make_rule_config(rules.clone());
-        let state =
-            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+        ));
         let mut service = RewriteService::new(state.clone());
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
@@ -190,13 +196,16 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_edit() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
         let dynamic_config = make_rule_config(rules.clone());
-        let state =
-            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+        ));
         let mut service = RewriteService::new(state.clone());
 
         let client1 = {
@@ -240,9 +249,12 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_list_and_edit() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![]);
-        let state =
-            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+        ));
         let mut service = RewriteService::new(state.clone());
 
         await!(verify_list_call(state.clone(), vec![]));

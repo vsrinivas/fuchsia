@@ -12,6 +12,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::vmo as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{StreamExt, TryFutureExt},
     parking_lot::RwLock,
@@ -51,8 +52,12 @@ fn main() -> Result<(), Error> {
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
+    let inspector = fuchsia_inspect::vmo::Inspector::new()
+        .context("pkg_resolver::main failed to create inspector")?;
+    let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
+
     let repo_manager = Arc::new(RwLock::new(load_repo_manager()));
-    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager()));
+    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
 
     let resolver_cb = {
         // Capture a clone of rewrite_manager's Arc so the new client callback has a copy from
@@ -97,6 +102,9 @@ fn main() -> Result<(), Error> {
         .add_fidl_service(resolver_cb)
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb);
+
+    inspector.export(&mut fs).context("pkg_resolver::main failed to export inspect VMO")?;
+
     fs.take_and_serve_directory_handle()?;
 
     let () = executor.run(fs.collect(), SERVER_THREADS);
@@ -122,8 +130,8 @@ fn load_repo_manager() -> RepositoryManager {
         .build()
 }
 
-fn load_rewrite_manager() -> RewriteManager {
-    RewriteManagerBuilder::new(DYNAMIC_RULES_PATH)
+fn load_rewrite_manager(node: inspect::Node) -> RewriteManager {
+    RewriteManagerBuilder::new(node, DYNAMIC_RULES_PATH)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {
                 fx_log_err!(

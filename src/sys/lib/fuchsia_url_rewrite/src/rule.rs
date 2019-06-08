@@ -5,6 +5,7 @@
 use {
     crate::errors::{RuleDecodeError, RuleParseError},
     fidl_fuchsia_pkg_rewrite as fidl,
+    fuchsia_inspect::vmo as inspect,
     fuchsia_url::pkg_url::{ParseError, PkgUrl},
     serde_derive::{Deserialize, Serialize},
     std::convert::TryFrom,
@@ -17,6 +18,15 @@ pub struct Rule {
     host_replacement: String,
     path_prefix_match: String,
     path_prefix_replacement: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RuleInspectState {
+    _host_match_property: inspect::StringProperty,
+    _host_replacement_property: inspect::StringProperty,
+    _path_prefix_match_property: inspect::StringProperty,
+    _path_prefix_replacement_property: inspect::StringProperty,
+    _node: inspect::Node,
 }
 
 /// Wraper for serializing rewrite rules to the on-disk JSON format.
@@ -111,6 +121,19 @@ impl Rule {
                 resource.to_owned(),
             ),
         })
+    }
+
+    pub fn create_inspect_state(&self, node: inspect::Node) -> RuleInspectState {
+        RuleInspectState {
+            _host_match_property: node.create_string("host_match", &self.host_match),
+            _host_replacement_property: node
+                .create_string("host_replacement", &self.host_replacement),
+            _path_prefix_match_property: node
+                .create_string("path_prefix_match", &self.path_prefix_match),
+            _path_prefix_replacement_property: node
+                .create_string("path_prefix_replacement", &self.path_prefix_replacement),
+            _node: node,
+        }
     }
 }
 
@@ -306,6 +329,8 @@ mod serde_tests {
 #[cfg(test)]
 mod rule_tests {
     use super::*;
+    use fuchsia_inspect::assert_inspect_tree;
+    use proptest::{prop_compose, proptest, proptest_helper};
 
     macro_rules! test_new_error {
         (
@@ -524,6 +549,63 @@ mod rule_tests {
                 "fuchsia-pkg://fuchsia.com" => Some(Err(ParseError::InvalidName)),
                 "fuchsia-pkg://fuchsia.com/foo" => Some(Err(ParseError::InvalidName)),
             ],
+        }
+    }
+
+    prop_compose! {
+        fn random_hostname()(s in "[a-z]{1,63}(\\.[a-z]{1,62}){0,3}") -> String {
+            s
+        }
+    }
+
+    prop_compose! {
+        fn random_path_prefix_no_ending_slash()(s in "(/[.--/]{1,10})+") -> String {
+            s
+        }
+    }
+
+    prop_compose! {
+        fn random_rule()(
+            host_match in random_hostname(),
+            host_replacement in random_hostname(),
+            mut path_prefix_match in random_path_prefix_no_ending_slash(),
+            mut path_prefix_replacment in random_path_prefix_no_ending_slash(),
+            append_slash_to_path_prefix in proptest::bool::ANY
+        ) -> Rule {
+            if append_slash_to_path_prefix {
+                path_prefix_match.push_str("/");
+                path_prefix_replacment.push_str("/");
+            }
+            Rule::new(
+                host_match,
+                host_replacement,
+                path_prefix_match,
+                path_prefix_replacment
+            ).expect("failed to create random rule")
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_create_inspect_state_passes_through_fields(
+            rule in random_rule()
+        ) {
+            let inspector = inspect::Inspector::new().expect("failed to create inspector");
+            let node = inspector.root().create_child("rule_node");
+
+            let _state = rule.create_inspect_state(node);
+
+            assert_inspect_tree!(
+                inspector,
+                root: {
+                    rule_node: {
+                        host_match: rule.host_match,
+                        host_replacement: rule.host_replacement,
+                        path_prefix_match: rule.path_prefix_match,
+                        path_prefix_replacement: rule.path_prefix_replacement,
+                    }
+                }
+            );
         }
     }
 }

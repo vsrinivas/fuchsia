@@ -13,9 +13,11 @@ rustc_library("fuchsia_url_rewrite") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/public/rust/fuchsia-inspect",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",

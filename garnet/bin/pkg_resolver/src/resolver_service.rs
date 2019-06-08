@@ -488,9 +488,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mock_amber() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("top-level-node");
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
+            RewriteManagerBuilder::new(node, &dynamic_rule_config).unwrap().build(),
         ));
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
@@ -519,9 +521,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("top-level-node");
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
+            RewriteManagerBuilder::new(node, &dynamic_rule_config).unwrap().build(),
         ));
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
@@ -543,9 +547,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_error() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("top-level-node");
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().build(),
+            RewriteManagerBuilder::new(node, &dynamic_rule_config).unwrap().build(),
         ));
         let packages = vec![
             Package::new("foo", "stable", &gen_merkle('a'), PackageKind::Ok),
@@ -575,6 +581,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_unknown_host() {
+        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let node = inspector.root().create_child("top-level-node");
         let rules = vec![fuchsia_url_rewrite::Rule::new(
             "example.com".to_owned(),
             "fuchsia.com".to_owned(),
@@ -584,7 +592,10 @@ mod tests {
         .unwrap()];
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(&dynamic_rule_config).unwrap().static_rules(rules).build(),
+            RewriteManagerBuilder::new(node, &dynamic_rule_config)
+                .unwrap()
+                .static_rules(rules)
+                .build(),
         ));
         let packages = vec![
             Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
