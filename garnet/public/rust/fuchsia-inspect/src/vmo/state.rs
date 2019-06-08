@@ -27,7 +27,7 @@ pub struct State {
 macro_rules! with_header_lock {
     ($self:ident, $code:block) => {{
         $self.header.lock_header()?;
-        let result = (|| $code)();
+        let result = $code;
         $self.header.unlock_header()?;
         result
     }};
@@ -280,7 +280,7 @@ impl State {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::vmo::reader::snapshot::Snapshot, failure::bail, std::convert::TryFrom};
+    use {super::*, crate::vmo::reader::snapshot::Snapshot, std::convert::TryFrom};
 
     #[test]
     fn test_create() {
@@ -675,14 +675,6 @@ mod tests {
         let snapshot = Snapshot::try_from(bytes).unwrap();
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
-    }
-
-    #[test]
-    fn test_with_header_lock() {
-        let state = get_state(4096);
-        let result: Result<(), Error> = (|| with_header_lock!(state, { bail!("some error") }))();
-        assert!(result.is_err());
-        assert!(state.header.check_locked(false).is_ok());
     }
 
     fn get_state(size: usize) -> State {
