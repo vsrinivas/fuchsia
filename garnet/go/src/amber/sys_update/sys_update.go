@@ -130,6 +130,13 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 		}
 
 		if upMon.needsUpdate(latestUpdateMerkle) {
+			if ver, err := getCurrentVersion(); err == nil {
+				log.Printf("current system version: %s", ver)
+			}
+			if ver, err := getUpdateVersion(); err == nil {
+				log.Printf("update system version: %s", ver)
+			}
+
 			log.Println("Performing GC")
 			upMon.d.GC()
 
@@ -157,9 +164,8 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 }
 
 func (upMon *SystemUpdateMonitor) Start() {
-	b, err := ioutil.ReadFile("/config/build-info/version")
-	if err == nil {
-		log.Printf("current system version: %s", bytes.TrimSpace(b))
+	if ver, err := getCurrentVersion(); err == nil {
+		log.Printf("current system version: %s", ver)
 	}
 
 	if !upMon.auto {
@@ -356,4 +362,14 @@ func packageDir(name, version string) string {
 func getUpdateMerkle() (string, error) {
 	b, err := ioutil.ReadFile(filepath.Join(packageDir(updateName, updateVersion), "meta"))
 	return string(b), err
+}
+
+func getUpdateVersion() (string, error) {
+	b, err := ioutil.ReadFile(filepath.Join(packageDir(updateName, updateVersion), "version"))
+	return string(bytes.TrimSpace(b)), err
+}
+
+func getCurrentVersion() (string, error) {
+	b, err := ioutil.ReadFile("/config/build-info/version")
+	return string(bytes.TrimSpace(b)), err
 }

@@ -17,6 +17,7 @@ import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/shell_commands.gni")
 import("//build/images/zxcrypt.gni")
+import("//build/info/info.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_molecule.gni")
@@ -1422,6 +1423,13 @@ action("update.manifest") {
         "update_package.json",
       ]
     },
+
+    {
+      target = "version"
+      sources = [
+        rebase_path(build_info_files.version, "", root_build_dir),
+      ]
+    },
   ]
 
   foreach(image, images) {
@@ -1456,7 +1464,13 @@ action("update.manifest") {
 
   args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
   sources = []
-  deps = []
+
+  deps = [
+    # This dep ensures the version file included below is always generated,
+    # which is presently significant only really for bringup, as bringup still
+    # attempts to build this target.
+    "//build/info:build-info",
+  ]
 
   foreach(entry, update_manifest) {
     entry_source = ""
