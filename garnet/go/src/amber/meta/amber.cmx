@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "build-info",
             "config-data",
             "deprecated-misc-storage",
             "shell",

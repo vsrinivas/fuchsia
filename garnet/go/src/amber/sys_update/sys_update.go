@@ -9,6 +9,7 @@ package sys_update
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -156,6 +157,11 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 }
 
 func (upMon *SystemUpdateMonitor) Start() {
+	b, err := ioutil.ReadFile("/config/build-info/version")
+	if err == nil {
+		log.Printf("current system version: %s", bytes.TrimSpace(b))
+	}
+
 	if !upMon.auto {
 		return
 	}

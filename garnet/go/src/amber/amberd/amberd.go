@@ -112,11 +112,7 @@ func Main() {
 		return err
 	})
 
-	go func() {
-		log.Printf("monitoring for updates")
-		supMon.Start()
-		log.Println("system update monitor exited")
-	}()
+	supMon.Start()
 
 	for i := 1; i < runtime.NumCPU(); i++ {
 		go fidl.Serve()
