@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "ftdi.h"
+#include "ftdi-i2c.h"
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -276,6 +277,19 @@ zx_status_t FtdiDevice::Reset() {
                                   0);
 }
 
+zx_status_t FtdiDevice::SetBitMode(uint8_t line_mask, uint8_t mode) {
+    uint16_t val = static_cast<uint16_t>(line_mask | (mode << 8));
+    zx_status_t status = usb_client_.ControlOut(USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                                                kFtdiSioSetBitmode, val, 0, ZX_TIME_INFINITE, NULL,
+                                                0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "FTDI set bitmode failed with %d\n", status);
+        return status;
+    }
+
+    return status;
+}
+
 zx_status_t FtdiDevice::SerialImplConfig(uint32_t baudrate, uint32_t flags) {
     if (baudrate != baudrate_) {
         return SetBaudrate(baudrate);
@@ -324,6 +338,38 @@ void FtdiDevice::DdkUnbind() {
 void FtdiDevice::DdkRelease() {
     cancel_thread_.join();
     delete this;
+}
+
+zx_status_t FtdiDevice::FidlCreateI2c(void* ctx, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
+                                      const fuchsia_hardware_ftdi_I2cDevice* device) {
+    FtdiDevice* ftdi = static_cast<FtdiDevice*>(ctx);
+
+    // Set the chip to run in MPSSE mode.
+    zx_status_t status = ftdi->SetBitMode(0, 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "FTDI: setting bitmode 0 failed\n");
+        return status;
+    }
+    status = ftdi->SetBitMode(0, 2);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "FTDI: setting bitmode 2 failed\n");
+        return status;
+    }
+
+    status = ftdi_mpsse::FtdiI2c::Create(ftdi->zxdev(), layout, device);
+    return status;
+}
+
+zx_status_t FtdiDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    static const fuchsia_hardware_ftdi_Device_ops_t ftdi_fidl_ops = {
+        .CreateI2C = FidlCreateI2c,
+    };
+    return fuchsia_hardware_ftdi_Device_dispatch(this, txn, msg, &ftdi_fidl_ops);
+}
+
+zx_status_t ftdi_bind_fail(zx_status_t status) {
+    zxlogf(ERROR, "ftdi_bind failed: %d\n", status);
+    return status;
 }
 
 zx_status_t FtdiDevice::Bind() {

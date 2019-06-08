@@ -9,6 +9,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/mutex.h>
+#include <fuchsia/hardware/ftdi/c/fidl.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
@@ -72,7 +73,8 @@ constexpr uint8_t kFtdiSioWriteEepromRequest      = 0x91;
 constexpr uint8_t kFtdiSioEraseEepromRequest      = 0x92;
 
 class FtdiDevice;
-using DeviceType = ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Writable, ddk::Readable>;
+using DeviceType = ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable,
+                               ddk::Readable>;
 class FtdiDevice : public DeviceType, public ddk::SerialImplProtocol<FtdiDevice,
                                                                      ddk::base_protocol> {
 public:
@@ -87,6 +89,8 @@ public:
     zx_status_t DdkWrite(const void* buf, size_t length, zx_off_t off,
                          size_t* actual);
     zx_status_t DdkRead(void* data, size_t len, zx_off_t off, size_t* actual);
+
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     static zx_status_t Bind(zx_device_t* device);
 
@@ -109,6 +113,8 @@ public:
     zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
 private:
+    static zx_status_t FidlCreateI2c(void* ctx, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
+                                     const fuchsia_hardware_ftdi_I2cDevice* device);
     zx_status_t Reset();
     zx_status_t SetBaudrate(uint32_t baudrate);
     zx_status_t CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_t divisor,
@@ -124,6 +130,7 @@ private:
     // |need_to_notify_cb|. Any caller of this is responsible for calling NotifyCallback
     // once the lock is released.
     void CheckStateLocked() __TA_REQUIRES(mutex_);
+    zx_status_t SetBitMode(uint8_t line_mask, uint8_t mode);
 
     ddk::UsbProtocolClient usb_client_ = {};
 
