@@ -29,7 +29,6 @@ dart_test("sl4f_test") {
         device_type = "Astro"
       }
       tags = [
-        "astro",
         "e2e-terminal",
       ]
     },
