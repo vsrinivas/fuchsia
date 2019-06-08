@@ -17,5 +17,10 @@ library("driver-integration-test") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  public_deps = [
+    "$zx/system/ulib/ddk:headers",
+    "$zx/system/ulib/devmgr-integration-test:headers",
+    "$zx/system/ulib/fbl:headers",
+  ]
   configs += [ "$zx/public/gn/config:static-libc++" ]
 }

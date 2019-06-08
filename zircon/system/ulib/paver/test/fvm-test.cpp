@@ -5,11 +5,15 @@
 #include <lib/paver/paver.h>
 
 #include <fs-management/fvm.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <zxtest/zxtest.h>
 
 #include "test/test-utils.h"
 
 namespace {
+
+using devmgr_integration_test::IsolatedDevmgr;
+using devmgr_integration_test::RecursiveWaitForFile;
 
 constexpr size_t kSliceSize = kBlockSize * 2;
 constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
@@ -19,7 +23,14 @@ constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 class FvmTest : public zxtest::Test {
 public:
     FvmTest() {
-        BlockDevice::Create(kFvmType, &device_);
+        devmgr_launcher::Args args;
+        args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+        args.driver_search_paths.push_back("/boot/driver");
+        args.use_system_svchost = true;
+        args.disable_block_watcher = true;
+        ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
+
+        BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &device_);
         ASSERT_TRUE(device_);
     }
 
@@ -32,6 +43,7 @@ public:
     }
 
 private:
+    IsolatedDevmgr devmgr_;
     std::unique_ptr<BlockDevice> device_;
 };
 

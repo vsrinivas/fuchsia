@@ -22,24 +22,6 @@
 
 namespace {
 
-void InsertTestDevices(fbl::StringPiece path) {
-    zx::channel device, device_remote;
-    ASSERT_EQ(zx::channel::create(0, &device, &device_remote), ZX_OK);
-    ASSERT_EQ(fdio_service_connect(path.data(), device_remote.release()), ZX_OK);
-
-    char topo_path[PATH_MAX] = {};
-    zx_status_t call_status;
-    size_t path_len;
-    ASSERT_EQ(fuchsia_device_ControllerGetTopologicalPath(device.get(), &call_status, topo_path,
-                                                          sizeof(topo_path) - 1, &path_len),
-              ZX_OK);
-    ASSERT_EQ(call_status, ZX_OK);
-    topo_path[path_len] = 0;
-
-    fbl::String topo_path_str(topo_path);
-    test_block_devices.push_back(std::move(topo_path_str));
-}
-
 void CreateBadBlockMap(void* buffer) {
     // Set all entries in first BBT to be good blocks.
     constexpr uint8_t kBlockGood = 0;
@@ -60,36 +42,12 @@ void CreateBadBlockMap(void* buffer) {
 
 } // namespace
 
-fbl::Vector<fbl::String> test_block_devices;
-
-bool FilterRealBlockDevices(const fbl::unique_fd& fd) {
-    char topo_path[PATH_MAX] = {'\0'};
-
-    fzl::UnownedFdioCaller caller(fd.get());
-    zx_status_t call_status;
-    size_t path_len;
-    zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-        caller.borrow_channel(), &call_status, topo_path, sizeof(topo_path) - 1,
-        &path_len);
-    if (status != ZX_OK || call_status != ZX_OK) {
-        return true;
-    }
-    topo_path[path_len] = 0;
-
-    for (const auto& device : test_block_devices) {
-        if (strstr(topo_path, device.data()) == topo_path) {
-            return false;
-        }
-    }
-    return true;
-}
-
-void BlockDevice::Create(const uint8_t* guid, fbl::unique_ptr<BlockDevice>* device) {
+void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
+                         fbl::unique_ptr<BlockDevice>* device) {
     ramdisk_client_t* client;
-    ASSERT_EQ(ramdisk_create_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
-                                       &client),
+    ASSERT_EQ(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, kBlockCount, guid,
+                                          ZBI_PARTITION_GUID_LEN, &client),
               ZX_OK);
-    InsertTestDevices(ramdisk_get_path(client));
     device->reset(new BlockDevice(client));
 }
 

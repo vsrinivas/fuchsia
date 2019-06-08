@@ -21,13 +21,10 @@ constexpr uint32_t kPagesPerBlock = 16;
 constexpr uint32_t kSkipBlockSize = kPageSize * kPagesPerBlock;
 constexpr uint32_t kNumBlocks = 20;
 
-extern fbl::Vector<fbl::String> test_block_devices;
-
-bool FilterRealBlockDevices(const fbl::unique_fd& fd);
-
 class BlockDevice {
 public:
-    static void Create(const uint8_t* guid, fbl::unique_ptr<BlockDevice>* device);
+    static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
+                       fbl::unique_ptr<BlockDevice>* device);
 
     ~BlockDevice() {
         ramdisk_destroy(client_);
@@ -48,7 +45,7 @@ public:
     static void Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
                        fbl::unique_ptr<SkipBlockDevice>* device);
 
-    fbl::unique_fd devfs_root() { return fbl::unique_fd(dup(ctl_->devfs_root().get())); }
+    fbl::unique_fd devfs_root() { return ctl_->devfs_root().duplicate(); }
 
     fzl::VmoMapper& mapper() { return mapper_; }
 

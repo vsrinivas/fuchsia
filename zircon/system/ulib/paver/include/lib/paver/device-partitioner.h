@@ -242,10 +242,9 @@ public:
     zx_status_t GetBlockSize(const fbl::unique_fd& device_fd, uint32_t* block_size) const override;
 
 private:
-    SkipBlockDevicePartitioner(fbl::unique_fd devfs_root, fbl::unique_fd block_devfs_root)
-        : devfs_root_(std::move(devfs_root)), block_devfs_root_(std::move(block_devfs_root)) {}
+    SkipBlockDevicePartitioner(fbl::unique_fd devfs_root)
+        : devfs_root_(std::move(devfs_root)) {}
 
     fbl::unique_fd devfs_root_;
-    fbl::unique_fd block_devfs_root_;
 };
 } // namespace paver

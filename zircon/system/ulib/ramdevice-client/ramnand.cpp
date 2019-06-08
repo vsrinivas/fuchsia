@@ -35,6 +35,8 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
     args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
+    args.use_system_svchost = true;
+    args.disable_block_watcher = true;
 
     devmgr_integration_test::IsolatedDevmgr devmgr;
     zx_status_t st = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
