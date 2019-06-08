@@ -142,9 +142,6 @@ class PaverServiceTest : public zxtest::Test {
 public:
     PaverServiceTest()
         : loop_(&kAsyncLoopConfigAttachToThread), fake_sysinfo_(loop_.dispatcher()) {
-        test_block_devices.reset();
-        paver::TestBlockFilter = FilterRealBlockDevices;
-
         zx::channel server;
         ASSERT_OK(zx::channel::create(0, &client_, &server));
 
@@ -203,10 +200,10 @@ protected:
 
 
 TEST_F(PaverServiceTest, QueryActiveConfiguration) {
-    zx_status_t status;
-    fuchsia_paver_Configuration* configuration;
-    ASSERT_OK(fuchsia_paver_PaverQueryActiveConfiguration(client_.get(), &status, &configuration));
-    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+    fuchsia_paver_Paver_QueryActiveConfiguration_Result result;
+    ASSERT_OK(fuchsia_paver_PaverQueryActiveConfiguration(client_.get(), &result));
+    ASSERT_EQ(result.tag, fuchsia_paver_Paver_QueryActiveConfiguration_ResultTag_err);
+    ASSERT_EQ(result.err, ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PaverServiceTest, SetActiveConfiguration) {
@@ -261,8 +258,9 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
     ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_RECOVERY,
                                             fuchsia_paver_Asset_KERNEL, &payload, &status));
     ASSERT_OK(status);
-    ValidateUnwritten(8, 4);
-    ValidateWritten(12, 2);
+    ValidateUnwritten(8, 2);
+    ValidateWritten(10, 2);
+    ValidateUnwritten(12, 2);
 }
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
