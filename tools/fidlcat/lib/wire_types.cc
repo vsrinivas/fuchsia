@@ -48,6 +48,9 @@ std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder,
   offset += sizeof(string_length);
 
   auto result = std::make_unique<StringField>(name, this, string_length);
+
+  // Don't need to check return value because the effects of returning false are
+  // dealt with in DecodeNullable.
   result->DecodeNullable(decoder, offset);
   return result;
 }
@@ -159,6 +162,9 @@ std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder,
 
   auto result =
       std::make_unique<VectorField>(name, this, size, component_type_.get());
+
+  // Don't need to check return value because the effects of returning false are
+  // dealt with in DecodeNullable.
   result->DecodeNullable(decoder, offset);
   return result;
 }

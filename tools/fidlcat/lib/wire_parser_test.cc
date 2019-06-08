@@ -384,6 +384,16 @@ TEST_DECODE_WIRE(
         FieldToPretty("i32", "int32", 1) + " }",
     TwoStringVectorFromVals("harpo", "chico"), 1)
 
+TEST_DECODE_WIRE(TwoStringVectors, TwoStringVectors,
+                 R"({"v_1":["harpo","chico"],"v_2":["groucho","zeppo"]})",
+                 "{\n  v_1: #gre#vector<string>#rst# = "
+                 R"([ #red#"harpo"#rst#, #red#"chico"#rst# ])"
+                 "\n  v_2: #gre#vector<string>#rst# = "
+                 R"([ #red#"groucho"#rst#, #red#"zeppo"#rst# ])"
+                 "\n}",
+                 TwoStringVectorFromVals("harpo", "chico"),
+                 TwoStringVectorFromVals("groucho", "zeppo"))
+
 // Struct Tests
 
 namespace {

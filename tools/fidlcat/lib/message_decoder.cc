@@ -36,15 +36,24 @@ MessageDecoder::MessageDecoder(const MessageDecoder* container,
       handle_pos_(container->handle_pos_),
       output_errors_(container->output_errors_) {}
 
+void MessageDecoder::ProcessSecondaryObjects() {
+  for (size_t i = 0; i < secondary_objects_.size(); ++i) {
+    MessageDecoder decoder(this, end_byte_pos_ - byte_pos_,
+                           end_handle_pos_ - handle_pos_);
+    secondary_objects_[i]->DecodeContent(&decoder);
+    decoder.ProcessSecondaryObjects();
+    GotoNextObjectOffset(decoder.byte_pos() - byte_pos_);
+    SkipHandles(decoder.handle_pos() - handle_pos_);
+  }
+}
+
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(
     const Struct& message_format) {
   std::unique_ptr<Object> result =
       message_format.DecodeObject(this, /*name=*/"", /*type=*/nullptr,
                                   /*offset=*/0, /*nullable=*/false);
   GotoNextObjectOffset(message_format.size());
-  for (size_t i = 0; i < secondary_objects_.size(); ++i) {
-    secondary_objects_[i]->DecodeContent(this);
-  }
+  ProcessSecondaryObjects();
   return result;
 }
 
@@ -52,9 +61,7 @@ std::unique_ptr<Field> MessageDecoder::DecodeField(std::string_view name,
                                                    const Type* type) {
   std::unique_ptr<Field> result = type->Decode(this, name, 0);
   GotoNextObjectOffset(type->InlineSize());
-  for (size_t i = 0; i < secondary_objects_.size(); ++i) {
-    secondary_objects_[i]->DecodeContent(this);
-  }
+  ProcessSecondaryObjects();
   return result;
 }
 

@@ -30,10 +30,12 @@ enum class Direction { kUnknown, kClient, kServer };
 class MessageDecoder {
  public:
   MessageDecoder(const fidl::Message& message, bool output_errors = true);
-  MessageDecoder(const MessageDecoder* container, uint64_t num_bytes,
-                 uint64_t num_handles);
+  MessageDecoder(const MessageDecoder* container, uint64_t num_bytes_remaining,
+                 uint64_t num_handles_remaining);
 
   const uint8_t* byte_pos() const { return byte_pos_; }
+
+  const zx_handle_t* handle_pos() const { return handle_pos_; }
 
   size_t current_offset() const { return byte_pos_ - start_byte_pos_; }
 
@@ -116,6 +118,9 @@ class MessageDecoder {
   std::unique_ptr<Field> DecodeField(std::string_view name, const Type* type);
 
  private:
+  // Iterates over the secondary objects and decodes them.
+  void ProcessSecondaryObjects();
+
   // The start of the message.
   const uint8_t* const start_byte_pos_;
   const zx_handle_t* const start_handle_pos_;
