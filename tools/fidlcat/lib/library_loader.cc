@@ -330,6 +330,10 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable,
     xuni->second->DecodeTypes();
     return std::make_unique<XUnionType>(std::ref(*xuni->second), is_nullable);
   }
+  const Interface* ifc;
+  if (GetInterfaceByName(identifier, &ifc)) {
+    return std::make_unique<HandleType>();
+  }
   return std::make_unique<RawType>(inline_size);
 }
 

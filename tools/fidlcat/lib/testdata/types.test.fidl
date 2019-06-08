@@ -60,6 +60,7 @@ protocol FidlcatTestInterface {
     Handle(handle<channel> ch);
     NullableHandle(handle<channel>? ch);
     HandleStruct(handle_struct hs);
+    Protocol(ParamProtocol ch);
 };
 
 struct primitive_types {
@@ -124,4 +125,8 @@ struct handle_struct {
     handle<channel> h1;
     handle<channel> h2;
     handle<channel> h3;
+};
+
+protocol ParamProtocol {
+    Method();
 };

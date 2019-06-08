@@ -882,6 +882,12 @@ class HandleSupport {
     pretty_ = "{ " + HandleToPretty("ch", out2_.get()) + " }";
   }
   zx::channel handle() { return std::move(out2_); }
+
+  template <typename Interface>
+  fidl::InterfaceHandle<Interface> interface() {
+    return fidl::InterfaceHandle<Interface>(std::move(out2_));
+  }
+
   std::string GetJSON() { return json_; }
   std::string GetPretty() { return pretty_; }
 
@@ -904,6 +910,13 @@ TEST_F(WireParserTest, ParseNullableHandle) {
   HandleSupport support;
   TEST_DECODE_WIRE_BODY(NullableHandle, support.GetJSON(), support.GetPretty(),
                         support.handle());
+}
+
+TEST_F(WireParserTest, ParseProtocol) {
+  HandleSupport support;
+  TEST_DECODE_WIRE_BODY(
+      Protocol, support.GetJSON(), support.GetPretty(),
+      support.interface<test::fidlcat::examples::ParamProtocol>());
 }
 
 namespace {
