@@ -5,14 +5,13 @@
 driver("mt8167-tdm-output") {
   sources = [
     "audio-stream-out.cpp",
-    "tas5782.cpp",
-    "tas5805.cpp",
+    "codec.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.composite",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/audio/lib/codec-interface",
     "$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",

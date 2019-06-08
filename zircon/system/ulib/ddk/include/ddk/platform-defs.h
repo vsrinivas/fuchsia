@@ -180,6 +180,8 @@ __BEGIN_CDECLS
 #define PDEV_VID_TI                 16
 #define PDEV_PID_TI_LP8556          1
 #define PDEV_DID_TI_BACKLIGHT       1
+#define PDEV_DID_TI_TAS5805         2
+#define PDEV_DID_TI_TAS5782         3
 
 // Test
 #define PDEV_VID_TEST               17

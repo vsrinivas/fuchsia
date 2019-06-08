@@ -4,30 +4,39 @@
 
 #pragma once
 
-#include <memory>
-
 #include <ddk/debug.h>
-#include <ddk/protocol/i2c.h>
-#include <ddktl/pdev.h>
+#include <ddktl/protocol/codec.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 
 namespace audio {
 namespace mt8167 {
 
-// TODO(andresoportus): Move this to channel communication as we separate codecs from controllers.
-class Codec {
-public:
-    virtual ~Codec() = default;
+static constexpr sample_format_t wanted_sample_format = SAMPLE_FORMAT_PCM_SIGNED;
+static constexpr justify_format_t wanted_justify_format = JUSTIFY_FORMAT_JUSTIFY_I2S;
+static constexpr uint32_t wanted_frame_rate = 48000;
+static constexpr uint8_t wanted_bits_per_sample = 32;
+static constexpr uint8_t wanted_bits_per_channel = 32;
 
-    virtual bool ValidGain(float gain) const = 0;
-    virtual zx_status_t SetGain(float gain) = 0;
-    virtual zx_status_t Init() = 0;
-    virtual zx_status_t Reset() = 0;
-    virtual zx_status_t Standby() = 0;
-    virtual zx_status_t ExitStandby() = 0;
-    virtual float GetGain() const = 0;
-    virtual float GetMinGain() const = 0;
-    virtual float GetMaxGain() const = 0;
-    virtual float GetGainStep() const = 0;
+struct Codec {
+    static constexpr uint32_t kCodecTimeoutSecs = 1;
+
+    struct AsyncOut {
+        sync_completion_t completion;
+        zx_status_t status;
+    };
+
+    zx_status_t Reset();
+    zx_status_t SetNotBridged();
+    void CheckAndSetUnb();
+    zx_status_t CheckExpectedDaiFormat();
+    zx_status_t SetDaiFormat(dai_format_t format);
+    zx_status_t GetGainFormat(gain_format_t* format);
+    zx_status_t GetGainState(gain_state_t* state);
+    zx_status_t SetGainState(gain_state_t* state);
+
+    ddk::CodecProtocolClient proto_client_;
 };
+
 } // namespace mt8167
 } // namespace audio

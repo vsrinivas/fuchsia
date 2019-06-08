@@ -12,30 +12,28 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/metadata/audio.h>
 #include <ddk/protocol/composite.h>
+#include <ddktl/metadata/audio.h>
+#include <fbl/array.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 
-#include "tas5782.h"
-#include "tas5805.h"
-
-namespace audio {
-namespace mt8167 {
+namespace {
 
 enum {
     COMPONENT_PDEV,
-    COMPONENT_I2C,
-    COMPONENT_RESET_GPIO, // This is optional
-    COMPONENT_MUTE_GPIO, // This is optional
+    COMPONENT_CODEC,
     COMPONENT_COUNT,
 };
-
 
 // Expects L+R.
 constexpr size_t kNumberOfChannels = 2;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
 constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels,
                                                                  PAGE_SIZE);
+} // namespace
+
+namespace audio {
+namespace mt8167 {
 
 Mt8167AudioStreamOut::Mt8167AudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {
@@ -72,23 +70,8 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         return status;
     }
 
-    // TODO(andresoportus): Move GPIO control to codecs?
-    // Not all codecs have these GPIOs.
-    if (components[COMPONENT_RESET_GPIO]) {
-        codec_reset_ = components[COMPONENT_RESET_GPIO];
-    }
-    if (components[COMPONENT_MUTE_GPIO]) {
-        codec_mute_ = components[COMPONENT_MUTE_GPIO];
-    }
-
-    if (codec == metadata::Codec::Tas5782) {
-        zxlogf(INFO, "audio: using TAS5782 codec\n");
-        codec_ = Tas5782::Create(components[COMPONENT_I2C], 0);
-    } else if (codec == metadata::Codec::Tas5805) {
-        zxlogf(INFO, "audio: using TAS5805 codec\n");
-        codec_ = Tas5805::Create(components[COMPONENT_I2C], 0);
-    } else {
-        zxlogf(ERROR, "%s could not get codec\n", __FUNCTION__);
+    codec_.proto_client_ = components[COMPONENT_CODEC];
+    if (!pdev_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
@@ -119,15 +102,35 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if (codec_reset_.is_valid()) {
-        codec_reset_.Write(0); // Reset.
-        // Delay to be safe.
-        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
-        codec_reset_.Write(1); // Set to "not reset".
-        // Delay to be safe.
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    status = codec_.Reset();
+    if (status != ZX_OK) {
+        return status;
     }
-    codec_->Init();
+
+    status = codec_.SetNotBridged();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = codec_.CheckExpectedDaiFormat();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    uint32_t channels[] = {0, 1};
+    dai_format_t format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use_list = channels;
+    format.channels_to_use_count = countof(channels);
+    format.sample_format = wanted_sample_format;
+    format.justify_format = wanted_justify_format;
+    format.frame_rate = wanted_frame_rate;
+    format.bits_per_sample = wanted_bits_per_sample;
+    format.bits_per_channel = wanted_bits_per_channel;
+    status = codec_.SetDaiFormat(format);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     // Initialize the ring buffer
     InitBuffer(kRingBufferSize);
@@ -159,14 +162,25 @@ zx_status_t Mt8167AudioStreamOut::Init() {
         return status;
     }
 
-    // Set our gain capabilities.
-    cur_gain_state_.cur_gain = codec_->GetGain();
-    cur_gain_state_.cur_mute = false;
-    cur_gain_state_.cur_agc = false;
+    // Get our gain capabilities.
+    gain_state_t state = {};
+    status = codec_.GetGainState(&state);
+    if (status != ZX_OK) {
+        return status;
+    }
+    cur_gain_state_.cur_gain = state.gain;
+    cur_gain_state_.cur_mute = state.muted;
+    cur_gain_state_.cur_agc = state.agc_enable;
 
-    cur_gain_state_.min_gain = codec_->GetMinGain();
-    cur_gain_state_.max_gain = codec_->GetMaxGain();
-    cur_gain_state_.gain_step = codec_->GetGainStep();
+    gain_format_t format = {};
+    status = codec_.GetGainFormat(&format);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    cur_gain_state_.min_gain = format.min_gain;
+    cur_gain_state_.max_gain = format.max_gain;
+    cur_gain_state_.gain_step = format.gain_step;
     cur_gain_state_.can_mute = false;
     cur_gain_state_.can_agc = false;
 
@@ -187,7 +201,7 @@ zx_status_t Mt8167AudioStreamOut::InitPost() {
     }
 
     dispatcher::Timer::ProcessHandler thandler(
-        [thiz = this](dispatcher::Timer * timer)->zx_status_t {
+        [thiz = this](dispatcher::Timer* timer) -> zx_status_t {
             OBTAIN_EXECUTION_DOMAIN_TOKEN(t, thiz->domain_);
             return thiz->ProcessRingNotification();
         });
@@ -219,21 +233,19 @@ zx_status_t Mt8167AudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtRe
 }
 
 void Mt8167AudioStreamOut::ShutdownHook() {
-    if (codec_mute_.is_valid()) {
-        codec_mute_.Write(0); // Set to "mute".
-    }
-    if (codec_reset_.is_valid()) {
-        codec_reset_.Write(0); // Keep the codec in reset.
-    }
     mt_audio_->Shutdown();
 }
 
 zx_status_t Mt8167AudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-    zx_status_t status = codec_->SetGain(req.gain);
+    gain_state_t state;
+    state.gain = req.gain;
+    state.muted = cur_gain_state_.cur_mute;
+    state.agc_enable = cur_gain_state_.cur_agc;
+    auto status = codec_.SetGainState(&state);
     if (status != ZX_OK) {
         return status;
     }
-    cur_gain_state_.cur_gain = codec_->GetGain();
+    cur_gain_state_.cur_gain = state.gain;
     return ZX_OK;
 }
 
@@ -327,8 +339,8 @@ zx_status_t Mt8167AudioStreamOut::InitBuffer(size_t size) {
     return ZX_OK;
 }
 
-} // mt8167
-} // audio
+} // namespace mt8167
+} // namespace audio
 
 __BEGIN_CDECLS
 

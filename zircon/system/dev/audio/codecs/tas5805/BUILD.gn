@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("tas5805") {
+  sources = [
+    "tas5805.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("tas5805-test") {
+  output_name = "tas5805-test"
+  sources = [
+    "tas5805-test.cpp",
+    "tas5805.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
