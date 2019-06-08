@@ -21,7 +21,6 @@
 
 namespace {
 
-constexpr uint8_t kFunctionNumber = SDIO_FN_2;
 constexpr size_t kBlockSize = 256;
 
 constexpr uint8_t kPacketTypeCmd   = 1;
@@ -176,7 +175,7 @@ zx_status_t BtHciMediatek::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t BtHciMediatek::Init(const zx::vmo& fw_vmo, size_t fw_size) {
-    zx_status_t status = sdio_.GetInBandIntr(kFunctionNumber, &sdio_int_);
+    zx_status_t status = sdio_.GetInBandIntr(&sdio_int_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to get SDIO interrupt\n", __FILE__);
         return status;
@@ -187,17 +186,17 @@ zx_status_t BtHciMediatek::Init(const zx::vmo& fw_vmo, size_t fw_size) {
         return status;
     }
 
-    if ((status = sdio_.EnableFn(kFunctionNumber)) != ZX_OK) {
+    if ((status = sdio_.EnableFn()) != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to set function\n", __FILE__);
         return status;
     }
 
-    if ((status = sdio_.EnableFnIntr(kFunctionNumber)) != ZX_OK) {
+    if ((status = sdio_.EnableFnIntr()) != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to enable function interrupt\n", __FILE__);
         return status;
     }
 
-    if ((status = sdio_.UpdateBlockSize(kFunctionNumber, kBlockSize, false)) != ZX_OK) {
+    if ((status = sdio_.UpdateBlockSize(kBlockSize, false)) != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to update block size\n", __FILE__);
         return status;
     }
@@ -294,7 +293,7 @@ zx_status_t BtHciMediatek::OpenChannel(zx::channel* in_channel, zx_handle_t in, 
 }
 
 zx_status_t BtHciMediatek::CardEnableInterrupt() {
-    zx_status_t status = sdio_.DoRwByte(true, kFunctionNumber, kChlpcrAddress,
+    zx_status_t status = sdio_.DoRwByte(true, kChlpcrAddress,
                                         kChlpcrFwIntSet | kChlpcrFwIntClear, nullptr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to enable card interrupt\n", __FILE__);
@@ -316,7 +315,7 @@ zx_status_t BtHciMediatek::CardEnableInterrupt() {
 }
 
 zx_status_t BtHciMediatek::CardDisableInterrupt() {
-    zx_status_t status = sdio_.DoRwByte(true, kFunctionNumber, kChlpcrAddress, 0, nullptr);
+    zx_status_t status = sdio_.DoRwByte(true, kChlpcrAddress, 0, nullptr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to disable card interrupt\n", __FILE__);
     }
@@ -335,7 +334,7 @@ zx_status_t BtHciMediatek::CardRead32(uint32_t address, uint32_t* value) {
     txn.virt_size = sizeof(*value);
     txn.buf_offset = 0;
 
-    zx_status_t status = sdio_.DoRwTxn(kFunctionNumber, &txn);
+    zx_status_t status = sdio_.DoRwTxn(&txn);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to read card register\n", __FILE__);
     }
@@ -357,7 +356,7 @@ zx_status_t BtHciMediatek::CardWrite32(uint32_t address, uint32_t value) {
     txn.virt_size = sizeof(value);
     txn.buf_offset = 0;
 
-    zx_status_t status = sdio_.DoRwTxn(kFunctionNumber, &txn);
+    zx_status_t status = sdio_.DoRwTxn(&txn);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Failed to write card register\n", __FILE__);
     }
@@ -465,7 +464,7 @@ zx_status_t BtHciMediatek::CardSetPower(bool on) {
     txn.virt_buffer = packet;
     txn.virt_size = sizeof(packet);
     txn.buf_offset = 0;
-    zx_status_t status = sdio_.DoRwTxn(kFunctionNumber, &txn);
+    zx_status_t status = sdio_.DoRwTxn(&txn);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return status;
@@ -495,7 +494,7 @@ zx_status_t BtHciMediatek::CardSetPower(bool on) {
     txn.virt_buffer = packet;
     txn.virt_size = recv_size;
     txn.buf_offset = 0;
-    if ((status = sdio_.DoRwTxn(kFunctionNumber, &txn)) != ZX_OK) {
+    if ((status = sdio_.DoRwTxn(&txn)) != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return ZX_ERR_IO;
     }
@@ -568,7 +567,7 @@ zx_status_t BtHciMediatek::CardSendVendorPacket(uint8_t id, uint8_t ocf, uint8_t
     txn.use_dma = true;
     txn.dma_vmo = vmo.get();
     txn.buf_offset = 0;
-    if ((status = sdio_.DoRwTxn(kFunctionNumber, &txn)) != ZX_OK) {
+    if ((status = sdio_.DoRwTxn(&txn)) != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return status;
     }
@@ -592,7 +591,7 @@ zx_status_t BtHciMediatek::CardSendVendorPacket(uint8_t id, uint8_t ocf, uint8_t
     txn.use_dma = true;
     txn.dma_vmo = vmo.get();
     txn.buf_offset = 0;
-    if ((status = sdio_.DoRwTxn(kFunctionNumber, &txn)) != ZX_OK) {
+    if ((status = sdio_.DoRwTxn(&txn)) != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return status;
     } else if (GetSizeField(packet_buf) != recv_size) {
@@ -775,7 +774,7 @@ zx_status_t BtHciMediatek::CardSendFirmwarePart(zx_handle_t vmo, uint8_t* buffer
     txn.use_dma = true;
     txn.dma_vmo = vmo;
     txn.buf_offset = 0;
-    zx_status_t status = sdio_.DoRwTxn(kFunctionNumber, &txn);
+    zx_status_t status = sdio_.DoRwTxn(&txn);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return status;
@@ -797,7 +796,7 @@ zx_status_t BtHciMediatek::CardSendFirmwarePart(zx_handle_t vmo, uint8_t* buffer
     txn.use_dma = true;
     txn.dma_vmo = vmo;
     txn.buf_offset = 0;
-    if ((status = sdio_.DoRwTxn(kFunctionNumber, &txn)) != ZX_OK) {
+    if ((status = sdio_.DoRwTxn(&txn)) != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return status;
     } else if (memcmp(buffer, kFirmwarePartResponse, sizeof(kFirmwarePartResponse)) != 0) {
@@ -856,7 +855,7 @@ zx_status_t BtHciMediatek::HandleCardInterrupt() {
     txn.use_dma = true;
     txn.dma_vmo = vmo.get();
     txn.buf_offset = 0;
-    if ((status = sdio_.DoRwTxn(kFunctionNumber, &txn)) != ZX_OK) {
+    if ((status = sdio_.DoRwTxn(&txn)) != ZX_OK) {
         zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
         return status;
     } else if (GetSizeField(header_buf) != recv_size) {
@@ -971,7 +970,7 @@ zx_status_t BtHciMediatek::HostToCardPacket(const zx::channel& channel, uint8_t 
         txn.use_dma = true;
         txn.dma_vmo = vmo.get();
         txn.buf_offset = 0;
-        if ((status = sdio_.DoRwTxn(kFunctionNumber, &txn)) != ZX_OK) {
+        if ((status = sdio_.DoRwTxn(&txn)) != ZX_OK) {
             zxlogf(ERROR, "%s: SDIO transaction failed\n", __FILE__);
             return status;
         }
@@ -1111,5 +1110,5 @@ static constexpr zx_driver_ops_t bt_hci_mediatek_driver_ops = []() {
 ZIRCON_DRIVER_BEGIN(bt_hci_mediatek, bt_hci_mediatek_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_SDIO_VID, 0x037a),
     BI_ABORT_IF(NE, BIND_SDIO_PID, 0x7668),
-    BI_MATCH_IF(EQ, BIND_SDIO_FUNCTION, kFunctionNumber),
+    BI_MATCH_IF(EQ, BIND_SDIO_FUNCTION, SDIO_FN_2),
 ZIRCON_DRIVER_END(bt_hci_mediatek)

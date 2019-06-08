@@ -33,9 +33,8 @@ public:
 
     const sdio_protocol_t* GetProto() { return &proto_; }
 
-    MockSdio& ExpectReadByte(uint8_t fn_idx, uint32_t addr, uint8_t byte) {
+    MockSdio& ExpectReadByte(uint32_t addr, uint8_t byte) {
         SdioRwExpectation exp{
-            .fn_idx = fn_idx,
             .addr = addr,
             .incr = false,
             .write = false,
@@ -46,9 +45,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectWriteByte(uint8_t fn_idx, uint32_t addr, uint8_t byte) {
+    MockSdio& ExpectWriteByte(uint32_t addr, uint8_t byte) {
         SdioRwExpectation exp{
-            .fn_idx = fn_idx,
             .addr = addr,
             .incr = false,
             .write = true,
@@ -59,9 +57,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectFifoRead(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
+    MockSdio& ExpectFifoRead(uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
-            .fn_idx = fn_idx,
             .addr = addr,
             .incr = false,
             .write = false,
@@ -72,9 +69,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectFifoWrite(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
+    MockSdio& ExpectFifoWrite(uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
-            .fn_idx = fn_idx,
             .addr = addr,
             .incr = false,
             .write = true,
@@ -85,9 +81,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectRead(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
+    MockSdio& ExpectRead(uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
-            .fn_idx = fn_idx,
             .addr = addr,
             .incr = true,
             .write = false,
@@ -98,9 +93,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectWrite(uint8_t fn_idx, uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
+    MockSdio& ExpectWrite(uint32_t addr, fbl::Vector<uint8_t> buf, bool exact) {
         SdioRwExpectation exp{
-            .fn_idx = fn_idx,
             .addr = addr,
             .incr = true,
             .write = true,
@@ -111,8 +105,8 @@ public:
         return *this;
     }
 
-    MockSdio& ExpectGetInBandIntr(uint8_t fn_idx, const zx::interrupt& interrupt) {
-        ExpectGetInBandIntrHelper(fn_idx, interrupt);
+    MockSdio& ExpectGetInBandIntr(const zx::interrupt& interrupt) {
+        ExpectGetInBandIntrHelper(interrupt);
         return *this;
     }
 
@@ -128,51 +122,51 @@ public:
     }
 
     // TODO(bradenkell): Add support for testing these.
-    zx_status_t SdioEnableFn(uint8_t fn_idx) {
+    zx_status_t SdioEnableFn() {
         return ZX_OK;
     }
 
-    zx_status_t SdioDisableFn(uint8_t fn_idx) {
+    zx_status_t SdioDisableFn() {
         return ZX_OK;
     }
 
-    zx_status_t SdioEnableFnIntr(uint8_t fn_idx) {
+    zx_status_t SdioEnableFnIntr() {
         return ZX_OK;
     }
 
-    zx_status_t SdioDisableFnIntr(uint8_t fn_idx) {
+    zx_status_t SdioDisableFnIntr() {
         return ZX_OK;
     }
 
-    zx_status_t SdioUpdateBlockSize(uint8_t fn_idx, uint16_t blk_sz, bool deflt) {
+    zx_status_t SdioUpdateBlockSize(uint16_t blk_sz, bool deflt) {
         return ZX_OK;
     }
 
-    zx_status_t SdioGetBlockSize(uint8_t fn_idx, uint16_t* out_cur_blk_size) {
+    zx_status_t SdioGetBlockSize(uint16_t* out_cur_blk_size) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) {
-        DoRwTxnHelper(fn_idx, txn);
+    zx_status_t SdioDoRwTxn(sdio_rw_txn_t* txn) {
+        DoRwTxnHelper(txn);
         return ZX_OK;
     }
 
-    zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+    zx_status_t SdioDoRwByte(bool write, uint32_t addr, uint8_t write_byte,
                              uint8_t* out_read_byte) {
-        DoRwByteHelper(write, fn_idx, addr, write_byte, out_read_byte);
+        DoRwByteHelper(write, addr, write_byte, out_read_byte);
         return ZX_OK;
     }
 
-    zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) {
-        GetInBandIntrHelper(fn_idx, out_irq);
+    zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq) {
+        GetInBandIntrHelper(out_irq);
         return ZX_OK;
     }
 
-    zx_status_t SdioIoAbort(uint8_t fn_idx) {
+    zx_status_t SdioIoAbort() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending) {
+    zx_status_t SdioIntrPending(bool* out_pending) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -183,7 +177,6 @@ public:
 
 private:
     struct SdioRwExpectation {
-        uint8_t fn_idx;
         uint32_t addr;
         bool incr;
         bool write;
@@ -191,19 +184,16 @@ private:
         bool exact;
     };
 
-    void ExpectGetInBandIntrHelper(uint8_t fn_idx, const zx::interrupt& interrupt) {
-        ASSERT_LT(fn_idx, countof(interrupts_));
-        ASSERT_FALSE(interrupts_[fn_idx].is_valid(), "Interrupt has already been set");
-        EXPECT_OK(interrupt.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupts_[fn_idx]),
+    void ExpectGetInBandIntrHelper(const zx::interrupt& interrupt) {
+        ASSERT_FALSE(interrupt_.is_valid(), "Interrupt has already been set");
+        EXPECT_OK(interrupt.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupt_),
                   "Failed to duplicate interrupt");
     }
 
-    void DoRwHelper(uint8_t fn_idx, uint32_t addr, bool incr, bool write, uint8_t* buffer,
-                    uint32_t size) {
+    void DoRwHelper(uint32_t addr, bool incr, bool write, uint8_t* buffer, uint32_t size) {
         ASSERT_LT(expectations_index_, expectations_.size(), "No more transactions are expected");
 
         const SdioRwExpectation& exp = expectations_[expectations_index_++];
-        EXPECT_EQ(exp.fn_idx, fn_idx, "Transaction function mismatch");
         EXPECT_EQ(exp.addr, addr, "Transaction address mismatch");
         EXPECT_EQ(exp.incr, incr, "Transaction FIFO mismatch");
         ASSERT_EQ(exp.write, write, "Transaction read/write mismatch");
@@ -222,7 +212,7 @@ private:
         }
     }
 
-    void DoRwTxnHelper(uint8_t fn_idx, sdio_rw_txn_t* txn) {
+    void DoRwTxnHelper(sdio_rw_txn_t* txn) {
         ASSERT_NOT_NULL(txn, "Transaction struct is null");
 
         uint8_t* buffer = reinterpret_cast<uint8_t*>(txn->virt_buffer) + txn->buf_offset;
@@ -240,24 +230,23 @@ private:
             buffer = reinterpret_cast<uint8_t*>(mapper.start()) + txn->buf_offset;
         }
 
-        DoRwHelper(fn_idx, txn->addr, txn->incr, txn->write, buffer, txn->data_size);
+        DoRwHelper(txn->addr, txn->incr, txn->write, buffer, txn->data_size);
     }
 
-    void DoRwByteHelper(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+    void DoRwByteHelper(bool write, uint32_t addr, uint8_t write_byte,
                         uint8_t* out_read_byte) {
-        DoRwHelper(fn_idx, addr, false, write, write ? &write_byte : out_read_byte, 1);
+        DoRwHelper(addr, false, write, write ? &write_byte : out_read_byte, 1);
     }
 
-    void GetInBandIntrHelper(uint8_t fn_idx, zx::interrupt* out_irq) {
-        ASSERT_LT(fn_idx, SDIO_MAX_FUNCS);
-        ASSERT_TRUE(interrupts_[fn_idx].is_valid(), "No interrupt has been set");
+    void GetInBandIntrHelper(zx::interrupt* out_irq) {
+        ASSERT_TRUE(interrupt_.is_valid(), "No interrupt has been set");
         ASSERT_NOT_NULL(out_irq, "Out interrupt is null");
 
-        *out_irq = std::move(interrupts_[fn_idx]);
+        *out_irq = std::move(interrupt_);
     }
 
     const sdio_protocol_t proto_;
-    zx::interrupt interrupts_[SDIO_MAX_FUNCS];
+    zx::interrupt interrupt_;
     fbl::Vector<SdioRwExpectation> expectations_;
     size_t expectations_index_ = 0;
 };

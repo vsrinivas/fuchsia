@@ -54,6 +54,8 @@ zx_status_t SdioFunctionDevice::AddDevice(const sdio_func_hw_info_t& hw_info, ui
         zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d\n", st);
     }
 
+    function_ = static_cast<uint8_t>(func);
+
     return st;
 }
 
@@ -61,49 +63,49 @@ zx_status_t SdioFunctionDevice::SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info) {
     return sdio_parent_->SdioGetDevHwInfo(out_hw_info);
 }
 
-zx_status_t SdioFunctionDevice::SdioEnableFn(uint8_t fn_idx) {
-    return sdio_parent_->SdioEnableFn(fn_idx);
+zx_status_t SdioFunctionDevice::SdioEnableFn() {
+    return sdio_parent_->SdioEnableFn(function_);
 }
 
-zx_status_t SdioFunctionDevice::SdioDisableFn(uint8_t fn_idx) {
-    return sdio_parent_->SdioDisableFn(fn_idx);
+zx_status_t SdioFunctionDevice::SdioDisableFn() {
+    return sdio_parent_->SdioDisableFn(function_);
 }
 
-zx_status_t SdioFunctionDevice::SdioEnableFnIntr(uint8_t fn_idx) {
-    return sdio_parent_->SdioEnableFnIntr(fn_idx);
+zx_status_t SdioFunctionDevice::SdioEnableFnIntr() {
+    return sdio_parent_->SdioEnableFnIntr(function_);
 }
 
-zx_status_t SdioFunctionDevice::SdioDisableFnIntr(uint8_t fn_idx) {
-    return sdio_parent_->SdioDisableFnIntr(fn_idx);
+zx_status_t SdioFunctionDevice::SdioDisableFnIntr() {
+    return sdio_parent_->SdioDisableFnIntr(function_);
 }
 
-zx_status_t SdioFunctionDevice::SdioUpdateBlockSize(uint8_t fn_idx, uint16_t blk_sz, bool deflt) {
-    return sdio_parent_->SdioUpdateBlockSize(fn_idx, blk_sz, deflt);
+zx_status_t SdioFunctionDevice::SdioUpdateBlockSize(uint16_t blk_sz, bool deflt) {
+    return sdio_parent_->SdioUpdateBlockSize(function_, blk_sz, deflt);
 }
 
-zx_status_t SdioFunctionDevice::SdioGetBlockSize(uint8_t fn_idx, uint16_t* out_cur_blk_size) {
-    return sdio_parent_->SdioGetBlockSize(fn_idx, out_cur_blk_size);
+zx_status_t SdioFunctionDevice::SdioGetBlockSize(uint16_t* out_cur_blk_size) {
+    return sdio_parent_->SdioGetBlockSize(function_, out_cur_blk_size);
 }
 
-zx_status_t SdioFunctionDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) {
-    return sdio_parent_->SdioDoRwTxn(fn_idx, txn);
+zx_status_t SdioFunctionDevice::SdioDoRwTxn(sdio_rw_txn_t* txn) {
+    return sdio_parent_->SdioDoRwTxn(function_, txn);
 }
 
-zx_status_t SdioFunctionDevice::SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr,
-                                             uint8_t write_byte, uint8_t* out_read_byte) {
-    return sdio_parent_->SdioDoRwByte(write, fn_idx, addr, write_byte, out_read_byte);
+zx_status_t SdioFunctionDevice::SdioDoRwByte(bool write, uint32_t addr, uint8_t write_byte,
+                                             uint8_t* out_read_byte) {
+    return sdio_parent_->SdioDoRwByte(write, function_, addr, write_byte, out_read_byte);
 }
 
-zx_status_t SdioFunctionDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) {
-    return sdio_parent_->SdioGetInBandIntr(fn_idx, out_irq);
+zx_status_t SdioFunctionDevice::SdioGetInBandIntr(zx::interrupt* out_irq) {
+    return sdio_parent_->SdioGetInBandIntr(function_, out_irq);
 }
 
-zx_status_t SdioFunctionDevice::SdioIoAbort(uint8_t fn_idx) {
-    return sdio_parent_->SdioIoAbort(fn_idx);
+zx_status_t SdioFunctionDevice::SdioIoAbort() {
+    return sdio_parent_->SdioIoAbort(function_);
 }
 
-zx_status_t SdioFunctionDevice::SdioIntrPending(uint8_t fn_idx, bool* out_pending) {
-    return sdio_parent_->SdioIntrPending(fn_idx, out_pending);
+zx_status_t SdioFunctionDevice::SdioIntrPending(bool* out_pending) {
+    return sdio_parent_->SdioIntrPending(function_, out_pending);
 }
 
 zx_status_t SdioFunctionDevice::SdioDoVendorControlRwByte(bool write, uint8_t addr,

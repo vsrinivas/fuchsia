@@ -168,7 +168,8 @@
 enum brcmf_sdiod_state { BRCMF_SDIOD_DOWN, BRCMF_SDIOD_DATA, BRCMF_SDIOD_NOMEDIUM };
 
 enum {
-    COMPONENT_SDIO,
+    COMPONENT_SDIO_FN1,
+    COMPONENT_SDIO_FN2,
     COMPONENT_OOB_GPIO,
     COMPONENT_DEBUG_GPIO,
     COMPONENT_COUNT,
@@ -194,7 +195,8 @@ struct brcmf_sdio_dev {
     struct sdio_func *func2;
     uint32_t manufacturer_id;
     uint32_t product_id;
-    sdio_protocol_t sdio_proto;
+    sdio_protocol_t sdio_proto_fn1;
+    sdio_protocol_t sdio_proto_fn2;
     gpio_protocol_t gpios[GPIO_COUNT];
     bool has_debug_gpio;
     zx_handle_t irq_handle;
@@ -316,11 +318,11 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev);
  * wb, wl - write byte / word.
  * Success is returned in result_out which may be NULL.
  */
-uint8_t brcmf_sdiod_func0_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
-                             zx_status_t *result_out);
+uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                                      zx_status_t *result_out);
 
-void brcmf_sdiod_func0_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
-                          zx_status_t *result_out);
+void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t value,
+                                   zx_status_t *result_out);
 
 uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
                              zx_status_t *result_out);

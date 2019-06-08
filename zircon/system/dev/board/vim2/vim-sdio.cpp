@@ -95,12 +95,18 @@ static const pbus_dev_t aml_sd_emmc_dev = []() {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
-static const zx_bind_inst_t sdio_match[]  = {
+static const zx_bind_inst_t sdio_fn1_match[]  = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
     BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
-    // The specific function number doesn't matter as long as we bind to one and only one of the
-    // created SDIO devices. The numbers start at 1, so just bind to the first device.
     BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 1),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4356), // Used in VIM2 Basic
+};
+static const zx_bind_inst_t sdio_fn2_match[]  = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
+    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 2),
     BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
     BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
     BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4356), // Used in VIM2 Basic
@@ -113,9 +119,13 @@ static const zx_bind_inst_t debug_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_WIFI_DEBUG),
 };
-static const device_component_part_t sdio_component[] = {
+static const device_component_part_t sdio_fn1_component[] = {
     { fbl::count_of(root_match), root_match },
-    { fbl::count_of(sdio_match), sdio_match },
+    { fbl::count_of(sdio_fn1_match), sdio_fn1_match },
+};
+static const device_component_part_t sdio_fn2_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(sdio_fn2_match), sdio_fn2_match },
 };
 static const device_component_part_t oob_gpio_component[] = {
     { fbl::count_of(root_match), root_match },
@@ -126,7 +136,8 @@ static const device_component_part_t debug_gpio_component[] = {
     { fbl::count_of(debug_gpio_match), debug_gpio_match },
 };
 static const device_component_t wifi_composite[] = {
-    { fbl::count_of(sdio_component), sdio_component },
+    { fbl::count_of(sdio_fn1_component), sdio_fn1_component },
+    { fbl::count_of(sdio_fn2_component), sdio_fn2_component },
     { fbl::count_of(oob_gpio_component), oob_gpio_component },
     { fbl::count_of(debug_gpio_component), debug_gpio_component },
 };

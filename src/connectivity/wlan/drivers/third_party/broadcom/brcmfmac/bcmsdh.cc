@@ -174,24 +174,24 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
         }
 
         /* must configure SDIO_CCCR_INT_ENABLE to enable irq */
-        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
-        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto_fn1);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto_fn2);
 
         /* redirect, configure and enable io for interrupt signal */
         data = SDIO_CCCR_BRCM_SEPINT_MASK | SDIO_CCCR_BRCM_SEPINT_OE;
         if (config.oob_irq_mode == ZX_INTERRUPT_MODE_LEVEL_HIGH) {
             data |= SDIO_CCCR_BRCM_SEPINT_ACT_HI;
         }
-        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, data, &ret);
+        brcmf_sdiod_vendor_control_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, data, &ret);
         // TODO(cphoenix): This pause is probably unnecessary.
         zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
         sdio_release_host(sdiodev->func1);
     } else {
         brcmf_dbg(SDIO, "Entering\n");
         sdio_claim_host(sdiodev->func1);
-        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto_fn1);
         (void)brcmf_sdiod_ib_irqhandler; // TODO(cphoenix): If we use these, plug them in later.
-        sdio_enable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_enable_fn_intr(&sdiodev->sdio_proto_fn2);
         (void)brcmf_sdiod_dummy_irqhandler;
         sdio_release_host(sdiodev->func1);
         sdiodev->sd_irq_requested = true;
@@ -209,9 +209,9 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
 
         pdata = &sdiodev->settings->bus.sdio;
         sdio_claim_host(sdiodev->func1);
-        brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
-        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
-        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
+        brcmf_sdiod_vendor_control_wb(sdiodev, SDIO_CCCR_BRCM_SEPINT, 0, NULL);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto_fn1);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto_fn2);
         sdio_release_host(sdiodev->func1);
 
         sdiodev->oob_irq_requested = false;
@@ -225,8 +225,8 @@ void brcmf_sdiod_intr_unregister(struct brcmf_sdio_dev* sdiodev) {
 
     if (sdiodev->sd_irq_requested) {
         sdio_claim_host(sdiodev->func1);
-        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_2);
-        sdio_disable_fn_intr(&sdiodev->sdio_proto, SDIO_FN_1);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto_fn2);
+        sdio_disable_fn_intr(&sdiodev->sdio_proto_fn1);
         sdio_release_host(sdiodev->func1);
         sdiodev->sd_irq_requested = false;
     }
@@ -275,7 +275,12 @@ static zx_status_t brcmf_sdiod_transfer(struct brcmf_sdio_dev* sdiodev, uint8_t 
     txn.use_dma = false; // TODO(cphoenix): Decide when to use DMA
     txn.buf_offset = 0;
 
-    result = sdio_do_rw_txn(&sdiodev->sdio_proto, func, &txn);
+    if (func == SDIO_FN_1) {
+        result = sdio_do_rw_txn(&sdiodev->sdio_proto_fn1, &txn);
+    } else {
+        result = sdio_do_rw_txn(&sdiodev->sdio_proto_fn2, &txn);
+    }
+
     if (result != ZX_OK) {
         brcmf_dbg(TEMP, "Why did this fail?? result %d %s", result, zx_status_get_string(result));
     }
@@ -293,11 +298,12 @@ static uint8_t brcmf_sdiod_func_rb(struct brcmf_sdio_dev* sdiodev, uint8_t func,
     return data;
 }
 
-uint8_t brcmf_sdiod_func0_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
-                             zx_status_t* result_out) {
+uint8_t brcmf_sdiod_vendor_control_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
+                                      zx_status_t* result_out) {
     uint8_t data = 0;
     zx_status_t result;
-    result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto, false, addr, 0, &data);
+    // Any function device can access the vendor control registers; fn2 could be used here instead.
+    result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto_fn1, false, addr, 0, &data);
     if (result_out != NULL) {
         *result_out = result;
     }
@@ -309,10 +315,11 @@ uint8_t brcmf_sdiod_func1_rb(struct brcmf_sdio_dev* sdiodev, uint32_t addr,
     return brcmf_sdiod_func_rb(sdiodev, SDIO_FN_1, addr, result_out);
 }
 
-void brcmf_sdiod_func0_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
-                             zx_status_t* result_out) {
+void brcmf_sdiod_vendor_control_wb(struct brcmf_sdio_dev* sdiodev, uint32_t addr, uint8_t data,
+                                   zx_status_t* result_out) {
     zx_status_t result;
-    result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto, true, addr, data, NULL);
+    // Any function device can access the vendor control registers; fn2 could be used here instead.
+    result = sdio_do_vendor_control_rw_byte(&sdiodev->sdio_proto_fn1, true, addr, data, NULL);
     if (result_out != NULL) {
         *result_out = result;
     }
@@ -668,7 +675,11 @@ zx_status_t brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func) {
     brcmf_dbg(SDIO, "Enter\n");
 
     /* Issue abort cmd52 command through F0 */
-    sdio_io_abort(&sdiodev->sdio_proto, func);
+    if (func == SDIO_FN_1) {
+        sdio_io_abort(&sdiodev->sdio_proto_fn1);
+    } else {
+        sdio_io_abort(&sdiodev->sdio_proto_fn2);
+    }
 
     brcmf_dbg(SDIO, "Exit\n");
     return ZX_OK;
@@ -757,12 +768,12 @@ static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
 
     /* Disable Function 2 */
     sdio_claim_host(sdiodev->func2);
-    sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
+    sdio_disable_fn(&sdiodev->sdio_proto_fn2);
     sdio_release_host(sdiodev->func2);
 
     /* Disable Function 1 */
     sdio_claim_host(sdiodev->func1);
-    sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_1);
+    sdio_disable_fn(&sdiodev->sdio_proto_fn1);
     sdio_release_host(sdiodev->func1);
 
     sdiodev->sbwad = 0;
@@ -785,12 +796,12 @@ static void brcmf_sdiod_host_fixup(struct mmc_host* host) {
 static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     zx_status_t ret = ZX_OK;
 
-    ret = sdio_update_block_size(&sdiodev->sdio_proto, SDIO_FN_1, SDIO_FUNC1_BLOCKSIZE, false);
+    ret = sdio_update_block_size(&sdiodev->sdio_proto_fn1, SDIO_FUNC1_BLOCKSIZE, false);
     if (ret != ZX_OK) {
         brcmf_err("Failed to set F1 blocksize\n");
         goto out;
     }
-    ret = sdio_update_block_size(&sdiodev->sdio_proto, SDIO_FN_2, SDIO_FUNC2_BLOCKSIZE, false);
+    ret = sdio_update_block_size(&sdiodev->sdio_proto_fn2, SDIO_FUNC2_BLOCKSIZE, false);
     if (ret != ZX_OK) {
         brcmf_err("Failed to set F2 blocksize\n");
         goto out;
@@ -801,7 +812,7 @@ static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
     //sdiodev->func2->enable_timeout = SDIO_WAIT_F2RDY;
 
     /* Enable Function 1 */
-    ret = sdio_enable_fn(&sdiodev->sdio_proto, SDIO_FN_1);
+    ret = sdio_enable_fn(&sdiodev->sdio_proto_fn1);
     if (ret != ZX_OK) {
         brcmf_err("Failed to enable F1: err=%d\n", ret);
         goto out;
@@ -891,11 +902,17 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
         return ZX_ERR_INTERNAL;
     }
 
-    sdio_protocol_t sdio_proto;
+    sdio_protocol_t sdio_proto_fn1;
+    sdio_protocol_t sdio_proto_fn2;
     gpio_protocol_t gpio_protos[GPIO_COUNT];
     bool has_debug_gpio = false;
 
-    status = device_get_protocol(components[COMPONENT_SDIO], ZX_PROTOCOL_SDIO, &sdio_proto);
+    status = device_get_protocol(components[COMPONENT_SDIO_FN1], ZX_PROTOCOL_SDIO, &sdio_proto_fn1);
+    if (status != ZX_OK) {
+        brcmf_err("ZX_PROTOCOL_SDIO not found, err=%d\n", status);
+        return status;
+    }
+    status = device_get_protocol(components[COMPONENT_SDIO_FN2], ZX_PROTOCOL_SDIO, &sdio_proto_fn2);
     if (status != ZX_OK) {
         brcmf_err("ZX_PROTOCOL_SDIO not found, err=%d\n", status);
         return status;
@@ -907,7 +924,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
         return status;
     }
     // Debug GPIO is optional
-    if (component_count > 2) {
+    if (component_count > 3) {
         status = device_get_protocol(components[COMPONENT_DEBUG_GPIO], ZX_PROTOCOL_GPIO,
                                      &gpio_protos[DEBUG_GPIO_INDEX]);
         if (status != ZX_OK) {
@@ -918,7 +935,7 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
     }
 
     sdio_hw_info_t devinfo;
-    sdio_get_dev_hw_info(&sdio_proto, &devinfo);
+    sdio_get_dev_hw_info(&sdio_proto_fn1, &devinfo);
     if (devinfo.dev_hw_info.num_funcs < 3) {
         brcmf_err("Not enough SDIO funcs (need 3, have %d)", devinfo.dev_hw_info.num_funcs);
         return ZX_ERR_IO;
@@ -981,7 +998,8 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
     }
     dev = &sdiodev->dev;
     dev->zxdev = zxdev;
-    memcpy(&sdiodev->sdio_proto, &sdio_proto, sizeof(sdiodev->sdio_proto));
+    memcpy(&sdiodev->sdio_proto_fn1, &sdio_proto_fn1, sizeof(sdiodev->sdio_proto_fn1));
+    memcpy(&sdiodev->sdio_proto_fn2, &sdio_proto_fn2, sizeof(sdiodev->sdio_proto_fn2));
     memcpy(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], &gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX],
            sizeof(gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]));
     if (has_debug_gpio) {

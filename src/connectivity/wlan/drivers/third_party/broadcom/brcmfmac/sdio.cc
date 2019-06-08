@@ -2243,7 +2243,7 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
 
         /* Turn off the bus (F2), free any pending packets */
         brcmf_dbg(INTR, "disable SDIO interrupts\n");
-        sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_disable_fn(&sdiodev->sdio_proto_fn2);
 
         /* Clear any pending interrupts now that F2 is disabled */
         brcmf_sdiod_func1_wl(sdiodev, core->base + SD_REG(intstatus), local_hostintmask, NULL);
@@ -3122,9 +3122,9 @@ static void brcmf_sdio_sr_init(struct brcmf_sdio* bus) {
     }
 
     /* Add CMD14 Support */
-    brcmf_sdiod_func0_wb(bus->sdiodev, SDIO_CCCR_BRCM_CARDCAP,
-                         (SDIO_CCCR_BRCM_CARDCAP_CMD14_SUPPORT | SDIO_CCCR_BRCM_CARDCAP_CMD14_EXT),
-                         &err);
+    brcmf_sdiod_vendor_control_wb(
+        bus->sdiodev, SDIO_CCCR_BRCM_CARDCAP,
+        (SDIO_CCCR_BRCM_CARDCAP_CMD14_SUPPORT | SDIO_CCCR_BRCM_CARDCAP_CMD14_EXT), &err);
     if (err != ZX_OK) {
         brcmf_err("error writing SDIO_CCCR_BRCM_CARDCAP\n");
         return;
@@ -3315,8 +3315,8 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 
                 sdio_claim_host(bus->sdiodev->func1);
 
-                sdio_intr_pending(&bus->sdiodev->sdio_proto, SDIO_FN_1, &func1_pend);
-                sdio_intr_pending(&bus->sdiodev->sdio_proto, SDIO_FN_2, &func2_pend);
+                sdio_intr_pending(&bus->sdiodev->sdio_proto_fn1, &func1_pend);
+                sdio_intr_pending(&bus->sdiodev->sdio_proto_fn2, &func2_pend);
                 sdio_release_host(bus->sdiodev->func1);
                 intstatus = func1_pend || func2_pend;
             }
@@ -3708,17 +3708,17 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     brcmf_sdio_drivestrengthinit(sdiodev, bus->ci, drivestrength);
 
     /* Set card control so an SDIO card reset does a WLAN backplane reset */
-    reg_val = brcmf_sdiod_func0_rb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL, &err);
+    reg_val = brcmf_sdiod_vendor_control_rb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL, &err);
     if (err != ZX_OK) {
-	brcmf_err("func0_rb failed: %s\n", zx_status_get_string(err));
+	brcmf_err("vendor_control_rb failed: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
     reg_val |= SDIO_CCCR_BRCM_CARDCTRL_WLANRESET;
 
-    brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL, reg_val, &err);
+    brcmf_sdiod_vendor_control_wb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL, reg_val, &err);
     if (err != ZX_OK) {
-	brcmf_err("func0_wb failed: %s\n", zx_status_get_string(err));
+	brcmf_err("vendor_control_wb failed: %s\n", zx_status_get_string(err));
         goto fail;
     }
 
@@ -3921,7 +3921,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     brcmf_sdiod_func1_wl(sdiod, core->base + SD_REG(tosbmailboxdata),
                        SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT, NULL);
 
-    err = sdio_enable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
+    err = sdio_enable_fn(&sdiodev->sdio_proto_fn2);
     brcmf_dbg(INFO, "enable F2: err=%d\n", err);
 
     /* If F2 successfully enabled, set core and enable interrupts */
@@ -3933,7 +3933,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
         brcmf_sdiod_func1_wb(sdiodev, SBSDIO_WATERMARK, 8, &err);
     } else {
         /* Disable F2 again */
-        sdio_disable_fn(&sdiodev->sdio_proto, SDIO_FN_2);
+        sdio_disable_fn(&sdiodev->sdio_proto_fn2);
         goto release;
     }
 
@@ -4074,7 +4074,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     }
 
     /* Query the F2 block size, set roundup accordingly */
-    sdio_get_block_size(&sdiodev->sdio_proto, SDIO_FN_2, &bus->blocksize);
+    sdio_get_block_size(&sdiodev->sdio_proto_fn2, &bus->blocksize);
     bus->roundup = min(max_roundup, bus->blocksize);
 
     /* Allocate buffers */
@@ -4092,7 +4092,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     sdio_claim_host(bus->sdiodev->func1);
 
     /* Disable F2 to clear any intermediate frame state on the dongle */
-    sdio_disable_fn(&bus->sdiodev->sdio_proto, SDIO_FN_2);
+    sdio_disable_fn(&bus->sdiodev->sdio_proto_fn2);
 
     bus->rxflow = false;
 

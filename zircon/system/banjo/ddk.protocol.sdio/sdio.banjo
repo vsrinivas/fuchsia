@@ -6,7 +6,6 @@ library ddk.protocol.sdio;
 
 using zx;
 
-const uint8 SDIO_FN_0 = 0;
 const uint8 SDIO_FN_1 = 1;
 const uint8 SDIO_FN_2 = 2;
 /// Including func 0
@@ -71,20 +70,20 @@ struct SdioRwTxn {
 [Layout = "ddk-protocol"]
 protocol Sdio {
     GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
-    EnableFn(uint8 fn_idx) -> (zx.status s);
-    DisableFn(uint8 fn_idx) -> (zx.status s);
-    EnableFnIntr(uint8 fn_idx) -> (zx.status s);
-    DisableFnIntr(uint8 fn_idx) -> (zx.status s);
-    UpdateBlockSize(uint8 fn_idx, uint16 blk_sz, bool deflt) -> (zx.status s);
-    GetBlockSize(uint8 fn_idx) -> (zx.status s, uint16 cur_blk_size);
-    DoRwTxn(uint8 fn_idx, SdioRwTxn? txn) -> (zx.status s);
-    DoRwByte(bool write, uint8 fn_idx, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
-    GetInBandIntr(uint8 fn_idx) -> (zx.status s, handle<interrupt> irq);
+    EnableFn() -> (zx.status s);
+    DisableFn() -> (zx.status s);
+    EnableFnIntr() -> (zx.status s);
+    DisableFnIntr() -> (zx.status s);
+    UpdateBlockSize(uint16 blk_sz, bool deflt) -> (zx.status s);
+    GetBlockSize() -> (zx.status s, uint16 cur_blk_size);
+    DoRwTxn(SdioRwTxn? txn) -> (zx.status s);
+    DoRwByte(bool write, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
+    GetInBandIntr() -> (zx.status s, handle<interrupt> irq);
     /// The following functions access the card common control registers (CCCR) on function 0.
     /// Aborts an I/O operation occurring on the specified function.
-    IoAbort(uint8 fn_idx) -> (zx.status s);
+    IoAbort() -> (zx.status s);
     /// Returns true if an interrupt is pending for function fn_idx, false otherwise.
-    IntrPending(uint8 fn_idx) -> (zx.status s, bool pending);
+    IntrPending() -> (zx.status s, bool pending);
     /// Reads or writes to a vendor CCCR register. addr must be in [0xF0, 0xFF].
     DoVendorControlRwByte(bool write, uint8 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
 };

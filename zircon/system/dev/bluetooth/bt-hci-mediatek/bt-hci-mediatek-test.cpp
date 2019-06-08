@@ -159,9 +159,9 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketCmd) {
     size_t size = write_data.size() - 8;
     memcpy(packet, write_data.get() + 8, size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_OK(test.CardSendVendorPacket(1, 0xcd, packet, &size, sizeof(packet)));
     ASSERT_EQ(sizeof(expected_read_packet), size);
@@ -191,9 +191,9 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketAcl) {
     size_t size = write_data.size() - 9;
     memcpy(packet, write_data.get() + 9, size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_OK(test.CardSendVendorPacket(2, 0xab, packet, &size, sizeof(packet)));
     ASSERT_EQ(sizeof(expected_read_packet), size);
@@ -217,9 +217,9 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketEdgeCases) {
     size_t size = write_data.size() - 8;
     memcpy(packet, write_data.get() + 8, size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_OK(test.CardSendVendorPacket(1, 0xef, packet, &size, sizeof(packet)));
     ASSERT_EQ(0, size);
@@ -241,7 +241,7 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketFail) {
     size_t size = write_data.size() - 8;
     memcpy(packet, write_data.get() + 8, size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, 3});
 
     EXPECT_NE(ZX_OK, test.CardSendVendorPacket(1, 0x00, packet, &size, sizeof(packet)));
@@ -257,7 +257,7 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketFail) {
     size = write_data.size() - 8;
     memcpy(packet, write_data.get() + 8, size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, sizeof(packet) + 5});
 
     EXPECT_NE(ZX_OK, test.CardSendVendorPacket(1, 0x00, packet, &size, sizeof(packet)));
@@ -276,9 +276,9 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketFail) {
     size = write_data.size() - 8;
     memcpy(packet, write_data.get() + 8, size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_NE(ZX_OK, test.CardSendVendorPacket(1, 0x00, packet, &size, sizeof(packet)));
 
@@ -316,9 +316,9 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePart) {
         read_data.push_back(kExpectedResponse[i]);
     }
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_OK(test.CardSendFirmwarePart(vmo.get(), buffer, fw_data, fw_data_size,
                                         BtHciMediatek::kFirmwarePartFirst));
@@ -341,9 +341,9 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePart) {
         read_data.push_back(kExpectedResponse[i]);
     }
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_OK(test.CardSendFirmwarePart(vmo.get(), buffer, fw_data, fw_data_size,
                                         BtHciMediatek::kFirmwarePartContinue));
@@ -363,9 +363,9 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePart) {
         read_data.push_back(kExpectedResponse[i]);
     }
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_OK(test.CardSendFirmwarePart(vmo.get(), buffer, fw_data, fw_data_size,
                                         BtHciMediatek::kFirmwarePartLast));
@@ -393,7 +393,7 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePartFail) {
     size_t fw_data_size = write_data.size() - 14;
     memcpy(fw_data, write_data.get() + 14, fw_data_size);
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, 13});
 
     EXPECT_NE(ZX_OK, test.CardSendFirmwarePart(vmo.get(), buffer, fw_data, fw_data_size,
@@ -414,9 +414,9 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePartFail) {
                                       0x04, 0xe4, 0x05, 0x02,
                                       0x01, 0x01, 0x00, 0x01};
 
-    sdio.ExpectFifoWrite(2, 0x18, std::move(write_data), false);
+    sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
     test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
-    sdio.ExpectFifoRead(2, 0x1c, std::move(read_data), true);
+    sdio.ExpectFifoRead(0x1c, std::move(read_data), true);
 
     EXPECT_NE(ZX_OK, test.CardSendFirmwarePart(vmo.get(), buffer, fw_data, fw_data_size,
                                                BtHciMediatek::kFirmwarePartLast));
