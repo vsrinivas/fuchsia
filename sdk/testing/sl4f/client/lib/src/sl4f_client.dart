@@ -104,12 +104,22 @@ class Sl4f {
       }
 
       _log.info('Try $attempt at starting sl4f.');
-      // We run sl4f with `-d` to make sure that it keeps running even if sshd
-      // dies or the connection somehow breaks.
-      // This has the nasty side effect that we won't get an error in the logs
-      // if sl4f.cmx isn't available. This shouldn't be an issue if the users
-      // start the test with the given instructions, but it could still happen
-      // if something gets misconfigured in the product config.
+      // We run sl4f with `-d` to make sure that it keeps running even
+      // if sshd dies or the connection somehow breaks.
+      //
+      // We apparently cannot rely on the ssh connection to stay open
+      // indefinitely for as long as sl4f is running.
+      //
+      // This has the consequence that we won't get an error in the logs
+      // if sl4f.cmx isn't available. This shouldn't be an issue if the
+      // users start the test with the given instructions, especially
+      // using the `end_to_end_deps` bundle, but it could still happen
+      // if something gets misconfigured in the product build config.
+      //
+      // TODO(mesch): It seems as if we could just await this ssh()
+      // call, but if we do this, we hang. Observed in
+      // screen_navigation_test on workstation.
+      //
       // ignore: unawaited_futures
       ssh('run -d $_sl4fComponentUrl');
 
