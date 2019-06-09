@@ -252,7 +252,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     }
 
     /// Check if the HEADER block is locked (when generation count is odd).
-    fn check_locked(&self, value: bool) -> Result<(), Error> {
+    pub(in crate) fn check_locked(&self, value: bool) -> Result<(), Error> {
         let payload = self.read_payload();
         if (payload.header_generation_count() & 1 == 1) != value {
             return Err(format_err!("Expected locked={}, actual={}", value, !value));
