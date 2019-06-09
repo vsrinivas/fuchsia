@@ -127,6 +127,10 @@ public:
         other.io_buffer_ = {};
     }
     IoBuffer& operator=(IoBuffer&& other) {
+        if(&other == this) {
+            return *this;
+        }
+        io_buffer_release(&io_buffer_);
         io_buffer_ = other.io_buffer_;
         other.io_buffer_ = {};
         return *this;
