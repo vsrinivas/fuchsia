@@ -52,7 +52,14 @@ public:
     Vfs* vfs() const { return vfs_; }
     uint64_t ino() const { return ino_; }
 
-    fbl::RefPtr<Dnode> dnode_;
+    // TODO(smklein): Move member into the VnodeDir subclass.
+    // Directories contain a raw reference to their location in the filesystem hierarchy.
+    // Although this would have safer memory semantics with an actual weak pointer, it is
+    // currently raw to avoid circular dependencies from Vnode -> Dnode -> Vnode.
+    //
+    // Caution must be taken when detaching Dnodes from their parents to avoid leaving
+    // this reference dangling.
+    Dnode* dnode_;
     uint32_t link_count_;
 
 protected:
@@ -120,9 +127,6 @@ public:
     zx_status_t CreateFromVmo(fbl::StringPiece name, zx_handle_t vmo,
                               zx_off_t off, zx_off_t len);
 
-    // Mount a subtree as a child of this directory.
-    void MountSubtree(fbl::RefPtr<VnodeDir> subtree);
-
     // Use the watcher container to implement a directory watcher
     void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
@@ -185,14 +189,14 @@ public:
     static zx_status_t Create(const char* fs_name, size_t pages_limit,
                               std::unique_ptr<Vfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root);
 
+    ~Vfs();
+
     // Creates a VnodeVmo under |parent| with |name| which is backed by |vmo|.
     // N.B. The VMO will not be taken into account when calculating
     // number of allocated pages in this Vfs.
     zx_status_t CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
                               zx_handle_t vmo, zx_off_t off,
                               zx_off_t len);
-
-    void MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree);
 
     size_t PagesLimit() const { return pages_limit_; }
 
@@ -215,7 +219,7 @@ public:
 
 private:
     // Creates a Vfs with the maximum |pages_limit| number of pages.
-    explicit Vfs(size_t pages_limit) : fs::ManagedVfs(), pages_limit_(pages_limit) {}
+    explicit Vfs(uint64_t id, size_t pages_limit, const char* name);
 
     uint64_t fs_id_ = 0;
 
@@ -226,6 +230,8 @@ private:
     // Number of pages currently in use by VnodeFiles.
     size_t num_allocated_pages_ = 0;
 
+    // Since no directory contains the root, it is owned by the VFS object.
+    std::unique_ptr<Dnode> root_;
 };
 
 } // namespace memfs

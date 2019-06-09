@@ -94,26 +94,27 @@ zx_status_t Vfs::Create(const char* name, size_t pages_limit,
         return status;
     }
 
-    std::unique_ptr<memfs::Vfs> fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(pages_limit));
-    fs->fs_id_ = id;
+    auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(id, pages_limit, name));
     fbl::RefPtr<VnodeDir> root = fbl::AdoptRef(new VnodeDir(fs.get()));
-    fbl::RefPtr<Dnode> dn = Dnode::Create(name, root);
-    root->dnode_ = dn;
-    *out_vfs = std::move(fs);
+    std::unique_ptr<Dnode> dn = Dnode::Create(name, root);
+    root->dnode_ = dn.get();
+    fs->root_ = std::move(dn);
+
     *out_root = std::move(root);
+    *out_vfs = std::move(fs);
     return ZX_OK;
 }
+
+Vfs::Vfs(uint64_t id, size_t pages_limit, const char* name)
+    : fs::ManagedVfs(), fs_id_(id), pages_limit_(pages_limit) {}
+
+Vfs::~Vfs() = default;
 
 zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, fbl::StringPiece name,
                                zx_handle_t vmo, zx_off_t off,
                                zx_off_t len) {
     fbl::AutoLock lock(&vfs_lock_);
     return parent->CreateFromVmo(name, vmo, off, len);
-}
-
-void Vfs::MountSubtree(VnodeDir* parent, fbl::RefPtr<VnodeDir> subtree) {
-    fbl::AutoLock lock(&vfs_lock_);
-    parent->MountSubtree(std::move(subtree));
 }
 
 std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;

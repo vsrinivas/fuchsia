@@ -37,7 +37,7 @@ bool TestMemfsNull() {
     ASSERT_EQ(zx_handle_close(root), ZX_OK);
     sync_completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
 
     END_TEST;
 }
@@ -81,7 +81,7 @@ bool TestMemfsBasic() {
     ASSERT_EQ(closedir(d), 0);
     sync_completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
 
     END_TEST;
 }
@@ -162,7 +162,7 @@ bool TestMemfsLimitPages() {
         ASSERT_EQ(closedir(d), 0);
         sync_completion_t unmounted;
         memfs_free_filesystem(vfs, &unmounted);
-        ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+        ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
     }
 
     END_TEST;
@@ -254,11 +254,11 @@ bool TestMemfsCloseDuringAccess() {
             }
         }, &args), thrd_success);
 
-        ASSERT_EQ(sync_completion_wait(&args.spinning, ZX_SEC(3)), ZX_OK);
+        ASSERT_EQ(sync_completion_wait(&args.spinning, zx::duration::infinite().get()), ZX_OK);
 
         sync_completion_t unmounted;
         memfs_free_filesystem(vfs, &unmounted);
-        ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+        ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
 
         int result;
         ASSERT_EQ(thrd_join(worker, &result), thrd_success);
@@ -309,7 +309,43 @@ bool TestMemfsOverflow() {
     ASSERT_EQ(closedir(d), 0);
     sync_completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
+    END_TEST;
+}
+
+bool TestMemfsDetachLinkedFilesystem() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+    // Create a memfs filesystem, acquire a file descriptor
+    memfs_filesystem_t* vfs;
+    zx_handle_t root;
+    ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
+    int root_fd;
+    ASSERT_EQ(fdio_fd_create(root, &root_fd), ZX_OK);
+
+    // Access files within the filesystem.
+    DIR* d = fdopendir(root_fd);
+    ASSERT_NONNULL(d);
+
+    // Leave a regular file.
+    fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+
+    // Leave an empty subdirectory.
+    ASSERT_EQ(0, mkdirat(dirfd(d), "empty-subdirectory", 0));
+
+    // Leave a subdirectory with children.
+    ASSERT_EQ(0, mkdirat(dirfd(d), "subdirectory", 0));
+    ASSERT_EQ(0, mkdirat(dirfd(d), "subdirectory/child", 0));
+
+    ASSERT_EQ(closedir(d), 0);
+
+    sync_completion_t unmounted;
+    memfs_free_filesystem(vfs, &unmounted);
+    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
     END_TEST;
 }
 
@@ -322,4 +358,5 @@ RUN_TEST(TestMemfsLimitPages)
 RUN_TEST(TestMemfsInstall)
 RUN_TEST(TestMemfsCloseDuringAccess)
 RUN_TEST(TestMemfsOverflow)
+RUN_TEST(TestMemfsDetachLinkedFilesystem)
 END_TEST_CASE(memfs_tests)

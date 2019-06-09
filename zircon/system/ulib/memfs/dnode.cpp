@@ -19,7 +19,7 @@
 namespace memfs {
 
 // Create a new dnode and attach it to a vnode
-fbl::RefPtr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn) {
+std::unique_ptr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn) {
     if ((name.length() > kDnodeNameMax) || (name.length() < 1)) {
         return nullptr;
     }
@@ -31,21 +31,18 @@ fbl::RefPtr<Dnode> Dnode::Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> 
     }
     memcpy(namebuffer.get(), name.data(), name.length());
     namebuffer[name.length()] = '\0';
-    fbl::RefPtr<Dnode> dn = fbl::AdoptRef(new (&ac) Dnode(vn, std::move(namebuffer),
-                                                          static_cast<uint32_t>(name.length())));
-    if (!ac.check()) {
-        return nullptr;
-    }
-
+    auto dn = std::unique_ptr<Dnode>(new Dnode(vn, std::move(namebuffer),
+                                               static_cast<uint32_t>(name.length())));
     return dn;
 }
 
-void Dnode::RemoveFromParent() {
+std::unique_ptr<Dnode> Dnode::RemoveFromParent() {
     ZX_DEBUG_ASSERT(vnode_ != nullptr);
 
+    std::unique_ptr<Dnode> node;
     // Detach from parent
     if (parent_) {
-        parent_->children_.erase(*this);
+        node = parent_->children_.erase(*this);
         if (IsDirectory()) {
             // '..' no longer references parent.
             parent_->vnode_->link_count_--;
@@ -54,6 +51,7 @@ void Dnode::RemoveFromParent() {
         parent_ = nullptr;
         vnode_->link_count_--;
     }
+    return node;
 }
 
 void Dnode::Detach() {
@@ -62,17 +60,17 @@ void Dnode::Detach() {
         return;
     }
 
-    RemoveFromParent();
+    auto self = RemoveFromParent();
     // Detach from vnode
-    vnode_->dnode_ = nullptr;
-    vnode_ = nullptr;
+    self->vnode_->dnode_ = nullptr;
+    self->vnode_ = nullptr;
 }
 
-void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
+void Dnode::AddChild(Dnode* parent, std::unique_ptr<Dnode> child) {
     ZX_DEBUG_ASSERT(parent != nullptr);
     ZX_DEBUG_ASSERT(child != nullptr);
     ZX_DEBUG_ASSERT(child->parent_ == nullptr); // Child shouldn't have a parent
-    ZX_DEBUG_ASSERT(child != parent);
+    ZX_DEBUG_ASSERT(child.get() != parent);
     ZX_DEBUG_ASSERT(parent->IsDirectory());
 
     child->parent_ = parent;
@@ -91,7 +89,7 @@ void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
     parent->vnode_->UpdateModified();
 }
 
-zx_status_t Dnode::Lookup(fbl::StringPiece name, fbl::RefPtr<Dnode>* out) const {
+zx_status_t Dnode::Lookup(fbl::StringPiece name, Dnode** out) {
     auto dn = children_.find_if([&name](const Dnode& elem) -> bool {
         return elem.NameMatch(name);
     });
@@ -100,7 +98,7 @@ zx_status_t Dnode::Lookup(fbl::StringPiece name, fbl::RefPtr<Dnode>* out) const 
     }
 
     if (out != nullptr) {
-        *out = dn.CopyPointer();
+        *out = &(*dn);
     }
     return ZX_OK;
 }
@@ -168,7 +166,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
 }
 
 // Answers the question: "Is dn a subdirectory of this?"
-bool Dnode::IsSubdirectory(fbl::RefPtr<Dnode> dn) const {
+bool Dnode::IsSubdirectory(const Dnode* dn) const {
     if (IsDirectory() && dn->IsDirectory()) {
         // Iterate all the way up to root
         while (dn->parent_ != nullptr && dn->parent_ != dn) {
@@ -193,8 +191,11 @@ void Dnode::PutName(fbl::unique_ptr<char[]> name, size_t len) {
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
 Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags) :
-    vnode_(std::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(std::move(name)) {
+    vnode_(std::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags),
+    name_(std::move(name)) {
 }
+
+Dnode::~Dnode() = default;
 
 size_t Dnode::NameLen() const {
     return flags_ & kDnodeNameMax;

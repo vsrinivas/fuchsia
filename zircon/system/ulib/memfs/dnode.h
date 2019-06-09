@@ -26,31 +26,47 @@ static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
 static_assert(((kDnodeNameMax + 1) & kDnodeNameMax) == 0,
               "Expected kDnodeNameMax to be one less than a power of two");
 
-class Dnode : public fbl::RefCounted<Dnode> {
+// The named portion of a node, representing the named hierarchy.
+//
+// Dnodes always have one corresponding Vnode (a name represents one vnode).
+// Vnodes may be represented by multiple Dnodes (a vnode may have many names).
+//
+// Dnodes are owned by their parents.
+class Dnode {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Dnode);
-    using NodeState = fbl::DoublyLinkedListNodeState<fbl::RefPtr<Dnode>>;
+    using NodeState = fbl::DoublyLinkedListNodeState<std::unique_ptr<Dnode>>;
 
     // ChildTraits is the state used for a Dnode to appear as the child
     // of another dnode.
-    struct TypeChildTraits { static NodeState& node_state(Dnode& dn) { return dn.type_child_state_; }};
-    using ChildList = fbl::DoublyLinkedList<fbl::RefPtr<Dnode>, Dnode::TypeChildTraits>;
+    struct TypeChildTraits {
+        static NodeState& node_state(Dnode& dn) {
+            return dn.type_child_state_;
+        }
+    };
+
+    using ChildList = fbl::DoublyLinkedList<std::unique_ptr<Dnode>, Dnode::TypeChildTraits>;
 
     // Allocates a dnode, attached to a vnode
-    static fbl::RefPtr<Dnode> Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn);
+    static std::unique_ptr<Dnode> Create(fbl::StringPiece name, fbl::RefPtr<VnodeMemfs> vn);
 
     // Takes a parent-less node and makes it a child of the parent node.
     //
     // Increments child link count by one.
     // If the child is a directory, increments the parent link count by one.
-    static void AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child);
+    static void AddChild(Dnode* parent, std::unique_ptr<Dnode> child);
+
+    ~Dnode();
 
     // Removes a dnode from its parent (if dnode has a parent)
     // Decrements parent link count by one.
-    void RemoveFromParent();
+    std::unique_ptr<Dnode> RemoveFromParent();
 
     // Detaches a dnode from its parent / vnode.
     // Decrements dn->vnode link count by one (if it exists).
+    //
+    // Precondition: Dnode has no children.
+    // Postcondition: "this" may be destroyed.
     void Detach();
 
     bool HasChildren() const { return !children_.is_empty(); }
@@ -62,7 +78,7 @@ public:
     // ZX_OK is still returned.
     // If "out" is provided as "nullptr", the returned status appears the
     // same, but the "out" argument is not touched.
-    zx_status_t Lookup(fbl::StringPiece name, fbl::RefPtr<Dnode>* out) const;
+    zx_status_t Lookup(fbl::StringPiece name, Dnode** out);
 
     // Acquire a pointer to the vnode underneath this dnode.
     // Acquires a reference to the underlying vnode.
@@ -79,7 +95,7 @@ public:
     void Readdir(fs::DirentFiller* df, void* cookie) const;
 
     // Answers the question: "Is dn a subdirectory of this?"
-    bool IsSubdirectory(fbl::RefPtr<Dnode> dn) const;
+    bool IsSubdirectory(const Dnode* dn) const;
 
     // Functions to take / steal the allocated dnode name.
     fbl::unique_ptr<char[]> TakeName();
@@ -97,7 +113,10 @@ private:
 
     NodeState type_child_state_;
     fbl::RefPtr<VnodeMemfs> vnode_;
-    fbl::RefPtr<Dnode> parent_;
+    // Refers to the parent named node in the directory hierarchy.
+    // A weak reference is used here to avoid a circular dependency, where
+    // parents own children, but children point to their parents.
+    Dnode* parent_;
     // Used to impose an absolute order on dnodes within a directory.
     size_t ordering_token_;
     ChildList children_;

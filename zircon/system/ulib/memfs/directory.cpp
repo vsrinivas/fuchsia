@@ -33,7 +33,8 @@ constexpr const char kFsName[] = "memfs";
 VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
     link_count_ = 1; // Implied '.'
 }
-VnodeDir::~VnodeDir() {}
+
+VnodeDir::~VnodeDir() = default;
 
 zx_status_t VnodeDir::ValidateFlags(uint32_t flags) {
     if (flags & ZX_FS_FLAG_NOT_DIRECTORY) {
@@ -85,7 +86,7 @@ zx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name)
     if (!IsDirectory()) {
         return ZX_ERR_NOT_FOUND;
     }
-    fbl::RefPtr<Dnode> dn;
+    Dnode* dn;
     zx_status_t r = dnode_->Lookup(name, &dn);
     ZX_DEBUG_ASSERT(r <= 0);
     if (r == ZX_OK) {
@@ -162,7 +163,7 @@ zx_status_t VnodeDir::Unlink(fbl::StringPiece name, bool must_be_dir) {
         // Calling unlink from unlinked, empty directory
         return ZX_ERR_BAD_STATE;
     }
-    fbl::RefPtr<Dnode> dn;
+    Dnode* dn;
     zx_status_t r;
     if ((r = dnode_->Lookup(name, &dn)) != ZX_OK) {
         return r;
@@ -188,7 +189,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
     if (!IsDirectory() || !newdir->IsDirectory())
         return ZX_ERR_BAD_STATE;
 
-    fbl::RefPtr<Dnode> olddn;
+    Dnode* olddn;
     zx_status_t r;
     // The source must exist
     if ((r = dnode_->Lookup(oldname, &olddn)) != ZX_OK) {
@@ -211,7 +212,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
     }
 
     // The destination may or may not exist
-    fbl::RefPtr<Dnode> targetdn;
+    Dnode* targetdn;
     r = newdir->dnode_->Lookup(newname, &targetdn);
     bool target_exists = (r == ZX_OK);
     if (target_exists) {
@@ -236,8 +237,8 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
     // (2) Allocating a new name, if creating a new name.
     fbl::unique_ptr<char[]> namebuffer(nullptr);
     if (target_exists) {
-        targetdn->Detach();
         namebuffer = targetdn->TakeName();
+        targetdn->Detach();
     } else {
         fbl::AllocChecker ac;
         namebuffer.reset(new (&ac) char[newname.length() + 1]);
@@ -253,9 +254,9 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
     // Validation ends here, and modifications begin. Rename should not fail
     // beyond this point.
 
-    olddn->RemoveFromParent();
+    std::unique_ptr<Dnode> moved_node = olddn->RemoveFromParent();
     olddn->PutName(std::move(namebuffer), newname.length());
-    Dnode::AddChild(newdir->dnode_, std::move(olddn));
+    Dnode::AddChild(newdir->dnode_, std::move(moved_node));
     return ZX_OK;
 }
 
@@ -278,7 +279,7 @@ zx_status_t VnodeDir::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target)
     }
 
     // Make a new dnode for the new name, attach the target vnode to it
-    fbl::RefPtr<Dnode> targetdn;
+    std::unique_ptr<Dnode> targetdn;
     if ((targetdn = Dnode::Create(name, vn)) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -287,10 +288,6 @@ zx_status_t VnodeDir::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target)
     Dnode::AddChild(dnode_, std::move(targetdn));
 
     return ZX_OK;
-}
-
-void VnodeDir::MountSubtree(fbl::RefPtr<VnodeDir> subtree) {
-    Dnode::AddChild(dnode_, subtree->dnode_);
 }
 
 zx_status_t VnodeDir::CreateFromVmo(fbl::StringPiece name,
@@ -329,7 +326,7 @@ zx_status_t VnodeDir::CanCreate(fbl::StringPiece name) const {
 zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, fbl::StringPiece name,
                                   bool isdir) {
     // dnode takes a reference to the vnode
-    fbl::RefPtr<Dnode> dn;
+    std::unique_ptr<Dnode> dn;
     if ((dn = Dnode::Create(name, vn)) == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -338,7 +335,7 @@ zx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, fbl::StringPiece n
     // addding a child will also increment the parent link_count (after all,
     // directories contain a ".." entry, which is a link to their parent).
     if (isdir) {
-        vn->dnode_ = dn;
+        vn->dnode_ = dn.get();
     }
 
     // parent takes first reference
