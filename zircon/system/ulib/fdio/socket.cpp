@@ -186,7 +186,7 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
     *_events = events;
 }
 
-static ssize_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
+static zx_status_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     switch (req) {
     case FIONREAD: {

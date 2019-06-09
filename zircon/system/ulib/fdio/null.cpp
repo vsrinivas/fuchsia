@@ -119,7 +119,7 @@ void fdio_default_wait_begin(fdio_t* io, uint32_t events,
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
 }
 
-ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va) {
+zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

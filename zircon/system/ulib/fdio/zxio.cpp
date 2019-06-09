@@ -579,7 +579,7 @@ static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
     return (zxio_pipe_t*)fdio_get_zxio(io);
 }
 
-static ssize_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
+static zx_status_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
     zxio_pipe_t* pipe = fdio_get_zxio_pipe(io);
     switch (request) {
     case FIONREAD: {

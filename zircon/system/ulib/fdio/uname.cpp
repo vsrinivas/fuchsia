@@ -16,27 +16,33 @@
 #define IOCTL_NETC_GET_NODENAME \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_NETCONFIG, 8)
 
-IOCTL_WRAPPER_VAROUT(ioctl_netc_get_nodename, IOCTL_NETC_GET_NODENAME, char);
+IOCTL_WRAPPER_VAROUT(ioctl_netc_get_nodename, IOCTL_NETC_GET_NODENAME, char)
 
+extern "C"
 __EXPORT
-int uname(struct utsname* uts) {
+int uname(utsname* uts) {
     if (!uts) {
         errno = EFAULT;
         return -1;
     }
-    *uts = (struct utsname){
-        .sysname = "Fuchsia",
-        .nodename = "",
-        .release = "",
-        .version = "",
+    strcpy(uts->sysname, "Fuchsia");
+    strcpy(uts->nodename, "");
+    strcpy(uts->release, "");
+    strcpy(uts->version, "");
 #if defined(__x86_64__)
-        .machine = "x86_64",
+    strcpy(uts->machine, "x86_64");
 #elif defined(__aarch64__)
-        .machine = "aarch64",
+    strcpy(uts->machine, "aarch64");
 #else
-        .machine = "",
+    strcpy(uts->machine, "");
 #endif
-    };
+
+#ifdef _GNU_SOURCE
+    strcpy(uts->domainname, "");
+#else
+    strcpy(uts->__domainname, "");
+#endif
+
     int s = socket(AF_INET, SOCK_DGRAM, 0);
     ioctl_netc_get_nodename(s, uts->nodename, sizeof(uts->nodename));
     if (!uts->nodename[0])

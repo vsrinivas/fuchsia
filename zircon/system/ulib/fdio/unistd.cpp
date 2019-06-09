@@ -15,8 +15,10 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/statvfs.h>
 #include <sys/uio.h>
 #include <utime.h>
 #include <threads.h>
@@ -30,6 +32,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
+
+#include <fbl/auto_lock.h>
 
 #include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
@@ -62,12 +66,20 @@ static zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_
 // non-thread-safe emulation of unistd io functions
 // using the fdio transports
 
-fdio_state_t __fdio_global_state = {
-    .lock = MTX_INIT,
-    .cwd_lock = MTX_INIT,
-    .init = true,
-    .cwd_path = "/",
-};
+// Constexpr function to compute the initialized value for __fdio_globbal_state at compile time.
+// If this is not constexpr, then initialization would happen after __libc_extensions_init,
+// wiping the fd table *after* it has been fill in with valid entries.
+// (musl invokes "__libc_start_init" after "__libc_extensions_init")
+static constexpr fdio_state_t initialize_fdio_state() {
+    fdio_state_t state = {};
+    state.lock = MTX_INIT;
+    state.cwd_lock = MTX_INIT;
+    state.init = true;
+    state.cwd_path[0] = '/';
+    state.cwd_path[1] = '\0';
+    return state;
+}
+fdio_state_t __fdio_global_state = initialize_fdio_state();
 
 static bool fdio_is_reserved_or_null(fdio_t *io) {
     if (io == NULL || io == fdio_get_reserved_io()) {
@@ -81,30 +93,26 @@ int fdio_reserve_fd(int starting_fd) {
         errno = EINVAL;
         return -1;
     }
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     for (int fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
         if (fdio_fdtab[fd] == NULL) {
             fdio_fdtab[fd] = fdio_get_reserved_io();
-            mtx_unlock(&fdio_lock);
             return fd;
         }
     }
-    mtx_unlock(&fdio_lock);
     errno = EMFILE;
     return -1;
 }
 
 int fdio_assign_reserved(int fd, fdio_t *io) {
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     fdio_t *res = fdio_fdtab[fd];
     if (res != fdio_get_reserved_io()) {
-        mtx_unlock(&fdio_lock);
         errno = EINVAL;
         return -1;
     }
     fdio_dupcount_acquire(io);
     fdio_fdtab[fd] = io;
-    mtx_unlock(&fdio_lock);
     return fd;
 }
 
@@ -113,15 +121,13 @@ int fdio_release_reserved(int fd) {
         errno = EINVAL;
         return -1;
     }
-    mtx_lock(&fdio_lock);
-    fdio_t *res = fdio_fdtab[fd];
+    fbl::AutoLock lock(&fdio_lock);
+    fdio_t* res = fdio_fdtab[fd];
     if (res != fdio_get_reserved_io()) {
-        mtx_unlock(&fdio_lock);
         errno = EINVAL;
         return -1;
     }
     fdio_fdtab[fd] = NULL;
-    mtx_unlock(&fdio_lock);
     return fd;
 }
 
@@ -131,31 +137,28 @@ int fdio_release_reserved(int fd) {
 __EXPORT
 int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
     fdio_t* io_to_close = NULL;
+    {
+        fbl::AutoLock lock(&fdio_lock);
+        if (fd < 0) {
+            // If we are not given an |fd|, the |starting_fd| must be non-negative.
+            if (starting_fd < 0) {
+                errno = EINVAL;
+                return -1;
+            }
 
-    mtx_lock(&fdio_lock);
-    if (fd < 0) {
-        // If we are not given an |fd|, the |starting_fd| must be non-negative.
-        if (starting_fd < 0) {
+            // A negative fd implies that any free fd value can be used
+            //TODO: bitmap, ffs, etc
+            for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
+                if (fdio_fdtab[fd] == NULL) {
+                    goto free_fd_found;
+                }
+            }
+            errno = EMFILE;
+            return -1;
+        } else if (fd >= FDIO_MAX_FD) {
             errno = EINVAL;
-            mtx_unlock(&fdio_lock);
             return -1;
         }
-
-        // A negative fd implies that any free fd value can be used
-        //TODO: bitmap, ffs, etc
-        for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
-            if (fdio_fdtab[fd] == NULL) {
-                goto free_fd_found;
-            }
-        }
-        errno = EMFILE;
-        mtx_unlock(&fdio_lock);
-        return -1;
-    } else if (fd >= FDIO_MAX_FD) {
-        errno = EINVAL;
-        mtx_unlock(&fdio_lock);
-        return -1;
-    } else {
         io_to_close = fdio_fdtab[fd];
         if (io_to_close) {
             fdio_dupcount_release(io_to_close);
@@ -165,12 +168,11 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
                 io_to_close = NULL;
             }
         }
-    }
 
 free_fd_found:
-    fdio_dupcount_acquire(io);
-    fdio_fdtab[fd] = io;
-    mtx_unlock(&fdio_lock);
+        fdio_dupcount_acquire(io);
+        fdio_fdtab[fd] = io;
+    }
 
     if (io_to_close) {
         fdio_get_ops(io_to_close)->close(io_to_close);
@@ -185,32 +187,24 @@ free_fd_found:
 // refcount.
 __EXPORT
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
-    zx_status_t status;
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     if (fd >= FDIO_MAX_FD) {
-        status = ZX_ERR_INVALID_ARGS;
-        goto done;
+        return ZX_ERR_INVALID_ARGS;
     }
     fdio_t* io = fdio_fdtab[fd];
     if (fdio_is_reserved_or_null(io)) {
-        status = ZX_ERR_INVALID_ARGS;
-        goto done;
+        return ZX_ERR_INVALID_ARGS;
     }
     if (fdio_get_dupcount(io) > 1) {
-        status = ZX_ERR_UNAVAILABLE;
-        goto done;
+        return ZX_ERR_UNAVAILABLE;
     }
     if (!fdio_is_last_reference(io)) {
-        status = ZX_ERR_UNAVAILABLE;
-        goto done;
+        return ZX_ERR_UNAVAILABLE;
     }
     fdio_dupcount_release(io);
     fdio_fdtab[fd] = NULL;
     *out = io;
-    status = ZX_OK;
-done:
-    mtx_unlock(&fdio_lock);
-    return status;
+    return ZX_OK;
 }
 
 __EXPORT
@@ -219,7 +213,7 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
         return NULL;
     }
     fdio_t* io = NULL;
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     io = fdio_fdtab[fd];
     if (fdio_is_reserved_or_null(io)) {
         // Never hand back the reserved io as it does not have an ops table.
@@ -227,7 +221,6 @@ fdio_t* fdio_unsafe_fd_to_io(int fd) {
     } else {
         fdio_acquire(io);
     }
-    mtx_unlock(&fdio_lock);
     return io;
 }
 
@@ -316,7 +309,7 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
 // case, *path is also adjusted.
 static fdio_t* fdio_iodir(const char** path, int dirfd) {
     fdio_t* iodir = NULL;
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     if (*path[0] == '/') {
         iodir = fdio_root_handle;
         // Since we are sending a request to the root handle, the
@@ -336,7 +329,6 @@ static fdio_t* fdio_iodir(const char** path, int dirfd) {
     if (iodir != NULL) {
         fdio_acquire(iodir);
     }
-    mtx_unlock(&fdio_lock);
     return iodir;
 }
 
@@ -635,13 +627,16 @@ static zx_status_t __fdio_opendir_containing(fdio_t** io, const char* path, char
 // hook into libc process startup
 // this is called prior to main to set up the fdio world
 // and thus does not use the fdio_lock
+//
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/libc.h
+extern "C"
 __EXPORT
 void __libc_extensions_init(uint32_t handle_count,
                             zx_handle_t handle[],
                             uint32_t handle_info[],
                             uint32_t name_count,
                             char** names) {
-
     int stdio_fd = -1;
 
     // extract handles we care about
@@ -732,6 +727,10 @@ void __libc_extensions_init(uint32_t handle_count,
 // Clean up during process teardown. This runs after atexit hooks in
 // libc. It continues to hold the fdio lock until process exit, to
 // prevent other threads from racing on file descriptors.
+//
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/libc.h
+extern "C"
 __EXPORT
 void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
     mtx_lock(&fdio_lock);
@@ -751,13 +750,12 @@ void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
 __EXPORT
 zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
     zx_status_t status = ZX_OK;
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     if (fdio_root_ns == NULL) {
         status = ZX_ERR_NOT_FOUND;
     } else {
         *ns = fdio_root_ns;
     }
-    mtx_unlock(&fdio_lock);
     return status;
 }
 
@@ -945,6 +943,9 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/stdio_impl.h
+extern "C"
 __EXPORT
 zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int flags, int fd,
                        off_t fd_off, uintptr_t* out) {
@@ -1604,7 +1605,7 @@ int lstat(const char* path, struct stat* buf) {
 }
 
 __EXPORT
-char* realpath(const char* restrict filename, char* restrict resolved) {
+char* realpath(const char* __restrict filename, char* __restrict resolved) {
     ssize_t r;
     struct stat st;
     char tmp[PATH_MAX];
@@ -1619,16 +1620,17 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
     if (filename[0] != '/') {
         // Convert 'filename' from a relative path to an absolute path.
         size_t file_len = strlen(filename);
-        mtx_lock(&fdio_cwd_lock);
-        size_t cwd_len = strlen(fdio_cwd_path);
-        if (cwd_len + 1 + file_len >= PATH_MAX) {
-            mtx_unlock(&fdio_cwd_lock);
-            errno = ENAMETOOLONG;
-            return NULL;
-        }
         char tmp2[PATH_MAX];
-        memcpy(tmp2, fdio_cwd_path, cwd_len);
-        mtx_unlock(&fdio_cwd_lock);
+        size_t cwd_len = 0;
+        {
+            fbl::AutoLock cwd_lock(&fdio_cwd_lock);
+            cwd_len = strlen(fdio_cwd_path);
+            if (cwd_len + 1 + file_len >= PATH_MAX) {
+                errno = ENAMETOOLONG;
+                return NULL;
+            }
+            memcpy(tmp2, fdio_cwd_path, cwd_len);
+        }
         tmp2[cwd_len] = '/';
         strcpy(tmp2 + cwd_len + 1, filename);
         zx_status_t status = __fdio_cleanpath(tmp2, tmp, &outlen, &is_dir);
@@ -1822,15 +1824,16 @@ char* getcwd(char* buf, size_t size) {
     }
 
     char* out = NULL;
-    mtx_lock(&fdio_cwd_lock);
-    size_t len = strlen(fdio_cwd_path) + 1;
-    if (len < size) {
-        memcpy(buf, fdio_cwd_path, len);
-        out = buf;
-    } else {
-        errno = ERANGE;
+    {
+        fbl::AutoLock(&fdio_cwd_lock);
+        size_t len = strlen(fdio_cwd_path) + 1;
+        if (len < size) {
+            memcpy(buf, fdio_cwd_path, len);
+            out = buf;
+        } else {
+            errno = ERANGE;
+        }
     }
-    mtx_unlock(&fdio_cwd_lock);
 
     if (out == tmp) {
         out = strdup(tmp);
@@ -1839,15 +1842,13 @@ char* getcwd(char* buf, size_t size) {
 }
 
 void fdio_chdir(fdio_t* io, const char* path) {
-    mtx_lock(&fdio_cwd_lock);
+    fbl::AutoLock cwd_lock(&fdio_cwd_lock);
     update_cwd_path(path);
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     fdio_t* old = fdio_cwd_handle;
     fdio_cwd_handle = io;
     fdio_get_ops(old)->close(old);
     fdio_release(old);
-    mtx_unlock(&fdio_lock);
-    mtx_unlock(&fdio_cwd_lock);
 }
 
 __EXPORT
@@ -1878,7 +1879,7 @@ struct __dirstream {
 };
 
 static DIR* internal_opendir(int fd) {
-    DIR* dir = calloc(1, sizeof(*dir));
+    DIR* dir = reinterpret_cast<DIR*>(calloc(1, sizeof(*dir)));
     if (dir != NULL) {
         mtx_init(&dir->lock, mtx_plain);
         dir->size = 0;
@@ -1923,11 +1924,11 @@ int closedir(DIR* dir) {
 
 __EXPORT
 struct dirent* readdir(DIR* dir) {
-    mtx_lock(&dir->lock);
+    fbl::AutoLock lock(&dir->lock);
     struct dirent* de = &dir->de;
     for (;;) {
         if (dir->size >= sizeof(vdirent_t)) {
-            vdirent_t* vde = (void*)dir->ptr;
+            vdirent_t* vde = reinterpret_cast<vdirent_t*>(dir->ptr);
 
             if (dir->size < vde->size + sizeof(vdirent_t)) {
                 // This buffer is corrupted (not large enough to hold a name).
@@ -1954,7 +1955,8 @@ struct dirent* readdir(DIR* dir) {
             // The d_reclen field is nonstandard, but existing code
             // may expect it to be useful as an upper bound on the
             // length of the name.
-            de->d_reclen = offsetof(struct dirent, d_name) + namelen + 1;
+            de->d_reclen = static_cast<unsigned short>(
+                offsetof(struct dirent, d_name) + namelen + 1);
             de->d_type = vde->type;
             memcpy(de->d_name, vde->name, namelen);
             de->d_name[namelen] = '\0';
@@ -1970,16 +1972,14 @@ struct dirent* readdir(DIR* dir) {
         de = NULL;
         break;
     }
-    mtx_unlock(&dir->lock);
     return de;
 }
 
 __EXPORT
 void rewinddir(DIR* dir) {
-    mtx_lock(&dir->lock);
+    fbl::AutoLock lock(&dir->lock);
     dir->size = 0;
     dir->ptr = NULL;
-    mtx_unlock(&dir->lock);
 }
 
 __EXPORT
@@ -2014,10 +2014,9 @@ int isatty(int fd) {
 __EXPORT
 mode_t umask(mode_t mask) {
     mode_t oldmask;
-    mtx_lock(&fdio_lock);
+    fbl::AutoLock lock(&fdio_lock);
     oldmask = __fdio_global_state.umask;
     __fdio_global_state.umask = mask & 0777;
-    mtx_unlock(&fdio_lock);
     return oldmask;
 }
 
@@ -2065,7 +2064,7 @@ int ppoll(struct pollfd* fds, nfds_t n,
     }
 
     fdio_t* ios[n];
-    int ios_used_max = -1;
+    nfds_t ios_used_count = 0;
 
     zx_status_t r = ZX_OK;
     nfds_t nvalid = 0;
@@ -2088,7 +2087,7 @@ int ppoll(struct pollfd* fds, nfds_t n,
             continue;
         }
         ios[i] = io;
-        ios_used_max = i;
+        ios_used_count = i + 1;
 
         zx_handle_t h;
         zx_signals_t sigs;
@@ -2134,7 +2133,7 @@ int ppoll(struct pollfd* fds, nfds_t n,
                     uint32_t events = 0;
                     fdio_get_ops(io)->wait_end(io, items[j].pending, &events);
                     // mask unrequested events except HUP/ERR
-                    pfd->revents = events & (pfd->events | POLLHUP | POLLERR);
+                    pfd->revents = static_cast<short>(events) & (pfd->events | POLLHUP | POLLERR);
                     if (pfd->revents != 0) {
                         nfds++;
                     }
@@ -2144,7 +2143,7 @@ int ppoll(struct pollfd* fds, nfds_t n,
         }
     }
 
-    for (int i = 0; i <= ios_used_max; i++) {
+    for (nfds_t i = 0; i < ios_used_count; i++) {
         if (ios[i]) {
             fdio_release(ios[i]);
         }
@@ -2161,8 +2160,8 @@ int poll(struct pollfd* fds, nfds_t n, int timeout) {
 }
 
 __EXPORT
-int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict efds,
-           struct timeval* restrict tv) {
+int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __restrict efds,
+           struct timeval* __restrict tv) {
     if (n > FD_SETSIZE || n < 1) {
         return ERRNO(EINVAL);
     }
@@ -2282,7 +2281,7 @@ int ioctl(int fd, int req, ...) {
     }
     va_list ap;
     va_start(ap, req);
-    ssize_t r = fdio_get_ops(io)->posix_ioctl(io, req, ap);
+    zx_status_t r = fdio_get_ops(io)->posix_ioctl(io, req, ap);
     va_end(ap);
     fdio_release(io);
     return STATUS(r);
@@ -2295,20 +2294,27 @@ ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct s
         return ERRNO(EBADF);
     }
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-    zx_status_t status;
+    ssize_t status_or_count;
     for (;;) {
-        status = fdio_get_ops(io)->sendto(io, buf, buflen, flags, addr, addrlen);
-        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+        status_or_count = fdio_get_ops(io)->sendto(io, buf, buflen, flags, addr, addrlen);
+        if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
         fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
-    return status < 0 ? STATUS(status) : status;
+    return status_or_count < 0
+        ? STATUS(static_cast<zx_status_t>(status_or_count))
+        : status_or_count;
 }
 
 __EXPORT
-ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+ssize_t recvfrom(int fd,
+                 void* __restrict buf,
+                 size_t buflen,
+                 int flags,
+                 struct sockaddr* __restrict addr,
+                 socklen_t* __restrict addrlen) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -2317,12 +2323,12 @@ ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct so
         return ERRNO(EFAULT);
     }
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-    zx_status_t status;
+    ssize_t status_or_count;
     zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
     zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
-        status = fdio_get_ops(io)->recvfrom(io, buf, buflen, flags, addr, addrlen);
-        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+        status_or_count = fdio_get_ops(io)->recvfrom(io, buf, buflen, flags, addr, addrlen);
+        if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
         if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
@@ -2330,7 +2336,9 @@ ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct so
         }
     }
     fdio_release(io);
-    return status < 0 ? STATUS(status) : status;
+    return status_or_count < 0
+           ? STATUS(static_cast<zx_status_t>(status_or_count))
+           : status_or_count;
 }
 
 __EXPORT
@@ -2344,16 +2352,18 @@ ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
     // install additional signal handlers to handle cases where connection has
     // been closed by remote end.
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-    zx_status_t status;
+    ssize_t status_or_count;
     for (;;) {
-        status = fdio_get_ops(io)->sendmsg(io, msg, flags);
-        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+        status_or_count = fdio_get_ops(io)->sendmsg(io, msg, flags);
+        if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
         fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
     }
     fdio_release(io);
-    return status < 0 ? STATUS(status) : status;
+    return status_or_count < 0
+           ? STATUS(static_cast<zx_status_t>(status_or_count))
+           : status_or_count;
 }
 
 __EXPORT
@@ -2363,12 +2373,12 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
         return ERRNO(EBADF);
     }
     bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
-    zx_status_t status;
+    ssize_t status_or_count;
     zx_duration_t duration = fdio_get_ops(io)->get_rcvtimeo(io);
     zx_time_t deadline = zx_deadline_after(duration);
     for (;;) {
-        status = fdio_get_ops(io)->recvmsg(io, msg, flags);
-        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
+        status_or_count = fdio_get_ops(io)->recvmsg(io, msg, flags);
+        if (status_or_count != ZX_ERR_SHOULD_WAIT || nonblocking) {
             break;
         }
         if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, NULL) == ZX_ERR_TIMED_OUT) {
@@ -2376,7 +2386,9 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
         }
     }
     fdio_release(io);
-    return status < 0 ? STATUS(status) : status;
+    return status_or_count < 0
+           ? STATUS(static_cast<zx_status_t>(status_or_count))
+           : status_or_count;
 }
 
 __EXPORT
@@ -2434,8 +2446,8 @@ static int fs_stat(int fd, struct statfs* buf) {
     stats.f_ffree = info.total_nodes - info.used_nodes;
     stats.f_namelen = info.max_filename_size;
     stats.f_type = info.fs_type;
-    stats.f_fsid.__val[0] = info.fs_id;
-    stats.f_fsid.__val[1] = info.fs_id >> 32;
+    stats.f_fsid.__val[0] = static_cast<int>(info.fs_id & 0xffffffff);
+    stats.f_fsid.__val[1] = static_cast<int>(info.fs_id >> 32u);
 
     *buf = stats;
     return 0;
@@ -2512,6 +2524,9 @@ int statvfs(const char* path, struct statvfs* buf) {
     return rv;
 }
 
+// extern "C" is required here, since the corresponding declaration is in an internal musl header:
+// zircon/third_party/ulib/musl/src/internal/libc.h
+extern "C"
 __EXPORT
 int _fd_open_max(void) {
     return FDIO_MAX_FD;

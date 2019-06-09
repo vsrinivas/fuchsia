@@ -10,6 +10,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+__BEGIN_CDECLS
+
 struct __locale_map;
 
 struct __locale_struct {
@@ -109,3 +111,5 @@ extern char** __environ;
 #else
 #define NO_ASAN
 #endif
+
+__END_CDECLS

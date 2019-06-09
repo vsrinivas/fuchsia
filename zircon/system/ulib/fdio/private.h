@@ -43,7 +43,7 @@ typedef struct fdio_ops {
     void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len,
                      void* out_buf, size_t out_len);
-    ssize_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
+    zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
     zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
     zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
     zx_status_t (*get_attr)(fdio_t* io, fuchsia_io_NodeAttributes* out);
@@ -262,7 +262,7 @@ void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_default_shutdown(fdio_t* io, int how);
 zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io);
-ssize_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
+zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
 
 typedef struct {

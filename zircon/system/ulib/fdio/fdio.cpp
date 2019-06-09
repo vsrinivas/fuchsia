@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <stdarg.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +15,7 @@
 
 struct fdio {
     const fdio_ops_t* ops;
-    atomic_int_fast32_t refcount;
+    std::atomic_int_fast32_t refcount;
     int32_t dupcount;
     uint32_t ioflag;
     zxio_storage_t storage;
@@ -36,6 +36,7 @@ static fdio_t fdio_reserved_io = {
     .refcount = 1,
     .dupcount = 1,
     .ioflag = 0,
+    .storage = {},
 };
 
 fdio_t* fdio_get_reserved_io(void) {
@@ -73,21 +74,21 @@ zxio_storage_t* fdio_get_zxio_storage(fdio_t* io) {
 fdio_t* fdio_alloc(const fdio_ops_t* ops) {
     fdio_t* io = (fdio_t*) calloc(1, sizeof(fdio_t));
     io->ops = ops;
-    atomic_init(&io->refcount, 1);
+    io->refcount.store(1);
     return io;
 }
 
 void fdio_acquire(fdio_t* io) {
-    atomic_fetch_add(&io->refcount, 1);
+    io->refcount.fetch_add(1);
 }
 
 void fdio_release(fdio_t* io) {
-    if (atomic_fetch_sub(&io->refcount, 1) == 1) {
+    if (io->refcount.fetch_sub(1) == 1) {
         io->ops = NULL;
         free(io);
     }
 }
 
 bool fdio_is_last_reference(fdio_t* io) {
-    return atomic_load(&io->refcount) == 1;
+    return io->refcount.load() == 1;
 }
