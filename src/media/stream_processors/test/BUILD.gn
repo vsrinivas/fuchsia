@@ -15,6 +15,7 @@ group("test") {
     ":audio_encoder_test",
     ":h264_decoder_test",
     ":stream_processor_lib_test",
+    ":video_frame_hasher_test",
   ]
 }
 
@@ -119,6 +120,38 @@ test_package("audio_encoder_test") {
   ]
 }
 
+rustc_library("video_frame_hasher_lib") {
+  name = "video_frame_hasher"
+  edition = "2018"
+  with_unit_tests = true
+  testonly = true
+  source_root = "video_frame_hasher/lib.rs"
+
+  deps = [
+    ":stream_processor_test_lib",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/mundane",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:rand",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+  ]
+}
+
+test_package("video_frame_hasher_test") {
+  deps = [
+    ":video_frame_hasher_lib_test",
+  ]
+
+  tests = [
+    {
+      name = "video_frame_hasher_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
 rustc_test("h264_decoder_test_bin") {
   name = "h264_decoder_test"
   edition = "2018"
@@ -127,6 +160,7 @@ rustc_test("h264_decoder_test_bin") {
   deps = [
     ":stream_processor_decoder_factory_lib",
     ":stream_processor_test_lib",
+    ":video_frame_hasher_lib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",

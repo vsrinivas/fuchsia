@@ -13,6 +13,7 @@ use parking_lot::Mutex;
 use std::{rc::Rc, sync::Arc};
 use stream_processor_decoder_factory::*;
 use stream_processor_test::*;
+use video_frame_hasher::*;
 
 lazy_static! {
     // We use a test lock to prevent any tests from running in parallel.
@@ -24,12 +25,17 @@ lazy_static! {
     // for a component, so we can set `RUST_TEST_THREADS=1` for this component.
     static ref TEST_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
     static ref LOGGER: () = ::fuchsia_syslog::init().expect("Initializing syslog");
+
+    static ref BEAR_DIGEST: ExpectedDigest = ExpectedDigest::new(
+        "bear.h264 decoded digest",
+        "1dc4d1510fc4d26173480f5e689e38dca7c1fa2df1894085f1bcee9c0d19acf7",
+    );
 }
 
 // TODO(turnage): Add test spec for buffers released between streams.
 // TODO(turnage): Add hash validator for NV12 and YV12.
 
-#[::fuchsia_async::run_singlethreaded]
+#[fuchsia_async::run_singlethreaded]
 #[test]
 async fn serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error> {
     let _lock = TEST_LOCK.lock();
@@ -44,6 +50,8 @@ async fn serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error
         expected_output_packet_count: stream.video_frame_count(),
     });
 
+    let hash_validator = Rc::new(VideoFrameHasher { expected_digest: *BEAR_DIGEST });
+
     let spec = TestSpec {
         cases: vec![
             TestCase {
@@ -54,6 +62,7 @@ async fn serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error
                         expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
                     }),
                     frame_count_validator.clone(),
+                    hash_validator.clone(),
                 ],
                 stream_options: None,
             },
@@ -65,6 +74,7 @@ async fn serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error
                         expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 3 },
                     }),
                     frame_count_validator,
+                    hash_validator,
                 ],
                 stream_options: Some(StreamOptions {
                     queue_format_details: false,

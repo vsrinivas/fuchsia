@@ -165,11 +165,31 @@ AvCodecContext::FrameBufferRequest AvCodecContext::frame_buffer_request(
       uncompressed_format.secondary_start_offset +
       uncompressed_format.secondary_height_pixels * linesizes[1];
 
+  uncompressed_format.image_format.pixel_format.type =
+      fuchsia::sysmem::PixelFormatType::YV12;
+  uncompressed_format.image_format.coded_width = frame->width;
+  uncompressed_format.image_format.coded_height = frame->height;
+  uncompressed_format.image_format.bytes_per_row = linesizes[0];
+  uncompressed_format.image_format.display_width =
+      frame->width - frame->crop_right;
+  uncompressed_format.image_format.display_height =
+      frame->height - frame->crop_bottom;
+  uncompressed_format.image_format.layers = 1;
+  uncompressed_format.image_format.color_space.type =
+      fuchsia::sysmem::ColorSpaceType::REC709;
+
+  uncompressed_format.image_format.has_pixel_aspect_ratio =
+      !!frame->sample_aspect_ratio.num;
   uncompressed_format.has_pixel_aspect_ratio = !!frame->sample_aspect_ratio.num;
   if (uncompressed_format.has_pixel_aspect_ratio) {
     uncompressed_format.pixel_aspect_ratio_width =
         frame->sample_aspect_ratio.num;
     uncompressed_format.pixel_aspect_ratio_height =
+        frame->sample_aspect_ratio.den;
+
+    uncompressed_format.image_format.pixel_aspect_ratio_width =
+        frame->sample_aspect_ratio.num;
+    uncompressed_format.image_format.pixel_aspect_ratio_height =
         frame->sample_aspect_ratio.den;
   }
 

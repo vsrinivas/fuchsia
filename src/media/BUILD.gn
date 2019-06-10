@@ -7,10 +7,10 @@ group("media") {
   deps = [
     ":tests",
     "audio",
-    "stream_processors",
     "lib",
     "playback",
     "sessions",
+    "stream_processors",
   ]
 }
 
@@ -27,6 +27,6 @@ group("tests") {
 group("examples") {
   testonly = true
   deps = [
-    "sessions:examples"
+    "sessions:examples",
   ]
 }

@@ -726,6 +726,20 @@ fuchsia::media::StreamOutputFormat CodecAdapterH264::CoreCodecGetOutputFormat(
   video_uncompressed.pixel_aspect_ratio_width = sar_width_;
   video_uncompressed.pixel_aspect_ratio_height = sar_height_;
 
+  video_uncompressed.image_format.pixel_format.type =
+      fuchsia::sysmem::PixelFormatType::NV12;
+  video_uncompressed.image_format.coded_width = width_;
+  video_uncompressed.image_format.coded_height = height_;
+  video_uncompressed.image_format.bytes_per_row = min_stride_;
+  video_uncompressed.image_format.display_width = display_width_;
+  video_uncompressed.image_format.display_height = display_height_;
+  video_uncompressed.image_format.layers = 1;
+  video_uncompressed.image_format.color_space.type =
+      fuchsia::sysmem::ColorSpaceType::REC709;
+  video_uncompressed.image_format.has_pixel_aspect_ratio = has_sar_;
+  video_uncompressed.image_format.pixel_aspect_ratio_width = sar_width_;
+  video_uncompressed.image_format.pixel_aspect_ratio_height = sar_height_;
+
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 

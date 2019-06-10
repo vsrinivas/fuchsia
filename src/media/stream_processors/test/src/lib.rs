@@ -15,6 +15,7 @@ mod stream;
 mod stream_runner;
 mod test_spec;
 
+pub use crate::buffer_set::*;
 pub use crate::elementary_stream::*;
 pub use crate::output_validator::*;
 pub use crate::stream::*;
