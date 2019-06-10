@@ -233,25 +233,25 @@ async fn wait_for_update_to_complete(chan: Channel, url: &PkgUrl) -> Result<Blob
 mod tests {
     use super::*;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
-    use crate::test_util::{MockAmber, MockPackageCache, Package, PackageKind};
+    use crate::test_util::{MockAmberBuilder, MockPackageCache, Package, PackageKind};
     use fidl::endpoints::{self, ServerEnd};
     use fidl_fuchsia_io::DirectoryProxy;
     use fidl_fuchsia_pkg::{self, PackageCacheProxy, UpdatePolicy};
     use files_async;
     use fuchsia_async as fasync;
     use fuchsia_zircon::{Channel, Status};
-    use std::cell::RefCell;
     use std::fs;
     use std::path::Path;
     use std::rc::Rc;
     use std::str;
+    use std::sync::Arc;
     use tempfile::TempDir;
 
     struct ResolveTest {
         rewrite_manager: Arc<RwLock<RewriteManager>>,
         amber_proxy: AmberProxy,
         cache_proxy: PackageCacheProxy,
-        pkgfs: Rc<TempDir>,
+        pkgfs: Arc<TempDir>,
     }
 
     impl ResolveTest {
@@ -259,15 +259,9 @@ mod tests {
             rewrite_manager: Arc<RwLock<RewriteManager>>,
             packages: Vec<Package>,
         ) -> ResolveTest {
-            let pkgfs = Rc::new(TempDir::new().expect("failed to create tmp dir"));
-            let amber = Rc::new(RefCell::new(MockAmber::new(packages, pkgfs.clone())));
-            let amber_proxy: AmberProxy = endpoints::spawn_local_stream_handler(move |req| {
-                let amber = amber.clone();
-                async move {
-                    amber.borrow_mut().get_update_complete(req).expect("amber failed");
-                }
-            })
-            .expect("failed to spawn handler");
+            let pkgfs = Arc::new(TempDir::new().expect("failed to create tmp dir"));
+            let amber = Arc::new(MockAmberBuilder::new(pkgfs.clone()).packages(packages).build());
+            let amber_proxy = amber.spawn();
             let cache =
                 Rc::new(MockPackageCache::new(pkgfs.clone()).expect("failed to create cache"));
             let cache_proxy: PackageCacheProxy =
