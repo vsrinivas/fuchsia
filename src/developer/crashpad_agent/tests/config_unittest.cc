@@ -24,7 +24,7 @@ TEST(ConfigTest, ParseConfig_ValidConfig_NoUpload) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload.json", &config),
             ZX_OK);
-  EXPECT_EQ(config.local_crashpad_database_path, "/data/crashes");
+  EXPECT_EQ(config.local_crashpad_database_path, "/foo/crashes");
   EXPECT_FALSE(config.enable_upload_to_crash_server);
   EXPECT_EQ(config.crash_server_url, nullptr);
 }
@@ -32,7 +32,7 @@ TEST(ConfigTest, ParseConfig_ValidConfig_NoUpload) {
 TEST(ConfigTest, ParseConfig_ValidConfig_Upload) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload.json", &config), ZX_OK);
-  EXPECT_EQ(config.local_crashpad_database_path, "/data/crashes");
+  EXPECT_EQ(config.local_crashpad_database_path, "/foo/crashes");
   EXPECT_TRUE(config.enable_upload_to_crash_server);
   EXPECT_EQ(*config.crash_server_url, "http://localhost:1234");
 }
@@ -42,7 +42,7 @@ TEST(ConfigTest, ParseConfig_ValidConfig_NoUploadServerUrlIgnored) {
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload_spurious_server.json",
                         &config),
             ZX_OK);
-  EXPECT_EQ(config.local_crashpad_database_path, "/data/crashes");
+  EXPECT_EQ(config.local_crashpad_database_path, "/foo/crashes");
   EXPECT_FALSE(config.enable_upload_to_crash_server);
   // Even though a URL is set in the config file, we check that it is not set in
   // the struct.
