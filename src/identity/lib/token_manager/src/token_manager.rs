@@ -27,6 +27,7 @@ use std::path::Path;
 use std::sync::Arc;
 use token_cache::{AuthCacheError, TokenCache};
 use token_store::file::AuthDbFile;
+use token_store::mem::AuthDbInMemory;
 use token_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 
 /// The maximum number of entries to be stored in the `TokenCache`.
@@ -50,7 +51,7 @@ pub struct TokenManager<T: AuthProviderSupplier> {
 }
 
 impl<T: AuthProviderSupplier> TokenManager<T> {
-    /// Creates a new TokenManager.
+    /// Creates a new TokenManager, backed by a file db.
     pub fn new(
         db_path: &Path,
         auth_provider_supplier: T,
@@ -67,6 +68,19 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             token_cache: Mutex::new(token_cache),
             task_group,
         })
+    }
+
+    /// Create a new in-memory TokenManager.
+    pub fn new_in_memory(auth_provider_supplier: T, task_group: TaskGroup) -> Self {
+        let token_store = AuthDbInMemory::new();
+        let token_cache = TokenCache::new(CACHE_SIZE);
+        TokenManager {
+            auth_provider_supplier,
+            auth_providers: Mutex::new(HashMap::new()),
+            token_store: Mutex::new(Box::new(token_store)),
+            token_cache: Mutex::new(token_cache),
+            task_group,
+        }
     }
 
     /// Returns a task group which can be used to spawn and cancel tasks that use this instance.
@@ -802,6 +816,18 @@ mod tests {
         ))
     }
 
+    /// Creates an in-memory TokenManager and serves requests for it.
+    async fn create_and_serve_in_memory_token_manager(
+        stream: TokenManagerRequestStream,
+        auth_provider_supplier: &FakeAuthProviderSupplier,
+    ) -> Result<(), failure::Error> {
+        let task_group = TaskGroup::new();
+        let token_manager = TokenManager::new_in_memory(auth_provider_supplier, task_group.clone());
+        let context = create_token_manager_context();
+        let (_sender, receiver) = oneshot::channel();
+        await!(token_manager.handle_requests_from_stream(&context, stream, receiver.shared()))
+    }
+
     /// Creates a TokenManager given a location to the file db, and serves requests for it.
     async fn create_and_serve_token_manager_with_db_path<'a>(
         db_path: &'a Path,
@@ -1363,6 +1389,94 @@ mod tests {
                 tm_stream,
                 &auth_provider_supplier
             )
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
+    }
+
+    /// Check a number of use-cases for the in-memory TokenManager
+    #[fasync::run_until_stalled(test)]
+    async fn in_memory() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "GAVIN")?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DINESH")?;
+                expect_get_access_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                expect_revoke_cred(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+            assert_eq!(await!(authorize_simple(&tm_proxy, "hooli", "GAVIN"))?.0, Status::Ok);
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "DINESH"))?.0, Status::Ok);
+
+            // Check listing
+            assert_eq!(
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("hooli")))?,
+                (Status::Ok, vec!["GAVIN".to_string()])
+            );
+
+            assert_eq!(
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?,
+                (Status::Ok, vec!["DINESH".to_string(), "RICHARD".to_string()])
+            );
+
+            assert_eq!(
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("myspace")))?,
+                (Status::Ok, vec![])
+            );
+
+            // This puts an access token in the cache
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                Status::Ok
+            );
+
+            // Ask for the same token again, expecting it delivered from the cache
+            assert_eq!(
+                await!(delete_all_tokens_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                Status::Ok
+            );
+            // Deleting a non-existing token succeeds
+            assert_eq!(
+                await!(delete_all_tokens_simple(&tm_proxy, "myspace", "MR_ROBOT"))?,
+                Status::Ok
+            );
+
+            // Richard no longer present in list
+            let profile_ids =
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+            assert_eq!(profile_ids, (Status::Ok, vec!["DINESH".to_string()]));
+
+            // Check that it was also removed from cache
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                (Status::UserNotFound, None)
+            );
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_in_memory_token_manager(tm_stream, &auth_provider_supplier)
         ));
         assert!(ap_result.is_ok());
         assert!(client_result.is_ok());
