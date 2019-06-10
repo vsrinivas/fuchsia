@@ -7,6 +7,10 @@ use {
     fidl_fuchsia_setui::*,
 };
 
+pub const LOGIN_OVERRIDE_AUTH: &str = "auth";
+pub const LOGIN_OVERRIDE_AUTOLOGINGUEST: &str = "autologinguest";
+pub const LOGIN_OVERRIDE_NONE: &str = "none";
+
 /// Converts argument string into a known SettingType. Will return an error if
 /// no suitable type can be determined.
 fn extract_setting_type(s: &str) -> Result<SettingType, Error> {
@@ -38,9 +42,9 @@ fn generate_account_mutation(value: &str) -> Result<Mutation, Error> {
 /// LoginOverride enum value.
 fn extract_login_override(value: &str) -> Result<LoginOverride, Error> {
     match value {
-        "auth" => Ok(LoginOverride::AuthProvider),
-        "autologinguest" => Ok(LoginOverride::AutologinGuest),
-        "none" => Ok(LoginOverride::None),
+        LOGIN_OVERRIDE_AUTH => Ok(LoginOverride::AuthProvider),
+        LOGIN_OVERRIDE_AUTOLOGINGUEST => Ok(LoginOverride::AutologinGuest),
+        LOGIN_OVERRIDE_NONE => Ok(LoginOverride::None),
         _ => Err(format_err!("unknown login override")),
     }
 }

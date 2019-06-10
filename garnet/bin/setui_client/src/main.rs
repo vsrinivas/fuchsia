@@ -94,8 +94,32 @@ fn describe_login_override(login_override_option: Option<LoginOverride>) -> Resu
     }
 
     match login_override_option.unwrap() {
-        LoginOverride::AutologinGuest => Ok("guest".to_string()),
-        LoginOverride::None => Ok("none".to_string()),
-        LoginOverride::AuthProvider => Ok("auth".to_string()),
+        LoginOverride::AutologinGuest => Ok(client::LOGIN_OVERRIDE_AUTOLOGINGUEST.to_string()),
+        LoginOverride::None => Ok(client::LOGIN_OVERRIDE_NONE.to_string()),
+        LoginOverride::AuthProvider => Ok(client::LOGIN_OVERRIDE_AUTH.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Verifies that externally dependent values are not changed
+    #[test]
+    fn test_describe_account_override() {
+        verify_account_override(LoginOverride::AutologinGuest, "autologinguest");
+        verify_account_override(LoginOverride::None, "none");
+        verify_account_override(LoginOverride::AuthProvider, "auth");
+    }
+
+    fn verify_account_override(login_override: LoginOverride, expected: &str) {
+        match describe_login_override(Some(login_override)) {
+            Ok(description) => {
+                assert_eq!(description, expected);
+            }
+            _ => {
+                panic!("expected");
+            }
+        }
     }
 }
