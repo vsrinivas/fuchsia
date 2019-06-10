@@ -7,6 +7,7 @@
 mod forwarding;
 mod icmp;
 mod igmp;
+mod ipv6;
 pub(crate) mod reassembly;
 mod types;
 
@@ -28,13 +29,13 @@ use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
 use crate::error::{IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
+use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
     FragmentProcessingState, IpLayerFragmentCache,
 };
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
-
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
     should_send_icmpv6_error,
@@ -232,6 +233,77 @@ macro_rules! drop_packet_and_undo_parse {
     }};
 }
 
+/// Process a fragment and reassemble if required.
+///
+/// Attempts to process a potential fragment packet and reassemble if we
+/// are ready to do so. If the packet isn't fragmented, or a packet was
+/// reassembled, attempt to dispatch the packet.
+macro_rules! process_fragment {
+    ($ctx:expr, $device:expr, $frame_dst:expr, $buffer:expr, $packet:expr, $ip:ident) => {{
+        match process_fragment::<&mut [u8], _, $ip>($ctx, $packet) {
+            // Handle the packet right away since reassembly is not needed.
+            FragmentProcessingState::NotNeeded(packet) => {
+                trace!("receive_ip_packet: not fragmented");
+                // TODO(joshlf):
+                // - Check for already-expired TTL?
+                let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
+                dispatch_receive_ip_packet(
+                    $ctx,
+                    Some($device),
+                    $frame_dst,
+                    src_ip,
+                    dst_ip,
+                    proto,
+                    $buffer,
+                    Some(meta),
+                );
+            }
+            // Ready to reassemble a packet.
+            FragmentProcessingState::Ready { key, packet_len } => {
+                trace!("receive_ip_packet: fragmented, ready for reassembly");
+                // Allocate a buffer of `packet_len` bytes.
+                let mut bytes = vec![0; packet_len];
+                let mut buffer = Buf::new(bytes.as_mut_slice(), ..);
+
+                // Attempt to reassemble the packet.
+                match reassemble_packet::<_, _, _, $ip>($ctx, &key, buffer.buffer_view_mut()) {
+                    // Successfully reassembled the packet, handle it.
+                    Ok(packet) => {
+                        trace!("receive_ip_packet: fragmented, reassembled packet: {:?}", packet);
+                        // TODO(joshlf):
+                        // - Check for already-expired TTL?
+                        let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
+                        dispatch_receive_ip_packet(
+                            $ctx,
+                            Some($device),
+                            $frame_dst,
+                            src_ip,
+                            dst_ip,
+                            proto,
+                            buffer,
+                            Some(meta),
+                        );
+                    }
+                    // TODO(ghanan): Handle reassembly errors.
+                    _ => return,
+                    Err(e) => {
+                        trace!("receive_ip_packet: fragmented, failed to reassemble: {:?}", e);
+                    }
+                }
+            }
+            // Cannot proceed since we need more fragments before we
+            // can reassemble a packet.
+            FragmentProcessingState::NeedMoreFragments => {
+                trace!("receive_ip_packet: fragmented, need more before reassembly")
+            }
+            // TODO(ghanan): Handle invalid fragments.
+            FragmentProcessingState::InvalidFragment => {
+                trace!("receive_ip_packet: fragmented, invalid")
+            }
+        };
+    }};
+}
+
 /// Receive an IP packet from a device.
 ///
 /// `frame_dst` specifies whether this packet was received in a broadcast or
@@ -310,10 +382,19 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // Once the packet gets to the last destination in the routing header, that node
         // will process the fragment extension header and handle reassembly.
         #[ipv4]
-        match process_fragment::<&mut [u8], _, Ipv4>(ctx, packet) {
-            // Handle the packet right away since reassembly is not needed.
-            FragmentProcessingState::NotNeeded(packet) => {
+        process_fragment!(ctx, device, frame_dst, buffer, packet, Ipv4);
+
+        #[ipv6]
+        // Handle extension headers first.
+        match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, true) {
+            Ipv6PacketAction::Discard => {
+                trace!("receive_ip_packet: handled IPv6 extension headers: discarding packet");
+            }
+            Ipv6PacketAction::Continue => {
+                trace!("receive_ip_packet: handled IPv6 extension headers: dispatching packet");
+
                 // TODO(joshlf):
+                // - Do something with ICMP if we don't have a handler for that protocol?
                 // - Check for already-expired TTL?
                 let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
                 dispatch_receive_ip_packet(
@@ -327,61 +408,35 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                     Some(meta),
                 );
             }
-            // Ready to reassemble a packet.
-            FragmentProcessingState::Ready { key, packet_len } => {
-                // Allocate a buffer of `packet_len` bytes.
-                let mut bytes = vec![0; packet_len];
-                let mut buffer = Buf::new(bytes.as_mut_slice(), ..);
+            Ipv6PacketAction::ProcessFragment => {
+                trace!(
+                    "receive_ip_packet: handled IPv6 extension headers: handling fragmented packet"
+                );
 
-                // Attempt to reassemble the packet.
-                match reassemble_packet::<_, _, _, Ipv4>(ctx, &key, buffer.buffer_view_mut()) {
-                    // Successfully reassembled the packet, handle it.
-                    Ok(packet) => {
-                        // TODO(joshlf):
-                        // - Check for already-expired TTL?
-                        let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
-                        dispatch_receive_ip_packet(
-                            ctx,
-                            Some(device),
-                            frame_dst,
-                            src_ip,
-                            dst_ip,
-                            proto,
-                            buffer,
-                            Some(meta),
-                        );
-                    }
-                    // TODO(ghanan): Handle reassembly errors.
-                    _ => return,
-                }
+                // TODO(ghanan): Handle extension headers again since there could be
+                //               some more in a reassembled packet (after the
+                //               fragment header).
+                process_fragment!(ctx, device, frame_dst, buffer, packet, Ipv6);
             }
-            // Cannot proceed since we need more fragments before we
-            // can reassemble a packet.
-            FragmentProcessingState::NeedMoreFragments => {}
-            // TODO(ghanan): Handle invalid fragments.
-            FragmentProcessingState::InvalidFragment => {}
-        };
-
-        #[ipv6]
-        {
-            // TODO(joshlf):
-            // - Check for already-expired TTL?
-            let (src_ip, dst_ip, proto, meta) = drop_packet!(packet);
-            dispatch_receive_ip_packet(
-                ctx,
-                Some(device),
-                frame_dst,
-                src_ip,
-                dst_ip,
-                proto,
-                buffer,
-                Some(meta),
-            );
         }
     } else if let Some(dest) = forward(ctx, packet.dst_ip()) {
         let ttl = packet.ttl();
         if ttl > 1 {
             trace!("receive_ip_packet: forwarding");
+
+            #[ipv6]
+            // Handle extension headers first.
+            match ipv6::handle_extension_headers(ctx, device, frame_dst, &packet, false) {
+                Ipv6PacketAction::Discard => {
+                    trace!("receive_ip_packet: handled IPv6 extension headers: discarding packet");
+                    return;
+                }
+                Ipv6PacketAction::Continue => {
+                    trace!("receive_ip_packet: handled IPv6 extension headers: forwarding packet");
+                }
+                Ipv6PacketAction::ProcessFragment => unreachable!("When forwarding packets, we should only ever look at the hop by hop options extension header (if present)"),
+            }
+
             packet.set_ttl(ttl - 1);
             let (src_ip, dst_ip, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
             if let Err((err, ser)) = crate::device::send_ip_frame(
@@ -1150,6 +1205,20 @@ mod tests {
 
         //
         // Test with unrecognized option type set with
+        // action = skip & continue.
+        //
+
+        let mut buf = buf_for_unrecognized_ext_hdr_option_test(
+            &mut bytes,
+            ExtensionHeaderOptionAction::SkipAndContinue,
+            false,
+        );
+        receive_ip_packet::<_, _, Ipv6>(&mut ctx, device, frame_dst, buf);
+        assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
+
+        //
+        // Test with unrecognized option type set with
         // action = discard.
         //
 
@@ -1237,11 +1306,12 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
 
         //
-        // None of our tests should have sent an icmpv4 packet or dispatched an ip packet.
+        // None of our tests should have sent an icmpv4 packet, or dispatched an ip packet
+        // after the first.
         //
 
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_parameter_problem"), 0);
-        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
     }
 
     #[test]
