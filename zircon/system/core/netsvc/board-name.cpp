@@ -130,6 +130,8 @@ bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length)
 #if __x86_64__
     if (IsChromebook()) {
         strcpy(real_board_name, "chromebook-x64");
+    } else {
+        strcpy(real_board_name, "pc");
     }
 #endif
 

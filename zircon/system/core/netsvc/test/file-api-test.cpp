@@ -197,9 +197,17 @@ TEST_F(FileApiTest, WriteNetCopy) {
 TEST_F(FileApiTest, WriteBoardName) {
     fake_sysinfo_.set_board_name(kFakeData);
     ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10), TFTP_NO_ERROR);
+#if __x86_64__
+    // We hardcode x64 to return "pc" no matter what sysinfo returns.
+    constexpr char kBoardName[] = "pc";
+    size_t len = sizeof(kBoardName);
+    ASSERT_EQ(file_api_.Write(kBoardName, &len, 0), TFTP_NO_ERROR);
+    ASSERT_EQ(len, sizeof(kBoardName));
+#else
     size_t len = sizeof(kFakeData);
     ASSERT_EQ(file_api_.Write(kFakeData, &len, 0), TFTP_NO_ERROR);
     ASSERT_EQ(len, sizeof(kFakeData));
+#endif
     file_api_.Close();
 }
 
