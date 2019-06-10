@@ -5,14 +5,14 @@
 #ifndef PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
 #define PERIDOT_TESTS_BENCHMARKS_STORY_TRACING_WAITER_H_
 
-#include <functional>
-#include <memory>
-
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
+
+#include <functional>
+#include <memory>
 
 namespace modular {
 
@@ -28,7 +28,7 @@ class TracingWaiter {
 
  private:
   bool started_{};
-  std::unique_ptr<trace::TraceProvider> trace_provider_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
   std::unique_ptr<trace::TraceObserver> trace_observer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TracingWaiter);
