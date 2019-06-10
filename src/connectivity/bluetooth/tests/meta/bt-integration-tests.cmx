@@ -14,6 +14,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/bt-emulator",
             "class/bt-host",
             "test/test"
         ],
