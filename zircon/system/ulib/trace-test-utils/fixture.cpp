@@ -53,7 +53,6 @@ public:
         // to StartTracing()/StopTracing(). Reset related state tracking vars
         // each time.
         disposition_ = ZX_ERR_INTERNAL;
-        buffer_bytes_written_ = 0u;
         observed_stopped_callback_ = false;
         ResetBufferFullNotification();
     }
@@ -61,9 +60,11 @@ public:
     void StartEngine() {
         ResetEngineState();
 
-        zx_status_t status = trace_engine_start(loop_.dispatcher(), this,
-                                                buffering_mode_,
-                                                buffer_.get(), buffer_.size());
+        zx_status_t status = trace_engine_initialize(loop_.dispatcher(), this,
+                                                     buffering_mode_,
+                                                     buffer_.get(), buffer_.size());
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+        status = trace_engine_start(TRACE_START_CLEAR_ENTIRE_BUFFER);
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 
@@ -82,7 +83,7 @@ public:
 
     void StopEngine() {
         ZX_DEBUG_ASSERT(trace_running_);
-        trace_engine_stop(ZX_OK);
+        trace_engine_terminate();
     }
 
     void WaitEngineStopped() {
@@ -172,14 +173,10 @@ private:
         return category[0] == '+';
     }
 
-    void TraceStopped(async_dispatcher_t* dispatcher,
-                      zx_status_t disposition,
-                      size_t buffer_bytes_written) override {
+    void TraceStopped(zx_status_t disposition) override {
         ZX_DEBUG_ASSERT(!observed_stopped_callback_);
         observed_stopped_callback_ = true;
-        ZX_DEBUG_ASSERT(dispatcher = loop_.dispatcher());
         disposition_ = disposition;
-        buffer_bytes_written_ = buffer_bytes_written;
 
         trace_stopped_.signal(0u, ZX_EVENT_SIGNALED);
 
@@ -201,7 +198,6 @@ private:
     fbl::Array<uint8_t> buffer_;
     bool trace_running_ = false;
     zx_status_t disposition_;
-    size_t buffer_bytes_written_;
     zx::event trace_stopped_;
     zx::event buffer_full_;
     bool observed_stopped_callback_;

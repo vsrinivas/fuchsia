@@ -59,14 +59,16 @@ struct trace_handler_ops {
     // An error indicates that the trace data may be inaccurate or incomplete.
     //
     // |handler| is the trace handler object itself.
-    // |async| is the trace engine's asynchronous dispatcher.
     // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
     // that tracing was aborted due to an error.
-    // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
-    void (*trace_stopped)(trace_handler_t* handler, async_dispatcher_t* dispatcher,
-                          zx_status_t disposition, size_t buffer_bytes_written);
+    void (*trace_stopped)(trace_handler_t* handler, zx_status_t disposition);
+
+    // Called by the trace engine to indicate it has terminated.
+    //
+    // Called on an asynchronous dispatch thread.
+    void (*trace_terminated)(trace_handler_t* handler);
 
     // Called by the trace engine after an attempt to allocate space
     // for a new record has failed because the buffer is full.
@@ -77,7 +79,16 @@ struct trace_handler_ops {
                                uint64_t durable_data_end);
 };
 
-// Asynchronously starts the trace engine.
+// Whether to clear the trace buffer when starting the engine.
+typedef enum {
+    // The numbering here is chosen to match the |BufferDisposition| enum in
+    // the fuchsia.tracing.provider.Provider FIDL protocol.
+    TRACE_START_CLEAR_ENTIRE_BUFFER = 1,
+    TRACE_START_CLEAR_NONDURABLE_BUFFER = 2,
+    TRACE_START_RETAIN_BUFFER = 3,
+} trace_start_mode_t;
+
+// Initialize the trace engine.
 //
 // |async| is the asynchronous dispatcher which the trace engine will use for dispatch (borrowed).
 // |handler| is the trace handler which will handle lifecycle events (borrowed).
@@ -85,7 +96,7 @@ struct trace_handler_ops {
 // |buffer_num_bytes| is the size of the trace buffer in bytes.
 //
 // Returns |ZX_OK| if tracing is ready to go.
-// Returns |ZX_ERR_BAD_STATE| if tracing is already in progress.
+// Returns |ZX_ERR_BAD_STATE| if tracing has already been initialized.
 // Returns |ZX_ERR_NO_MEMORY| if allocation failed.
 //
 // This function is thread-safe.
@@ -100,22 +111,33 @@ struct trace_handler_ops {
 // the trace handler will not be notified of trace completion and subsequent calls
 // to |trace_engine_start()| will return |ZX_ERR_BAD_STATE|.
 //
-// For this reason, it is a good idea to call |trace_engine_stop()| and wait
-// for the handler to receive the |trace_handler_ops.trace_stopped()| callback
+// For this reason, it is a good idea to call |trace_engine_terminate()| and wait
+// for the handler to receive the |trace_handler_ops.trace_terminated()| callback
 // prior to shutting down the trace engine's asynchronous dispatcher.
 //
 // Better yet, don't shut down the trace engine's asynchronous dispatcher unless
 // the process is already about to exit.
-zx_status_t trace_engine_start(async_dispatcher_t* dispatcher,
-                               trace_handler_t* handler,
-                               trace_buffering_mode_t buffering_mode,
-                               void* buffer,
-                               size_t buffer_num_bytes);
+zx_status_t trace_engine_initialize(async_dispatcher_t* dispatcher,
+                                    trace_handler_t* handler,
+                                    trace_buffering_mode_t buffering_mode,
+                                    void* buffer,
+                                    size_t buffer_num_bytes);
+
+// Asynchronously starts the trace engine.
+// The engine must have already be initialized with |trace_engine_initialize()|.
+//
+// |mode| specifies whether to clear the trace buffer first.
+//
+// Returns |ZX_OK| if tracing is ready to go.
+// Returns |ZX_ERR_BAD_STATE| if tracing is already in progress.
+//
+// This function is thread-safe.
+zx_status_t trace_engine_start(trace_start_mode_t mode);
 
 // Asynchronously stops the trace engine.
 //
 // The trace handler's |trace_stopped()| method will be invoked asynchronously
-// when the trace engine transitions to the |TRACE_STOPPED| states.
+// when the trace engine transitions to the |TRACE_STOPPED| state.
 // Does nothing if tracing has already stopped.
 //
 // |disposition| is |ZX_OK| if tracing is being stopped normally, otherwise indicates
@@ -123,6 +145,22 @@ zx_status_t trace_engine_start(async_dispatcher_t* dispatcher,
 //
 // This function is thread-safe.
 void trace_engine_stop(zx_status_t disposition);
+
+// Asynchronously terminates the trace engine.
+//
+// This must be called before tracing is initialized again.
+//
+// The trace handler's |trace_terminated()| method will be invoked asynchronously,
+// after the trace engine transitions to the |TRACE_STOPPED| state if not already
+// stopped.
+// This may be called whether tracing is currenting started or not.
+// Does nothing if tracing has already terminated.
+//
+// If tracing is not already stopped the disposition is set to |ZX_OK|.
+// If a different disposition is desired, call |trace_engine_stop()| first.
+//
+// This function is thread-safe.
+void trace_engine_terminate();
 
 // Asynchronously notifies the engine that buffers up to |wrapped_count|
 // have been saved.

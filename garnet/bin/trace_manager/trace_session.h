@@ -9,7 +9,7 @@
 #include <list>
 #include <vector>
 
-#include <fuchsia/tracelink/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
@@ -41,7 +41,8 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   explicit TraceSession(zx::socket destination,
                         std::vector<std::string> categories,
                         size_t trace_buffer_size_megabytes,
-                        fuchsia::tracelink::BufferingMode buffering_mode,
+                        fuchsia::tracing::provider::BufferingMode
+                            buffering_mode,
                         TraceProviderSpecMap&& provider_specs,
                         fit::closure abort_handler);
   // Frees all allocated resources and closes the outgoing
@@ -93,7 +94,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   zx::socket destination_;
   fidl::VectorPtr<std::string> categories_;
   size_t trace_buffer_size_megabytes_;
-  fuchsia::tracelink::BufferingMode buffering_mode_;
+  fuchsia::tracing::provider::BufferingMode buffering_mode_;
   TraceProviderSpecMap provider_specs_;
   std::list<std::unique_ptr<Tracee>> tracees_;
   async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout>

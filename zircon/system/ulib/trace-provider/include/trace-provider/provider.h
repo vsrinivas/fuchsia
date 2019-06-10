@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -55,7 +56,11 @@ typedef struct trace_provider_packet {
 // |data64| is current offset in the durable buffer
 #define TRACE_PROVIDER_SAVE_BUFFER (0x2)
 
-// Next Provider->Manager packet = 0x3
+// Indicate the provider has completely stopped tracing.
+// |data16,data32,data64| are unused (must be zero).
+#define TRACE_PROVIDER_STOPPED (0x3)
+
+// Next Provider->Manager packet = 0x4
 
 // Manager->Provider
 // A buffer has been saved (streaminng mode only).

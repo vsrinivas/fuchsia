@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <trace-provider/provider.h>
+// TODO(PT-127): Replace the next line with trace-provider/provider.h.
+#include <trace-provider/tracelink_provider.h>
 
 #include "garnet/bin/ktrace_provider/app.h"
 #include "src/lib/fxl/command_line.h"
@@ -17,7 +18,9 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "ktrace_provider");
+  // TODO(PT-127): Use TraceProviderWithFdio.
+  trace::TracelinkProviderWithFdio trace_provider(
+      loop.dispatcher(), "ktrace_provider");
 
   App app(command_line);
   loop.Run();

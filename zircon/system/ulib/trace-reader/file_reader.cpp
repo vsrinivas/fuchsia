@@ -12,6 +12,7 @@ bool FileReader::Create(const char* file_path,
                         ErrorHandler error_handler,
                         std::unique_ptr<FileReader>* out_reader) {
     ZX_DEBUG_ASSERT(out_reader != nullptr);
+
     FILE* f = fopen(file_path, "rb");
     if (f == nullptr) {
         return false;

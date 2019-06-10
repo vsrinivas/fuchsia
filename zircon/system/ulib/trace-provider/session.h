@@ -11,8 +11,8 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <lib/zircon-internal/fnv1hash.h>
 #include <trace-provider/handler.h>
+#include <trace-provider/provider.h>
 
 // clang-format off
 // TODO(DX-1043): These are for the is-category-enabled lookup.
@@ -20,6 +20,7 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zircon-internal/fnv1hash.h>
 // clang-format on
 
 namespace trace {
@@ -27,22 +28,24 @@ namespace internal {
 
 class Session final : public trace::TraceHandler {
 public:
-    static void StartEngine(async_dispatcher_t* dispatcher,
-                            trace_buffering_mode_t buffering_mode,
-                            zx::vmo buffer, zx::fifo fifo,
-                            std::vector<std::string> enabled_categories);
+    static void InitializeEngine(async_dispatcher_t* dispatcher,
+                                 trace_buffering_mode_t buffering_mode,
+                                 zx::vmo buffer, zx::fifo fifo,
+                                 std::vector<std::string> categories);
+    static void StartEngine(trace_start_mode_t start_mode);
     static void StopEngine();
+    static void TerminateEngine();
 
 private:
     Session(void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
-            std::vector<std::string> enabled_categories);
+            std::vector<std::string> categories);
     ~Session() override;
 
     // |trace::TraceHandler|
     bool IsCategoryEnabled(const char* category) override;
     void TraceStarted() override;
-    void TraceStopped(async_dispatcher_t* dispatcher,
-                      zx_status_t disposition, size_t buffer_bytes_written) override;
+    void TraceStopped(zx_status_t disposition) override;
+    void TraceTerminated() override;
     // This is called in streaming mode to notify the trace manager that
     // buffer |buffer_number| is full and needs to be saved.
     void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end)
@@ -52,6 +55,7 @@ private:
                     zx_status_t status,
                     const zx_packet_signal_t* signal);
     bool ReadFifoMessage();
+    void SendFifoPacket(const trace_provider_packet_t* packet);
 
     // This is called in streaming mode when TraceManager reports back that
     // it has saved the buffer.
@@ -62,7 +66,7 @@ private:
     size_t buffer_num_bytes_;
     zx::fifo fifo_;
     async::WaitMethod<Session, &Session::HandleFifo> fifo_wait_;
-    std::vector<std::string> const enabled_categories_;
+    std::vector<std::string> const categories_;
 
     using CString = const char*;
 

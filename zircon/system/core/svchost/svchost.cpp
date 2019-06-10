@@ -103,10 +103,20 @@ static zx_handle_t appmgr_svc;
 static zx_handle_t root_job;
 static zx_handle_t root_resource;
 
-// We should host the tracelink service ourselves instead of routing the request
-// to appmgr.
-zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
+// TODO(PT-127): fuchsia.tracelink is being renamed to fuchsia.tracing.provider.
+static zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
     const char* service_name = "fuchsia.tracelink.Registry";
+    return dir->AddEntry(
+        service_name,
+        fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
+            return fdio_service_connect_at(appmgr_svc, service_name, request.release());
+        }));
+}
+
+// We should host the fuchsia.tracing.provider service ourselves instead of
+// routing the request to appmgr.
+static zx_status_t publish_tracing_provider(const fbl::RefPtr<fs::PseudoDir>& dir) {
+    const char* service_name = "fuchsia.tracing.provider.Registry";
     return dir->AddEntry(
         service_name,
         fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
@@ -310,6 +320,13 @@ int main(int argc, char** argv) {
     status = publish_tracelink(outgoing.public_dir());
     if (status != ZX_OK) {
         fprintf(stderr, "svchost: error: Failed to publish tracelink: %d (%s).\n",
+                status, zx_status_get_string(status));
+        return 1;
+    }
+
+    status = publish_tracing_provider(outgoing.public_dir());
+    if (status != ZX_OK) {
+        fprintf(stderr, "svchost: error: Failed to publish tracing.provider: %d (%s).\n",
                 status, zx_status_get_string(status));
         return 1;
     }

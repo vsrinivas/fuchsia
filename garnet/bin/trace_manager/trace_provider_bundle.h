@@ -12,11 +12,33 @@
 #include <string>
 
 #include <fuchsia/tracelink/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 
 namespace tracing {
 
+// TODO(PT-127): Both tracelink and tracing.provider providers are handled
+// here, until the tracelink renaming is complete, afterwhich this will revert
+// back to its original simple self.
 struct TraceProviderBundle {
-  fuchsia::tracelink::ProviderPtr provider;
+  TraceProviderBundle(fuchsia::tracelink::ProviderPtr tracelink_provider,
+                      uint32_t id, zx_koid_t pid, const std::string& name);
+  TraceProviderBundle(fuchsia::tracing::provider::ProviderPtr provider,
+                      uint32_t id, zx_koid_t pid, const std::string& name);
+  ~TraceProviderBundle() = default;
+
+  TraceProviderBundle(const TraceProviderBundle& value) = delete;
+  TraceProviderBundle& operator=(const TraceProviderBundle&) = delete;
+
+  TraceProviderBundle(const TraceProviderBundle&& value) = delete;
+  TraceProviderBundle& operator=(const TraceProviderBundle&&) = delete;
+
+  // Only one of these is used, depending on |is_tracelink|.
+  fuchsia::tracelink::ProviderPtr tracelink_provider;
+  fuchsia::tracing::provider::ProviderPtr provider;
+
+  // If true use |tracelink_provider|, otherwise use |provider|.
+  bool is_tracelink;
+
   uint32_t id;
   zx_koid_t pid;
   const std::string name;

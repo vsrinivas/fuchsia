@@ -23,15 +23,15 @@ namespace internal {
 
 Session::Session(void* buffer, size_t buffer_num_bytes,
                  zx::fifo fifo,
-                 std::vector<std::string> enabled_categories)
+                 std::vector<std::string> categories)
     : buffer_(buffer),
       buffer_num_bytes_(buffer_num_bytes),
       fifo_(std::move(fifo)),
       fifo_wait_(this, fifo_.get(),
                  ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED),
-      enabled_categories_(std::move(enabled_categories)) {
+      categories_(std::move(categories)) {
     // Build a quick lookup table for IsCategoryEnabled().
-    for (const auto& cat : enabled_categories_) {
+    for (const auto& cat : categories_) {
         auto entry = std::make_unique<StringSetEntry>(cat.c_str());
         enabled_category_set_.insert_or_find(std::move(entry));
     }
@@ -45,10 +45,10 @@ Session::~Session() {
     ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 }
 
-void Session::StartEngine(async_dispatcher_t* dispatcher,
-                          trace_buffering_mode_t buffering_mode,
-                          zx::vmo buffer, zx::fifo fifo,
-                          std::vector<std::string> enabled_categories) {
+void Session::InitializeEngine(async_dispatcher_t* dispatcher,
+                               trace_buffering_mode_t buffering_mode,
+                               zx::vmo buffer, zx::fifo fifo,
+                               std::vector<std::string> categories) {
     ZX_DEBUG_ASSERT(buffer);
     ZX_DEBUG_ASSERT(fifo);
 
@@ -59,7 +59,7 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
         break;
     case TRACE_STOPPING:
         fprintf(stderr, "Session for process %" PRIu64
-                ": cannot start engine, still stopping from previous trace\n",
+                ": cannot initialize engine, still stopping from previous trace\n",
                 GetPid());
         return;
     case TRACE_STARTED:
@@ -67,7 +67,7 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
         // This is a bug in the app, provide extra assistance for diagnosis.
         // Including the pid here has been extraordinarily helpful.
         fprintf(stderr, "Session for process %" PRIu64
-                ": engine is already started. Is there perchance two"
+                ": engine is already initialized. Is there perchance two"
                 " providers in this app?\n",
                 GetPid());
         return;
@@ -95,7 +95,7 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
 
     auto session = new Session(reinterpret_cast<void*>(buffer_ptr),
                                buffer_num_bytes, std::move(fifo),
-                               std::move(enabled_categories));
+                               std::move(categories));
 
     status = session->fifo_wait_.Begin(dispatcher);
     if (status != ZX_OK) {
@@ -105,20 +105,67 @@ void Session::StartEngine(async_dispatcher_t* dispatcher,
         return;
     }
 
-    status = trace_engine_start(dispatcher, session, buffering_mode,
-                                session->buffer_, session->buffer_num_bytes_);
+    status = trace_engine_initialize(dispatcher, session, buffering_mode,
+                                     session->buffer_, session->buffer_num_bytes_);
     if (status != ZX_OK) {
         fprintf(stderr, "Session: error starting engine, status=%d(%s)\n",
                 status, zx_status_get_string(status));
         delete session;
+    } else {
+        // The session will be destroyed in |TraceTerminated()|.
+    }
+}
+
+void Session::StartEngine(trace_start_mode_t start_mode) {
+    // If the engine isn't stopped flag an error. No one else should be
+    // starting/stopping the engine so testing this here is ok.
+    switch (trace_state()) {
+    case TRACE_STOPPED:
+        break;
+    case TRACE_STOPPING:
+        fprintf(stderr, "Session for process %" PRIu64
+                ": cannot start engine, still stopping from previous trace\n",
+                GetPid());
         return;
+    case TRACE_STARTED:
+        // Ignore.
+        return;
+    default:
+        __UNREACHABLE;
     }
 
-    // The session will be destroyed in |TraceStopped()|.
+    zx_status_t status = trace_engine_start(start_mode);
+    if (status != ZX_OK) {
+        // There's nothing more we can do here. There's currently no easy way
+        // to inform trace-manager of the error because we don't have a copy
+        // of "this", we're a static method and we give ownership of "this" to
+        // the trace engine. When the trace-engine wants to invoke one of our
+        // methods it does so via the "handler" API. But we're not in the
+        // engine here. Fortunately there's nothing more we need to do here.
+        // The kinds of errors we can get here fall into three categories:
+        // 1) Can't happen: If it can't happen then just let trace-manager
+        //    timeout waiting for us to start.
+        // 2) To be ignored: The FIDL provider protocol specifies that if a
+        //    Start request is received when the engine is not stopped then the
+        //    request is to be ignored.
+        // 3) Async loop shutting down: If the provider is shutting down its
+        //    async loop then the engine is about to be terminated anyway.
+        //
+        // Just log the error for debugging purposes.
+        // Ignore BAD_STATE as that is case #2.
+        if (status != ZX_ERR_BAD_STATE) {
+            fprintf(stderr, "Session: error starting engine, status=%d(%s)\n",
+                    status, zx_status_get_string(status));
+        }
+    }
 }
 
 void Session::StopEngine() {
     trace_engine_stop(ZX_OK);
+}
+
+void Session::TerminateEngine() {
+    trace_engine_terminate();
 }
 
 void Session::HandleFifo(async_dispatcher_t* dispatcher,
@@ -145,7 +192,7 @@ void Session::HandleFifo(async_dispatcher_t* dispatcher,
     }
 
     // TraceManager is gone or other error with the fifo.
-    StopEngine();
+    TerminateEngine();
 }
 
 bool Session::ReadFifoMessage() {
@@ -192,26 +239,33 @@ zx_status_t Session::MarkBufferSaved(uint32_t wrapped_count,
 }
 
 bool Session::IsCategoryEnabled(const char* category) {
-    if (enabled_categories_.size() == 0) {
+    if (categories_.size() == 0) {
       // If none are specified, enable all categories.
       return true;
     }
     return enabled_category_set_.find(category) != enabled_category_set_.end();
 }
 
-void Session::TraceStarted() {
-    trace_provider_packet_t packet{};
-    packet.request = TRACE_PROVIDER_STARTED;
-    packet.data32 = TRACE_PROVIDER_FIFO_PROTOCOL_VERSION;
-    auto status = fifo_.write(sizeof(packet), &packet, 1, nullptr);
+void Session::SendFifoPacket(const trace_provider_packet_t* packet) {
+    auto status = fifo_.write(sizeof(*packet), packet, 1, nullptr);
     ZX_DEBUG_ASSERT(status == ZX_OK ||
                     status == ZX_ERR_PEER_CLOSED);
 }
 
-void Session::TraceStopped(async_dispatcher_t* dispatcher, zx_status_t disposition,
-                           size_t buffer_bytes_written) {
-    // There's no need to notify the trace manager that records were dropped
-    // here. That can be determined from the buffer header.
+void Session::TraceStarted() {
+    trace_provider_packet_t packet{};
+    packet.request = TRACE_PROVIDER_STARTED;
+    packet.data32 = TRACE_PROVIDER_FIFO_PROTOCOL_VERSION;
+    SendFifoPacket(&packet);
+}
+
+void Session::TraceStopped(zx_status_t disposition) {
+    trace_provider_packet_t packet{};
+    packet.request = TRACE_PROVIDER_STOPPED;
+    SendFifoPacket(&packet);
+}
+
+void Session::TraceTerminated() {
     delete this;
 }
 

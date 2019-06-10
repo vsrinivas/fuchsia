@@ -539,7 +539,7 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
     launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
     launchpad_add_handle(lp, logger.release(), PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO));
 
-    // Remove once svchost hosts the tracelink service itself.
+    // Remove once svchost hosts the fuchsia.tracing.provider service itself.
     launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));
 
     // Give svchost a restricted root job handle. svchost is already a privileged system service

@@ -87,7 +87,12 @@ struct trace_context {
 
     size_t DurableBytesAllocated() const;
 
+    void ResetDurableBufferPointers();
+    void ResetRollingBufferPointers();
+    void ResetBufferPointers();
     void InitBufferHeader();
+    void ClearEntireBuffer();
+    void ClearRollingBuffers();
     void UpdateBufferHeaderAfterStopped();
 
     uint64_t* AllocRecord(size_t num_bytes);

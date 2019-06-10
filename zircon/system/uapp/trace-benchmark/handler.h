@@ -43,11 +43,15 @@ public:
     trace_buffering_mode_t mode() const { return mode_; }
 
     void Start() {
-        zx_status_t status = trace_engine_start(loop_->dispatcher(),
-                                                this, mode_,
-                                                buffer_.get(), buffer_.size());
+        zx_status_t status = trace_engine_initialize(loop_->dispatcher(),
+                                                     this, mode_,
+                                                     buffer_.get(), buffer_.size());
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
-                            "trace_start_engine returned %s\n",
+                            "trace_engine_initialize returned %s\n",
+                            zx_status_get_string(status));
+        status = trace_engine_start(TRACE_START_CLEAR_ENTIRE_BUFFER);
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK,
+                            "trace_engine_start returned %s\n",
                             zx_status_get_string(status));
         ZX_DEBUG_ASSERT(trace_state() == TRACE_STARTED);
         observer_event_.signal(ZX_EVENT_SIGNALED, 0u);
@@ -61,7 +65,7 @@ public:
         trace::internal::trace_buffer_header header;
         {
             auto context = trace::TraceProlongedContext::Acquire();
-            trace_engine_stop(ZX_OK);
+            trace_engine_terminate();
             trace_context_snapshot_buffer_header(context.get(), &header);
         }
 
@@ -91,9 +95,7 @@ private:
         return category[0] == '+';
     }
 
-    void TraceStopped(async_dispatcher_t* async,
-                      zx_status_t disposition,
-                      size_t buffer_bytes_written) override {
+    void TraceStopped(zx_status_t disposition) override {
         // This is noise if the status is ZX_OK, so just print if error.
         // There's also no point in printing for ZX_ERR_NO_MEMORY, as that
         // information can be determined from the number of records dropped.

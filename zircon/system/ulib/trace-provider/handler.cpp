@@ -10,6 +10,7 @@ const trace_handler_ops_t TraceHandler::kOps =
     {.is_category_enabled = &TraceHandler::CallIsCategoryEnabled,
      .trace_started = &TraceHandler::CallTraceStarted,
      .trace_stopped = &TraceHandler::CallTraceStopped,
+     .trace_terminated = &TraceHandler::CallTraceTerminated,
      .notify_buffer_full = &TraceHandler::CallNotifyBufferFull};
 
 TraceHandler::TraceHandler()
@@ -25,10 +26,12 @@ void TraceHandler::CallTraceStarted(trace_handler_t* handler) {
     static_cast<TraceHandler*>(handler)->TraceStarted();
 }
 
-void TraceHandler::CallTraceStopped(trace_handler_t* handler, async_dispatcher_t* dispatcher,
-                                    zx_status_t disposition, size_t buffer_bytes_written) {
-    static_cast<TraceHandler*>(handler)->TraceStopped(dispatcher,
-                                                      disposition, buffer_bytes_written);
+void TraceHandler::CallTraceStopped(trace_handler_t* handler, zx_status_t disposition) {
+    static_cast<TraceHandler*>(handler)->TraceStopped(disposition);
+}
+
+void TraceHandler::CallTraceTerminated(trace_handler_t* handler) {
+    static_cast<TraceHandler*>(handler)->TraceTerminated();
 }
 
 void TraceHandler::CallNotifyBufferFull(trace_handler_t* handler,

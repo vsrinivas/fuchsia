@@ -83,6 +83,7 @@ group("fidl") {
     "fuchsia-telephony-snoop",
     "fuchsia-tracelink",
     "fuchsia-tracing-kernel",
+    "fuchsia-tracing-provider",
     "fuchsia-usb-debug",
     "fuchsia-virtualconsole",
   ]

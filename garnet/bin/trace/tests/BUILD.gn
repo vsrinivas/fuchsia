@@ -278,10 +278,26 @@ executable("detach_tests") {
   ]
 }
 
+executable("ktrace_integration_tests") {
+  testonly = true
+  output_name = "ktrace_integration_tests"
+
+  sources = [
+    "ktrace_integration_tests.cc"
+  ]
+
+  deps = [
+    ":run_test",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 test_package("trace_tests") {
   deps = [
     ":basic_integration_test_app",
     ":detach_tests",
+    ":ktrace_integration_tests",
     ":nested_environment_test",
     ":return_1234",
     ":return_child_result_tests",
@@ -296,6 +312,10 @@ test_package("trace_tests") {
   tests = [
     {
       name = "detach_tests"
+      environments = basic_envs
+    },
+    {
+      name = "ktrace_integration_tests"
       environments = basic_envs
     },
     {

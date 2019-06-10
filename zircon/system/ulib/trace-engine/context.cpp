@@ -46,7 +46,8 @@
 // tracing effectively stops, and all further records are dropped.
 // Note: The term "rolling buffer" is intended to be internal to the trace
 // engine/reader/manager and is not intended to appear in public APIs
-// (at least not today).
+// (at least not today). Externally, the two rolling buffers comprise the
+// "nondurable" buffer.
 //
 // The protocol between the trace engine and the handler for saving buffers in
 // streaming mode is as follows:
@@ -104,6 +105,7 @@ trace_context::trace_context(void* buffer, size_t buffer_num_bytes,
     ZX_DEBUG_ASSERT(buffer_num_bytes <= kMaxPhysicalBufferSize);
     ZX_DEBUG_ASSERT(generation_ != 0u);
     ComputeBufferSizes();
+    ResetBufferPointers();
 }
 
 trace_context::~trace_context() = default;
@@ -372,12 +374,22 @@ void trace_context::ComputeBufferSizes() {
     default:
         __UNREACHABLE;
     }
+}
 
+void trace_context::ResetDurableBufferPointers() {
     durable_buffer_current_.store(0);
     durable_buffer_full_mark_.store(0);
+}
+
+void trace_context::ResetRollingBufferPointers() {
     rolling_buffer_current_.store(0);
     rolling_buffer_full_mark_[0].store(0);
     rolling_buffer_full_mark_[1].store(0);
+}
+
+void trace_context::ResetBufferPointers() {
+    ResetDurableBufferPointers();
+    ResetRollingBufferPointers();
 }
 
 void trace_context::InitBufferHeader() {
@@ -389,6 +401,15 @@ void trace_context::InitBufferHeader() {
     header_->total_size = buffer_end_ - buffer_start_;
     header_->durable_buffer_size = durable_buffer_size_;
     header_->rolling_buffer_size = rolling_buffer_size_;
+}
+
+void trace_context::ClearEntireBuffer() {
+    ResetBufferPointers();
+    InitBufferHeader();
+}
+
+void trace_context::ClearRollingBuffers() {
+    ResetRollingBufferPointers();
 }
 
 void trace_context::UpdateBufferHeaderAfterStopped() {

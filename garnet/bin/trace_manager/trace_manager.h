@@ -7,6 +7,7 @@
 
 #include <fuchsia/tracelink/cpp/fidl.h>
 #include <fuchsia/tracing/controller/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <list>
@@ -21,13 +22,16 @@
 
 namespace tracing {
 
-class TraceManager : public fuchsia::tracelink::Registry,
-                     public fuchsia::tracing::controller::Controller {
+class TraceManager : public fuchsia::tracing::controller::Controller,
+                     public fuchsia::tracing::provider::Registry {
  public:
   TraceManager(sys::ComponentContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
+  // TODO(PT-127): Remove after tracelink renaming complete.
+  friend class TracelinkManager;
+
   // |Controller| implementation.
   void StartTracing(fuchsia::tracing::controller::TraceOptions options,
                     zx::socket output, StartTracingCallback cb) override;
@@ -35,18 +39,16 @@ class TraceManager : public fuchsia::tracelink::Registry,
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
 
   // |TraceRegistry| implementation.
-  void RegisterTraceProviderWorker(
-      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+  void RegisterProviderWorker(
+      fidl::InterfaceHandle<fuchsia::tracing::provider::Provider> provider,
       uint64_t pid, fidl::StringPtr name);
-  void RegisterTraceProviderDeprecated(
-      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider) override;
-  void RegisterTraceProvider(
-      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+  void RegisterProvider(
+      fidl::InterfaceHandle<fuchsia::tracing::provider::Provider> provider,
       uint64_t pid, std::string name) override;
-  void RegisterTraceProviderSynchronously(
-      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
+  void RegisterProviderSynchronously(
+      fidl::InterfaceHandle<fuchsia::tracing::provider::Provider> provider,
       uint64_t pid, std::string name,
-      RegisterTraceProviderSynchronouslyCallback callback) override;
+      RegisterProviderSynchronouslyCallback callback) override;
 
   void FinalizeTracing();
   void LaunchConfiguredProviders();

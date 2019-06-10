@@ -12,6 +12,7 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <trace-engine/handler.h>
 #include <trace-engine/types.h>
 #include <trace-provider/provider.h>
 
@@ -48,9 +49,16 @@ private:
         async::WaitMethod<Connection, &Connection::Handle> wait_;
     };
 
-    void Start(trace_buffering_mode_t buffering_mode, zx::vmo buffer,
-               zx::fifo fifo, std::vector<std::string> enabled_categories);
+    void Initialize(trace_buffering_mode_t buffering_mode, zx::vmo buffer,
+                    zx::fifo fifo, std::vector<std::string> categories);
+    void Start(trace_start_mode_t start_mode,
+               std::vector<std::string> additional_categories);
+
     void Stop();
+    void Terminate();
+
+    void OnStopped();
+    void OnTerminated();
     void OnClose();
 
     async_dispatcher_t* const dispatcher_;

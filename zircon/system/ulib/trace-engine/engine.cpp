@@ -56,6 +56,11 @@ async_dispatcher_t* g_dispatcher{nullptr};
 //   - can be read outside the lock only while the engine is not stopped
 trace_handler_t* g_handler{nullptr};
 
+// Set to true when a trace is terminated and writes are in flight.
+// Rules:
+//   - can only be accessed or modified while holding g_engine_mutex
+bool g_trace_terminated{false};
+
 // Trace observer table.
 // Rules:
 //   - can only be accessed or modified while holding g_engine_mutex
@@ -325,7 +330,7 @@ void add_to_site_cache(trace_site_t* site, trace_site_state_t current_state, boo
 /*** Trace engine functions ***/
 
 // thread-safe
-EXPORT_NO_DDK zx_status_t trace_engine_start(
+EXPORT_NO_DDK zx_status_t trace_engine_initialize(
         async_dispatcher_t* dispatcher, trace_handler_t* handler,
         trace_buffering_mode_t buffering_mode,
         void* buffer, size_t buffer_num_bytes) {
@@ -354,40 +359,99 @@ EXPORT_NO_DDK zx_status_t trace_engine_start(
 
     fbl::AutoLock lock(&g_engine_mutex);
 
-    // We must have fully stopped a prior tracing session before starting a new one.
-    if (g_state.load(std::memory_order_relaxed) != TRACE_STOPPED)
+    // We must have fully terminated a prior tracing session before starting a new one.
+    if (g_handler) {
         return ZX_ERR_BAD_STATE;
+    }
+    ZX_DEBUG_ASSERT(g_state.load(std::memory_order_relaxed) == TRACE_STOPPED);
     ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) == 0u);
 
     zx::event event;
     zx_status_t status = zx::event::create(0u, &event);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
-
-    // Schedule a waiter for |event|.
-    g_event_wait = {
-        .state = {ASYNC_STATE_INIT},
-        .handler = &handle_event,
-        .object = event.get(),
-        .trigger = (SIGNAL_ALL_OBSERVERS_STARTED |
-                    SIGNAL_CONTEXT_RELEASED)};
-    status = async_begin_wait(dispatcher, &g_event_wait);
-    if (status != ZX_OK)
-        return status;
+    }
 
     // Initialize the trace engine state and context.
-    g_state.store(TRACE_STARTED, std::memory_order_relaxed);
+    // Note that we're still stopped at this point.
     g_dispatcher = dispatcher;
     g_handler = handler;
     g_disposition = ZX_OK;
     g_context = new trace_context(buffer, buffer_num_bytes, buffering_mode, handler);
     g_event = std::move(event);
+    g_trace_terminated = false;
 
-    g_context->InitBufferHeader();
+    g_context->ClearEntireBuffer();
 
-    // Write the trace initialization record first before allowing clients to
-    // get in and write their own trace records.
+    // Write the trace initialization record in case |trace_engine_start()| is
+    // called with |TRACE_START_RETAIN_BUFFER|.
     trace_context_write_initialization_record(g_context, zx_ticks_per_second());
+
+    return ZX_OK;
+}
+
+// thread-safe
+EXPORT_NO_DDK zx_status_t trace_engine_start(trace_start_mode_t start_mode) {
+    fbl::AutoLock lock(&g_engine_mutex);
+
+    switch (start_mode) {
+    case TRACE_START_CLEAR_ENTIRE_BUFFER:
+    case TRACE_START_CLEAR_NONDURABLE_BUFFER:
+    case TRACE_START_RETAIN_BUFFER:
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // The engine must be initialized first.
+    if (g_handler == nullptr) {
+        // The provider library should have initialized us first.
+        // Use ZX_ERR_INTERNAL to distinguish this from the "not stopped"
+        // error: the FIDL provider protocol specifies that the response for
+        // the latter error is to ignore the error. We leave it to the caller
+        // to decide what to do with this error.
+        return ZX_ERR_INTERNAL;
+    }
+    // |g_handler,g_context| are set/reset together.
+    ZX_DEBUG_ASSERT(g_context != nullptr);
+
+    // We must have fully stopped a prior tracing session before starting a new one.
+    if (g_state.load(std::memory_order_relaxed) != TRACE_STOPPED) {
+        return ZX_ERR_BAD_STATE;
+    }
+    ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) == 0u);
+
+    // Schedule a waiter for |event|.
+    g_event_wait = {
+        .state = {ASYNC_STATE_INIT},
+        .handler = &handle_event,
+        .object = g_event.get(),
+        .trigger = (SIGNAL_ALL_OBSERVERS_STARTED |
+                    SIGNAL_CONTEXT_RELEASED)};
+    zx_status_t status = async_begin_wait(g_dispatcher, &g_event_wait);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Initialize the trace engine state and context.
+    g_state.store(TRACE_STARTED, std::memory_order_relaxed);
+
+    switch (start_mode) {
+    case TRACE_START_CLEAR_ENTIRE_BUFFER:
+        g_context->ClearEntireBuffer();
+        trace_context_write_initialization_record(g_context, zx_ticks_per_second());
+        break;
+    case TRACE_START_CLEAR_NONDURABLE_BUFFER:
+        // Internal the "nondurable" buffer consists of the "rolling" buffers.
+        g_context->ClearRollingBuffers();
+        trace_context_write_initialization_record(g_context, zx_ticks_per_second());
+        break;
+    case TRACE_START_RETAIN_BUFFER:
+        // Nothing to do.
+        break;
+    default:
+        __UNREACHABLE;
+    }
 
     // After this point clients can acquire references to the trace context.
     g_context_refs.store(kProlongedCounterIncrement, std::memory_order_release);
@@ -410,11 +474,10 @@ EXPORT_NO_DDK zx_status_t trace_engine_start(
     return ZX_OK;
 }
 
-// thread-safe
-EXPORT_NO_DDK void trace_engine_stop(zx_status_t disposition) {
-    fbl::AutoLock lock(&g_engine_mutex);
+namespace {
 
-    // We must have have an active trace in order to stop it.
+void trace_engine_stop_locked(zx_status_t disposition) __TA_REQUIRES(g_engine_mutex) {
+    // We must have an active trace in order to stop it.
     int state = g_state.load(std::memory_order_relaxed);
     if (state == TRACE_STOPPED) {
         return;
@@ -452,6 +515,55 @@ EXPORT_NO_DDK void trace_engine_stop(zx_status_t disposition) {
     // |handle_context_released()| will be called asynchronously when the last
     // reference is released.
     trace_release_prolonged_context(reinterpret_cast<trace_prolonged_context_t*>(g_context));
+}
+
+void trace_engine_terminate_locked() __TA_REQUIRES(g_engine_mutex) {
+    ZX_DEBUG_ASSERT(g_state.load(std::memory_order_relaxed) == TRACE_STOPPED);
+    ZX_DEBUG_ASSERT(g_context_refs.load(std::memory_order_relaxed) == 0u);
+    ZX_DEBUG_ASSERT(g_context != nullptr);
+    ZX_DEBUG_ASSERT(g_handler != nullptr);
+
+    delete g_context;
+    g_context = nullptr;
+    g_dispatcher = nullptr;
+    g_handler = nullptr;
+    g_event.reset();
+}
+
+}  // namespace
+
+// thread-safe
+EXPORT_NO_DDK void trace_engine_stop(zx_status_t disposition) {
+    fbl::AutoLock lock(&g_engine_mutex);
+    trace_engine_stop_locked(disposition);
+}
+
+// thread-safe
+EXPORT_NO_DDK void trace_engine_terminate() {
+    trace_handler_t* handler = nullptr;
+
+    {
+        fbl::AutoLock lock(&g_engine_mutex);
+
+        // If trace is still running, stop it.
+        // We must have an active trace in order to stop it.
+        if (g_state.load(std::memory_order_relaxed) == TRACE_STOPPED) {
+            if (g_handler == nullptr) {
+                // Already terminated.
+                return;
+            }
+            handler = g_handler;
+            trace_engine_terminate_locked();
+        } else {
+            // Final termination has to wait for completion of all pending writers.
+            g_trace_terminated = true;
+            trace_engine_stop_locked(ZX_OK);
+        }
+    }
+
+    if (handler) {
+        handler->ops->trace_terminated(handler);
+    }
 }
 
 // This is an internal function, only called from context.cpp.
@@ -517,12 +629,13 @@ void handle_all_observers_started() {
     }
 }
 
-void handle_context_released(async_dispatcher_t* dispatcher) {
+void handle_context_released() {
     // All ready to clean up.
     // Grab the mutex while modifying shared state.
     zx_status_t disposition;
     trace_handler_t* handler;
-    size_t buffer_bytes_written;
+    bool trace_terminated = false;
+
     {
         fbl::AutoLock lock(&g_engine_mutex);
 
@@ -537,17 +650,15 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
         if (g_context->WasRecordDropped())
             update_disposition_locked(ZX_ERR_NO_MEMORY);
         disposition = g_disposition;
+        // If we're also terminating |g_handler| will get reset.
         handler = g_handler;
-        buffer_bytes_written = (g_context->RollingBytesAllocated() +
-                                g_context->DurableBytesAllocated());
+        ZX_DEBUG_ASSERT(handler != nullptr);
 
         // Tidy up.
-        g_dispatcher = nullptr;
-        g_handler = nullptr;
         g_disposition = ZX_OK;
-        g_event.reset();
-        delete g_context;
-        g_context = nullptr;
+
+        // Clear the signal, otherwise we'll keep getting called.
+        g_event.signal(SIGNAL_CONTEXT_RELEASED, 0u);
 
         // After this point, it's possible for the engine to be restarted
         // (once we release the lock).
@@ -564,12 +675,24 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
         // cached as enabled.
         flush_site_cache();
 
+        // If tracing has also terminated, finish processing that too.
+        if (g_trace_terminated) {
+            trace_terminated = true;
+            trace_engine_terminate_locked();
+        }
+
         // Notify observers that the state changed.
         notify_observers_locked();
     }
 
+    // Handler operations are called outside the engine lock.
+
     // Notify the handler about the final disposition.
-    handler->ops->trace_stopped(handler, dispatcher, disposition, buffer_bytes_written);
+    handler->ops->trace_stopped(handler, disposition);
+
+    if (trace_terminated) {
+        handler->ops->trace_terminated(handler);
+    }
 }
 
 // Handles the case where the asynchronous dispatcher has encountered an error
@@ -578,6 +701,8 @@ void handle_context_released(async_dispatcher_t* dispatcher) {
 void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
     // Stop the engine, in case it hasn't noticed yet.
     trace_engine_stop(ZX_ERR_CANCELED);
+    // And terminate it.
+    trace_engine_terminate();
 
     // There may still be outstanding references to the trace context.
     // We don't know when or whether they will be cleared but we can't complete
@@ -592,7 +717,7 @@ void handle_hard_shutdown(async_dispatcher_t* dispatcher) {
         zx::deadline_after(kSynchronousShutdownTimeout),
         nullptr);
     if (status == ZX_OK) {
-        handle_context_released(dispatcher);
+        handle_context_released();
         return;
     }
 
@@ -618,7 +743,7 @@ void handle_event(async_dispatcher_t* dispatcher, async_wait_t* wait,
             handle_all_observers_started();
         }
         if (signal->observed & SIGNAL_CONTEXT_RELEASED) {
-            handle_context_released(dispatcher);
+            handle_context_released();
             return; // trace engine is completely stopped now
         }
         status = async_begin_wait(dispatcher, &g_event_wait);

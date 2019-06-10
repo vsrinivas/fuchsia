@@ -43,33 +43,33 @@ public:
     // The trace collection status is |ZX_OK| if trace collection was successful.
     // An error indicates that the trace data may be inaccurate or incomplete.
     //
-    // |async| is the trace engine's asynchronous dispatcher.
     // |disposition| is |ZX_OK| if tracing stopped normally, otherwise indicates
     // that tracing was aborted due to an error. If records were dropped (due
     // to the trace buffer being full) then |disposition| is |ZX_ERR_NO_MEMORY|.
-    // |buffer_bytes_written| is number of bytes which were written to the trace buffer.
     //
     // Called on an asynchronous dispatch thread.
-    virtual void TraceStopped(async_dispatcher_t* dispatcher,
-                              zx_status_t disposition, size_t buffer_bytes_written) {}
+    virtual void TraceStopped(zx_status_t disposition) {}
+
+    // Called by the trace engine when tracing has terminated.
+    virtual void TraceTerminated() {}
 
     // Called by the trace engine in streaming mode to indicate a buffer is full.
     // This is only used in streaming mode where double-buffering is used.
     // |wrapped_count| is the number of times writing to the buffer has
     // switched from one buffer to the other.
-    // |durable_data_end| is the offset into the durable buffer when the
+    // |durable_buffer_offset| is the offset into the durable buffer when the
     // buffer filled. It is provided so that TraceManager can save the data
     // thus far written to the durable buffer.
-    virtual void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end) {}
+    virtual void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_buffer_offset) {}
 
 private:
     static bool CallIsCategoryEnabled(trace_handler_t* handler, const char* category);
     static void CallTraceStarted(trace_handler_t* handler);
-    static void CallTraceStopped(trace_handler_t* handler, async_dispatcher_t* dispatcher,
-                                 zx_status_t disposition, size_t buffer_bytes_written);
+    static void CallTraceStopped(trace_handler_t* handler, zx_status_t disposition);
+    static void CallTraceTerminated(trace_handler_t* handler);
     static void CallNotifyBufferFull(trace_handler_t* handler,
                                      uint32_t wrapped_count,
-                                     uint64_t durable_data_end);
+                                     uint64_t durable_buffer_offset);
 
     static const trace_handler_ops_t kOps;
 };

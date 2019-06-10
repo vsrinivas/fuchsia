@@ -45,7 +45,8 @@ uint64_t trace_generate_nonce(void);
 // Describes the state of the trace engine.
 typedef enum {
     // Trace instrumentation is inactive.
-    // Any data written into the trace buffer will be discarded.
+    // Any data attempted to be written will be discarded.
+    // This enum doesn't distinguish between "stopped" and "terminated".
     TRACE_STOPPED = 0,
     // Trace instrumentation is active.
     TRACE_STARTED = 1,
