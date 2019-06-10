@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <kernel.h>
-#include <bsp.h>  // for CACHE_LINE_SIZE definition
+#include <zircon/compiler.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "ftl.h"
+#include "utils/bsp.h"  // for CACHE_LINE_SIZE definition
+#include "utils/kernel.h"
 
 /***********************************************************************/
 /* Configuration                                                       */
@@ -91,6 +90,8 @@ typedef enum {
     FS_FORMAT_RESET_WC,
 } FS_EVENTS;
 
+__BEGIN_CDECLS
+
 /***********************************************************************/
 /* Variable Declarations                                               */
 /***********************************************************************/
@@ -113,6 +114,4 @@ int FsReadMeta(ui32 vol_id, ui32* meta, const char* vol_name);
 void NvNdmCtrlPgWr(ui32 frst);
 ui32 NvNdmCtrlPgRd(void);
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

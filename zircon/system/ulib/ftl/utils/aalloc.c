@@ -4,9 +4,10 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <sys.h>
-#include <bsp.h>
-#include <ftl_private.h>
+
+#include "inc/sys.h"
+#include "ftl_private.h"
+#include "utils/bsp.h"
 
 #ifndef CACHE_LINE_SIZE
 #error CACHE_LINE_SIZE is undefined
@@ -72,4 +73,3 @@ void afree_clear(void* aligned_ptr_addr) {
     *aptr = 0;
 #endif
 }
-

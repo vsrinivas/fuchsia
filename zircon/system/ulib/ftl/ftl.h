@@ -4,11 +4,7 @@
 
 #pragma once
 
-#include <stdint.h>    // For fixed width types.
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdint.h>
 
 //
 // Type Declarations.
@@ -32,8 +28,3 @@ typedef struct XfsVol {
     void* vol;              // driver's volume pointer
     void* ftl_volume;       // ftl layer (block device) volume
 } XfsVol;
-
-#ifdef __cplusplus
-}
-#endif
-

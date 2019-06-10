@@ -44,10 +44,5 @@ library("ftl") {
 config("config") {
   visibility = [ ":*" ]
   defines = [ "NDM_DEBUG" ]
-  include_dirs = [
-    ".",
-    "utils",
-    "inc",
-    "inc/kprivate",
-  ]
+  include_dirs = [ "." ]
 }

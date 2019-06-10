@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "kernel.h"
+#include <stdio.h>
 
 #include <new>
-#include <stdio.h>
 
 #include <fbl/mutex.h>
 #include <zircon/assert.h>
+
+#include "kernel.h"
 
 // Gets a semaphore token.
 //

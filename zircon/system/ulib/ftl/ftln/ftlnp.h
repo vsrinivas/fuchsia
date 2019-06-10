@@ -4,14 +4,18 @@
 
 #pragma once
 
-#include <inc/config.h>
+// Unfortunately, the configuration file needs to go first.
+#include "inc/config.h"
 
 #include <errno.h>
 #include <string.h>
-#include <ftl_private.h>
-#include <fsprivate.h>
-#include <kprivate/ndm.h>
-#include <ftl_mc.h>
+
+#include <zircon/compiler.h>
+
+#include "inc/kprivate/fsprivate.h"
+#include "inc/kprivate/ndm.h"
+#include "ftl_private.h"
+#include "utils/ftl_mc.h"
 
 //
 // Configuration.
@@ -217,6 +221,8 @@ struct ftln {
     char vol_name[FILENAME_MAX]; // volume name
 };
 
+__BEGIN_CDECLS
+
 //
 // Variable Declarations.
 //
@@ -263,3 +269,4 @@ void FtlnStats(FTLN ftl);
 void FtlnShowBlks(void);
 void FtlnCheckBlank(FTLN ftl, ui32 b);
 
+__END_CDECLS

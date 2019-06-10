@@ -4,12 +4,10 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stddef.h>    // for size_t definition
 #include <stdint.h>    // for fixed width types
+
+#include <zircon/compiler.h>
 
 /***********************************************************************/
 /* Symbol Definitions                                                  */
@@ -68,8 +66,8 @@ union vstat {
     vstat_xfs xfs;
 };
 
+__BEGIN_CDECLS
+
 int FtlNdmDelVol(const char* name);
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

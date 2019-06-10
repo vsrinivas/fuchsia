@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sys.h>
+#include "ftl_mc.h"
 
-#include <ftl_private.h>
-#include <ftl_mc.h>
-#include <fsprivate.h>
+#include "ftl_private.h"
+#include "inc/kprivate/fsprivate.h"
+#include "inc/sys.h"
 
 // Configuration
 #define MC_DEBUG FALSE
@@ -420,4 +420,3 @@ ui32* ftlmcInCache(FTLMC* cache, ui32 mpn) {
     // Page is not in cache, return NULL.
     return NULL;
 }
-

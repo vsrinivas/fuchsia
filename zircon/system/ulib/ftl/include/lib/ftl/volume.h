@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <cstdint>
 #include <memory>
 
 #include <fbl/macros.h>

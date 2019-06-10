@@ -4,13 +4,12 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdio.h>
-#include <posix.h>
-#include <fsdriver.h>
+
+#include <zircon/compiler.h>
+
+#include "inc/kprivate/fsdriver.h"
+#include "inc/posix.h"
 
 // Symbol Definitions.
 
@@ -68,6 +67,8 @@ enum FsErrorCode
 #define BITMAP_OFF(start, i) (*((ui8*)(start) + (i) / 8) &= (ui8) ~(1 << ((i) % 8)))
 #define IS_BITMAP_ON(start, i) (*((ui8*)(start) + (i) / 8) & (1 << ((i) % 8)))
 
+__BEGIN_CDECLS
+
 // Function Prototypes.
 
 int fsPerror(int fs_err_code);
@@ -86,6 +87,4 @@ void FsFreeClear(void* ptr_ptr);
 void FsAfreeClear(void* ptr_ptr);
 void FsFree(void* ptr);
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

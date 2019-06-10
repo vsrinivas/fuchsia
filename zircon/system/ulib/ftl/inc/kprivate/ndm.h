@@ -4,13 +4,11 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <zircon/compiler.h>
 
-#include <targetos.h>
-#include <kernel.h>
-#include <fsdriver.h>
+#include "inc/kprivate/fsdriver.h"
+#include "inc/targetos.h"
+#include "utils/kernel.h"
 
 /***********************************************************************/
 /* Symbol Definitions                                                  */
@@ -103,6 +101,8 @@ typedef struct {
 #endif
 } NDMDrvr;
 
+__BEGIN_CDECLS
+
 /***********************************************************************/
 /* Functions Prototypes                                                */
 /***********************************************************************/
@@ -132,6 +132,4 @@ int ndmExtractBBL(NDM ndm);
 int ndmInsertBBL(NDM ndm);
 int NdmDvrTestAdd(const NDMDrvr* dev);
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

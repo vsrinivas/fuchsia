@@ -4,16 +4,21 @@
 
 #pragma once
 
-#include <inc/config.h>
+// Unfortunately, the configuration file needs to go first.
+#include "inc/config.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
-#include <ftl_private.h>
-#include <sys.h>
-#include <kprivate/ndm.h>
+#include <zircon/compiler.h>
+
+#include "inc/kprivate/fsprivate.h"
+#include "inc/kprivate/ndm.h"
+#include "inc/posix.h"
+#include "inc/sys.h"
+#include "ftl_private.h"
 
 //
 // Configuration.
@@ -134,6 +139,8 @@ struct ndm {
     ui8 eb_size;       // spare area size in bytes
 };
 
+__BEGIN_CDECLS
+
 //
 // Variable Declarations.
 //
@@ -152,3 +159,4 @@ int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 action);
 int printf(const char*, ...);
 #endif
 
+__BEGIN_CDECLS

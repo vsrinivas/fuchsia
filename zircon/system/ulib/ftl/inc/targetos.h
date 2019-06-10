@@ -4,11 +4,8 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
+
 /***********************************************************************/
 /* TargetOS Release Number                                             */
 /***********************************************************************/
@@ -213,8 +210,4 @@ typedef volatile struct vol_circ_list {
 
 #ifndef EOF_TFS
 #define EOF_TFS (-1)
-#endif
-
-#ifdef __cplusplus
-}
 #endif

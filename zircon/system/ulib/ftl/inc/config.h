@@ -4,10 +4,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -34,7 +30,3 @@ extern "C" {
 /* Private Module Assert/Debug Configuration                           */
 /***********************************************************************/
 #define FS_ASSERT TRUE    // TRUE enables filesys PfAssert()
-
-#ifdef __cplusplus
-}
-#endif

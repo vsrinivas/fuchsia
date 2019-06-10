@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "ndmp.h"
-#include <kprivate/fsprivate.h>
 
 // Configuration
 #define BBL_INSERT_INC TRUE

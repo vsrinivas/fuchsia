@@ -4,12 +4,13 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdlib.h>
-#include <targetos.h>
+
+#include <zircon/compiler.h>
+
+#include "inc/targetos.h"
+
+__BEGIN_CDECLS
 
 void free_clear(void* alloc_ptr_addr);
 
@@ -25,6 +26,4 @@ extern const ui32 Crc32Tbl[256];
 #define CRC32_FINAL 0xDEBB20E3 // summed over data and CRC
 #define CRC32_UPDATE(crc, c) ((crc >> 8) ^ Crc32Tbl[(ui8)(crc ^ c)])
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

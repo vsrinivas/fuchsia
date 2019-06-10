@@ -4,12 +4,10 @@
 
 #pragma once
 
-#include <inc/config.h>
-#include <targetos.h>
+#include <zircon/compiler.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "inc/config.h"
+#include "inc/targetos.h"
 
 // Flags for Semaphore/Queue Mode for Task Queueing
 #define OS_FIFO 0
@@ -19,12 +17,12 @@ extern "C" {
 
 typedef struct scb* SEM;  /* Semaphore Control Block */
 
+__BEGIN_CDECLS
+
 // Semaphore Related Routines
 SEM semCreate(const char name[8], int init_count, int mode);
 void semDelete(SEM* semp);
 void semPostBin(SEM sem);
 int semPend(SEM sem, int wait_opt);
 
-#ifdef __cplusplus
-}
-#endif
+__END_CDECLS

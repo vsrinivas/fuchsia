@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "ndmp.h"
-#include <kprivate/fsprivate.h>
 
 // Symbol Definitions
 #define NDM_META_BLKS 2  // blocks reserved for internal use
@@ -1313,4 +1312,3 @@ void ndmCkMeta(NDM ndm0) {
     free(ndm1);
 }
 #endif // RDBACK_CHECK
-

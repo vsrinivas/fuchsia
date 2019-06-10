@@ -6,6 +6,10 @@
 
 #include <stdlib.h>
 
+#include <zircon/compiler.h>
+
+#include "inc/targetos.h"
+
 /***********************************************************************/
 /* Type Declarations                                                   */
 /***********************************************************************/
@@ -29,6 +33,8 @@ typedef struct {
     ui32 mpg_sz;           // size of a cached map page in bytes
 } FTLMC;
 
+__BEGIN_CDECLS
+
 /***********************************************************************/
 /* Function Prototypes                                                 */
 /***********************************************************************/
@@ -40,3 +46,5 @@ int ftlmcFlushPage(FTLMC* ftlmc, ui32 mpn);
 int ftlmcFlushMap(FTLMC* ftlmc);
 ui32* ftlmcInCache(FTLMC* ftlmc, ui32 mpn);
 ui32 ftlmcRAM(const FTLMC* ftlmc);
+
+__END_CDECLS

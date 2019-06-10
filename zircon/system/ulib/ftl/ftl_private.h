@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include <ftl.h>   // For API definition.
+#include <zircon/compiler.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "ftl.h"  // For API definition.
 
 //
 // Symbol Definitions.
 //
 #define ui8 uint8_t
+
+__BEGIN_CDECLS
 
 //
 // Function Prototypes.
@@ -29,7 +29,4 @@ int ndmTransferPage(uint32_t old_vpn, uint32_t new_vpn, ui8* buf, ui8* spare, ND
 int ndmCheckPage(uint32_t pn, ui8* data, ui8* spare, NDM ndm);
 uint32_t ndmPairOffset(uint32_t page_offset, CNDM ndm);
 
-#ifdef __cplusplus
-}
-#endif
-
+__END_CDECLS

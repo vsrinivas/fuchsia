@@ -4,8 +4,6 @@
 
 #include "ndmp.h"
 
-#include <kprivate/fsprivate.h>
-
 // Global Function Definitions
 
 //   ndmDelVol: Un-initialize a Blunk file system volume, or custom
@@ -53,4 +51,3 @@ int ndmDelVols(CNDM ndm) {
     // Return status.
     return status;
 }
-
