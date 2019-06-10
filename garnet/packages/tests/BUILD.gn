@@ -292,7 +292,7 @@ group("examples") {
 group("intl_examples") {
   testonly = true
   public_deps = [
-    "//garnet/examples/intl/manager:intl_property_manager_tests",
+    "//garnet/examples/intl/manager:tests",
     "//garnet/examples/intl/wisdom/test:intl_wisdom_test",
   ]
 }

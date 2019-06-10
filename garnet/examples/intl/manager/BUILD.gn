@@ -59,3 +59,11 @@ test_package("intl_property_manager_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":intl_property_manager",
+    ":intl_property_manager_tests",
+  ]
+}
