@@ -37,7 +37,7 @@ base_package_labels += [
   "//garnet/packages/tools:boringssl",
   "//garnet/packages/tools:netstack",
   "//src/connectivity/network/dhcp:dhcpd",
-  "//src/connectivity/network/mdns/bundles:util",
+  "//src/connectivity/network/mdns/bundles:utils",
   "//src/connectivity/wlan:service",
   "//src/connectivity/wlan:tests",
   "//src/connectivity/wlan:tools",
