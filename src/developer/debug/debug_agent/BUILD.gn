@@ -41,11 +41,11 @@ static_library("lib") {
     "process_memory_accessor.h",
     "process_watchpoint.cc",
     "process_watchpoint.h",
-    "software_breakpoint.cc",
-    "software_breakpoint.h",
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
+    "software_breakpoint.cc",
+    "software_breakpoint.h",
     "system_info.cc",
     "system_info.h",
     "unwind.cc",
@@ -115,7 +115,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/cmdline"
+    "//zircon/public/lib/cmdline",
   ]
 }
 
@@ -261,10 +261,13 @@ test_package("debug_agent_tests") {
       name = "printer"
     },
     {
+      name = "process_loop"
+    },
+    {
       name = "process_spawner"
     },
     {
-      name = "process_loop"
+      name = "thread_signals"
     },
   ]
 

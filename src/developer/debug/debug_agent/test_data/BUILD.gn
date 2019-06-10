@@ -129,12 +129,13 @@ group("helper_executables") {
   public_deps = [
     ":debug_test_false",
     ":debug_test_true",
-    ":multi_threaded",
     ":hw_breakpointer",
     ":hw_watchpointer",
+    ":multi_threaded",
     ":printer",
     ":process_loop",
     ":process_spawner",
+    ":thread_signals",
   ]
 }
 
@@ -223,4 +224,17 @@ executable("process_spawner") {
   ]
 }
 
+executable("thread_signals") {
+  testonly = true
+  output_name = "thread_signals"
 
+  sources = [
+    "thread_signals.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
