@@ -16,7 +16,7 @@ use futures::prelude::*;
 use log::{error, info};
 use std::sync::Arc;
 
-use crate::device::{self, IfaceDevice, IfaceMap, NewIface, PhyDevice, PhyMap};
+use crate::device::{self, DirectMlmeChannel, IfaceDevice, IfaceMap, NewIface, PhyDevice, PhyMap};
 use crate::inspect;
 use crate::station;
 use crate::stats_scheduler::StatsRef;
@@ -63,12 +63,13 @@ pub async fn serve_device_requests(
                         responder.send(zx::sys::ZX_OK, Some(resp).as_mut().map(OutOfLine))?;
 
                         // TODO(WLAN-927): Remove check once all drivers support SME channels.
-                        if new_iface.mlme_proxy.is_some() {
+                        if let DirectMlmeChannel::Supported(mlme_proxy) = new_iface.mlme_channel {
                             let inspect_tree = inspect_tree.clone();
                             let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
 
                             let serve_sme_fut = device::query_and_serve_iface(
-                                new_iface,
+                                new_iface.id,
+                                mlme_proxy,
                                 ifaces.clone(),
                                 iface_tree_holder,
                                 cobalt_sender.clone(),
@@ -210,15 +211,15 @@ async fn create_iface(
 
     let supports_sme_channel =
         phy_info.driver_features.contains(&DriverFeature::TempDirectSmeChannel);
-    let (mlme_proxy, sme_channel) = if supports_sme_channel {
+    let (mlme_channel, sme_channel) = if supports_sme_channel {
         create_proxy::<MlmeMarker>()
             .map_err(|e| {
                 error!("failed to create MlmeProxy: {}", e);
                 zx::Status::INTERNAL
             })
-            .map(|(p, c)| (Some(p), Some(c.into_channel())))?
+            .map(|(p, c)| (DirectMlmeChannel::Supported(p), Some(c.into_channel())))?
     } else {
-        (None, None)
+        (DirectMlmeChannel::NotSupported, None)
     };
 
     let mut phy_req = fidl_wlan_dev::CreateIfaceRequest { role: req.role, sme_channel };
@@ -232,7 +233,7 @@ async fn create_iface(
         id: 0, // TODO(WLAN-927): Hand out global IDs for ifaces.
         phy_id,
         phy_assigned_id: r.iface_id,
-        mlme_proxy,
+        mlme_channel,
     })
 }
 

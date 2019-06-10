@@ -30,6 +30,13 @@ use crate::{
     watchable_map::WatchableMap,
 };
 
+// TODO(WLAN-927): Obsolete once all drivers support this feature.
+#[derive(Debug)]
+pub enum DirectMlmeChannel {
+    NotSupported,
+    Supported(fidl_mlme::MlmeProxy),
+}
+
 #[derive(Debug)]
 pub struct NewIface {
     // Global iface ID.
@@ -38,8 +45,10 @@ pub struct NewIface {
     pub phy_id: u16,
     // Local ID assigned by this iface's PHY.
     pub phy_assigned_id: u16,
-    // TODO(WLAN-927): mlme_proxy is None if the iface's driver doesn't support SME channels.
-    pub mlme_proxy: Option<fidl_mlme::MlmeProxy>,
+    // A channel to communicate with the iface's underlying MLME.
+    // The MLME proxy is only available if the device driver indicates support in its
+    // feature flags. See WLAN-927 (direct SME Channel support).
+    pub mlme_channel: DirectMlmeChannel,
 }
 
 pub struct PhyDevice {
@@ -189,12 +198,12 @@ async fn query_and_serve_iface_deprecated(
 }
 
 pub async fn query_and_serve_iface(
-    new_iface: NewIface,
+    iface_id: u16,
+    mlme_proxy: fidl_mlme::MlmeProxy,
     ifaces: Arc<IfaceMap>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
 ) -> Result<(), failure::Error> {
-    let mlme_proxy = new_iface.mlme_proxy.expect("MlmeProxy must not be None");
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
 
@@ -210,16 +219,16 @@ pub async fn query_and_serve_iface(
     )
     .map_err(|e| format_err!("failed to creating SME: {}", e))?;
 
-    info!("new iface #{} with role '{:?}'", new_iface.id, device_info.role,);
+    info!("new iface #{} with role '{:?}'", iface_id, device_info.role,);
     let mlme_query = MlmeQueryProxy::new(mlme_proxy);
     ifaces.insert(
-        new_iface.id,
+        iface_id,
         IfaceDevice { sme_server: sme, stats_sched, device: None, mlme_query, device_info },
     );
 
     let result = await!(sme_fut).map_err(|e| format_err!("error while serving SME: {}", e));
-    info!("iface removed: {}", new_iface.id);
-    ifaces.remove(&new_iface.id);
+    info!("iface removed: {}", iface_id);
+    ifaces.remove(&iface_id);
     result
 }
 
