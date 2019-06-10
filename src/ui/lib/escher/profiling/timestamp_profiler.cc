@@ -10,6 +10,7 @@
 
 #ifdef OS_FUCHSIA
 #include <zircon/syscalls.h>
+#include <lib/zx/time.h>
 #endif
 
 namespace escher {
@@ -82,16 +83,9 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
 }
 
 #ifdef OS_FUCHSIA
-// TODO (ES-174) precision issues here?
-static inline uint64_t NanosToTicks(zx_time_t nanoseconds, zx_time_t now_nanos,
-                                    uint64_t now_ticks,
-                                    double ticks_per_nanosecond) {
-  double now_ticks_from_nanos = now_nanos * ticks_per_nanosecond;
-
-  // Number of ticks to add to now_ticks_from_nanos to get to now_ticks.
-  double offset = now_ticks - now_ticks_from_nanos;
-
-  return static_cast<uint64_t>(nanoseconds * ticks_per_nanosecond + offset);
+static inline uint64_t MicrosToTicks(zx_time_t microseconds) {
+    static const uint64_t ticks_per_microsecond = zx_ticks_per_second() / 1000000.0;
+    return microseconds * ticks_per_microsecond;
 }
 
 // ProcessTraceEvents transforms the data received from GetQueryResults into a
@@ -117,25 +111,16 @@ TimestampProfiler::ProcessTraceEvents(
   if (timestamps.size() < 2)
     return traces;
 
-  static const double kTicksPerNanosecond =
-      zx_ticks_per_second() / 1000000000.0;
-  const zx_time_t now_nanos = zx_clock_get_monotonic();
-  const uint64_t now_ticks = zx_ticks_get();
-
-  // start_ticks is the starting tick value for our current event.
-  uint64_t start_ticks = NanosToTicks(timestamps[0].raw_nanoseconds, now_nanos,
-                                      now_ticks, kTicksPerNanosecond);
-  // end_ticks is the ending tick value for our current event.
-  uint64_t end_ticks = NanosToTicks(timestamps[1].raw_nanoseconds, now_nanos,
-                                    now_ticks, kTicksPerNanosecond);
+  uint64_t start_ticks = MicrosToTicks(timestamps[0].time);
+  uint64_t end_ticks = MicrosToTicks(timestamps[1].time);
 
   // Create the first trace event.
   std::vector<const char*> name = {timestamps[1].name};
   traces.push_back({start_ticks, end_ticks, name});
 
   for (size_t i = 2; i < timestamps.size() - 1; i++) {
-    uint64_t ticks = NanosToTicks(timestamps[i].raw_nanoseconds, now_nanos,
-                                  now_ticks, kTicksPerNanosecond);
+    uint64_t ticks = MicrosToTicks(timestamps[i].time);
+
     // If the ticks we see is greater than our last one, we start a new
     // TraceEvent and update our start and end tick values.
     if (ticks > end_ticks) {
@@ -167,45 +152,64 @@ void TimestampProfiler::TraceGpuQueryResults(
     uint64_t gpu_vthread_id) {
   constexpr static const char* kCategoryLiteral = "gfx";
 
+  // NOTE: If this value changes, you should also change the corresponding
+  // kCleanupDelay inside engine.cc.
+  zx::duration kCleanupDelay = zx::msec(1);
+
+  // Shift the vthread events by kCleanupDelay / 2. This is specifically chosen
+  // because we know CleanupEscher() (and therefore us, too) runs every 1ms,
+  // so by setting the "end" to be 0.5ms ago, we know we cannot be off by more than
+  // +/- 0.5ms. See SCN-1460 for more details.
+  static const uint64_t kTicksPerMillisecond = zx_ticks_per_second() / 1000.0;
+  const double kCleanupTicks = kTicksPerMillisecond * kCleanupDelay.get();
+
+  static const uint64_t kTicksOffset = kCleanupTicks / 2;
+
+  uint64_t real_end_ticks = zx_ticks_get() - kTicksOffset;
+
+  // Get the beginning, which is the offset we add to all |elapsed_ticks| to get the
+  // shifted start and end.
+  uint64_t real_start_ticks = real_end_ticks - (trace_events.back().end_elapsed_ticks);
+
   // First, create the entire duration event. We can do this by creating an
   // event combining the start of the first event, and the end of the last
   // event.
-  uint64_t frame_start_ticks = trace_events[0].start_ticks;
-  uint64_t frame_end_ticks = trace_events.back().end_ticks;
-
   TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_literal,
                                gpu_vthread_literal, gpu_vthread_id,
-                               frame_start_ticks, "Frame number", frame_number,
+                               real_start_ticks, "Frame number", frame_number,
                                "Escher frame number", escher_frame_number);
+
   TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_literal,
                              gpu_vthread_literal, gpu_vthread_id,
-                             frame_end_ticks, "Frame number", frame_number,
+                             real_end_ticks, "Frame number", frame_number,
                              "Escher frame number", escher_frame_number);
 
+
   // Now, output the more interesting events added by the application.
-  for (size_t i = 0; i < trace_events.size(); i++) {
+  for (size_t i = 0; i < trace_events.size(); ++i) {
     size_t num_concurrent_events = trace_events[i].names.size();
+    uint64_t start_ticks = real_start_ticks + trace_events[i].start_elapsed_ticks;
+    uint64_t end_ticks = real_start_ticks + trace_events[i].end_elapsed_ticks;
 
     switch (num_concurrent_events) {
       case 1: {
         TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0],
                                      gpu_vthread_literal, gpu_vthread_id,
-                                     trace_events[i].start_ticks);
-
+                                     start_ticks);
         TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0],
                                    gpu_vthread_literal, gpu_vthread_id,
-                                   trace_events[i].end_ticks);
+                                   end_ticks);
         break;
       }
       case 2: {
         TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0],
                                      gpu_vthread_literal, gpu_vthread_id,
-                                     trace_events[i].start_ticks,
+                                     start_ticks,
                                      "Second Event", trace_events[i].names[1]);
 
         TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0],
                                    gpu_vthread_literal, gpu_vthread_id,
-                                   trace_events[i].end_ticks, "Second Event",
+                                   end_ticks, "Second Event",
                                    trace_events[i].names[1]);
         break;
       }
@@ -221,11 +225,11 @@ void TimestampProfiler::TraceGpuQueryResults(
   // Flow event tracking the progress of a Scenic frame.
   TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame",
                           gpu_vthread_literal, gpu_vthread_id,
-                          frame_number, frame_start_ticks);
+                          frame_number, real_start_ticks);
 
   TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame",
                           gpu_vthread_literal, gpu_vthread_id,
-                          frame_number, frame_end_ticks);
+                          frame_number, real_end_ticks);
 }
 #else
 void TimestampProfiler::TraceGpuQueryResults(

@@ -31,8 +31,8 @@ TEST(Trace, OneSingularEvent) {
   const char* name = "event";
 
   ts.push_back({1000, 0, 0, "start"});
-  ts.push_back({2000, 0, 0, name});
-  ts.push_back({3000, 0, 0, "end"});
+  ts.push_back({2000, 1, 1, name});
+  ts.push_back({3000, 2, 1, "end"});
 
   std::vector<TimestampProfiler::TraceEvent> trace_events =
       TimestampProfiler::ProcessTraceEvents(ts);
@@ -53,9 +53,9 @@ TEST(Trace, MultipleSingularEvents) {
   const char* name2 = "event2";
 
   ts.push_back({1000, 0, 0, "start"});
-  ts.push_back({2000, 0, 0, name1});
-  ts.push_back({3000, 0, 0, name2});
-  ts.push_back({4000, 0, 0, "end"});
+  ts.push_back({2000, 1, 1, name1});
+  ts.push_back({3000, 2, 1, name2});
+  ts.push_back({4000, 3, 1, "end"});
 
   std::vector<TimestampProfiler::TraceEvent> trace_events =
       TimestampProfiler::ProcessTraceEvents(ts);
@@ -78,9 +78,9 @@ TEST(Trace, OneConcurrentEvent) {
   const char* name1b = "event1b";
 
   ts.push_back({1000, 0, 0, "start"});
-  ts.push_back({2000, 0, 0, name1a});
-  ts.push_back({2000, 0, 0, name1b});
-  ts.push_back({3000, 0, 0, "end"});
+  ts.push_back({2000, 1, 1, name1a});
+  ts.push_back({2000, 1, 0, name1b});
+  ts.push_back({3000, 2, 1, "end"});
 
   std::vector<TimestampProfiler::TraceEvent> trace_events =
       TimestampProfiler::ProcessTraceEvents(ts);
@@ -106,13 +106,13 @@ TEST(Trace, MultipleConcurrentEvents) {
   const char* name3a = "event3a";
 
   ts.push_back({1000, 0, 0, "start"});
-  ts.push_back({2000, 0, 0, name1a});
-  ts.push_back({2000, 0, 0, name1b});
-  ts.push_back({3000, 0, 0, name2a});
-  ts.push_back({3000, 0, 0, name2b});
-  ts.push_back({3000, 0, 0, name2c});
-  ts.push_back({4000, 0, 0, name3a});
-  ts.push_back({5000, 0, 0, "end"});
+  ts.push_back({2000, 1, 1, name1a});
+  ts.push_back({2000, 1, 0, name1b});
+  ts.push_back({3000, 2, 1, name2a});
+  ts.push_back({3000, 2, 0, name2b});
+  ts.push_back({3000, 2, 0, name2c});
+  ts.push_back({4000, 3, 1, name3a});
+  ts.push_back({5000, 4, 1, "end"});
 
   std::vector<TimestampProfiler::TraceEvent> trace_events =
       TimestampProfiler::ProcessTraceEvents(ts);
