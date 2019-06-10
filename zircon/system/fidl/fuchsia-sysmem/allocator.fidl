@@ -4,62 +4,62 @@
 
 library fuchsia.sysmem;
 
-// Allocates system memory buffers.
-//
+/// Allocates system memory buffers.
+///
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
 [Discoverable, Layout = "Simple"]
 protocol Allocator {
-    // Allocates a BufferCollection on behalf of a single client (aka initiator)
-    // who is also the only participant (from the point of view of sysmem).
-    //
-    // This call exists mainly for temp/testing purposes.  This call skips the
-    // BufferCollectionToken stage, so there's no way to allow another
-    // participant to specify its constraints.
-    //
-    // Real clients are encouraged to use AllocateSharedCollection() instead,
-    // and to let relevant participants directly convey their own constraints to
-    // sysmem.
-    //
-    // |constraints| indicates constraints on the buffer collection, such as how
-    // many buffers to allocate, buffer size constraints, etc.
-    //
-    // |collection| is the server end of the BufferCollection FIDL channel.  The
-    // client can call SetConstraints() and then WaitForBuffersAllocated() on
-    // the client end of this channel to specify constraints and then determine
-    // success/failure and get the BufferCollectionInfo_2 for the
-    // BufferCollection.  The client should also keep the client end of
-    // this channel open while using the BufferCollection, and should notice
-    // when this channel closes and stop using the BufferCollection ASAP.
+    /// Allocates a BufferCollection on behalf of a single client (aka initiator)
+    /// who is also the only participant (from the point of view of sysmem).
+    ///
+    /// This call exists mainly for temp/testing purposes.  This call skips the
+    /// BufferCollectionToken stage, so there's no way to allow another
+    /// participant to specify its constraints.
+    ///
+    /// Real clients are encouraged to use AllocateSharedCollection() instead,
+    /// and to let relevant participants directly convey their own constraints to
+    /// sysmem.
+    ///
+    /// `constraints` indicates constraints on the buffer collection, such as how
+    /// many buffers to allocate, buffer size constraints, etc.
+    ///
+    /// `collection` is the server end of the BufferCollection FIDL channel.  The
+    /// client can call SetConstraints() and then WaitForBuffersAllocated() on
+    /// the client end of this channel to specify constraints and then determine
+    /// success/failure and get the BufferCollectionInfo_2 for the
+    /// BufferCollection.  The client should also keep the client end of
+    /// this channel open while using the BufferCollection, and should notice
+    /// when this channel closes and stop using the BufferCollection ASAP.
     AllocateNonSharedCollection(request<BufferCollection> collection);
 
-    // Creates a logical BufferCollectionToken which can be shared among
-    // participants (using BufferCollectionToken.Duplicate()), and then
-    // converted into a BufferCollection using BindSharedCollection().
-    //
-    // Success/failure to populate the BufferCollection with buffers is
-    // determined via the BufferCollection interface.
+    /// Creates a logical BufferCollectionToken which can be shared among
+    /// participants (using BufferCollectionToken.Duplicate()), and then
+    /// converted into a BufferCollection using BindSharedCollection().
+    ///
+    /// Success/failure to populate the BufferCollection with buffers is
+    /// determined via the BufferCollection interface.
     AllocateSharedCollection(request<BufferCollectionToken> token_request);
 
-    // Convert a BufferCollectionToken into a connection to the logical
-    // BufferCollection.  The BufferCollection hasn't yet been populated with
-    // buffers - the participant must first also send SetConstraints() via the
-    // client end of buffer_collection.
-    //
-    // All BufferCollectionToken(s) duplicated from a logical
-    // BufferCollectionToken created via AllocateSharedCollection() must be
-    // turned in via BindSharedCollection() before the logical BufferCollection
-    // will be populated with buffers.
-    //
-    // |token| the client endpoint of a channel whose server end was sent to
-    // sysmem using AllocateSharedCollection or whose server end was sent to
-    // sysmem using BufferCollectionToken.Duplicate().  The token is being
-    // "exchanged" for a channel to the logical BufferCollection.
-    //
-    // |buffer_collection| the server end of a BufferCollection channel.  The
-    // sender retains the client end as usual.  The BufferCollection channel
-    // is a single participant's connection to the logical BufferCollection.
-    // There typically will be other participants with their own
-    // BufferCollection channel to the logical BufferCollection.
+    /// Convert a BufferCollectionToken into a connection to the logical
+    /// BufferCollection.  The BufferCollection hasn't yet been populated with
+    /// buffers - the participant must first also send SetConstraints() via the
+    /// client end of buffer_collection.
+    ///
+    /// All BufferCollectionToken(s) duplicated from a logical
+    /// BufferCollectionToken created via AllocateSharedCollection() must be
+    /// turned in via BindSharedCollection() before the logical BufferCollection
+    /// will be populated with buffers.
+    ///
+    /// `token` the client endpoint of a channel whose server end was sent to
+    /// sysmem using AllocateSharedCollection or whose server end was sent to
+    /// sysmem using BufferCollectionToken.Duplicate().  The token is being
+    /// "exchanged" for a channel to the logical BufferCollection.
+    ///
+    /// `buffer_collection` the server end of a BufferCollection channel.  The
+    /// sender retains the client end as usual.  The BufferCollection channel
+    /// is a single participant's connection to the logical BufferCollection.
+    /// There typically will be other participants with their own
+    /// BufferCollection channel to the logical BufferCollection.
     BindSharedCollection(BufferCollectionToken token,
                          request<BufferCollection> buffer_collection_request);
 };

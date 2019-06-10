@@ -6,336 +6,336 @@ library fuchsia.sysmem;
 
 using zx;
 
-// A BufferCollectionToken is not a BufferCollection, but rather a way to
-// identify a potential shared BufferCollection prior to the BufferCollection
-// being allocated.
-//
-// We use a channel for the BufferCollectionToken instead of a single eventpair
-// (pair) because this way we can detect error conditions like a participant
-// dying mid-create.
+/// A BufferCollectionToken is not a BufferCollection, but rather a way to
+/// identify a potential shared BufferCollection prior to the BufferCollection
+/// being allocated.
+///
+/// We use a channel for the BufferCollectionToken instead of a single eventpair
+/// (pair) because this way we can detect error conditions like a participant
+/// dying mid-create.
 [Discoverable, Layout = "Simple"]
 protocol BufferCollectionToken {
-    // The initiator or a participant can send Duplicate() as part of creating
-    // another participant-side handle to the same logical
-    // BufferCollectionToken.
-    //
-    // This method is used to hand the logical token to all participants so all
-    // participants can provide constraints to sysmem for the overall
-    // BufferCollection to achieve the goal of allocating buffers compatible
-    // with all participants.
-    //
-    // The Duplicate() message is intentionally available only on
-    // BufferCollectionToken not BufferCollection.
-    //
-    // The token is separate from BufferCollection so that participants contact
-    // sysmem directly, so that participants are only trusting their environment
-    // for who sysmem is (fake token mitigation), not an initiator.  Only after
-    // successful BindSharedCollection does a participant know that the token
-    // was a real sysmem token.  In contrast, if we had Duplicate() directly on
-    // BufferCollection, an initiator could attempt to serve the
-    // BufferCollection channel itself, which would allow for some problematic
-    // possibilities.
-    //
-    // All the BufferCollectionToken channels of a logical token must be turned
-    // in via BindSharedCollection() for a BufferCollection to be successfully
-    // created.  Else the BufferCollection channel will close.
-    //
-    // When a client calls BindSharedCollection() to turn in a
-    // BufferCollectionToken, the server will process all Duplicate() messages
-    // before closing down the BufferCollectionToken.  This allows the client
-    // to Duplicate() and immediately turn in the BufferCollectionToken using
-    // BindSharedCollection, then later transfer the client end of token_request
-    // to another participant - the server will notice the existence of the
-    // token_request before considering this BufferCollectionToken fully closed.
-    //
-    // |rights_attenuation_mask| rights bits that are zero in this mask will be
-    // absent in the buffer VMO rights obtainable via the client end of
-    // token_request.  This allows an initiator or intermediary participant
-    // to attenuate the rights available to a participant.  This may not be the
-    // only mechanism that attenuates rights on the VMO handles obtainable via
-    // the client end of token_request.  This does not allow a participant
-    // to gain rights that the participant doesn't already have.
-    //
-    // |token_request| is the server end of a BufferCollectionToken channel.
-    // The client end of this channel acts as another handle to the same logical
-    // BufferCollectionToken.  Typically the sender of Duplicate() will transfer
-    // the client end corresponding to collection_request to a/another
-    // participant running in a separate process, but it's also fine for the
-    // additional logical participant to be in the same process.
-    //
-    // After sending one or more Duplicate() messages, and before sending the
-    // created tokens to other participants (or to other Allocator2 channels),
-    // the client should send a Sync() and wait for its response.  The Sync()
-    // call can be made on the token, or on the BufferCollection obtained by
-    // passing this token to BindSharedCollection().  Either will ensure that
-    // the server knows about the tokens created via Duplicate() before the
-    // other participant sends the token to the server via separate Allocator2
-    // channel.  If a client is using FIDL C generated code and doesn't want to
-    // block waiting for a response message, the other option is to notice
-    // arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
-    // after turning in this token for a BufferCollection.
+    /// The initiator or a participant can send Duplicate() as part of creating
+    /// another participant-side handle to the same logical
+    /// BufferCollectionToken.
+    ///
+    /// This method is used to hand the logical token to all participants so all
+    /// participants can provide constraints to sysmem for the overall
+    /// BufferCollection to achieve the goal of allocating buffers compatible
+    /// with all participants.
+    ///
+    /// The Duplicate() message is intentionally available only on
+    /// BufferCollectionToken not BufferCollection.
+    ///
+    /// The token is separate from BufferCollection so that participants contact
+    /// sysmem directly, so that participants are only trusting their environment
+    /// for who sysmem is (fake token mitigation), not an initiator.  Only after
+    /// successful BindSharedCollection does a participant know that the token
+    /// was a real sysmem token.  In contrast, if we had Duplicate() directly on
+    /// BufferCollection, an initiator could attempt to serve the
+    /// BufferCollection channel itself, which would allow for some problematic
+    /// possibilities.
+    ///
+    /// All the BufferCollectionToken channels of a logical token must be turned
+    /// in via BindSharedCollection() for a BufferCollection to be successfully
+    /// created.  Else the BufferCollection channel will close.
+    ///
+    /// When a client calls BindSharedCollection() to turn in a
+    /// BufferCollectionToken, the server will process all Duplicate() messages
+    /// before closing down the BufferCollectionToken.  This allows the client
+    /// to Duplicate() and immediately turn in the BufferCollectionToken using
+    /// BindSharedCollection, then later transfer the client end of token_request
+    /// to another participant - the server will notice the existence of the
+    /// token_request before considering this BufferCollectionToken fully closed.
+    ///
+    /// `rights_attenuation_mask` rights bits that are zero in this mask will be
+    /// absent in the buffer VMO rights obtainable via the client end of
+    /// token_request.  This allows an initiator or intermediary participant
+    /// to attenuate the rights available to a participant.  This may not be the
+    /// only mechanism that attenuates rights on the VMO handles obtainable via
+    /// the client end of token_request.  This does not allow a participant
+    /// to gain rights that the participant doesn't already have.
+    ///
+    /// `token_request` is the server end of a BufferCollectionToken channel.
+    /// The client end of this channel acts as another handle to the same logical
+    /// BufferCollectionToken.  Typically the sender of Duplicate() will transfer
+    /// the client end corresponding to collection_request to a/another
+    /// participant running in a separate process, but it's also fine for the
+    /// additional logical participant to be in the same process.
+    ///
+    /// After sending one or more Duplicate() messages, and before sending the
+    /// created tokens to other participants (or to other Allocator2 channels),
+    /// the client should send a Sync() and wait for its response.  The Sync()
+    /// call can be made on the token, or on the BufferCollection obtained by
+    /// passing this token to BindSharedCollection().  Either will ensure that
+    /// the server knows about the tokens created via Duplicate() before the
+    /// other participant sends the token to the server via separate Allocator2
+    /// channel.  If a client is using FIDL C generated code and doesn't want to
+    /// block waiting for a response message, the other option is to notice
+    /// arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
+    /// after turning in this token for a BufferCollection.
     //
     // TODO(dustingreen): Consider other mechanisms to ensure the token created
     // here is recognized by the server.
     Duplicate(uint32 rights_attenuation_mask,
               request<BufferCollectionToken> token_request);
 
-    // Ensure that previous Duplicate() messages have been received server side,
-    // so that it's safe to send the client end of token_request to another
-    // participant knowing the server will recognize the token when it's sent
-    // into BindSharedCollection by the other participant.
-    //
-    // Other options include waiting for each Duplicate() to complete
-    // individually, or calling Sync() on BufferCollection after this token has
-    // been turned in via BindSharedCollection(), or noticing arrival of
-    // BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
+    /// Ensure that previous Duplicate() messages have been received server side,
+    /// so that it's safe to send the client end of token_request to another
+    /// participant knowing the server will recognize the token when it's sent
+    /// into BindSharedCollection by the other participant.
+    ///
+    /// Other options include waiting for each Duplicate() to complete
+    /// individually, or calling Sync() on BufferCollection after this token has
+    /// been turned in via BindSharedCollection(), or noticing arrival of
+    /// BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
     Sync() -> ();
 
-    // Normally a participant will convert the token into a BufferCollection
-    // view, but a particpant is also free to Close() the token (and then close
-    // the channel immediately or shortly later in response to server closing
-    // its end), which avoids causing LogicalBufferCollection failure.
-    // Normally an unexpected token channel close will cause
-    // LogicalBufferCollection failure.
+    /// Normally a participant will convert the token into a BufferCollection
+    /// view, but a particpant is also free to Close() the token (and then close
+    /// the channel immediately or shortly later in response to server closing
+    /// its end), which avoids causing LogicalBufferCollection failure.
+    /// Normally an unexpected token channel close will cause
+    /// LogicalBufferCollection failure.
     Close();
 };
 
-// BufferCollection is a connection directly from a participant to sysmem re.
-// a logical BufferCollection; typically the logical BufferCollection is shared
-// with other participants.  In other words, an instance of the BufferCollection
-// interface is a view of a "LogicalBufferCollection".
-//
-// This connection exists to facilitate async indication of when the logical
-// BufferCollection has been populated with buffers.
-//
-// Also, the channel's closure by the server is an indication to the client
-// that the client should close all VMO handles that were obtained from the
-// BufferCollection ASAP.
-//
-// Also, this interface may in future allow specifying constraints in other
-// ways, and may allow for back-and-forth negotiation of constraints to some
-// degree.
-//
-// This interface may in future allow for more than 64 VMO handles per
-// BufferCollection, but currently the limit is 64.
-//
-// This interface may in future allow for allocating/deallocating single
-// buffers.
-//
-// Some initiators may wait a short duration until all old logical
-// BufferCollection VMO handles have closed (or until the short duration times
-// out) before allocating a new BufferCollection, to help control physical
-// memory fragmentation and avoid overlap of buffer allocation lifetimes for
-// the old and new collections. Collections can be large enough that it's worth
-// avoiding allocation overlap (in time).
+/// BufferCollection is a connection directly from a participant to sysmem re.
+/// a logical BufferCollection; typically the logical BufferCollection is shared
+/// with other participants.  In other words, an instance of the BufferCollection
+/// interface is a view of a "LogicalBufferCollection".
+///
+/// This connection exists to facilitate async indication of when the logical
+/// BufferCollection has been populated with buffers.
+///
+/// Also, the channel's closure by the server is an indication to the client
+/// that the client should close all VMO handles that were obtained from the
+/// BufferCollection ASAP.
+///
+/// Also, this interface may in future allow specifying constraints in other
+/// ways, and may allow for back-and-forth negotiation of constraints to some
+/// degree.
+///
+/// This interface may in future allow for more than 64 VMO handles per
+/// BufferCollection, but currently the limit is 64.
+///
+/// This interface may in future allow for allocating/deallocating single
+/// buffers.
+///
+/// Some initiators may wait a short duration until all old logical
+/// BufferCollection VMO handles have closed (or until the short duration times
+/// out) before allocating a new BufferCollection, to help control physical
+/// memory fragmentation and avoid overlap of buffer allocation lifetimes for
+/// the old and new collections. Collections can be large enough that it's worth
+/// avoiding allocation overlap (in time).
 [Discoverable, Layout = "Simple"]
 protocol BufferCollection {
-    // At least for now, the only way to get events from a BufferCollection is
-    // to set a reverse BufferCollectionEvents channel.  This can be sent up to
-    // once at any point during BufferCollection channel lifetime.  All events
-    // are one-shot events, and will be sent immediately via |events| if the
-    // one-shot event's condition has already become true (once true will stay
-    // true; only goes from false to true once).
-    //
-    // |events| is the client end of a BufferCollectionEvents which will be sent
-    // one-way messages indicating events relevant to this BufferCollection
-    // channel (some may be specific to this BufferCollection channel and some
-    // may be relevant to the overall logical BufferCollection).
+    /// At least for now, the only way to get events from a BufferCollection is
+    /// to set a reverse BufferCollectionEvents channel.  This can be sent up to
+    /// once at any point during BufferCollection channel lifetime.  All events
+    /// are one-shot events, and will be sent immediately via `events` if the
+    /// one-shot event's condition has already become true (once true will stay
+    /// true; only goes from false to true once).
+    ///
+    /// `events` is the client end of a BufferCollectionEvents which will be sent
+    /// one-way messages indicating events relevant to this BufferCollection
+    /// channel (some may be specific to this BufferCollection channel and some
+    /// may be relevant to the overall logical BufferCollection).
     SetEventSink(BufferCollectionEvents events);
 
-    // See comments on BufferCollectionToken::Sync().
+    /// See comments on BufferCollectionToken::Sync().
     Sync() -> ();
 
-    // Provide BufferCollectionConstraints to the logical BufferCollection.
-    //
-    // Participants with read but not write can only call SetConstraints() once.
-    //
-    // Participants with write can call SetConstraints() more than once.  The
-    // initial buffer allocation will use the constraints in the first call to
-    // SetConstraints().  Among other things, this allows a decoder to attempt
-    // to allocate a new buffer that's larger to hold an output frame that's
-    // larger.
-    //
-    // Sometimes the initiator is a participant only in the sense of wanting to
-    // keep an eye on success/failure to populate with buffers, and zx.status on
-    // failure.  In that case, |has_constraints| can be false, and |constraints|
-    // will be ignored.
-    //
-    // VMO handles will not be provided to the client that sends null
-    // constraints - that can be intentional for an initiator that doesn't need
-    // VMO handles.  Not having VMO handles doesn't prevent the initator from
-    // adjusting which portion of a buffer is considered valid and similar, but
-    // the initiator can't hold a VMO handle open to prevent the logical
-    // BufferCollection from cleaning up if the logical BufferCollection needs
-    // to go away regardless of the initiator's degree of involvement for
-    // whatever reason.
-    //
-    // For population of buffers to be attempted, all holders of a
-    // BufferCollection client channel need to call SetConstraints() before
-    // sysmem will attempt to allocate buffers.
-    //
-    // |has_constraints| if false, the constraints are effectively null, and
-    // |constraints| are ignored.  The sender of null constraints won't get any
-    // VMO handles in BufferCollectionInfo, but can still find out how many
-    // buffers were allocated and can still refer to buffers by their
-    // buffer_index.
-    //
-    // |constraints| are constraints on the buffer collection.
+    /// Provide BufferCollectionConstraints to the logical BufferCollection.
+    ///
+    /// Participants with read but not write can only call SetConstraints() once.
+    ///
+    /// Participants with write can call SetConstraints() more than once.  The
+    /// initial buffer allocation will use the constraints in the first call to
+    /// SetConstraints().  Among other things, this allows a decoder to attempt
+    /// to allocate a new buffer that's larger to hold an output frame that's
+    /// larger.
+    ///
+    /// Sometimes the initiator is a participant only in the sense of wanting to
+    /// keep an eye on success/failure to populate with buffers, and zx.status on
+    /// failure.  In that case, `has_constraints` can be false, and `constraints`
+    /// will be ignored.
+    ///
+    /// VMO handles will not be provided to the client that sends null
+    /// constraints - that can be intentional for an initiator that doesn't need
+    /// VMO handles.  Not having VMO handles doesn't prevent the initator from
+    /// adjusting which portion of a buffer is considered valid and similar, but
+    /// the initiator can't hold a VMO handle open to prevent the logical
+    /// BufferCollection from cleaning up if the logical BufferCollection needs
+    /// to go away regardless of the initiator's degree of involvement for
+    /// whatever reason.
+    ///
+    /// For population of buffers to be attempted, all holders of a
+    /// BufferCollection client channel need to call SetConstraints() before
+    /// sysmem will attempt to allocate buffers.
+    ///
+    /// `has_constraints` if false, the constraints are effectively null, and
+    /// `constraints` are ignored.  The sender of null constraints won't get any
+    /// VMO handles in BufferCollectionInfo, but can still find out how many
+    /// buffers were allocated and can still refer to buffers by their
+    /// buffer_index.
+    ///
+    /// `constraints` are constraints on the buffer collection.
     SetConstraints(bool has_constraints,
                    BufferCollectionConstraints constraints);
 
-    // This request completes when buffers have been allocated, responds with
-    // some failure detail if allocation has been attempted but failed.
-    //
-    // The following must occur before buffers will be allocated:
-    //   * All BufferCollectionToken(s) of the logical BufferCollectionToken
-    //     must be turned in via BindSharedCollection().
-    //   * All BufferCollection(s) of the logical BufferCollection must have had
-    //     SetConstraints() sent to them.
-    //
-    // A caller using C generated FIDL code who wishes not to block a thread in
-    // a zx_channel_call() for a potentially fairly long duration on this
-    // message/response can use SetEventSink() and
-    // BufferCollectionEvents.OnBuffersPopulated() instead.
-    //
-    // This method is still legal to call despite use of OnBuffersPopulated(),
-    // but in that case the additional BufferCollectionInfo returned here will
-    // include handles that are redundant with other handles in the
-    // BufferCollectionInfo delivered via OnBuffersPopulated() (separate handle
-    // but same underlying VMO objects), so most clients that bother calling
-    // SetEventSink() will prefer to receive BufferCollectionInfo via
-    // OnBuffersPopulated().  This method is mostly here for clients that don't
-    // call SetEventSink().
-    //
-    // Returns |ZX_OK| if successful.
-    // Returns |ZX_ERR_NO_MEMORY| if the request is valid but cannot be
-    // fulfilled due to resource exhaustion.
-    // Returns |ZX_ERR_ACCESS_DENIED| if the caller is not permitted to
-    // obtain the buffers it requested.
-    // Returns |ZX_ERR_INVALID_ARGS| if the request is malformed.
-    // Returns |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be
-    // satisfied, perhaps due to hardware limitations.
-    //
-    // |buffer_collection_info| has the VMO handles and other related info.
+    /// This request completes when buffers have been allocated, responds with
+    /// some failure detail if allocation has been attempted but failed.
+    ///
+    /// The following must occur before buffers will be allocated:
+    ///   * All BufferCollectionToken(s) of the logical BufferCollectionToken
+    ///     must be turned in via BindSharedCollection().
+    ///   * All BufferCollection(s) of the logical BufferCollection must have had
+    ///     SetConstraints() sent to them.
+    ///
+    /// A caller using C generated FIDL code who wishes not to block a thread in
+    /// a zx_channel_call() for a potentially fairly long duration on this
+    /// message/response can use SetEventSink() and
+    /// BufferCollectionEvents.OnBuffersPopulated() instead.
+    ///
+    /// This method is still legal to call despite use of OnBuffersPopulated(),
+    /// but in that case the additional BufferCollectionInfo returned here will
+    /// include handles that are redundant with other handles in the
+    /// BufferCollectionInfo delivered via OnBuffersPopulated() (separate handle
+    /// but same underlying VMO objects), so most clients that bother calling
+    /// SetEventSink() will prefer to receive BufferCollectionInfo via
+    /// OnBuffersPopulated().  This method is mostly here for clients that don't
+    /// call SetEventSink().
+    ///
+    /// Returns `ZX_OK` if successful.
+    /// Returns `ZX_ERR_NO_MEMORY` if the request is valid but cannot be
+    /// fulfilled due to resource exhaustion.
+    /// Returns `ZX_ERR_ACCESS_DENIED` if the caller is not permitted to
+    /// obtain the buffers it requested.
+    /// Returns `ZX_ERR_INVALID_ARGS` if the request is malformed.
+    /// Returns `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be
+    /// satisfied, perhaps due to hardware limitations.
+    ///
+    /// `buffer_collection_info` has the VMO handles and other related info.
     WaitForBuffersAllocated()
         -> (zx.status status, BufferCollectionInfo_2 buffer_collection_info);
 
-    // This returns the same result code as WaitForBuffersAllocated if the
-    // buffer collection has been allocated or failed, or |ZX_ERR_UNAVAILABLE|
-    // if WaitForBuffersAllocated would block.
+    /// This returns the same result code as WaitForBuffersAllocated if the
+    /// buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
+    /// if WaitForBuffersAllocated would block.
     CheckBuffersAllocated() -> (zx.status status);
 
-    // The CloseBuffer() doesn't immediately force all VMO handles to that
-    // buffer to close, but it does close any handle held by sysmem, and does
-    // notify all participants of the desire to close the buffer at which point
-    // each participant that's listening may close their handle to the buffer.
-    //
-    // Only a particpant with write can do this.  Coordination among multiple
-    // participants with write is outside of the scope of this interface.
-    //
-    // |buffer_index| indicates which buffer to close.  If the buffer is already
-    // closed this has no effect (idempotent).
+    /// The CloseBuffer() doesn't immediately force all VMO handles to that
+    /// buffer to close, but it does close any handle held by sysmem, and does
+    /// notify all participants of the desire to close the buffer at which point
+    /// each participant that's listening may close their handle to the buffer.
+    ///
+    /// Only a particpant with write can do this.  Coordination among multiple
+    /// participants with write is outside of the scope of this interface.
+    ///
+    /// `buffer_index` indicates which buffer to close.  If the buffer is already
+    /// closed this has no effect (idempotent).
     CloseSingleBuffer(uint64 buffer_index);
 
-    // This allocates a new buffer that is consistent with the most recent call
-    // to SetConstraints(), if possible.  If not possible, this indicates the
-    // failure via OnNewBufferAllocated().
-    //
-    // Only a participant with write can do this.  Coordination among multiple
-    // participants with write is outside the scope of this interface.
-    //
-    // The participant is (intentionally) never informed of other participant's
-    // constraints.
+    /// This allocates a new buffer that is consistent with the most recent call
+    /// to SetConstraints(), if possible.  If not possible, this indicates the
+    /// failure via OnNewBufferAllocated().
+    ///
+    /// Only a participant with write can do this.  Coordination among multiple
+    /// participants with write is outside the scope of this interface.
+    ///
+    /// The participant is (intentionally) never informed of other participant's
+    /// constraints.
     AllocateSingleBuffer(uint64 buffer_index);
 
-    // Completes when AllocateBuffer is done.  Callers who wish to avoid
-    // blocking a thread while waiting can use OnAllocateSingleBufferDone()
-    // instead.
+    /// Completes when AllocateBuffer is done.  Callers who wish to avoid
+    /// blocking a thread while waiting can use OnAllocateSingleBufferDone()
+    /// instead.
     WaitForSingleBufferAllocated(uint64 buffer_index)
         -> (zx.status status, SingleBufferInfo buffer_info);
 
-    // A participant can use this message to have sysmem verify that this
-    // buffer_index exists.  This message is intentionally ignored by the
-    // server if the buffer_index _does_ exist.  In that case, the client will
-    // see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
-    // client hasn't already seen that message).  If on the other hand the
-    // buffer_index does not exist, this message causes the server to send
-    // OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
-    // particpant will typically use this when the participant receives a new
-    // buffer_index that the participant doesn't yet know about, to ensure that
-    // the participant won't be waiting forever for the
-    // OnAllocateSingleBufferDone() message regarding this buffer_index.
+    /// A participant can use this message to have sysmem verify that this
+    /// buffer_index exists.  This message is intentionally ignored by the
+    /// server if the buffer_index _does_ exist.  In that case, the client will
+    /// see OnAllocateSingleBufferDone() soon with status == ZX_OK (if the
+    /// client hasn't already seen that message).  If on the other hand the
+    /// buffer_index does not exist, this message causes the server to send
+    /// OnAllocateSingleBufferDone() with status == ZX_ERR_NOT_FOUND.  A
+    /// particpant will typically use this when the participant receives a new
+    /// buffer_index that the participant doesn't yet know about, to ensure that
+    /// the participant won't be waiting forever for the
+    /// OnAllocateSingleBufferDone() message regarding this buffer_index.
     CheckSingleBufferAllocated(uint64 buffer_index);
 
-    // The server handles unexpected failure of a BufferCollection by failing
-    // the whole LogicalBufferCollection.  Partly this is to expedite closing
-    // VMO handles.  If a participant would like to cleanly close a
-    // BufferCollection view without causing LogicalBufferCollection failure,
-    // the participant can send Close() before closing the client end of the
-    // BufferCollection channel.  If this is the last BufferCollection view, the
-    // LogicalBufferCollection will still go away.
+    /// The server handles unexpected failure of a BufferCollection by failing
+    /// the whole LogicalBufferCollection.  Partly this is to expedite closing
+    /// VMO handles.  If a participant would like to cleanly close a
+    /// BufferCollection view without causing LogicalBufferCollection failure,
+    /// the participant can send Close() before closing the client end of the
+    /// BufferCollection channel.  If this is the last BufferCollection view, the
+    /// LogicalBufferCollection will still go away.
     Close();
 };
 
-// This interface intentionally doesn't include any event for
-// OnOldBufferClosed(), because such an event could arrive at a participant too
-// soon to be useful.  Instead, such an indication should be made in-band within
-// FIDL interfaces that deliver packets to downstream participants.
+/// This interface intentionally doesn't include any event for
+/// OnOldBufferClosed(), because such an event could arrive at a participant too
+/// soon to be useful.  Instead, such an indication should be made in-band within
+/// FIDL interfaces that deliver packets to downstream participants.
 [Discoverable, Layout = "Simple"]
 protocol BufferCollectionEvents {
-    // See comments on BufferCollectionToken::Sync().
-    //
-    // This message only indicates that the server has reached the point where
-    // it knows about previously created tokens Duplicate()ed from the token
-    // used to create this BufferCollection.
+    /// See comments on BufferCollectionToken::Sync().
+    ///
+    /// This message only indicates that the server has reached the point where
+    /// it knows about previously created tokens Duplicate()ed from the token
+    /// used to create this BufferCollection.
     OnDuplicatedTokensKnownByServer();
 
-    // This event inidicates that buffer allocation is over, whether succesful
-    // or failed.
-    //
-    // This event will eventually be sent by the server (unless the
-    // BufferCollection channel closes first).
-    //
-    // |status|:
-    // |ZX_OK| if successful.
-    // |ZX_ERR_NO_MEMORY| if the request is valid but cannot be fulfilled due to
-    // resource exhaustion.
-    // |ZX_ERR_ACCESS_DENIED| if the caller is not permitted to obtain the
-    // buffers it requested.
-    // |ZX_ERR_INVALID_ARGS| if the request is malformed.
-    // |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be satisfied,
-    // perhaps due to hardware limitations.
-    //
-    // |buffer_collection_info| The buffer information, including VMO handles.
-    // If |status| is not |ZX_OK|, |buffer_collection_info| is default
-    // initialized and contains no meaningful information.
+    /// This event inidicates that buffer allocation is over, whether succesful
+    /// or failed.
+    ///
+    /// This event will eventually be sent by the server (unless the
+    /// BufferCollection channel closes first).
+    ///
+    /// `status`:
+    /// `ZX_OK` if successful.
+    /// `ZX_ERR_NO_MEMORY` if the request is valid but cannot be fulfilled due to
+    /// resource exhaustion.
+    /// `ZX_ERR_ACCESS_DENIED` if the caller is not permitted to obtain the
+    /// buffers it requested.
+    /// `ZX_ERR_INVALID_ARGS` if the request is malformed.
+    /// `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
+    /// perhaps due to hardware limitations.
+    ///
+    /// `buffer_collection_info` The buffer information, including VMO handles.
+    /// If `status` is not `ZX_OK`, `buffer_collection_info` is default
+    /// initialized and contains no meaningful information.
     OnBuffersAllocated(zx.status status,
                        BufferCollectionInfo_2 buffer_collection_info);
 
-    // A participant can learn when a new buffer is allocated via this event.
-    // The only participant that will see a failing status is the participant
-    // that attempted the single buffer allocation.  Other participants will
-    // only see successful single buffer allocations.
-    //
-    // |status|:
-    //
-    // |ZX_OK| if successful.  This can be seen by any participant (whether
-    // sender of AllocateSingleBuffer() or not.)
-    //
-    // |ZX_ERR_NOT_FOUND| if the buffer_index sent via
-    // CheckSingleBufferAllocated() isn't known to the server.  This can be seen
-    // by any participant (whether sender of AllocateSingleBuffer() or not.)
-    //
-    // These error codes are only ever seen by the sender of
-    // AllocateSingleBuffer():
-    //
-    // |ZX_ERR_NO_MEMORY| if the request is valid but cannot be fulfilled due to
-    // resource exhaustion.
-    // |ZX_ERR_ACCESS_DENIED| if the caller is not permitted to obtain the
-    // buffers it requested.
-    // |ZX_ERR_INVALID_ARGS| if the request is malformed.
-    // |ZX_ERR_NOT_SUPPORTED| if request is valid but cannot be satisfied,
-    // perhaps due to hardware limitations.
+    /// A participant can learn when a new buffer is allocated via this event.
+    /// The only participant that will see a failing status is the participant
+    /// that attempted the single buffer allocation.  Other participants will
+    /// only see successful single buffer allocations.
+    ///
+    /// `status`:
+    ///
+    /// `ZX_OK` if successful.  This can be seen by any participant (whether
+    /// sender of AllocateSingleBuffer() or not.)
+    ///
+    /// `ZX_ERR_NOT_FOUND` if the buffer_index sent via
+    /// CheckSingleBufferAllocated() isn't known to the server.  This can be seen
+    /// by any participant (whether sender of AllocateSingleBuffer() or not.)
+    ///
+    /// These error codes are only ever seen by the sender of
+    /// AllocateSingleBuffer():
+    ///
+    /// `ZX_ERR_NO_MEMORY` if the request is valid but cannot be fulfilled due to
+    /// resource exhaustion.
+    /// `ZX_ERR_ACCESS_DENIED` if the caller is not permitted to obtain the
+    /// buffers it requested.
+    /// `ZX_ERR_INVALID_ARGS` if the request is malformed.
+    /// `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
+    /// perhaps due to hardware limitations.
     OnAllocateSingleBufferDone(zx.status status,
                                SingleBufferInfo buffer_info);
 };

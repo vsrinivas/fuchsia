@@ -6,33 +6,33 @@ library fuchsia.sysmem;
 
 using zx;
 
-// Once a channel with this interface is established to a driver (typically in
-// advance), this interface allows asynchronously sending the server end of an
-// Allocator channel which will be served by the driver.
-//
-// For now, the only FIDL interface directly served via normal devhost FIDL
-// dispatching code by the sysmem driver is this interface.  Other sysmem
-// interfaces are served by separate dispatching code primarily because we want
-// to be able to establish channels async by sending the server channel toward
-// the driver without needing a round-trip open and without managing the channel
-// as a file descriptor.
-//
-// A secondary current reason tracked by ZX-3091 is that the current devhost
-// dispatching code doesn't permit async processing of requests, which we want
-// for proper functionining of at least the BufferCollection interface since
-// that interface has requests that don't complete until the devhost has
-// constraints from other participants.
+/// Once a channel with this interface is established to a driver (typically in
+/// advance), this interface allows asynchronously sending the server end of an
+/// Allocator channel which will be served by the driver.
+///
+/// For now, the only FIDL interface directly served via normal devhost FIDL
+/// dispatching code by the sysmem driver is this interface.  Other sysmem
+/// interfaces are served by separate dispatching code primarily because we want
+/// to be able to establish channels async by sending the server channel toward
+/// the driver without needing a round-trip open and without managing the channel
+/// as a file descriptor.
+///
+/// A secondary current reason tracked by ZX-3091 is that the current devhost
+/// dispatching code doesn't permit async processing of requests, which we want
+/// for proper functionining of at least the BufferCollection interface since
+/// that interface has requests that don't complete until the devhost has
+/// constraints from other participants.
 //
 // Needs Layout = "Simple" because used with "FIDL Simple C Bindings".
 [Discoverable, Layout = "Simple"]
 protocol DriverConnector {
-    // This one-way message sends in the server end of an Allocator channel.
-    //
-    // |allocator_request| will be served by the sysmem driver (or the channel
-    // will close).
+    /// This one-way message sends in the server end of an Allocator channel.
+    ///
+    /// `allocator_request` will be served by the sysmem driver (or the channel
+    /// will close).
     Connect(request<Allocator> allocator_request);
 
-    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
+    /// Get information about the physical layout of protected memory, for use by sysmem-assistant.
     // TODO(MTWN-231): Connect directly between sysmem and the TEE driver and remove this.
     GetProtectedMemoryInfo() -> (zx.status status, uint64 base_address, uint64 size);
 };

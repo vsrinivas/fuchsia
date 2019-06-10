@@ -77,14 +77,14 @@ struct BufferCollectionConstraints {
     /// accounted for in min_buffer_count_for_camping.
     uint32 min_buffer_count_for_shared_slack;
 
-    // A particularly-picky participant may unfortunately need to demand a tight
-    // range of buffer_count, or even a specific buffer_count.  This field
-    // should remain 0 unless a participant really must set this field to
-    // constrain the overall BufferCollectionInfo_2.buffer_count.  Any such
-    // participant should still fill out the min_buffer_count_for_* fields
-    // above.
+    /// A particularly-picky participant may unfortunately need to demand a tight
+    /// range of buffer_count, or even a specific buffer_count.  This field
+    /// should remain 0 unless a participant really must set this field to
+    /// constrain the overall BufferCollectionInfo_2.buffer_count.  Any such
+    /// participant should still fill out the min_buffer_count_for_* fields
+    /// above.
     uint32 min_buffer_count;
-    // 0 is treated as 0xFFFFFFFF.
+    /// 0 is treated as 0xFFFFFFFF.
     uint32 max_buffer_count;
 
     /// Constraints on BufferCollectionSettings.buffer_settings.
@@ -109,44 +109,44 @@ struct BufferCollectionConstraints {
 };
 
 struct VmoBuffer {
-    // The same VMO can be used by more than one CodecBuffer (only of the same
-    // buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
-    //
-    // The vmo field can be 0 if this is a VmoBuffer in BufferCollectionInfo_2
-    // that's at or beyond BufferCollectionInfo_2.buffer_count.
+    /// The same VMO can be used by more than one CodecBuffer (only of the same
+    /// buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
+    ///
+    /// The vmo field can be 0 if this is a VmoBuffer in BufferCollectionInfo_2
+    /// that's at or beyond BufferCollectionInfo_2.buffer_count.
     handle<vmo>? vmo;
 
-    // Offset within the VMO of the first usable byte.  Must be < the VMO's size
-    // in bytes, and leave sufficient room for BufferMemorySettings.size_bytes
-    // before the end of the VMO.
+    /// Offset within the VMO of the first usable byte.  Must be < the VMO's size
+    /// in bytes, and leave sufficient room for BufferMemorySettings.size_bytes
+    /// before the end of the VMO.
     uint64 vmo_usable_start;
 };
 
-// Information about a buffer collection and its buffers.
+/// Information about a buffer collection and its buffers.
 // TODO(ZX-2260): change struct to table
 struct BufferCollectionInfo_2 {
-    // If this is the initial buffer collection allocation, this is the total
-    // number of buffers.  If this is a single buffer allocation, this is zero,
-    // and the rest of the fields only apply to the single buffer.
+    /// If this is the initial buffer collection allocation, this is the total
+    /// number of buffers.  If this is a single buffer allocation, this is zero,
+    /// and the rest of the fields only apply to the single buffer.
     uint32 buffer_count;
 
-    // These settings apply to all the buffers in the inital buffer allocation.
+    /// These settings apply to all the buffers in the inital buffer allocation.
     SingleBufferSettings settings;
 
-    // VMO handles (and vmo_usable_start offset) for each buffer in the
-    // collection.
-    //
-    // If present, all the VMOs at or after index |buffer_count| are invalid (0)
-    // handles.
-    //
-    // All buffer VMO handles have identical size and access rights.  The size
-    // is in settings.buffer_settings.size_bytes.
-    //
-    // The VMO access rights are determined based on the usages which the
-    // client specified when allocating the buffer collection.  For example,
-    // a client which expressed a read-only usage will receive VMOs without
-    // write rights.  In addition, the rights can be attenuated by the parameter
-    // to BufferCollectionToken.Duplicate() calls.
+    /// VMO handles (and vmo_usable_start offset) for each buffer in the
+    /// collection.
+    ///
+    /// If present, all the VMOs at or after index |buffer_count| are invalid (0)
+    /// handles.
+    ///
+    /// All buffer VMO handles have identical size and access rights.  The size
+    /// is in settings.buffer_settings.size_bytes.
+    ///
+    /// The VMO access rights are determined based on the usages which the
+    /// client specified when allocating the buffer collection.  For example,
+    /// a client which expressed a read-only usage will receive VMOs without
+    /// write rights.  In addition, the rights can be attenuated by the parameter
+    /// to BufferCollectionToken.Duplicate() calls.
     array<VmoBuffer>:64 buffers;
 };
 
@@ -155,10 +155,10 @@ struct SingleBufferInfo {
     VmoBuffer buffer;
 };
 
-// After the initial buffer allocation, it's allowed to close old buffers and
-// allocate new buffers.  When a new buffer is allocated its settings can differ
-// from the rest of the buffers in the collection, and the single buffer's
-// settings are delivered via OnSingleBufferAllocated() using this struct:
+/// After the initial buffer allocation, it's allowed to close old buffers and
+/// allocate new buffers.  When a new buffer is allocated its settings can differ
+/// from the rest of the buffers in the collection, and the single buffer's
+/// settings are delivered via OnSingleBufferAllocated() using this struct:
 struct SingleBufferSettings {
     BufferMemorySettings buffer_settings;
 
@@ -373,21 +373,21 @@ struct ImageFormat_2 {
     /// Color space.
     ColorSpace color_space;
 
-    // The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
-    // pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
-    // (AKA Y) samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
-    // pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice
-    // as wide as they are tall. Codec implementation should ensure these
-    // two values are relatively prime by reducing the fraction (dividing
-    // both by GCF) if necessary.
-    //
-    // When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
-    // pixel_aspect_ratio_height will both be 1, but in that case the
-    // pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just
-    // a very weak suggestion re. reasonable-ish handling, not in any way
-    // authoritative. In this case (or in any case really) the receiver of
-    // this message may have other OOB means to determine the actual
-    // pixel_aspect_ratio.
+    /// The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
+    /// pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
+    /// (AKA Y) samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
+    /// pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice
+    /// as wide as they are tall. Codec implementation should ensure these
+    /// two values are relatively prime by reducing the fraction (dividing
+    /// both by GCF) if necessary.
+    ///
+    /// When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
+    /// pixel_aspect_ratio_height will both be 1, but in that case the
+    /// pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just
+    /// a very weak suggestion re. reasonable-ish handling, not in any way
+    /// authoritative. In this case (or in any case really) the receiver of
+    /// this message may have other OOB means to determine the actual
+    /// pixel_aspect_ratio.
     bool has_pixel_aspect_ratio = false;
     uint32 pixel_aspect_ratio_width = 1;
     uint32 pixel_aspect_ratio_height = 1;
