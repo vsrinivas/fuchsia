@@ -119,3 +119,7 @@ change that.
 *   **GN templates** are not easily testable. We are working on a test framework
     for GN templates. Until then, it's permitted for build template changes to
     be manually tested only.
+*   **Resource leaks** are not easily preventable in C-style code. In the longer
+    term, such code should be refactored to use Rust or modern C++ idioms to
+    reduce the chances of leaks, and automation should exist that is capable of
+    automatically detecting leaks.
