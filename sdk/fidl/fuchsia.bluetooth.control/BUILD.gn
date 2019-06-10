@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth.control") {
   sources = [
+    "bonding.fidl",
     "control.fidl",
     "pairing_delegate.fidl",
     "remote_device.fidl",

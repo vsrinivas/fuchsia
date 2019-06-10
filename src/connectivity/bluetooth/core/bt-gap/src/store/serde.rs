@@ -9,7 +9,7 @@
 #![allow(non_snake_case)]
 
 use {
-    fidl_fuchsia_bluetooth_host::{
+    fidl_fuchsia_bluetooth_control::{
         AddressType, BondingData, BredrData, HostData, LeConnectionParameters, LeData, LocalKey,
         Ltk, RemoteKey, SecurityProperties,
     },

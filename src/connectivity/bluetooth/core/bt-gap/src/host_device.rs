@@ -5,11 +5,11 @@
 use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, DeviceClass, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
-        RemoteDevice,
+        AdapterInfo, BondingData, DeviceClass, HostData, InputCapabilityType, OutputCapabilityType,
+        PairingDelegateMarker, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
-    fidl_fuchsia_bluetooth_host::{BondingData, HostData, HostEvent, HostProxy},
+    fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_le::CentralProxy,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{Future, FutureExt, StreamExt},

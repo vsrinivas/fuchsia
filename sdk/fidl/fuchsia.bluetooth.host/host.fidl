@@ -12,18 +12,6 @@ using fuchsia.bluetooth.bredr;
 
 // TODO(BT-814): Convert all comments below to doc-comments.
 
-/// Represents persistent local host data.
-// TODO(BT-813): Consider using a table instead of struct.
-struct HostData {
-    /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
-    /// Addresses when privacy is enabled.
-    ///
-    /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
-    /// care to assign an IRK that consistent with the local bt-host identity.
-    // TODO(BT-815): Document behavior once there is a better privacy policy when |irk| is null.
-    LocalKey? irk;
-};
-
 // Interface for interacting with a Bluetooth host device (bt-host)
 protocol Host {
     // The following methods fulfill a given interface request. bt-host device
@@ -53,7 +41,7 @@ protocol Host {
     GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo info);
 
     /// Assigns local data to this host.
-    SetLocalData(HostData host_data);
+    SetLocalData(fuchsia.bluetooth.control.HostData host_data);
 
     // Returns a list of all known connectable devices, included those that are
     // currently connected and/or bonded. This list does not include
@@ -157,7 +145,7 @@ protocol Host {
     // Adds existing bonded devices to the host. The host will be configured to automatically connect
     // to these devices when they are in range and connectable. Future connections will be encrypted
     // using the provided bonding data.
-    AddBondedDevices(vector<BondingData> bonds) -> (fuchsia.bluetooth.Status status);
+    AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
 
     // ===== Events =====
 
@@ -170,7 +158,7 @@ protocol Host {
     -> OnDeviceRemoved(string identifier);
 
     // Notifies when bonding data for a device has been updated.
-    -> OnNewBondingData(BondingData data);
+    -> OnNewBondingData(fuchsia.bluetooth.control.BondingData data);
 
     // TODO(BT-194): Introduce a "OnBondRemoved()" event to notify when existing
     // keys become stale.

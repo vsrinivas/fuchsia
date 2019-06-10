@@ -5,9 +5,8 @@
 use {
     failure::Error,
     fidl_fuchsia_bluetooth::Status,
-    fidl_fuchsia_bluetooth_control::TechnologyType,
-    fidl_fuchsia_bluetooth_host::{
-        AddressType, BondingData, LeData, Ltk, RemoteKey, SecurityProperties,
+    fidl_fuchsia_bluetooth_control::{
+        AddressType, BondingData, LeData, Ltk, RemoteKey, SecurityProperties, TechnologyType,
     },
     fuchsia_bluetooth::expectation,
     futures::TryFutureExt,

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.bluetooth.host;
+library fuchsia.bluetooth.control;
 
 struct SecurityProperties {
     bool authenticated;
@@ -101,4 +101,16 @@ struct BondingData {
 
     // Bonding data that is present when this device is paired on the BR/EDR transport.
     BREDRData? bredr;
+};
+
+/// Represents persistent local host data.
+// TODO(BT-813): Consider using a table instead of struct.
+struct HostData {
+    /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
+    /// Addresses when privacy is enabled.
+    ///
+    /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
+    /// care to assign an IRK that consistent with the local bt-host identity.
+    // TODO(BT-815): Document behavior once there is a better privacy policy when |irk| is null.
+    LocalKey? irk;
 };

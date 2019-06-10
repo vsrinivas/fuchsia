@@ -5,10 +5,10 @@
 use {
     failure::{err_msg, format_err, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice, TechnologyType},
-    fidl_fuchsia_bluetooth_host::{
-        BondingData, HostControlHandle, HostMarker, HostRequest, HostRequestStream,
+    fidl_fuchsia_bluetooth_control::{
+        AdapterInfo, AdapterState, BondingData, RemoteDevice, TechnologyType,
     },
+    fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
     fuchsia_async::TimeoutExt,
     fuchsia_bluetooth::bt_fidl_status,
     fuchsia_zircon::DurationNum,

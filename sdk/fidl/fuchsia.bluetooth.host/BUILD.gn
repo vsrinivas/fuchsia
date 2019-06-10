@@ -10,7 +10,6 @@ fidl("fuchsia.bluetooth.host") {
   # Do not add to partner SDK.
 
   sources = [
-    "bonding.fidl",
     "host.fidl",
   ]
 

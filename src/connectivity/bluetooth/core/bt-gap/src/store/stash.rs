@@ -5,7 +5,7 @@
 use {
     failure::Error,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_bluetooth_host::{BondingData, HostData},
+    fidl_fuchsia_bluetooth_control::{BondingData, HostData},
     fidl_fuchsia_stash::{
         GetIteratorMarker, StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value,
     },
@@ -223,7 +223,7 @@ pub async fn init_stash(component_id: &str) -> Result<Stash, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_bluetooth_host::LocalKey;
+    use fidl_fuchsia_bluetooth_control::LocalKey;
     use {
         fuchsia_async as fasync, fuchsia_component::client::connect_to_service, pin_utils::pin_mut,
     };

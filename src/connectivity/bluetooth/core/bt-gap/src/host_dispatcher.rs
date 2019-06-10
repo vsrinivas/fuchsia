@@ -11,11 +11,11 @@ use {
     fidl_fuchsia_bluetooth::{Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, ControlControlHandle, DeviceClass, InputCapabilityType, OutputCapabilityType,
-        PairingDelegateProxy, RemoteDevice,
+        AdapterInfo, BondingData, ControlControlHandle, DeviceClass, HostData, InputCapabilityType,
+        LocalKey, OutputCapabilityType, PairingDelegateProxy, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
-    fidl_fuchsia_bluetooth_host::{BondingData, HostData, HostProxy, LocalKey},
+    fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
@@ -458,10 +458,7 @@ impl HostDispatcher {
         self.state.write().pairing_delegate()
     }
 
-    pub fn store_bond(
-        &self,
-        bond_data: fidl_fuchsia_bluetooth_host::BondingData,
-    ) -> Result<(), Error> {
+    pub fn store_bond(&self, bond_data: BondingData) -> Result<(), Error> {
         self.state.write().stash.store_bond(bond_data)
     }
 

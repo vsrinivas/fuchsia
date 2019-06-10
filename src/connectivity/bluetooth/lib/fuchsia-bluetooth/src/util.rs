@@ -4,10 +4,9 @@
 
 use {
     fidl_fuchsia_bluetooth::{self, Int8},
-    fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
-    fidl_fuchsia_bluetooth_host::{
-        BondingData, BredrData, HostData, LeConnectionParameters, LeData, LocalKey, Ltk, RemoteKey,
-        SecurityProperties,
+    fidl_fuchsia_bluetooth_control::{
+        AdapterInfo, AdapterState, BondingData, BredrData, HostData, LeConnectionParameters,
+        LeData, LocalKey, Ltk, RemoteDevice, RemoteKey, SecurityProperties,
     },
 };
 
