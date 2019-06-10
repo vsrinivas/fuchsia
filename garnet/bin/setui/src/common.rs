@@ -4,7 +4,7 @@
 
 use failure::Error;
 use fidl_fuchsia_setui::*;
-use std::sync::mpsc::Sender;
+use futures::channel::oneshot::Sender;
 
 pub type ProcessMutation = dyn Fn(&Mutation) -> Result<Option<SettingData>, Error> + Send + Sync;
 pub type BoxedSettingCodec<T> = Box<dyn SettingCodec<T> + Send + Sync>;

@@ -6,7 +6,7 @@ use crate::common::*;
 use crate::fidl_clone::*;
 use fidl_fuchsia_setui::*;
 use fuchsia_syslog::fx_log_err;
-use std::sync::mpsc::Sender;
+use futures::channel::oneshot::Sender;
 use std::sync::Mutex;
 
 /// SettingAdapter provides a basic implementation of the Adapter trait,

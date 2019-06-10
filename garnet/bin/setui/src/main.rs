@@ -54,12 +54,10 @@ fn main() -> Result<(), Error> {
     fs.dir("public").add_fidl_service(move |stream: SetUiServiceRequestStream| {
         let handler_clone = handler.clone();
         fx_log_info!("Connecting to setui_service");
-        fasync::spawn(
-            async move {
-                await!(handler_clone.handle_stream(stream))
-                    .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
-            },
-        );
+        fasync::spawn(async move {
+            await!(handler_clone.handle_stream(stream))
+                .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
+        });
     });
 
     fs.take_and_serve_directory_handle()?;

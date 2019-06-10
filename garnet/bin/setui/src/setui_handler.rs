@@ -7,9 +7,9 @@ use crate::fidl_clone::*;
 use failure::{format_err, Error};
 use fidl_fuchsia_setui::*;
 use fuchsia_syslog::fx_log_err;
+use futures::channel::oneshot::{channel, Sender};
 use futures::prelude::*;
 use std::collections::HashMap;
-use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
@@ -70,18 +70,22 @@ impl SetUIHandler {
             // We clone here so the value can be moved into the closure below.
             let last_seen_settings_clone = self.last_seen_settings.clone();
 
-            fasync::spawn(
-                async move {
-                    let data: SettingData = receiver.recv().unwrap();
-                    last_seen_settings_clone.write().unwrap().insert(setting_type, data.clone());
-                    responder
-                        .send(&mut SettingsObject {
-                            setting_type: setting_type,
-                            data: data.clone(),
-                        })
-                        .ok();
-                },
-            );
+            fasync::spawn(async move {
+                await!(receiver.map(|data| {
+                    if let Ok(data) = data {
+                        last_seen_settings_clone
+                            .write()
+                            .unwrap()
+                            .insert(setting_type, data.clone());
+                        responder
+                            .send(&mut SettingsObject {
+                                setting_type: setting_type,
+                                data: data.clone(),
+                            })
+                            .ok();
+                    }
+                }));
+            });
         } else {
             fx_log_err!("watch: no valid adapter for type");
         }
@@ -181,12 +185,12 @@ mod tests {
             MutationResponse { return_code: ReturnCode::Ok }
         );
 
-        let (sender, receiver) = channel();
+        let (sender, mut receiver) = channel();
 
         // Listen for change
         assert!(handler.listen(SettingType::Unknown, sender).is_ok());
 
-        let listen_result = receiver.recv();
+        let listen_result = receiver.try_recv();
 
         assert!(listen_result.is_ok());
 
@@ -194,7 +198,7 @@ mod tests {
 
         // Ensure value matches original change.
         match data {
-            SettingData::StringValue(string_val) => {
+            Some(SettingData::StringValue(string_val)) => {
                 assert_eq!(string_val, test_val.clone());
             }
             _ => {
@@ -226,18 +230,18 @@ mod tests {
     }
 
     fn check_login_override(adapter: &Adapter, expected_override: Option<LoginOverride>) {
-        let (sender, receiver) = channel();
+        let (sender, mut receiver) = channel();
 
         // Ensure initial account settings returned.
         adapter.listen(sender, None);
 
-        let listen_result = receiver.recv();
+        let listen_result = receiver.try_recv();
         assert!(listen_result.is_ok());
 
         let data = listen_result.unwrap();
 
         match data {
-            SettingData::Account(val) => {
+            Some(SettingData::Account(val)) => {
                 assert_eq!(val.mode, expected_override);
             }
             _ => {
