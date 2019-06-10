@@ -93,21 +93,22 @@ static int netboot_send_query(int socket, unsigned port, const char* ifname) {
 
     bool success = false;
 
-    for (; ifa != NULL; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == NULL) {
+    struct ifaddrs* ifa_it = ifa;
+    for (; ifa_it != NULL; ifa_it = ifa_it->ifa_next) {
+        if (ifa_it->ifa_addr == NULL) {
             continue;
         }
-        if (ifa->ifa_addr->sa_family != AF_INET6) {
+        if (ifa_it->ifa_addr->sa_family != AF_INET6) {
             continue;
         }
-        struct sockaddr_in6* in6 = (void*)ifa->ifa_addr;
+        struct sockaddr_in6* in6 = (void*)ifa_it->ifa_addr;
         if (in6->sin6_scope_id == 0) {
             continue;
         }
-        if (ifname && ifname[0] != 0 && strcmp(ifname, ifa->ifa_name)) {
+        if (ifname && ifname[0] != 0 && strcmp(ifname, ifa_it->ifa_name)) {
             continue;
         }
-        // printf("tx %s (sid=%d)\n", ifa->ifa_name, in6->sin6_scope_id);
+        // printf("tx %s (sid=%d)\n", ifa_it->ifa_name, in6->sin6_scope_id);
         size_t sz = sizeof(nbmsg) + hostname_len;
         addr.sin6_scope_id = in6->sin6_scope_id;
 
@@ -301,6 +302,7 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
             }
         } else if (r < 0 && errno != EAGAIN && errno != EINTR) {
             fprintf(stderr, "poll returned error: %s\n", strerror(errno));
+            close(s);
             return -1;
         }
         if (first_wait) {
