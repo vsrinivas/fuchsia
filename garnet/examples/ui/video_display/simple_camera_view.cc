@@ -57,6 +57,11 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
 
   // Now pass the other end of the image pipe to the simple camera interface:
   simple_camera_->ConnectToCamera(camera_id, std::move(image_pipe_handle));
+  simple_camera_.set_error_handler([](zx_status_t error) {
+    if (error) {
+      FXL_PLOG(FATAL, error) << "Camera connection failed";
+    }
+  });
 
   // Create a rounded-rect shape to display the camera image on.
   scenic::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80, 80,
