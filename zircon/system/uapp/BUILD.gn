@@ -54,6 +54,7 @@ group("uapp") {
     "lz4",
     "midiecho",
     "minfs",
+    "mutex_pi_exerciser",
     "namespace",
     "nand-loader",
     "nand-util",
