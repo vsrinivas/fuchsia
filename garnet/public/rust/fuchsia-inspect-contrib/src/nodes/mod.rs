@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_time_metadata_format() {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         let time_property =
             inspector.root().create_time_at("time", zx::Time::from_nanos(123_456700000));
         assert_inspect_tree!(inspector, root: { time: "123.456" });

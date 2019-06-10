@@ -152,7 +152,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_list() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
@@ -172,7 +172,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_reset_all() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
@@ -196,7 +196,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_edit() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
@@ -249,7 +249,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_list_and_edit() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![]);
         let state = Arc::new(RwLock::new(

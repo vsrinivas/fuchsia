@@ -488,7 +488,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mock_amber() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
@@ -521,7 +521,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
@@ -547,7 +547,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_error() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let dynamic_rule_config = make_rule_config(vec![]);
         let rewrite_manager = Arc::new(RwLock::new(
@@ -581,7 +581,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_unknown_host() {
-        let inspector = fuchsia_inspect::vmo::Inspector::new().unwrap();
+        let inspector = fuchsia_inspect::vmo::Inspector::new();
         let node = inspector.root().create_child("top-level-node");
         let rules = vec![fuchsia_url_rewrite::Rule::new(
             "example.com".to_owned(),

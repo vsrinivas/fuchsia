@@ -82,8 +82,8 @@ fn main() -> Result<(), Error> {
     info!("Starting account manager");
 
     let mut fs = ServiceFs::new();
-    let inspector = Inspector::new()?;
-    inspector.export(&mut fs)?;
+    let inspector = Inspector::new();
+    inspector.export(&mut fs);
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let account_manager = Arc::new(

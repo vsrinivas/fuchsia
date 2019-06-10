@@ -21,8 +21,8 @@ impl WlanstackTree {
     pub fn new<ServiceObjTy: ServiceObjTrait>(
         fs: &mut ServiceFs<ServiceObjTy>,
     ) -> Result<Self, Error> {
-        let inspector = Inspector::new_with_size(VMO_SIZE_BYTES)?;
-        inspector.export(fs)?;
+        let inspector = Inspector::new_with_size(VMO_SIZE_BYTES);
+        inspector.export(fs);
         let ifaces_trees = IfacesTrees::new(MAX_DEAD_IFACE_NODES);
         Ok(Self { inspector, ifaces_trees: Mutex::new(ifaces_trees) })
     }

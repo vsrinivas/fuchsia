@@ -184,10 +184,13 @@ impl AccountManager {
         &'a self,
         account_id: &'a LocalAccountId,
         mut ids_to_handlers_lock: MutexGuard<'a, AccountMap>,
-    ) -> Result<(Arc<AccountHandlerConnection>, MutexGuard<'a, AccountMap>), AccountManagerError> {
+    ) -> Result<(Arc<AccountHandlerConnection>, MutexGuard<'a, AccountMap>), AccountManagerError>
+    {
         match ids_to_handlers_lock.get(account_id) {
             None => return Err(AccountManagerError::new(Status::NotFound)),
-            Some(Some(existing_handler)) => return Ok((Arc::clone(existing_handler), ids_to_handlers_lock)),
+            Some(Some(existing_handler)) => {
+                return Ok((Arc::clone(existing_handler), ids_to_handlers_lock))
+            }
             Some(None) => { /* ID is valid but a handler doesn't exist yet */ }
         }
 
@@ -274,13 +277,14 @@ impl AccountManager {
 
     async fn remove_account(&self, id: LocalAccountId) -> Status {
         let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
-        let account_handler = match await!(self.get_handler_for_existing_account_with_lock(&id, ids_to_handlers)) {
-            Ok((account_handler, lock)) => {
-                ids_to_handlers = lock;
-                account_handler
-            },
-            Err(err) => return err.status,
-        };
+        let account_handler =
+            match await!(self.get_handler_for_existing_account_with_lock(&id, ids_to_handlers)) {
+                Ok((account_handler, lock)) => {
+                    ids_to_handlers = lock;
+                    account_handler
+                }
+                Err(err) => return err.status,
+            };
         match await!(account_handler.proxy().remove_account()) {
             Ok(Status::Ok) => await!(account_handler.terminate()),
             Ok(status) => return status,
@@ -518,7 +522,7 @@ mod tests {
         StoredAccountList::new(stored_account_list)
             .save(data_dir)
             .expect("Couldn't write account list");
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
 
         AccountManager {
             ids_to_handlers: Mutex::new(
@@ -534,7 +538,7 @@ mod tests {
 
     // Contructs an account manager that reads its accounts from the supplied directory.
     fn read_accounts(data_dir: &Path) -> AccountManager {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         AccountManager::new(data_dir.to_path_buf(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap()
     }
 
@@ -545,7 +549,7 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
             AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),

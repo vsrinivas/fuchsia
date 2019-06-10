@@ -159,7 +159,7 @@ mod tests {
 
     /// Creates a new AccountEventEmitter whose inspect interface is not exported
     fn create_account_event_emitter() -> AccountEventEmitter {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         AccountEventEmitter::new(inspector.root())
     }
 

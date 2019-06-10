@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_node_writer() {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         let mut node = ManagedNode::new(inspector.root().create_child("config"));
         node.writer()
             .create_string("str_key", "str_value")

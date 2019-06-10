@@ -350,7 +350,7 @@ mod tests {
     }
 
     fn inspector_and_list_node() -> (Inspector, BoundedListNode) {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         let list_node = inspector.root().create_child("list_node");
         let list_node = BoundedListNode::new(list_node, 10);
         (inspector, list_node)

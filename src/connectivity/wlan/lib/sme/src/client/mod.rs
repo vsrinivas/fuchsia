@@ -599,7 +599,7 @@ mod tests {
 
     #[test]
     fn connecting_to_wep_network_supported() {
-        let inspector = finspect::vmo::Inspector::new().expect("unable to create Inspector");
+        let inspector = finspect::vmo::Inspector::new();
         let sme_root_node = inspector.root().create_child("sme");
         let (mut sme, mut mlme_stream, _info_stream, _time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::with_wep_support()),
@@ -901,7 +901,7 @@ mod tests {
     }
 
     fn create_sme() -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
-        let inspector = finspect::vmo::Inspector::new().expect("unable to create Inspector");
+        let inspector = finspect::vmo::Inspector::new();
         let sme_root_node = inspector.root().create_child("sme");
         ClientSme::new(
             ClientConfig::default(),

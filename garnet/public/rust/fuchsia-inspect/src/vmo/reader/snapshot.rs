@@ -136,7 +136,11 @@ impl TryFrom<&Inspector> for Snapshot {
     type Error = failure::Error;
 
     fn try_from(inspector: &Inspector) -> Result<Self, Self::Error> {
-        Snapshot::try_from(&inspector.vmo)
+        inspector
+            .vmo
+            .as_ref()
+            .ok_or(format_err!("Cannot read from no-op Inspector"))
+            .and_then(|vmo| Snapshot::try_from(vmo))
     }
 }
 

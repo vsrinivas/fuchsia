@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn read_vmo() {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         let root = inspector.root();
         let _root_int = root.create_int("int-root", 3);
 
@@ -355,13 +355,13 @@ mod tests {
     fn from_invalid_utf8_string() {
         // Creates a perfectly normal Inspector with a perfectly normal string
         // property with a perfectly normal value.
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         let root = inspector.root();
         let prop = root.create_string("property", "hello world");
 
         // Now we will excavate the bytes that comprise the string property, then mess with them on
         // purpose to produce an invalid UTF8 string in the property.
-        let vmo = &inspector.vmo;
+        let vmo = inspector.vmo.as_ref().unwrap();
         let snapshot = Snapshot::try_from(vmo).expect("getting snapshot");
         let block = snapshot.get_block(prop.block_index()).expect("getting block");
 

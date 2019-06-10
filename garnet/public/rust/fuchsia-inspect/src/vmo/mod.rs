@@ -31,38 +31,53 @@ pub struct Inspector {
     root_node: Node,
 
     /// The VMO backing the inspector
-    pub(super) vmo: zx::Vmo,
+    pub(super) vmo: Option<zx::Vmo>,
 }
 
 /// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
 /// the root node.
 impl Inspector {
     /// Create a new Inspect VMO object with the default maximum size.
-    pub fn new() -> Result<Self, Error> {
+    pub fn new() -> Self {
         Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES)
+    }
+
+    /// True if the Inspector was created successfully (it's not No-Op)
+    pub fn is_valid(&self) -> bool {
+        self.vmo.is_some() && self.root_node.is_valid()
     }
 
     /// Create a new Inspect VMO object with the given maximum size. If the
     /// given size is less than 4K, it will be made 4K which is the minimum size
     /// the VMO should have.
-    pub fn new_with_size(max_size: usize) -> Result<Self, Error> {
-        let (vmo, root_node) = Inspector::new_root(max_size)?;
-        Ok(Inspector { vmo, root_node })
+    pub fn new_with_size(max_size: usize) -> Self {
+        match Inspector::new_root(max_size) {
+            Ok((vmo, root_node)) => Inspector { vmo: Some(vmo), root_node },
+            Err(e) => {
+                fx_log_err!("Failed to create root node. Error: {}", e);
+                Inspector::new_no_op()
+            }
+        }
     }
 
     /// Exports the VMO backing this Inspector at the standard location in the
     /// supplied ServiceFs.
-    pub fn export<ServiceObjTy: ServiceObjTrait>(
-        &self,
-        service_fs: &mut ServiceFs<ServiceObjTy>,
-    ) -> Result<(), Error> {
-        service_fs.dir("objects").add_vmo_file_at(
-            "root.inspect",
-            self.vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
-            0, /* vmo offset */
-            self.vmo.get_size()?,
-        );
-        Ok(())
+    pub fn export<ServiceObjTy: ServiceObjTrait>(&self, service_fs: &mut ServiceFs<ServiceObjTy>) {
+        self.vmo
+            .as_ref()
+            .ok_or(format_err!("Cannot expose No-Op Inspector"))
+            .and_then(|vmo| {
+                service_fs.dir("objects").add_vmo_file_at(
+                    "root.inspect",
+                    vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
+                    0, /* vmo offset */
+                    vmo.get_size()?,
+                );
+                Ok(())
+            })
+            .unwrap_or_else(|e| {
+                fx_log_err!("Failed to expose vmo. Error: {:?}", e);
+            });
     }
 
     /// Get the root of the VMO object.
@@ -70,6 +85,12 @@ impl Inspector {
         &self.root_node
     }
 
+    /// Creates a new No-Op inspector
+    fn new_no_op() -> Self {
+        Inspector { vmo: None, root_node: Node::new_no_op() }
+    }
+
+    /// Allocates a new VMO and initializes it.
     fn new_root(max_size: usize) -> Result<(zx::Vmo, Node), Error> {
         let mut size = max(constants::MINIMUM_VMO_SIZE_BYTES, max_size);
         // If the size is not a multiple of 4096, round up.
@@ -97,6 +118,7 @@ trait InspectType {
 
     fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self;
     fn new_no_op() -> Self;
+    fn is_valid(&self) -> bool;
     fn unwrap_ref(&self) -> &Self::Inner;
 }
 
@@ -134,6 +156,10 @@ macro_rules! inspect_type_impl {
                             state, block_index
                         })
                     }
+                }
+
+                fn is_valid(&self) -> bool {
+                    self.inner.is_some()
                 }
 
                 fn new_no_op() -> Self {
@@ -432,47 +458,66 @@ mod tests {
     use {
         super::*,
         crate::vmo::{block_type::BlockType, constants, heap::Heap},
+        fuchsia_async::{self as fasync, futures::StreamExt},
         mapped_vmo::Mapping,
     };
 
     #[test]
     fn inspector_new() {
-        let test_object = Inspector::new().unwrap();
-        assert_eq!(test_object.vmo.get_size().unwrap(), constants::DEFAULT_VMO_SIZE_BYTES as u64);
+        let test_object = Inspector::new();
+        assert_eq!(
+            test_object.vmo.as_ref().unwrap().get_size().unwrap(),
+            constants::DEFAULT_VMO_SIZE_BYTES as u64
+        );
         let root_name_block =
             test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
     #[test]
-    fn test_no_op() {
-        let inspector = Inspector::new_with_size(4096).unwrap();
+    fn no_op() {
+        let inspector = Inspector::new_with_size(4096);
         // Make the VMO full.
         let nodes = (0..126).map(|_| inspector.root().create_child("test")).collect::<Vec<Node>>();
         let root_block = inspector.root().get_block().unwrap();
 
-        assert!(nodes.iter().all(|node| node.inner.is_some()));
+        assert!(nodes.iter().all(|node| node.is_valid()));
         assert_eq!(root_block.child_count().unwrap(), 126);
-        assert!(nodes.iter().all(|node| node.inner.is_some()));
         let no_op_node = inspector.root().create_child("no-op-child");
-        assert!(no_op_node.inner.is_none());
+        assert!(!no_op_node.is_valid());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn new_no_op() -> Result<(), Error> {
+        let mut fs = ServiceFs::new();
+
+        let inspector = Inspector::new_no_op();
+        assert!(!inspector.is_valid());
+        assert!(!inspector.root().is_valid());
+
+        // Ensure export doesn't crash on a No-Op inspector
+        inspector.export(&mut fs);
+
+        fs.take_and_serve_directory_handle()?;
+        fasync::spawn(fs.collect());
+        Ok(())
     }
 
     #[test]
     fn inspector_new_with_size() {
-        let test_object = Inspector::new_with_size(8192).unwrap();
-        assert_eq!(test_object.vmo.get_size().unwrap(), 8192);
+        let test_object = Inspector::new_with_size(8192);
+        assert_eq!(test_object.vmo.as_ref().unwrap().get_size().unwrap(), 8192);
         let root_name_block =
             test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
         assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
 
         // If size is not a multiple of 4096, it'll be rounded up.
-        let test_object = Inspector::new_with_size(10000).unwrap();
-        assert_eq!(test_object.vmo.get_size().unwrap(), 12288);
+        let test_object = Inspector::new_with_size(10000);
+        assert_eq!(test_object.vmo.unwrap().get_size().unwrap(), 12288);
 
         // If size is less than the minimum size, the minimum will be set.
-        let test_object = Inspector::new_with_size(2000).unwrap();
-        assert_eq!(test_object.vmo.get_size().unwrap(), 4096);
+        let test_object = Inspector::new_with_size(2000);
+        assert_eq!(test_object.vmo.unwrap().get_size().unwrap(), 4096);
     }
 
     #[test]
@@ -642,7 +687,7 @@ mod tests {
 
     #[test]
     fn dummy_partialeq() -> Result<(), Error> {
-        let inspector = Inspector::new()?;
+        let inspector = Inspector::new();
         let root = inspector.root();
 
         // Types should all be equal to another type. This is to enable clients

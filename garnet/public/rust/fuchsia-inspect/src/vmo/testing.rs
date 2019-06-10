@@ -483,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_matching_with_inspector() {
-        let inspector = Inspector::new().unwrap();
+        let inspector = Inspector::new();
         assert_inspect_tree!(inspector, root: {});
     }
 

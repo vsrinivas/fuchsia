@@ -52,8 +52,7 @@ fn main() -> Result<(), Error> {
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
-    let inspector = fuchsia_inspect::vmo::Inspector::new()
-        .context("pkg_resolver::main failed to create inspector")?;
+    let inspector = fuchsia_inspect::vmo::Inspector::new();
     let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
 
     let repo_manager = Arc::new(RwLock::new(load_repo_manager()));
@@ -103,7 +102,7 @@ fn main() -> Result<(), Error> {
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb);
 
-    inspector.export(&mut fs).context("pkg_resolver::main failed to export inspect VMO")?;
+    inspector.export(&mut fs);
 
     fs.take_and_serve_directory_handle()?;
 

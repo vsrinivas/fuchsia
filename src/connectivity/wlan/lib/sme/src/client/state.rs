@@ -1467,7 +1467,7 @@ mod tests {
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
-            let inspector = Inspector::new().expect("unable to create Inspector");
+            let inspector = Inspector::new();
             let context = Context {
                 device_info: Arc::new(fake_device_info()),
                 mlme_sink: MlmeSink::new(mlme_sink),

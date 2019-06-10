@@ -590,7 +590,7 @@ mod rule_tests {
         fn test_create_inspect_state_passes_through_fields(
             rule in random_rule()
         ) {
-            let inspector = inspect::Inspector::new().expect("failed to create inspector");
+            let inspector = inspect::Inspector::new();
             let node = inspector.root().create_child("rule_node");
 
             let _state = rule.create_inspect_state(node);
