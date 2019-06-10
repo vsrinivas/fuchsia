@@ -73,7 +73,7 @@ library.
 Tests live in a `test` subfolder of your mod and end in `_test.dart`. These
 requirements are stipulated by
 [`dart_fuchsia_test`](https://fuchsia.googlesource.com/topaz/+/master/runtime/dart/dart_fuchsia_test.gni),
-described [later](#build_gn-target). The tests for `driver_example_mod` are in
+described [later](#build-gn-target). The tests for `driver_example_mod` are in
 [`driver_example_mod_test.dart`](https://fuchsia.googlesource.com/topaz/+/HEAD/examples/test/driver_example_mod/test/driver_example_mod_test.dart).
 
 ### Boilerplate
@@ -230,7 +230,7 @@ graphics. In addition, the `fuchsia.net.SocketProvider` system service and
 `shell` feature are needed to allow Flutter Driver to interact with the Dart
 Observatory.
 
-### BUILD.gn target
+### BUILD.gn target {:#build-gn-target}
 
 The test itself also needs a target in the
 [`BUILD.gn`](https://fuchsia.googlesource.com/topaz/+/HEAD/examples/test/driver_example_mod/BUILD.gn).
