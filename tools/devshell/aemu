@@ -5,8 +5,10 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-k] [-l] [-N [-I <ifname>]] [-u <path>] [-e <directory>] [--audio]
+## usage: fx aemu [-k] [-f] [-x] [-l] [-N [-I <ifname>]] [-u <path>] [-e <directory>] [--audio]
 ##   -k use KVM
+##   -f use HVF
+##   -x use HAXM
 ##   -l run headless
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> Uses the tun/tap interface named ifname
@@ -20,10 +22,12 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 KVM=0
+HVF=0
+HAX=0
 NET=0
 IFNAME=""
 AUDIO=0
-HEADLESS=""
+AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=no
 
@@ -36,8 +40,14 @@ while [[ $# -ge 1 ]]; do
   -k)
     KVM=1
     ;;
+  -f)
+    HVF=1
+    ;;
+  -x)
+    HAX=1
+    ;;
   -l)
-    HEADLESS="-headless"
+    AEMU="emulator-headless"
     ;;
   -N)
     NET=1
@@ -88,11 +98,24 @@ if (( $AUDIO )); then
   ARGS+=("-soundhw" "hda")
 fi
 
+FEATURES="VirtioInput,RefCountPipe"
 if (( $KVM )); then
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
+  FEATURES+=",KVM,Vulkan,GLDirectMem";
+elif (( $HVF )); then
+  ARGS+=("-enable-hvf" "-cpu" "Haswell")
+  FEATURES+=",HVF,Vulkan,GLDirectMem";
+elif (( $HAX )); then
+  ARGS+=("-enable-hax" "-cpu" "Haswell")
+  FEATURES+=",HAXM,Vulkan,GLDirectMem";
 else
   ARGS+=("-cpu" "Haswell,+smap,-check,-fsgsbase")
+  # disable vulkan as not useful without kvm,hvf,hax and support
+  # for coherent host visible memory.
+  FEATURES+=",-Vulkan,-GLDirectMem";
 fi
+OPTIONS=()
+OPTIONS+=("-feature" "$FEATURES")
 
 if (( $NET )); then
   if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -187,5 +210,6 @@ CMDLINE+="kernel.halt-on-panic=true "
 
 # run aemu
 set -x
-exec "${AEMU_DIR}"emulator"$HEADLESS" -fuchsia -kernel "$KERNEL" -initrd "$kernelzbi" "${ARGS[@]}" \
+exec "${AEMU_DIR}${AEMU}" "${OPTIONS[@]}" -fuchsia \
+     -kernel "$KERNEL" -initrd "$kernelzbi" "${ARGS[@]}" \
      -append "$CMDLINE" "$@"
