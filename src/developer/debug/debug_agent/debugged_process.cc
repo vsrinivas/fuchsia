@@ -496,7 +496,9 @@ void DebuggedProcess::SuspendAll(bool synchronous,
                                  std::vector<uint64_t>* suspended_koids) {
   // We issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {
-    if (thread->Suspend() == DebuggedThread::SuspendResult::kWasRunning) {
+    auto past_state = thread->Suspend(synchronous);
+    FXL_DCHECK(past_state);
+    if (*past_state == DebuggedThread::State::kRunning) {
       if (suspended_koids)
         suspended_koids->push_back(thread_koid);
     }

@@ -92,8 +92,8 @@ zx_status_t HardwareBreakpoint::Install(
 
   // Thread needs to be suspended or on an exception (ZX-3772).
   // We make a synchronous (blocking) call.
-  auto result = thread->Suspend(true);
-  if (result == DebuggedThread::SuspendResult::kError) {
+  auto past_state = thread->Suspend(true);
+  if (!past_state) {
     Warn(WarningType::kInstall, thread_koid, address, ZX_ERR_BAD_STATE);
     return ZX_ERR_BAD_STATE;
   }
@@ -108,7 +108,7 @@ zx_status_t HardwareBreakpoint::Install(
   }
 
   // If the thread was running, we need to resume it.
-  if (result == DebuggedThread::SuspendResult::kWasRunning) {
+  if (*past_state == DebuggedThread::State::kRunning) {
     debug_ipc::ResumeRequest resume;
     resume.how = debug_ipc::ResumeRequest::How::kContinue;
     thread->Resume(resume);
@@ -141,8 +141,8 @@ zx_status_t HardwareBreakpoint::Uninstall(
 
   // Thread needs to be suspended or on an exception (ZX-3772).
   // We make a synchronous (blocking) call.
-  auto result = thread->Suspend(true);
-  if (result == DebuggedThread::SuspendResult::kError) {
+  auto past_state = thread->Suspend(true);
+  if (!past_state) {
     Warn(WarningType::kInstall, thread_koid, address, ZX_ERR_BAD_STATE);
     return ZX_ERR_BAD_STATE;
   }
@@ -155,7 +155,7 @@ zx_status_t HardwareBreakpoint::Uninstall(
   }
 
   // If the thread was running, we need to resume it.
-  if (result == DebuggedThread::SuspendResult::kWasRunning) {
+  if (*past_state == DebuggedThread::State::kRunning) {
     debug_ipc::ResumeRequest resume;
     resume.how = debug_ipc::ResumeRequest::How::kContinue;
     thread->Resume(resume);

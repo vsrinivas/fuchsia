@@ -32,22 +32,21 @@ enum class ThreadCreationOption {
 
 class DebuggedThread {
  public:
-  // The SuspendReason indicates why the thread was suspended from our
-  // perspective. This doesn't take into account other things on the system
-  // that may have suspended a thread. If somebody does this, the thread will
-  // be suspended but our state will be kNone (meaning resuming it is not
-  // something we can do).
-  enum class SuspendReason {
-    // Not suspended.
-    kNone,
+  // The State indicates what the debugger thinks the state of the thread is.
+  // This doesn't take into account other things on the system that may have
+  // suspended a thread. If somebody does this, the thread will be suspended but
+  // our state will be kRunning (meaning resuming it is not something the
+  // debugger can do).
+  enum class State {
+    kRunning,
 
     // Exception from the program.
     kException,
 
-    // Anything else.
-    kOther
+    // The exception is suspended through a zx_task_suspend call.
+    kSuspended,
   };
-  const char* SuspendReasonToString(SuspendReason);
+  const char* StateToString(State);
 
   // When a thread is first created and we get a notification about it, it
   // will be suspended, but when we attach to a process with existing threads
@@ -68,27 +67,25 @@ class DebuggedThread {
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(const debug_ipc::ResumeRequest& request);
 
-  // Pauses execution of the thread. Returns true if the pause was successful.
-  // Pausing happens asynchronously so the thread will not necessarily have
-  // stopped when this returns. Set the |synchronous| flag for blocking on the
-  // suspended signal and make this call synchronous.
+  // Pauses execution of the thread. Pausing happens asynchronously so the
+  // thread will not necessarily have stopped when this returns. Set the
+  // |synchronous| flag for blocking on the suspended signal and make this call
+  // block until the thread is suspended.
   //
   // The return type determines the state the thread was in *before* the suspend
   // operation. That means that if |kRunning| is returned, means that the thread
   // was running and now is suspended.
-  enum class SuspendResult {
-    kWasRunning,   // Thread is now suspended.
-    kSuspended,    // Thread remains suspended.
-    kOnException,  // Thread is in exception, *not* suspended (ZX-3772).
-    kError,        // An error ocurred suspending or waiting for the signal.
-  };
-  SuspendResult Suspend(bool synchronous = false);
+  //
+  // A nullopt means an error ocurred while suspending.
+  std::optional<State> Suspend(bool synchronous = false);
 
   // The typical suspend deadline users should use when suspending.
   static zx::time DefaultSuspendDeadline();
 
   // Waits on a suspension token.
-  SuspendResult WaitForSuspension(zx::time deadline);
+  // A nullopt means an error ocurred while suspending.
+  std::optional<State> WaitForSuspension(
+      zx::time deadline = DefaultSuspendDeadline());
 
   // Fills the thread status record. If full_stack is set, a full backtrace
   // will be generated, otherwise a minimal one will be generated.
@@ -112,7 +109,7 @@ class DebuggedThread {
   // Notification that a ProcessBreakpoint is about to be deleted.
   void WillDeleteProcessBreakpoint(ProcessBreakpoint* bp);
 
-  SuspendReason suspend_reason() const { return suspend_reason_; }
+  State state() const { return state_; }
 
  private:
   enum class OnStop {
@@ -193,9 +190,9 @@ class DebuggedThread {
   uint64_t step_in_range_end_ = 0;
 
   // This is the reason for the thread suspend. This controls how the thread
-  // will be resumed. SuspendReason::kOther implies the suspend_token_ is
+  // will be resumed. State::kOther implies the suspend_token_ is
   // valid.
-  SuspendReason suspend_reason_ = SuspendReason::kNone;
+  State state_ = State::kRunning;
   zx::suspend_token suspend_token_;
 
   // This can be set in two cases:

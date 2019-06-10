@@ -81,7 +81,7 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
       // do nothing
       break;
     case ThreadCreationOption::kSuspendedKeepSuspended:
-      suspend_reason_ = SuspendReason::kException;
+      state_ = State::kException;
       break;
     case ThreadCreationOption::kSuspendedShouldRun:
       debug_ipc::MessageLoopTarget::Current()->ResumeFromException(koid,
@@ -93,7 +93,7 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
 DebuggedThread::~DebuggedThread() = default;
 
 void DebuggedThread::OnException(uint32_t type) {
-  suspend_reason_ = SuspendReason::kException;
+  state_ = State::kException;
 
   debug_ipc::NotifyException exception;
   exception.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
@@ -245,28 +245,28 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
   ResumeForRunMode();
 }
 
-DebuggedThread::SuspendResult DebuggedThread::Suspend(bool synchronous) {
+std::optional<DebuggedThread::State> DebuggedThread::Suspend(bool synchronous) {
   // Subsequent suspend calls should return immediatelly. Note that this does
   // not mean that the thread is in that state, but rather that that operation
   // was sent to the kernel.
-  if (suspend_reason_ == SuspendReason::kException)
-    return SuspendResult::kOnException;
+  if (state_ == State::kException)
+    return State::kException;
 
-  if (suspend_reason_ == SuspendReason::kOther)
-    return SuspendResult::kSuspended;
+  if (state_ == State::kSuspended)
+    return State::kSuspended;
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Suspending thread.";
 
   zx_status_t status;
   status = thread_.suspend(&suspend_token_);
   if (status != ZX_OK)
-    return SuspendResult::kError;
+    return std::nullopt;
 
-  suspend_reason_ = SuspendReason::kOther;
+  state_ = State::kSuspended;
 
   if (synchronous)
     return WaitForSuspension(DefaultSuspendDeadline());
-  return SuspendResult::kWasRunning;
+  return State::kRunning;
 }
 
 zx::time DebuggedThread::DefaultSuspendDeadline() {
@@ -277,7 +277,7 @@ zx::time DebuggedThread::DefaultSuspendDeadline() {
   return zx::deadline_after(zx::sec(1));
 }
 
-DebuggedThread::SuspendResult DebuggedThread::WaitForSuspension(
+std::optional<DebuggedThread::State> DebuggedThread::WaitForSuspension(
     zx::time deadline) {
   // This function is complex because a thread in an exception state can't be
   // suspended (ZX-3772). Delivery of exceptions are queued on the
@@ -303,16 +303,16 @@ DebuggedThread::SuspendResult DebuggedThread::WaitForSuspension(
     // Always check the thread state from the kernel because of queue desribed
     // above.
     if (IsBlockedOnException(thread_))
-      return SuspendResult::kOnException;
+      return State::kException;
 
     zx_signals_t observed;
     status = thread_.wait_one(ZX_THREAD_SUSPENDED,
                               zx::deadline_after(poll_time), &observed);
     if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
-      return SuspendResult::kSuspended;
+      return State::kSuspended;
 
   } while (status == ZX_ERR_TIMED_OUT && zx::clock::get_monotonic() < deadline);
-  return SuspendResult::kError;
+  return std::nullopt;
 }
 
 void DebuggedThread::FillThreadRecord(
@@ -641,7 +641,7 @@ void DebuggedThread::UpdateForWatchpointHit(
 
 void DebuggedThread::ResumeForRunMode() {
   // If we jumped, once we resume we reset the status.
-  if (suspend_reason_ == SuspendReason::kException) {
+  if (state_ == State::kException) {
     // Note: we could have a valid suspend token here in addition to the
     // exception if the suspension races with the delivery of the exception.
     if (current_breakpoint_) {
@@ -654,14 +654,14 @@ void DebuggedThread::ResumeForRunMode() {
       // All non-continue resumptions require single stepping.
       SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
     }
-    suspend_reason_ = SuspendReason::kNone;
+    state_ = State::kRunning;
 
     zx_status_t status =
         debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
             koid_, thread_, 0);
     FXL_DCHECK(status == ZX_OK)
         << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(status);
-  } else if (suspend_reason_ == SuspendReason::kOther) {
+  } else if (state_ == State::kSuspended) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.
     FXL_DCHECK(!current_breakpoint_);
@@ -671,7 +671,7 @@ void DebuggedThread::ResumeForRunMode() {
 
     // The suspend token is holding the thread suspended, releasing it will
     // resume (if nobody else has the thread suspended).
-    suspend_reason_ = SuspendReason::kNone;
+    state_ = State::kRunning;
     FXL_DCHECK(suspend_token_.is_valid());
     suspend_token_.reset();
   }
@@ -684,14 +684,14 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
-const char* DebuggedThread::SuspendReasonToString(SuspendReason reason) {
+const char* DebuggedThread::StateToString(State reason) {
   switch (reason) {
-    case SuspendReason::kNone:
-      return "None";
-    case SuspendReason::kException:
+    case State::kRunning:
+      return "Running";
+    case State::kException:
       return "Exception";
-    case SuspendReason::kOther:
-      return "Other";
+    case State::kSuspended:
+      return "Suspended";
   }
   FXL_NOTREACHED();
   return "";
