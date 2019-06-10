@@ -53,8 +53,6 @@ func TestEndpointAttributes(t *testing.T) {
 }
 
 func TestBridge(t *testing.T) {
-	t.Skip("Test is flaky. See: FLK-342")
-
 	// payload should be unique enough that it won't accidentally appear
 	// in TCP/IP packets.
 	const payload = "hello"
@@ -322,7 +320,9 @@ func (e *endpoint) IsAttached() bool {
 }
 
 func (*endpoint) MTU() uint32 {
-	return 0
+	// This value is used by IPv4 fragmentation.  It must be at least 68 bytes as
+	// required by RFC 791.
+	return 1000
 }
 
 func (*endpoint) Capabilities() stack.LinkEndpointCapabilities {
