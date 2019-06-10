@@ -678,9 +678,6 @@ images += [
     if (!use_vboot && custom_signing_script == "") {
       updater = "zbi"
     }
-    if (!use_vboot) {
-      installer = "fuchsia.zbi"
-    }
     json = {
       name = "zircon-a"
       type = "zbi"
@@ -775,7 +772,6 @@ if (custom_signing_script != "") {
       ]
       sdk = "zircon-a.signed"
       updater = "zbi.signed"
-      installer = "fuchsia.zbi"
       json = {
         name = "zircon-a.signed"
         type = "zbi.signed"
@@ -812,7 +808,6 @@ if (custom_signing_script != "") {
       ]
 
       updater = "zedboot.signed"
-      installer = "zedboot.zbi"
     },
   ]
 } else {
@@ -825,7 +820,6 @@ if (custom_signing_script != "") {
         "$root_out_dir/zedboot.zbi",
       ]
       updater = "zedboot"
-      installer = "zedboot.zbi"
     },
   ]
 }
@@ -976,7 +970,6 @@ if (!bootfs_only) {
         type = "blk"
         bootserver_pave = [ "--fvm" ]
       }
-      installer = "fvm.sparse.blk"
       sdk = "fvm.sparse.blk"
       public = [
         "IMAGE_FVM_SPARSE",
@@ -1118,7 +1111,6 @@ if (target_cpu != "arm64" && !use_vboot) {
         type = "blk"
         bootserver_pave = [ "--bootloader" ]
       }
-      installer = "fuchsia.esp.blk"
       sdk = "local.esp.blk"
       if (!use_vboot && custom_signing_script == "") {
         updater = "bootloader"
@@ -1133,85 +1125,6 @@ if (target_cpu != "arm64" && !use_vboot) {
       ]
       sources = [
         "$root_out_dir/zedboot.esp.blk",
-      ]
-    },
-  ]
-}
-
-if (!bootfs_only) {
-  installer_label = "//garnet/bin/installer:install-fuchsia"
-  installer_out_dir = get_label_info(installer_label, "root_out_dir")
-  installer_path = "$installer_out_dir/install-fuchsia"
-
-  action("installer.manifest") {
-    script = "manifest.py"
-    outputs = [
-      "$target_out_dir/installer.manifest",
-    ]
-    args = [
-      "--output=" + rebase_path(outputs[0], root_build_dir),
-      "--output-cwd=" + rebase_path(target_out_dir, root_build_dir),
-      "--entry=install-fuchsia=" + rebase_path(installer_path, root_build_dir),
-    ]
-    foreach(image, images) {
-      if (defined(image.installer)) {
-        image_sources = []
-        if (defined(image.sources)) {
-          image_sources += image.sources
-        } else {
-          foreach(label, image.deps) {
-            image_sources += get_target_outputs(label)
-          }
-        }
-        assert(image_sources == [ image_sources[0] ])
-        args += [ "--entry=${image.installer}=" +
-                  rebase_path(image_sources[0], root_build_dir) ]
-      }
-    }
-  }
-
-  # installer.blk is a minfs partition image that includes all of the
-  # images required to install a Fuchsia build.
-  zircon_tool_action("installer") {
-    testonly = true
-    tool = "minfs"
-    deps = [
-      ":installer.manifest",
-      installer_label,
-    ]
-    outputs = [
-      "$target_out_dir/installer.blk",
-    ]
-    sources = []
-    foreach(image, images) {
-      if (defined(image.installer)) {
-        deps += image.deps
-        if (defined(image.sources)) {
-          sources += image.sources
-        } else {
-          foreach(label, image.deps) {
-            sources += get_target_outputs(label)
-          }
-        }
-      }
-    }
-    depfile = "$target_out_dir/installer.blk.d"
-    args = [
-      "--depfile",
-      rebase_path(outputs[0], root_build_dir),
-      "create",
-      "--manifest",
-    ]
-    args += rebase_path(get_target_outputs(deps[0]), root_build_dir)
-  }
-  images += [
-    {
-      default = false
-      public = [
-        "IMAGE_INSTALLER_RAW",
-      ]
-      deps = [
-        ":installer",
       ]
     },
   ]

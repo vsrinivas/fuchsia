@@ -23,7 +23,6 @@ group("bin") {
     "glob",
     "http",
     "insntrace",
-    "installer",
     "iquery",
     "kms",
     "ktrace_provider",
