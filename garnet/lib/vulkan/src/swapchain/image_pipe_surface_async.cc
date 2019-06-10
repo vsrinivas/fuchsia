@@ -16,11 +16,17 @@ bool ImagePipeSurfaceAsync::CreateImage(
     std::vector<ImageInfo>* image_info_out) {
   for (uint32_t i = 0; i < image_count; ++i) {
     // Allocate a buffer.
+    VkExternalMemoryImageCreateInfo external_image_create_info{
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .handleTypes =
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+    };
     uint32_t width = image_info.width;
     uint32_t height = image_info.height;
     VkImageCreateInfo create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &external_image_create_info,
         .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
