@@ -756,11 +756,18 @@ impl Responder for TokenManagerListProfileIdsResponder {
 mod tests {
     use super::*;
     use crate::fake_auth_provider_supplier::FakeAuthProviderSupplier;
-    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_auth::{AuthenticationContextProviderMarker, TokenManagerMarker};
+    use fidl::encoding::OutOfLine;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_auth::{
+        AuthProviderRequest, AuthProviderStatus, AuthToken, AuthenticationContextProviderMarker,
+        FirebaseToken, TokenManagerMarker, TokenManagerProxy, TokenType,
+    };
     use fuchsia_async as fasync;
+    use futures::channel::oneshot;
+    use futures::future::join3;
     use tempfile::TempDir;
 
+    /// Generate a pre-populated AppConfig fidl struct
     fn create_app_config(auth_provider_type: &str) -> AppConfig {
         AppConfig {
             auth_provider_type: auth_provider_type.to_string(),
@@ -770,13 +777,215 @@ mod tests {
         }
     }
 
+    /// Generate a TokenManagerContext which answers standard calls
     fn create_token_manager_context() -> TokenManagerContext {
-        let (ui_context_provider_proxy, _) =
-            create_proxy::<AuthenticationContextProviderMarker>().unwrap();
+        let (ui_context_provider_proxy, mut stream) =
+            create_proxy_and_stream::<AuthenticationContextProviderMarker>().unwrap();
+        fasync::spawn(async move { while let Some(_) = await!(stream.try_next()).unwrap() {} });
         TokenManagerContext {
             application_url: "APPLICATION_URL".to_string(),
             auth_ui_context_provider: ui_context_provider_proxy,
         }
+    }
+
+    /// Creates a TokenManager and serves requests for it.
+    async fn create_and_serve_token_manager(
+        stream: TokenManagerRequestStream,
+        auth_provider_supplier: &FakeAuthProviderSupplier,
+    ) -> Result<(), failure::Error> {
+        let tmp_dir = TempDir::new().unwrap();
+        let db_path = tmp_dir.path().join("tokens.json");
+        await!(create_and_serve_token_manager_with_db_path(
+            &db_path,
+            stream,
+            auth_provider_supplier
+        ))
+    }
+
+    /// Creates a TokenManager given a location to the file db, and serves requests for it.
+    async fn create_and_serve_token_manager_with_db_path<'a>(
+        db_path: &'a Path,
+        stream: TokenManagerRequestStream,
+        auth_provider_supplier: &'a FakeAuthProviderSupplier,
+    ) -> Result<(), failure::Error> {
+        let task_group = TaskGroup::new();
+
+        let token_manager = TokenManager::new(&db_path, auth_provider_supplier, task_group.clone())
+            .expect("failed creating TokenManager");
+        let context = create_token_manager_context();
+        let (_sender, receiver) = oneshot::channel();
+        await!(token_manager.handle_requests_from_stream(&context, stream, receiver.shared()))
+    }
+
+    /// Expect a GetPersistentCredential request, configurable with user_id. Generates a response.
+    fn expect_get_cred(request: AuthProviderRequest, user_id: &str) -> Result<(), fidl::Error> {
+        match request {
+            AuthProviderRequest::GetPersistentCredential {
+                auth_ui_context,
+                user_profile_id,
+                responder,
+            } => {
+                assert!(auth_ui_context.is_some());
+                assert_eq!(user_profile_id, Some(user_id.to_string()));
+                let mut user_profile_info = UserProfileInfo {
+                    id: user_id.to_string(),
+                    display_name: Some(format!("{}_DISPLAY", user_id)),
+                    url: Some(format!("http://example.org/{}", user_id)),
+                    image_url: Some(format!("http://example.org/{}/img", user_id)),
+                };
+                responder.send(
+                    AuthProviderStatus::Ok,
+                    Some(&format!("{}_CREDENTIAL", user_id)),
+                    Some(OutOfLine(&mut user_profile_info)),
+                )?;
+            }
+            _ => panic!("Unexpected message received"),
+        }
+        Ok(())
+    }
+
+    /// Expect a GetAppAccessToken request, configurable with a token. Generates a response.
+    fn expect_get_access_token(
+        request: AuthProviderRequest,
+        token: &str,
+    ) -> Result<(), fidl::Error> {
+        match request {
+            AuthProviderRequest::GetAppAccessToken { credential, client_id, scopes, responder } => {
+                assert_eq!(credential, token);
+                assert_eq!(client_id, None);
+                assert_eq!(scopes, Vec::<String>::default());
+                let mut auth_token = AuthToken {
+                    token_type: TokenType::AccessToken,
+                    token: format!("{}_ACCESS", token),
+                    expires_in: 3600,
+                };
+                responder.send(AuthProviderStatus::Ok, Some(OutOfLine(&mut auth_token)))?;
+            }
+            _ => panic!("Unexpected message received"),
+        }
+        Ok(())
+    }
+
+    /// Expect a GetAppIdToken request, configurable with a token. Generates a response.
+    fn expect_get_id_token(request: AuthProviderRequest, token: &str) -> Result<(), fidl::Error> {
+        match request {
+            AuthProviderRequest::GetAppIdToken { credential, audience, responder } => {
+                assert_eq!(credential, token);
+                assert_eq!(audience, Some("AUDIENCE".to_string()));
+                let mut auth_token = AuthToken {
+                    token_type: TokenType::IdToken,
+                    token: format!("{}_ID", token),
+                    expires_in: 3600,
+                };
+                responder.send(AuthProviderStatus::Ok, Some(OutOfLine(&mut auth_token)))?;
+            }
+            _ => panic!("Unexpected message received"),
+        }
+        Ok(())
+    }
+
+    /// Expect a GetAppFirebaseToken request, configurable with an id_token. Generates a response.
+    fn expect_get_firebase_token(
+        request: AuthProviderRequest,
+        token: &str,
+    ) -> Result<(), fidl::Error> {
+        match request {
+            AuthProviderRequest::GetAppFirebaseToken { id_token, firebase_api_key, responder } => {
+                assert_eq!(id_token, token);
+                assert_eq!(firebase_api_key, "FIREBASE_API_KEY");
+                let mut firebase_token = FirebaseToken {
+                    id_token: format!("{}_FIREBASE", token),
+                    local_id: None,
+                    email: None,
+                    expires_in: 3600,
+                };
+                responder.send(AuthProviderStatus::Ok, Some(OutOfLine(&mut firebase_token)))?;
+            }
+            _ => panic!("Unexpected message received"),
+        }
+        Ok(())
+    }
+
+    /// Expect a RevokeAppOrPersistentCredential request, configurable with a token. Responds Ok.
+    fn expect_revoke_cred(request: AuthProviderRequest, token: &str) -> Result<(), fidl::Error> {
+        match request {
+            AuthProviderRequest::RevokeAppOrPersistentCredential { credential, responder } => {
+                assert_eq!(credential, token);
+                responder.send(AuthProviderStatus::Ok)?;
+            }
+            _ => panic!("Unexpected message received"),
+        }
+        Ok(())
+    }
+
+    /// Wrapper for TokenManager::Authorize
+    async fn authorize_simple<'a>(
+        tm_proxy: &'a TokenManagerProxy,
+        auth_provider_type: &'a str,
+        user_profile_id: &'a str,
+    ) -> Result<(Status, Option<Box<UserProfileInfo>>), fidl::Error> {
+        let mut app_config = create_app_config(auth_provider_type);
+        let auth_ui_context = None;
+        let app_scopes = Vec::<String>::default();
+        let auth_code = None;
+        await!(tm_proxy.authorize(
+            &mut app_config,
+            auth_ui_context,
+            &mut app_scopes.iter().map(|x| &**x),
+            Some(user_profile_id),
+            auth_code
+        ))
+    }
+
+    /// Wrapper for TokenManager::GetAccessToken
+    async fn get_access_token_simple<'a>(
+        tm_proxy: &'a TokenManagerProxy,
+        auth_provider_type: &'a str,
+        user_profile_id: &'a str,
+    ) -> Result<(Status, Option<String>), fidl::Error> {
+        let mut app_config = create_app_config(auth_provider_type);
+        let app_scopes = Vec::<String>::default();
+        await!(tm_proxy.get_access_token(
+            &mut app_config,
+            user_profile_id,
+            &mut app_scopes.iter().map(|x| &**x)
+        ))
+    }
+
+    /// Wrapper for TokenManager::GetIdToken
+    async fn get_id_token_simple<'a>(
+        tm_proxy: &'a TokenManagerProxy,
+        auth_provider_type: &'a str,
+        user_profile_id: &'a str,
+    ) -> Result<(Status, Option<String>), fidl::Error> {
+        let mut app_config = create_app_config(auth_provider_type);
+        await!(tm_proxy.get_id_token(&mut app_config, user_profile_id, Some("AUDIENCE")))
+    }
+
+    /// Wrapper for TokenManager::GetFirebaseToken
+    async fn get_firebase_token_simple<'a>(
+        tm_proxy: &'a TokenManagerProxy,
+        auth_provider_type: &'a str,
+        user_profile_id: &'a str,
+    ) -> Result<(Status, Option<Box<FirebaseToken>>), fidl::Error> {
+        let mut app_config = create_app_config(auth_provider_type);
+        await!(tm_proxy.get_firebase_token(
+            &mut app_config,
+            user_profile_id,
+            "AUDIENCE",
+            "FIREBASE_API_KEY"
+        ))
+    }
+
+    /// Wrapper for TokenManager::DeleteAllTokens
+    async fn delete_all_tokens_simple<'a>(
+        tm_proxy: &'a TokenManagerProxy,
+        auth_provider_type: &'a str,
+        user_profile_id: &'a str,
+    ) -> Result<Status, fidl::Error> {
+        let mut app_config = create_app_config(auth_provider_type);
+        let force = true;
+        await!(tm_proxy.delete_all_tokens(&mut app_config, user_profile_id, force))
     }
 
     /// Create a TokenManager and terminate it using its task group.
@@ -808,5 +1017,355 @@ mod tests {
         // Now the channel should be closed
         let mut app_config = create_app_config("hooli");
         assert!(await!(proxy.list_profile_ids(&mut app_config)).is_err());
+    }
+
+    /// Authorize with multiple auth providers and multiple users per auth provider
+    #[fasync::run_until_stalled(test)]
+    async fn authorize() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "GAVIN")?;
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DENPAK")?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            // Authorize Gavin to Hooli
+            let (status, user_profile_info) =
+                await!(authorize_simple(&tm_proxy, "hooli", "GAVIN"))?;
+            assert_eq!(status, Status::Ok);
+            let user_profile_info = user_profile_info.expect("user_profile_info is empty");
+            assert_eq!(user_profile_info.id, "GAVIN");
+            assert_eq!(user_profile_info.display_name, Some("GAVIN_DISPLAY".to_string()));
+            assert_eq!(user_profile_info.url, Some("http://example.org/GAVIN".to_string()));
+            assert_eq!(
+                user_profile_info.image_url,
+                Some("http://example.org/GAVIN/img".to_string())
+            );
+
+            // Authorize Richard to Pied Piper
+            let (status, user_profile_info) =
+                await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?;
+            assert_eq!(status, Status::Ok);
+            let user_profile_info = user_profile_info.expect("user_profile_info is empty");
+            assert_eq!(user_profile_info.id, "RICHARD");
+            assert_eq!(user_profile_info.display_name, Some("RICHARD_DISPLAY".to_string()));
+            assert_eq!(user_profile_info.url, Some("http://example.org/RICHARD".to_string()));
+            assert_eq!(
+                user_profile_info.image_url,
+                Some("http://example.org/RICHARD/img".to_string())
+            );
+
+            // Again, authorize Gavin to Hooli (with just basic assertions)
+            let (status, user_profile_info) =
+                await!(authorize_simple(&tm_proxy, "hooli", "DENPAK"))?;
+            assert_eq!(status, Status::Ok);
+            assert_eq!(user_profile_info.expect("user_profile_info is empty").id, "DENPAK");
+
+            // Authorize against a non-existing auth provider
+            assert_eq!(
+                (Status::AuthProviderServiceUnavailable, None),
+                await!(authorize_simple(&tm_proxy, "myspace", "MR_ROBOT"))?
+            );
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
+    }
+
+    /// Check that user profiles can be listed
+    #[fasync::run_until_stalled(test)]
+    async fn list_profile_ids() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "GAVIN")?;
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DENPAK")?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            assert_eq!(await!(authorize_simple(&tm_proxy, "hooli", "GAVIN"))?.0, Status::Ok);
+            assert_eq!(await!(authorize_simple(&tm_proxy, "hooli", "DENPAK"))?.0, Status::Ok);
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+
+            let profile_ids = await!(tm_proxy.list_profile_ids(&mut create_app_config("hooli")))?;
+            assert_eq!(profile_ids, (Status::Ok, vec!["DENPAK".to_string(), "GAVIN".to_string()]));
+            let profile_ids =
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+            assert_eq!(profile_ids, (Status::Ok, vec!["RICHARD".to_string()]));
+            let profile_ids = await!(tm_proxy.list_profile_ids(&mut create_app_config("myspace")))?;
+            assert_eq!(profile_ids, (Status::Ok, vec![]));
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
+    }
+
+    /// Check that we can get an access, id and firebase token, both by exchanging the refresh token
+    /// and by using the cache to retrieve the same value (without calling the auth provider).
+    #[fasync::run_until_stalled(test)]
+    async fn get_tokens() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                expect_get_access_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                expect_get_id_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                expect_get_firebase_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL_ID",
+                )?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+
+            // Check that "_CREDENTIAL" was added by the authorize call and that "_ACCESS", "_ID" or
+            // "_FIREBASE", respectively, was added by the token exchange calls. In the second
+            // iteration, make the same calls, but this time they should be delivered from cache.
+            for _ in 0..2 {
+                assert_eq!(
+                    await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                    (Status::Ok, Some("RICHARD_CREDENTIAL_ACCESS".to_string()))
+                );
+                assert_eq!(
+                    await!(get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                    (Status::Ok, Some("RICHARD_CREDENTIAL_ID".to_string()))
+                );
+                let (status, firebase_token) =
+                    await!(get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?;
+                assert_eq!(status, Status::Ok);
+                assert_eq!(
+                    firebase_token.expect("firebase token is empty").id_token,
+                    "RICHARD_CREDENTIAL_ID_FIREBASE"
+                );
+            }
+
+            // Errors
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "pied-piper", "DINESH"))?,
+                (Status::UserNotFound, None)
+            );
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "myspace", "MR_ROBOT"))?,
+                (Status::UserNotFound, None)
+            );
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
+    }
+
+    /// Check that tokens are correctly deleted, including the cached ones such as access tokens
+    #[fasync::run_until_stalled(test)]
+    async fn delete_all_tokens() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "DINESH")?;
+                expect_get_access_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                expect_get_id_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                expect_get_firebase_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL_ID",
+                )?;
+                expect_revoke_cred(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "DINESH"))?.0, Status::Ok);
+
+            // Put an access token, an id token and firebase token in the cache
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                Status::Ok
+            );
+            assert_eq!(
+                await!(get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                Status::Ok
+            );
+            assert_eq!(
+                await!(get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0,
+                Status::Ok
+            );
+
+            // Deleting an existing token succeeds
+            assert_eq!(
+                await!(delete_all_tokens_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                Status::Ok
+            );
+            // Deleting a non-existing token succeeds
+            assert_eq!(
+                await!(delete_all_tokens_simple(&tm_proxy, "myspace", "MR_ROBOT"))?,
+                Status::Ok
+            );
+
+            // No longer present in list
+            let profile_ids =
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+            assert_eq!(profile_ids, (Status::Ok, vec!["DINESH".to_string()]));
+
+            // Check that they was also removed from cache
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                (Status::UserNotFound, None)
+            );
+            assert_eq!(
+                await!(get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                (Status::UserNotFound, None)
+            );
+            assert_eq!(
+                await!(get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                (Status::UserNotFound, None)
+            );
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_token_manager(tm_stream, &auth_provider_supplier)
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
+    }
+
+    /// Check that state is preserved when a TokenManager is recreated with the same file db.
+    #[fasync::run_until_stalled(test)]
+    async fn file_db() {
+        let tmp_dir = TempDir::new().expect("Could not create temp dir");
+        let db_path = tmp_dir.path().join("tokens.json");
+
+        // Part 1: Create some state in a token manager
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_cred(await!(stream.try_next())?.expect("End of stream"), "RICHARD")?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            assert_eq!(await!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD"))?.0, Status::Ok);
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_token_manager_with_db_path(
+                &db_path,
+                tm_stream,
+                &auth_provider_supplier
+            )
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
+
+        // Part 2: Create a new token manager and check that the state survived
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
+            async move {
+                expect_get_access_token(
+                    await!(stream.try_next())?.expect("End of stream"),
+                    "RICHARD_CREDENTIAL",
+                )?;
+                Ok(assert!(await!(stream.try_next())?.is_none()))
+            }
+        });
+
+        let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
+        let client_fut = async move {
+            // Check that the profile list survived
+            let profile_ids =
+                await!(tm_proxy.list_profile_ids(&mut create_app_config("pied-piper")))?;
+            assert_eq!(profile_ids, (Status::Ok, vec!["RICHARD".to_string()]));
+
+            // Check that the credential survived, and that it triggers a call to the auth provider
+            // since the cache did not survive
+            assert_eq!(
+                await!(get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD"))?,
+                (Status::Ok, Some("RICHARD_CREDENTIAL_ACCESS".to_string()))
+            );
+
+            Result::<(), fidl::Error>::Ok(())
+        };
+        let (ap_result, client_result, tm_result) = await!(join3(
+            auth_provider_supplier.run(),
+            client_fut,
+            create_and_serve_token_manager_with_db_path(
+                &db_path,
+                tm_stream,
+                &auth_provider_supplier
+            )
+        ));
+        assert!(ap_result.is_ok());
+        assert!(client_result.is_ok());
+        assert!(tm_result.is_ok());
     }
 }

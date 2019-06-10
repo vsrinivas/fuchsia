@@ -5,15 +5,18 @@
 
 use crate::{AuthProviderSupplier, TokenManagerError};
 use failure::Fail;
-use parking_lot::Mutex;
-use std::collections::HashMap;
 use fidl::endpoints::create_request_stream;
-use fidl_fuchsia_auth::{AuthProviderMarker, AuthProviderRequest, AuthProviderStatus, AuthProviderRequestStream, Status};
-use futures::prelude::*;
+use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_auth::{
+    AuthProviderMarker, AuthProviderRequest, AuthProviderRequestStream, AuthProviderStatus, Status,
+};
 use futures::future::BoxFuture;
 use futures::future::{join, FutureObj};
+use futures::prelude::*;
 use futures::stream::FuturesUnordered;
-use fidl::endpoints::{ClientEnd};
+use parking_lot::Mutex;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 /// FakeAuthProviderSupplier implements AuthProviderSupplier, which is needed by TokenManager
 /// during instantiation. This fake has a bit of logic: (1) auth provider clients can be
@@ -78,10 +81,10 @@ impl AuthProviderSupplier for FakeAuthProviderSupplier {
     /// Just returns the pre-populated AuthProvider client end. Note that this consumes the
     /// auth provider; a second identical call will fail. This method should be invoked by the
     /// code under test.
-    fn get<'a>(
-        &'a self,
-        auth_provider_type: &'a str,
-    ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
+    fn get<'b>(
+        &'b self,
+        auth_provider_type: &'b str,
+    ) -> FutureObj<'b, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
         let client_end = self.auth_providers.lock().remove(auth_provider_type);
         FutureObj::new(Box::new(async move {
             client_end.ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
@@ -89,10 +92,18 @@ impl AuthProviderSupplier for FakeAuthProviderSupplier {
     }
 }
 
+impl<'a> AuthProviderSupplier for &'a FakeAuthProviderSupplier {
+    fn get<'b>(
+        &'b self,
+        auth_provider_type: &'b str,
+    ) -> FutureObj<'b, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
+        AuthProviderSupplier::get(*self, auth_provider_type)
+    }
+}
+
 mod tests {
     use super::*;
     use fuchsia_async;
-    use std::sync::Arc;
 
     /// This is a meta-test, of the FakeAuthProviderSupplier itself, since it has a bit of logic.
     /// First we create a FakeAuthProviderSupplier with two auth providers, Hooli and Pied Piper,
