@@ -9,6 +9,7 @@ use crate::{
     installer::{Installer, Plan},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
+        self,
         request::{Event, EventErrorCode, EventResult, EventType},
         response::{parse_json_response, OmahaStatus, Response},
     },
@@ -46,7 +47,7 @@ where
 /// This is the set of errors that can occur when making a request to Omaha.  This is an internal
 /// collection of error types.
 #[derive(Fail, Debug)]
-enum OmahaRequestError {
+pub enum OmahaRequestError {
     #[fail(display = "Unexpected JSON error constructing update check: {}", _0)]
     Json(#[cause] serde_json::Error),
 
@@ -75,16 +76,49 @@ impl From<hyper::Error> for OmahaRequestError {
     }
 }
 
+impl From<serde_json::Error> for OmahaRequestError {
+    fn from(err: serde_json::Error) -> Self {
+        OmahaRequestError::Json(err)
+    }
+}
+
+impl From<http::Error> for OmahaRequestError {
+    fn from(err: http::Error) -> Self {
+        OmahaRequestError::HttpBuilder(err)
+    }
+}
+
+impl From<http::StatusCode> for OmahaRequestError {
+    fn from(sc: http::StatusCode) -> Self {
+        OmahaRequestError::HttpStatus(sc)
+    }
+}
+
 /// This is the set of errors that can occur when parsing the response body from Omaha.  This is an
 /// internal collection of error types.
 #[derive(Fail, Debug)]
 #[allow(dead_code)]
-enum ResponseParseError {
+pub enum ResponseParseError {
     #[fail(display = "Response was not valid UTF-8")]
     Utf8(#[cause] Utf8Error),
 
     #[fail(display = "Unexpected JSON error parsing update check response: {}", _0)]
     Json(#[cause] serde_json::Error),
+}
+
+#[derive(Fail, Debug)]
+pub enum UpdateCheckError {
+    #[fail(display = "Check not performed per policy: {:?}", _0)]
+    Policy(CheckDecision),
+
+    #[fail(display = "Error checking with Omaha: {:?}", _0)]
+    OmahaRequest(OmahaRequestError),
+
+    #[fail(display = "Error parsing Omaha response: {:?}", _0)]
+    ResponseParser(ResponseParseError),
+
+    #[fail(display = "Unable to create an install plan: {:?}", _0)]
+    InstallPlan(failure::Error),
 }
 
 impl<PE, HR, IN> StateMachine<PE, HR, IN>
@@ -105,7 +139,7 @@ where
         options: CheckOptions,
         apps: &'a [App],
         context: update_check::Context,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<update_check::Response, UpdateCheckError> {
         info!("Checking to see if an update check is allowed at this time for {:?}", apps);
         let decision = await!(self.policy_engine.update_check_allowed(
             apps,
@@ -124,17 +158,17 @@ where
             CheckDecision::TooSoon => {
                 info!("Too soon for update check, ending");
                 // TODO: Report status
-                return Ok(());
+                return Err(UpdateCheckError::Policy(decision));
             }
             CheckDecision::ThrottledByPolicy => {
                 info!("Update check has been throttled by the Policy, ending");
                 // TODO: Report status
-                return Ok(());
+                return Err(UpdateCheckError::Policy(decision));
             }
             CheckDecision::DeniedByPolicy => {
                 info!("Update check has ben denied by the Policy");
                 // TODO: Report status
-                return Ok(());
+                return Err(UpdateCheckError::Policy(decision));
             }
         };
 
@@ -148,25 +182,25 @@ where
             Ok(res) => res,
             Err(OmahaRequestError::Json(e)) => {
                 error!("Unable to construct request body! {:?}", e);
-                // TODO:  Report status
-                return Ok(());
+                // TODO:  Report progress status
+                return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::HttpBuilder(e)) => {
                 error!("Unable to construct HTTP request! {:?}", e);
-                // TODO:  Report status
-                return Ok(());
+                // TODO:  Report progress status
+                return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::Hyper(e)) => {
                 warn!("Unable to contact Omaha: {:?}", e);
-                // TODO:  Report status
+                // TODO:  Report progress status
                 // TODO:  Parse for proper retry behavior
-                return Ok(());
+                return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::HttpStatus(e)) => {
                 warn!("Unable to contact Omaha: {:?}", e);
-                // TODO:  Report status
+                // TODO:  Report progress status
                 // TODO:  Parse for proper retry behavior
-                return Ok(());
+                return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
         };
 
@@ -179,7 +213,8 @@ where
                     &request_params,
                     EventErrorCode::ParseResponse,
                 ));
-                return Ok(());
+                // TODO: Report progress status (error)
+                return Err(UpdateCheckError::ResponseParser(err));
             }
         };
 
@@ -187,10 +222,17 @@ where
 
         let statuses = Self::get_app_update_statuses(&response);
         for (app_id, status) in &statuses {
+            // TODO:  Report or metric statuses other than 'no-update' and 'ok'
             info!("Omaha update check status: {} => {:?}", app_id, status);
         }
 
-        if statuses.iter().any(|(_id, status)| **status == OmahaStatus::Ok) {
+        let some_app_has_update = statuses.iter().any(|(_id, status)| **status == OmahaStatus::Ok);
+        if !some_app_has_update {
+            // A succesfull, no-update, check
+
+            // TODO: Report progress status (done)
+            Ok(Self::make_response(response.apps.as_slice(), update_check::Action::NoUpdate))
+        } else {
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
             );
@@ -204,7 +246,8 @@ where
                         &request_params,
                         EventErrorCode::ConstructInstallPlan
                     ));
-                    return Ok(());
+                    // TODO: Report progress status (Error)
+                    return Err(UpdateCheckError::InstallPlan(e.into()));
                 }
             };
 
@@ -216,24 +259,34 @@ where
                 }
                 UpdateDecision::DeferredByPolicy => {
                     info!("Install plan was deferred by Policy.");
-                    // TODO: Report status (Deferred)
+                    // Report "error" to Omaha (as this is an event that needs reporting as the
+                    // install isn't starting immediately.
                     let event = Event {
                         event_type: EventType::UpdateComplete,
                         event_result: EventResult::UpdateDeferred,
                         ..Event::default()
                     };
                     await!(self.report_omaha_event(apps, &request_params, event));
-                    return Ok(());
+
+                    // TODO: Report progress status (Deferred)
+                    return Ok(Self::make_response(
+                        response.apps.as_slice(),
+                        update_check::Action::DeferredByPolicy,
+                    ));
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
-                    // TODO: Report status (Error)
                     await!(self.report_error_event(
                         apps,
                         &request_params,
                         EventErrorCode::DeniedByPolicy
                     ));
-                    return Ok(());
+
+                    // TODO: Report progress status (Error)
+                    return Ok(Self::make_response(
+                        response.apps.as_slice(),
+                        update_check::Action::DeniedByPolicy,
+                    ));
                 }
             }
 
@@ -252,10 +305,13 @@ where
                     &request_params,
                     EventErrorCode::Installation
                 ));
-                return Ok(());
+                return Ok(Self::make_response(
+                    response.apps.as_slice(),
+                    update_check::Action::InstallPlanExecutionError,
+                ));
             }
 
-            // TODO: Report Status (Done)
+            // TODO: Report progress status (finishing)
             await!(self.report_success_event(
                 apps,
                 &request_params,
@@ -266,10 +322,9 @@ where
 
             await!(self.report_success_event(apps, &request_params, EventType::UpdateComplete));
 
-            // TODO: Consult Policy for next update time.
+            // TODO: Report progress status (update complete)
+            Ok(Self::make_response(response.apps.as_slice(), update_check::Action::Updated))
         }
-
-        Ok(())
     }
 
     /// Report an error event to Omaha.
@@ -380,10 +435,33 @@ where
             })
             .collect()
     }
+
+    /// Utility to take a set of protocol::response::Apps and then construct a response from the
+    /// update check based on those app IDs.
+    ///
+    /// TODO: Change the Policy and Installer to return a set of results, one for each app ID, then
+    ///       make this match that.
+    fn make_response(
+        apps: &[protocol::response::App],
+        action: update_check::Action,
+    ) -> update_check::Response {
+        update_check::Response {
+            app_responses: apps
+                .iter()
+                .map(|app| update_check::AppResponse {
+                    app_id: app.id.clone(),
+                    cohort: app.cohort.clone(),
+                    result: action.clone(),
+                })
+                .collect(),
+            server_dictated_poll_interval: None,
+        }
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
+    use super::update_check::*;
     use super::*;
     use crate::{
         common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
@@ -395,13 +473,15 @@ pub mod tests {
     };
     use futures::executor::block_on;
     use log::info;
+    use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::time::SystemTime;
 
     async fn do_update_check<'a, PE, HR, IN>(
         state_machine: &'a mut StateMachine<PE, HR, IN>,
         apps: &'a [App],
-    ) where
+    ) -> Result<update_check::Response, UpdateCheckError>
+    where
         PE: PolicyEngine,
         HR: HttpRequest,
         IN: Installer,
@@ -417,7 +497,7 @@ pub mod tests {
             state: ProtocolState::default(),
         };
 
-        await!(state_machine.perform_update_check(options, &apps, context)).unwrap();
+        await!(state_machine.perform_update_check(options, &apps, context))
     }
 
     fn make_test_apps() -> Vec<App> {
@@ -460,9 +540,40 @@ pub mod tests {
             let mut state_machine =
                 StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
             let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps));
+            await!(do_update_check(&mut state_machine, &apps)).unwrap();
 
             info!("update check complete!");
+        });
+    }
+
+    #[test]
+    fn test_cohort_returned_with_noupdate_result() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "cohort": "1",
+                "cohortname": "stable-channel",
+                "updatecheck": {
+                  "status": "noupdate"
+                }
+              }]
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+
+            let mut state_machine =
+                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let apps = make_test_apps();
+            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
+            assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
+            assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
+            assert_eq!(None, response.app_responses[0].cohort.hint);
         });
     }
 
@@ -476,7 +587,12 @@ pub mod tests {
             let mut state_machine =
                 StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
             let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps));
+            match await!(do_update_check(&mut state_machine, &apps)) {
+                Err(UpdateCheckError::ResponseParser(_)) => {} // expected
+                result @ _ => {
+                    panic!("Unexpected result from do_update_check: {:?}", result);
+                }
+            }
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&config, &request_params);
@@ -512,7 +628,12 @@ pub mod tests {
             let mut state_machine =
                 StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
             let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps));
+            match await!(do_update_check(&mut state_machine, &apps)) {
+                Err(UpdateCheckError::InstallPlan(_)) => {} // expected
+                result @ _ => {
+                    panic!("Unexpected result from do_update_check: {:?}", result);
+                }
+            }
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&config, &request_params);
@@ -555,7 +676,8 @@ pub mod tests {
                 &config,
             );
             let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps));
+            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&config, &request_params);
@@ -596,7 +718,8 @@ pub mod tests {
             let mut state_machine =
                 StateMachine::new(policy_engine, http, StubInstaller::default(), &config);
             let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps));
+            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&config, &request_params);
@@ -636,7 +759,8 @@ pub mod tests {
             let mut state_machine =
                 StateMachine::new(policy_engine, http, StubInstaller::default(), &config);
             let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps));
+            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&config, &request_params);
