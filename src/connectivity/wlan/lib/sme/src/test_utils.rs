@@ -43,7 +43,7 @@ pub fn wpa2_psk_ccmp_rsne_with_caps(caps: RsnCapabilities) -> Rsne {
 
 pub fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
     let mut buf = Vec::with_capacity(s_rsne.len());
-    s_rsne.as_bytes(&mut buf);
+    s_rsne.write_into(&mut buf).expect("error writing RSNE into buffer");
     buf
 }
 

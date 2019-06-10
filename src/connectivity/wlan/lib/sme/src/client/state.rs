@@ -803,7 +803,10 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
         Protection::Rsna(rsna) => {
             let s_rsne = rsna.negotiated_rsne.to_full_rsne();
             let mut buf = Vec::with_capacity(s_rsne.len());
-            s_rsne.as_bytes(&mut buf);
+            // Writing an RSNE into a Vector can never fail as a Vector can be grown when more
+            // space is required. If this panic ever triggers, something is clearly broken
+            // somewhere else.
+            let () = s_rsne.write_into(&mut buf).expect("writing RSNE into Vec can never fail");
             Some(buf)
         }
     };

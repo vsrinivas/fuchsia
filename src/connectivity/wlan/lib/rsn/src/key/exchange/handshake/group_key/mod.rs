@@ -172,10 +172,10 @@ mod tests {
     use super::*;
     use crate::rsna::{test_util, NegotiatedRsne};
 
-    fn verify_group_key_frame<'a>(
-        key_frame: &'a eapol::KeyFrame,
+    fn verify_group_key_frame(
+        key_frame: &eapol::KeyFrame,
         role: Role,
-    ) -> Result<GroupKeyHandshakeFrame<'a>, failure::Error> {
+    ) -> Result<GroupKeyHandshakeFrame, failure::Error> {
         let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
         let frame = VerifiedKeyFrame::from_key_frame(&key_frame, &role, &rsne, 0)
             .expect("couldn't verify frame");

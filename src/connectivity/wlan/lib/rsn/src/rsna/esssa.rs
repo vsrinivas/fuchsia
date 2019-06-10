@@ -677,7 +677,7 @@ mod tests {
         assert!(!test_util::is_zero(&msg2.key_mic[..]));
         assert_eq!(msg2.key_mic.len(), test_util::mic_len());
         assert_eq!(msg2.key_data.len(), msg2.key_data_len as usize);
-        assert_eq!(msg2.key_data.len(), s_rsne_data.len());
+        assert_eq!(msg2.key_data.len(), 20);
         assert_eq!(&msg2.key_data[..], &s_rsne_data[..]);
 
         // Send 3rd message.

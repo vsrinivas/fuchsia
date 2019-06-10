@@ -111,7 +111,7 @@ impl Supplicant {
 mod tests {
     use super::*;
     use crate::key::exchange::handshake::group_key::GroupKey;
-    use crate::key_data::{self, kde};
+    use crate::key_data::kde;
     use crate::rsna::{test_util, NegotiatedRsne, Role, VerifiedKeyFrame};
     use wlan_common::ie::rsn::akm::{Akm, PSK};
     use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
@@ -131,14 +131,28 @@ mod tests {
     }
 
     fn fake_msg1() -> eapol::KeyFrame {
-        eapol::KeyFrame {
+        let mut w = kde::Writer::new(vec![]);
+        w.write_gtk(&kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]))
+            .expect("error writing GTK KDE");
+        let key_data = w.finalize_for_encryption().expect("error finalizing key data");
+        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &key_data[..]);
+
+        let mut key_frame = eapol::KeyFrame {
             version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
             packet_type: eapol::PacketType::Key as u8,
             descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
             key_info: eapol::KeyInformation(0b01001110000010),
             key_mic: Bytes::from(vec![0; 16]),
+            key_rsc: GTK_RSC,
+            key_data_len: encrypted_key_data.len() as u16,
+            key_data: Bytes::from(encrypted_key_data),
             ..Default::default()
-        }
+        };
+        key_frame.update_packet_body_len();
+        let mic = compute_mic(&KCK[..], &Akm::new_dot11(PSK), &mut key_frame)
+            .expect("error updating MIC");
+        key_frame.key_mic = Bytes::from(mic);
+        key_frame
     }
 
     fn fake_gtk() -> Gtk {
@@ -157,31 +171,11 @@ mod tests {
         )
         .expect("error creating Group Key Handshake");
 
-        // Write GTK KDE
-        let mut buf = Vec::with_capacity(256);
-        let gtk_kde = kde::Gtk::new(GTK_KEY_ID, kde::GtkInfoTx::BothRxTx, &GTK[..]);
-        if let key_data::Element::Gtk(hdr, gtk) = gtk_kde {
-            hdr.as_bytes(&mut buf);
-            gtk.as_bytes(&mut buf);
-        }
-        key_data::add_padding(&mut buf);
-        let encrypted_key_data = test_util::encrypt_key_data(&KEK[..], &buf[..]);
-
-        // Construct key frame.
-        let mut key_frame = eapol::KeyFrame {
-            key_rsc: GTK_RSC,
-            key_data_len: encrypted_key_data.len() as u16,
-            key_data: Bytes::from(encrypted_key_data),
-            ..fake_msg1()
-        };
-        key_frame.update_packet_body_len();
-        let mic = compute_mic(&KCK[..], &psk, &mut key_frame).expect("error updating MIC");
-        key_frame.key_mic = Bytes::from(mic);
-        let msg1 =
-            make_verified(&key_frame, Role::Supplicant).expect("error verifying group frame");
-
         // Let Supplicant handle key frame.
         let mut update_sink = UpdateSink::default();
+        let key_frame = fake_msg1();
+        let msg1 =
+            make_verified(&key_frame, Role::Supplicant).expect("error verifying group frame");
         handshake
             .on_eapol_key_frame(&mut update_sink, 0, msg1)
             .expect("error processing msg1 of Group Key Handshake");
