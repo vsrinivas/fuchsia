@@ -23,11 +23,11 @@ namespace mt_usb_hci {
 // The maximum single-buffered endpoint FIFO size.
 constexpr uint32_t kFifoMaxSize = 4096;
 
-// An Endpoint cultivates a queue of outstanding usb requests and asynchronously services them in
-// serial-FIFO order.
-class Endpoint {
+// An RequestQueue cultivates a queue of outstanding usb requests and asynchronously services them
+// in serial-FIFO order.
+class RequestQueue {
 public:
-    virtual ~Endpoint() = default;
+    virtual ~RequestQueue() = default;
 
     // Advance processing of the current request which may optionally be the result of servicing a
     // hardware IRQ event (in which case interrupt should be set to true).
@@ -50,18 +50,19 @@ public:
     virtual zx_status_t Halt() = 0;
 };
 
-// A TransactionEndpoint is an Endpoint which dispatches requests to a Transaction for processing.
-class TransactionEndpoint : public Endpoint {
+// A TransactionQueue is an RequestQueue which dispatches requests to a Transaction for
+// processing.
+class TransactionQueue : public RequestQueue {
 public:
-    TransactionEndpoint(ddk::MmioView usb, uint8_t faddr,
-                        const usb_endpoint_descriptor_t& descriptor)
+    TransactionQueue(ddk::MmioView usb, uint8_t faddr,
+                     const usb_endpoint_descriptor_t& descriptor)
         : usb_(usb),
           faddr_(faddr),
           max_pkt_sz_(usb_ep_max_packet(&descriptor)),
           descriptor_(descriptor),
           halted_(false) {}
 
-    ~TransactionEndpoint() = default;
+    ~TransactionQueue() = default;
 
     void Advance(bool interrupt) override { transaction_->Advance(interrupt); }
     zx_status_t QueueRequest(usb::UnownedRequest<> req) override;
@@ -109,14 +110,15 @@ private:
     fbl::ConditionVariable pending_cond_ TA_GUARDED(pending_lock_);
 };
 
-// A ControlEndpoint is an Endpoint dispatching control-type transactions.
-class ControlEndpoint : public TransactionEndpoint {
+// A ControlQueue is a TransactionQueue dispatching control-type transactions.
+class ControlQueue : public TransactionQueue {
 public:
     // Note that initially all enumeration control transactions are performed on the default
     // control-pipe address of 0 using the spec. default maximum packet size of 8 bytes (encoded in
     // this type's static descriptor).  During enumeration, these values will be updated to their
     // final configured values.
-    explicit ControlEndpoint(ddk::MmioView usb) : TransactionEndpoint(usb, 0, descriptor_) {}
+    explicit ControlQueue(ddk::MmioView usb)
+        : TransactionQueue(usb, 0, descriptor_) {}
 
     // Read the device descriptor (used only for enumeration).  Note that a successful
     // GET_DESCRIPTOR transaction will result in max_pkt_sz_ being updated with the bMaxPacketSize0
@@ -131,7 +133,7 @@ public:
 private:
     zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
 
-    // A minimal descriptor describing only the initial desired ControlEndpoint properties.
+    // An endpoint descriptor containing sufficient data to bootstrap a Control transaction.
     static constexpr usb_endpoint_descriptor_t descriptor_ = {
         0,            // .bLength
         0,            // .bDescriptorType
@@ -142,22 +144,23 @@ private:
     };
 };
 
-// A BulkEndpoint is an Endpoint dispatching bulk-type transactions.
-class BulkEndpoint : public TransactionEndpoint {
+// A BulkQueue is a TransactionQueue dispatching bulk-type transactions.
+class BulkQueue : public TransactionQueue {
 public:
-    BulkEndpoint(ddk::MmioView usb, uint8_t faddr, const usb_endpoint_descriptor_t& descriptor)
-        : TransactionEndpoint(usb, faddr, descriptor) {}
+    BulkQueue(ddk::MmioView usb, uint8_t faddr,
+              const usb_endpoint_descriptor_t& descriptor)
+        : TransactionQueue(usb, faddr, descriptor) {}
 
 private:
     zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
 };
 
-// An InterruptEndpoint is an Endpoint dispatching to interrupt-type transactions.
-class InterruptEndpoint : public TransactionEndpoint {
+// An InterruptQueue is a TransactionQueue dispatching interrupt-type transactions.
+class InterruptQueue : public TransactionQueue {
 public:
-    InterruptEndpoint(ddk::MmioView usb, uint8_t faddr,
-                      const usb_endpoint_descriptor_t& descriptor)
-        : TransactionEndpoint(usb, faddr, descriptor) {}
+    InterruptQueue(ddk::MmioView usb, uint8_t faddr,
+                   const usb_endpoint_descriptor_t& descriptor)
+        : TransactionQueue(usb, faddr, descriptor) {}
 
 private:
     zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;

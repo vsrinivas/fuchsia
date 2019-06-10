@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "usb-endpoint.h"
+#include "usb-request-queue.h"
 #include "usb-transaction.h"
 
 #include <array>
@@ -42,11 +42,11 @@ private:
     mock_function::MockFunction<void> m_wait_;
 };
 
-// TestingEndpoint is a class with stub DispatchRequest().
-class TestingEndpoint : public TransactionEndpoint {
+// TestingQueue is a class with stub DispatchRequest().
+class TestingQueue : public TransactionQueue {
 public:
-    explicit TestingEndpoint(ddk::MmioView view)
-        : TransactionEndpoint(view, 123, {}),
+    explicit TestingQueue(ddk::MmioView view)
+        : TransactionQueue(view, 123, {}),
           dispatch_ct_(0) {}
 
     mock_function::MockFunction<zx_status_t>& m_dispatch() { return m_dispatch_; }
@@ -80,7 +80,7 @@ private:
     fbl::ConditionVariable cond_ TA_GUARDED(lock_);
 };
 
-class TransactionEndpointTest : public zxtest::Test {
+class TransactionQueueTest : public zxtest::Test {
 protected:
     void SetUp() {
         ASSERT_OK(zx::vmo::create(4096, 0, &vmo_));
@@ -97,29 +97,29 @@ protected:
     };
 };
 
-TEST_F(TransactionEndpointTest, QueueThread_StartAndHalt) {
-    TestingEndpoint te(mmio_->View(0));
-    EXPECT_OK(te.StartQueueThread());
-    EXPECT_OK(te.Halt());
+TEST_F(TransactionQueueTest, QueueThread_StartAndHalt) {
+    TestingQueue q(mmio_->View(0));
+    EXPECT_OK(q.StartQueueThread());
+    EXPECT_OK(q.Halt());
 }
 
-TEST_F(TransactionEndpointTest, QueueThread_Enqueue) {
+TEST_F(TransactionQueueTest, QueueThread_Enqueue) {
     std::optional<usb::Request<>> o_req;
     size_t alloc_sz = usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
     ASSERT_OK(usb::Request<>::Alloc(&o_req, 4096, 0, alloc_sz));
     usb::UnownedRequest<> req(o_req->take(), cb_, sizeof(usb_request_t));
 
-    TestingEndpoint te(mmio_->View(0));
-    te.m_dispatch().ExpectCall(ZX_OK);
-    EXPECT_OK(te.StartQueueThread());
-    EXPECT_OK(te.QueueRequest(std::move(req)));
-    te.Wait();
+    TestingQueue q(mmio_->View(0));
+    q.m_dispatch().ExpectCall(ZX_OK);
+    EXPECT_OK(q.StartQueueThread());
+    EXPECT_OK(q.QueueRequest(std::move(req)));
+    q.Wait();
 
-    EXPECT_OK(te.Halt());
-    te.m_dispatch().VerifyAndClear();
+    EXPECT_OK(q.Halt());
+    q.m_dispatch().VerifyAndClear();
 }
 
-TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiBeforeThreadStarts) {
+TEST_F(TransactionQueueTest, QueueThread_EnqueueMultiBeforeThreadStarts) {
     std::optional<usb::Request<>> o_req1;
     std::optional<usb::Request<>> o_req2;
     std::optional<usb::Request<>> o_req3;
@@ -139,26 +139,26 @@ TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiBeforeThreadStarts) {
     usb::UnownedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
     usb::UnownedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
 
-    TestingEndpoint te(mmio_->View(0));
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
+    TestingQueue q(mmio_->View(0));
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
 
-    EXPECT_OK(te.QueueRequest(std::move(req1)));
-    EXPECT_OK(te.QueueRequest(std::move(req2)));
-    EXPECT_OK(te.QueueRequest(std::move(req3)));
-    EXPECT_OK(te.QueueRequest(std::move(req4)));
-    EXPECT_OK(te.QueueRequest(std::move(req5)));
-    EXPECT_OK(te.StartQueueThread());
-    te.Wait(5);
+    EXPECT_OK(q.QueueRequest(std::move(req1)));
+    EXPECT_OK(q.QueueRequest(std::move(req2)));
+    EXPECT_OK(q.QueueRequest(std::move(req3)));
+    EXPECT_OK(q.QueueRequest(std::move(req4)));
+    EXPECT_OK(q.QueueRequest(std::move(req5)));
+    EXPECT_OK(q.StartQueueThread());
+    q.Wait(5);
 
-    EXPECT_OK(te.Halt());
-    te.m_dispatch().VerifyAndClear();
+    EXPECT_OK(q.Halt());
+    q.m_dispatch().VerifyAndClear();
 }
 
-TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiAfterThreadStarts) {
+TEST_F(TransactionQueueTest, QueueThread_EnqueueMultiAfterThreadStarts) {
     std::optional<usb::Request<>> o_req1;
     std::optional<usb::Request<>> o_req2;
     std::optional<usb::Request<>> o_req3;
@@ -178,26 +178,26 @@ TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiAfterThreadStarts) {
     usb::UnownedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
     usb::UnownedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
 
-    TestingEndpoint te(mmio_->View(0));
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
+    TestingQueue q(mmio_->View(0));
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
 
-    EXPECT_OK(te.StartQueueThread());
-    EXPECT_OK(te.QueueRequest(std::move(req1)));
-    EXPECT_OK(te.QueueRequest(std::move(req2)));
-    EXPECT_OK(te.QueueRequest(std::move(req3)));
-    EXPECT_OK(te.QueueRequest(std::move(req4)));
-    EXPECT_OK(te.QueueRequest(std::move(req5)));
-    te.Wait(5);
+    EXPECT_OK(q.StartQueueThread());
+    EXPECT_OK(q.QueueRequest(std::move(req1)));
+    EXPECT_OK(q.QueueRequest(std::move(req2)));
+    EXPECT_OK(q.QueueRequest(std::move(req3)));
+    EXPECT_OK(q.QueueRequest(std::move(req4)));
+    EXPECT_OK(q.QueueRequest(std::move(req5)));
+    q.Wait(5);
 
-    EXPECT_OK(te.Halt());
-    te.m_dispatch().VerifyAndClear();
+    EXPECT_OK(q.Halt());
+    q.m_dispatch().VerifyAndClear();
 }
 
-TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiDuringThreadStart) {
+TEST_F(TransactionQueueTest, QueueThread_EnqueueMultiDuringThreadStart) {
     std::optional<usb::Request<>> o_req1;
     std::optional<usb::Request<>> o_req2;
     std::optional<usb::Request<>> o_req3;
@@ -217,26 +217,26 @@ TEST_F(TransactionEndpointTest, QueueThread_EnqueueMultiDuringThreadStart) {
     usb::UnownedRequest<> req4(o_req4->take(), cb_, sizeof(usb_request_t));
     usb::UnownedRequest<> req5(o_req5->take(), cb_, sizeof(usb_request_t));
 
-    TestingEndpoint te(mmio_->View(0));
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
-    te.m_dispatch().ExpectCall(ZX_OK);
+    TestingQueue q(mmio_->View(0));
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
+    q.m_dispatch().ExpectCall(ZX_OK);
 
-    EXPECT_OK(te.QueueRequest(std::move(req1)));
-    EXPECT_OK(te.QueueRequest(std::move(req2)));
-    EXPECT_OK(te.StartQueueThread());
-    EXPECT_OK(te.QueueRequest(std::move(req3)));
-    EXPECT_OK(te.QueueRequest(std::move(req4)));
-    EXPECT_OK(te.QueueRequest(std::move(req5)));
-    te.Wait(5);
+    EXPECT_OK(q.QueueRequest(std::move(req1)));
+    EXPECT_OK(q.QueueRequest(std::move(req2)));
+    EXPECT_OK(q.StartQueueThread());
+    EXPECT_OK(q.QueueRequest(std::move(req3)));
+    EXPECT_OK(q.QueueRequest(std::move(req4)));
+    EXPECT_OK(q.QueueRequest(std::move(req5)));
+    q.Wait(5);
 
-    EXPECT_OK(te.Halt());
-    te.m_dispatch().VerifyAndClear();
+    EXPECT_OK(q.Halt());
+    q.m_dispatch().VerifyAndClear();
 }
 
-TEST_F(TransactionEndpointTest, QueueThread_CancelAll) {
+TEST_F(TransactionQueueTest, QueueThread_CancelAll) {
     typedef struct {
         int idx = 0;
         std::array<zx_status_t, 5> array;
@@ -274,23 +274,23 @@ TEST_F(TransactionEndpointTest, QueueThread_CancelAll) {
     usb::UnownedRequest<> req5(o_req5->take(), cb, sizeof(usb_request_t));
 
     // Note here we don't start the thread.
-    TestingEndpoint te(mmio_->View(0));
-    te.new_transaction();
-    te.transaction().m_cancel().ExpectCall();
-    EXPECT_OK(te.QueueRequest(std::move(req1)));
-    EXPECT_OK(te.QueueRequest(std::move(req2)));
-    EXPECT_OK(te.QueueRequest(std::move(req3)));
-    EXPECT_OK(te.QueueRequest(std::move(req4)));
-    EXPECT_OK(te.QueueRequest(std::move(req5)));
-    EXPECT_OK(te.CancelAll());
+    TestingQueue q(mmio_->View(0));
+    q.new_transaction();
+    q.transaction().m_cancel().ExpectCall();
+    EXPECT_OK(q.QueueRequest(std::move(req1)));
+    EXPECT_OK(q.QueueRequest(std::move(req2)));
+    EXPECT_OK(q.QueueRequest(std::move(req3)));
+    EXPECT_OK(q.QueueRequest(std::move(req4)));
+    EXPECT_OK(q.QueueRequest(std::move(req5)));
+    EXPECT_OK(q.CancelAll());
 
     EXPECT_EQ(ZX_ERR_CANCELED, cap.array[0]);
     EXPECT_EQ(ZX_ERR_CANCELED, cap.array[1]);
     EXPECT_EQ(ZX_ERR_CANCELED, cap.array[2]);
     EXPECT_EQ(ZX_ERR_CANCELED, cap.array[3]);
     EXPECT_EQ(ZX_ERR_CANCELED, cap.array[4]);
-    te.m_dispatch().VerifyAndClear();
-    te.transaction().m_cancel().VerifyAndClear();
+    q.m_dispatch().VerifyAndClear();
+    q.transaction().m_cancel().VerifyAndClear();
 }
 
 } // namespace mt_usb_hci

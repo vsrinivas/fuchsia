@@ -5,8 +5,8 @@
 driver("mt-musb-host") {
   sources = [
     "usb-device.cpp",
-    "usb-endpoint.cpp",
     "usb-hci.cpp",
+    "usb-request-queue.cpp",
     "usb-root-hub.cpp",
     "usb-spew.cpp",
     "usb-transaction.cpp",
@@ -46,10 +46,10 @@ test("mt-hci-transaction-test") {
   ]
 }
 
-test("mt-hci-endpoint-test") {
+test("mt-hci-request-queue-test") {
   sources = [
-    "usb-endpoint-test.cpp",
-    "usb-endpoint.cpp",
+    "usb-request-queue-test.cpp",
+    "usb-request-queue.cpp",
     "usb-transaction.cpp",
   ]
   deps = [

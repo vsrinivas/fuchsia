@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "usb-endpoint.h"
+#include "usb-request-queue.h"
 
 #include <array>
 #include <fbl/array.h>
@@ -53,7 +53,7 @@ public:
         : usb_(usb),
           id_(id),
           hub_id_(hub_id),
-          speed_(speed) { ep_[0] = std::make_unique<ControlEndpoint>(usb); }
+          speed_(speed) { ep_q_[0] = std::make_unique<ControlQueue>(usb); }
 
     ~HardwareDevice() = default;
 
@@ -65,12 +65,13 @@ public:
     uint32_t hub_id() const override { return hub_id_; }
     const usb_speed_t& speed() const override { return speed_; }
 
-    std::unique_ptr<Endpoint>& endpoint(uint8_t ep) {
-        ZX_ASSERT_MSG(ep_.at(ep), "endpoint not configured");
-        return ep_[ep];
+    std::unique_ptr<RequestQueue>& ep_queue(uint8_t ep) {
+        ZX_ASSERT_MSG(ep_q_.at(ep), "endpoint not configured");
+        return ep_q_[ep];
     }
 
     zx_status_t HandleRequest(usb::UnownedRequest<> req) override;
+    // Endpoint processing for a HardwareDevice involves starting the requisite RequestQueue.
     zx_status_t EnableEndpoint(const usb_endpoint_descriptor_t& desc) override;
     zx_status_t DisableEndpoint(const usb_endpoint_descriptor_t& desc) override;
     size_t GetMaxTransferSize(uint8_t ep) override;
@@ -101,8 +102,8 @@ private:
     // The speed of this device.
     const usb_speed_t speed_;
 
-    // Array of endpoint managing instance indexed by endpoint number.
-    std::array<std::unique_ptr<Endpoint>, kMaxEpNum+1> ep_;
+    // Array of RequestQueue unique_ptrs indexed by endpoint-number.
+    std::array<std::unique_ptr<RequestQueue>, kMaxEpNum+1> ep_q_;
 };
 
 } // namespace mt_usb_hci

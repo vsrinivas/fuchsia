@@ -72,7 +72,7 @@ if (current_cpu != "") {
       "$zx/system/dev/test",
       "$zx/system/dev/thermal/aml-thermal-s912:aml-thermal-s912-test",
       "$zx/system/dev/thermal/mtk-thermal:mtk-thermal-test",
-      "$zx/system/dev/usb/mt-musb-host:mt-hci-endpoint-test",
+      "$zx/system/dev/usb/mt-musb-host:mt-hci-request-queue-test",
       "$zx/system/dev/usb/mt-musb-host:mt-hci-transaction-test",
       "$zx/system/uapp/disk-pave:install-disk-image-test",
       "$zx/system/uapp/nand-util:nand-util-test",

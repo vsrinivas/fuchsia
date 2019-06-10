@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "trace.h"
-#include "usb-endpoint.h"
+#include "usb-request-queue.h"
 #include "usb-spew.h"
 
 #include <ddk/debug.h>
@@ -14,7 +14,7 @@
 
 namespace mt_usb_hci {
 
-zx_status_t TransactionEndpoint::QueueRequest(usb::UnownedRequest<> req) {
+zx_status_t TransactionQueue::QueueRequest(usb::UnownedRequest<> req) {
     fbl::AutoLock _(&pending_lock_);
 
     // To prevent a race condition by which a request is enqueued after having stopped the
@@ -29,8 +29,8 @@ zx_status_t TransactionEndpoint::QueueRequest(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t TransactionEndpoint::StartQueueThread() {
-    auto go = [](void* arg) { return static_cast<TransactionEndpoint*>(arg)->QueueThread(); };
+zx_status_t TransactionQueue::StartQueueThread() {
+    auto go = [](void* arg) { return static_cast<TransactionQueue*>(arg)->QueueThread(); };
     auto rc = thrd_create_with_name(&pending_thread_, go, this, "usb-endpoint-thread");
     if (rc != thrd_success) {
         return ZX_ERR_INTERNAL;
@@ -38,7 +38,7 @@ zx_status_t TransactionEndpoint::StartQueueThread() {
     return ZX_OK;
 }
 
-zx_status_t TransactionEndpoint::CancelAll() {
+zx_status_t TransactionQueue::CancelAll() {
     fbl::AutoLock _(&pending_lock_);
     if (transaction_) {
         transaction_->Cancel();
@@ -52,11 +52,11 @@ zx_status_t TransactionEndpoint::CancelAll() {
     return ZX_OK;
 }
 
-size_t TransactionEndpoint::GetMaxTransferSize() {
+size_t TransactionQueue::GetMaxTransferSize() {
     return static_cast<size_t>(max_pkt_sz_);
 }
 
-zx_status_t TransactionEndpoint::Halt() {
+zx_status_t TransactionQueue::Halt() {
     {
         fbl::AutoLock _(&pending_lock_);
         if (transaction_) {
@@ -82,7 +82,7 @@ zx_status_t TransactionEndpoint::Halt() {
     return ZX_OK;
 }
 
-int TransactionEndpoint::QueueThread() {
+int TransactionQueue::QueueThread() {
     zx_status_t status;
     std::optional<usb::UnownedRequest<>> req;
 
@@ -118,7 +118,7 @@ int TransactionEndpoint::QueueThread() {
     return 0;
 }
 
-zx_status_t ControlEndpoint::GetDeviceDescriptor(usb_device_descriptor_t* out) {
+zx_status_t ControlQueue::GetDeviceDescriptor(usb_device_descriptor_t* out) {
     TRACE();
     usb_setup_t req = { // GET_DESCRIPTOR request, see: USB 2.0 spec. section 9.4.3.
         0x80,        // .bmRequestType
@@ -142,7 +142,7 @@ zx_status_t ControlEndpoint::GetDeviceDescriptor(usb_device_descriptor_t* out) {
     return ZX_OK;
 }
 
-zx_status_t ControlEndpoint::SetAddress(uint8_t addr) {
+zx_status_t ControlQueue::SetAddress(uint8_t addr) {
     usb_setup_t req = { // SET_ADDRESS request, see: USB 2.0 spec. section 9.4.6.
         0,    // .bmRequestType
         0x5,  // .bRequest
@@ -169,7 +169,7 @@ zx_status_t ControlEndpoint::SetAddress(uint8_t addr) {
     return ZX_OK;
 }
 
-zx_status_t ControlEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
+zx_status_t ControlQueue::DispatchRequest(usb::UnownedRequest<> req) {
     zx_status_t status;
     usb_setup_t setup = req.request()->setup;
 
@@ -210,7 +210,7 @@ zx_status_t ControlEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t BulkEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
+zx_status_t BulkQueue::DispatchRequest(usb::UnownedRequest<> req) {
     void* vmo_addr;
     auto status = req.Mmap(&vmo_addr);
     if (status != ZX_OK) {
@@ -236,7 +236,7 @@ zx_status_t BulkEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t InterruptEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
+zx_status_t InterruptQueue::DispatchRequest(usb::UnownedRequest<> req) {
     void* vmo_addr;
     auto status = req.Mmap(&vmo_addr);
     if (status != ZX_OK) {

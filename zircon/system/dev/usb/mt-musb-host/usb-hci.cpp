@@ -262,7 +262,7 @@ void UsbHci::HandleDisconnect() {
 
 void UsbHci::HandleEndpoint(uint8_t ep) {
     auto* device = static_cast<HardwareDevice*>(device_[kDeviceId].get());
-    device->endpoint(ep)->Advance(true);
+    device->ep_queue(ep)->Advance(true);
 }
 
 int UsbHci::IrqThread() {
