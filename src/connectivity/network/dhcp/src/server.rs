@@ -350,6 +350,10 @@ fn add_required_options(
     let mut lease = vec![0; 4];
     BigEndian::write_u32(&mut lease, client_config.lease_time_s);
     msg.options.push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: lease });
+    msg.options.push(ConfigOption {
+        code: OptionCode::SubnetMask,
+        value: config.subnet_mask.octets().to_vec(),
+    });
     msg.options
         .push(ConfigOption { code: OptionCode::DhcpMessageType, value: vec![msg_type.into()] });
     msg.options.push(ConfigOption {
@@ -422,8 +426,7 @@ fn build_ack(req: Message, requested_ip: Ipv4Addr, config: &ServerConfig) -> Mes
 }
 
 fn is_in_subnet(ip: Ipv4Addr, config: &ServerConfig) -> bool {
-    apply_subnet_mask_to(config.subnet_mask, ip)
-        == apply_subnet_mask_to(config.subnet_mask, config.server_ip)
+    config.subnet_mask.apply_to(ip) == config.subnet_mask.apply_to(config.server_ip)
 }
 
 fn is_client_mac_known(mac: MacAddr, cache: &CachedClients) -> bool {
@@ -480,18 +483,13 @@ fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
     Some(Ipv4Addr::from(raw_server_id))
 }
 
-fn apply_subnet_mask_to(prefix_len: u8, ip_addr: Ipv4Addr) -> Ipv4Addr {
-    assert!(prefix_len < 32);
-    let subnet_mask_bits = ::std::u32::MAX << (32 - prefix_len);
-    let ip_addr_bits = BigEndian::read_u32(&ip_addr.octets());
-    Ipv4Addr::from(ip_addr_bits & subnet_mask_bits)
-}
-
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use crate::configuration::SubnetMask;
     use crate::protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
+    use std::convert::TryFrom;
     use std::net::Ipv4Addr;
 
     fn new_test_server<F>(time_provider: F) -> Server<F>
@@ -530,6 +528,10 @@ mod tests {
         offer
             .options
             .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 100] });
+        offer.options.push(ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: SubnetMask::try_from(24).unwrap().octets().to_vec(),
+        });
         offer.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPOFFER.into()],
@@ -573,6 +575,10 @@ mod tests {
         ack.chaddr = MacAddr { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
         ack.options
             .push(ConfigOption { code: OptionCode::IpAddrLeaseTime, value: vec![0, 0, 0, 100] });
+        ack.options.push(ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: SubnetMask::try_from(24).unwrap().octets().to_vec(),
+        });
         ack.options.push(ConfigOption {
             code: OptionCode::DhcpMessageType,
             value: vec![MessageType::DHCPACK.into()],

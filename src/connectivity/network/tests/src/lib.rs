@@ -528,7 +528,7 @@ async fn acquire_dhcp() -> Result {
         assert_eq!(
             netmask,
             fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                addr: [255, 255, 255, 0]
+                addr: [255, 255, 255, 128]
             })
         );
     }

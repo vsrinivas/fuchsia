@@ -75,7 +75,8 @@ fn get_server_config_file_path() -> Result<String, Error> {
 }
 
 async fn define_msg_handling_loop_future<F: Fn() -> i64>(
-    sock: UdpSocket, server: &Mutex<Server<F>>,
+    sock: UdpSocket,
+    server: &Mutex<Server<F>>,
 ) -> Result<Void, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {
