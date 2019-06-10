@@ -76,6 +76,17 @@ Finally, follow the **Compilation Database** instructions below to
 generate the `compile_commands.json` in the fuchsia root directory. Then
 reload vscode to enjoy the results.
 
+You may also benefit from enabling background indexing and clang-tidy using the following settings:
+
+```
+"clangd.arguments": [
+    "-clang-tidy",
+    "-background-index"
+]
+```
+
+Further details on clangd setup can be found [here](https://clang.llvm.org/extra/clangd/Installation.html).
+
 ### default vscode C++ extension
 
 Install the default [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
