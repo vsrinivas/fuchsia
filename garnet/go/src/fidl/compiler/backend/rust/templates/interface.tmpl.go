@@ -311,13 +311,20 @@ impl {{ $interface.Name }}Event {
 	{{- end }}
 }
 
+/// A type which can be used to send events into a borrowed channel.
+///
+/// Note: this should only be used when the channel must be temporarily
+/// borrowed. For a typical sending of events, use the send_ methods
+/// on the ControlHandle types, which can be acquired through a
+/// RequestStream or Responder type.
 pub struct {{ $interface.Name }}EventSender<'a> {
 	// Some protocols don't define events which would render this channel unused.
 	#[allow(unused)]
-	channel: zx::Unowned<'a, zx::Channel>,
+	channel: &'a zx::Channel,
 }
+
 impl <'a> {{ $interface.Name }}EventSender<'a> {
-	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+	pub fn new(channel: &'a zx::Channel) -> Self {
 		Self { channel }
 	}
 	{{- range $method := $interface.Methods }}
