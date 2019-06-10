@@ -52,6 +52,7 @@ impl Policy for StubPolicy {
 
 /// A stub PolicyEngine that just gathers the current time and hands it off to the StubPolicy as the
 /// PolicyData.
+#[derive(Debug)]
 pub struct StubPolicyEngine;
 
 impl PolicyEngine for StubPolicyEngine {

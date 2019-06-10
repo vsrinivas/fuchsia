@@ -13,9 +13,9 @@ use futures::prelude::*;
 /// A mock PolicyEngine that returns mocked data.
 #[derive(Debug, Default)]
 pub struct MockPolicyEngine {
-    pub check_schedule: Option<UpdateCheckSchedule>,
-    pub check_decision: Option<CheckDecision>,
-    pub update_decision: Option<UpdateDecision>,
+    pub check_schedule: UpdateCheckSchedule,
+    pub check_decision: CheckDecision,
+    pub update_decision: UpdateDecision,
 }
 
 impl PolicyEngine for MockPolicyEngine {
@@ -25,8 +25,7 @@ impl PolicyEngine for MockPolicyEngine {
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
     ) -> BoxFuture<UpdateCheckSchedule> {
-        let schedule = self.check_schedule.take().unwrap();
-        future::ready(schedule).boxed()
+        future::ready(self.check_schedule.clone()).boxed()
     }
 
     fn update_check_allowed(
@@ -36,15 +35,13 @@ impl PolicyEngine for MockPolicyEngine {
         _protocol_state: &ProtocolState,
         _check_options: &CheckOptions,
     ) -> BoxFuture<CheckDecision> {
-        let decision = self.check_decision.take().unwrap();
-        future::ready(decision).boxed()
+        future::ready(self.check_decision.clone()).boxed()
     }
 
     fn update_can_start(
         &mut self,
         _proposed_install_plan: &impl Plan,
     ) -> BoxFuture<UpdateDecision> {
-        let decision = self.update_decision.take().unwrap();
-        future::ready(decision).boxed()
+        future::ready(self.update_decision.clone()).boxed()
     }
 }

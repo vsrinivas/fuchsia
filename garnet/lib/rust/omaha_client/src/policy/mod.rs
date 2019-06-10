@@ -25,7 +25,7 @@ pub struct PolicyData {
 }
 
 /// Reasons why a check can/cannot be performed at this time
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CheckDecision {
     /// positive responses
     Ok(RequestParams),
@@ -38,8 +38,15 @@ pub enum CheckDecision {
     DeniedByPolicy,
 }
 
+#[cfg(test)]
+impl Default for CheckDecision {
+    fn default() -> Self {
+        CheckDecision::Ok(RequestParams::default())
+    }
+}
+
 /// Reasons why an update can/cannot be performed at this time
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum UpdateDecision {
     /// Update can be performed.
     Ok,
@@ -47,6 +54,13 @@ pub enum UpdateDecision {
     DeferredByPolicy,
     /// Update is rejected by Policy.
     DeniedByPolicy,
+}
+
+#[cfg(test)]
+impl Default for UpdateDecision {
+    fn default() -> Self {
+        UpdateDecision::Ok
+    }
 }
 
 /// The policy implementation itself

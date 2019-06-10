@@ -11,6 +11,7 @@ use hyper::{Body, Request, Response};
 use pretty_assertions::assert_eq;
 use std::collections::VecDeque;
 
+#[derive(Debug)]
 pub struct MockHttpRequest {
     // The last request made using this mock.
     request: Request<Body>,

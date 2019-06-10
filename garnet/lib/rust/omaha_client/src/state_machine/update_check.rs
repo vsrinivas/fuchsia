@@ -12,7 +12,7 @@ use crate::{
 /// The Context provides the protocol context for a given update check operation.  This is
 /// information that's passed to the Policy to allow it to properly reason about what can and cannot
 /// be done at this time.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Context {
     /// The last-computed time to next check for an update.
     pub schedule: UpdateCheckSchedule,

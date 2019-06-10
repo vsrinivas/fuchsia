@@ -157,6 +157,17 @@ pub struct UpdateCheckSchedule {
     pub next_update_time: SystemTime,
 }
 
+#[cfg(test)]
+impl Default for UpdateCheckSchedule {
+    fn default() -> Self {
+        UpdateCheckSchedule {
+            last_update_time: SystemTime::UNIX_EPOCH,
+            next_update_time: SystemTime::UNIX_EPOCH,
+            next_update_window_start: SystemTime::UNIX_EPOCH,
+        }
+    }
+}
+
 /// These hold the data maintained request-to-request so that the requirements for
 /// backoffs, throttling, proxy use, etc. can all be properly maintained.  This is
 /// NOT the state machine's internal state.

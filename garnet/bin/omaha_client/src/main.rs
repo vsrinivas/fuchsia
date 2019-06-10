@@ -14,12 +14,15 @@ use fidl_fuchsia_update::{
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use http_request::FuchsiaHyperHttpRequest;
 use log::{error, info};
+use omaha_client::{installer::stub::StubInstaller, state_machine::StateMachine};
 
 mod configuration;
 mod http_request;
 mod install_plan;
 mod metrics;
+mod policy;
 mod timer;
 
 async fn run_fidl_server(stream: IncomingServices) -> Result<(), Error> {
@@ -103,7 +106,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new().context("Error creating executor")?;
 
     executor.run_singlethreaded(async {
-        let apps = configuration::get_apps();
+        let apps = configuration::get_apps()?;
         info!("Omaha apps: {:?}", apps);
         let config = configuration::get_config();
         info!("Update config: {:?}", config);
@@ -120,7 +123,15 @@ fn main() -> Result<(), Error> {
 
         let (_metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();
 
-        await!(future::join(fidl_fut, cobalt_fut));
+        let http = FuchsiaHyperHttpRequest::new();
+        let mut state_machine = StateMachine::new(
+            policy::FuchsiaPolicyEngine,
+            http,
+            StubInstaller::default(),
+            &config,
+            timer::FuchsiaTimer,
+        );
+        await!(future::join3(fidl_fut, cobalt_fut, state_machine.start(apps).boxed()));
         Ok(())
     })
 }

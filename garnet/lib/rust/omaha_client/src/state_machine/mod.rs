@@ -3,23 +3,25 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{App, CheckOptions},
+    common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     configuration::Config,
     http_request::HttpRequest,
     installer::{Installer, Plan},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
         self,
-        request::{Event, EventErrorCode, EventResult, EventType},
+        request::{Event, EventErrorCode, EventResult, EventType, InstallSource},
         response::{parse_json_response, OmahaStatus, Response},
     },
     request_builder::{self, RequestBuilder, RequestParams},
 };
+use chrono::{DateTime, Utc};
 use failure::Fail;
 use futures::{compat::Stream01CompatExt, prelude::*};
 use http::response::Parts;
 use log::{error, info, warn};
 use std::str::Utf8Error;
+use std::time::{Duration, SystemTime};
 
 pub mod update_check;
 
@@ -28,11 +30,13 @@ pub use timer::Timer;
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform a single update check process.
-pub struct StateMachine<PE, HR, IN>
+#[derive(Debug)]
+pub struct StateMachine<PE, HR, IN, TM>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
+    TM: Timer,
 {
     /// The immutable configuration of the client itself.
     client_config: Config,
@@ -42,6 +46,8 @@ where
     http: HR,
 
     installer: IN,
+
+    timer: TM,
 }
 
 /// This is the set of errors that can occur when making a request to Omaha.  This is an internal
@@ -121,19 +127,107 @@ pub enum UpdateCheckError {
     InstallPlan(failure::Error),
 }
 
-impl<PE, HR, IN> StateMachine<PE, HR, IN>
+impl<PE, HR, IN, TM> StateMachine<PE, HR, IN, TM>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
     IN: Installer,
+    TM: Timer,
 {
-    pub fn new(policy_engine: PE, http: HR, installer: IN, config: &Config) -> Self {
-        StateMachine { client_config: config.clone(), policy_engine, http, installer }
+    pub fn new(policy_engine: PE, http: HR, installer: IN, config: &Config, timer: TM) -> Self {
+        StateMachine { client_config: config.clone(), policy_engine, http, installer, timer }
+    }
+
+    /// Load and initialize update check context from persistent storage.
+    fn load_context(&mut self) -> update_check::Context {
+        // TODO: Read last_update_time, server_dictated_poll_interval, etc from storage.
+        update_check::Context {
+            schedule: UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH,
+                next_update_time: SystemTime::now(),
+                next_update_window_start: SystemTime::now(),
+            },
+            state: ProtocolState::default(),
+        }
+    }
+
+    /// Start the StateMachine to do periodic update check in the background. The future this
+    /// function returns never finishes!
+    pub async fn start(&mut self, mut apps: Vec<App>) {
+        let mut context = self.load_context();
+
+        loop {
+            context.schedule = await!(self.policy_engine.compute_next_update_time(
+                &apps,
+                &context.schedule,
+                &context.state,
+            ));
+            // Wait if |next_update_time| is in the future.
+            if let Ok(duration) =
+                context.schedule.next_update_time.duration_since(SystemTime::now())
+            {
+                let date_time = DateTime::<Utc>::from(context.schedule.next_update_time);
+                info!("Waiting until {} for the next update check...", date_time.to_rfc3339());
+
+                await!(self.timer.wait(duration));
+            }
+
+            let options = CheckOptions { source: InstallSource::ScheduledTask };
+            match await!(self.perform_update_check(options, &apps, context.clone())) {
+                Ok(result) => {
+                    info!("Update check result: {:?}", result);
+                    // Update check succeeded, update |last_update_time|.
+                    context.schedule.last_update_time = SystemTime::now();
+
+                    context.state.server_dictated_poll_interval =
+                        result.server_dictated_poll_interval.map(Duration::from_secs);
+
+                    // Increment |consecutive_failed_update_attempts| if any app failed to install,
+                    // otherwise reset it to 0.
+                    if result
+                        .app_responses
+                        .iter()
+                        .any(|app| app.result == update_check::Action::InstallPlanExecutionError)
+                    {
+                        context.state.consecutive_failed_update_attempts += 1;
+                    } else {
+                        context.state.consecutive_failed_update_attempts = 0;
+                    }
+
+                    // Update check succeeded, reset |consecutive_failed_update_checks| to 0.
+                    context.state.consecutive_failed_update_checks = 0;
+
+                    // Update the cohort for each app from Omaha.
+                    for app_response in result.app_responses {
+                        for app in apps.iter_mut() {
+                            if app.id == app_response.app_id {
+                                app.cohort = app_response.cohort;
+                                break;
+                            }
+                        }
+                    }
+
+                    // TODO: update consecutive_proxied_requests
+                }
+                Err(error) => {
+                    error!("Update check failed: {:?}", error);
+                    // Update check failed, increment |consecutive_failed_update_checks|.
+                    context.state.consecutive_failed_update_checks += 1;
+
+                    match error {
+                        UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
+                            // We talked to Omaha, update |last_update_time|.
+                            context.schedule.last_update_time = SystemTime::now();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 
     /// This function constructs the chain of async futures needed to perform all of the async tasks
     /// that comprise an update check.
-    /// TODO: change from sync to fire and forget that sets up the future for execution.
     pub async fn perform_update_check<'a>(
         &'a mut self,
         options: CheckOptions,
@@ -471,20 +565,24 @@ pub mod tests {
         policy::{MockPolicyEngine, StubPolicyEngine},
         protocol::Cohort,
     };
-    use futures::executor::block_on;
+    use futures::executor::{block_on, LocalPool};
+    use futures::task::LocalSpawnExt;
     use log::info;
     use pretty_assertions::assert_eq;
     use serde_json::json;
-    use std::time::SystemTime;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use std::time::{Duration, SystemTime};
 
-    async fn do_update_check<'a, PE, HR, IN>(
-        state_machine: &'a mut StateMachine<PE, HR, IN>,
+    async fn do_update_check<'a, PE, HR, IN, TM>(
+        state_machine: &'a mut StateMachine<PE, HR, IN, TM>,
         apps: &'a [App],
     ) -> Result<update_check::Response, UpdateCheckError>
     where
         PE: PolicyEngine,
         HR: HttpRequest,
         IN: Installer,
+        TM: Timer,
     {
         let options = CheckOptions::default();
 
@@ -537,8 +635,13 @@ pub mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine =
-                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
             let apps = make_test_apps();
             await!(do_update_check(&mut state_machine, &apps)).unwrap();
 
@@ -566,8 +669,13 @@ pub mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(hyper::Response::new(response.into()));
 
-            let mut state_machine =
-                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
             let apps = make_test_apps();
             let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
@@ -584,8 +692,13 @@ pub mod tests {
             let mut http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
             http.add_response(hyper::Response::new("".into()));
 
-            let mut state_machine =
-                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
             let apps = make_test_apps();
             match await!(do_update_check(&mut state_machine, &apps)) {
                 Err(UpdateCheckError::ResponseParser(_)) => {} // expected
@@ -625,8 +738,13 @@ pub mod tests {
             let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
             http.add_response(hyper::Response::new("".into()));
 
-            let mut state_machine =
-                StateMachine::new(StubPolicyEngine, http, StubInstaller::default(), &config);
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
             let apps = make_test_apps();
             match await!(do_update_check(&mut state_machine, &apps)) {
                 Err(UpdateCheckError::InstallPlan(_)) => {} // expected
@@ -674,6 +792,7 @@ pub mod tests {
                 http,
                 StubInstaller { should_fail: true },
                 &config,
+                timer::MockTimer::new(),
             );
             let apps = make_test_apps();
             let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
@@ -711,12 +830,16 @@ pub mod tests {
             http.add_response(hyper::Response::new("".into()));
 
             let policy_engine = MockPolicyEngine {
-                check_decision: Some(CheckDecision::Ok(RequestParams::default())),
-                update_decision: Some(UpdateDecision::DeferredByPolicy),
+                update_decision: UpdateDecision::DeferredByPolicy,
                 ..MockPolicyEngine::default()
             };
-            let mut state_machine =
-                StateMachine::new(policy_engine, http, StubInstaller::default(), &config);
+            let mut state_machine = StateMachine::new(
+                policy_engine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
             let apps = make_test_apps();
             let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
@@ -752,12 +875,16 @@ pub mod tests {
             let mut http = MockHttpRequest::new(hyper::Response::new(response.into()));
             http.add_response(hyper::Response::new("".into()));
             let policy_engine = MockPolicyEngine {
-                check_decision: Some(CheckDecision::Ok(RequestParams::default())),
-                update_decision: Some(UpdateDecision::DeniedByPolicy),
+                update_decision: UpdateDecision::DeniedByPolicy,
                 ..MockPolicyEngine::default()
             };
-            let mut state_machine =
-                StateMachine::new(policy_engine, http, StubInstaller::default(), &config);
+            let mut state_machine = StateMachine::new(
+                policy_engine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
             let apps = make_test_apps();
             let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
@@ -773,4 +900,94 @@ pub mod tests {
             await!(assert_request(state_machine.http, request_builder));
         });
     }
+
+    #[test]
+    fn test_wait_timer() {
+        let config = config_generator();
+        let mut http = MockHttpRequest::new(hyper::Response::new("".into()));
+        http.add_response(hyper::Response::new("".into()));
+        let mut timer = timer::MockTimer::new();
+        timer.expect(Duration::from_secs(111));
+        let next_update_time = SystemTime::now() + Duration::from_secs(111);
+        let policy_engine = MockPolicyEngine {
+            check_schedule: UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH,
+                next_update_time,
+                next_update_window_start: next_update_time,
+            },
+            ..MockPolicyEngine::default()
+        };
+
+        let mut state_machine =
+            StateMachine::new(policy_engine, http, StubInstaller::default(), &config, timer);
+
+        let mut pool = LocalPool::new();
+        pool.spawner()
+            .spawn_local(async move {
+                await!(state_machine.start(make_test_apps()));
+            })
+            .unwrap();
+        pool.run_until_stalled();
+    }
+
+    #[test]
+    fn test_update_cohort() {
+        let config = config_generator();
+        let response = json!({"response":{
+            "server": "prod",
+            "protocol": "3.0",
+            "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "cohort": "1",
+            "cohortname": "stable-channel",
+            "updatecheck": {
+                "status": "noupdate"
+            }
+          }]
+        }});
+        let response = serde_json::to_vec(&response).unwrap();
+        let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
+        http.add_response(hyper::Response::new(response.into()));
+        let mut timer = timer::MockTimer::new();
+        // Run the update check twice and then block.
+        timer.expect(Duration::from_secs(111));
+        timer.expect(Duration::from_secs(111));
+        let next_update_time = SystemTime::now() + Duration::from_secs(111);
+        let policy_engine = MockPolicyEngine {
+            check_schedule: UpdateCheckSchedule {
+                last_update_time: SystemTime::UNIX_EPOCH,
+                next_update_time,
+                next_update_window_start: next_update_time,
+            },
+            ..MockPolicyEngine::default()
+        };
+
+        let state_machine =
+            StateMachine::new(policy_engine, http, StubInstaller::default(), &config, timer);
+        let state_machine = Rc::new(RefCell::new(state_machine));
+
+        {
+            let state_machine = state_machine.clone();
+            let mut pool = LocalPool::new();
+            pool.spawner()
+                .spawn_local(async move {
+                    let mut state_machine = state_machine.borrow_mut();
+                    await!(state_machine.start(make_test_apps()));
+                })
+                .unwrap();
+            pool.run_until_stalled();
+        }
+
+        let request_params = RequestParams::default();
+        let mut request_builder = RequestBuilder::new(&config, &request_params);
+        let mut apps = make_test_apps();
+        apps[0].cohort.id = Some("1".to_string());
+        apps[0].cohort.name = Some("stable-channel".to_string());
+        request_builder = request_builder.add_update_check(&apps[0]);
+        // Move |state_machine| out of Rc and RefCell.
+        let state_machine = Rc::try_unwrap(state_machine).unwrap().into_inner();
+        block_on(assert_request(state_machine.http, request_builder));
+    }
+
 }
