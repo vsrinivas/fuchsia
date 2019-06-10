@@ -6,9 +6,10 @@
 // provides a place for testing aspects of launchpad that aren't necessarily
 // normally used.
 
-#include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <elfload/elfload.h>
 
@@ -26,6 +27,7 @@
 
 #include <unittest/unittest.h>
 
+#include "threads_impl.h"
 #include "util.h"
 
 static bool stdio_pipe_test(void)
@@ -154,7 +156,76 @@ static bool stdio_launchpad_pipe_test(void)
     END_TEST;
 }
 
-BEGIN_TEST_CASE(launchpad_tests)
+static bool stdio_handle_to_tid_mapping(void) {
+    BEGIN_TEST;
+
+    // Basic expectations.
+    ASSERT_EQ(__thread_handle_to_filelock_tid(0b0011), 0, "");
+    ASSERT_EQ(__thread_handle_to_filelock_tid(0b0111), 1, "");
+    ASSERT_EQ(__thread_handle_to_filelock_tid(0x123f), 0x48f, "");
+    ASSERT_EQ(__thread_handle_to_filelock_tid(0x80000000), 0x20000000, "");
+    ASSERT_EQ(__thread_handle_to_filelock_tid(0xffffffff), 0x3fffffff, "");
+    ASSERT_EQ(__thread_handle_to_filelock_tid(0xffffffff), 0x3fffffff, "");
+
+    zx_handle_t last_h0 = 0;
+    for (zx_handle_t h0 = ZX_HANDLE_FIXED_BITS_MASK; h0 > last_h0;
+         last_h0 = h0, h0 += ZX_HANDLE_FIXED_BITS_MASK + 1) {
+        // Ensure no handles are ever mapped to negative.
+        ASSERT_GE(__thread_handle_to_filelock_tid(h0), 0, "pid_t must be >= 0");
+    }
+
+    END_TEST;
+}
+
+typedef struct ThreadData {
+    FILE* f;
+    size_t index;
+} ThreadData;
+
+static void* thread_func_do_some_printing(void* arg) {
+    ThreadData* data = (ThreadData*)arg;
+    for (int i = 0; i < 100; ++i) {
+        fprintf(data->f, "this is message %d from thread %zu\n", i, data->index);
+    }
+    return NULL;
+}
+
+// This is a crash regression test, multithreaded access to FILE* was racy and
+// could crash. If this test is "flaky", this has regressed. See ZX-4278.
+static bool stdio_race_on_file_access(void) {
+    BEGIN_TEST;
+
+    zx_time_t start_time = zx_clock_get_monotonic();
+    while (zx_clock_get_monotonic() - start_time < ZX_SEC(5)) {
+        FILE* f = tmpfile();
+        ASSERT_NONNULL(f, "tmpfile failed");
+
+        pthread_t threads[100];
+        ThreadData thread_data[countof(threads)];
+
+        for (size_t i = 0; i < countof(threads); ++i) {
+            ThreadData* data = &thread_data[i];
+            data->f = f;
+            data->index = i;
+
+            int err = pthread_create(&threads[i], NULL, thread_func_do_some_printing, data);
+            ASSERT_EQ(err, 0, "pthread_create");
+        }
+
+        for (size_t i = 0; i < countof(threads); ++i) {
+            int err = pthread_join(threads[i], NULL);
+            ASSERT_EQ(err, 0, "pthread_join");
+        }
+
+        fclose(f);
+    }
+
+    END_TEST;
+}
+
+BEGIN_TEST_CASE(stdio_tests)
 RUN_TEST(stdio_pipe_test);
 RUN_TEST(stdio_launchpad_pipe_test);
-END_TEST_CASE(launchpad_tests)
+RUN_TEST(stdio_handle_to_tid_mapping);
+RUN_TEST(stdio_race_on_file_access);
+END_TEST_CASE(stdio_tests)

@@ -188,6 +188,32 @@ static inline pid_t __thread_get_tid(void) {
     return zxr_thread_get_handle(&__pthread_self()->zxr_thread);
 }
 
+// This function maps a zx_handle_t for the thread into an int, similar to
+// __thread_get_tid(). This version is used by FILE::lock to indicate that this
+// thread owns the lock. In that lock structure, values < 0 (in particular -1)
+// are used to signal that the FILE structure does not require locking (this is
+// used for unshared structures, or rentrant calls where the FILE is already
+// locked).
+//
+// Because zx_handle_t uses the top bits of its uint32_t, simply returning the
+// uint32_t as an int32_t would erronously cause the tid to be < 0, causing the
+// FILE structure to go unguarded. See ZX-4278 for more detail.
+//
+// However, zx_handle_t reserves ZX_HANDLE_FIXED_BITS_MASK of its lower bits,
+// and they're always set to 1. Because we're only using this as an opaque
+// identifier (and no longer treating it as a handle value), we can simply shift
+// the valid bits of the handle down to avoid the sign bit being set.
+//
+// This function is (semi-)exposed for testing, but should only be used by
+// __thread_get_tid_for_filelock().
+static inline pid_t __thread_handle_to_filelock_tid(zx_handle_t handle) {
+    return (pid_t)(handle >> (ZX_HANDLE_FIXED_BITS_MASK - 1));
+}
+
+static inline pid_t __thread_get_tid_for_filelock(void) {
+    return __thread_handle_to_filelock_tid(zxr_thread_get_handle(&__pthread_self()->zxr_thread));
+}
+
 int __pthread_create(pthread_t* __restrict, const pthread_attr_t* __restrict,
                      void* (*)(void*), void* __restrict) ATTR_LIBC_VISIBILITY;
 int __pthread_detach(pthread_t t) ATTR_LIBC_VISIBILITY;
