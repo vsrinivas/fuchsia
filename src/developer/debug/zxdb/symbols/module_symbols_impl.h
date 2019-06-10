@@ -64,6 +64,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   const ModuleSymbolIndex& GetIndex() const override;
   LazySymbol IndexDieRefToSymbol(
       const ModuleSymbolIndexNode::DieRef&) const override;
+  bool HasBinary() const override;
 
  private:
   llvm::DWARFUnit* CompileUnitForRelativeAddress(

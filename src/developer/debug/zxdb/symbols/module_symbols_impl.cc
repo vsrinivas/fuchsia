@@ -470,4 +470,6 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
   }
 }
 
+bool ModuleSymbolsImpl::HasBinary() const { return !binary_name_.empty(); }
+
 }  // namespace zxdb

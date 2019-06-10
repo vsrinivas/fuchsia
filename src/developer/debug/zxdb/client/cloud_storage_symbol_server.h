@@ -59,7 +59,7 @@ class MockCloudStorageSymbolServer : public CloudStorageSymbolServer {
       : CloudStorageSymbolServer(session, url) {}
 
   // Finishes constructing the object. This is manual for the mock class so we
-  // can get our instrumentation in place before we do the heaveir parts of the
+  // can get our instrumentation in place before we do the heavier parts of the
   // initialization.
   void InitForTest() { DoInit(); }
 
@@ -74,6 +74,9 @@ class MockCloudStorageSymbolServer : public CloudStorageSymbolServer {
   std::function<void(const std::map<std::string, std::string>&,
                      std::function<void(const Err&)>)>
       on_do_authenticate = {};
+
+  // Force the symbol server into the ready state.
+  void ForceReady() { ChangeState(SymbolServer::State::kReady); }
 
   // Implementation of Symbol server.
   void Fetch(const std::string& build_id, DebugSymbolFileType file_type,

@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -43,11 +44,15 @@ namespace zxdb {
 // Download object dies the destructor handles notifying the system.
 class Download {
  public:
-  explicit Download(const std::string& build_id,
+  explicit Download(const std::string& build_id, DebugSymbolFileType file_type,
                     SymbolServer::FetchCallback result_cb)
-      : build_id_(build_id), result_cb_(std::move(result_cb)) {}
+      : build_id_(build_id),
+        file_type_(file_type),
+        result_cb_(std::move(result_cb)) {}
 
   ~Download() { Finish(); }
+
+  bool active() { return !!result_cb_; }
 
   // Notify this download object that we have gotten the symbols if we're going
   // to get them.
@@ -69,6 +74,7 @@ class Download {
              std::function<void(SymbolServer::FetchCallback)>& cb);
 
   std::string build_id_;
+  DebugSymbolFileType file_type_;
   Err err_;
   std::string path_;
   SymbolServer::FetchCallback result_cb_;
@@ -94,7 +100,7 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
     return;
 
   server->CheckFetch(
-      build_id_, DebugSymbolFileType::kDebugInfo,
+      build_id_, file_type_,
       [self](const Err& err,
              std::function<void(SymbolServer::FetchCallback)> cb) {
         if (!cb)
@@ -268,14 +274,16 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
 }
 
 std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
+                                                  DebugSymbolFileType file_type,
                                                   bool quiet) {
-  if (auto existing = downloads_[build_id].lock()) {
+  if (auto existing = downloads_[{build_id, file_type}].lock()) {
     return existing;
   }
 
   auto download = std::make_shared<Download>(
-      build_id, [build_id, weak_this = weak_factory_.GetWeakPtr(), quiet](
-                    const Err& err, const std::string& path) {
+      build_id, file_type,
+      [build_id, file_type, weak_this = weak_factory_.GetWeakPtr(), quiet](
+          const Err& err, const std::string& path) {
         if (!weak_this) {
           return;
         }
@@ -286,8 +294,8 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
           if (err.has_error()) {
             // If we got a path but still had an error, something went wrong
             // with the cache repo. Add the path manually.
-            symbols.build_id_index().AddBuildIDMapping(
-                build_id, path, DebugSymbolFileType::kDebugInfo);
+            symbols.build_id_index().AddBuildIDMapping(build_id, path,
+                                                       file_type);
           }
 
           for (const auto& target : weak_this->targets_) {
@@ -296,17 +304,18 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
             }
           }
         } else if (!quiet) {
-          weak_this->NotifyFailedToFindDebugSymbols(err, build_id);
+          weak_this->NotifyFailedToFindDebugSymbols(err, build_id, file_type);
         }
       });
 
-  downloads_[build_id] = download;
+  downloads_[{build_id, file_type}] = download;
 
   return download;
 }
 
-void SystemImpl::RequestDownload(const std::string& build_id, bool quiet) {
-  auto download = GetDownload(build_id, quiet);
+void SystemImpl::RequestDownload(const std::string& build_id,
+                                 DebugSymbolFileType file_type, bool quiet) {
+  auto download = GetDownload(build_id, file_type, quiet);
 
   for (auto& server : symbol_servers_) {
     if (server->state() != SymbolServer::State::kReady) {
@@ -318,7 +327,8 @@ void SystemImpl::RequestDownload(const std::string& build_id, bool quiet) {
 }
 
 void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err,
-                                                const std::string& build_id) {
+                                                const std::string& build_id,
+                                                DebugSymbolFileType file_type) {
   for (const auto& target : targets_) {
     // Notify only those targets which are processes and which have attempted
     // and failed to load symbols for this build ID previously.
@@ -331,10 +341,17 @@ void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err,
         continue;
 
       if (!err.has_error()) {
-        process->OnSymbolLoadFailure(Err(fxl::StringPrintf(
-            "Could not load symbols for \"%s\" because there was no mapping "
-            "for build ID \"%s\".",
-            status.name.c_str(), status.build_id.c_str())));
+        if (file_type == DebugSymbolFileType::kDebugInfo) {
+          process->OnSymbolLoadFailure(Err(fxl::StringPrintf(
+              "Could not load symbols for \"%s\" because there was no mapping "
+              "for build ID \"%s\".",
+              status.name.c_str(), status.build_id.c_str())));
+        } else {
+          process->OnSymbolLoadFailure(Err(fxl::StringPrintf(
+              "Could not load binary for \"%s\" because there was no mapping "
+              "for build ID \"%s\".",
+              status.name.c_str(), status.build_id.c_str())));
+        }
       } else {
         process->OnSymbolLoadFailure(err);
       }
@@ -350,7 +367,12 @@ void SystemImpl::OnSymbolServerBecomesReady(SymbolServer* server) {
 
     for (const auto& mod : process->GetSymbols()->GetStatus()) {
       if (!mod.symbols || !mod.symbols->module_ref()) {
-        auto download = GetDownload(mod.build_id, true);
+        auto download =
+            GetDownload(mod.build_id, DebugSymbolFileType::kDebugInfo, true);
+        download->AddServer(download, server);
+      } else if (!mod.symbols->module_symbols()->HasBinary()) {
+        auto download =
+            GetDownload(mod.build_id, DebugSymbolFileType::kBinary, true);
         download->AddServer(download, server);
       }
     }
@@ -451,18 +473,23 @@ void SystemImpl::Continue() {
 }
 
 bool SystemImpl::HasDownload(const std::string& build_id) {
-  auto download = downloads_.find(build_id);
+  auto download = downloads_.find({build_id, DebugSymbolFileType::kDebugInfo});
+
+  if (download == downloads_.end()) {
+    download = downloads_.find({build_id, DebugSymbolFileType::kBinary});
+  }
 
   if (download == downloads_.end()) {
     return false;
   }
 
-  return !download->second.expired();
+  auto ptr = download->second.lock();
+  return ptr && ptr->active();
 }
 
 std::shared_ptr<Download> SystemImpl::InjectDownloadForTesting(
     const std::string& build_id) {
-  return GetDownload(build_id, true);
+  return GetDownload(build_id, DebugSymbolFileType::kDebugInfo, true);
 }
 
 void SystemImpl::DidConnect() {
@@ -553,28 +580,36 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
     for (const auto& url : urls) {
       if (existing.find(url) == existing.end()) {
         symbol_servers_.push_back(SymbolServer::FromURL(session(), url));
-        auto& server = symbol_servers_.back();
-
-        for (auto& observer : observers()) {
-          observer.DidCreateSymbolServer(server.get());
-        }
-
-        server->set_state_change_callback(
-            [weak_this = weak_factory_.GetWeakPtr()](
-                SymbolServer* server, SymbolServer::State state) {
-              if (weak_this && state == SymbolServer::State::kReady)
-                weak_this->OnSymbolServerBecomesReady(server);
-            });
-
-        if (server->state() == SymbolServer::State::kReady) {
-          OnSymbolServerBecomesReady(server.get());
-        }
+        AddSymbolServer(symbol_servers_.back().get());
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
     debug_ipc::SetDebugMode(store.GetBool(setting_name));
   } else {
     FXL_LOG(WARNING) << "Unhandled setting change: " << setting_name;
+  }
+}
+
+void SystemImpl::InjectSymbolServerForTesting(
+    std::unique_ptr<SymbolServer> server) {
+  symbol_servers_.push_back(std::move(server));
+  AddSymbolServer(symbol_servers_.back().get());
+}
+
+void SystemImpl::AddSymbolServer(SymbolServer* server) {
+  for (auto& observer : observers()) {
+    observer.DidCreateSymbolServer(server);
+  }
+
+  server->set_state_change_callback(
+      [weak_this = weak_factory_.GetWeakPtr()](SymbolServer* server,
+                                               SymbolServer::State state) {
+        if (weak_this && state == SymbolServer::State::kReady)
+          weak_this->OnSymbolServerBecomesReady(server);
+      });
+
+  if (server->state() == SymbolServer::State::kReady) {
+    OnSymbolServerBecomesReady(server);
   }
 }
 

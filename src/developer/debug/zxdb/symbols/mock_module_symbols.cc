@@ -104,4 +104,6 @@ LazySymbol MockModuleSymbols::IndexDieRefToSymbol(
   return LazySymbol(found->second);
 }
 
+bool MockModuleSymbols::HasBinary() const { return false; }
+
 }  // namespace zxdb

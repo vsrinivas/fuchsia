@@ -53,7 +53,8 @@ class SystemSymbols {
 
   class DownloadHandler {
    public:
-    virtual void RequestDownload(const std::string& build_id, bool quiet) = 0;
+    virtual void RequestDownload(const std::string& build_id,
+                                 DebugSymbolFileType file_type, bool quiet) = 0;
   };
 
   explicit SystemSymbols(DownloadHandler* download_handler);
@@ -78,14 +79,14 @@ class SystemSymbols {
   //
   // This function uses the build_id for loading symbols. The name is only
   // used for generating informational messages.
-  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module);
+  //
+  // If download is set to true, downloads will be kicked off for any missing
+  // debug files.
+  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module,
+                bool download = true);
 
  private:
   friend ModuleRef;
-
-  // Request that the system arrange for symbols to be downloaded for a given
-  // build ID.
-  void RequestDownload(const std::string& build_id, bool quiet);
 
   // Notification from the ModuleRef that all references have been deleted and
   // the tracking information should be removed from the map.

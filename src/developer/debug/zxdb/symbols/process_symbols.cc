@@ -227,8 +227,8 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& build_id) {
     }
 
     fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
-    Err err =
-        target_symbols_->system_symbols()->GetModule(build_id, &module_symbols);
+    Err err = target_symbols_->system_symbols()->GetModule(
+        build_id, &module_symbols, false);
 
     if (!err.has_error() && !module_symbols) {
       err = Err("Symbols were downloaded but did not appear in index.");

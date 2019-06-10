@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <string>
 #include <vector>
 
@@ -85,6 +86,10 @@ class ModuleSymbols {
   // object for reading.
   virtual LazySymbol IndexDieRefToSymbol(
       const ModuleSymbolIndexNode::DieRef&) const = 0;
+
+  // Return whether this module has been given the opportunity to include
+  // symbols from the binary itself, such as PLT entries.
+  virtual bool HasBinary() const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbols);

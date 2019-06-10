@@ -77,7 +77,7 @@ fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
 }
 
 Err SystemSymbols::GetModule(const std::string& build_id,
-                             fxl::RefPtr<ModuleRef>* module) {
+                             fxl::RefPtr<ModuleRef>* module, bool download) {
   auto found_existing = modules_.find(build_id);
   if (found_existing != modules_.end()) {
     *module = fxl::RefPtr<ModuleRef>(found_existing->second);
@@ -86,17 +86,23 @@ Err SystemSymbols::GetModule(const std::string& build_id,
 
   std::string file_name =
       build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kDebugInfo);
-  if (file_name.empty()) {
-    // This should only be null in tests.
-    FXL_DCHECK(download_handler_);
-
+  if (file_name.empty() && download && download_handler_) {
     *module = nullptr;
-    download_handler_->RequestDownload(build_id, false);
-    return Err();
+    download_handler_->RequestDownload(build_id,
+                                       DebugSymbolFileType::kDebugInfo, false);
   }
 
   std::string binary_file_name =
       build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kBinary);
+
+  if (binary_file_name.empty() && download && download_handler_) {
+    download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary,
+                                       false);
+  }
+
+  if (file_name.empty()) {
+    return Err();
+  }
 
   auto module_symbols = std::make_unique<ModuleSymbolsImpl>(
       file_name, binary_file_name, build_id);
