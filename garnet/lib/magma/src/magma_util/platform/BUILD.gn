@@ -46,7 +46,9 @@ source_set("barriers") {
 
 source_set("buffer_header") {
   public_configs = [ ":platform_include_config" ]
-
+  public_deps = [
+    ":handle",
+  ]
   sources = [
     "platform_buffer.h",
   ]

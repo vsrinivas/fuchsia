@@ -97,6 +97,18 @@ magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_
     return result ? MAGMA_STATUS_OK : MAGMA_STATUS_INTERNAL_ERROR;
 }
 
+magma_status_t magma_set_buffer_mapping_address_range(magma_buffer_t buffer, uint32_t handle)
+{
+    auto address_range =
+        magma::PlatformBuffer::MappingAddressRange::Create(magma::PlatformHandle::Create(handle));
+    if (!address_range)
+        return DRET(MAGMA_STATUS_INVALID_ARGS);
+
+    magma::Status status = reinterpret_cast<magma::PlatformBuffer*>(buffer)->SetMappingAddressRange(
+        std::move(address_range));
+    return status.get();
+}
+
 uint64_t magma_get_buffer_id(magma_buffer_t buffer)
 {
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();
@@ -316,6 +328,17 @@ void magma_submit_command_buffer(magma_connection_t connection, magma_buffer_t c
     private:
         magma::PlatformBuffer* platform_buffer_;
     };
+
+    // The CommandBufferInterpreter maps the command buffer in order to validate its contents
+    // and retrieve the batch buffer resource index.
+    // A virtualized client may have mapped the command buffer into a different vmar, so here we
+    // ensure to map into the root vmar.
+    magma::Status status = platform_buffer->SetMappingAddressRange(
+        magma::PlatformBuffer::MappingAddressRange::CreateDefault());
+    if (!status.ok()) {
+        DLOG("Failed to set mapping address range");
+        return;
+    }
 
     CommandBufferInterpreter interpreter(platform_buffer);
     if (!interpreter.Initialize()) {

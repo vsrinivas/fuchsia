@@ -169,6 +169,16 @@ magma_status_t magma_get_buffer_is_mappable(
     magma_bool_t* is_mappable_out);
 
 ///
+/// \brief Sets the mapping address range on the given buffer.  Ownership of the handle is
+///        transferred to magma.
+/// \param buffer The given buffer.
+/// \param handle A platform specific handle to the address range.
+///
+magma_status_t magma_set_buffer_mapping_address_range(
+    magma_buffer_t buffer,
+    uint32_t handle);
+
+///
 /// \brief Maps the given buffer's memory into the calling process's address space.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
@@ -307,7 +317,7 @@ void magma_release_command_buffer(
 
 ///
 /// \brief Submits a command buffer for execution on the GPU, and transfers ownership to the given
-///        context.
+///        context. The command buffer should not be mapped.
 /// \param connection An open connection.
 /// \param command_buffer A valid buffer containing valid magma_system_command_buffer structures.
 /// \param context_id A valid context ID.

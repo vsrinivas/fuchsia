@@ -14,34 +14,46 @@
 
 namespace magma {
 
+std::unique_ptr<PlatformBuffer::MappingAddressRange>
+PlatformBuffer::MappingAddressRange::Create(std::unique_ptr<magma::PlatformHandle> handle)
+{
+    return std::make_unique<ZirconPlatformBuffer::MappingAddressRange>(
+        handle ? zx::vmar(handle->release()) : zx::vmar());
+}
+
+uint64_t ZirconPlatformBuffer::MappingAddressRange::Length()
+{
+    zx_info_vmar_t info;
+    get()->get_info(ZX_INFO_VMAR, &info, sizeof(info), nullptr, nullptr);
+    return info.len;
+}
+
+uint64_t ZirconPlatformBuffer::MappingAddressRange::Base()
+{
+    zx_info_vmar_t info;
+    get()->get_info(ZX_INFO_VMAR, &info, sizeof(info), nullptr, nullptr);
+    return info.base;
+}
+
 class ZirconPlatformBufferMapping : public PlatformBuffer::Mapping {
 public:
-    ZirconPlatformBufferMapping(uint64_t addr, uint64_t size) : addr_(addr), size_(size) {}
+    ZirconPlatformBufferMapping(
+        uint64_t addr, uint64_t size,
+        std::shared_ptr<ZirconPlatformBuffer::MappingAddressRange> parent_vmar)
+        : addr_(addr), size_(size), parent_vmar_(std::move(parent_vmar))
+    {
+        DASSERT(parent_vmar_);
+    }
 
-    ~ZirconPlatformBufferMapping() override { zx::vmar::root_self()->unmap(addr_, size_); }
+    ~ZirconPlatformBufferMapping() override { parent_vmar_->get()->unmap(addr_, size_); }
 
     void* address() override { return reinterpret_cast<void*>(addr_); }
 
 private:
     uint64_t addr_;
     uint64_t size_;
+    std::shared_ptr<ZirconPlatformBuffer::MappingAddressRange> parent_vmar_;
 };
-
-// static
-uint64_t PlatformBuffer::MinimumMappableAddress()
-{
-    zx_info_vmar_t root_info;
-    zx::vmar::root_self()->get_info(ZX_INFO_VMAR, &root_info, sizeof(root_info), nullptr, nullptr);
-    return root_info.base;
-}
-
-// static
-uint64_t PlatformBuffer::MappableAddressRegionLength()
-{
-    zx_info_vmar_t root_info;
-    zx::vmar::root_self()->get_info(ZX_INFO_VMAR, &root_info, sizeof(root_info), nullptr, nullptr);
-    return root_info.len;
-}
 
 bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
                                            std::unique_ptr<Mapping>* mapping_out)
@@ -59,11 +71,11 @@ bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uin
     if (flags & kMapWrite)
         map_flags |= ZX_VM_PERM_WRITE;
     uintptr_t ptr;
-    zx_status_t status = zx::vmar::root_self()->map(0, vmo_, offset, length, flags, &ptr);
+    zx_status_t status = parent_vmar_->get()->map(0, vmo_, offset, length, flags, &ptr);
     if (status != ZX_OK) {
         return DRETF(false, "Failed to map: %d", status);
     }
-    *mapping_out = std::make_unique<ZirconPlatformBufferMapping>(ptr, length);
+    *mapping_out = std::make_unique<ZirconPlatformBufferMapping>(ptr, length, parent_vmar_);
     return true;
 }
 
@@ -81,16 +93,16 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t
         return DRETF(false, "buffer is already mapped");
     DASSERT(!vmar_);
 
-    uint64_t minimum_mappable = MinimumMappableAddress();
-    if (addr < minimum_mappable)
-        return DRETF(false, "addr %lx below vmar base %lx", addr, minimum_mappable);
+    uint64_t vmar_base = parent_vmar_->Base();
+    if (addr < vmar_base)
+        return DRETF(false, "addr %lx below vmar base %lx", addr, vmar_base);
 
     uint64_t child_addr;
     zx::vmar child_vmar;
-    zx_status_t status = zx::vmar::root_self()->allocate(
-        addr - minimum_mappable, length,
-        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
-        &child_vmar, &child_addr);
+    zx_status_t status = parent_vmar_->get()->allocate(addr - vmar_base, length,
+                                                       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE |
+                                                           ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
+                                                       &child_vmar, &child_addr);
     if (status != ZX_OK)
         return DRETF(false, "Failed to create vmar, status %d", status);
     DASSERT(child_addr == addr);
@@ -125,7 +137,7 @@ bool ZirconPlatformBuffer::MapCpu(void** addr_out, uint64_t alignment)
         // the buffer will fit at an aligned address inside it.
         uintptr_t vmar_size = alignment ? size() + alignment : size();
         zx::vmar child_vmar;
-        zx_status_t status = zx::vmar::root_self()->allocate(
+        zx_status_t status = parent_vmar_->get()->allocate(
             0, vmar_size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
             &child_vmar, &child_addr);
         if (status != ZX_OK)
@@ -277,6 +289,34 @@ magma_status_t ZirconPlatformBuffer::GetIsMappable(magma_bool_t* is_mappable_out
     return MAGMA_STATUS_OK;
 }
 
+magma::Status ZirconPlatformBuffer::SetMappingAddressRange(
+    std::unique_ptr<PlatformBuffer::MappingAddressRange> address_range)
+{
+    DASSERT(address_range);
+
+    auto zircon_address_range = std::static_pointer_cast<MappingAddressRange>(
+        std::shared_ptr<PlatformBuffer::MappingAddressRange>(std::move(address_range)));
+
+    if (zircon_address_range->is_root() && parent_vmar_->is_root())
+        return MAGMA_STATUS_OK;
+
+    if (map_count_)
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "Can't set mapping address range while mapped");
+
+    parent_vmar_ = std::move(zircon_address_range);
+    return MAGMA_STATUS_OK;
+}
+
+uint64_t PlatformBuffer::MinimumMappableAddress()
+{
+    return MappingAddressRange::CreateDefault()->Base();
+}
+
+uint64_t PlatformBuffer::MappableAddressRegionLength()
+{
+    return PlatformBuffer::MappingAddressRange::CreateDefault()->Length();
+}
+
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char* name)
 {
     size = magma::round_up(size, PAGE_SIZE);
@@ -290,7 +330,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
     vmo.set_property(ZX_PROP_NAME, name, strlen(name));
 
     DLOG("allocated vmo size %ld handle 0x%x", size, vmo.get());
-    return std::unique_ptr<PlatformBuffer>(new ZirconPlatformBuffer(std::move(vmo), size));
+    return std::make_unique<ZirconPlatformBuffer>(std::move(vmo), size);
 }
 
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
@@ -307,7 +347,7 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
     if (!magma::is_page_aligned(size))
         return DRETP(nullptr, "attempting to import vmo with invalid size");
 
-    return std::unique_ptr<PlatformBuffer>(new ZirconPlatformBuffer(std::move(vmo), size));
+    return std::make_unique<ZirconPlatformBuffer>(std::move(vmo), size);
 }
 
 } // namespace magma

@@ -112,6 +112,11 @@ magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_set_buffer_mapping_address_range(magma_buffer_t buffer, uint32_t handle)
+{
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_create_command_buffer(magma_connection_t connection, uint64_t size,
                                            magma_buffer_t* buffer_out)
 {

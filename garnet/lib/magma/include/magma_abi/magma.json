@@ -279,6 +279,23 @@
         ]
       },
       {
+        "name": "magma_set_buffer_mapping_address_range",
+        "type": "magma_status_t",
+        "description": "Sets the mapping address range on the given buffer.  Ownership of the handle is transferred to magma.",
+        "arguments": [
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "The given buffer."
+          },
+          {
+            "name": "handle",
+            "type": "uint32_t",
+            "description": "A platform specific handle to the address range."
+          }
+        ]
+      },
+      {
         "name": "magma_map",
         "type": "magma_status_t",
         "description": "Maps the given buffer's memory into the calling process's address space.",
@@ -548,7 +565,7 @@
       {
         "name": "magma_submit_command_buffer",
         "type": "void",
-        "description": "Submits a command buffer for execution on the GPU, and transfers ownership to the given context.",
+        "description": "Submits a command buffer for execution on the GPU, and transfers ownership to the given context. The command buffer should not be mapped.",
         "arguments": [
           {
             "name": "connection",

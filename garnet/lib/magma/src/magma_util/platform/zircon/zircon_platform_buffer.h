@@ -18,6 +18,25 @@ namespace magma {
 
 class ZirconPlatformBuffer : public PlatformBuffer {
 public:
+    class MappingAddressRange : public PlatformBuffer::MappingAddressRange {
+    public:
+        MappingAddressRange(zx::vmar vmar) : vmar_(std::move(vmar)) {}
+
+        bool is_root() const { return !vmar_.is_valid(); }
+
+        zx::unowned<zx::vmar> get() const
+        {
+            return vmar_ ? zx::unowned_vmar(vmar_.get()) : zx::vmar::root_self();
+        }
+
+        uint64_t Length() override;
+        uint64_t Base() override;
+
+    private:
+        zx::vmar vmar_;
+        DISALLOW_COPY_AND_ASSIGN(MappingAddressRange);
+    };
+
     ZirconPlatformBuffer(zx::vmo vmo, uint64_t size) : vmo_(std::move(vmo)), size_(size)
     {
         DLOG("ZirconPlatformBuffer ctor size %ld vmo 0x%x", size, vmo_.get());
@@ -62,6 +81,8 @@ public:
     bool SetCachePolicy(magma_cache_policy_t cache_policy) override;
     magma_status_t GetCachePolicy(magma_cache_policy_t* cache_policy_out) override;
     magma_status_t GetIsMappable(magma_bool_t* is_mappable_out) override;
+    magma::Status SetMappingAddressRange(
+        std::unique_ptr<PlatformBuffer::MappingAddressRange> address_range) override;
 
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 
@@ -82,6 +103,8 @@ private:
     uint64_t koid_;
     void* virt_addr_{};
     uint32_t map_count_ = 0;
+    std::shared_ptr<MappingAddressRange> parent_vmar_ =
+        std::make_shared<MappingAddressRange>(zx::vmar());
 };
 
 } // namespace magma

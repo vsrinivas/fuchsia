@@ -7,6 +7,9 @@
 
 #include "magma_common_defs.h"
 #include "magma_util/dlog.h"
+#include "magma_util/macros.h"
+#include "magma_util/status.h"
+#include "platform_handle.h"
 #include <memory>
 
 namespace magma {
@@ -14,6 +17,23 @@ namespace magma {
 // In general only the const functions in this class must be implemented in a threadsafe way
 class PlatformBuffer {
 public:
+    class MappingAddressRange {
+    public:
+        virtual ~MappingAddressRange() {}
+
+        virtual uint64_t Length() = 0;
+        virtual uint64_t Base() = 0;
+
+        static std::unique_ptr<MappingAddressRange> CreateDefault() { return Create(nullptr); }
+        static std::unique_ptr<MappingAddressRange>
+        Create(std::unique_ptr<magma::PlatformHandle> handle);
+
+    protected:
+        MappingAddressRange() {}
+
+        DISALLOW_COPY_AND_ASSIGN(MappingAddressRange);
+    };
+
     class Mapping {
     public:
         virtual ~Mapping() {}
@@ -26,6 +46,7 @@ public:
     };
 
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size, const char* name);
+
     // Import takes ownership of the handle.
     static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
 
@@ -65,11 +86,15 @@ public:
     // readable and writable.
     virtual magma_status_t GetIsMappable(magma_bool_t* is_mappable_out) = 0;
 
+    virtual magma::Status
+    SetMappingAddressRange(std::unique_ptr<MappingAddressRange> address_range) = 0;
+
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 
+    // Deprecated
     static uint64_t MinimumMappableAddress();
 
-    // Returns the length of the region where memory can be mapped.
+    // Deprecated; returns the length of the region where memory can be mapped.
     static uint64_t MappableAddressRegionLength();
 };
 
