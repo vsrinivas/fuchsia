@@ -20,6 +20,7 @@ source_set("agent_impl") {
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
