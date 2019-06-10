@@ -355,3 +355,16 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
     // For this fake implementation, just create a normal vmo:
     return zx_vmo_create(size, 0, out);
 }
+
+// Duplicates a fake handle, or if it is a real handle, calls the real
+// zx_handle_duplicate function.
+// |rights| is ignored for fake handles.
+zx_status_t zx_handle_duplicate(zx_handle_t handle_value, zx_rights_t rights, zx_handle_t* out) {
+    if (HandleTable::IsValidFakeHandle(handle_value)) {
+        fbl::RefPtr<Object> obj;
+        zx_status_t status = gHandleTable.Get(handle_value, &obj);
+        ZX_ASSERT_MSG(status == ZX_OK, "fake object_get_info: Bad handle %u\n", handle_value);
+        return gHandleTable.Add(std::move(obj), out);
+    }
+    return _zx_handle_duplicate(handle_value, rights, out);
+}
