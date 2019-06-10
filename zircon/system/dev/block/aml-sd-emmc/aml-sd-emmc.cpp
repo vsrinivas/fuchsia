@@ -163,7 +163,11 @@ int AmlSdEmmc::IrqThread() {
     while (1) {
         zx::time timestamp;
         zx_status_t status = irq_.wait(&timestamp);
-        if (status != ZX_OK) {
+        zxlogf(ERROR, "AmlSdEmmc::IrqThread: irq wait done\n");
+        if (status == ZX_ERR_CANCELED) {
+            zxlogf(ERROR, "AmlSdEmmc::IrqThread: Cancelled interrupt cancelled\n");
+            return 0;
+        } else if (status != ZX_OK) {
             zxlogf(ERROR, "AmlSdEmmc::IrqThread: zx_interrupt_wait got %d\n", status);
             break;
         }
@@ -884,6 +888,10 @@ zx_status_t AmlSdEmmc::Init() {
 zx_status_t AmlSdEmmc::Bind() {
     zx_status_t status = DdkAdd("aml-sd-emmc");
     if (status != ZX_OK) {
+        irq_.destroy();
+        if (irq_thread_) {
+            thrd_join(irq_thread_, NULL);
+        }
         zxlogf(ERROR, "AmlSdEmmc::Bind: DdkAdd failed\n");
     }
     return status;
@@ -951,7 +959,7 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     }
 
     auto dev =
-        std::make_unique<AmlSdEmmc>(parent, pdev, std::move(bti), *std::move(mmio),
+        std::make_unique<AmlSdEmmc>(parent, std::move(bti), *std::move(mmio),
                                     *std::move(pinned_mmio), config, std::move(irq), reset_gpio);
 
     if ((status = dev->Init()) != ZX_OK) {
@@ -965,12 +973,6 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     // devmgr is now in charge of the device.
     __UNUSED auto* dummy = dev.release();
     return ZX_OK;
-}
-
-AmlSdEmmc::~AmlSdEmmc() {
-    irq_.destroy();
-    if (irq_thread_)
-        thrd_join(irq_thread_, NULL);
 }
 
 void AmlSdEmmc::DdkUnbind() {
