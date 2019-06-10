@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zxio/ops.h>
@@ -46,8 +47,8 @@ typedef struct fdio_ops {
     zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
     zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
     zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
-    zx_status_t (*get_attr)(fdio_t* io, fuchsia_io_NodeAttributes* out);
-    zx_status_t (*set_attr)(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr);
+    zx_status_t (*get_attr)(fdio_t* io, fuchsia::io::NodeAttributes* out);
+    zx_status_t (*set_attr)(fdio_t* io, uint32_t flags, const fuchsia::io::NodeAttributes* attr);
     zx_status_t (*readdir)(fdio_t* io, void* ptr, size_t max, size_t* actual);
     zx_status_t (*rewind)(fdio_t* io);
     zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
@@ -228,7 +229,7 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in,
 
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
-zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr);
+zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia::io::NodeAttributes* attr);
 zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual);
 zx_status_t fdio_default_rewind(fdio_t* io);
 zx_status_t fdio_default_unlink(fdio_t* io, const char* path, size_t len);
@@ -249,7 +250,7 @@ ssize_t fdio_default_sendto(fdio_t* io, const void* _data, size_t len,
                             socklen_t addrlen);
 ssize_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags);
 ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags);
-zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* out);
+zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* out);
 zx_status_t fdio_default_close(fdio_t* io);
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out);

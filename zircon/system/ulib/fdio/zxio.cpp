@@ -77,12 +77,12 @@ static zx_status_t fdio_zxio_sync(fdio_t* io) {
     return zxio_sync(z);
 }
 
-static zx_status_t fdio_zxio_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* out) {
+static zx_status_t fdio_zxio_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* out) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_attr_get(z, out);
 }
 
-static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr) {
+static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const fuchsia::io::NodeAttributes* attr) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_attr_set(z, flags, attr);
 }

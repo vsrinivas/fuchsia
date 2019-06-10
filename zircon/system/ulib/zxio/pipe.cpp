@@ -31,7 +31,7 @@ static zx_status_t zxio_pipe_clone(zxio_t* io, zx_handle_t* out_handle) {
 }
 
 static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
-    memset(out_attr, 0, sizeof(*out_attr));
+    *out_attr = {};
     out_attr->mode = S_IFIFO | S_IRUSR | S_IWUSR;
     return ZX_OK;
 }

@@ -67,10 +67,10 @@ zx_status_t zxio_dir_open(fdio_t* io, const char* path, uint32_t flags,
     return dir->fs->Open(fbl::WrapRefPtr(dir->vn), path, flags, mode, out);
 }
 
-zx_status_t zxio_dir_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* attr) {
-    memset(attr, 0, sizeof(*attr));
+zx_status_t zxio_dir_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* attr) {
+    *attr = {};
     attr->mode = V_TYPE_DIR | V_IRUSR;
-    attr->id = fuchsia_io_INO_UNKNOWN;
+    attr->id = fuchsia::io::INO_UNKNOWN;
     attr->link_count = 1;
     return ZX_OK;
 }

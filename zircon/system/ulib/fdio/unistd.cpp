@@ -803,7 +803,7 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* _pending, zx_time_t 
 }
 
 static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
-    fuchsia_io_NodeAttributes attr;
+    fuchsia::io::NodeAttributes attr;
     zx_status_t status = fdio_get_ops(io)->get_attr(io, &attr);
     if (status != ZX_OK) {
         return status;
@@ -1656,8 +1656,7 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
 
 static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
                               int flags) {
-    fuchsia_io_NodeAttributes attr;
-    memset(&attr, 0, sizeof(attr));
+    fuchsia::io::NodeAttributes attr;
     uint32_t mask = 0;
 
     // Extract modify time.

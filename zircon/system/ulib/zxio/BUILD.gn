@@ -24,10 +24,12 @@ library("zxio") {
   public_deps = [
     # <lib/zxio/zxio.h> has #include <fuchsia/io/c/fidl.h>.
     "$zx/system/fidl/fuchsia-io:c.headers",
+    "$zx/system/fidl/fuchsia-io:llcpp.headers",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-net:c",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

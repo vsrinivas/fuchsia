@@ -6,6 +6,7 @@
 #define LIB_ZXIO_ZXIO_H_
 
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zxio/types.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -13,10 +14,10 @@
 
 __BEGIN_CDECLS
 
-typedef fuchsia_io_NodeAttributes zxio_node_attr_t;
+typedef fuchsia::io::NodeAttributes zxio_node_attr_t;
 typedef fuchsia_io_SeekOrigin zxio_seek_origin_t;
 
-// A IO object.
+// An IO object.
 //
 // Provides an ergonomic C interface to the fuchsia.io family of protocols.
 // These protocols are optimized for efficiency at the cost of ergonomics. This

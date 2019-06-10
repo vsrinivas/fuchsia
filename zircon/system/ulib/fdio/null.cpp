@@ -14,11 +14,11 @@ zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* out) {
+zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* out) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr) {
+zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia::io::NodeAttributes* attr) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

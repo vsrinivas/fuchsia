@@ -73,7 +73,7 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
 
 static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
     zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
-    memset(out_attr, 0, sizeof(*out_attr));
+    *out_attr = {};
     out_attr->mode = S_IFREG | S_IRUSR;
     out_attr->content_size = file->end - file->off;
     return ZX_OK;
