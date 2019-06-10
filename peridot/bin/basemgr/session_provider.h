@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_BASEMGR_SESSION_PROVIDER_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -37,6 +38,7 @@ class SessionProvider {
   // start a new session.
   SessionProvider(Delegate* const delegate,
                   fuchsia::sys::Launcher* const launcher,
+                  fuchsia::device::manager::AdministratorPtr administrator,
                   fuchsia::modular::AppConfig sessionmgr,
                   fuchsia::modular::AppConfig session_shell,
                   fuchsia::modular::AppConfig story_shell,
@@ -55,6 +57,11 @@ class SessionProvider {
   // once teardown is complete or has timed out.
   void Teardown(fit::function<void()> callback);
 
+  // Callback function for session_provider to invoke when there is no active
+  // session
+  void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason,
+                         bool logout_users);
+
   // Stops the active session shell, and starts the session shell specified in
   // |session_shell_config|. If no session shells are running, this has no
   // effect, and will return an immediately-completed future.
@@ -68,10 +75,19 @@ class SessionProvider {
  private:
   Delegate* const delegate_;                // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;  // Not owned.
+  fuchsia::device::manager::AdministratorPtr administrator_;
   const fuchsia::modular::AppConfig sessionmgr_;
   const fuchsia::modular::AppConfig session_shell_;
   const fuchsia::modular::AppConfig story_shell_;
   bool use_session_shell_for_story_shell_factory_;
+
+  // The number of times that session had to be recovered from a crash, during a
+  // given timeout. If the count exceed the max retry limit, a device
+  // reboot will be triggered
+  int session_crash_recovery_counter_ = 0;
+
+  // The timestamp of when last crash happened
+  zx::time last_crash_time_;
 
   fit::function<void()> on_zero_sessions_;
   std::unique_ptr<SessionContextImpl> session_context_;

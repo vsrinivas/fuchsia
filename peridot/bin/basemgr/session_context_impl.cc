@@ -73,7 +73,7 @@ SessionContextImpl::SessionContextImpl(
     // Shutdown(), which expects a graceful shutdown of sessionmgr, does not
     // apply here because sessionmgr crashed. Just run |on_session_shutdown_|
     // directly.
-    on_session_shutdown_(/* logout_users= */ false);
+    on_session_shutdown_(ShutDownReason::CRASHED, /* logout_users= */ false);
   });
 }
 
@@ -114,8 +114,9 @@ void SessionContextImpl::Shutdown(bool logout_users,
     for (const auto& callback : shutdown_callbacks_) {
       callback();
     }
-
-    on_session_shutdown_(logout_users);
+    ShutDownReason shutdown_reason =
+        logout_users ? ShutDownReason::LOGGED_OUT : ShutDownReason::CRASHED;
+    on_session_shutdown_(shutdown_reason, logout_users);
   });
 }
 

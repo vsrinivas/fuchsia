@@ -47,7 +47,7 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
       nullptr /* account */, fuchsia::ui::views::ViewToken(),
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {
       } /* get_presentation */,
-      [](bool) {} /* done_callback */);
+      [](SessionContextImpl::ShutDownReason, bool) {} /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }
@@ -81,7 +81,9 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       /* get_presentation= */
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},
       /* done_callback= */
-      [&done_callback_called](bool) { done_callback_called = true; });
+      [&done_callback_called](SessionContextImpl::ShutDownReason, bool) {
+        done_callback_called = true;
+      });
 
   RunLoopUntilIdle();
   EXPECT_TRUE(done_callback_called);

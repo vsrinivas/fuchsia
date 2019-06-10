@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
@@ -163,12 +164,15 @@ std::unique_ptr<modular::BasemgrImpl> ConfigureBasemgr(
   component_context->svc()->Connect(wlan.NewRequest());
   fuchsia::auth::account::AccountManagerPtr account_manager;
   component_context->svc()->Connect(account_manager.NewRequest());
+  fuchsia::device::manager::AdministratorPtr administrator;
+  component_context->svc()->Connect(administrator.NewRequest());
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config),
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       std::move(presenter), std::move(device_settings_manager), std::move(wlan),
-      std::move(account_manager), [&loop, &cobalt_cleanup, component_context] {
+      std::move(account_manager), std::move(administrator),
+      [&loop, &cobalt_cleanup, component_context] {
         cobalt_cleanup.call();
         component_context->outgoing()->debug_dir()->RemoveEntry(
             modular_config::kBasemgrConfigName);

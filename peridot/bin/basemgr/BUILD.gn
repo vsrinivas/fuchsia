@@ -62,6 +62,7 @@ executable_package("basemgr") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
+    "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
@@ -117,6 +118,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/lib/trace",
   ]
 

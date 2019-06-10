@@ -32,11 +32,19 @@ namespace modular {
 // owner (BasemgrImpl) to delete it.
 class SessionContextImpl : fuchsia::modular::internal::SessionContext {
  public:
-  // Called after perfoming shutdown of the session, to signal our completion
+  enum class ShutDownReason {
+    // normal mode of shutdown
+    LOGGED_OUT,
+    // sessionmgr or session_shell crashed.
+    CRASHED
+  };
+
+  // Called after performing shutdown of the session, to signal our completion
   // (and deletion of our instance) to our owner, this is done using a callback
   // supplied in the constructor. (The alternative is to take in a
   // SessionProvider*, which seems a little specific and overscoped).
-  using OnSessionShutdownCallback = fit::function<void(bool logout_users)>;
+  using OnSessionShutdownCallback =
+      fit::function<void(ShutDownReason shutdown_reason, bool logout_users)>;
 
   // Called when sessionmgr requests to acquire the presentation.
   using GetPresentationCallback = fit::function<void(

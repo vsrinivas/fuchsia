@@ -4,6 +4,7 @@
 
 #include "peridot/bin/basemgr/basemgr_impl.h"
 
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fsl/types/type_converters.h>
@@ -66,6 +67,7 @@ BasemgrImpl::BasemgrImpl(
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
     fuchsia::wlan::service::WlanPtr wlan,
     fuchsia::auth::account::AccountManagerPtr account_manager,
+    fuchsia::device::manager::AdministratorPtr device_administrator,
     fit::function<void()> on_shutdown)
     : config_(std::move(config)),
       launcher_(std::move(launcher)),
@@ -73,6 +75,7 @@ BasemgrImpl::BasemgrImpl(
       device_settings_manager_(std::move(device_settings_manager)),
       wlan_(std::move(wlan)),
       account_manager_(std::move(account_manager)),
+      device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
       base_shell_context_binding_(this),
       authentication_context_provider_binding_(this),
@@ -186,8 +189,9 @@ void BasemgrImpl::Start() {
   auto story_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.story_shell().app_config());
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_.get(), std::move(sessionmgr_config),
-      CloneStruct(session_shell_config_), std::move(story_shell_config),
+      /* delegate= */ this, launcher_.get(), std::move(device_administrator_),
+      std::move(sessionmgr_config), CloneStruct(session_shell_config_),
+      std::move(story_shell_config),
       config_.use_session_shell_for_story_shell_factory(),
       /* on_zero_sessions= */
       [this] {

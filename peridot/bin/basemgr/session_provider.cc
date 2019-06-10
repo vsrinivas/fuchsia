@@ -4,26 +4,38 @@
 
 #include "peridot/bin/basemgr/session_provider.h"
 
+#include <fuchsia/device/manager/cpp/fidl.h>
+#include <zircon/status.h>
+
 #include "peridot/bin/basemgr/session_context_impl.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
 
-SessionProvider::SessionProvider(Delegate* const delegate,
-                                 fuchsia::sys::Launcher* const launcher,
-                                 fuchsia::modular::AppConfig sessionmgr,
-                                 fuchsia::modular::AppConfig session_shell,
-                                 fuchsia::modular::AppConfig story_shell,
-                                 bool use_session_shell_for_story_shell_factory,
-                                 fit::function<void()> on_zero_sessions)
+const int kMaxCrashRecoveryLimit = 3;
+
+const zx::duration kMaxCrashRecoveryDuration =
+    zx::msec(3600 * 1000);  // 1 hour in milliseconds
+
+SessionProvider::SessionProvider(
+    Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+    fuchsia::device::manager::AdministratorPtr administrator,
+    fuchsia::modular::AppConfig sessionmgr,
+    fuchsia::modular::AppConfig session_shell,
+    fuchsia::modular::AppConfig story_shell,
+    bool use_session_shell_for_story_shell_factory,
+    fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
+      administrator_(std::move(administrator)),
       sessionmgr_(std::move(sessionmgr)),
       session_shell_(std::move(session_shell)),
       story_shell_(std::move(story_shell)),
       use_session_shell_for_story_shell_factory_(
           use_session_shell_for_story_shell_factory),
-      on_zero_sessions_(std::move(on_zero_sessions)) {}
+      on_zero_sessions_(std::move(on_zero_sessions)) {
+  last_crash_time_ = zx::clock::get_monotonic();
+}
 
 bool SessionProvider::StartSession(
     fuchsia::ui::views::ViewToken view_token,
@@ -35,20 +47,6 @@ bool SessionProvider::StartSession(
                         "exists. Try calling SessionProvider::Teardown()";
     return false;
   }
-
-  auto done = [this](bool logout_users) {
-    auto delete_session_context = [this] {
-      session_context_.reset();
-      on_zero_sessions_();
-    };
-
-    if (logout_users) {
-      delegate_->LogoutUsers(
-          [delete_session_context]() { delete_session_context(); });
-    } else {
-      delete_session_context();
-    }
-  };
 
   // TODO(MF-280): Currently, session_id maps to account ID. We should generate
   // unique session ID's and store the mapping of session ID to session.
@@ -62,6 +60,11 @@ bool SessionProvider::StartSession(
     // Non-guest user.
     session_id = std::string(account->id);
   }
+
+  auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason,
+                     bool logout_users) {
+    OnSessionShutdown(shutdown_reason, logout_users);
+  };
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
@@ -111,6 +114,48 @@ void SessionProvider::RestartSession(
   // session.
   session_context_->Shutdown(/* logout_users= */ false,
                              std::move(on_restart_complete));
+}
+
+void SessionProvider::OnSessionShutdown(
+    SessionContextImpl::ShutDownReason shutdown_reason, bool logout_users) {
+  if (shutdown_reason == SessionContextImpl::ShutDownReason::CRASHED) {
+    if (session_crash_recovery_counter_ != 0) {
+      zx::duration duration = zx::clock::get_monotonic() - last_crash_time_;
+      // If last retry is 1 hour ago, the counter will be reset
+      if (duration > kMaxCrashRecoveryDuration) {
+        session_crash_recovery_counter_ = 1;
+      }
+    }
+
+    // Check if max retry limit is reached
+    if (session_crash_recovery_counter_ == kMaxCrashRecoveryLimit) {
+      FXL_LOG(ERROR) << "Sessionmgr restart limit reached. Considering "
+                        "this an unrecoverable failure.";
+      administrator_->Suspend(fuchsia::device::manager::SUSPEND_FLAG_REBOOT,
+                              [this](zx_status_t status) {
+                                if (status != ZX_OK) {
+                                  FXL_LOG(ERROR)
+                                      << "Failed to reboot: "
+                                      << zx_status_get_string(status);
+                                }
+                              });
+      return;
+    }
+    session_crash_recovery_counter_ += 1;
+    last_crash_time_ = zx::clock::get_monotonic();
+  }
+
+  auto delete_session_context = [this] {
+    session_context_.reset();
+    on_zero_sessions_();
+  };
+
+  if (logout_users) {
+    delegate_->LogoutUsers(
+        [delete_session_context]() { delete_session_context(); });
+  } else {
+    delete_session_context();
+  }
 }
 
 }  // namespace modular

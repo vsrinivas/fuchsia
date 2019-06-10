@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
+#include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -36,7 +37,7 @@ namespace modular {
 // Basemgr is the parent process of the modular framework, and it is started by
 // the sysmgr as part of the boot sequence.
 //
-// It has several high-level responsibilites:
+// It has several high-level responsibilities:
 // 1) Initializes and owns the system's root view and presentation.
 // 2) Sets up the interactive flow for user authentication and login.
 // 3) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
@@ -62,6 +63,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
       fuchsia::wlan::service::WlanPtr wlan,
       fuchsia::auth::account::AccountManagerPtr account_manager,
+      fuchsia::device::manager::AdministratorPtr device_administrator,
       fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
@@ -154,6 +156,8 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fuchsia::wlan::service::WlanPtr wlan_;
   // Used for account management in the framework.
   fuchsia::auth::account::AccountManagerPtr account_manager_;
+  // Used to trigger device reboot.
+  fuchsia::device::manager::AdministratorPtr device_administrator_;
   fit::function<void()> on_shutdown_;
 
   // Holds the presentation service.
