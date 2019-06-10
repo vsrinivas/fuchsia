@@ -10,7 +10,8 @@
         "services": [
             "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

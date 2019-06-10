@@ -14,7 +14,8 @@
             "fuchsia.sys.Environment",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

@@ -9,6 +9,7 @@
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Environment",
             "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

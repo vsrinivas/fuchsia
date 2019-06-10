@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

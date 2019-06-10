@@ -14,6 +14,7 @@
             "fuchsia.testing.runner.TestRunner",
             "fuchsia.testing.runner.TestRunnerStore",
             "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"
         ]

@@ -5,7 +5,8 @@
     "sandbox": {
         "services": [
             "fuchsia.overnet.Overnet",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

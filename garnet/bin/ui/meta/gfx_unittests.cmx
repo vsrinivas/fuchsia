@@ -19,6 +19,7 @@
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]
     }

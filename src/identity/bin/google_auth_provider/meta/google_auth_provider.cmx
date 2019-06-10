@@ -17,6 +17,7 @@
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.logger.LogSink",
             "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.web.ContextProvider"
         ]
     }

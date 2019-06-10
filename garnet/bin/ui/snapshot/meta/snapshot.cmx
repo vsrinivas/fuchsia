@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.vulkan.loader.Loader"
         ]
