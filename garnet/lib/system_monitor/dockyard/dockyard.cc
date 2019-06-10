@@ -4,15 +4,13 @@
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
-#include <grpc++/grpc++.h>
-
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
 
+#include "garnet/lib/system_monitor/dockyard/dockyard_service_impl.h"
 #include "garnet/lib/system_monitor/gt_log.h"
-#include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 
 namespace dockyard {
 
@@ -47,113 +45,6 @@ SampleValue calculate_slope(SampleValue value, SampleValue* prior_value,
   *prior_value = value;
   *prior_time = time;
   return result;
-}
-
-// Logic and data behind the server's behavior.
-class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
- public:
-  void SetDockyard(Dockyard* dockyard) { dockyard_ = dockyard; }
-
- private:
-  Dockyard* dockyard_;
-
-  grpc::Status Init(grpc::ServerContext* context,
-                    const dockyard_proto::InitRequest* request,
-                    dockyard_proto::InitReply* reply) override {
-    auto now = std::chrono::system_clock::now();
-    auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           now.time_since_epoch())
-                           .count();
-    dockyard_->SetDeviceTimeDeltaNs(nanoseconds - request->device_time_ns());
-    if (request->version() != DOCKYARD_VERSION) {
-      return grpc::Status::CANCELLED;
-    }
-    reply->set_version(DOCKYARD_VERSION);
-    dockyard_->OnConnection();
-    return grpc::Status::OK;
-  }
-
-  grpc::Status SendInspectJson(
-      grpc::ServerContext* context,
-      grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
-                               dockyard_proto::InspectJson>* stream) override {
-    dockyard_proto::InspectJson inspect;
-    while (stream->Read(&inspect)) {
-      GT_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
-                   << inspect.dockyard_id() << ": " << inspect.json();
-      // TODO(smbug.com/43): interpret the data.
-    }
-    return grpc::Status::OK;
-  }
-
-  // This is the handler for the client sending a `SendSample` message. A better
-  // name would be `ReceiveSample` but then it wouldn't match the message
-  // name.
-  grpc::Status SendSample(
-      grpc::ServerContext* context,
-      grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
-                               dockyard_proto::RawSample>* stream) override {
-    dockyard_proto::RawSample sample;
-    while (stream->Read(&sample)) {
-      GT_LOG(INFO) << "Received sample at " << sample.time() << ", key "
-                   << sample.sample().key() << ": " << sample.sample().value();
-
-      dockyard_->AddSample(sample.sample().key(),
-                           Sample(sample.time(), sample.sample().value()));
-    }
-    return grpc::Status::OK;
-  }
-
-  // Handler for the Harvester calling `SendSamples()`.
-  grpc::Status SendSamples(
-      grpc::ServerContext* context,
-      grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
-                               dockyard_proto::RawSamples>* stream) override {
-    dockyard_proto::RawSamples samples;
-    while (stream->Read(&samples)) {
-      int limit = samples.sample_size();
-      for (int i = 0; i < limit; ++i) {
-        auto sample = samples.sample(i);
-        dockyard_->AddSample(sample.key(),
-                             Sample(samples.time(), sample.value()));
-      }
-    }
-    return grpc::Status::OK;
-  }
-
-  grpc::Status GetDockyardIdsForPaths(
-      grpc::ServerContext* context,
-      const dockyard_proto::DockyardPaths* request,
-      dockyard_proto::DockyardIds* reply) override {
-    for (int i = 0; i < request->path_size(); ++i) {
-      DockyardId id = dockyard_->GetDockyardId(request->path(i));
-      reply->add_id(id);
-      GT_LOG(DEBUG) << "Allocated DockyardIds "
-                    << ": " << request->path(i) << ", id " << id;
-    }
-    return grpc::Status::OK;
-  }
-};
-
-// Listen for Harvester connections from the Fuchsia device.
-void RunGrpcServer(const char* listen_at, Dockyard* dockyard) {
-  std::string server_address(listen_at);
-  DockyardServiceImpl service;
-  service.SetDockyard(dockyard);
-
-  grpc::ServerBuilder builder;
-  // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-  // Register "service" as the instance through which we'll communicate with
-  // clients. In this case it corresponds to a *synchronous* service.
-  builder.RegisterService(&service);
-  // Finally assemble the server.
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  GT_LOG(INFO) << "Server listening on " << server_address;
-
-  // Wait for the server to shutdown. Note that some other thread must be
-  // responsible for shutting down the server for this call to ever return.
-  server->Wait();
 }
 
 // Calculates the (edge) time for each column of the result data.
@@ -229,11 +120,7 @@ Dockyard::Dockyard()
       on_stream_sets_handler_(nullptr) {}
 
 Dockyard::~Dockyard() {
-  std::lock_guard<std::mutex> guard(mutex_);
-  GT_LOG(DEBUG) << "Stopping dockyard server";
-  if (server_thread_.joinable()) {
-    server_thread_.join();
-  }
+  StopCollectingFromDevice();
   for (SampleStreamMap::iterator i = sample_streams_.begin();
        i != sample_streams_.end(); ++i) {
     delete i->second;
@@ -318,14 +205,7 @@ void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
 
 DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
   std::lock_guard<std::mutex> guard(mutex_);
-  auto search = dockyard_path_to_id_.find(dockyard_path);
-  if (search != dockyard_path_to_id_.end()) {
-    return search->second;
-  }
-  DockyardId id = dockyard_path_to_id_.size();
-  dockyard_path_to_id_.emplace(dockyard_path, id);
-  dockyard_id_to_path_.emplace(id, dockyard_path);
-  return id;
+  return GetDockyardIdImpl(dockyard_path);
 }
 
 bool Dockyard::HasDockyardPath(const std::string& dockyard_path,
@@ -393,6 +273,10 @@ void Dockyard::ResetHarvesterData() {
   // Maybe send error responses.
   pending_requests_.clear();
 
+  for (SampleStreamMap::iterator i = sample_streams_.begin();
+       i != sample_streams_.end(); ++i) {
+    delete i->second;
+  }
   sample_streams_.clear();
   sample_stream_low_high_.clear();
 
@@ -400,7 +284,7 @@ void Dockyard::ResetHarvesterData() {
   dockyard_id_to_path_.clear();
 
   // The ID of the invalid value is zero because it's the first value created.
-  DockyardId dockyard_id = GetDockyardId("<INVALID>");
+  DockyardId dockyard_id = GetDockyardIdImpl("<INVALID>");
   // The test below should never fail (unless there's a bug).
   if (dockyard_id != INVALID_DOCKYARD_ID) {
     GT_LOG(ERROR) << "INVALID_DOCKYARD_ID string allocation failed. Exiting.";
@@ -422,23 +306,52 @@ void Dockyard::OnConnection() {
 void Dockyard::StartCollectingFrom(const std::string& device) {
   ResetHarvesterData();
   Initialize();
+  server_thread_ = std::thread([this]() { RunGrpcServer(); });
   GT_LOG(INFO) << "Starting collecting from " << device;
   // TODO(smbug.com/39): Connect to the device and start the harvester.
 }
 
-void Dockyard::StopCollectingFrom(const std::string& device) {
-  GT_LOG(INFO) << "Stop collecting from " << device;
-  // TODO(smbug.com/40): Stop the harvester.
+void Dockyard::StopCollectingFromDevice() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  if (!server_thread_.joinable()) {
+    return;
+  }
+  GT_LOG(INFO) << "Stop collecting from Harvester";
+  grpc_server_->Shutdown();
+  server_thread_.join();
+  grpc_server_.reset();
+  protocol_buffer_service_.reset();
 }
 
-bool Dockyard::Initialize() {
+void Dockyard::Initialize() {
+  std::lock_guard<std::mutex> guard(mutex_);
   if (server_thread_.joinable()) {
-    return true;
+    return;
   }
+
   GT_LOG(INFO) << "Starting dockyard server";
-  server_thread_ =
-      std::thread([this] { RunGrpcServer(DEFAULT_SERVER_ADDRESS, this); });
-  return server_thread_.joinable();
+  protocol_buffer_service_ = std::make_unique<DockyardServiceImpl>();
+
+  protocol_buffer_service_->SetDockyard(this);
+
+  std::string server_address(DEFAULT_SERVER_ADDRESS);
+  grpc::ServerBuilder builder;
+  // Listen on the given address without any authentication mechanism.
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  // Register "service" as the instance through which we'll communicate with
+  // clients. In this case it corresponds to a *synchronous* service. The
+  // builder (and server) will hold a weak pointer to the service.
+  builder.RegisterService(protocol_buffer_service_.get());
+  // Finally assemble the server.
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+  grpc_server_ = std::move(server);
+  GT_LOG(INFO) << "Server listening on " << server_address;
+}
+
+void Dockyard::RunGrpcServer() {
+  // Wait for the server to shutdown. Note that some other thread must be
+  // responsible for shutting down the server for this call to ever return.
+  grpc_server_->Wait();
 }
 
 OnConnectionCallback Dockyard::SetConnectionHandler(
@@ -792,6 +705,17 @@ void Dockyard::ComputeSmoothed(DockyardId dockyard_id,
       samples->push_back(result);
     }
   }
+}
+
+DockyardId Dockyard::GetDockyardIdImpl(const std::string& dockyard_path) {
+  auto search = dockyard_path_to_id_.find(dockyard_path);
+  if (search != dockyard_path_to_id_.end()) {
+    return search->second;
+  }
+  DockyardId id = dockyard_path_to_id_.size();
+  dockyard_path_to_id_.emplace(dockyard_path, id);
+  dockyard_id_to_path_.emplace(id, dockyard_path);
+  return id;
 }
 
 SampleValue Dockyard::OverallAverageForStream(DockyardId dockyard_id) const {

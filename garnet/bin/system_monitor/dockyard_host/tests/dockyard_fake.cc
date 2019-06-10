@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
+#include "garnet/lib/system_monitor/dockyard/dockyard_service_impl.h"
 #include "garnet/lib/system_monitor/gt_log.h"
 
 // The code below is not the real Dockyard. They are test/mock functions.
@@ -76,7 +77,7 @@ void Dockyard::OnConnection() {}
 
 void Dockyard::StartCollectingFrom(const std::string& device) {}
 
-void Dockyard::StopCollectingFrom(const std::string& device) {}
+void Dockyard::StopCollectingFromDevice() {}
 
 OnConnectionCallback Dockyard::SetConnectionHandler(
     OnConnectionCallback callback) {

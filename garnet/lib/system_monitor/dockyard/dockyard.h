@@ -17,8 +17,14 @@
 #include <vector>
 
 class SystemMonitorDockyardHostTest;
+namespace grpc {
+class Server;
+}  // namespace grpc
 
 namespace dockyard {
+
+class DockyardServiceImpl;
+class SystemMonitorDockyardTest;
 
 // An integer value representing a dockyard path.
 typedef uint32_t DockyardId;
@@ -290,7 +296,7 @@ class Dockyard {
   // Start collecting data from a named device. Tip: device names are normally
   // four short words, such as "duck floor quick rock".
   void StartCollectingFrom(const std::string& device);
-  void StopCollectingFrom(const std::string& device);
+  void StopCollectingFromDevice();
 
   OnConnectionCallback SetConnectionHandler(OnConnectionCallback callback);
 
@@ -328,6 +334,13 @@ class Dockyard {
   mutable std::mutex mutex_;
   std::thread server_thread_;
 
+  // The server handles grpc messages (runs in a background thread).
+  std::unique_ptr<grpc::Server> grpc_server_;
+
+  // The service handles proto buffers. The |service_| must remain valid until
+  // the |server_| (which holds a weak pointer to |service_|) is finished.
+  std::unique_ptr<DockyardServiceImpl> protocol_buffer_service_;
+
   // The time (clock) on the device will likely differ from the host.
   SampleTimeNs device_time_delta_ns_;
   SampleTimeNs latest_sample_time_ns_;
@@ -349,7 +362,10 @@ class Dockyard {
   DockyardIdToPathMap dockyard_id_to_path_;
 
   // Listen for incoming samples.
-  bool Initialize();
+  void Initialize();
+
+  // Listen for Harvester connections from the Fuchsia device.
+  void RunGrpcServer();
 
   // Each of these Compute*() methods aggregate samples in different ways.
   // There's no single 'true' way to represent aggregated data, so the choice
@@ -379,6 +395,9 @@ class Dockyard {
                        const StreamSetsRequest& request,
                        std::vector<SampleValue>* samples) const;
 
+  // Non-locking implementation of GetDockyardId().
+  DockyardId GetDockyardIdImpl(const std::string& dockyard_path);
+
   // Rework the response so that all values are in the range 0 to one million.
   // This represents a 0.0 to 1.0 value, scaled up.
   void NormalizeResponse(DockyardId dockyard_id,
@@ -397,6 +416,7 @@ class Dockyard {
                             StreamSetsResponse* response) const;
 
   friend class ::SystemMonitorDockyardHostTest;
+  friend class ::dockyard::SystemMonitorDockyardTest;
 };
 
 // Merge and print a request and response. It can make debugging easier to have

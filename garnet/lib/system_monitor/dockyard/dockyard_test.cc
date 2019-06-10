@@ -6,11 +6,11 @@
 
 #include <climits>
 
+#include "garnet/lib/system_monitor/dockyard/dockyard_service_impl.h"
 #include "garnet/lib/system_monitor/dockyard/test_sample_generator.h"
 #include "gtest/gtest.h"
 
 namespace dockyard {
-namespace {
 
 class SystemMonitorDockyardTest : public ::testing::Test {
  public:
@@ -63,6 +63,11 @@ class SystemMonitorDockyardTest : public ::testing::Test {
                                                            {195ULL, 148ULL}});
   }
 
+  // Returns whether the gRPC server is listening for Harvester connections.
+  bool IsGrpcServerActive() {
+    return !!dockyard_.grpc_server_ && dockyard_.server_thread_.joinable();
+  }
+
   void TestPathsCallback(const std::vector<PathInfo>& add,
                          const std::vector<uint32_t>& remove) {
     ++name_call_count_;
@@ -78,6 +83,8 @@ class SystemMonitorDockyardTest : public ::testing::Test {
   Dockyard dockyard_;
   StreamSetsResponse response_;
 };
+
+namespace {
 
 TEST_F(SystemMonitorDockyardTest, NameCallback) {
   EXPECT_EQ(100, name_call_count_);
@@ -655,6 +662,15 @@ TEST_F(SystemMonitorDockyardTest, DockyardIdToString) {
   EXPECT_EQ("dog", test);
   EXPECT_TRUE(dockyard_.GetDockyardPath(elephant_id, &test));
   EXPECT_EQ("elephant", test);
+}
+
+TEST_F(SystemMonitorDockyardTest, ServerListening) {
+  // Test for: https://bugs.chromium.org/p/fuchsia/issues/detail?id=72
+  EXPECT_FALSE(IsGrpcServerActive());
+  dockyard_.StartCollectingFrom("apple.banana.carrot.dog");
+  EXPECT_TRUE(IsGrpcServerActive());
+  dockyard_.StopCollectingFromDevice();
+  EXPECT_FALSE(IsGrpcServerActive());
 }
 
 }  // namespace

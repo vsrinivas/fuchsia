@@ -7,21 +7,26 @@ import("//third_party/protobuf/proto_library.gni")
 source_set("headers") {
   sources = [
     "dockyard.h",
-  ]
-}
-
-source_set("lib") {
-  sources = [
-    "dockyard.cc",
-    "dockyard.h",
-    "test_sample_generator.cc",
-    "test_sample_generator.h",
+    "dockyard_service_impl.h",
   ]
 
   public_deps = [
     ":protos",
     "//garnet/lib/system_monitor:lib",
     "//third_party/grpc:grpc++",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "dockyard.cc",
+    "dockyard_service_impl.cc",
+    "test_sample_generator.cc",
+    "test_sample_generator.h",
+  ]
+
+  public_deps = [
+    ":headers",
   ]
 }
 
