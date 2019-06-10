@@ -56,52 +56,7 @@ constexpr uint32_t kOpFlagGroupLeader = (1u << 8);
 
 constexpr uint32_t kOpGroupNone = 0;
 
-// class StreamOp.
-// The library schedules operations, or ops of type StreamOp. An IO operation is a discrete
-// unit of IO that is meaningful to the client. StreamOps are allocated and freed by the client.
-// The Scheduler interacts with these via the SchedulerClient interface. A reference to each op
-// acquired through this interface is retained until the Release() method is called.
-class StreamOp : public fbl::DoublyLinkedListable<StreamOp*> {
-public:
-    StreamOp() {
-        StreamOp(OpType::kOpTypeUnknown, 0, kOpGroupNone, 0, nullptr);
-    }
-
-    StreamOp(OpType type, uint32_t stream_id, uint32_t group_id, uint32_t group_members,
-             void* cookie)
-             : type_(type), stream_id_(stream_id), group_id_(group_id),
-               group_members_(group_members), result_(ZX_OK), cookie_(cookie) {}
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
-
-    OpType type() { return type_; }
-    void set_ype(OpType type) { type_ = type; }
-
-    uint32_t stream() { return stream_id_; }
-    void set_stream(uint32_t stream_id) { stream_id_ = stream_id; }
-
-    uint32_t group() { return group_id_; }
-    void set_group(uint32_t gid) { group_id_ = gid; }
-
-    uint32_t members() { return group_members_; }
-    void set_members(uint32_t group_members) { group_members_ = group_members; }
-
-    zx_status_t result() { return result_; }
-    void set_result(zx_status_t result) { result_ = result; }
-
-    void* cookie() { return cookie_; }
-    void set_cookie(void* cookie) { cookie_ = cookie; }
-
-private:
-    fbl::DoublyLinkedListNodeState<StreamOp*> node_state_;
-
-    OpType type_;               // Type of operation.
-    uint32_t stream_id_;        // Stream into which this op is queued.
-    uint32_t group_id_;         // Group of operations.
-    uint32_t group_members_;    // Number of members in the group.
-    zx_status_t result_;        // Status code of the released operation.
-    void* cookie_;              // User-defined per-op cookie.
-};
+class StreamOp;
 
 // UniqueOp is a wrapper around StreamOp designed to clarify the ownership of an op pointer.
 // It supports move-only semantics, and must be either move()'d or release()'d before destruction.
@@ -156,6 +111,53 @@ public:
 
 private:
     StreamOp* op_ = nullptr;
+};
+
+// class StreamOp.
+// The library schedules operations, or ops of type StreamOp. An IO operation is a discrete
+// unit of IO that is meaningful to the client. StreamOps are allocated and freed by the client.
+// The Scheduler interacts with these via the SchedulerClient interface. A reference to each op
+// acquired through this interface is retained until the Release() method is called.
+class StreamOp : public fbl::DoublyLinkedListable<StreamOp*> {
+public:
+    StreamOp() {
+        StreamOp(OpType::kOpTypeUnknown, 0, kOpGroupNone, 0, nullptr);
+    }
+
+    StreamOp(OpType type, uint32_t stream_id, uint32_t group_id, uint32_t group_members,
+             void* cookie)
+             : type_(type), stream_id_(stream_id), group_id_(group_id),
+               group_members_(group_members), result_(ZX_OK), cookie_(cookie) {}
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(StreamOp);
+
+    OpType type() { return type_; }
+    void set_ype(OpType type) { type_ = type; }
+
+    uint32_t stream() { return stream_id_; }
+    void set_stream(uint32_t stream_id) { stream_id_ = stream_id; }
+
+    uint32_t group() { return group_id_; }
+    void set_group(uint32_t gid) { group_id_ = gid; }
+
+    uint32_t members() { return group_members_; }
+    void set_members(uint32_t group_members) { group_members_ = group_members; }
+
+    zx_status_t result() { return result_; }
+    void set_result(zx_status_t result) { result_ = result; }
+
+    void* cookie() { return cookie_; }
+    void set_cookie(void* cookie) { cookie_ = cookie; }
+
+private:
+    fbl::DoublyLinkedListNodeState<StreamOp*> node_state_;
+
+    OpType type_;               // Type of operation.
+    uint32_t stream_id_;        // Stream into which this op is queued.
+    uint32_t group_id_;         // Group of operations.
+    uint32_t group_members_;    // Number of members in the group.
+    zx_status_t result_;        // Status code of the released operation.
+    void* cookie_;              // User-defined per-op cookie.
 };
 
 } // namespace ioscheduler
