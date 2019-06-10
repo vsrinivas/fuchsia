@@ -16,22 +16,18 @@ use std::sync::RwLock;
 
 use fuchsia_async as fasync;
 
+type SettingDataMap = Arc<RwLock<HashMap<SettingType, SettingData>>>;
+
 pub struct SetUIHandler {
     // Tracks active adapters.
     adapters: RwLock<HashMap<SettingType, Mutex<Box<dyn Adapter + Send + Sync>>>>,
-    // Provides bookkeeping for last value transmitted by a callback. Asynchronous
-    // to allow sharing between all callback closures.
-    last_seen_settings: Arc<RwLock<HashMap<SettingType, SettingData>>>,
 }
 
 /// SetUIHandler handles all API calls for the service. It is intended to be
 /// used as a single instance to service multiple streams.
 impl SetUIHandler {
     pub fn new() -> SetUIHandler {
-        Self {
-            adapters: RwLock::new(HashMap::new()),
-            last_seen_settings: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self { adapters: RwLock::new(HashMap::new()) }
     }
 
     /// Adds (or replaces) any existing adapter. Setting type mapping is
@@ -43,9 +39,7 @@ impl SetUIHandler {
     /// Asynchronous handling of the given stream. Note that we must consider the
     /// possibility of simultaneous active streams.
     pub async fn handle_stream(&self, mut stream: SetUiServiceRequestStream) -> Result<(), Error> {
-        // A single StreamSetting watcher is created for the lifetime of the stream.
-        // It is used for asynchronously processing updates to a setting type and
-        // tracking the current values.
+        let last_seen_settings = Arc::new(RwLock::new(HashMap::new()));
 
         while let Some(req) = await!(stream.try_next())? {
             match req {
@@ -54,7 +48,7 @@ impl SetUIHandler {
                     responder.send(&mut response)?;
                 }
                 SetUiServiceRequest::Watch { setting_type, responder } => {
-                    self.watch(setting_type, responder);
+                    self.watch(setting_type, responder, last_seen_settings.clone());
                 }
                 _ => {}
             }
@@ -63,17 +57,22 @@ impl SetUIHandler {
         Ok(())
     }
 
-    fn watch(&self, setting_type: SettingType, responder: SetUiServiceWatchResponder) {
+    fn watch(
+        &self,
+        setting_type: SettingType,
+        responder: SetUiServiceWatchResponder,
+        last_seen_settings: SettingDataMap,
+    ) {
         let (sender, receiver) = channel();
 
-        if self.listen(setting_type, sender).is_ok() {
-            // We clone here so the value can be moved into the closure below.
-            let last_seen_settings_clone = self.last_seen_settings.clone();
-
+        if self
+            .listen(setting_type, sender, last_seen_settings.read().unwrap().get(&setting_type))
+            .is_ok()
+        {
             fasync::spawn(async move {
                 await!(receiver.map(|data| {
                     if let Ok(data) = data {
-                        last_seen_settings_clone
+                        last_seen_settings
                             .write()
                             .unwrap()
                             .insert(setting_type, data.clone());
@@ -93,10 +92,15 @@ impl SetUIHandler {
 
     /// The core logic behind listening to a setting is separate from the watch
     /// method definition to facilitate testing.
-    fn listen(&self, setting_type: SettingType, sender: Sender<SettingData>) -> Result<(), Error> {
+    fn listen(
+        &self,
+        setting_type: SettingType,
+        sender: Sender<SettingData>,
+        last_seen: Option<&SettingData>,
+    ) -> Result<(), Error> {
         if let Some(adapter_lock) = self.adapters.read().unwrap().get(&setting_type) {
             if let Ok(adapter) = adapter_lock.lock() {
-                adapter.listen(sender, self.last_seen_settings.read().unwrap().get(&setting_type));
+                adapter.listen(sender, last_seen);
                 return Ok(());
             }
         }
@@ -185,24 +189,43 @@ mod tests {
             MutationResponse { return_code: ReturnCode::Ok }
         );
 
-        let (sender, mut receiver) = channel();
+        // Verify request with current value as seen returns nothing.
+        {
+            let (sender, mut receiver) = channel();
+            assert!(handler
+                .listen(
+                    SettingType::Unknown,
+                    sender,
+                    Some(&SettingData::StringValue(test_val.clone()))
+                )
+                .is_ok());
+            let listen_result = receiver.try_recv();
 
-        // Listen for change
-        assert!(handler.listen(SettingType::Unknown, sender).is_ok());
+            assert!(listen_result.is_ok());
+            assert!(listen_result.unwrap() == None);
+        }
 
-        let listen_result = receiver.try_recv();
+        // Verify request with no seen value returns current value.
+        {
+            let (sender, mut receiver) = channel();
 
-        assert!(listen_result.is_ok());
+            // Listen for change
+            assert!(handler.listen(SettingType::Unknown, sender, None).is_ok());
 
-        let data = listen_result.unwrap();
+            let listen_result = receiver.try_recv();
 
-        // Ensure value matches original change.
-        match data {
-            Some(SettingData::StringValue(string_val)) => {
-                assert_eq!(string_val, test_val.clone());
-            }
-            _ => {
-                panic!("Did not receive back expected SettingData type");
+            assert!(listen_result.is_ok());
+
+            let data = listen_result.unwrap();
+
+            // Ensure value matches original change.
+            match data {
+                Some(SettingData::StringValue(string_val)) => {
+                    assert_eq!(string_val, test_val.clone());
+                }
+                _ => {
+                    panic!("Did not receive back expected SettingData type");
+                }
             }
         }
     }

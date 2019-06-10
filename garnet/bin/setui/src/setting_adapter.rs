@@ -89,13 +89,22 @@ impl Adapter for SettingAdapter {
     }
 
     /// Listen
-    fn listen(&self, sender: Sender<SettingData>, _last_seen_data: Option<&SettingData>) {
+    fn listen(&self, sender: Sender<SettingData>, last_seen_data: Option<&SettingData>) {
         if let Some(ref value) = self.latest_val {
-            sender.send(value.clone()).ok();
-        } else {
-            if let Ok(mut senders) = self.senders.lock() {
-                senders.push(sender);
+            let mut should_send = last_seen_data == None;
+
+            if let Some(data) = last_seen_data {
+                should_send = data != value;
             }
+
+            if should_send {
+                sender.send(value.clone()).ok();
+                return;
+            }
+        }
+
+        if let Ok(mut senders) = self.senders.lock() {
+            senders.push(sender);
         }
     }
 }
