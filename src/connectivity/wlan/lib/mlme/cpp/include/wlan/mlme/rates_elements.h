@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RATES_ELEMENTS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RATES_ELEMENTS_H_
 
+#include <fbl/span.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element.h>
-#include <wlan/common/span.h>
 
 // Utilities for writing SupportedRates / ExtendedSupportedRates elements
 
@@ -15,7 +15,7 @@ namespace wlan {
 
 class RatesWriter {
  public:
-  explicit RatesWriter(Span<const SupportedRate> all_rates)
+  explicit RatesWriter(fbl::Span<const SupportedRate> all_rates)
       : all_rates_(all_rates) {}
 
   void WriteSupportedRates(BufferWriter* w) const;
@@ -23,7 +23,7 @@ class RatesWriter {
   void WriteExtendedSupportedRates(BufferWriter* w) const;
 
  private:
-  Span<const SupportedRate> all_rates_;
+  fbl::Span<const SupportedRate> all_rates_;
 };
 
 }  // namespace wlan

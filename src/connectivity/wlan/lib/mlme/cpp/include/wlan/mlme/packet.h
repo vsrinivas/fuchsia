@@ -7,10 +7,10 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
+#include <fbl/span.h>
 #include <fbl/unique_ptr.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/logging.h>
-#include <wlan/common/span.h>
 #include <wlan/mlme/wlan.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>

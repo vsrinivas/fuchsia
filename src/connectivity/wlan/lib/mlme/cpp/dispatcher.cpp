@@ -119,7 +119,7 @@ zx_status_t Dispatcher::HandlePortPacket(uint64_t key) {
   return ZX_OK;
 }
 
-zx_status_t Dispatcher::HandleAnyMlmeMessage(Span<uint8_t> span) {
+zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
   debugfn();
 
   auto hdr = FromBytes<fidl_message_header_t>(span);
@@ -195,7 +195,7 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(Span<uint8_t> span) {
 }
 
 template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMessage(Span<uint8_t> span,
+zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span,
                                           uint32_t ordinal) {
   auto msg = MlmeMsg<Message>::Decode(span, ordinal);
   if (!msg.has_value()) {
@@ -312,7 +312,7 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint32_t ordinal,
                         fuchsia_wlan_mlme_MLMEListMinstrelPeersOrdinal, txid);
 }
 
-zx_status_t Dispatcher::HandleMinstrelTxStats(Span<uint8_t> span,
+zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span,
                                               uint32_t ordinal,
                                               zx_txid_t txid) const {
   debugfn();

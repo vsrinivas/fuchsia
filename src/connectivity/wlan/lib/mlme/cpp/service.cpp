@@ -103,11 +103,10 @@ zx_status_t SendAssocConfirm(DeviceInterface* device,
                         fuchsia_wlan_mlme_MLMEAssociateConfOrdinal);
 }
 
-zx_status_t SendAssocIndication(DeviceInterface* device,
-                                const common::MacAddr& peer_sta,
-                                uint16_t listen_interval,
-                                Span<const uint8_t> ssid,
-                                std::optional<Span<const uint8_t>> rsn_body) {
+zx_status_t SendAssocIndication(
+    DeviceInterface* device, const common::MacAddr& peer_sta,
+    uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
+    std::optional<fbl::Span<const uint8_t>> rsn_body) {
   debugfn();
   wlan_mlme::AssociateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());

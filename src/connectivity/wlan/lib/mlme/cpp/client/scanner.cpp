@@ -255,7 +255,7 @@ void Scanner::HandleBeacon(const MgmtFrameView<Beacon>& frame) {
     auto bssid = frame.hdr()->addr3;
     auto rx_info = frame.rx_info();
     auto bcn_frame = frame.NextFrame();
-    Span<const uint8_t> ie_chain = bcn_frame.body_data();
+    fbl::Span<const uint8_t> ie_chain = bcn_frame.body_data();
 
     ProcessBeaconOrProbeResponse(bssid, *bcn_frame.hdr(), ie_chain, rx_info);
   }
@@ -267,7 +267,7 @@ void Scanner::HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame) {
     auto bssid = frame.hdr()->addr3;
     auto rx_info = frame.rx_info();
     auto probe_resp_body = frame.NextFrame();
-    Span<const uint8_t> ie_chain = probe_resp_body.body_data();
+    fbl::Span<const uint8_t> ie_chain = probe_resp_body.body_data();
 
     Beacon beacon;
     beacon.timestamp = probe_resp_body.hdr()->timestamp;
@@ -280,7 +280,7 @@ void Scanner::HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame) {
 
 void Scanner::ProcessBeaconOrProbeResponse(const common::MacAddr bssid,
                                            const Beacon& beacon,
-                                           Span<const uint8_t> ie_chain,
+                                           fbl::Span<const uint8_t> ie_chain,
                                            const wlan_rx_info_t* rx_info) {
   debugfn();
 

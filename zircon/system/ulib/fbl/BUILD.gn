@@ -30,6 +30,7 @@ library("fbl") {
     "fbl/ref_ptr.h",
     "fbl/slab_allocator.h",
     "fbl/slab_malloc.h",
+    "fbl/span.h",
     "fbl/string.h",
     "fbl/string_buffer.h",
     "fbl/string_piece.h",

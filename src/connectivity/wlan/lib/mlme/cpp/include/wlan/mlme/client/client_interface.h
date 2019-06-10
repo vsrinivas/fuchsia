@@ -29,12 +29,12 @@ class ClientInterface {
       uint32_t timeout) = 0;
   virtual zx_status_t Deauthenticate(
       ::fuchsia::wlan::mlme::ReasonCode reason_code) = 0;
-  virtual zx_status_t Associate(Span<const uint8_t> rsne) = 0;
-  virtual zx_status_t SendEapolFrame(Span<const uint8_t> eapol_frame,
+  virtual zx_status_t Associate(fbl::Span<const uint8_t> rsne) = 0;
+  virtual zx_status_t SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
                                      const common::MacAddr& src,
                                      const common::MacAddr& dst) = 0;
   virtual zx_status_t SetKeys(
-      Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) = 0;
+      fbl::Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) = 0;
   virtual void UpdateControlledPort(
       ::fuchsia::wlan::mlme::ControlledPortState state) = 0;
 

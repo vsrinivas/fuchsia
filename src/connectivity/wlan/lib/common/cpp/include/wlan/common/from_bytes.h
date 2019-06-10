@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_FROM_BYTES_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_FROM_BYTES_H_
 
-#include <wlan/common/span.h>
+#include <fbl/span.h>
 
 #include <cstdint>
 
@@ -25,7 +25,7 @@ const T* FromBytes(const uint8_t* buf, size_t len) {
 }
 
 template <typename T>
-const T* FromBytes(Span<const uint8_t> bytes) {
+const T* FromBytes(fbl::Span<const uint8_t> bytes) {
   if (bytes.size() < sizeof(T))
     return nullptr;
   return reinterpret_cast<const T*>(bytes.data());

@@ -27,7 +27,7 @@ class BeaconSender {
   void Stop();
   zx_status_t UpdateBeacon(const PsCfg& ps_cfg);
   void SendProbeResponse(const common::MacAddr& recv_addr,
-                         Span<const uint8_t> ie_chain);
+                         fbl::Span<const uint8_t> ie_chain);
 
  private:
   zx_status_t BuildBeacon(const PsCfg& ps_cfg, MgmtFrame<Beacon>* frame,
@@ -41,8 +41,8 @@ class BeaconSender {
 };
 
 // Visible for testing
-bool ShouldSendProbeResponse(Span<const uint8_t> ie_chain,
-                             Span<const uint8_t> our_ssid);
+bool ShouldSendProbeResponse(fbl::Span<const uint8_t> ie_chain,
+                             fbl::Span<const uint8_t> our_ssid);
 
 }  // namespace wlan
 

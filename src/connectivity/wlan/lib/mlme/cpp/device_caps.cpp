@@ -22,8 +22,8 @@ const wlan_info_band_info_t* FindBandByChannel(const wlan_info_t& device_info,
   return nullptr;
 }
 
-const Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info,
-                                            uint8_t channel) {
+const fbl::Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info,
+                                                 uint8_t channel) {
   const wlan_info_band_info_t* band = FindBandByChannel(device_info, channel);
   if (band == nullptr) {
     return {};

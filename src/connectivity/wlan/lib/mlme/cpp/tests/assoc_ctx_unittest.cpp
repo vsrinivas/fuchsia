@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/span.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/fidl/cpp/vector.h>
@@ -9,7 +10,6 @@
 #include <wlan/common/element.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/common/span.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/client/station.h>
@@ -66,7 +66,7 @@ AssociationResponse* WriteAssocRespHdr(BufferWriter* w) {
   return assoc_resp;
 }
 
-Span<const uint8_t> WriteAssocRespElements(Span<uint8_t> buffer) {
+fbl::Span<const uint8_t> WriteAssocRespElements(fbl::Span<uint8_t> buffer) {
   BufferWriter w(buffer);
   HtCapabilities ht_cap{};
   ht_cap.ht_cap_info.set_rx_stbc(1);

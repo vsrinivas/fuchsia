@@ -72,8 +72,8 @@ TEST(MlmeMsg, CorruptedPacket) {
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
   fidl::Encoder enc(42);
   SerializeServiceMsg(&enc, fidl_msg.get());
-  Span<uint8_t> span(enc.GetMessage().bytes());
-  Span<uint8_t> invalid_span(span.data(), span.size() - 1);
+  fbl::Span<uint8_t> span(enc.GetMessage().bytes());
+  fbl::Span<uint8_t> invalid_span(span.data(), span.size() - 1);
 
   // Verify correctness.
   auto mlme_msg =

@@ -183,7 +183,7 @@ static fbl::unique_ptr<Packet> MakeOriginalPrep(
 static fbl::unique_ptr<Packet> MakeForwardedPreq(
     const MacHeaderWriter& mac_header_writer,
     const common::ParsedPreq& incoming_preq, uint32_t last_hop_metric,
-    Span<const PreqPerTarget> to_forward) {
+    fbl::Span<const PreqPerTarget> to_forward) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -448,7 +448,7 @@ static void WriteForwardedPerrDestination(
 static fbl::unique_ptr<Packet> MakeForwardedPerr(
     const MacHeaderWriter& mac_header_writer,
     const common::ParsedPerr& incoming_perr, uint8_t num_destinations,
-    Span<const uint8_t> destinations) {
+    fbl::Span<const uint8_t> destinations) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -531,7 +531,7 @@ static void HandlePerr(const common::MacAddr& perr_transmitter_addr,
   }
 }
 
-PacketQueue HandleHwmpAction(Span<const uint8_t> elements,
+PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,
                              const common::MacAddr& action_transmitter_addr,
                              const common::MacAddr& self_addr,
                              uint32_t last_hop_metric,

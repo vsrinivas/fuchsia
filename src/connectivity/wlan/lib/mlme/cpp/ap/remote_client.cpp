@@ -226,10 +226,10 @@ void AuthenticatedState::HandleAssociationRequest(
            client_->addr().ToString().c_str());
 
   auto assoc_req_frame = frame.View().NextFrame();
-  Span<const uint8_t> ies = assoc_req_frame.body_data();
+  fbl::Span<const uint8_t> ies = assoc_req_frame.body_data();
 
-  std::optional<Span<const uint8_t>> ssid;
-  std::optional<Span<const uint8_t>> rsn_body;
+  std::optional<fbl::Span<const uint8_t>> ssid;
+  std::optional<fbl::Span<const uint8_t>> rsn_body;
   for (auto [id, raw_body] : common::ElementSplitter(ies)) {
     switch (id) {
       case element_id::kSsid:
@@ -1135,7 +1135,8 @@ wlan_assoc_ctx_t RemoteClient::BuildAssocContext(uint16_t aid) {
           // AP role). The field is mainly for client role. (Maybe we need it
           // in the future for Mesh role. Don't know yet) Thus, hard-code a
           // number here for ath10k AP mode only. See NET-1816.
-  assoc.phy = WLAN_INFO_PHY_TYPE_ERP;  // Default vlaue. Will be overwritten below.
+  assoc.phy =
+      WLAN_INFO_PHY_TYPE_ERP;  // Default vlaue. Will be overwritten below.
   assoc.chan = bss_->Chan();
 
   auto rates = bss_->Rates();

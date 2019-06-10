@@ -23,7 +23,8 @@ wlan_info_phy_type_t AssocContext::DerivePhy() const {
   return WLAN_INFO_PHY_TYPE_ERP;
 }
 
-const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz) {
+const wlan_info_band_info_t* FindBand(const wlan_info_t& ifc_info,
+                                      bool is_5ghz) {
   ZX_DEBUG_ASSERT(ifc_info.bands_count <= WLAN_INFO_MAX_BANDS);
 
   for (uint8_t idx = 0; idx < ifc_info.bands_count; idx++) {
@@ -68,7 +69,8 @@ std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
 }
 
 // TODO(NET-1287): Refactor together with Bss::ParseIE()
-std::optional<AssocContext> ParseAssocRespIe(Span<const uint8_t> ie_chains) {
+std::optional<AssocContext> ParseAssocRespIe(
+    fbl::Span<const uint8_t> ie_chains) {
   AssocContext ctx{};
   for (auto [id, raw_body] : common::ElementSplitter(ie_chains)) {
     switch (id) {
@@ -154,7 +156,7 @@ AssocContext MakeClientAssocCtx(const wlan_info_t& ifc_info,
 }
 
 std::optional<AssocContext> MakeBssAssocCtx(
-    const AssociationResponse& assoc_resp, Span<const uint8_t> ie_chains,
+    const AssociationResponse& assoc_resp, fbl::Span<const uint8_t> ie_chains,
     const common::MacAddr& peer) {
   auto ctx = ParseAssocRespIe(ie_chains);
   if (!ctx.has_value()) {

@@ -74,7 +74,7 @@ class ScannerTest : public ::testing::Test {
         {std::move(req), fuchsia_wlan_mlme_MLMEOnScanResultOrdinal});
   }
 
-  fbl::unique_ptr<wlan::Packet> CreatePacket(Span<const uint8_t> data) {
+  fbl::unique_ptr<wlan::Packet> CreatePacket(fbl::Span<const uint8_t> data) {
     wlan_rx_info_t info;
     info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
     info.chan = {
@@ -254,7 +254,8 @@ TEST_F(ScannerTest, ActiveScanning) {
       0x00, 0x00,                           // ssid IE
       0x01, 0x06, 12, 24, 48, 54, 96, 108,  // supported rates IE
   };
-  EXPECT_RANGES_EQ(Span<const uint8_t>(frame.data(), frame.len()), expected);
+  EXPECT_RANGES_EQ(fbl::Span<const uint8_t>(frame.data(), frame.len()),
+                   expected);
 
   // Mock receiving a probe response during scan. Verify that scan result is
   // constructed.

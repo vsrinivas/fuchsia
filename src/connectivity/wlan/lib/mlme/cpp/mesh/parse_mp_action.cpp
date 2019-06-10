@@ -23,7 +23,7 @@ struct RequiredIes {
 };
 
 static void HandleCommonMpElement(element_id::ElementId id,
-                                  Span<const uint8_t> raw_body,
+                                  fbl::Span<const uint8_t> raw_body,
                                   wlan_mlme::MeshPeeringCommon* out,
                                   RequiredIes* required_ies) {
   switch (id) {

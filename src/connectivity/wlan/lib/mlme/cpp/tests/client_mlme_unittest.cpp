@@ -172,7 +172,7 @@ struct ClientTest : public ::testing::Test {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     auto assoc_req_frame = frame.NextFrame();
-    Span<const uint8_t> ie_chain{assoc_req_frame.body_data()};
+    fbl::Span<const uint8_t> ie_chain{assoc_req_frame.body_data()};
     ASSERT_TRUE(ValidateFrame("invalid assoc request", *pkt.pkt));
 
     bool has_ssid = false;
@@ -210,7 +210,7 @@ struct ClientTest : public ::testing::Test {
   };
 
   void AssertDataFrameSentToAp(WlanPacket pkt,
-                               Span<const uint8_t> expected_payload,
+                               fbl::Span<const uint8_t> expected_payload,
                                DataFrameAssert asserts = {.protected_frame = 0,
                                                           .more_data = 0}) {
     auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
@@ -656,8 +656,8 @@ TEST_F(ClientTest, ProcessEmptyDataFrames) {
 
 TEST_F(ClientTest, ProcessAmsduDataFrame) {
   const uint8_t payload_data[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  Span<const uint8_t> payload(payload_data);
-  std::vector<Span<const uint8_t>> payloads;
+  fbl::Span<const uint8_t> payload(payload_data);
+  std::vector<fbl::Span<const uint8_t>> payloads;
   for (size_t payload_len = 1; payload_len <= 10; ++payload_len) {
     payloads.push_back(payload.subspan(0, payload_len));
   }
@@ -666,8 +666,8 @@ TEST_F(ClientTest, ProcessAmsduDataFrame) {
   client.HandleFramePacket(CreateAmsduDataFramePacket(payloads));
   ASSERT_EQ(device.eth_queue.size(), payloads.size());
   for (size_t i = 0; i < payloads.size(); ++i) {
-    auto eth_payload =
-        Span<const uint8_t>(device.eth_queue[i]).subspan(sizeof(EthernetII));
+    auto eth_payload = fbl::Span<const uint8_t>(device.eth_queue[i])
+                           .subspan(sizeof(EthernetII));
     EXPECT_RANGES_EQ(eth_payload, payloads[i]);
   }
 }

@@ -26,6 +26,7 @@ test("fbl") {
     "macro_tests.cpp",
     "recycler_tests.cpp",
     "ref_ptr_tests.cpp",
+    "span_tests.cpp",
     "string_buffer_tests.cpp",
     "string_piece_tests.cpp",
     "string_printf_tests.cpp",

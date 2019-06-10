@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <wlan/common/span.h>
+#include <fbl/span.h>
 
 #include <cstddef>
 
@@ -16,8 +16,8 @@ namespace wlan {
 const wlan_info_band_info_t* FindBandByChannel(const wlan_info_t& device_info,
                                                uint8_t channel);
 
-const Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info,
-                                            uint8_t channel);
+const fbl::Span<const uint8_t> GetRatesByChannel(const wlan_info_t& device_info,
+                                                 uint8_t channel);
 
 }  // namespace wlan
 

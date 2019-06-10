@@ -28,7 +28,7 @@ struct BeaconConfig {
   MeshConfiguration* mesh_config;
   const uint8_t* mesh_id;
   size_t mesh_id_len;
-  Span<const SupportedRate>
+  fbl::Span<const SupportedRate>
       rates;  // covers both Supported Rates and Ext Sup Rates elements
 };
 

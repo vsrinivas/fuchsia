@@ -63,7 +63,7 @@ class Scanner {
   bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
   void ProcessBeaconOrProbeResponse(const common::MacAddr bssid,
                                     const Beacon& beacon,
-                                    Span<const uint8_t> ie_chain,
+                                    fbl::Span<const uint8_t> ie_chain,
                                     const wlan_rx_info_t* rx_info);
   void SendProbeRequest(wlan_channel_t channel);
   OffChannelRequest CreateOffChannelRequest();

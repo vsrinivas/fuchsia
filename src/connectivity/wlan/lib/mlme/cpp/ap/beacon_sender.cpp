@@ -81,15 +81,15 @@ void BeaconSender::Stop() {
 
 bool BeaconSender::IsStarted() { return bss_ != nullptr; }
 
-static bool SsidMatch(Span<const uint8_t> our_ssid,
-                      Span<const uint8_t> req_ssid) {
+static bool SsidMatch(fbl::Span<const uint8_t> our_ssid,
+                      fbl::Span<const uint8_t> req_ssid) {
   return req_ssid.empty()  // wildcard always matches
          || std::equal(our_ssid.begin(), our_ssid.end(), req_ssid.begin(),
                        req_ssid.end());
 }
 
-bool ShouldSendProbeResponse(Span<const uint8_t> ie_chain,
-                             Span<const uint8_t> our_ssid) {
+bool ShouldSendProbeResponse(fbl::Span<const uint8_t> ie_chain,
+                             fbl::Span<const uint8_t> our_ssid) {
   auto splitter = common::ElementSplitter(ie_chain);
   auto it = std::find_if(splitter.begin(), splitter.end(), [](auto elem) {
     return std::get<element_id::ElementId>(elem) == element_id::kSsid;
@@ -102,7 +102,7 @@ bool ShouldSendProbeResponse(Span<const uint8_t> ie_chain,
     return true;
   }
 
-  if (auto ssid = common::ParseSsid(std::get<Span<const uint8_t>>(*it))) {
+  if (auto ssid = common::ParseSsid(std::get<fbl::Span<const uint8_t>>(*it))) {
     return SsidMatch(our_ssid, *ssid);
   }
   // Malformed SSID element
@@ -150,7 +150,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
 }
 
 void BeaconSender::SendProbeResponse(const common::MacAddr& recv_addr,
-                                     Span<const uint8_t> ie_chain) {
+                                     fbl::Span<const uint8_t> ie_chain) {
   if (!IsStarted()) {
     return;
   }

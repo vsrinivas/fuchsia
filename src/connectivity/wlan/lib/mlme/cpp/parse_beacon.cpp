@@ -84,16 +84,16 @@ wlan_channel_t DeriveChannel(uint8_t rx_channel,
   return chan;
 }
 
-static bool IsBlankSsid(Span<const uint8_t> ssid) {
+static bool IsBlankSsid(fbl::Span<const uint8_t> ssid) {
   return std::all_of(ssid.cbegin(), ssid.cend(),
                      [](auto c) { return c == '\0'; });
 }
 
-static void DoParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
-                                  wlan_mlme::BSSDescription* bss_desc,
-                                  std::optional<uint8_t>* dsss_chan,
-                                  Span<const SupportedRate>* supp_rates,
-                                  Span<const SupportedRate>* ext_supp_rates) {
+static void DoParseBeaconElements(
+    fbl::Span<const uint8_t> ies, uint8_t rx_channel,
+    wlan_mlme::BSSDescription* bss_desc, std::optional<uint8_t>* dsss_chan,
+    fbl::Span<const SupportedRate>* supp_rates,
+    fbl::Span<const SupportedRate>* ext_supp_rates) {
   for (auto [id, raw_body] : common::ElementSplitter(ies)) {
     switch (id) {
       case element_id::kSsid:
@@ -171,7 +171,7 @@ static void DoParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
   }
 }
 
-static void ClassifyRates(Span<const SupportedRate> rates,
+static void ClassifyRates(fbl::Span<const SupportedRate> rates,
                           ::std::vector<uint8_t>* basic,
                           ::std::vector<uint8_t>* op) {
   for (SupportedRate r : rates) {
@@ -182,8 +182,8 @@ static void ClassifyRates(Span<const SupportedRate> rates,
   }
 }
 
-void FillRates(Span<const SupportedRate> supp_rates,
-               Span<const SupportedRate> ext_supp_rates,
+void FillRates(fbl::Span<const SupportedRate> supp_rates,
+               fbl::Span<const SupportedRate> ext_supp_rates,
                ::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op) {
   basic->resize(0);
   op->resize(0);
@@ -191,11 +191,11 @@ void FillRates(Span<const SupportedRate> supp_rates,
   ClassifyRates(ext_supp_rates, basic, op);
 }
 
-void ParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
+void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
                          wlan_mlme::BSSDescription* bss_desc) {
   std::optional<uint8_t> dsss_chan{};
-  Span<const SupportedRate> supp_rates;
-  Span<const SupportedRate> ext_supp_rates;
+  fbl::Span<const SupportedRate> supp_rates;
+  fbl::Span<const SupportedRate> ext_supp_rates;
 
   DoParseBeaconElements(ies, rx_channel, bss_desc, &dsss_chan, &supp_rates,
                         &ext_supp_rates);

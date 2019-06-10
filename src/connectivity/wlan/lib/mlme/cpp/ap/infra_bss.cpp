@@ -159,7 +159,7 @@ void InfraBss::HandleAnyMgmtFrame(MgmtFrame<>&& frame) {
       // Valid ProbeRequest, let BeaconSender process and respond to it.
       auto ra = mgmt_probe_req_frame.hdr()->addr2;
       auto probe_req_frame = mgmt_probe_req_frame.NextFrame();
-      Span<const uint8_t> ie_chain = probe_req_frame.body_data();
+      fbl::Span<const uint8_t> ie_chain = probe_req_frame.body_data();
       bcn_sender_->SendProbeResponse(ra, ie_chain);
       return;
     }
@@ -426,7 +426,7 @@ zx_status_t InfraBss::SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
   return device_->SendWlan(mgmt_frame.Take());
 }
 
-zx_status_t InfraBss::DeliverEthernet(Span<const uint8_t> frame) {
+zx_status_t InfraBss::DeliverEthernet(fbl::Span<const uint8_t> frame) {
   return device_->DeliverEthernet(frame);
 }
 
@@ -548,7 +548,7 @@ HtConfig InfraBss::Ht() const {
   };
 }
 
-const Span<const SupportedRate> InfraBss::Rates() const {
+const fbl::Span<const SupportedRate> InfraBss::Rates() const {
   const auto rates = GetRatesByChannel(device_->GetWlanInfo().ifc_info,
                                        device_->GetState()->channel().primary);
   static_assert(sizeof(SupportedRate) == sizeof(rates[0]));

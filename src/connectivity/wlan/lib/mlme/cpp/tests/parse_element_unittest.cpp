@@ -10,7 +10,7 @@ namespace common {
 
 TEST(ParseElement, Ssid) {
   const uint8_t raw_body[] = {'f', 'o', 'o'};
-  std::optional<Span<const uint8_t>> ssid = ParseSsid(raw_body);
+  std::optional<fbl::Span<const uint8_t>> ssid = ParseSsid(raw_body);
   ASSERT_TRUE(ssid);
   EXPECT_EQ(raw_body, ssid->data());
   EXPECT_EQ(3u, ssid->size());
@@ -18,13 +18,13 @@ TEST(ParseElement, Ssid) {
 
 TEST(ParseElement, SsidTooLong) {
   const uint8_t raw_body[33] = {};
-  std::optional<Span<const uint8_t>> ssid = ParseSsid(raw_body);
+  std::optional<fbl::Span<const uint8_t>> ssid = ParseSsid(raw_body);
   ASSERT_FALSE(ssid);
 }
 
 TEST(ParseElement, SupportedRates) {
   const uint8_t raw_body[] = {10, 20, 30, 40, 50, 60, 70, 80};
-  std::optional<Span<const SupportedRate>> rates =
+  std::optional<fbl::Span<const SupportedRate>> rates =
       ParseSupportedRates(raw_body);
   ASSERT_TRUE(rates);
   EXPECT_EQ(raw_body, reinterpret_cast<const uint8_t*>(rates->data()));
@@ -32,13 +32,13 @@ TEST(ParseElement, SupportedRates) {
 }
 
 TEST(ParseElement, SupportedRatesEmpty) {
-  std::optional<Span<const SupportedRate>> rates = ParseSupportedRates({});
+  std::optional<fbl::Span<const SupportedRate>> rates = ParseSupportedRates({});
   ASSERT_FALSE(rates);
 }
 
 TEST(ParseElement, SupportedRatesTooLong) {
   const uint8_t raw_body[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-  std::optional<Span<const SupportedRate>> rates =
+  std::optional<fbl::Span<const SupportedRate>> rates =
       ParseSupportedRates(raw_body);
   ASSERT_FALSE(rates);
 }
@@ -150,7 +150,7 @@ TEST(ParseElement, CountryTooShort) {
 
 TEST(ParseElement, ExtendedSupportedRates) {
   const uint8_t raw_body[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-  std::optional<Span<const SupportedRate>> rates =
+  std::optional<fbl::Span<const SupportedRate>> rates =
       ParseExtendedSupportedRates(raw_body);
   ASSERT_TRUE(rates);
   EXPECT_EQ(raw_body, reinterpret_cast<const uint8_t*>(rates->data()));
@@ -158,7 +158,7 @@ TEST(ParseElement, ExtendedSupportedRates) {
 }
 
 TEST(ParseElement, ExtendedSupportedRatesEmpty) {
-  std::optional<Span<const SupportedRate>> rates =
+  std::optional<fbl::Span<const SupportedRate>> rates =
       ParseExtendedSupportedRates({});
   ASSERT_FALSE(rates);
 }
@@ -190,7 +190,7 @@ TEST(ParseElement, MeshConfigurationTooLong) {
 
 TEST(ParseElement, MeshId) {
   const uint8_t raw_body[] = {'f', 'o', 'o'};
-  std::optional<Span<const uint8_t>> mesh_id = ParseMeshId(raw_body);
+  std::optional<fbl::Span<const uint8_t>> mesh_id = ParseMeshId(raw_body);
   ASSERT_TRUE(mesh_id);
   EXPECT_EQ(raw_body, mesh_id->data());
   EXPECT_EQ(3u, mesh_id->size());
@@ -198,7 +198,7 @@ TEST(ParseElement, MeshId) {
 
 TEST(ParseElement, MeshIdTooLong) {
   const uint8_t raw_body[33] = {};
-  std::optional<Span<const uint8_t>> mesh_id = ParseMeshId(raw_body);
+  std::optional<fbl::Span<const uint8_t>> mesh_id = ParseMeshId(raw_body);
   ASSERT_FALSE(mesh_id);
 }
 

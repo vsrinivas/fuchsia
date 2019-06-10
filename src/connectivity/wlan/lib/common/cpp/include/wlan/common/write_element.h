@@ -11,18 +11,19 @@
 namespace wlan {
 namespace common {
 
-void WriteSsid(BufferWriter* w, Span<const uint8_t> ssid);
+void WriteSsid(BufferWriter* w, fbl::Span<const uint8_t> ssid);
 void WriteSupportedRates(BufferWriter* w,
-                         Span<const SupportedRate> supported_rates);
+                         fbl::Span<const SupportedRate> supported_rates);
 void WriteDsssParamSet(BufferWriter* w, uint8_t current_chan);
 void WriteCfParamSet(BufferWriter* w, CfParamSet param_set);
-void WriteTim(BufferWriter* w, TimHeader header, Span<const uint8_t> bitmap);
+void WriteTim(BufferWriter* w, TimHeader header,
+              fbl::Span<const uint8_t> bitmap);
 void WriteCountry(BufferWriter* w, Country country,
-                  Span<SubbandTriplet> triplets);
-void WriteExtendedSupportedRates(BufferWriter* w,
-                                 Span<const SupportedRate> ext_supported_rates);
+                  fbl::Span<SubbandTriplet> triplets);
+void WriteExtendedSupportedRates(
+    BufferWriter* w, fbl::Span<const SupportedRate> ext_supported_rates);
 void WriteMeshConfiguration(BufferWriter* w, MeshConfiguration mesh_config);
-void WriteMeshId(BufferWriter* w, Span<const uint8_t> mesh_id);
+void WriteMeshId(BufferWriter* w, fbl::Span<const uint8_t> mesh_id);
 void WriteQosCapability(BufferWriter* w, QosInfo qos_info);
 void WriteGcrGroupAddress(BufferWriter* w, common::MacAddr gcr_group_addr);
 void WriteHtCapabilities(BufferWriter* w, const HtCapabilities& ht_caps);
@@ -34,12 +35,13 @@ void WriteMpmConfirm(BufferWriter* w, MpmHeader mpm_header,
                      uint16_t peer_link_id, const MpmPmk* pmk);
 void WritePreq(BufferWriter* w, const PreqHeader& header,
                const common::MacAddr* originator_external_addr,
-               const PreqMiddle& middle, Span<const PreqPerTarget> per_target);
+               const PreqMiddle& middle,
+               fbl::Span<const PreqPerTarget> per_target);
 void WritePrep(BufferWriter* w, const PrepHeader& header,
                const common::MacAddr* target_external_addr,
                const PrepTail& tail);
 void WritePerr(BufferWriter* w, const PerrHeader& header,
-               Span<const uint8_t> destinations);
+               fbl::Span<const uint8_t> destinations);
 
 }  // namespace common
 }  // namespace wlan

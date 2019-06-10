@@ -49,10 +49,10 @@ class DeviceInterface {
 
   virtual zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) = 0;
 
-  virtual zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) = 0;
+  virtual zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) = 0;
   virtual zx_status_t SendWlan(fbl::unique_ptr<Packet> packet,
                                uint32_t flags = 0) = 0;
-  virtual zx_status_t SendService(Span<const uint8_t> span) = 0;
+  virtual zx_status_t SendService(fbl::Span<const uint8_t> span) = 0;
 
   virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
   virtual zx_status_t SetStatus(uint32_t status) = 0;

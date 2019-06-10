@@ -48,7 +48,7 @@ struct Context {
     ap->HandleFramePacket(CreateDeauthFrame(client_addr));
   }
 
-  void SendClientAssocReqFrame(Span<const uint8_t> ssid = kSsid,
+  void SendClientAssocReqFrame(fbl::Span<const uint8_t> ssid = kSsid,
                                bool rsn = true) {
     ap->HandleFramePacket(CreateAssocReqFrame(client_addr, ssid, rsn));
   }
@@ -69,7 +69,7 @@ struct Context {
     ap->HandleFramePacket(frame.Take());
   }
 
-  void SendDataFrame(Span<const uint8_t> payload) {
+  void SendDataFrame(fbl::Span<const uint8_t> payload) {
     auto pkt = CreateDataFrame(payload);
     auto hdr = pkt->mut_field<DataFrameHeader>(0);
     common::MacAddr bssid(kBssid1);
@@ -81,7 +81,7 @@ struct Context {
     ap->HandleFramePacket(std::move(pkt));
   }
 
-  void SendEthFrame(Span<const uint8_t> payload) {
+  void SendEthFrame(fbl::Span<const uint8_t> payload) {
     auto pkt = CreateEthFrame(payload);
     auto hdr = pkt->mut_field<EthernetII>(0);
     hdr->src = common::MacAddr(kBssid1);
@@ -197,7 +197,7 @@ struct Context {
   };
 
   void AssertDataFrameSentToClient(WlanPacket pkt,
-                                   Span<const uint8_t> expected_payload,
+                                   fbl::Span<const uint8_t> expected_payload,
                                    DataFrameAssert asserts = {
                                        .protected_frame = 0, .more_data = 0}) {
     auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
@@ -212,8 +212,8 @@ struct Context {
     EXPECT_RANGES_EQ(llc_frame.body_data(), expected_payload);
   }
 
-  void AssertEthFrame(Span<const uint8_t> pkt,
-                      Span<const uint8_t> expected_payload) {
+  void AssertEthFrame(fbl::Span<const uint8_t> pkt,
+                      fbl::Span<const uint8_t> expected_payload) {
     BufferReader rdr(pkt);
     auto hdr = rdr.Read<EthernetII>();
     ASSERT_NE(hdr, nullptr);
@@ -545,7 +545,7 @@ TEST_F(ApInfraBssTest, Associate_EmptySsid) {
   ctx.AuthenticateClient();
 
   // Send association request frame without an SSID
-  auto ssid = Span<uint8_t>();
+  auto ssid = fbl::Span<uint8_t>();
   ctx.SendClientAssocReqFrame(ssid, true);
 
   // Verify that no Association.indication msg is sent out

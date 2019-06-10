@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PERR_DESTINATION_PARSER_H_
 
+#include <fbl/span.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/element.h>
-#include <wlan/common/span.h>
 
 namespace wlan {
 namespace common {
@@ -37,7 +37,7 @@ struct ParsedPerrDestination {
 //
 class PerrDestinationParser {
  public:
-  explicit PerrDestinationParser(Span<const uint8_t> bytes);
+  explicit PerrDestinationParser(fbl::Span<const uint8_t> bytes);
 
   std::optional<ParsedPerrDestination> Next();
 

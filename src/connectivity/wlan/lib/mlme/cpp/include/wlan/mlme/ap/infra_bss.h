@@ -58,7 +58,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
   zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) override;
   zx_status_t SendDataFrame(DataFrame<>&& data_frame,
                             uint32_t flags = 0) override;
-  zx_status_t DeliverEthernet(Span<const uint8_t> frame) override;
+  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) override;
 
   uint32_t NextSns1(const common::MacAddr& addr) override;
 
@@ -69,7 +69,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
   bool IsRsn() const override;
   HtConfig Ht() const override;
-  const Span<const SupportedRate> Rates() const override;
+  const fbl::Span<const SupportedRate> Rates() const override;
 
   wlan_channel_t Chan() const override { return chan_; }
 

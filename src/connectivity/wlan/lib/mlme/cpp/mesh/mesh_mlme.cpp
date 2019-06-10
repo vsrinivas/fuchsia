@@ -232,7 +232,8 @@ void MeshMlme::ConfigurePeering(
       .rates_cnt = static_cast<uint16_t>(
           std::min(req.body()->rates.size(), sizeof(ctx.rates))),
       .chan = device_->GetState()->channel(),
-      .phy = WLAN_INFO_PHY_TYPE_OFDM,  // TODO(gbonik): get PHY from MeshPeeringParams
+      .phy = WLAN_INFO_PHY_TYPE_OFDM,  // TODO(gbonik): get PHY from
+                                       // MeshPeeringParams
   };
   memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
   memcpy(ctx.rates, req.body()->rates.data(), ctx.rates_cnt);
@@ -574,7 +575,8 @@ bool MeshMlme::ShouldDeliverData(const common::ParsedDataFrameHeader& header) {
 }
 
 void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header,
-                           Span<uint8_t> wlan_frame, size_t payload_offset) {
+                           fbl::Span<uint8_t> wlan_frame,
+                           size_t payload_offset) {
   ZX_ASSERT(payload_offset >= sizeof(EthernetII));
   auto eth_frame = wlan_frame.subspan(payload_offset - sizeof(EthernetII));
   ZX_ASSERT(eth_frame.size() >= sizeof(EthernetII));

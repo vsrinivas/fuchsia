@@ -8,13 +8,13 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <endian.h>
 #include <fbl/algorithm.h>
+#include <fbl/span.h>
 #include <lib/zx/time.h>
 #include <wlan/common/action_frame.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/reason_code.h>
-#include <wlan/common/span.h>
 #include <wlan/common/status_code.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

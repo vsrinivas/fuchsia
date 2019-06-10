@@ -32,7 +32,7 @@ class ApMlme : public Mlme {
 
   // Visible for tests only
   HtConfig Ht() const;
-  const Span<const SupportedRate> Rates() const;
+  const fbl::Span<const SupportedRate> Rates() const;
 
  private:
   zx_status_t HandleMlmeStartReq(

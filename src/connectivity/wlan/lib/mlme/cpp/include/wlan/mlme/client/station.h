@@ -54,12 +54,12 @@ class Station : public ClientInterface {
                            uint32_t timeout) override;
   zx_status_t Deauthenticate(
       ::fuchsia::wlan::mlme::ReasonCode reason_code) override;
-  zx_status_t Associate(Span<const uint8_t> rsne) override;
-  zx_status_t SendEapolFrame(Span<const uint8_t> eapol_frame,
+  zx_status_t Associate(fbl::Span<const uint8_t> rsne) override;
+  zx_status_t SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
                              const common::MacAddr& src,
                              const common::MacAddr& dst) override;
   zx_status_t SetKeys(
-      Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) override;
+      fbl::Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) override;
   void UpdateControlledPort(
       ::fuchsia::wlan::mlme::ControlledPortState state) override;
 
@@ -97,7 +97,8 @@ class Station : public ClientInterface {
   zx_status_t SendAddBaRequestFrame();
   zx_status_t SendKeepAliveResponse();
 
-  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw, wlan_info_phy_type_t phy);
+  zx_status_t SendCtrlFrame(fbl::unique_ptr<Packet> packet, CBW cbw,
+                            wlan_info_phy_type_t phy);
   zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet);
   zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet, bool unicast,
                             uint32_t flags = 0);
@@ -127,7 +128,8 @@ class Station : public ClientInterface {
   zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);
   std::optional<AssocContext> BuildAssocCtx(
       const MgmtFrameView<AssociationResponse>& frame,
-      const wlan_channel_t& join_chan, wlan_info_phy_type_t join_phy, uint16_t listen_interval);
+      const wlan_channel_t& join_chan, wlan_info_phy_type_t join_phy,
+      uint16_t listen_interval);
 
   zx_status_t NotifyAssocContext();
 

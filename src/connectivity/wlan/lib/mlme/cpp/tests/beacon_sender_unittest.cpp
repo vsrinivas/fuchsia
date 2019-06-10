@@ -44,7 +44,7 @@ struct MockBss : public BssInterface {
 
   bool IsRsn() const { return false; }
   HtConfig Ht() const { return {}; }
-  const Span<const SupportedRate> Rates() const { return {}; }
+  const fbl::Span<const SupportedRate> Rates() const { return {}; }
 
   zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -52,7 +52,7 @@ struct MockBss : public BssInterface {
   zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t DeliverEthernet(Span<const uint8_t> frame) {
+  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

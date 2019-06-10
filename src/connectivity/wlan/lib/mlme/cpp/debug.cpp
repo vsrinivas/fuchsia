@@ -233,7 +233,7 @@ std::string HexDump(const uint8_t bytes[], size_t bytes_len) {
   return HexDump({bytes, bytes_len});
 }
 
-std::string HexDump(Span<const uint8_t> bytes) {
+std::string HexDump(fbl::Span<const uint8_t> bytes) {
   // Generate a string in following format
   // First 64 of 1500 bytes
   // 0x0000:   b8 ac 6f 2e 57 b3 00 01  6c 99 14 68 08 00 45 10  ..o.W...
@@ -268,7 +268,7 @@ std::string HexDump(Span<const uint8_t> bytes) {
   return std::string(buf);
 }
 
-std::string HexDumpOneline(Span<const uint8_t> bytes) {
+std::string HexDumpOneline(fbl::Span<const uint8_t> bytes) {
   // Generate a string in following format
   // b8 ac 6f 2e 57 b3 00 01  6c 99 14 68 08 00 45 10  ..o.W... l..h..E.
 

@@ -71,7 +71,8 @@ struct MockDevice : public DeviceInterface {
     return std::make_unique<TestTimer>(id, &clock_);
   }
 
-  zx_status_t DeliverEthernet(Span<const uint8_t> eth_frame) override final {
+  zx_status_t DeliverEthernet(
+      fbl::Span<const uint8_t> eth_frame) override final {
     eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});
     return ZX_OK;
   }
@@ -85,7 +86,7 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t SendService(Span<const uint8_t> span) override final {
+  zx_status_t SendService(fbl::Span<const uint8_t> span) override final {
     std::vector<uint8_t> msg(span.cbegin(), span.cend());
     svc_queue.push_back(msg);
     return ZX_OK;

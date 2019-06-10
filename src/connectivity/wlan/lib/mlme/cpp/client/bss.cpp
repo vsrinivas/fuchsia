@@ -20,7 +20,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 // TODO(NET-500): This file needs some clean-up.
 
 zx_status_t Bss::ProcessBeacon(const Beacon& beacon,
-                               Span<const uint8_t> ie_chain,
+                               fbl::Span<const uint8_t> ie_chain,
                                const wlan_rx_info_t* rx_info) {
   if (!IsBeaconValid(beacon)) {
     return ZX_ERR_INTERNAL;
@@ -113,7 +113,7 @@ void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
 }
 
 bool Bss::HasBeaconChanged(const Beacon& beacon,
-                           Span<const uint8_t> ie_chain) const {
+                           fbl::Span<const uint8_t> ie_chain) const {
   // Test changes in beacon, except for the timestamp field.
   if (last_ie_chain_len_ != ie_chain.size()) {
     return true;
@@ -122,7 +122,8 @@ bool Bss::HasBeaconChanged(const Beacon& beacon,
   return sig != last_bcn_signature_;
 }
 
-zx_status_t Bss::Update(const Beacon& beacon, Span<const uint8_t> ie_chain) {
+zx_status_t Bss::Update(const Beacon& beacon,
+                        fbl::Span<const uint8_t> ie_chain) {
   last_ie_chain_len_ = ie_chain.size();
   last_bcn_signature_ = GetBeaconSignature(beacon, ie_chain);
 
@@ -144,7 +145,7 @@ zx_status_t Bss::Update(const Beacon& beacon, Span<const uint8_t> ie_chain) {
 }
 
 BeaconHash Bss::GetBeaconSignature(const Beacon& beacon,
-                                   Span<const uint8_t> ie_chain) const {
+                                   fbl::Span<const uint8_t> ie_chain) const {
   // Get a hash of the beacon except for its first field: timestamp.
   // TODO(porce): Change to a less humble version.
   BeaconHash hash = beacon.beacon_interval + beacon.cap.val();

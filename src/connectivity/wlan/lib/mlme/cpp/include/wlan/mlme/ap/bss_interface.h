@@ -41,12 +41,12 @@ class BssInterface {
 
   virtual bool IsRsn() const = 0;
   virtual HtConfig Ht() const = 0;
-  virtual const Span<const SupportedRate> Rates() const = 0;
+  virtual const fbl::Span<const SupportedRate> Rates() const = 0;
 
   virtual zx_status_t SendMgmtFrame(MgmtFrame<>&& mgmt_frame) = 0;
   virtual zx_status_t SendDataFrame(DataFrame<>&& data_frame,
                                     uint32_t flags = 0) = 0;
-  virtual zx_status_t DeliverEthernet(Span<const uint8_t> frame) = 0;
+  virtual zx_status_t DeliverEthernet(fbl::Span<const uint8_t> frame) = 0;
 
   // Indications reported from lower MAC layer.
   virtual void OnPreTbtt() = 0;

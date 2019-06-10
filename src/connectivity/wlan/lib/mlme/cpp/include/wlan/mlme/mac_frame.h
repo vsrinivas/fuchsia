@@ -121,7 +121,7 @@ class FrameView {
     return pkt_->data() + data_offset_;
   }
 
-  Span<const uint8_t> body_data() const {
+  fbl::Span<const uint8_t> body_data() const {
     ZX_DEBUG_ASSERT(pkt_ != nullptr);
     if (body_len() == 0) {
       return {};
@@ -251,7 +251,7 @@ class Frame {
 
   const Body* body() const { return View().body(); }
 
-  Span<const uint8_t> body_data() const { return View().body_data(); }
+  fbl::Span<const uint8_t> body_data() const { return View().body_data(); }
 
   size_t body_len() const { return View().body_len(); }
 

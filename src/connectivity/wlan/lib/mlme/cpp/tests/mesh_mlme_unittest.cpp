@@ -82,7 +82,7 @@ struct MeshMlmeTest : public ::testing::Test {
   MeshMlme mlme;
 };
 
-static fbl::unique_ptr<Packet> MakeWlanPacket(Span<const uint8_t> bytes) {
+static fbl::unique_ptr<Packet> MakeWlanPacket(fbl::Span<const uint8_t> bytes) {
   auto packet = GetWlanPacket(bytes.size());
   memcpy(packet->data(), bytes.data(), bytes.size());
   return packet;
@@ -483,7 +483,7 @@ TEST_F(MeshMlmeTest, DataForwarding) {
         0xde, 0xad, 0xbe, 0xef,
       // clang-format on
   };
-  EXPECT_RANGES_EQ(expected, Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected, fbl::Span<const uint8_t>(*packets[0].pkt));
 }
 
 TEST_F(MeshMlmeTest, OutgoingData) {
@@ -527,7 +527,7 @@ TEST_F(MeshMlmeTest, OutgoingData) {
   auto packets = device.GetWlanPackets();
   ASSERT_EQ(1u, packets.size());
   EXPECT_RANGES_EQ(expected_data_frame(0, 'a'),
-                   Span<const uint8_t>(*packets[0].pkt));
+                   fbl::Span<const uint8_t>(*packets[0].pkt));
 
   // Transmit another data frame
   ASSERT_EQ(ZX_OK, mlme.HandleFramePacket(
@@ -535,7 +535,7 @@ TEST_F(MeshMlmeTest, OutgoingData) {
   packets = device.GetWlanPackets();
   ASSERT_EQ(1u, packets.size());
   EXPECT_RANGES_EQ(expected_data_frame(1, 'b'),
-                   Span<const uint8_t>(*packets[0].pkt));
+                   fbl::Span<const uint8_t>(*packets[0].pkt));
 
   // Fast forward well into the future and attempt to transmit yet another data
   // frame
@@ -575,13 +575,14 @@ TEST_F(MeshMlmeTest, OutgoingData) {
         0x00, 0x00, 0x00, 0x00, // target hwmp seqno
       // clang-format on
   };
-  EXPECT_RANGES_EQ(expected_preq_frame, Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected_preq_frame,
+                   fbl::Span<const uint8_t>(*packets[0].pkt));
 
   // The current implementation is expected to send out the data frame even if
   // the path has expired. This might change in the future if we implement
   // packet buffering.
   EXPECT_RANGES_EQ(expected_data_frame(2, 'c'),
-                   Span<const uint8_t>(*packets[1].pkt));
+                   fbl::Span<const uint8_t>(*packets[1].pkt));
 }
 
 TEST_F(MeshMlmeTest, GeneratePerrIfMissingForwardingPath) {
@@ -644,7 +645,8 @@ TEST_F(MeshMlmeTest, GeneratePerrIfMissingForwardingPath) {
         62, 0, // reason code = MESH-PATH-ERROR-NO-FORWARDING-INFORMATION
       // clang-format on
   };
-  EXPECT_RANGES_EQ(expected_perr_frame, Span<const uint8_t>(*packets[0].pkt));
+  EXPECT_RANGES_EQ(expected_perr_frame,
+                   fbl::Span<const uint8_t>(*packets[0].pkt));
 }
 
 }  // namespace wlan

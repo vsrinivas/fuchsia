@@ -11,7 +11,7 @@ namespace common {
 
 namespace {
 template <typename T>
-const T* ParseFixedSized(Span<const uint8_t> raw_body) {
+const T* ParseFixedSized(fbl::Span<const uint8_t> raw_body) {
   if (raw_body.size() != sizeof(T)) {
     return nullptr;
   }
@@ -19,15 +19,16 @@ const T* ParseFixedSized(Span<const uint8_t> raw_body) {
 }
 }  // namespace
 
-std::optional<Span<const uint8_t>> ParseSsid(Span<const uint8_t> raw_body) {
+std::optional<fbl::Span<const uint8_t>> ParseSsid(
+    fbl::Span<const uint8_t> raw_body) {
   if (raw_body.size() > kMaxSsidLen) {
     return {};
   }
   return {raw_body};
 }
 
-std::optional<Span<const SupportedRate>> ParseSupportedRates(
-    Span<const uint8_t> raw_body) {
+std::optional<fbl::Span<const SupportedRate>> ParseSupportedRates(
+    fbl::Span<const uint8_t> raw_body) {
   if (raw_body.empty() || raw_body.size() > kMaxSupportedRatesLen) {
     return {};
   }
@@ -36,15 +37,15 @@ std::optional<Span<const SupportedRate>> ParseSupportedRates(
   return {{rates, raw_body.size()}};
 }
 
-const DsssParamSet* ParseDsssParamSet(Span<const uint8_t> raw_body) {
+const DsssParamSet* ParseDsssParamSet(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<DsssParamSet>(raw_body);
 }
 
-const CfParamSet* ParseCfParamSet(Span<const uint8_t> raw_body) {
+const CfParamSet* ParseCfParamSet(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<CfParamSet>(raw_body);
 }
 
-std::optional<ParsedTim> ParseTim(Span<const uint8_t> raw_body) {
+std::optional<ParsedTim> ParseTim(fbl::Span<const uint8_t> raw_body) {
   auto header = FromBytes<TimHeader>(raw_body);
   if (header == nullptr) {
     return {};
@@ -56,7 +57,7 @@ std::optional<ParsedTim> ParseTim(Span<const uint8_t> raw_body) {
   return {{*header, bitmap}};
 }
 
-std::optional<ParsedCountry> ParseCountry(Span<const uint8_t> raw_body) {
+std::optional<ParsedCountry> ParseCountry(fbl::Span<const uint8_t> raw_body) {
   auto country = FromBytes<Country>(raw_body);
   if (country == nullptr) {
     return {};
@@ -68,8 +69,8 @@ std::optional<ParsedCountry> ParseCountry(Span<const uint8_t> raw_body) {
             num_triplets}}};
 }
 
-std::optional<Span<const SupportedRate>> ParseExtendedSupportedRates(
-    Span<const uint8_t> raw_body) {
+std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
+    fbl::Span<const uint8_t> raw_body) {
   if (raw_body.empty()) {
     return {};
   }
@@ -78,42 +79,44 @@ std::optional<Span<const SupportedRate>> ParseExtendedSupportedRates(
   return {{rates, raw_body.size()}};
 }
 
-const MeshConfiguration* ParseMeshConfiguration(Span<const uint8_t> raw_body) {
+const MeshConfiguration* ParseMeshConfiguration(
+    fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<MeshConfiguration>(raw_body);
 }
 
-std::optional<Span<const uint8_t>> ParseMeshId(Span<const uint8_t> raw_body) {
+std::optional<fbl::Span<const uint8_t>> ParseMeshId(
+    fbl::Span<const uint8_t> raw_body) {
   if (raw_body.size() > kMaxMeshIdLen) {
     return {};
   }
   return {raw_body};
 }
 
-const QosInfo* ParseQosCapability(Span<const uint8_t> raw_body) {
+const QosInfo* ParseQosCapability(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<QosInfo>(raw_body);
 }
 
-const common::MacAddr* ParseGcrGroupAddress(Span<const uint8_t> raw_body) {
+const common::MacAddr* ParseGcrGroupAddress(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<common::MacAddr>(raw_body);
 }
 
-const HtCapabilities* ParseHtCapabilities(Span<const uint8_t> raw_body) {
+const HtCapabilities* ParseHtCapabilities(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<HtCapabilities>(raw_body);
 }
 
-const HtOperation* ParseHtOperation(Span<const uint8_t> raw_body) {
+const HtOperation* ParseHtOperation(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<HtOperation>(raw_body);
 }
 
-const VhtCapabilities* ParseVhtCapabilities(Span<const uint8_t> raw_body) {
+const VhtCapabilities* ParseVhtCapabilities(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<VhtCapabilities>(raw_body);
 }
 
-const VhtOperation* ParseVhtOperation(Span<const uint8_t> raw_body) {
+const VhtOperation* ParseVhtOperation(fbl::Span<const uint8_t> raw_body) {
   return ParseFixedSized<VhtOperation>(raw_body);
 }
 
-std::optional<ParsedMpmOpen> ParseMpmOpen(Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmOpen> ParseMpmOpen(fbl::Span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {
@@ -128,7 +131,8 @@ std::optional<ParsedMpmOpen> ParseMpmOpen(Span<const uint8_t> raw_body) {
   return {{*header, pmk}};
 }
 
-std::optional<ParsedMpmConfirm> ParseMpmConfirm(Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(
+    fbl::Span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {
@@ -148,7 +152,7 @@ std::optional<ParsedMpmConfirm> ParseMpmConfirm(Span<const uint8_t> raw_body) {
   return {{*header, *peer_link_id, pmk}};
 }
 
-std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmClose> ParseMpmClose(fbl::Span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {
@@ -173,7 +177,7 @@ std::optional<ParsedMpmClose> ParseMpmClose(Span<const uint8_t> raw_body) {
   return {{*header, peer_link_id, *reason_code, pmk}};
 }
 
-std::optional<ParsedPreq> ParsePreq(Span<const uint8_t> raw_body) {
+std::optional<ParsedPreq> ParsePreq(fbl::Span<const uint8_t> raw_body) {
   ParsedPreq ret{};
   auto r = BufferReader{raw_body};
   ret.header = r.Read<PreqHeader>();
@@ -205,7 +209,7 @@ std::optional<ParsedPreq> ParsePreq(Span<const uint8_t> raw_body) {
   return {ret};
 }
 
-std::optional<ParsedPrep> ParsePrep(Span<const uint8_t> raw_body) {
+std::optional<ParsedPrep> ParsePrep(fbl::Span<const uint8_t> raw_body) {
   ParsedPrep ret{};
   auto r = BufferReader{raw_body};
   ret.header = r.Read<PrepHeader>();
@@ -232,7 +236,7 @@ std::optional<ParsedPrep> ParsePrep(Span<const uint8_t> raw_body) {
   return {ret};
 }
 
-std::optional<ParsedPerr> ParsePerr(Span<const uint8_t> raw_body) {
+std::optional<ParsedPerr> ParsePerr(fbl::Span<const uint8_t> raw_body) {
   ParsedPerr ret{};
   auto r = BufferReader{raw_body};
 

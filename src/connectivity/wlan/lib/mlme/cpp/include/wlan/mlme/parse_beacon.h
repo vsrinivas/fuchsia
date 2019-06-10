@@ -5,18 +5,18 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PARSE_BEACON_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PARSE_BEACON_H_
 
+#include <fbl/span.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/element.h>
-#include <wlan/common/span.h>
 
 namespace wlan {
 
-void ParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
+void ParseBeaconElements(fbl::Span<const uint8_t> ies, uint8_t rx_channel,
                          fuchsia::wlan::mlme::BSSDescription* bss_desc);
 
 // The following functions are visible for testing only
-void FillRates(Span<const SupportedRate> supp_rates,
-               Span<const SupportedRate> ext_supp_rates,
+void FillRates(fbl::Span<const SupportedRate> supp_rates,
+               fbl::Span<const SupportedRate> ext_supp_rates,
                ::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op);
 std::optional<CBW> GetVhtCbw(const fuchsia::wlan::mlme::VhtOperation& vht_op);
 wlan_channel_t DeriveChannel(uint8_t rx_channel,

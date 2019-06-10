@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_READER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_READER_H_
 
+#include <fbl/span.h>
 #include <fbl/unique_ptr.h>
-#include <wlan/common/span.h>
 #include <zircon/types.h>
 
 #include <optional>
@@ -15,7 +15,7 @@ namespace wlan {
 
 class BufferReader {
  public:
-  explicit BufferReader(Span<const uint8_t> buf) : buf_(buf) {}
+  explicit BufferReader(fbl::Span<const uint8_t> buf) : buf_(buf) {}
 
   template <typename T>
   const T* Peek() {
@@ -37,7 +37,7 @@ class BufferReader {
   }
 
   template <typename T>
-  Span<const T> ReadArray(size_t len) {
+  fbl::Span<const T> ReadArray(size_t len) {
     if (buf_.size() < offset_ + sizeof(T) * len) {
       return {};
     }
@@ -56,7 +56,7 @@ class BufferReader {
     }
   }
 
-  Span<const uint8_t> Read(size_t len) {
+  fbl::Span<const uint8_t> Read(size_t len) {
     if (buf_.size() < offset_ + len) {
       return {};
     }
@@ -66,7 +66,7 @@ class BufferReader {
     return {data, len};
   }
 
-  Span<const uint8_t> ReadRemaining() {
+  fbl::Span<const uint8_t> ReadRemaining() {
     auto data = buf_.subspan(offset_);
     offset_ = buf_.size();
     return data;
@@ -76,7 +76,7 @@ class BufferReader {
   size_t RemainingBytes() const { return buf_.size() - offset_; }
 
  private:
-  Span<const uint8_t> buf_;
+  fbl::Span<const uint8_t> buf_;
   size_t offset_ = 0;
 };
 

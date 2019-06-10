@@ -256,7 +256,7 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
   return ZX_OK;
 }
 
-zx_status_t Station::Associate(Span<const uint8_t> rsne) {
+zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
   debugfn();
   WLAN_STATS_INC(svc_msg.in);
 
@@ -414,7 +414,7 @@ void Station::HandleBeacon(MgmtFrame<Beacon>&& frame) {
   auto_deauth_last_accounted_ = timer_mgr_.Now();
 
   auto bcn_frame = frame.View().NextFrame();
-  Span<const uint8_t> ie_chain = bcn_frame.body_data();
+  fbl::Span<const uint8_t> ie_chain = bcn_frame.body_data();
   auto tim = common::FindAndParseTim(ie_chain);
   if (tim &&
       common::IsTrafficBuffered(assoc_ctx_.aid, tim->header, tim->bitmap)) {
@@ -932,7 +932,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
   return ZX_OK;
 }
 
-zx_status_t Station::SendEapolFrame(Span<const uint8_t> eapol_frame,
+zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
                                     const common::MacAddr& src,
                                     const common::MacAddr& dst) {
   debugfn();
@@ -972,7 +972,8 @@ zx_status_t Station::SendEapolFrame(Span<const uint8_t> eapol_frame,
   return status;
 }
 
-zx_status_t Station::SetKeys(Span<const wlan_mlme::SetKeyDescriptor> keys) {
+zx_status_t Station::SetKeys(
+    fbl::Span<const wlan_mlme::SetKeyDescriptor> keys) {
   debugfn();
   WLAN_STATS_INC(svc_msg.in);
 
@@ -1228,7 +1229,8 @@ bool Station::IsQosReady() const {
 
   // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the
   // BlockAck session, independently of 40MHz operation.
-  return assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_HT || assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_VHT;
+  return assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_HT ||
+         assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_VHT;
 }
 
 CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
@@ -1307,7 +1309,7 @@ zx_status_t Station::SetAssocContext(
   assoc_ctx_.listen_interval = join_ctx_->listen_interval();
 
   auto assoc_resp_frame = frame.NextFrame();
-  Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
+  fbl::Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
   auto bss_assoc_ctx = ParseAssocRespIe(ie_chain);
   if (!bss_assoc_ctx.has_value()) {
     debugf("failed to parse AssocResp\n");
@@ -1438,9 +1440,10 @@ void Station::ResetStats() { stats_.Reset(); }
 // TODO(porce): replace SetAssocContext()
 std::optional<AssocContext> Station::BuildAssocCtx(
     const MgmtFrameView<AssociationResponse>& frame,
-    const wlan_channel_t& join_chan, wlan_info_phy_type_t join_phy, uint16_t listen_interval) {
+    const wlan_channel_t& join_chan, wlan_info_phy_type_t join_phy,
+    uint16_t listen_interval) {
   auto assoc_resp_frame = frame.NextFrame();
-  Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
+  fbl::Span<const uint8_t> ie_chain = assoc_resp_frame.body_data();
   auto bssid = frame.hdr()->addr3;
   auto bss = MakeBssAssocCtx(*frame.body(), ie_chain, bssid);
   if (!bss.has_value()) {
