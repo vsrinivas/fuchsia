@@ -15,6 +15,7 @@ use {
 };
 
 mod archive;
+mod collection;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
