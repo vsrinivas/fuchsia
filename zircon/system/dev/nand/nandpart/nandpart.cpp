@@ -10,6 +10,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
@@ -58,7 +59,7 @@ void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* nand
 
 } // namespace
 
-zx_status_t NandPartDevice::Create(zx_device_t* parent) {
+zx_status_t NandPartDevice::Create(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "NandPartDevice::Create: Starting...!\n");
 
     nand_protocol_t nand_proto;
@@ -304,8 +305,18 @@ zx_status_t NandPartDevice::DdkGetProtocol(uint32_t proto_id, void* protocol) {
     return ZX_OK;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = NandPartDevice::Create;
+    return ops;
+}();
+
 } // namespace nand
 
-extern "C" zx_status_t nandpart_bind(void* ctx, zx_device_t* parent) {
-    return nand::NandPartDevice::Create(parent);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(nandpart, nand::driver_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_PARTMAP),
+ZIRCON_DRIVER_END(nandpart)
+// clang-format on

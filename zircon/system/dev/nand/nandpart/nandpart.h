@@ -30,7 +30,7 @@ class NandPartDevice : public DeviceType,
                        public ddk::BadBlockProtocol<NandPartDevice> {
 public:
     // Spawns device nodes based on parent node.
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     zx_status_t Bind(const char* name, uint32_t copy_count);
 

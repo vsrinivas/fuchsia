@@ -6,7 +6,6 @@ driver("nandpart") {
   sources = [
     "aml-bad-block.cpp",
     "bad-block.cpp",
-    "binding.c",
     "nandpart-utils.cpp",
     "nandpart.cpp",
   ]
