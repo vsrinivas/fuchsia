@@ -91,6 +91,8 @@ source_set("lib") {
     "page_db_impl.h",
     "page_storage_impl.cc",
     "page_storage_impl.h",
+    "piece_tracker.cc",
+    "piece_tracker.h",
     "split.cc",
     "split.h",
   ]
@@ -172,6 +174,7 @@ source_set("unittests") {
     "page_db_empty_impl.h",
     "page_db_unittest.cc",
     "page_storage_unittest.cc",
+    "piece_tracker_unittest.cc",
     "split_unittest.cc",
   ]
 
