@@ -146,7 +146,7 @@ zx_status_t Mt8167::Msdc2Init() {
     const pbus_gpio_t* msdc2_gpios = msdc2_ref_gpios;
     size_t msdc2_gpio_count = countof(msdc2_ref_gpios);
 
-    if (board_info_.pid == PDEV_PID_CLEO) {
+    if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         msdc2_gpios = msdc2_cleo_gpios;
         msdc2_gpio_count = countof(msdc2_cleo_gpios);
     }

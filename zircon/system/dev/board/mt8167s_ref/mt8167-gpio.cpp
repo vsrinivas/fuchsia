@@ -70,22 +70,26 @@ zx_status_t Mt8167::GpioInit() {
     gpio_dev.mmio_count = countof(gpio_mmios);
     gpio_dev.irq_list = gpio_irqs;
     gpio_dev.irq_count = countof(gpio_irqs);
-    if (board_info_.vid == PDEV_VID_GOOGLE || board_info_.pid == PDEV_PID_CLEO) {
-        gpio_dev.metadata_list = cleo_gpio_metadata;
-        gpio_dev.metadata_count = countof(cleo_gpio_metadata);
+    gpio_dev.metadata_list = cleo_gpio_metadata;
+    gpio_dev.metadata_count = countof(cleo_gpio_metadata);
+
+    if ((board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) ||
+        (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO)) {
+        zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
+            return status;
+        }
+
+        status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
+            return status;
+        }
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
-        return status;
-    }
-
-    status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
-        return status;
-    }
 
 //#define GPIO_TEST
 #ifdef GPIO_TEST

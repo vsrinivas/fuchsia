@@ -220,9 +220,9 @@ zx_status_t Mt8167::DisplayInit() {
     // TODO(payamm): Cannot use POWER_PROTOCOL since it does not support voltage selection yet
     // Enable LCD voltage rails
     uint32_t kVpg2VoSel = 0;
-    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+    if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         kVpg2VoSel = 0x60; // 3 << 5
-    } else if (board_info_.pid == PDEV_PID_CLEO) {
+    } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         kVpg2VoSel = 0xA0; // 5 << 5
     } else {
         // make sure proper LCD voltage rail is set for any new PID

@@ -100,12 +100,12 @@ zx_status_t Mt8167::ButtonsInit() {
     dev.vid = PDEV_VID_GENERIC;
     dev.pid = PDEV_PID_GENERIC;
     dev.did = PDEV_DID_HID_BUTTONS;
-    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+    if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         dev.gpio_list = mt8167s_ref_pbus_gpios;
         dev.gpio_count = countof(mt8167s_ref_pbus_gpios);
         dev.metadata_list = mt8167s_ref_metadata;
         dev.metadata_count = countof(mt8167s_ref_metadata);
-    } else if (board_info_.pid == PDEV_PID_CLEO) {
+    } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         dev.gpio_list = cleo_pbus_gpios;
         dev.gpio_count = countof(cleo_pbus_gpios);
         dev.metadata_list = cleo_metadata;

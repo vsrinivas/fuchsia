@@ -591,10 +591,10 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
 
     // Select the appropriate display table.
     // TODO(payamm): This should really be done via display ID GPIO pins
-    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+    if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         panel_type_ = PANEL_ILI9881C;
         init_disp_table_ = &kDisplaySettingIli9881c;
-    } else if (board_info_.pid == PDEV_PID_CLEO) {
+    } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         panel_type_ = PANEL_ST7701S;
         init_disp_table_ = &kDisplaySettingSt7701s;
     } else {
@@ -717,11 +717,11 @@ zx_status_t Mt8167sDisplay::Bind() {
         return status;
     }
 
-    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+    if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         width_ = MTKREF_DISPLAY_WIDTH;
         height_ = MTKREF_DISPLAY_HEIGHT;
         hasDsi_ = true;
-    } else if (board_info_.pid == PDEV_PID_CLEO) {
+    } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         width_ = CLEO_DISPLAY_WIDTH;
         height_ = CLEO_DISPLAY_HEIGHT;
         hasDsi_ = true;

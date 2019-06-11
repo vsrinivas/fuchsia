@@ -62,6 +62,25 @@ zx_status_t Mt8167::I2cInit() {
         },
     };
 
+    constexpr i2c_channel_t mt8167s_i2c_channels[] = {
+        // For mt8167s_ref audio out
+        {
+            .bus_id = 2,
+            .address = 0x48,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
+        // For audio in
+        {
+            .bus_id = 1,
+            .address = 0x1B,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
+    };
+
     constexpr i2c_channel_t cleo_i2c_channels[] = {
         {
             .bus_id = 0,
@@ -93,14 +112,6 @@ zx_status_t Mt8167::I2cInit() {
             .pid = 0,
             .did = 0,
         },
-        // For mt8167s_ref audio out
-        {
-            .bus_id = 2,
-            .address = 0x48,
-            .vid = 0,
-            .pid = 0,
-            .did = 0,
-        },
         // For cleo audio out
         {
             .bus_id = 2,
@@ -119,6 +130,13 @@ zx_status_t Mt8167::I2cInit() {
         },
     };
 
+    const pbus_metadata_t mt8167s_i2c_metadata[] = {
+        {
+            .type = DEVICE_METADATA_I2C_CHANNELS,
+            .data_buffer = &mt8167s_i2c_channels,
+            .data_size = sizeof(mt8167s_i2c_channels),
+        },
+    };
     const pbus_metadata_t cleo_i2c_metadata[] = {
         {
             .type = DEVICE_METADATA_I2C_CHANNELS,
@@ -138,9 +156,16 @@ zx_status_t Mt8167::I2cInit() {
     i2c_dev.gpio_list = i2c_gpios;
     i2c_dev.gpio_count = countof(i2c_gpios);
 
-    if (board_info_.vid == PDEV_VID_GOOGLE || board_info_.pid == PDEV_PID_CLEO) {
+
+    if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
         i2c_dev.metadata_list = cleo_i2c_metadata;
         i2c_dev.metadata_count = countof(cleo_i2c_metadata);
+    } else if (board_info_.vid == PDEV_VID_MEDIATEK &&
+               board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        i2c_dev.metadata_list = mt8167s_i2c_metadata;
+        i2c_dev.metadata_count = countof(mt8167s_i2c_metadata);
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
