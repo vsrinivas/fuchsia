@@ -4,15 +4,6 @@
 
 import("//build/package.gni")
 
-group("camera_manager") {
-  testonly = true
-  deps = [
-    ":bin",
-    ":camera_manager_cpp",
-    ":lib",
-  ]
-}
-
 source_set("lib") {
   sources = [
     "camera_manager_impl.cc",
@@ -42,7 +33,7 @@ source_set("lib") {
 }
 
 executable("bin") {
-  output_name = "camera_manager_cpp"
+  output_name = "camera_manager"
 
   sources = [
     "camera_manager.cc",
@@ -55,21 +46,21 @@ executable("bin") {
   ]
 }
 
-package("camera_manager_cpp") {
+package("camera_manager") {
   deps = [
     ":bin",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/camera_manager_cpp.cmx")
-      dest = "camera_manager_cpp.cmx"
+      path = rebase_path("meta/camera_manager.cmx")
+      dest = "camera_manager.cmx"
     },
   ]
 
   binaries = [
     {
-      name = "camera_manager_cpp"
+      name = "camera_manager"
     },
   ]
 }

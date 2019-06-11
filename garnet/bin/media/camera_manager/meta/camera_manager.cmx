@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/camera_manager_cpp"
+        "binary": "bin/camera_manager"
     },
     "sandbox": {
         "dev": [

@@ -610,7 +610,7 @@ group("crashpad_agent") {
 group("media") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/camera_manager:camera_manager_cpp",
+    "//garnet/bin/media/camera_manager:camera_manager",
     "//garnet/lib/media/camera/simple_camera_server:simple_camera_server_cpp",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
