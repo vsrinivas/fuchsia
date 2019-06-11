@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/threads.h>
 
+#include "src/developer/debug/shared/arch_arm64.h"
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
-
-#include <unistd.h>
 
 // This is a self contained binary that is meant to be run *manually*.
 // This is the smallest code that can be used to reproduce a HW watchpoint
@@ -62,8 +63,12 @@ zx_thread_state_debug_regs_t GetDebugRegs() {
 #elif defined(__aarch64__)
 
 zx_thread_state_debug_regs_t GetDebugRegs() {
-  FXL_NOTREACHED() << "Arm64 side not implemented.";
-  return {};
+  zx_thread_state_debug_regs_t debug_regs = {};
+  // For now the API is very simple, as zircon is not using further
+  // configuration beyond simply adding a write watchpoint.
+  debug_regs.hw_wps[0].dbgwcr = ARM64_FLAG_MASK(DBGWCR, E);
+  debug_regs.hw_wps[0].dbgwvr = reinterpret_cast<uint64_t>(&kVariableToChange);
+  return debug_regs;
 }
 
 #else
@@ -83,24 +88,28 @@ int main() {
   zx_status_t status;
   zx_handle_t suspend_token;
   status = zx_task_suspend(thread_handle, &suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not suspend thread: " << status;
+  FXL_DCHECK(status == ZX_OK)
+      << "Could not suspend thread: " << debug_ipc::ZxStatusToString(status);
 
   zx_signals_t observed;
   status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED,
                               zx_deadline_after(ZX_MSEC(500)), &observed);
-  FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: " << status;
+  FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: "
+                              << debug_ipc::ZxStatusToString(status);
 
   FXL_LOG(INFO) << "****** Writing watchpoint.";
 
   auto debug_regs = GetDebugRegs();
   status = zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS,
                                  &debug_regs, sizeof(debug_regs));
-  FXL_DCHECK(status == ZX_OK) << "Could not write debug regs: " << status;
+  FXL_DCHECK(status == ZX_OK)
+      << "Could not write debug regs: " << debug_ipc::ZxStatusToString(status);
 
   FXL_LOG(INFO) << "****** Resuming thread.";
 
   status = zx_handle_close(suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not resume thread: " << status;
+  FXL_DCHECK(status == ZX_OK)
+      << "Could not resume thread: " << debug_ipc::ZxStatusToString(status);
 
   FXL_LOG(INFO) << "****** Waiting for a bit to hit the watchpoint.";
 

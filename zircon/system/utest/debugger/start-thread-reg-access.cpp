@@ -111,7 +111,7 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state,
 
 #elif defined(__aarch64__)
 
-#define ARM64_CPSR_MASK_SERROR (1UL << 8) 
+#define ARM64_CPSR_MASK_SERROR (1UL << 8)
     // TODO(dje): See TODO in arch_setup_uspace_iframe.
     // cpsr is read as 0x0 but it's set as 0x100;
     expected_regs.cpsr = regs.cpsr & ARM64_CPSR_MASK_SERROR;

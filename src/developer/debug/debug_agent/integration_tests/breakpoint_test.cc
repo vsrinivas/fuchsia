@@ -190,7 +190,15 @@ TEST(BreakpointIntegration, SWBreakpoint) {
   }
 }
 
+#if defined(__aarch64__)
+// TODO(donosoc): Currently arm64 has a flake over this functionality.
+//                One of the objectives of test week is to fix this flake once
+//                and for all.
+TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
+#else
 TEST(BreakpointIntegration, HWBreakpoint) {
+#endif
+
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;

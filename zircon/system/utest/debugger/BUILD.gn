@@ -18,7 +18,9 @@ test("debugger") {
     "suspended-reg-access.cpp",
     "utils.cpp",
     "utils.h",
+    "watchpoint-test.cpp",
   ]
+
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/fbl",

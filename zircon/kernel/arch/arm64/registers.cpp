@@ -34,18 +34,23 @@ void arm64_set_debug_state_for_cpu(bool active) {
     __isb(ARM_MB_SY);
 }
 
-bool arm64_validate_debug_state(arm64_debug_state_t* state, uint32_t* active_breakpoints) {
+static bool arm64_validate_hw_breakpoints(arm64_debug_state_t* state,
+                                          uint32_t* active_breakpoints) {
     uint32_t breakpoint_count = 0;
-    // Validate that the addresses are valid.
+
+    // Validate that the addresses are valid. HW breakpoints that are beyond the
+    // arch resource count will be ignored. This is because zircon will never
+    // update or use those values in any way, so they will always be zero,
+    // independent of what the user provided within those.
     size_t hw_bp_count = arm64_hw_breakpoint_count();
     for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
         uint32_t dbgbcr = state->hw_bps[i].dbgbcr;
         uint64_t dbgbvr = state->hw_bps[i].dbgbvr;
 
-        // If we're beyond the provided values and a breakpoint is set, we
-        // consider these parameters invalid.
-        if ((i >= hw_bp_count) && (dbgbcr || dbgbvr)) {
-            return false;
+        // Breakpoints values beyond the CPU count won't ever be written to the
+        // debug state, so they can be ignored.
+        if (i >= hw_bp_count) {
+          break;
         }
 
         // Verify that the breakpoint refers to userspace.
@@ -56,14 +61,59 @@ bool arm64_validate_debug_state(arm64_debug_state_t* state, uint32_t* active_bre
 
         // If the address is valid and the breakpoint is activated, we mask in
         // the other necessary value and count it for bookkeepping.
-        if (state->hw_bps[i].dbgbcr & ARM64_DBGBCR_E) {
-            state->hw_bps[i].dbgbcr = ARM64_DBGBCR_ACTIVATED_MASK;
+        if (dbgbcr & ARM64_DBGBCR_E) {
+            state->hw_bps[i].dbgbcr = ARM64_DBGBCR_ACTIVE_MASK;
             breakpoint_count++;
         }
     }
 
     *active_breakpoints = breakpoint_count;
     return true;
+}
+
+static bool arm64_validate_hw_watchpoints(arm64_debug_state_t* state,
+                                          uint32_t* active_watchpoints) {
+    uint32_t watchpoint_count = 0;
+    // Validate that the addresses are valid. HW watchpoint that are beyond the
+    // arch resource count will be ignored. This is because zircon will never
+    // update or use those values in any way, so they will always be zero,
+    // independent of what the user provided within those.
+    size_t hw_wp_count = arm64_hw_watchpoint_count();
+    for (size_t i = 0; i < hw_wp_count; i++) {
+        uint32_t dbgwcr = state->hw_wps[i].dbgwcr;
+        uint64_t dbgwvr = state->hw_wps[i].dbgwvr;
+
+        // Watchpoints values beyond the CPU count won't ever be written to the
+        // debug state, so they can be ignored.
+        if (i >= hw_wp_count) {
+            break;
+        }
+
+        // Verify that the breakpoint refers to userspace.
+        if (dbgwvr != 0 && !is_user_address(dbgwvr)) {
+            return false;
+        }
+        state->hw_wps[i].dbgwvr &= ARM64_DBGWVR_USER_MASK;
+
+        // If the address is valid and the watchpoint is active, we mask in
+        // the other necessary bits.
+        if (dbgwcr & ARM64_DBGWCR_E) {
+            state->hw_wps[i].dbgwcr = ARM64_DBGWCR_ACTIVE_MASK;
+            watchpoint_count++;
+        }
+    }
+
+    *active_watchpoints = watchpoint_count;
+    return true;
+}
+
+bool arm64_validate_debug_state(arm64_debug_state_t* state,
+                                uint32_t* active_breakpoints, uint32_t* active_watchpoints) {
+  if (!arm64_validate_hw_breakpoints(state, active_breakpoints) ||
+      !arm64_validate_hw_watchpoints(state, active_watchpoints)) {
+      return false;
+  }
+  return true;
 }
 
 uint8_t arm64_hw_breakpoint_count() {
@@ -125,6 +175,9 @@ static void arm64_read_hw_breakpoint_by_index(unsigned int index, uint32_t* dbgb
     *dbgbvr = read_dbgbvr;
 }
 
+#undef READ_HW_BREAKPOINT
+#undef READ_HW_BREAKPOINT_CASE
+
 void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state) {
     // We clear the state out.
     *debug_state = {};
@@ -173,28 +226,79 @@ static void arm64_write_hw_breakpoint_by_index(unsigned int index, uint32_t dbgb
     }
 }
 
+#undef WRITE_HW_BREAKPOINT
+#undef WRITE_HW_BREAKPOINT_CASE
+
+#define WRITE_HW_WATCHPOINT(index, dbgwcr, dbgwvr) \
+    __arm_wsr("dbgwcr" #index "_el1", dbgwcr);     \
+    __arm_wsr64("dbgwvr" #index "_el1", dbgwvr);   \
+    __isb(ARM_MB_SY);
+#define WRITE_HW_WATCHPOINT_CASE(index, dbgwcr, dbgwvr) \
+    case index:                                         \
+        WRITE_HW_WATCHPOINT(index, dbgwcr, dbgwvr);     \
+        break;
+
+static void arm64_write_hw_watchpoint_by_index(unsigned int index, uint32_t dbgwcr,
+                                               uint64_t dbgwvr) {
+    switch (index) {
+        WRITE_HW_WATCHPOINT_CASE(0, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(1, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(2, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(3, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(4, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(5, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(6, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(7, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(8, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(9, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(10, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(11, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(12, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(13, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(14, dbgwcr, dbgwvr);
+        WRITE_HW_WATCHPOINT_CASE(15, dbgwcr, dbgwvr);
+    default:
+        DEBUG_ASSERT(false);
+    }
+}
+
+#undef WRITE_HW_WATCHPOINT
+#undef WRITE_HW_WATCHPOINT_CASE
+
 void arm64_write_hw_debug_regs(const arm64_debug_state_t* debug_state) {
+    // Write the HW Breakpoints.
     uint64_t bps_count = arm64_hw_breakpoint_count();
     for (unsigned int i = 0; i < bps_count; i++) {
         uint32_t dbgbcr = debug_state->hw_bps[i].dbgbcr;
         uint64_t dbgbvr = debug_state->hw_bps[i].dbgbvr;
         arm64_write_hw_breakpoint_by_index(i, dbgbcr, dbgbvr);
     }
+
+    // Write the HW Watchpoints.
+    uint64_t wps_count = arm64_hw_watchpoint_count();
+    for (unsigned int i = 0; i < wps_count; i++) {
+        uint32_t dbgwcr = debug_state->hw_wps[i].dbgwcr;
+        uint64_t dbgwvr = debug_state->hw_wps[i].dbgwvr;
+        arm64_write_hw_watchpoint_by_index(i, dbgwcr, dbgwvr);
+    }
 }
 
 void arm64_clear_hw_debug_regs() {
-  for (unsigned int i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
-        arm64_write_hw_breakpoint_by_index(0, 0, i);
-  }
+    for (unsigned int i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+        arm64_write_hw_breakpoint_by_index(i, 0, 0);
+        arm64_write_hw_watchpoint_by_index(i, 0, 0);
+    }
 }
 
 // Debug only.
 void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
-    for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
+    printf("HW breakpoints:\n");
+    for (uint32_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
         uint32_t dbgbcr = debug_state->hw_bps[i].dbgbcr;
         uint64_t dbgbvr = debug_state->hw_bps[i].dbgbvr;
 
-        printf("%lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d\n",
+        printf("%02u. DBGBVR: 0x%lx, "
+               "DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d\n",
                i, dbgbvr,
                (int)(dbgbcr & ARM64_DBGBCR_E),
                (int)((dbgbcr & ARM64_DBGBCR_PMC) >> ARM64_DBGBCR_PMC_SHIFT),
@@ -203,6 +307,25 @@ void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
                (int)((dbgbcr & ARM64_DBGBCR_SSC) >> ARM64_DBGBCR_SSC_SHIFT),
                (int)((dbgbcr & ARM64_DBGBCR_LBN) >> ARM64_DBGBCR_LBN_SHIFT),
                (int)((dbgbcr & ARM64_DBGBCR_BT) >> ARM64_DBGBCR_BY_SHIFT));
+    }
+
+    printf("HW watchpoints:\n");
+    for (uint32_t i = 0; i < ARM64_MAX_HW_WATCHPOINTS; i++) {
+        uint32_t dbgwcr = debug_state->hw_wps[i].dbgwcr;
+        uint64_t dbgwvr = debug_state->hw_wps[i].dbgwvr;
+
+        printf("%02u. DBGWVR: 0x%lx, DBGWCR: "
+               "E=%d, PAC=%d, LSC=%d, BAS=0x%x, HMC=%d, SSC=%d, LBN=%d, WT=%d, MASK=0x%x\n",
+               i, dbgwvr,
+               (int)(dbgwcr & ARM64_DBGWCR_E),
+               (int)((dbgwcr & ARM64_DBGWCR_PAC) >> ARM64_DBGWCR_PAC_SHIFT),
+               (int)((dbgwcr & ARM64_DBGWCR_LSC) >> ARM64_DBGWCR_LSC_SHIFT),
+               (unsigned int)((dbgwcr & ARM64_DBGWCR_BAS) >> ARM64_DBGWCR_BAS_SHIFT),
+               (int)((dbgwcr & ARM64_DBGWCR_HMC) >> ARM64_DBGWCR_HMC_SHIFT),
+               (int)((dbgwcr & ARM64_DBGWCR_SSC) >> ARM64_DBGWCR_SSC_SHIFT),
+               (int)((dbgwcr & ARM64_DBGWCR_LBN) >> ARM64_DBGWCR_LBN_SHIFT),
+               (int)((dbgwcr & ARM64_DBGWCR_WT) >> ARM64_DBGWCR_WT_SHIFT),
+               (unsigned int)((dbgwcr & ARM64_DBGWCR_MASK) >> ARM64_DBGWCR_MASK_SHIFT));
     }
 }
 
@@ -225,5 +348,3 @@ void print_mdscr() {
            (int)((mdscr & ARM64_MDSCR_EL1_TXfull) >> ARM64_MDSCR_EL1_TXfull_SHIFT),
            (int)((mdscr & ARM64_MDSCR_EL1_RXfull) >> ARM64_MDSCR_EL1_RXfull_SHIFT));
 }
-
-

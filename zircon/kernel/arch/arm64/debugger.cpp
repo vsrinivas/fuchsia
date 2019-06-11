@@ -174,8 +174,15 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
         state.hw_bps[i].dbgbvr = in->hw_bps[i].dbgbvr;
     }
 
+    uint64_t wp_count = arm64_hw_watchpoint_count();
+    for (size_t i = 0; i < wp_count; i++) {
+        state.hw_wps[i].dbgwcr = in->hw_wps[i].dbgwcr;
+        state.hw_wps[i].dbgwvr = in->hw_wps[i].dbgwvr;
+    }
+
     uint32_t active_breakpoints = 0;
-    if (!arm64_validate_debug_state(&state, &active_breakpoints)) {
+    uint32_t active_watchpoints = 0;
+    if (!arm64_validate_debug_state(&state, &active_breakpoints, &active_watchpoints)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -188,7 +195,8 @@ zx_status_t arch_set_debug_regs(struct thread* thread, const zx_thread_state_deb
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    arm64_set_debug_state_for_thread(thread, active_breakpoints > 0);
+    bool hw_debug_needed = (active_breakpoints > 0) || (active_watchpoints > 0);
+    arm64_set_debug_state_for_thread(thread, hw_debug_needed);
     thread->arch.track_debug_state = true;
     thread->arch.debug_state = state;
 

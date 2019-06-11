@@ -266,4 +266,3 @@ int test_suspend_on_start() {
 
     END_HELPER;
 }
-

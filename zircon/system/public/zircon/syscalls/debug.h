@@ -125,15 +125,15 @@ typedef struct zx_thread_state_vector_regs {
 // Value for XZ_THREAD_STATE_DEBUG_REGS for ARM64 platforms.
 typedef struct zx_thread_state_debug_regs {
     struct {
-        uint64_t dbgbvr; //  HW Breakpoint Value register.
         uint32_t dbgbcr; //  HW Breakpoint Control register.
+        uint64_t dbgbvr; //  HW Breakpoint Value register.
     } hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
     // Number of HW Breakpoints in the platform.
     // Will be set on read and ignored on write.
     uint8_t hw_bps_count;
     struct {
-        uint64_t dbgwvr; // HW Watchpoint Value register.
         uint32_t dbgwcr; // HW Watchpoint Control register.
+        uint64_t dbgwvr; // HW Watchpoint Value register.
     } hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
     // Number of HW Watchpoints in the platform.
     // Will be set on read and ignored on write.
