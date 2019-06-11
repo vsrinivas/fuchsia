@@ -81,6 +81,9 @@ Where *condition* is one of
   a new process.
 + **ZX_POL_NEW_PROFILE** a process under this job is attempting to create
   a new profile.
++ **ZX_POL_AMBIENT_MARK_VMO_EXEC** a process under this job is attempting
+  to use [`zx_vmo_replace_as_executable()`] with a **ZX_HANDLE_INVALID**
+  as the second argument rather than a valid **ZX_RSRC_KIND_VMEX**.
 + **ZX_POL_NEW_ANY** is a special *condition* that stands for all of
   the above **ZX_NEW** condtions such as **ZX_POL_NEW_VMO**,
   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,
@@ -180,3 +183,4 @@ In a future build this error will no longer occur.
 [`zx_job_create()`]: job_create.md
 [`zx_object_get_info()`]: object_get_info.md
 [`zx_process_create()`]: process_create.md
+[`zx_vmo_replace_as_executable()`]: vmo_replace_as_executable.md

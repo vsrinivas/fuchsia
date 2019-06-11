@@ -196,6 +196,25 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                     cmd.status = ZX_OK;
                     goto reply;
                 }
+                if (what & MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE) {
+                    what &= ~MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE;
+                    zx_handle_t vmo = ZX_HANDLE_INVALID;
+                    zx_handle_t pager = ZX_HANDLE_INVALID;
+                    zx_handle_t port = ZX_HANDLE_INVALID;
+
+                    // We use builtin_trap to kill off the process in a way
+                    // that distinguishes a failure in these calls from an
+                    // intended failure.
+                    if (ctx.pager_create(0u, &pager) != ZX_OK)
+                        __builtin_trap();
+                    if (ctx.port_create(0u, &port) != ZX_OK)
+                        __builtin_trap();
+                    if (ctx.pager_create_vmo(pager, 0u, port, 0u, 0u, &vmo) != ZX_OK)
+                        __builtin_trap();
+
+                    cmd.status = ctx.vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+                    goto reply;
+                }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get ZX_CHANNEL_PEER_CLOSED.

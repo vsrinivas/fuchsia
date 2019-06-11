@@ -48,7 +48,8 @@ union Encoding {
         uint64_t new_timer       :  4;
         uint64_t new_process     :  4;
         uint64_t new_profile     :  4;
-        uint64_t unused_bits     : 11;
+        uint64_t ambient_mark_vmo_exec  :  4;
+        uint64_t unused_bits     :  7;
         uint64_t cookie_mode     :  1;  // see kPolicyInCookie.
     };
 
@@ -76,8 +77,9 @@ const uint32_t kNewObjectPolicies[]{
     ZX_POL_NEW_PROFILE,
 };
 static_assert(
-    fbl::count_of(kNewObjectPolicies) + 4 == ZX_POL_MAX,
-    "please update JobPolicy::AddPartial, JobPolicy::QueryBasicPolicy, and kNewObjectPolicies");
+    fbl::count_of(kNewObjectPolicies) + 5 == ZX_POL_MAX,
+    "please update JobPolicy::AddPartial, JobPolicy::QueryBasicPolicy, kNewObjectPolicies,"
+    "and the add_basic_policy_deny_any_new() test");
 
 bool CanSetEntry(uint64_t existing, uint32_t new_action) {
     if (Encoding::is_default(existing))
@@ -146,6 +148,10 @@ zx_status_t AddPartial(uint32_t mode, pol_cookie_t existing_policy,
         break;
     case ZX_POL_NEW_PROFILE:
         POLMAN_SET_ENTRY(mode, existing.new_profile, policy, result.new_profile);
+        break;
+    case ZX_POL_AMBIENT_MARK_VMO_EXEC:
+        POLMAN_SET_ENTRY(mode, existing.ambient_mark_vmo_exec, policy,
+                         result.ambient_mark_vmo_exec);
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -245,6 +251,7 @@ uint32_t JobPolicy::QueryBasicPolicy(uint32_t condition) const {
     case ZX_POL_NEW_PROCESS: return GetEffectiveAction(existing.new_process);
     case ZX_POL_NEW_PROFILE: return GetEffectiveAction(existing.new_profile);
     case ZX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
+    case ZX_POL_AMBIENT_MARK_VMO_EXEC: return GetEffectiveAction(existing.ambient_mark_vmo_exec);
     default: return ZX_POL_ACTION_DENY;
     }
 }
@@ -310,6 +317,7 @@ bool JobPolicy::operator!=(const JobPolicy& rhs) const {
     DEFINE_COUNTER(action, new_timer)                                          \
     DEFINE_COUNTER(action, new_process)                                        \
     DEFINE_COUNTER(action, new_profile)                                        \
+    DEFINE_COUNTER(action, ambient_mark_vmo_exec)                              \
     static constexpr const Counter* const COUNTER_ARRAY(action)[] = {          \
         [ZX_POL_BAD_HANDLE] = &COUNTER(action, bad_handle),                    \
         [ZX_POL_WRONG_OBJECT] = &COUNTER(action, wrong_object),                \
@@ -325,6 +333,7 @@ bool JobPolicy::operator!=(const JobPolicy& rhs) const {
         [ZX_POL_NEW_TIMER] = &COUNTER(action, new_timer),                      \
         [ZX_POL_NEW_PROCESS] = &COUNTER(action, new_process),                  \
         [ZX_POL_NEW_PROFILE] = &COUNTER(action, new_profile),                  \
+        [ZX_POL_AMBIENT_MARK_VMO_EXEC] = &COUNTER(action, ambient_mark_vmo_exec), \
     };                                                                         \
     static_assert(fbl::count_of(COUNTER_ARRAY(action)) == ZX_POL_MAX);
 

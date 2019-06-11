@@ -140,7 +140,7 @@ static bool add_basic_policy_unmodified_on_error() {
     END_TEST;
 }
 
-static bool add_basic_policy_deny_any() {
+static bool add_basic_policy_deny_any_new() {
     BEGIN_TEST;
 
     JobPolicy p;
@@ -156,6 +156,11 @@ static bool add_basic_policy_deny_any() {
     ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_TIMER), "");
     ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PROCESS), "");
     ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PROFILE), "");
+
+    ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_BAD_HANDLE), "");
+    ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_WRONG_OBJECT), "");
+    ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_VMAR_WX), "");
+    ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_AMBIENT_MARK_VMO_EXEC), "");
 
     END_TEST;
 }
@@ -195,7 +200,7 @@ UNITTEST("add_basic_policy_no_widening_with_any", add_basic_policy_no_widening_w
 UNITTEST("add_basic_policy_absolute", add_basic_policy_absolute)
 UNITTEST("add_basic_policy_relative", add_basic_policy_relative)
 UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_error)
-UNITTEST("add_basic_policy_deny_any", add_basic_policy_deny_any)
+UNITTEST("add_basic_policy_deny_any_new", add_basic_policy_deny_any_new)
 UNITTEST("set_get_timer_slack", set_get_timer_slack)
 UNITTEST("increment_counters", increment_counters)
 UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests");

@@ -139,7 +139,7 @@ static bool invalid_calls(uint32_t options) {
     {
         // Too many.
         auto job = make_job();
-        zx_policy_basic_t policy[15]{};
+        zx_policy_basic_t policy[16]{};
         for (unsigned i = 0; i < fbl::count_of(policy); ++i) {
             policy[i] = {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL};
         }
@@ -275,6 +275,24 @@ static bool EnforceDenyVmoPhysical() {
     ASSERT_TRUE(CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
                                     MINIP_CMD_CREATE_VMO_PHYSICAL, ZX_ERR_ACCESS_DENIED));
 
+    END_TEST;
+}
+
+static bool EnforceDenyAmbientExecutable() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY}};
+    ASSERT_TRUE(CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                                    MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE, ZX_ERR_ACCESS_DENIED));
+
+    END_TEST;
+}
+static bool TestAllowAmbientExecutable() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_ALLOW}};
+    ASSERT_TRUE(CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                                    MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE, ZX_OK));
     END_TEST;
 }
 
@@ -630,6 +648,8 @@ RUN_TEST(EnforceDenyAny)
 RUN_TEST(EnforceKillEvent)
 RUN_TEST(EnforceAllowAny)
 RUN_TEST(EnforceDenyButEvent)
+RUN_TEST(EnforceDenyAmbientExecutable)
+RUN_TEST(TestAllowAmbientExecutable)
 RUN_TEST(TestExceptionOnNewEventAndDeny)
 RUN_TEST(TestExceptionOnNewEventButAllow)
 RUN_TEST(TestExceptionOnNewProfileAndDeny)

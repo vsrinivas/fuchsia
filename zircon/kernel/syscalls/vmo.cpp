@@ -283,15 +283,14 @@ zx_status_t sys_vmo_replace_as_executable(
     zx_handle_t handle, zx_handle_t vmex, user_out_handle* out) {
     LTRACEF("repexec %x %x\n", handle, vmex);
 
+    auto up = ProcessDispatcher::GetCurrent();
+
     zx_status_t vmex_status = ZX_OK;
     if (vmex != ZX_HANDLE_INVALID) {
         vmex_status = validate_resource(vmex, ZX_RSRC_KIND_VMEX);
     } else {
-        // TODO(mdempsky): Print warning that VMEX resource is
-        // required, and eventually reject outright.
+        vmex_status = up->EnforceBasicPolicy(ZX_POL_AMBIENT_MARK_VMO_EXEC);
     }
-
-    auto up = ProcessDispatcher::GetCurrent();
 
     Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table_lock()};
     auto source = up->GetHandleLocked(handle);

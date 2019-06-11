@@ -52,6 +52,9 @@ __BEGIN_CDECLS
 // The process requests a backtrace dump.
 // The return value upon successful thread resume is ZX_OK.
 #define MINIP_CMD_BACKTRACE_REQUEST          (1 << 13)
+// The process requests a attempts to use the null handle with replace_as_executable.
+// This forwards the result of that operation
+#define MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE (1 << 14)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.

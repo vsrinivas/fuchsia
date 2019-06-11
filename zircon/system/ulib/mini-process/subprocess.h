@@ -23,6 +23,7 @@ typedef struct {
     __typeof(zx_pager_create_vmo)*      pager_create_vmo;
     __typeof(zx_vmo_create_contiguous)* vmo_contiguous_create;
     __typeof(zx_vmo_create_physical)*   vmo_physical_create;
+    __typeof(zx_vmo_replace_as_executable)*   vmo_replace_as_executable;
 } minip_ctx_t;
 
 // Subsequent messages and replies are of this format. The |what| parameter is

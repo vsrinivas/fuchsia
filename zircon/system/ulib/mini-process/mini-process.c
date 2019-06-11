@@ -39,8 +39,8 @@ static zx_status_t write_ctx_message(
         .pager_create = get_syscall_addr(&zx_pager_create, vdso_base),
         .pager_create_vmo = get_syscall_addr(&zx_pager_create_vmo, vdso_base),
         .vmo_contiguous_create = get_syscall_addr(&zx_vmo_create_contiguous, vdso_base),
-        .vmo_physical_create = get_syscall_addr(&zx_vmo_create_physical, vdso_base)
-
+        .vmo_physical_create = get_syscall_addr(&zx_vmo_create_physical, vdso_base),
+        .vmo_replace_as_executable = get_syscall_addr(&zx_vmo_replace_as_executable, vdso_base)
     };
     return zx_channel_write(channel, 0u, &ctx, sizeof(ctx), &transferred_handle, 1u);
 }
