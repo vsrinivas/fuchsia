@@ -11,21 +11,16 @@
 #include <string>
 #include <vector>
 
+#include <cmdline/status.h>
 #include <fidl/lexer.h>
 #include <fidl/linter.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 #include <fidl/tree_visitor.h>
 
-namespace {
+#include "command_line_options.h"
 
-void Usage(const std::string& argv0) {
-    std::cout
-        << "usage: " << argv0 << " <options> <files>\n"
-                                 " * `-h, --help`                   Prints this help, and exits immediately.\n"
-                                 "\n";
-    std::cout.flush();
-}
+namespace {
 
 [[noreturn]] void FailWithUsage(
     const std::string& argv0, const char* message, ...) {
@@ -33,7 +28,7 @@ void Usage(const std::string& argv0) {
     va_start(args, message);
     vfprintf(stderr, message, args);
     va_end(args);
-    Usage(argv0);
+    std::cerr << fidl::linter::Usage(argv0) << std::endl;
     exit(1);
 }
 
@@ -45,7 +40,8 @@ void Usage(const std::string& argv0) {
     exit(1);
 }
 
-bool Lint(const fidl::SourceFile& source_file,
+bool Lint(const fidl::linter::CommandLineOptions& options,
+          const fidl::SourceFile& source_file,
           fidl::ErrorReporter* error_reporter, std::string& output) {
     fidl::Lexer lexer(source_file, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
@@ -55,53 +51,71 @@ bool Lint(const fidl::SourceFile& source_file,
     }
     fidl::Findings findings;
     fidl::linter::Linter linter;
-    // These are very noisy and make it difficult to see other violations.
-    // Also, how bad is it to repeat the library name? Maybe this should be allowed.
-    linter.IgnoreCheckId("name-repeats-library-name");
-    linter.IgnoreCheckId("name-repeats-enclosing-type-name");
-    linter.IgnoreCheckId("no-trailing-comment");
+
+    // The following Excludes can be opted in via command line option:
+
+    // The name-repeats-* checks are very noisy, and sometimes produce
+    // unexpected findings. Rules are being refined, but for now, these
+    // are suppressed.
+    linter.ExcludeCheckId("name-repeats-library-name");
+    linter.ExcludeCheckId("name-repeats-enclosing-type-name");
+
+    // This check does currently highlight some potential issues with
+    // formatting and with 2-slash comments that will be converted to
+    // 3-slash Doc-Comments, but the rule cannot currently check 3-slash
+    // Doc-Comments (they are stripped out before they reach the linter,
+    // and converted to Attributes), and trailing non-Doc comments are
+    // supposed to be allowed. Therefore, the rule will eventually be
+    // removed, once the valid issues it currently surfaces have been
+    // addressed.
+    linter.ExcludeCheckId("no-trailing-comment");
+
+    for (auto check_id : options.excluded_checks) {
+        linter.ExcludeCheckId(check_id);
+    }
+
+    // Includes will override excludes
+    for (auto check_id : options.included_checks) {
+        linter.IncludeCheckId(check_id);
+    }
+
     if (linter.Lint(ast, &findings)) {
         return true;
     }
-    fidl::utils::WriteFindingsToErrorReporter(findings, error_reporter);
+    fidl::utils::WriteFindingsToErrorReporter(
+        findings, error_reporter);
     return false;
 }
 
 } // namespace
 
 int main(int argc, char* argv[]) {
-    // Construct the args vector from the argv array.
-    std::vector<std::string> args(argv, argv + argc);
-    size_t pos = 1;
-    // Process options
-    while (pos < args.size() && args[pos] != "--" && args[pos].find("-") == 0) {
-        if (args[pos] == "-h" || args[pos] == "--help") {
-            Usage(args[0]);
-            exit(0);
-        } else {
-            FailWithUsage(args[0], "Unknown argument: %s\n", args[pos].c_str());
-        }
-        pos++;
+
+    fidl::linter::CommandLineOptions options;
+    std::vector<std::string> filepaths;
+    cmdline::Status status = fidl::linter::ParseCommandLine(
+        argc, const_cast<const char**>(argv), &options, &filepaths);
+    if (status.has_error()) {
+        Fail("%s\n", status.error_message().c_str());
     }
 
-    if (pos >= args.size()) {
-        // TODO: Should probably read a file from stdin, instead.
-        FailWithUsage(args[0], "No files provided\n");
+    if (filepaths.size() == 0) {
+        FailWithUsage(argv[0], "No files provided\n");
     }
 
     fidl::SourceManager source_manager;
 
     // Process filenames.
-    for (size_t i = pos; i < args.size(); i++) {
-        if (!source_manager.CreateSource(args[i])) {
-            Fail("Couldn't read in source data from %s\n", args[i].c_str());
+    for (auto filepath : filepaths) {
+        if (!source_manager.CreateSource(filepath)) {
+            Fail("Couldn't read in source data from %s\n", filepath.c_str());
         }
     }
 
     fidl::ErrorReporter error_reporter;
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
-        if (!Lint(*source_file, &error_reporter, output)) {
+        if (!Lint(options, *source_file, &error_reporter, output)) {
             // Some findings were produced but for now we will continue,
             // and print the results at the end.
         }

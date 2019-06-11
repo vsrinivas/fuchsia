@@ -147,14 +147,9 @@ public:
 
 private:
     // Removes all expected findings previously added with AddFinding().
-    LintTest& Reset() {
-        library_.reset();
-        expected_findings_.clear();
-        that_ = "";
-        return *this;
-    }
+    bool execute_helper(bool expect_findings, bool assert_positions_match) {
+        BEGIN_HELPER;
 
-    bool execute(bool expect_findings, bool assert_positions_match = true) {
         std::ostringstream ss;
         ss << std::endl
            << "Failed test for check '" << default_check_id_ << "'";
@@ -194,7 +189,7 @@ private:
 
         while (finding != findings.end() &&
                expected_finding != expected_findings_.end()) {
-            ASSERT_TRUE(CompareExpectedToActualFinding(
+            EXPECT_TRUE(CompareExpectedToActualFinding(
                 *expected_finding, *finding,
                 ss.str(), assert_positions_match));
             expected_finding++;
@@ -204,19 +199,29 @@ private:
             PrintFindings(ss, finding, findings.end(), "UNEXPECTED FINDINGS");
             context = ss.str();
             bool has_unexpected_findings = true;
-            ASSERT_FALSE(has_unexpected_findings, context.c_str());
+            EXPECT_FALSE(has_unexpected_findings, context.c_str());
         }
         if (expected_finding != expected_findings_.end()) {
             PrintFindings(ss, expected_finding, expected_findings_.end(),
                           "EXPECTED FINDINGS NOT FOUND");
             context = ss.str();
             bool expected_findings_not_found = true;
-            ASSERT_FALSE(expected_findings_not_found, context.c_str());
+            EXPECT_FALSE(expected_findings_not_found, context.c_str());
         }
-        // Delete the library. The library owns the |SourceFile| referenced by
-        // the |expected_findings_|, so delete those as well.
+
+        END_HELPER;
+    }
+
+    void Reset() {
+        library_.reset();
+        expected_findings_.clear();
+        that_ = "";
+    }
+
+    bool execute(bool expect_findings, bool assert_positions_match = true) {
+        bool success = execute_helper(expect_findings, assert_positions_match);
         Reset();
-        return true;
+        return success;
     }
 
     bool ValidTest() const {
@@ -1412,7 +1417,7 @@ library fidl.a;
 
     test.source_template(R"FIDL(// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-    // found in the README.md file.
+// found in the README.md file.
 
 library fidl.a;
 )FIDL")

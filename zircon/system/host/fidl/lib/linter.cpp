@@ -116,13 +116,20 @@ const fidl::raw::SourceElement& GetElementAsRef(
 // is not modified. It's Findings object (not owned) is updated.
 Finding* Linter::AddFinding(SourceLocation source_location,
                             std::string check_id,
-                            std::string message) const {
-    assert(current_findings_ != nullptr);
-    if (ignored_check_ids_.find(check_id) == ignored_check_ids_.end()) {
-        return &(current_findings_->emplace_back(source_location, check_id, message));
-    } else {
+                            std::string message) {
+    bool is_included = included_check_ids_.find(check_id) != included_check_ids_.end();
+    bool is_excluded = excluded_check_ids_.find(check_id) != excluded_check_ids_.end();
+    if (is_excluded && !is_included)
         return nullptr;
-    }
+
+    auto result = current_findings_.emplace(
+        new Finding(
+            source_location, check_id, message));
+    // Future checks may need to allow multiple findings of the
+    // same check ID at the same location.
+    assert(result.second &&
+           "Duplicate key. Check criteria in Finding.operator==() and operator<()");
+    return result.first->get();
 }
 
 // Add a finding with optional suggestion and replacement
@@ -131,7 +138,7 @@ const Finding* Linter::AddFinding(
     const CheckDef& check,
     Substitutions substitutions,
     std::string suggestion_template,
-    std::string replacement_template) const {
+    std::string replacement_template) {
     auto* finding = AddFinding(
         location,
         check.id(), check.message_template().Substitute(substitutions));
@@ -158,7 +165,7 @@ const Finding* Linter::AddFinding(
     const CheckDef& check,
     Substitutions substitutions,
     std::string suggestion_template,
-    std::string replacement_template) const {
+    std::string replacement_template) {
     return AddFinding(
         GetElementAsRef(element).location(),
         check, substitutions,
@@ -175,13 +182,14 @@ CheckDef Linter::DefineCheck(std::string check_id,
 // Returns true if no new findings were generated
 bool Linter::Lint(std::unique_ptr<raw::File> const& parsed_source,
                   Findings* findings) {
-    size_t initial_findings_count = findings->size();
-    current_findings_ = findings;
     callbacks_.Visit(parsed_source);
-    current_findings_ = nullptr;
-    if (findings->size() == initial_findings_count) {
+    if (current_findings_.empty()) {
         return true;
     }
+    for (auto& finding_ptr : current_findings_) {
+        findings->emplace_back(std::move(*finding_ptr));
+    }
+    current_findings_.clear();
     return false;
 }
 
@@ -275,7 +283,7 @@ void Linter::CheckRepeatedName(
 
 const Finding* Linter::AddRepeatedNameFinding(
     const Context& context,
-    const Context::RepeatsContextNames& name_repeater) const {
+    const Context::RepeatsContextNames& name_repeater) {
     std::string repeated_names;
     for (const auto& repeat : name_repeater.repeats) {
         if (!repeated_names.empty()) {

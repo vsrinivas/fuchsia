@@ -63,7 +63,7 @@ public:
         : source_location_(source_location),
           subcategory_(subcategory), message_(message) {}
 
-    // move constructor (required for emplace() functions)
+    // move constructor
     Finding(Finding&& rhs) = default;
 
     // Construct a new Suggestion with its constructor arguments, and add it to

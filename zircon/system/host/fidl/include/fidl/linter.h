@@ -20,7 +20,7 @@ namespace fidl {
 namespace linter {
 
 // The primary business logic for lint-checks on a FIDL file is implemented in
-// the |Linter| class.
+// the |Linter| class. This class is not thread safe.
 class Linter {
 
 public:
@@ -29,14 +29,19 @@ public:
     // |CheckCallbacks|).
     Linter();
 
-    void IgnoreCheckId(std::string check_id) {
-        ignored_check_ids_.insert(check_id);
+    void ExcludeCheckId(std::string check_id) {
+        excluded_check_ids_.insert(check_id);
+    }
+
+    void IncludeCheckId(std::string check_id) {
+        included_check_ids_.insert(check_id);
     }
 
     // Calling Lint() invokes the callbacks for elements
     // of the given |SourceFile|. If a check fails, the callback generates a
     // |Finding| and adds it to the given Findings (vector of Finding).
-    // Lint() is not thread-safe.
+    // Lint() is single-threaded, and modifies state of the |Linter| class
+    // as it evaluates a single file at a time.
     // Returns true if no new findings were generated.
     bool Lint(std::unique_ptr<raw::File> const& parsed_source,
               Findings* findings);
@@ -129,14 +134,14 @@ private:
 
     Finding* AddFinding(SourceLocation source_location,
                         std::string check_id,
-                        std::string message) const;
+                        std::string message);
 
     const Finding* AddFinding(
         SourceLocation location,
         const CheckDef& check,
         Substitutions substitutions = {},
         std::string suggestion_template = "",
-        std::string replacement_template = "") const;
+        std::string replacement_template = "");
 
     template <typename SourceElementSubtypeRefOrPtr>
     const Finding* AddFinding(
@@ -144,16 +149,16 @@ private:
         const CheckDef& check,
         Substitutions substitutions = {},
         std::string suggestion_template = "",
-        std::string replacement_template = "") const;
+        std::string replacement_template = "");
 
     const Finding* AddRepeatedNameFinding(
         const Context& context,
-        const Context::RepeatsContextNames& name_repeater) const;
+        const Context::RepeatsContextNames& name_repeater);
 
     bool CurrentLibraryIsPlatformSourceLibrary();
     bool CurrentFileIsInPlatformSourceTree();
 
-    // Initialization and checks at the start of a new file. The Linter
+    // Initialization and checks at the start of a new file. The |Linter|
     // can be called multiple times with many different files.
     void NewFile(const raw::File& element);
 
@@ -248,15 +253,53 @@ private:
     CaseType upper_camel_{utils::is_upper_camel_case,
                           utils::to_upper_camel_case};
 
-    std::set<std::string> ignored_check_ids_;
+    std::set<std::string> included_check_ids_;
+    std::set<std::string> excluded_check_ids_;
 
-    // Pointer to the current "Findings" object, passed to the Lint() method,
-    // for the diration of the Visit() to lint a given FIDL file. When the
-    // Visit() is over, |current_findings_| is reset to nullptr.
-    // As a result, Lint() is single-threaded. The variable could be changed
-    // to thread-local, but in general this class has not been reviewed for
-    // thread-safety characteristics, and it is not currently deemed necessary.
-    Findings* current_findings_ = nullptr;
+    using FindingPtr = std::unique_ptr<Finding>;
+
+    // Compare type provides the function for ordering elements in the set, and
+    // ensuring elements are set-wise unique. The current assumption is that no
+    // two findings from the same subcategory at the same location are expected.
+    // By including both source location and subcategory, all expected Findings
+    // will be unique, and any Finding added with the same location and
+    // subcategory as another will be considered a bug.
+    struct FindingPtrCompare {
+        // Return true if lhs < rhs.
+        bool operator()(const FindingPtr& lhs, const FindingPtr& rhs) const {
+            return lhs->source_location() < rhs->source_location() ||
+                   (lhs->source_location() == rhs->source_location() &&
+                    lhs->subcategory() < rhs->subcategory());
+        }
+    };
+
+    // An ordered collection of |std::unique_ptr| to |Finding| objects,
+    // populated only for the duration of the Visit(), to lint a given FIDL
+    // file.
+    //
+    // Some lint checks can only be assessed after processing more of the FIDL
+    // (for example, "name-repeats-enclosing-type-name" checks cannot be added
+    // until all members of the enclosing type are available). Other checks on
+    // the same members will be added as they are encountered. Since |Finding|
+    // objects are collected out of source order, an ordered collecttion
+    // ensures |Finding| objects are in sorted order.
+    //
+    // |Finding| objects must be returned in source order (filename, starting
+    // character, and ending character).
+    //
+    // |Finding| objects are sorted by SourceLocation, with additional criteria
+    // to sort multiple findings for the same source element. If a Finding is
+    // added to an ordered collection that does not allow duplicates, and the
+    // sort criteria is not specific enough to avoid a key collision, an
+    // assertion error will halt the program, to be resolved either by adding
+    // additional sort criteriea or changing the Finding objects to ensure
+    // uinqueness.
+    //
+    // When the Visit() is over, the |Finding| objects are transferred, in order
+    // (by filename and source location of each finding, with any duplicates
+    // also included in the order they were discovered/added) into the |Findings|
+    // list passed into the Lint() method, and |current_findings_| is cleared.
+    std::set<FindingPtr, FindingPtrCompare> current_findings_;
 };
 
 } // namespace linter

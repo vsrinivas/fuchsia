@@ -34,6 +34,22 @@ public:
     SourceFile::Position position() const;
     std::string position_str() const;
 
+    // identity
+    inline bool operator==(const SourceLocation& rhs) const {
+        return data_.data() == rhs.data_.data() &&
+               data_.size() == rhs.data_.size();
+    }
+
+    // supports sorted sets or ordering by SourceLocation, based on filename,
+    // start position, and then end position.
+    inline bool operator<(const SourceLocation& rhs) const {
+        return (source_file_->filename() < rhs.source_file_->filename() ||
+                (source_file_ == rhs.source_file_ &&
+                 (data_.data() < rhs.data_.data() ||
+                  (data_.data() == rhs.data_.data() &&
+                   (data_.size() < rhs.data_.size())))));
+    }
+
 private:
     std::string_view data_;
     const SourceFile* source_file_;

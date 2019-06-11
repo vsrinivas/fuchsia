@@ -179,7 +179,9 @@ std::string to_konstant_case(const std::string& str) {
 }
 
 void PrintFinding(std::ostream& os, const Finding& finding) {
-    os << finding.message() << " [" << finding.subcategory() << "]";
+    os << finding.message() << " [";
+    os << finding.subcategory();
+    os << "]";
     if (finding.suggestion().has_value()) {
         auto& suggestion = finding.suggestion();
         os << "; " << suggestion->description();
