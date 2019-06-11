@@ -124,9 +124,6 @@ typedef uint32_t zx_signals_t;
 #define ZX_SOCKET_READ_THRESHOLD      __ZX_OBJECT_SIGNAL_10
 #define ZX_SOCKET_WRITE_THRESHOLD     __ZX_OBJECT_SIGNAL_11
 
-// Deprecated
-#define ZX_SOCKET_READ_DISABLED       ZX_SOCKET_PEER_WRITE_DISABLED
-
 // Fifo
 #define ZX_FIFO_READABLE            __ZX_OBJECT_READABLE
 #define ZX_FIFO_WRITABLE            __ZX_OBJECT_WRITABLE

@@ -189,7 +189,7 @@ VirtioVsock::SocketConnection::~SocketConnection() {
 
 zx_status_t VirtioVsock::SocketConnection::Init() {
   rx_wait_.set_object(socket_.get());
-  rx_wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
+  rx_wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED |
                        ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
   rx_wait_.set_handler(
       [this](async_dispatcher_t* dispatcher, async::Wait* wait,
@@ -223,7 +223,7 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
 
   // If the socket has been partially or fully closed, wait on the Virtio
   // receive queue.
-  if (signal->observed & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED |
+  if (signal->observed & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED |
                           ZX_SOCKET_WRITE_DISABLED)) {
     zx_signals_t signals = rx_wait_.trigger();
     if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
@@ -233,13 +233,13 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
       flags_ |= VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH;
       rx_wait_.set_trigger(signals & ~ZX_SOCKET_PEER_CLOSED);
     } else {
-      if (signal->observed & ZX_SOCKET_READ_DISABLED &&
+      if (signal->observed & ZX_SOCKET_PEER_WRITE_DISABLED &&
           !(flags_ & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV)) {
         // The peer disabled reading, therefore we move to sending a partial
         // connection shutdown.
         UpdateOp(VIRTIO_VSOCK_OP_SHUTDOWN);
         flags_ |= VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV;
-        rx_wait_.set_trigger(signals & ~ZX_SOCKET_READ_DISABLED);
+        rx_wait_.set_trigger(signals & ~ZX_SOCKET_PEER_WRITE_DISABLED);
       }
       if (signal->observed & ZX_SOCKET_WRITE_DISABLED &&
           !(flags_ & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND)) {

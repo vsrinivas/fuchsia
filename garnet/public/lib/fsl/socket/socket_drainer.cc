@@ -28,7 +28,7 @@ SocketDrainer::~SocketDrainer() {
 void SocketDrainer::Start(zx::socket source) {
   source_ = std::move(source);
   wait_.set_object(source_.get());
-  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
+  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED |
                     ZX_SOCKET_PEER_CLOSED);
   OnHandleReady(dispatcher_, &wait_, ZX_OK, nullptr);
 }
