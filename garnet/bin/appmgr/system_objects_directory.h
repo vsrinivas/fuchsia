@@ -19,43 +19,27 @@ class SystemObjectsDirectory : public component::ExposedObject {
   explicit SystemObjectsDirectory(zx::process process);
 
  private:
-  zx_status_t GetProcessHandleStats(
-      zx_info_process_handle_stats_t* process_handle_stats);
-
   class ThreadsDirectory : public component::ExposedObject {
    public:
-    ThreadsDirectory(const zx::process* process);
+    explicit ThreadsDirectory(std::shared_ptr<zx::process> process);
 
    private:
-    static constexpr size_t kMaxThreads = 2048;
     static constexpr uint64_t kAllId = 1;
-    struct ThreadInfo {
-      zx_koid_t koid;
-      fbl::String name;
-      zx::thread thread;
-    };
-
-    // Retrieves a list of ThreadInfos, one for each thread of the process.
-    void GetThreads(fbl::Vector<ThreadInfo>* out);
-
-    // Given a thread's handle, returns stats about the thread.
-    zx_status_t GetThreadStats(zx_handle_t thread,
-                               zx_info_thread_stats_t* thread_stats);
-
-    const zx::process* process_;
+    std::shared_ptr<zx::process> process_;
+    fit::deferred_action<fit::closure> cleanup_;
   };
 
   class MemoryDirectory : public component::ExposedObject {
    public:
-    MemoryDirectory(const zx::process* process);
+    explicit MemoryDirectory(std::shared_ptr<zx::process> process);
 
    private:
-    zx_status_t GetTaskStats(zx_info_task_stats_t* task_stats);
-
-    const zx::process* process_;
+    std::shared_ptr<zx::process> process_;
+    fit::deferred_action<fit::closure> cleanup_;
   };
 
-  zx::process process_;
+  // TODO(CF-761): Refactor this to use dynamic VMO nodes.
+  std::shared_ptr<zx::process> process_;
   std::unique_ptr<ThreadsDirectory> threads_;
   std::unique_ptr<MemoryDirectory> memory_;
 };

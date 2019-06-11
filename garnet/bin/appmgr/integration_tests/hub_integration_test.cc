@@ -5,6 +5,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/async_promise/executor.h>
+#include <lib/fdio/directory.h>
 #include <lib/inspect/query/discover.h>
 #include <lib/inspect/query/read.h>
 #include <lib/inspect/testing/inspect.h>
@@ -164,8 +165,6 @@ TEST_F(HubTest, SystemObjectsThreads) {
       "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
       "appmgr_integration_tests_inspect_test_app.cmx";
 
-  // TODO(crjohns): Figure out how to retrieve the koid of a started
-  // environment.
   auto env_name = fxl::StringPrintf("test-%lu", time(NULL));
 
   auto nested_env = CreateNewEnclosingEnvironment(env_name, CreateServices());
@@ -203,6 +202,81 @@ TEST_F(HubTest, SystemObjectsThreads) {
   EXPECT_THAT(*stacks,
               NodeMatches(PropertyList(ElementsAre(StringPropertyIs(
                   "stacks", "\nERROR (CF-812): Full thread dump disabled")))));
+}
+
+TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
+  std::string url =
+      "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/"
+      "appmgr_integration_tests_inspect_test_app.cmx";
+
+  auto env_name = fxl::StringPrintf("test-%lu", time(NULL));
+
+  auto nested_env = CreateNewEnclosingEnvironment(env_name, CreateServices());
+  WaitForEnclosingEnvToStart(nested_env.get());
+
+  fuchsia::sys::ComponentControllerPtr controller =
+      nested_env->CreateComponentFromUrl(url);
+  bool ready = false;
+  controller.events().OnDirectoryReady = [&] { ready = true; };
+  RunLoopUntil([&] { return ready; });
+
+  auto paths = inspect::SyncSearchGlobs({fxl::StringPrintf(
+      "/hub/r/%s/*/c/appmgr_integration_tests_inspect_test_app.cmx/*/"
+      "system_objects/*",
+      env_name.c_str())});
+
+  ASSERT_EQ(1U, paths.size());
+
+  async::Executor executor_(dispatcher());
+
+  fuchsia::inspect::InspectPtr inspect;
+  auto endpoint = paths[0].AbsoluteFilePath();
+  zx_status_t status = fdio_service_connect(
+      endpoint.c_str(), inspect.NewRequest().TakeChannel().get());
+  ASSERT_EQ(ZX_OK, status);
+  auto reader = std::make_unique<inspect::ObjectReader>(std::move(inspect));
+
+  bool reader_open = false;
+  executor_.schedule_task(reader->Read().and_then(
+      [&](fuchsia::inspect::Object& unused) { reader_open = true; }));
+  RunLoopUntil([&] { return reader_open; });
+
+  auto open_child = reader->OpenChild("threads");
+
+  bool terminated = false;
+  controller.events().OnTerminated =
+      [&](uint64_t status, fuchsia::sys::TerminationReason reason) {
+        terminated = true;
+      };
+  controller->Kill();
+  RunLoopUntil([&] { return terminated; });
+  controller.Unbind();
+
+  std::unique_ptr<inspect::ObjectReader> all_stack_reader;
+  executor_.schedule_task(open_child
+                              .and_then([&](inspect::ObjectReader& next) {
+                                return next.OpenChild("all_thread_stacks");
+                              })
+                              .and_then([&](inspect::ObjectReader& next) {
+                                all_stack_reader =
+                                    std::make_unique<inspect::ObjectReader>(
+                                        std::move(next));
+                              }));
+
+  RunLoopUntil([&] { return !!all_stack_reader; });
+  reader.reset();
+
+  // At this point in time we have an open FIDL connection to a node in the
+  // SystemObjectsDirectory. Accessing that node should not cause a crash and
+  // will give no visible error.
+  fit::result<fuchsia::inspect::Object> result;
+  executor_.schedule_task(all_stack_reader->Read().then(
+      [&](fit::result<fuchsia::inspect::Object>& res) {
+        result = std::move(res);
+      }));
+
+  RunLoopUntil([&] { return !!result; });
+  EXPECT_TRUE(result.is_ok());
 }
 
 }  // namespace
