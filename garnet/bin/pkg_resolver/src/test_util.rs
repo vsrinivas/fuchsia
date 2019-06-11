@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::amber_connector::AmberConnect;
 use failure::Error;
 use fidl::endpoints::{self, ServerEnd};
 use fidl_fuchsia_amber::{ControlProxy as AmberProxy, ControlRequest};
@@ -10,6 +11,7 @@ use fidl_fuchsia_pkg::{self, PackageCacheRequest};
 use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{Channel, Peered, Signals, Status};
+use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json;
 use std::collections::HashMap;
@@ -199,5 +201,23 @@ impl MockPackageCache {
             }
             _ => {}
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct MockAmberConnector {
+    amber: Arc<Mutex<Arc<MockAmber>>>,
+}
+
+impl MockAmberConnector {
+    pub(crate) fn new(amber: MockAmber) -> Self {
+        let amber = Arc::new(Mutex::new(Arc::new(amber)));
+        MockAmberConnector { amber }
+    }
+}
+
+impl AmberConnect for MockAmberConnector {
+    fn connect(&self) -> Result<AmberProxy, Status> {
+        Ok(self.amber.lock().clone().spawn())
     }
 }

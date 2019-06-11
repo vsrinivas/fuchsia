@@ -3,22 +3,20 @@
 // found in the LICENSE file.
 
 use {
+    crate::amber_connector::AmberConnect,
     crate::rewrite_manager::RewriteManager,
-    failure::{Error, ResultExt},
+    failure::Error,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_amber::{self, ControlMarker as AmberMarker, ControlProxy as AmberProxy},
     fidl_fuchsia_io::{self, DirectoryMarker},
     fidl_fuchsia_pkg::{
         PackageCacheProxy, PackageResolverRequest, PackageResolverRequestStream, UpdatePolicy,
     },
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{Channel, MessageBuf, Signals, Status},
     futures::prelude::*,
-    log::{info, warn},
     parking_lot::RwLock,
     std::sync::Arc,
 };
@@ -26,14 +24,15 @@ use {
 // The error amber returns if it could not find the merkle for this package.
 const PACKAGE_NOT_FOUND: &str = "merkle not found for package";
 
-pub async fn run_resolver_service(
+pub async fn run_resolver_service<A>(
     rewrites: Arc<RwLock<RewriteManager>>,
-    mut amber: AmberProxy,
+    amber_connector: A,
     cache: PackageCacheProxy,
     mut stream: PackageResolverRequestStream,
-) -> Result<(), Error> {
-    let mut should_reconnect = false;
-
+) -> Result<(), Error>
+where
+    A: AmberConnect,
+{
     while let Some(event) = await!(stream.try_next())? {
         let PackageResolverRequest::Resolve {
             package_url,
@@ -43,20 +42,15 @@ pub async fn run_resolver_service(
             responder,
         } = event;
 
-        if should_reconnect {
-            info!("Reconnecting to amber");
-            amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
-            should_reconnect = false;
-        }
-
-        let status =
-            await!(resolve(&rewrites, &amber, &cache, package_url, selectors, update_policy, dir));
-
-        // TODO this is an overbroad error type for this, make it more accurate
-        if let Err(Status::INTERNAL) = &status {
-            warn!("Resolution had an internal error, will reconnect to amber on next request.");
-            should_reconnect = true;
-        }
+        let status = await!(resolve(
+            &rewrites,
+            &amber_connector,
+            &cache,
+            package_url,
+            selectors,
+            update_policy,
+            dir
+        ));
 
         responder.send(Status::from(status).into_raw())?;
     }
@@ -68,15 +62,18 @@ pub async fn run_resolver_service(
 ///
 /// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
 /// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
-async fn resolve<'a>(
+async fn resolve<'a, A>(
     rewrites: &'a Arc<RwLock<RewriteManager>>,
-    amber: &'a AmberProxy,
+    amber_connector: &'a A,
     cache: &'a PackageCacheProxy,
     pkg_url: String,
     selectors: Vec<String>,
     _update_policy: UpdatePolicy,
     dir_request: ServerEnd<DirectoryMarker>,
-) -> Result<(), Status> {
+) -> Result<(), Status>
+where
+    A: AmberConnect,
+{
     let url = PkgUrl::parse(&pkg_url).map_err(|err| {
         fx_log_err!("failed to parse package url {:?}: {}", pkg_url, err);
         Err(Status::INVALID_ARGS)
@@ -111,6 +108,7 @@ async fn resolve<'a>(
     // FIXME: use the package cache to fetch the package instead of amber.
 
     // Ask amber to cache the package.
+    let amber = amber_connector.connect()?;
     let chan = await!(amber.get_update_complete(&name, url.variant(), url.package_hash()))
         .map_err(|err| {
             fx_log_err!("error communicating with amber: {:?}", err);
@@ -232,8 +230,11 @@ async fn wait_for_update_to_complete(chan: Channel, url: &PkgUrl) -> Result<Blob
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::amber_connector::AmberConnect;
     use crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder};
-    use crate::test_util::{MockAmberBuilder, MockPackageCache, Package, PackageKind};
+    use crate::test_util::{
+        MockAmberBuilder, MockAmberConnector, MockPackageCache, Package, PackageKind,
+    };
     use fidl::endpoints::{self, ServerEnd};
     use fidl_fuchsia_io::DirectoryProxy;
     use fidl_fuchsia_pkg::{self, PackageCacheProxy, UpdatePolicy};
@@ -249,7 +250,7 @@ mod tests {
 
     struct ResolveTest {
         rewrite_manager: Arc<RwLock<RewriteManager>>,
-        amber_proxy: AmberProxy,
+        amber_connector: MockAmberConnector,
         cache_proxy: PackageCacheProxy,
         pkgfs: Arc<TempDir>,
     }
@@ -290,7 +291,8 @@ mod tests {
             merkle: Option<&'a str>,
             expected_res: Result<String, Status>,
         ) {
-            let chan = await!(self.amber_proxy.get_update_complete(name, variant, merkle))
+            let amber = self.amber_connector.connect().unwrap();
+            let chan = await!(amber.get_update_complete(name, variant, merkle))
                 .expect("error communicating with amber");
             let expected_res = expected_res.map(|r| r.parse().expect("could not parse blob"));
 
@@ -317,7 +319,7 @@ mod tests {
             let (package_dir_c, package_dir_s) = Channel::create().unwrap();
             let res = await!(resolve(
                 &self.rewrite_manager,
-                &self.amber_proxy,
+                &self.amber_connector,
                 &self.cache_proxy,
                 url.to_string(),
                 selectors,
@@ -364,8 +366,8 @@ mod tests {
         }
 
         fn build(self) -> ResolveTest {
-            let amber = Arc::new(self.amber.build());
-            let amber_proxy = amber.spawn();
+            let amber = self.amber.build();
+            let amber_connector = MockAmberConnector::new(amber);
 
             let cache = Arc::new(
                 MockPackageCache::new(self.pkgfs.clone()).expect("failed to create cache"),
@@ -390,7 +392,7 @@ mod tests {
             ResolveTest {
                 rewrite_manager: Arc::new(RwLock::new(rewrite_manager)),
                 pkgfs: self.pkgfs,
-                amber_proxy,
+                amber_connector,
                 cache_proxy,
             }
         }

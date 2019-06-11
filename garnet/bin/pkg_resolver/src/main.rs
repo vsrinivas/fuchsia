@@ -7,7 +7,6 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_amber::ControlMarker as AmberMarker,
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -20,6 +19,7 @@ use {
     std::sync::Arc,
 };
 
+mod amber_connector;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
@@ -29,6 +29,7 @@ mod rewrite_service;
 #[cfg(test)]
 mod test_util;
 
+use crate::amber_connector::AmberConnector;
 use crate::repository_manager::{RepositoryManager, RepositoryManagerBuilder};
 use crate::repository_service::RepositoryService;
 use crate::rewrite_manager::{RewriteManager, RewriteManagerBuilder};
@@ -48,7 +49,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 
-    let amber = connect_to_service::<AmberMarker>().context("error connecting to amber")?;
+    let amber_connector = AmberConnector::new();
     let cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
 
@@ -66,7 +67,7 @@ fn main() -> Result<(), Error> {
             fasync::spawn(
                 resolver_service::run_resolver_service(
                     rewrite_manager.clone(),
-                    amber.clone(),
+                    amber_connector.clone(),
                     cache.clone(),
                     stream,
                 )
