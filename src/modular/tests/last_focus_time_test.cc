@@ -169,7 +169,9 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   fuchsia::modular::Intent intent;
   intent.handler = test_module_url;
   intent.action = "action";
-  AddModToStory(std::move(intent), "modname", kStoryName);
+
+  modular::testing::AddModToStory(test_harness(), kStoryName, "modname",
+                                  std::move(intent));
 
   RunLoopUntil([&] { return test_module.is_running(); });
 

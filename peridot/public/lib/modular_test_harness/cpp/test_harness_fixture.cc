@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 
 namespace modular {
 namespace testing {
@@ -16,27 +12,29 @@ const char kTestHarnessUrl[] =
     "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/"
     "modular_test_harness.cmx";
 
-std::string BuildExtraCmx(TestHarnessBuilder::InterceptOptions options) {
-  if (options.sandbox_services.empty())
-    return "";
-
-  rapidjson::Document cmx;
-  cmx.SetObject();
-  rapidjson::Value sandbox;
-  sandbox.SetObject();
-  rapidjson::Value services;
-  services.SetArray();
-  for (const auto& service : options.sandbox_services) {
-    rapidjson::Value v(service, cmx.GetAllocator());
-    services.PushBack(v.Move(), cmx.GetAllocator());
+std::string StringsToCSV(std::vector<std::string> strings) {
+  std::stringstream csv;
+  for (size_t i = 0; i < strings.size(); i++) {
+    if (i != 0) {
+      csv << ",";
+    }
+    csv << "\"" << strings[i] << "\"";
   }
-  sandbox.AddMember("services", services.Move(), cmx.GetAllocator());
-  cmx.AddMember("sandbox", sandbox.Move(), cmx.GetAllocator());
+  return csv.str();
+}
 
-  rapidjson::StringBuffer buf;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
-  cmx.Accept(writer);
-  return buf.GetString();
+std::string BuildExtraCmx(TestHarnessBuilder::InterceptOptions options) {
+  std::stringstream ss;
+  ss << R"({
+    "sandbox": {
+      "services": [
+        )";
+  ss << StringsToCSV(options.sandbox_services);
+  ss << R"(
+      ]
+    }
+  })";
+  return ss.str();
 }
 
 bool BufferFromString(std::string str, fuchsia::mem::Buffer* buffer) {
@@ -210,82 +208,10 @@ std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) const {
   return url;
 }
 
-TestHarnessFixture::~TestHarnessFixture() {
-  if (!test_harness_ctrl_) {
-    return;
-  }
-
-  bool exited = false;
-  test_harness_ctrl_.events().OnTerminated =
-      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-        exited = true;
-      };
-  test_harness_ctrl_->Kill();
-
-  // Wait until the modular test harness binary has died.
-  RunLoopUntil([&] { return exited; });
-}
-
-std::string TestHarnessFixture::InterceptBaseShell(
-    fuchsia::modular::testing::TestHarnessSpec* spec) const {
-  auto url = TestHarnessBuilder().GenerateFakeUrl();
-  spec->mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->set_url(url);
-
-  fuchsia::modular::testing::InterceptSpec intercept_spec;
-  intercept_spec.set_component_url(url);
-  spec->mutable_components_to_intercept()->push_back(std::move(intercept_spec));
-
-  return url;
-}
-
-std::string TestHarnessFixture::InterceptSessionShell(
-    fuchsia::modular::testing::TestHarnessSpec* spec,
-    std::string extra_cmx_contents) const {
-  auto url = TestHarnessBuilder().GenerateFakeUrl();
-
-  // 1. Add session shell to modular config.
-  {
-    fuchsia::modular::session::SessionShellMapEntry entry;
-    entry.mutable_config()->mutable_app_config()->set_url(url);
-
-    spec->mutable_basemgr_config()->mutable_session_shell_map()->push_back(
-        std::move(entry));
-  }
-
-  // 2. Set up interception for session shell.
-  fuchsia::modular::testing::InterceptSpec shell_intercept_spec;
-  if (!extra_cmx_contents.empty()) {
-    ZX_ASSERT(BufferFromString(
-        extra_cmx_contents, shell_intercept_spec.mutable_extra_cmx_contents()));
-  }
-  shell_intercept_spec.set_component_url(url);
-  spec->mutable_components_to_intercept()->push_back(
-      std::move(shell_intercept_spec));
-
-  return url;
-}
-
-std::string TestHarnessFixture::InterceptStoryShell(
-    fuchsia::modular::testing::TestHarnessSpec* spec) const {
-  auto url = TestHarnessBuilder().GenerateFakeUrl();
-  spec->mutable_basemgr_config()
-      ->mutable_story_shell()
-      ->mutable_app_config()
-      ->set_url(url);
-
-  fuchsia::modular::testing::InterceptSpec intercept_spec;
-  intercept_spec.set_component_url(url);
-  spec->mutable_components_to_intercept()->push_back(std::move(intercept_spec));
-
-  return url;
-}
-
-void TestHarnessFixture::AddModToStory(fuchsia::modular::Intent intent,
-                                       std::string mod_name,
-                                       std::string story_name) {
+void AddModToStory(
+    const fuchsia::modular::testing::TestHarnessPtr& test_harness,
+    std::string story_name, std::string mod_name,
+    fuchsia::modular::Intent intent) {
   fuchsia::modular::AddMod add_mod;
   add_mod.mod_name_transitional = {mod_name};
   add_mod.intent = std::move(intent);
@@ -300,7 +226,7 @@ void TestHarnessFixture::AddModToStory(fuchsia::modular::Intent intent,
   fuchsia::modular::PuppetMasterPtr puppet_master;
   fuchsia::modular::testing::ModularService svc;
   svc.set_puppet_master(puppet_master.NewRequest());
-  test_harness()->ConnectToModularService(std::move(svc));
+  test_harness->ConnectToModularService(std::move(svc));
 
   // Create a story
   fuchsia::modular::StoryPuppetMasterPtr story_master;
@@ -321,6 +247,22 @@ TestHarnessFixture::TestHarnessFixture() {
 
   test_harness_ =
       test_harness_svc_->Connect<fuchsia::modular::testing::TestHarness>();
+}
+
+TestHarnessFixture::~TestHarnessFixture() {
+  if (!test_harness_ctrl_) {
+    return;
+  }
+
+  bool exited = false;
+  test_harness_ctrl_.events().OnTerminated =
+      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
+        exited = true;
+      };
+  test_harness_ctrl_->Kill();
+
+  // Wait until the modular test harness binary has died.
+  RunLoopUntil([&] { return exited; });
 }
 
 }  // namespace testing

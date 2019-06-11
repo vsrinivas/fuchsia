@@ -14,7 +14,7 @@
 
 #include "gmock/gmock.h"
 
-// TODO(MF-435): Use TestHarnessFixture.AddModToStory throughout the test.
+// TODO(MF-435): Use modular::testing::AddModToStory() throughout the test.
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;
 using fuchsia::modular::StoryInfo;

@@ -9,7 +9,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <src/lib/fxl/logging.h>
 
 namespace modular {
 namespace testing {
@@ -186,6 +185,13 @@ class TestHarnessBuilder {
   std::unique_ptr<vfs::PseudoDir> env_services_;
 };
 
+// Starts a new mod by the given |intent| and |mod_name| in a new story given
+// by |story_name|.
+void AddModToStory(
+    const fuchsia::modular::testing::TestHarnessPtr& test_harness,
+    std::string story_name, std::string mod_name,
+    fuchsia::modular::Intent intent);
+
 class TestHarnessFixture : public sys::testing::TestWithEnvironment {
  protected:
   TestHarnessFixture();
@@ -194,20 +200,6 @@ class TestHarnessFixture : public sys::testing::TestWithEnvironment {
   fuchsia::modular::testing::TestHarnessPtr& test_harness() {
     return test_harness_;
   }
-
-  // DEPRECATED: Prefer to use the methods on TestHarnessBuilder.
-  std::string InterceptBaseShell(
-      fuchsia::modular::testing::TestHarnessSpec* spec) const;
-  std::string InterceptSessionShell(
-      fuchsia::modular::testing::TestHarnessSpec* spec,
-      std::string extra_cmx_contents = "") const;
-  std::string InterceptStoryShell(
-      fuchsia::modular::testing::TestHarnessSpec* spec) const;
-
-  // Starts a new mod by the given |intent| and |mod_name| in a new story given
-  // by |story_name|.
-  void AddModToStory(fuchsia::modular::Intent intent, std::string mod_name,
-                     std::string story_name);
 
  private:
   std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;

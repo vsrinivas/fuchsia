@@ -115,8 +115,9 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
        .sandbox_services = child_module2.component.GetSandboxServices()});
 
   StartSession(std::move(builder));
-  AddModToStory({.action = "action", .handler = parent_module.url}, "storyname",
-                "modname");
+  modular::testing::AddModToStory(
+      test_harness(), "storyname", "modname",
+      {.action = "action", .handler = parent_module.url});
   RunLoopUntil([&] { return parent_module.component.is_running(); });
 
   // Add a single child module.
@@ -191,10 +192,10 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
        .sandbox_services = module2.component.GetSandboxServices()});
 
   StartSession(std::move(builder));
-  AddModToStory({.action = "action", .handler = module1.url}, "modname1",
-                "storyname");
-  AddModToStory({.action = "action", .handler = module2.url}, "modname2",
-                "storyname");
+  modular::testing::AddModToStory(test_harness(), "storyname", "modname1",
+                                  {.action = "action", .handler = module1.url});
+  modular::testing::AddModToStory(test_harness(), "storyname", "modname2",
+                                  {.action = "action", .handler = module2.url});
   RunLoopUntil([&] {
     return module1.component.is_running() && module2.component.is_running();
   });
@@ -229,8 +230,8 @@ TEST_F(ModuleContextTest, CreateEntity) {
       {.url = module_url, .sandbox_services = module.GetSandboxServices()});
 
   StartSession(std::move(builder));
-  AddModToStory({.action = "action", .handler = module_url}, "modname",
-                "storyname");
+  modular::testing::AddModToStory(test_harness(), "storyname", "modname",
+                                  {.action = "action", .handler = module_url});
   RunLoopUntil([&] { return module.is_running(); });
 
   // Create an entity, acquire an Entity handle as well as a reference
@@ -375,10 +376,10 @@ TEST_F(ModuleContextTest, OngoingActivity_NotifyOnWatch) {
        .sandbox_services = module2.component.GetSandboxServices()});
 
   StartSession(std::move(builder));
-  AddModToStory({.action = "action", .handler = module1.url}, "modname1",
-                "storyname");
-  AddModToStory({.action = "action", .handler = module2.url}, "modname2",
-                "storyname");
+  modular::testing::AddModToStory(test_harness(), "storyname", "modname1",
+                                  {.action = "action", .handler = module1.url});
+  modular::testing::AddModToStory(test_harness(), "storyname", "modname2",
+                                  {.action = "action", .handler = module2.url});
   RunLoopUntil([&] {
     return module1.component.is_running() && module2.component.is_running();
   });

@@ -164,7 +164,8 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     fuchsia::modular::Intent intent;
     intent.handler = test_module_url_;
     intent.action = "action";
-    AddModToStory(std::move(intent), mod_name, story_name);
+    modular::testing::AddModToStory(test_harness(), story_name, mod_name,
+                                    std::move(intent));
 
     // Wait for the story to be created.
     RunLoopUntil([this] { return test_module_->is_running(); });

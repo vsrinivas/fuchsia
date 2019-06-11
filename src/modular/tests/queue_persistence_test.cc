@@ -150,7 +150,8 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   // Add the test mod.
   fuchsia::modular::Intent intent;
   intent.handler = test_module_url;
-  AddModToStory(std::move(intent), kModuleName, kStoryName);
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                  std::move(intent));
   RunLoopUntil([&] { return test_module.is_running(); });
 
   // Connect to the test agent from the test mod.

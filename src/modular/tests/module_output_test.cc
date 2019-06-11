@@ -47,9 +47,9 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
   intent.handler = test_module_url_;
   intent.action = kIntentAction;
 
-  AddModToStory(std::move(intent), kModuleName, kStoryName);
-  RunLoopUntil(
-      [&] { return test_module_->is_running(); });
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                  std::move(intent));
+  RunLoopUntil([&] { return test_module_->is_running(); });
 
   fsl::SizedVmo vmo;
   fsl::VmoFromString(kTestData, &vmo);

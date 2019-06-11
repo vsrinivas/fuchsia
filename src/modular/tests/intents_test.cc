@@ -113,7 +113,8 @@ TEST_F(IntentsTest, ModuleUsesIntentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                  std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
@@ -130,7 +131,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerSameParamName) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                  std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
@@ -158,7 +160,8 @@ TEST_F(IntentsTest, ReuseIntentHandlerDifferentParam) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                  std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 
@@ -188,7 +191,8 @@ TEST_F(IntentsTest, DifferentHandler) {
   // Launch initial module
   auto initial_module_intent = CreateIntent(
       test_module_url_, kIntentParameterName, kInitialIntentParameterData);
-  AddModToStory(std::move(initial_module_intent), kModuleName, kStoryName);
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
+                                  std::move(initial_module_intent));
   RunLoopUntil([&] { return number_of_intents_handled_ == 1; });
   ASSERT_TRUE(test_module_->is_running());
 

@@ -83,7 +83,9 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
   void LaunchParentModule() {
     auto parent_mod_intent =
         fuchsia::modular::Intent{.handler = parent_module_url_};
-    AddModToStory(std::move(parent_mod_intent), kParentModuleName, kStoryName);
+    modular::testing::AddModToStory(test_harness(), kStoryName,
+                                    kParentModuleName,
+                                    std::move(parent_mod_intent));
 
     RunLoopUntil([&] { return parent_module_->is_running(); });
   }
