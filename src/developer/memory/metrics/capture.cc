@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/memory_monitor/capture.h"
+#include "src/developer/memory/metrics/capture.h"
 
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>

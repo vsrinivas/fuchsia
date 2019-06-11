@@ -5,55 +5,13 @@
 import("//build/config.gni")
 import("//build/package.gni")
 
-source_set("mem_lib") {
-  sources = [
-    "capture.cc",
-    "capture.h",
-    "printer.cc",
-    "printer.h",
-    "summary.cc",
-    "summary.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
-    "//zircon/public/lib/task-utils",
-  ]
-}
-
-executable("mem_bin") {
-  output_name = "mem"
-  sources = [
-    "mem_main.cc",
-  ]
-  deps = [
-    ":mem_lib",
-    "//src/lib/fxl",
-    "//sdk/lib/sys/cpp",
-  ]
-}
-
-package("mem") {
-  deps = [
-    ":mem_bin",
-  ]
-  binaries = [
-    {
-      name = "mem"
-      shell = true
-    },
-  ]
-}
-
-source_set("mon_lib") {
+source_set("lib") {
   sources = [
     "monitor.cc",
     "monitor.h",
   ]
   public_deps = [
-    ":mem_lib",
+    "//src/developer/memory/metrics",
     "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/lib/sys/cpp",
@@ -67,13 +25,13 @@ source_set("mon_lib") {
   ]
 }
 
-executable("mon_bin") {
+executable("bin") {
   output_name = "memory_monitor"
   sources = [
-    "mon_main.cc",
+    "main.cc",
   ]
   deps = [
-    ":mon_lib",
+    ":lib",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",
@@ -82,9 +40,9 @@ executable("mon_bin") {
   ]
 }
 
-package("memory_monitor") {
+package("monitor") {
   deps = [
-    ":mon_bin",
+    ":bin",
   ]
   binary = "memory_monitor"
   meta = [

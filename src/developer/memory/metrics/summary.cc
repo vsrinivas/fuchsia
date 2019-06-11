@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/memory_monitor/summary.h"
+#include "src/developer/memory/metrics/summary.h"
 
 namespace memory {
 

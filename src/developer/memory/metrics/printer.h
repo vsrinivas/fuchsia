@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEMORY_MONITOR_PRINTER_H_
-#define GARNET_BIN_MEMORY_MONITOR_PRINTER_H_
+#ifndef SRC_DEVELOPER_MEMORY_METRICS_PRINTER_H_
+#define SRC_DEVELOPER_MEMORY_METRICS_PRINTER_H_
 
 #include <iostream>
 #include <src/lib/fxl/macros.h>
 #include <string>
 #include <sstream>
 
-#include "garnet/bin/memory_monitor/capture.h"
-#include "garnet/bin/memory_monitor/summary.h"
+#include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/summary.h"
 
 namespace memory {
 
@@ -31,4 +31,4 @@ class Printer {
 
 }  // namespace memory
 
-#endif  // GARNET_BIN_MEMORY_MONITOR_PRINTER_H_
+#endif  // SRC_DEVELOPER_MEMORY_METRICS_PRINTER_H_

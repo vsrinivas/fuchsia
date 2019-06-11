@@ -15,14 +15,10 @@ executable("memory_monitor_unittests") {
   output_name = "memory_monitor_unittests"
   sources = [
     "monitor_unittest.cc",
-    "printer_unittest.cc",
-    "summary_unittest.cc",
-    "test_utils.cc",
-    "test_utils.h",
   ]
 
   deps = [
-    "//garnet/bin/memory_monitor:mon_lib",
+    "//src/developer/memory/monitor:lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",

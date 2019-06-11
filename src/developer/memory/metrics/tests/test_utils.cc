@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/memory_monitor/test/test_utils.h"
+#include "src/developer/memory/metrics/tests/test_utils.h"
 
 namespace memory {
 
