@@ -4,7 +4,9 @@
 
 #include "rtl8211f.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/unique_ptr.h>
 #include <stdio.h>
@@ -82,7 +84,7 @@ void PhyDevice::DdkRelease() {
     delete this;
 }
 
-zx_status_t PhyDevice::Create(zx_device_t* device) {
+zx_status_t PhyDevice::Create(void* ctx, zx_device_t* device) {
     fbl::AllocChecker ac;
     auto phy_device = fbl::make_unique_checked<PhyDevice>(&ac, device);
     if (!ac.check()) {
@@ -114,8 +116,19 @@ zx_status_t PhyDevice::Create(zx_device_t* device) {
     return status;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = PhyDevice::Create;
+    return ops;
+}();
+
 } // namespace phy
 
-extern "C" zx_status_t rtl8211f_bind(void* ctx, zx_device_t* device) {
-    return phy::PhyDevice::Create(device);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(rtl8211f, phy::driver_ops, "rtl8211-phy", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_REALTEK),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_RTL8211F),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_PHY),
+ZIRCON_DRIVER_END(rtl8211f)
+// clang-format on

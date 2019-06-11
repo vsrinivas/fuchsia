@@ -16,7 +16,7 @@ public:
     explicit PhyDevice(zx_device_t* parent)
         : DeviceType(parent), eth_mac_(parent) {}
 
-    static zx_status_t Create(zx_device_t* device);
+    static zx_status_t Create(void* ctx, zx_device_t* device);
 
     void DdkRelease();
     void DdkUnbind();
