@@ -58,6 +58,7 @@ pub enum StreamControlFlow {
 impl<'a: 'b, 'b> Stream<'a> {
     pub async fn start(&'b mut self) -> Result<()> {
         if self.options.queue_format_details && self.input_packet_stream.is_some() {
+            vlog!(2, "Sending input format details for follow-up stream.");
             self.stream_processor.queue_input_format_details(
                 self.stream_lifetime_ordinal,
                 self.stream.format_details(self.format_details_version_ordinal),
@@ -86,6 +87,7 @@ impl<'a: 'b, 'b> Stream<'a> {
                     self.options.input_buffer_collection_constraints,
                 ))?;
 
+                vlog!(2, "Sending input format details in response to input constraints.");
                 self.stream_processor.queue_input_format_details(
                     self.stream_lifetime_ordinal,
                     self.stream.format_details(self.format_details_version_ordinal),
@@ -212,10 +214,10 @@ impl<'a: 'b, 'b> Stream<'a> {
             match input_packet_stream.next_packet()? {
                 PacketPoll::Ready(input_packet) => {
                     vlog!(2, "Sending input packet.");
-                    break Ok(self.stream_processor.queue_input_packet(input_packet)?);
+                    self.stream_processor.queue_input_packet(input_packet)?;
                 }
                 PacketPoll::Eos => {
-                    vlog!(2, "Sending stream close");
+                    vlog!(2, "Sending end of stream.");
                     break Ok(self
                         .stream_processor
                         .queue_input_end_of_stream(self.stream_lifetime_ordinal)?);
