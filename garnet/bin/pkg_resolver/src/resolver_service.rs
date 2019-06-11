@@ -239,10 +239,10 @@ mod tests {
     use fidl_fuchsia_pkg::{self, PackageCacheProxy, UpdatePolicy};
     use files_async;
     use fuchsia_async as fasync;
+    use fuchsia_url_rewrite::Rule;
     use fuchsia_zircon::{Channel, Status};
     use std::fs;
     use std::path::Path;
-    use std::rc::Rc;
     use std::str;
     use std::sync::Arc;
     use tempfile::TempDir;
@@ -255,26 +255,6 @@ mod tests {
     }
 
     impl ResolveTest {
-        fn new(
-            rewrite_manager: Arc<RwLock<RewriteManager>>,
-            packages: Vec<Package>,
-        ) -> ResolveTest {
-            let pkgfs = Arc::new(TempDir::new().expect("failed to create tmp dir"));
-            let amber = Arc::new(MockAmberBuilder::new(pkgfs.clone()).packages(packages).build());
-            let amber_proxy = amber.spawn();
-            let cache =
-                Rc::new(MockPackageCache::new(pkgfs.clone()).expect("failed to create cache"));
-            let cache_proxy: PackageCacheProxy =
-                endpoints::spawn_local_stream_handler(move |req| {
-                    let cache = cache.clone();
-                    async move {
-                        cache.open(req);
-                    }
-                })
-                .expect("failed to spawn handler");
-            ResolveTest { rewrite_manager, amber_proxy, cache_proxy, pkgfs }
-        }
-
         fn check_dir(&self, dir_path: &Path, want_files: &Vec<String>) {
             let mut files: Vec<String> = fs::read_dir(&dir_path)
                 .expect("could not read dir")
@@ -354,6 +334,68 @@ mod tests {
         }
     }
 
+    struct ResolveTestBuilder {
+        pkgfs: Arc<TempDir>,
+        amber: MockAmberBuilder,
+        static_rewrite_rules: Vec<Rule>,
+        dynamic_rewrite_rules: Vec<Rule>,
+    }
+
+    impl ResolveTestBuilder {
+        fn new() -> Self {
+            let pkgfs = Arc::new(TempDir::new().expect("failed to create tmp dir"));
+            let amber = MockAmberBuilder::new(pkgfs.clone());
+            ResolveTestBuilder {
+                pkgfs: pkgfs.clone(),
+                amber: amber,
+                static_rewrite_rules: vec![],
+                dynamic_rewrite_rules: vec![],
+            }
+        }
+
+        fn packages<I: IntoIterator<Item = Package>>(mut self, packages: I) -> Self {
+            self.amber = self.amber.packages(packages);
+            self
+        }
+
+        fn static_rewrite_rules<I: IntoIterator<Item = Rule>>(mut self, rules: I) -> Self {
+            self.static_rewrite_rules.extend(rules);
+            self
+        }
+
+        fn build(self) -> ResolveTest {
+            let amber = Arc::new(self.amber.build());
+            let amber_proxy = amber.spawn();
+
+            let cache = Arc::new(
+                MockPackageCache::new(self.pkgfs.clone()).expect("failed to create cache"),
+            );
+            let cache_proxy: PackageCacheProxy =
+                endpoints::spawn_local_stream_handler(move |req| {
+                    let cache = cache.clone();
+                    async move {
+                        cache.open(req);
+                    }
+                })
+                .expect("failed to spawn handler");
+
+            let inspector = fuchsia_inspect::Inspector::new();
+            let node = inspector.root().create_child("top-level-node");
+            let dynamic_rule_config = make_rule_config(self.dynamic_rewrite_rules);
+            let rewrite_manager = RewriteManagerBuilder::new(node, &dynamic_rule_config)
+                .unwrap()
+                .static_rules(self.static_rewrite_rules)
+                .build();
+
+            ResolveTest {
+                rewrite_manager: Arc::new(RwLock::new(rewrite_manager)),
+                pkgfs: self.pkgfs,
+                amber_proxy,
+                cache_proxy,
+            }
+        }
+    }
+
     fn gen_merkle(c: char) -> String {
         (0..64).map(|_| c).collect()
     }
@@ -364,19 +406,14 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_mock_amber() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("top-level-node");
-        let dynamic_rule_config = make_rule_config(vec![]);
-        let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_rule_config).unwrap().build(),
-        ));
-        let packages = vec![
-            Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
-            Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
-            Package::new("baz", "stable", &gen_merkle('c'), PackageKind::Ok),
-            Package::new("buz", "0", &gen_merkle('c'), PackageKind::Ok),
-        ];
-        let test = ResolveTest::new(rewrite_manager, packages);
+        let test = ResolveTestBuilder::new()
+            .packages(vec![
+                Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+                Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
+                Package::new("baz", "stable", &gen_merkle('c'), PackageKind::Ok),
+                Package::new("buz", "0", &gen_merkle('c'), PackageKind::Ok),
+            ])
+            .build();
 
         // Name
         await!(test.check_amber_update("foo", None, None, Ok(gen_merkle('a'))));
@@ -397,17 +434,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("top-level-node");
-        let dynamic_rule_config = make_rule_config(vec![]);
-        let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_rule_config).unwrap().build(),
-        ));
-        let packages = vec![
-            Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
-            Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
-        ];
-        let test = ResolveTest::new(rewrite_manager, packages);
+        let test = ResolveTestBuilder::new()
+            .packages(vec![
+                Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+                Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
+            ])
+            .build();
 
         // Package name
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')]),));
@@ -423,22 +455,17 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_error() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("top-level-node");
-        let dynamic_rule_config = make_rule_config(vec![]);
-        let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_rule_config).unwrap().build(),
-        ));
-        let packages = vec![
-            Package::new("foo", "stable", &gen_merkle('a'), PackageKind::Ok),
-            Package::new(
-                "unavailable",
-                "0",
-                &gen_merkle('a'),
-                PackageKind::Error("not found in 1 active sources. last error: ".to_string()),
-            ),
-        ];
-        let test = ResolveTest::new(rewrite_manager, packages);
+        let test = ResolveTestBuilder::new()
+            .packages(vec![
+                Package::new("foo", "stable", &gen_merkle('a'), PackageKind::Ok),
+                Package::new(
+                    "unavailable",
+                    "0",
+                    &gen_merkle('a'),
+                    PackageKind::Error("not found in 1 active sources. last error: ".to_string()),
+                ),
+            ])
+            .build();
 
         // Missing package
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::NOT_FOUND)));
@@ -457,27 +484,19 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_resolve_package_unknown_host() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("top-level-node");
-        let rules = vec![fuchsia_url_rewrite::Rule::new(
-            "example.com".to_owned(),
-            "fuchsia.com".to_owned(),
-            "/foo/".to_owned(),
-            "/foo/".to_owned(),
-        )
-        .unwrap()];
-        let dynamic_rule_config = make_rule_config(vec![]);
-        let rewrite_manager = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_rule_config)
-                .unwrap()
-                .static_rules(rules)
-                .build(),
-        ));
-        let packages = vec![
-            Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
-            Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
-        ];
-        let test = ResolveTest::new(rewrite_manager, packages);
+        let test = ResolveTestBuilder::new()
+            .packages(vec![
+                Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+                Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
+            ])
+            .static_rewrite_rules(vec![Rule::new(
+                "example.com".to_owned(),
+                "fuchsia.com".to_owned(),
+                "/foo/".to_owned(),
+                "/foo/".to_owned(),
+            )
+            .unwrap()])
+            .build();
 
         await!(test.run_resolve("fuchsia-pkg://example.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
         await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/0", Ok(vec![gen_merkle_file('a')]),));
