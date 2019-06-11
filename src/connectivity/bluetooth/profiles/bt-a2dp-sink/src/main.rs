@@ -236,10 +236,12 @@ async fn discover_remote_streams(peer: Arc<avdtp::Peer>) {
                         media_type: avdtp::MediaType::Audio,
                         codec_type,
                         ..
-                    } = cap {
+                    } = cap
+                    {
                         let event_code = match codec_type {
-                            avdtp::MediaCodecType::AUDIO_SBC =>
-                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc,
+                            avdtp::MediaCodecType::AUDIO_SBC => {
+                                metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc
+                            }
                             _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
                         };
                         cobalt.log_event(
@@ -508,10 +510,9 @@ async fn decode_media_stream(
     }
     let end_time = zx::Time::get(zx::ClockId::Monotonic);
     // TODO (BT-818): determine codec metric dimension from encoding instead of hard-coding to sbc
-    get_cobalt_logger().log_event_count(
+    get_cobalt_logger().log_elapsed_time(
         metrics::A2DP_NUMBER_OF_MICROSECONDS_STREAMED_METRIC_ID,
         metrics::A2dpNumberOfMicrosecondsStreamedMetricDimensionCodec::Sbc as u32,
-        0,
         (end_time - start_time).into_micros(),
     );
 }
