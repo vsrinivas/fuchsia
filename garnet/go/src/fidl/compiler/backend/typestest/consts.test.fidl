@@ -7,7 +7,6 @@ const uint16 ANSWER_IN_BINARY = 0b101010;
 const uint32 POPULATION_USA_2018 = 330000000;
 const uint64 DIAMOND = 0x183c7effff7e3c18;
 const uint64 FUCHSIA = 4054509061583223046;
-// `const string` is not yet supported for Go.
-// const string USERNAME = "squeenze";
+const string USERNAME = "\"squeenze\"";
 const float32 MIN_TEMP = -273.15;
 const float64 CONVERSION_FACTOR = 1.41421358;

@@ -642,13 +642,14 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 
 func (_ *compiler) compileLiteral(val types.Literal) string {
 	switch val.Kind {
-	// TODO(mknyszek): Support string and default literals.
 	case types.NumericLiteral:
 		return val.Value
 	case types.TrueLiteral:
 		return "true"
 	case types.FalseLiteral:
 		return "false"
+	case types.StringLiteral:
+		return strconv.Quote(val.Value)
 	default:
 		log.Fatal("Unknown literal kind: ", val.Kind)
 		return ""

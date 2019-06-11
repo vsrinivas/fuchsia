@@ -5,6 +5,7 @@
 
 namespace test {
 namespace name {
+const  USERNAME[] = "\"squeenze\"";
 
 }  // namespace name
 }  // namespace test

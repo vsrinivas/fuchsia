@@ -6,6 +6,7 @@
 namespace test {
 namespace name {
 
+const char USERNAME[] = "\"squeenze\"";
 }  // namespace name
 }  // namespace test
 

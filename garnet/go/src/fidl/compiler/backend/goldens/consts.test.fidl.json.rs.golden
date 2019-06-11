@@ -35,6 +35,8 @@ pub const DIAMOND: u64 = 1746410393481133080;
 
 pub const FUCHSIA: u64 = 4054509061583223046;
 
+pub const USERNAME: &str = r###""squeenze""###;
+
 pub const MIN_TEMP: f32 = -273.15;
 
 pub const CONVERSION_FACTOR: f64 = 1.41421;

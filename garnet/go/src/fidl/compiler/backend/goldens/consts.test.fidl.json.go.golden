@@ -13,6 +13,7 @@ const (
 	PopulationUsa2018 uint32 = 330000000
 	Diamond uint64 = 1746410393481133080
 	Fuchsia uint64 = 4054509061583223046
+	Username string = "\"squeenze\""
 	MinTemp float32 = -273.15
 	ConversionFactor float64 = 1.41421
 )

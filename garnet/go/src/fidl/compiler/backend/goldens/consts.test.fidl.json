@@ -145,10 +145,30 @@
       }
     },
     {
+      "name": "test.name/USERNAME",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 10,
+        "column": 14
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "string",
+          "value": "\"squeenze\"",
+          "expression": "\"\\\"squeenze\\\"\""
+        }
+      }
+    },
+    {
       "name": "test.name/MIN_TEMP",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
-        "line": 12,
+        "line": 11,
         "column": 15
       },
       "type": {
@@ -168,7 +188,7 @@
       "name": "test.name/CONVERSION_FACTOR",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
-        "line": 13,
+        "line": 12,
         "column": 15
       },
       "type": {
@@ -192,6 +212,7 @@
   "union_declarations": [],
   "xunion_declarations": [],
   "declaration_order": [
+    "test.name/USERNAME",
     "test.name/POPULATION_USA_2018",
     "test.name/OFFSET",
     "test.name/MIN_TEMP",
@@ -210,6 +231,7 @@
     "test.name/POPULATION_USA_2018": "const",
     "test.name/DIAMOND": "const",
     "test.name/FUCHSIA": "const",
+    "test.name/USERNAME": "const",
     "test.name/MIN_TEMP": "const",
     "test.name/CONVERSION_FACTOR": "const"
   }
