@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CLIENT_JOB_IMPL_H_
-#define GARNET_BIN_ZXDB_CLIENT_JOB_IMPL_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_IMPL_H_
 
 #include "src/developer/debug/zxdb/client/job.h"
-
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -38,4 +37,4 @@ class JobImpl : public Job {
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CLIENT_JOB_IMPL_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_IMPL_H_

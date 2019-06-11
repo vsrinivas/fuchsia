@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
-#define GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
 
 #include "src/lib/fxl/macros.h"
 
@@ -43,4 +43,4 @@ class RemoteAPIAdapter {
 
 }  // namespace debug_agent
 
-#endif  // GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_REMOTE_API_ADAPTER_H_

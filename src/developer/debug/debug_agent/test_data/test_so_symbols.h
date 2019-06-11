@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SO_SYMBOLS_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SO_SYMBOLS_H_
 
 // Debug Agent Test Shared Object.
 //
@@ -34,5 +35,6 @@ EXPORT NOINLINE void WatchpointFunction();
 
 EXPORT NOINLINE void Test_BranchOnRAX();
 EXPORT NOINLINE void Test_PCJump();
-
 }
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SO_SYMBOLS_H_

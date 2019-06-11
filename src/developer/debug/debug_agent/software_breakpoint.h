@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SOFTWARE_BREAKPOINT_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SOFTWARE_BREAKPOINT_H_
 
 #include <zircon/status.h>
 
@@ -10,7 +11,6 @@
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {
-
 
 class ProcessBreakpoint;
 class ProcessMemoryAccessor;
@@ -37,3 +37,5 @@ class SoftwareBreakpoint {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SOFTWARE_BREAKPOINT_H_

@@ -1,11 +1,13 @@
 {
-  "program": {
-    "binary": "test/debug_agent_unit_tests"
-  },
-  "sandbox": {
-    "services": [
-      "fuchsia.process.Launcher"
-    ],
-    "dev": [ "misc" ]
-  }
+    "program": {
+        "binary": "test/debug_agent_unit_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "misc"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
 }

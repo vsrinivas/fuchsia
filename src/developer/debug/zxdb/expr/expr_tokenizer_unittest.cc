@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+
 #include "gtest/gtest.h"
 
 namespace zxdb {

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_TYPE_TEST_SUPPORT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_TYPE_TEST_SUPPORT_H_
 
 #include <initializer_list>
 
@@ -50,3 +51,5 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(
     std::initializer_list<NameAndType> derived_members);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_TYPE_TEST_SUPPORT_H_

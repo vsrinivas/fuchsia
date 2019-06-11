@@ -16,9 +16,9 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/object_util.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -129,9 +129,7 @@ zx::job GetJobFromKoid(zx_koid_t koid) {
   return result;
 }
 
-zx_koid_t GetRootJobKoid() {
-  return KoidForObject(GetRootJob());
-}
+zx_koid_t GetRootJobKoid() { return KoidForObject(GetRootJob()); }
 
 // The hub writes the job it uses to create components in a special file.
 //

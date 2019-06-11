@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_ZX_STATUS_DEFINITIONS_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_ZX_STATUS_DEFINITIONS_H_
 
 #include <stdint.h>
 
@@ -238,3 +239,5 @@ constexpr zx_status_t kZxErrConnectionReset = -75;
 constexpr zx_status_t kZxErrConnectionAborted = -76;
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_ZX_STATUS_DEFINITIONS_H_

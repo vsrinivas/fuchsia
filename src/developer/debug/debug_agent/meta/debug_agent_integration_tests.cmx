@@ -1,14 +1,16 @@
 {
-  "program": {
-    "binary": "test/debug_agent_integration_tests"
-  },
-  "sandbox": {
-    "features": [
-      "deprecated-shell"
-    ],
-    "services": [
-      "fuchsia.process.Launcher"
-    ],
-    "dev": [ "misc" ]
-  }
+    "program": {
+        "binary": "test/debug_agent_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "misc"
+        ],
+        "features": [
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
 }

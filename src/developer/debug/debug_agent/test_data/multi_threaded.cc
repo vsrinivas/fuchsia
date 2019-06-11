@@ -72,7 +72,9 @@ const char* ThreadStateToString(uint32_t state) {
 
 std::mutex kMutex;
 
-#define PRINT(...) printf(__VA_ARGS__); fflush(stdout)
+#define PRINT(...)     \
+  printf(__VA_ARGS__); \
+  fflush(stdout)
 
 void __NO_INLINE PrintFunction(ThreadContext* ctx, int i) {
   PRINT("%s: message %d\n", ctx->name.c_str(), i);
@@ -111,9 +113,7 @@ std::vector<std::unique_ptr<ThreadContext>> CreateThreads(int count) {
 
     context->index = i;
     context->name = fxl::StringPrintf("thread-%d", i);
-    thrd_create_with_name(&context->handle,
-                          ThreadFunction,
-                          context.get(),
+    thrd_create_with_name(&context->handle, ThreadFunction, context.get(),
                           context->name.c_str());
 
     context->zx_handle = thrd_get_zx_handle(context->handle);
@@ -143,8 +143,8 @@ void Suspending() {
   PRINT("Suspending all the threads.\n");
   for (int i = 0; i < kThreadCount; i++) {
     zx_handle_t suspend_token;
-    zx_status_t status = zx_task_suspend(contexts[i]->zx_handle,
-                                         &suspend_token);
+    zx_status_t status =
+        zx_task_suspend(contexts[i]->zx_handle, &suspend_token);
     if (status != ZX_OK) {
       PRINT("Could not suspend thread %d: %s\n", i,
             zx_status_get_string(status));
@@ -155,10 +155,9 @@ void Suspending() {
   PRINT("Waiting for suspend notifications.\n");
   for (int i = 0; i < kThreadCount; i++) {
     zx_signals_t signals;
-    zx_status_t status = zx_object_wait_one(contexts[i]->zx_handle,
-                                            ZX_THREAD_SUSPENDED,
-                                            zx_deadline_after(ZX_MSEC(100)),
-                                            &signals);
+    zx_status_t status =
+        zx_object_wait_one(contexts[i]->zx_handle, ZX_THREAD_SUSPENDED,
+                           zx_deadline_after(ZX_MSEC(100)), &signals);
     if (status != ZX_OK) {
       PRINT("Could not wait for signal for thread %d: %s\n", i,
             zx_status_get_string(status));
@@ -172,7 +171,6 @@ void Suspending() {
 
     PRINT("Successfully suspended thread %i\n", i);
   }
-
 }
 
 // Wait State ------------------------------------------------------------------
@@ -209,7 +207,6 @@ zx_info_thread GetThreadState(zx_handle_t thread_handle) {
   return info;
 }
 
-
 void WaitState() {
   auto first_thread = CreateThread("infinite", InfiniteFunction);
 
@@ -218,8 +215,8 @@ void WaitState() {
 
   FXL_LOG(INFO) << "Thread entered infinite loop.";
 
-  auto second_thread = CreateThread("wait-on-first", WaitOnThread,
-                                    first_thread.get());
+  auto second_thread =
+      CreateThread("wait-on-first", WaitOnThread, first_thread.get());
   while (!gSecondStarted)
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
@@ -250,7 +247,6 @@ void WaitState() {
     FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
     FXL_DCHECK((observed & ZX_THREAD_SUSPENDED) != 0);
 
-
     auto info = GetThreadState(second_thread->zx_handle);
     FXL_LOG(INFO) << "Got status: " << ThreadStateToString(info.state);
 
@@ -265,7 +261,6 @@ void WaitState() {
   FXL_DCHECK(thrd_join(first_thread->handle, &res) == thrd_success);
   FXL_DCHECK(res == 0) << "Res: " << res;
 }
-
 
 }  // namespace
 

@@ -9,10 +9,10 @@
 #include <lib/fdio/io.h>
 #include <zircon/processargs.h>
 
-#include "src/lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -51,7 +51,7 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
 
 ComponentLauncher::ComponentLauncher(
     std::shared_ptr<sys::ServiceDirectory> services)
-   : services_(std::move(services)) {}
+    : services_(std::move(services)) {}
 
 zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
                                        ComponentDescription* description,

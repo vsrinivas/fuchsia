@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_FACTORY_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_FACTORY_H_
 
 #include <inttypes.h>
+
 #include <memory>
 
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -37,3 +39,5 @@ class SymbolFactory : public fxl::RefCountedThreadSafe<SymbolFactory> {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_FACTORY_H_

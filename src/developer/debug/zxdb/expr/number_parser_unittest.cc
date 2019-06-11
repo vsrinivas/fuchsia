@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/expr/number_parser.h"
+
 #include <variant>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
-#include "src/developer/debug/zxdb/expr/number_parser.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace zxdb {
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+
 #include "gtest/gtest.h"
 
 namespace zxdb {

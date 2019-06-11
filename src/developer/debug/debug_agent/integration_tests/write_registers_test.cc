@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <optional>
-
 #include <gtest/gtest.h>
+
+#include <optional>
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
@@ -12,7 +12,6 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
-
 #include "src/lib/fxl/logging.h"
 
 namespace {

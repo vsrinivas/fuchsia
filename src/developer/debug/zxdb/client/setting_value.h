@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_VALUE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_VALUE_H_
 
 #include <string>
 #include <variant>
@@ -25,7 +26,7 @@ struct SettingInfo {
 };
 
 struct SettingValue {
-  SettingValue();   // Creates a kNull type.
+  SettingValue();  // Creates a kNull type.
   explicit SettingValue(bool);
   explicit SettingValue(int);
   explicit SettingValue(const char*);
@@ -65,3 +66,5 @@ struct Setting {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_VALUE_H_

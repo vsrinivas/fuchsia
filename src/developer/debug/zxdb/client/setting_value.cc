@@ -32,8 +32,7 @@ SettingValue::SettingValue() = default;
 SettingValue::SettingValue(bool val)
     : type(SettingType::kBoolean), value(val) {}
 
-SettingValue::SettingValue(int val)
-    : type(SettingType::kInteger), value(val) {}
+SettingValue::SettingValue(int val) : type(SettingType::kInteger), value(val) {}
 
 SettingValue::SettingValue(const char* val)
     : type(SettingType::kString), value(std::string(val)) {}

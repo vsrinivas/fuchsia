@@ -74,8 +74,8 @@ class WatchpointStreamBackend : public MockStreamBackend {
 
 constexpr uint32_t kWatchpointId = 0x1234;
 
-std::pair<LaunchRequest, LaunchReply>
-GetLaunchRequest(const WatchpointStreamBackend& backend, std::string exe);
+std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
+    const WatchpointStreamBackend& backend, std::string exe);
 
 std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply>
 GetWatchpointRequest(const WatchpointStreamBackend& backend, uint64_t address);
@@ -94,7 +94,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
   uint64_t variable_offset =
-    so_wrapper.GetSymbolOffset(kTestSo, "gWatchpointVariable");
+      so_wrapper.GetSymbolOffset(kTestSo, "gWatchpointVariable");
   ASSERT_NE(variable_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
@@ -149,13 +149,12 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     // The process should've exited correctly.
     EXPECT_EQ(backend.return_code(), 0);
   }
-
 }
 
 // Helpers ---------------------------------------------------------------------
 
-std::pair<LaunchRequest, LaunchReply>
-GetLaunchRequest(const WatchpointStreamBackend& backend, std::string exe) {
+std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
+    const WatchpointStreamBackend& backend, std::string exe) {
   LaunchRequest launch_request = {};
   launch_request.argv = {exe};
   launch_request.inferior_type = InferiorType::kBinary;
@@ -268,4 +267,3 @@ void WatchpointStreamBackend::ShouldQuitLoop() {
 }  // namespace
 
 }  // namespace debug_agent
-

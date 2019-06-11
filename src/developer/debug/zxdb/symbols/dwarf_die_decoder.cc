@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 
-#include "src/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -204,8 +204,8 @@ bool DwarfDieDecoder::Decode(const llvm::DWARFDebugInfoEntry& die) {
   return DecodeInternal(die, kMaxAbstractOriginRefsToFollow);
 }
 
-bool DwarfDieDecoder::DecodeInternal(
-    const llvm::DWARFDebugInfoEntry& die, int abstract_origin_refs_to_follow) {
+bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
+                                     int abstract_origin_refs_to_follow) {
   // This indicates the abbreviation. Each DIE starts with an abbreviation
   // code.  The is the number that the DWARFAbbreviationDeclaration was derived
   // from above. We have to read it again to skip the offset over the number.

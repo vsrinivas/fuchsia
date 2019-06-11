@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_ARM64_HELPERS_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_ARM64_HELPERS_H_
 
-#include <zircon/syscalls/exception.h>
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch_arm64.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -43,3 +44,5 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
 
 }  // namespace arch
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_ARM64_HELPERS_H_

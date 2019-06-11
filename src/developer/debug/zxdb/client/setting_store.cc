@@ -77,7 +77,7 @@ Setting SettingStore::GetSetting(const std::string& key) const {
   if (it != values_.end()) {
     DEBUG_LOG(Setting) << "Store " << name_ << ": stored value for " << key
                        << ": " << it->second.ToDebugString();
-    return {std::move(default_setting.setting.info),  it->second};
+    return {std::move(default_setting.setting.info), it->second};
   }
 
   // We check the fallback SettingStore to see if it has the setting.

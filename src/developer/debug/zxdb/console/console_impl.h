@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_
 
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -55,3 +56,5 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_

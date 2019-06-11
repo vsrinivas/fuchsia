@@ -13,7 +13,8 @@ namespace zxdb {
 
 FoundName::FoundName() = default;
 
-FoundName::FoundName(Kind kind, const std::string& name) : kind_(kind), name_(name) {
+FoundName::FoundName(Kind kind, const std::string& name)
+    : kind_(kind), name_(name) {
   // These are the only kinds that don't require other information.
   FXL_DCHECK(kind == kNone || kind == kNamespace || kind == kTemplate);
 }

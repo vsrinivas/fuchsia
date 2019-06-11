@@ -105,8 +105,8 @@ class BreakpointStreamBackend : public MockStreamBackend {
   TestStage test_stage_ = TestStage::kWaitingForThreadToStart;
 };
 
-std::pair<LaunchRequest, LaunchReply>
-GetLaunchRequest(const BreakpointStreamBackend& backend, std::string exe) {
+std::pair<LaunchRequest, LaunchReply> GetLaunchRequest(
+    const BreakpointStreamBackend& backend, std::string exe) {
   LaunchRequest launch_request = {};
   launch_request.argv = {exe, fxl::StringPrintf("%lu", backend.thread_count())};
   launch_request.inferior_type = InferiorType::kBinary;
@@ -296,7 +296,7 @@ void BreakpointStreamBackend::ShouldQuitLoop() {
   if (test_stage_ == TestStage::kWaitingForThreadToStart) {
     static bool got_modules = false;
 
-      // The first thread started, we need to resume it.
+    // The first thread started, we need to resume it.
     if (thread_started == 0 && thread_starts_.size() == 1u) {
       thread_started++;
       ResumeAllThreads();

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/format_context.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"

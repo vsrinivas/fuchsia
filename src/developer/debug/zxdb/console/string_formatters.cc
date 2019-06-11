@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/string_formatters.h"
+
 #include <float.h>
 
 #include <limits>
 
 #include "src/developer/debug/zxdb/client/register.h"
-#include "src/developer/debug/zxdb/console/string_formatters.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

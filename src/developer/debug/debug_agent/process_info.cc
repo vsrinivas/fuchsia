@@ -4,8 +4,10 @@
 
 #include "src/developer/debug/debug_agent/process_info.h"
 
+// clang-format off
 // Included early because of conflicts.
 #include "src/lib/elflib/elflib.h"
+// clang-format on
 
 #include <inttypes.h>
 #include <lib/zx/thread.h>

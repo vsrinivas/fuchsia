@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 

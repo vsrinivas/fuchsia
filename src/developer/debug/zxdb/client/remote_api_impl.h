@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CLIENT_REMOTE_API_IMPL_H_
-#define GARNET_BIN_ZXDB_CLIENT_REMOTE_API_IMPL_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_
 
 #include "src/developer/debug/zxdb/client/remote_api.h"
 
@@ -76,8 +76,7 @@ class RemoteAPIImpl : public RemoteAPI {
       override;
   void SysInfo(
       const debug_ipc::SysInfoRequest& request,
-      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb)
-      override;
+      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) override;
   void ThreadStatus(
       const debug_ipc::ThreadStatusRequest& request,
       std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb)
@@ -113,4 +112,4 @@ class RemoteAPIImpl : public RemoteAPI {
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CLIENT_REMOTE_API_IMPL_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_

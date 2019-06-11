@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_STRING_UTIL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_STRING_UTIL_H_
 
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/utf_codecs.h"
@@ -36,3 +37,5 @@ std::string GetExclamation();
 size_t UnicodeCharWidth(const std::string& str);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_STRING_UTIL_H_

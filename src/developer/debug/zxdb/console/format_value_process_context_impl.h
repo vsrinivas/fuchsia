@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_VALUE_PROCESS_CONTEXT_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_VALUE_PROCESS_CONTEXT_IMPL_H_
 
 #include "src/developer/debug/zxdb/console/format_value.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -32,3 +33,5 @@ class FormatValueProcessContextImpl : public FormatValue::ProcessContext {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_VALUE_PROCESS_CONTEXT_IMPL_H_

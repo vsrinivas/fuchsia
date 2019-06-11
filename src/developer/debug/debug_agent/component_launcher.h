@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <string>
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_COMPONENT_LAUNCHER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_COMPONENT_LAUNCHER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <zircon/types.h>
+
+#include <string>
 
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/shared/component_utils.h"
@@ -52,3 +53,5 @@ class ComponentLauncher {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_COMPONENT_LAUNCHER_H_

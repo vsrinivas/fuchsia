@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CLIENT_TARGET_H_
-#define GARNET_BIN_ZXDB_CLIENT_TARGET_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_H_
 
 #include <functional>
 #include <map>
@@ -126,4 +126,4 @@ class Target : public ClientObject {
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CLIENT_TARGET_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_H_

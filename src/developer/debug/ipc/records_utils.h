@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_IPC_RECORDS_UTILS_H_
+#define SRC_DEVELOPER_DEBUG_IPC_RECORDS_UTILS_H_
 
 #include "src/developer/debug/ipc/records.h"
 
@@ -21,3 +22,5 @@ struct AddressRangeCompare {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_IPC_RECORDS_UTILS_H_

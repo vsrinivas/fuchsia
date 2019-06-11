@@ -85,14 +85,13 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 // System Implementation -------------------------------------------------------
 
 System::System(Session* session)
-    : ClientObject(session), settings_(GetSchema(), nullptr),
+    : ClientObject(session),
+      settings_(GetSchema(), nullptr),
       weak_factory_(this) {}
 
 System::~System() = default;
 
-fxl::WeakPtr<System> System::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<System> System::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void System::AddObserver(SystemObserver* observer) {
   observers_.AddObserver(observer);

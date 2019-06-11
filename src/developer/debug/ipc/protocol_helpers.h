@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_HELPERS_H_
+#define SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_HELPERS_H_
 
 #include <string>
 #include <vector>
@@ -74,3 +75,5 @@ inline bool Deserialize(MessageReader* reader, std::vector<uint8_t>* v) {
 }
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_HELPERS_H_

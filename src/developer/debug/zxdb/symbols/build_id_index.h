@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BUILD_ID_INDEX_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BUILD_ID_INDEX_H_
 
 #include <filesystem>
 #include <functional>
@@ -89,9 +90,7 @@ class BuildIDIndex {
   }
   const std::vector<std::string>& sources() const { return sources_; }
 
-  const IDMap& build_id_to_files() const {
-    return build_id_to_files_;
-  }
+  const IDMap& build_id_to_files() const { return build_id_to_files_; }
 
  private:
   // Updates the build_id_to_files_ cache if necessary.
@@ -141,3 +140,5 @@ class BuildIDIndex {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BUILD_ID_INDEX_H_

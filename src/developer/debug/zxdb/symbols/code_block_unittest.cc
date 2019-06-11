@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/code_block.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 

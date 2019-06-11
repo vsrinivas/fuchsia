@@ -6,10 +6,10 @@
 
 #include <set>
 
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/time/time_point.h"
-#include "src/lib/files/path.h"
 
 namespace debug_ipc {
 

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <set>
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_HARDWARE_BREAKPOINT_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_HARDWARE_BREAKPOINT_H_
 
 #include <zircon/status.h>
+
+#include <set>
 
 namespace debug_agent {
 
@@ -35,10 +36,11 @@ class HardwareBreakpoint {
   std::set<zx_koid_t> installed_threads_;
 };
 
-
 // A given set of breakpoints have a number of locations, which could target
 // different threads. We need to get all the threads that are targeted to
 // this particular location.
 std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb);
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_HARDWARE_BREAKPOINT_H_

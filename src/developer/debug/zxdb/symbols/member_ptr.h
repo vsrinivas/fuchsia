@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MEMBER_PTR_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MEMBER_PTR_H_
 
 #include "src/developer/debug/zxdb/symbols/type.h"
 
@@ -43,3 +44,5 @@ class MemberPtr final : public Type {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MEMBER_PTR_H_

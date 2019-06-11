@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/test_data/test_so_symbols.h"
-
 #include <stdio.h>
 #include <string.h>
+
+#include "src/developer/debug/debug_agent/test_data/test_so_symbols.h"
 
 // This program is setup so that it needs to have registers written at key
 // points so that it passes successfully.

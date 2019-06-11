@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_NOUNS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_NOUNS_H_
 
 #include <map>
 #include <vector>
@@ -83,3 +84,5 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns);
 const std::vector<SwitchRecord>& GetNounSwitches();
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_NOUNS_H_

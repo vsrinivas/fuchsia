@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_UNTIL_THREAD_CONTROLLER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_UNTIL_THREAD_CONTROLLER_H_
 
 #include <stdint.h>
 
@@ -10,10 +11,8 @@
 
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/developer/debug/zxdb/client/frame_fingerprint.h"
-#include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -84,3 +83,5 @@ class UntilThreadController : public ThreadController {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_UNTIL_THREAD_CONTROLLER_H_

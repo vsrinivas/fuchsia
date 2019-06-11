@@ -10,7 +10,8 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/lib/fxl/command_line.h"
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ACTIONS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ACTIONS_H_
 
 namespace zxdb {
 
@@ -107,3 +108,5 @@ std::vector<Action> CommandsToActions(const std::string& input);
 Err ScriptFileToActions(const std::string& path, std::vector<Action>* actions);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ACTIONS_H_

@@ -37,7 +37,7 @@ TEST(BuildIDIndex, IndexFile) {
   // The known file should be found. We have no debug symbols for this binary,
   // so it shouldn't show as debug info.
   EXPECT_EQ("", index.FileForBuildID(kSmallTestBuildID,
-                                            DebugSymbolFileType::kDebugInfo));
+                                     DebugSymbolFileType::kDebugInfo));
   EXPECT_EQ(test_file, index.FileForBuildID(kSmallTestBuildID,
                                             DebugSymbolFileType::kBinary));
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_TEST_SUPPORT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_TEST_SUPPORT_H_
 
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -66,3 +67,5 @@ struct DerivedClassTestSetup {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_TEST_SUPPORT_H_

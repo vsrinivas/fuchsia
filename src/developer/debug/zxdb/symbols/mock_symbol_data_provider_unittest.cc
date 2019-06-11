@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 

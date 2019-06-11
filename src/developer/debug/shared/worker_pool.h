@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_WORKER_POOL_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_WORKER_POOL_H_
 
 #include <functional>
 #include <mutex>
 #include <thread>
 #include <vector>
 
+#include "src/lib/containers/cpp/circular_deque.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/containers/cpp/circular_deque.h"
 
 namespace debug_ipc {
 
@@ -83,22 +84,22 @@ class WorkerPool {
   ::containers::circular_deque<Task> tasks_;      // GUARDED_BY(mutex_)
 
   // Counters.
-  int waiting_workers_ = 0;   // GUARDED_BY(mutex_)
+  int waiting_workers_ = 0;  // GUARDED_BY(mutex_)
 
   // State machine.
 
   // Cannot use thread safety analysis because we use std::unique_lock.
-  bool running_  = false;         // GUARDED_BY(mutex_)
-  bool shutting_down_ = false;    // GUARDED_BY(mutex_)
+  bool running_ = false;        // GUARDED_BY(mutex_)
+  bool shutting_down_ = false;  // GUARDED_BY(mutex_)
 
   // Whether we're creating a worker.
   // The new worker, upon startup, will switch off this flag.
-  volatile bool creating_worker_  = false;  // GUARDED_BY(mutex_)
+  volatile bool creating_worker_ = false;  // GUARDED_BY(mutex_)
 
   mutable std::mutex mutex_;
 
-  std::condition_variable worker_created_cv_;   // REQUIRES(mutex_)
-  std::condition_variable work_available_cv_;   // REQUIRES(mutex_)
+  std::condition_variable worker_created_cv_;  // REQUIRES(mutex_)
+  std::condition_variable work_available_cv_;  // REQUIRES(mutex_)
 
   Observer* observer_ = nullptr;
 
@@ -106,3 +107,5 @@ class WorkerPool {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_WORKER_POOL_H_

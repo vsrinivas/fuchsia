@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ADDRESS_RANGE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ADDRESS_RANGE_H_
 
 #include <stdint.h>
 
@@ -71,3 +72,5 @@ struct AddressRangeEndAddrCmp {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_ADDRESS_RANGE_H_

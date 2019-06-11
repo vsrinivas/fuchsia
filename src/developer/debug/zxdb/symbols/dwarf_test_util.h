@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_TEST_UTIL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_TEST_UTIL_H_
 
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -30,3 +31,5 @@ llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context,
                                        const std::string& name);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_TEST_UTIL_H_

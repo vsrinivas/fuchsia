@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CLIENT_SYSTEM_IMPL_H_
-#define GARNET_BIN_ZXDB_CLIENT_SYSTEM_IMPL_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SYSTEM_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SYSTEM_IMPL_H_
 
 #include <map>
 #include <memory>
@@ -130,4 +130,4 @@ class SystemImpl final : public System,
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CLIENT_SYSTEM_IMPL_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SYSTEM_IMPL_H_

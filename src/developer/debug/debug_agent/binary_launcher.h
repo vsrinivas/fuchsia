@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_DEBUG_AGENT_LAUNCHER_H_
-#define GARNET_BIN_DEBUG_AGENT_LAUNCHER_H_
-
-#include <string>
-#include <vector>
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_BINARY_LAUNCHER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_BINARY_LAUNCHER_H_
 
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 
+#include <string>
+#include <vector>
+
 #include "garnet/lib/process/process_builder.h"
-#include "src/lib/fxl/macros.h"
 #include "lib/sys/cpp/service_directory.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
 
@@ -67,4 +67,4 @@ class BinaryLauncher {
 
 }  // namespace debug_agent
 
-#endif  // GARNET_BIN_DEBUG_AGENT_LAUNCHER_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_BINARY_LAUNCHER_H_

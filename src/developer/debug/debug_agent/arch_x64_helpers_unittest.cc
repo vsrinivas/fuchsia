@@ -63,10 +63,10 @@ uint64_t GetHWBreakpointDR7Mask(size_t index) {
   FXL_DCHECK(index < 4);
   // Mask is: L = 1, RW = 00, LEN = 0
   static uint64_t dr_masks[4] = {
-    X86_FLAG_MASK(DR7L0),
-    X86_FLAG_MASK(DR7L1),
-    X86_FLAG_MASK(DR7L2),
-    X86_FLAG_MASK(DR7L3),
+      X86_FLAG_MASK(DR7L0),
+      X86_FLAG_MASK(DR7L1),
+      X86_FLAG_MASK(DR7L2),
+      X86_FLAG_MASK(DR7L3),
   };
   return dr_masks[index];
 }
@@ -76,10 +76,10 @@ uint64_t GetWatchpointDR7Mask(size_t index) {
   FXL_DCHECK(index < 4);
   // Mask is: L = 1, RW = 0b01, LEN = 10 (8 bytes).
   static uint64_t masks[4] = {
-    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
-    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
-    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
-    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
+      X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
+      X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
+      X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
+      X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
   };
   return masks[index];
 }
@@ -347,9 +347,7 @@ TEST(x64Helpers, RemovingHWBreakpoint) {
 
 namespace {
 
-inline uint64_t AlignedAddress(uint64_t address) {
-  return address & ~0b111;
-}
+inline uint64_t AlignedAddress(uint64_t address) { return address & ~0b111; }
 
 }  // namespace
 
@@ -366,7 +364,7 @@ TEST(x64Helpers, SettingWatchpoints) {
 
   // Adding the same breakpoint should detect that the same already exists.
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress1,
-                        ZX_ERR_ALREADY_BOUND);
+                      ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], 0u);
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -428,7 +426,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   SetupHWBreakpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress4, ZX_OK);
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_NO_RESOURCES);
+                      ZX_ERR_NO_RESOURCES);
 
   RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3, ZX_OK);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
@@ -444,7 +442,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
 
   // Removing same watchpoint should not work.
   RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                         ZX_ERR_OUT_OF_RANGE);
+                       ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -458,7 +456,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
 
   // Removing an unknown address should warn and change nothing.
   RemoveWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, 0xaaaaaaa,
-                         ZX_ERR_OUT_OF_RANGE);
+                       ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress1));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], 0u);
@@ -523,7 +521,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
 
   // Already exists should not change.
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress5,
-                        ZX_ERR_ALREADY_BOUND);
+                      ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));
@@ -537,7 +535,7 @@ TEST(x64Helpers, RemovingWatchpoints) {
 
   // No more resources.
   SetupWatchpointTest(FROM_HERE_NO_FUNC, &debug_regs, kAddress3,
-                        ZX_ERR_NO_RESOURCES);
+                      ZX_ERR_NO_RESOURCES);
   EXPECT_EQ(debug_regs.dr[0], AlignedAddress(kAddress5));
   EXPECT_EQ(debug_regs.dr[1], AlignedAddress(kAddress2));
   EXPECT_EQ(debug_regs.dr[2], AlignedAddress(kAddress1));

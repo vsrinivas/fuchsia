@@ -38,8 +38,7 @@ bool IsSuperSet(const std::vector<std::string>& super_set,
 
 }  // namespace
 
-void SettingSchema::AddBool(std::string name, std::string description,
-                            bool v) {
+void SettingSchema::AddBool(std::string name, std::string description, bool v) {
   SettingInfo info{name, std::move(description)};
   AddSetting(std::move(name), {std::move(info), SettingValue(v)});
 }

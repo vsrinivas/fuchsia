@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <vector>
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_HELPERS_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_HELPERS_H_
 
 #include <lib/zx/thread.h>
 #include <zircon/syscalls/exception.h>
+
+#include <vector>
 
 #include "src/developer/debug/debug_agent/arch_x64.h"
 
@@ -59,3 +60,5 @@ std::string DR7ToString(uint64_t dr7);
 
 }  // namespace arch
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_HELPERS_H_

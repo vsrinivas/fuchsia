@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_LOADED_MODULE_SYMBOLS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_LOADED_MODULE_SYMBOLS_H_
 
 #include <stdint.h>
+
 #include <string>
 #include <vector>
 
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -101,3 +103,5 @@ class LoadedModuleSymbols {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_LOADED_MODULE_SYMBOLS_H_

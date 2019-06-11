@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_PROCESS_SYMBOLS_TEST_SETUP_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_PROCESS_SYMBOLS_TEST_SETUP_H_
 
 #include <memory>
 
@@ -43,3 +44,5 @@ class ProcessSymbolsTestSetup {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_PROCESS_SYMBOLS_TEST_SETUP_H_

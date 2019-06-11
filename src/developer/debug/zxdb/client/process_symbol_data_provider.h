@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_PROCESS_SYMBOL_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_PROCESS_SYMBOL_DATA_PROVIDER_H_
 
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 
@@ -44,3 +45,5 @@ class ProcessSymbolDataProvider : public SymbolDataProvider {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_PROCESS_SYMBOL_DATA_PROVIDER_H_

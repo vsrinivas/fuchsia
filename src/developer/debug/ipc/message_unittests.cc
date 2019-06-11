@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gtest/gtest.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
-
-#include "gtest/gtest.h"
 
 namespace debug_ipc {
 

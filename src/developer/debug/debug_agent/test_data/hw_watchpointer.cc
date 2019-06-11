@@ -51,9 +51,9 @@ int ThreadFunction(void*) {
 
 zx_thread_state_debug_regs_t GetDebugRegs() {
   zx_thread_state_debug_regs_t debug_regs = {};
-  debug_regs.dr7 = 0b1 |          // L0 = 1 (watchpoint is active).
-                   0b01 << 16 |   // R/W0 = 01 (Only data write triggers).
-                   0b11 << 18;    // LEN0 = 11 (4 byte watchpoint).
+  debug_regs.dr7 = 0b1 |         // L0 = 1 (watchpoint is active).
+                   0b01 << 16 |  // R/W0 = 01 (Only data write triggers).
+                   0b11 << 18;   // LEN0 = 11 (4 byte watchpoint).
 
   // 4 byte aligned.
   debug_regs.dr[0] = reinterpret_cast<uint64_t>(&kVariableToChange) & ~0b11;
@@ -121,6 +121,4 @@ int main() {
 
   FXL_LOG(ERROR) << " THIS IS AN ERROR. THIS BINARY SHOULD'VE CRASHED!";
   return 1;
-
-
 }

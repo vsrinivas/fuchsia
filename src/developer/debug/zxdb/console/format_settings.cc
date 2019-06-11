@@ -82,8 +82,8 @@ void AddSettingToTable(const Setting& setting,
 
         if (add_heading) {
           // The first entry has the setting name.
-          auto title = i == 0 ? OutputBuffer(setting.info.name)
-                              : OutputBuffer();
+          auto title =
+              i == 0 ? OutputBuffer(setting.info.name) : OutputBuffer();
           auto it = row.emplace_back(std::move(title));
         }
         row.emplace_back(std::move(bullet_list[i]));

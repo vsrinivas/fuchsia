@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <memory>
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_
 
 #include <lib/async/cpp/exception.h>
 #include <lib/async/cpp/wait.h>
+
+#include <memory>
 
 #include "src/lib/fxl/macros.h"
 
@@ -71,3 +72,5 @@ class ExceptionHandler {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_

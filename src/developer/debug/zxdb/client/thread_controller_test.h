@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_CONTROLLER_TEST_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_CONTROLLER_TEST_H_
 
 #include <memory>
 
@@ -66,3 +67,5 @@ class ThreadControllerTest : public RemoteAPITest {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_CONTROLLER_TEST_H_

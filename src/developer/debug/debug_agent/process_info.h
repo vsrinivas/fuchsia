@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_INFO_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_INFO_H_
 
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -41,3 +42,5 @@ debug_ipc::ThreadRecord::State ThreadStateToEnums(
     uint32_t state, debug_ipc::ThreadRecord::BlockedReason* blocked_reason);
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_INFO_H_

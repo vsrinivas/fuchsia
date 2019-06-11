@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BASE_TYPE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BASE_TYPE_H_
 
 #include <stdint.h>
 
@@ -72,3 +73,5 @@ class BaseType final : public Type {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_BASE_TYPE_H_

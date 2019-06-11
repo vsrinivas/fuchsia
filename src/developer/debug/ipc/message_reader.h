@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_IPC_MESSAGE_READER_H_
+#define SRC_DEVELOPER_DEBUG_IPC_MESSAGE_READER_H_
 
 #include <stdint.h>
+
 #include <string>
 #include <vector>
 
@@ -48,3 +50,5 @@ class MessageReader {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_IPC_MESSAGE_READER_H_

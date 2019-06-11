@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
+#include "src/developer/debug/debug_agent/process_breakpoint.h"
 
+#include <string.h>
 #include <zircon/syscalls/exception.h>
 
 #include "gtest/gtest.h"
@@ -11,7 +12,6 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
-#include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 
 namespace debug_agent {

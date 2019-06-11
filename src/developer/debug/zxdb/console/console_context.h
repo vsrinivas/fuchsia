@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
-#define GARNET_BIN_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
 
 #include "src/developer/debug/zxdb/client/breakpoint_observer.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
@@ -219,4 +219,4 @@ class ConsoleContext : public ProcessObserver,
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_

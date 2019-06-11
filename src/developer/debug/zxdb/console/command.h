@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CONSOLE_COMMAND_H_
-#define GARNET_BIN_ZXDB_CONSOLE_COMMAND_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_H_
 
 #include <initializer_list>
 #include <map>
@@ -124,4 +124,4 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd,
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CONSOLE_COMMAND_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_H_

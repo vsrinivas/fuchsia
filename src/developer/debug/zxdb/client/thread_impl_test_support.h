@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_TEST_SUPPORT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_TEST_SUPPORT_H_
 
 // This file contains a test harness and helper classes for writing tests
 // involving lower-level thread control such as ThreadImpl itself, and
@@ -52,3 +53,5 @@ class TestThreadObserver : public ThreadObserver {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_TEST_SUPPORT_H_

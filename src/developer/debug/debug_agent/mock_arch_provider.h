@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_ARCH_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_ARCH_PROVIDER_H_
 
 #include <functional>
 #include <map>
@@ -66,3 +67,5 @@ class ScopedMockArchProvider {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_ARCH_PROVIDER_H_

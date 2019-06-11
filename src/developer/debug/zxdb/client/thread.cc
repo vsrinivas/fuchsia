@@ -5,7 +5,6 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target.h"
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_ARRAY_TYPE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_ARRAY_TYPE_H_
 
 #include "src/developer/debug/zxdb/symbols/type.h"
 
@@ -45,3 +46,5 @@ class ArrayType final : public Type {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_ARRAY_TYPE_H_

@@ -42,7 +42,6 @@ debug_ipc::zx_status_t HandleQuitOnExit(const std::string& str,
 std::vector<debug_ipc::zx_status_t> HandleActions(
     const std::vector<debug_ipc::ConfigAction>& actions,
     AgentConfiguration* config) {
-
   // Iterate over all the actions and always return an answer for each one.
   std::vector<debug_ipc::zx_status_t> results;
   for (const auto& action : actions) {

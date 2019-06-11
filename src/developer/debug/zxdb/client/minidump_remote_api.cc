@@ -4,8 +4,10 @@
 
 #include "src/developer/debug/zxdb/client/minidump_remote_api.h"
 
+// clang-format off
 // This has to go up here due to some strange header conflicts.
 #include "src/lib/elflib/elflib.h"
+// clang-format on
 
 #include <algorithm>
 #include <cstring>

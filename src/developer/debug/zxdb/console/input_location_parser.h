@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_INPUT_LOCATION_PARSER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_INPUT_LOCATION_PARSER_H_
 
 #include <vector>
 
@@ -56,8 +57,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
                                Location* location);
 
 // Autocomplete for input locations.
-void CompleteInputLocation(const Command& command,
-                           const std::string& prefix,
+void CompleteInputLocation(const Command& command, const std::string& prefix,
                            std::vector<std::string>* completions);
 
 // Generates help for a command describing the parsing of locations. The
@@ -91,3 +91,5 @@ void CompleteInputLocation(const Command& command,
   "      decimal numbers with * to force interpretation as an address.\n"
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_INPUT_LOCATION_PARSER_H_

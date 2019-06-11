@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_LINE_TABLE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_LINE_TABLE_H_
 
 #include "src/developer/debug/zxdb/symbols/line_table.h"
 
@@ -30,3 +31,5 @@ class MockLineTable : public LineTable {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MOCK_LINE_TABLE_H_

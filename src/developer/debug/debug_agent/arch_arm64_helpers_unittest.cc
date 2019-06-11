@@ -8,9 +8,9 @@
 
 #include <optional>
 
-#include "src/lib/fxl/arraysize.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace debug_agent {
 namespace arch {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_DEBUG_IPC_CLIENT_PROTOCOL_H_
-#define GARNET_LIB_DEBUG_IPC_CLIENT_PROTOCOL_H_
+#ifndef SRC_DEVELOPER_DEBUG_IPC_CLIENT_PROTOCOL_H_
+#define SRC_DEVELOPER_DEBUG_IPC_CLIENT_PROTOCOL_H_
 
 #include "src/developer/debug/ipc/protocol.h"
 
@@ -103,8 +103,8 @@ bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply,
                uint32_t* transaction_id);
 
 // SysInfo
-void WriteRequest(const SysInfoRequest& request,
-                  uint32_t transaction_id, MessageWriter* writer);
+void WriteRequest(const SysInfoRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer);
 bool ReadReply(MessageReader* reader, SysInfoReply* reply,
                uint32_t* transaction_id);
 
@@ -157,4 +157,4 @@ bool ReadNotifyIO(MessageReader*, NotifyIO*);
 
 }  // namespace debug_ipc
 
-#endif  // GARNET_LIB_DEBUG_IPC_CLIENT_PROTOCOL_H_
+#endif  // SRC_DEVELOPER_DEBUG_IPC_CLIENT_PROTOCOL_H_

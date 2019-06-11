@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_COMPONENT_UTILS_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_COMPONENT_UTILS_H_
 
 #include <string>
 
@@ -28,3 +29,5 @@ bool ExtractComponentFromPackageUrl(const std::string& url,
                                     ComponentDescription* out);
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_COMPONENT_UTILS_H_

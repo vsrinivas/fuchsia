@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/verbs.h"
-
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -12,6 +10,7 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_settings.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

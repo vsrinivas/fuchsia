@@ -116,7 +116,6 @@ bool WorkerPool::ShouldCreateWorker() {
          !tasks_.empty();                   // 5. There is actual work to do.
 }
 
-
 void WorkerPool::CreateWorker(std::unique_lock<std::mutex>* lock) {
   // NOTE: |lock| is held.
   FXL_DCHECK(lock);

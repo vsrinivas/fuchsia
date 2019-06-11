@@ -77,8 +77,7 @@ zx_status_t HardwareBreakpoint::Update(
   return ZX_OK;
 }
 
-zx_status_t HardwareBreakpoint::Install(
-    zx_koid_t thread_koid) {
+zx_status_t HardwareBreakpoint::Install(zx_koid_t thread_koid) {
   uint64_t address = process_bp_->address();
   // We need to install this new thread.
   DebuggedThread* thread = process_bp_->process()->GetThread(thread_koid);
@@ -127,8 +126,7 @@ zx_status_t HardwareBreakpoint::Uninstall() {
   return ZX_OK;
 }
 
-zx_status_t HardwareBreakpoint::Uninstall(
-    zx_koid_t thread_koid) {
+zx_status_t HardwareBreakpoint::Uninstall(zx_koid_t thread_koid) {
   uint64_t address = process_bp_->address();
   DebuggedThread* thread = process_bp_->process()->GetThread(thread_koid);
   if (!thread) {

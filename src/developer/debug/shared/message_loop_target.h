@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/unsafe.h>
@@ -206,3 +207,5 @@ struct MessageLoopTarget::WatchInfo {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_

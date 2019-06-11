@@ -38,7 +38,8 @@ struct MessageLoopTarget::Exception {
 
 // MessageLoopTarget -----------------------------------------------------------
 
-MessageLoopTarget::MessageLoopTarget() : loop_(&kAsyncLoopConfigAttachToThread) {}
+MessageLoopTarget::MessageLoopTarget()
+    : loop_(&kAsyncLoopConfigAttachToThread) {}
 
 MessageLoopTarget::~MessageLoopTarget() {
   FXL_DCHECK(Current() != this);  // Cleanup should have been called.
@@ -79,9 +80,7 @@ void MessageLoopTarget::Cleanup() {
 }
 
 // static
-MessageLoopTarget* MessageLoopTarget::Current() {
-  return current_message_loop;
-}
+MessageLoopTarget* MessageLoopTarget::Current() { return current_message_loop; }
 
 const MessageLoopTarget::WatchInfo* MessageLoopTarget::FindWatchInfo(
     int id) const {
@@ -92,8 +91,8 @@ const MessageLoopTarget::WatchInfo* MessageLoopTarget::FindWatchInfo(
 }
 
 zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object,
-                                               zx_signals_t signals,
-                                               WatchInfo* associated_info) {
+                                                zx_signals_t signals,
+                                                WatchInfo* associated_info) {
   SignalHandler handler;
   zx_status_t status = handler.Init(id, object, signals);
   if (status != ZX_OK)
@@ -109,8 +108,8 @@ zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object,
 }
 
 zx_status_t MessageLoopTarget::AddExceptionHandler(int id, zx_handle_t object,
-                                                  uint32_t options,
-                                                  WatchInfo* associated_info) {
+                                                   uint32_t options,
+                                                   WatchInfo* associated_info) {
   ExceptionHandler handler;
   zx_status_t status = handler.Init(id, object, options);
   if (status != ZX_OK)
@@ -127,7 +126,7 @@ zx_status_t MessageLoopTarget::AddExceptionHandler(int id, zx_handle_t object,
 }
 
 MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd,
-                                                   FDWatcher* watcher) {
+                                                    FDWatcher* watcher) {
   WatchInfo info;
   info.type = WatchType::kFdio;
   info.fd_watcher = watcher;
@@ -172,9 +171,9 @@ MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd,
 }
 
 zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode,
-                                          zx_handle_t socket_handle,
-                                          SocketWatcher* watcher,
-                                          MessageLoop::WatchHandle* out) {
+                                           zx_handle_t socket_handle,
+                                           SocketWatcher* watcher,
+                                           MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kSocket;
   info.socket_watcher = watcher;
@@ -273,8 +272,8 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(
 }
 
 zx_status_t MessageLoopTarget::ResumeFromException(zx_koid_t thread_koid,
-                                                  zx::thread& thread,
-                                                  uint32_t options) {
+                                                   zx::thread& thread,
+                                                   uint32_t options) {
   auto it = thread_exception_map_.find(thread_koid);
   FXL_DCHECK(it != thread_exception_map_.end());
   zx_status_t res = async_resume_from_exception(async_get_default_dispatcher(),
@@ -295,7 +294,7 @@ bool MessageLoopTarget::CheckAndProcessPendingTasks() {
 }
 
 void MessageLoopTarget::HandleException(const ExceptionHandler& handler,
-                                       zx_port_packet_t packet) {
+                                        zx_port_packet_t packet) {
   WatchInfo* watch_info = nullptr;
   {
     // Some event being watched.
@@ -454,7 +453,7 @@ void MessageLoopTarget::StopWatching(int id) {
 void MessageLoopTarget::SetHasTasks() { task_event_.signal(0, kTaskSignal); }
 
 void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info,
-                                    zx_signals_t observed) {
+                                     zx_signals_t observed) {
   uint32_t events = 0;
   fdio_unsafe_wait_end(info.fdio, observed, &events);
 
@@ -486,7 +485,7 @@ void MessageLoopTarget::RemoveExceptionHandler(const async_exception_t* key) {
 }
 
 void MessageLoopTarget::AddException(const ExceptionHandler& handler,
-                                    zx_koid_t thread_koid) {
+                                     zx_koid_t thread_koid) {
   // In the case of a "thread exiting" exception, it's possible the thread is
   // already in an exception state. In this case, we want to overwrite the
   // previous exception (which is now moot because the thread is gone). This
@@ -500,8 +499,8 @@ void MessageLoopTarget::AddException(const ExceptionHandler& handler,
 }
 
 void MessageLoopTarget::OnProcessException(const ExceptionHandler& handler,
-                                          const WatchInfo& info,
-                                          const zx_port_packet_t& packet) {
+                                           const WatchInfo& info,
+                                           const zx_port_packet_t& packet) {
   if (ZX_PKT_IS_EXCEPTION(packet.type)) {
     // All debug exceptions.
     switch (packet.type) {
@@ -535,14 +534,14 @@ void MessageLoopTarget::OnProcessException(const ExceptionHandler& handler,
 }
 
 void MessageLoopTarget::OnProcessTerminated(const WatchInfo& info,
-                                           zx_signals_t observed) {
+                                            zx_signals_t observed) {
   FXL_DCHECK(observed & ZX_PROCESS_TERMINATED);
   info.exception_watcher->OnProcessTerminated(info.task_koid);
 }
 
 void MessageLoopTarget::OnJobException(const ExceptionHandler& handler,
-                                      const WatchInfo& info,
-                                      const zx_port_packet_t& packet) {
+                                       const WatchInfo& info,
+                                       const zx_port_packet_t& packet) {
   if (ZX_PKT_IS_EXCEPTION(packet.type)) {
     // All debug exceptions.
     switch (packet.type) {
@@ -559,7 +558,7 @@ void MessageLoopTarget::OnJobException(const ExceptionHandler& handler,
 }
 
 void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info,
-                                      zx_signals_t observed) {
+                                       zx_signals_t observed) {
   // Dispatch readable signal.
   if (observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);

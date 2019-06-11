@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include "src/developer/debug/zxdb/client/thread_observer.h"
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BACKTRACE_CACHE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BACKTRACE_CACHE_H_
 
 #include <map>
 
+#include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/symbols/file_line.h"
 
 namespace zxdb {
@@ -26,7 +26,7 @@ class TargetSymbols;
 
 struct Backtrace {
   struct Frame {
-    uint64_t address = 0;   // 0 is invalid.
+    uint64_t address = 0;  // 0 is invalid.
     FileLine file_line;
     std::string function_name;
   };
@@ -58,3 +58,5 @@ class BacktraceCache final : public ThreadObserver {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BACKTRACE_CACHE_H_

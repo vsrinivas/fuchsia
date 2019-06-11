@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_H_
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/breakpoint_observer.h"
@@ -62,3 +63,5 @@ class Breakpoint : public ClientObject {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_H_

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_WATCHPOINT_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_WATCHPOINT_H_
 
 #include <stdint.h>
+#include <zircon/types.h>
 
 #include <set>
 
-#include <zircon/types.h>
-
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -68,3 +68,5 @@ class Watchpoint {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_WATCHPOINT_H_

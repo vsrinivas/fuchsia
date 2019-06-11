@@ -64,8 +64,8 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid,
   FXL_DCHECK(!process_.get());
 
   state_ = State::kRunning;
-  process_ = CreateProcessImpl(koid, process_name,
-                               Process::StartType::kComponent);
+  process_ =
+      CreateProcessImpl(koid, process_name, Process::StartType::kComponent);
   system_->NotifyDidCreateProcess(process_.get());
   for (auto& observer : observers())
     observer.DidCreateProcess(this, process_.get(), false);

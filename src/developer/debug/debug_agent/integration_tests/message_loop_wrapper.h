@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MESSAGE_LOOP_WRAPPER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MESSAGE_LOOP_WRAPPER_H_
 
 #include "src/developer/debug/shared/message_loop_target.h"
 
@@ -20,3 +21,5 @@ class MessageLoopWrapper {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MESSAGE_LOOP_WRAPPER_H_

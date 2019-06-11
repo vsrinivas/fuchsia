@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/variable_location.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 

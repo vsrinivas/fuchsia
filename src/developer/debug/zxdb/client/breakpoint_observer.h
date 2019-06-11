@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_OBSERVER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_OBSERVER_H_
 
 namespace zxdb {
 
@@ -14,3 +15,5 @@ class BreakpointObserver {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_OBSERVER_H_

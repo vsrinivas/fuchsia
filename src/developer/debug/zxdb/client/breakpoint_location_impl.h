@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_LOCATION_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_LOCATION_IMPL_H_
+
 #include "src/developer/debug/zxdb/client/breakpoint_location.h"
 
 namespace zxdb {
@@ -33,3 +36,5 @@ class BreakpointLocationImpl final : public BreakpointLocation {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_BREAKPOINT_LOCATION_IMPL_H_

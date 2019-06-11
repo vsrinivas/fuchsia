@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/client/disassembler.h"
+
 #include <string>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
-#include "src/developer/debug/zxdb/client/disassembler.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/lib/fxl/arraysize.h"
 

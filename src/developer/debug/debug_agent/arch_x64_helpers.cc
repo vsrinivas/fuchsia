@@ -20,12 +20,8 @@ namespace {
 
 uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
   FXL_DCHECK(index < 4);
-  static uint64_t masks[4] = {
-      X86_FLAG_MASK(DR7L0),
-      X86_FLAG_MASK(DR7L1),
-      X86_FLAG_MASK(DR7L2),
-      X86_FLAG_MASK(DR7L3)
-  };
+  static uint64_t masks[4] = {X86_FLAG_MASK(DR7L0), X86_FLAG_MASK(DR7L1),
+                              X86_FLAG_MASK(DR7L2), X86_FLAG_MASK(DR7L3)};
 
   return (dr7 & masks[index]) != 0;
 }
@@ -74,10 +70,10 @@ bool IsWatchpoint(uint64_t dr7, size_t index) {
 uint64_t HWDebugResourceD7ClearMask(size_t index) {
   FXL_DCHECK(index < 4);
   static uint64_t masks[4] = {
-    ~(X86_FLAG_MASK(DR7L0) | X86_FLAG_MASK(DR7RW0) | X86_FLAG_MASK(DR7LEN0)),
-    ~(X86_FLAG_MASK(DR7L1) | X86_FLAG_MASK(DR7RW1) | X86_FLAG_MASK(DR7LEN1)),
-    ~(X86_FLAG_MASK(DR7L2) | X86_FLAG_MASK(DR7RW2) | X86_FLAG_MASK(DR7LEN2)),
-    ~(X86_FLAG_MASK(DR7L3) | X86_FLAG_MASK(DR7RW3) | X86_FLAG_MASK(DR7LEN3)),
+      ~(X86_FLAG_MASK(DR7L0) | X86_FLAG_MASK(DR7RW0) | X86_FLAG_MASK(DR7LEN0)),
+      ~(X86_FLAG_MASK(DR7L1) | X86_FLAG_MASK(DR7RW1) | X86_FLAG_MASK(DR7LEN1)),
+      ~(X86_FLAG_MASK(DR7L2) | X86_FLAG_MASK(DR7RW2) | X86_FLAG_MASK(DR7LEN2)),
+      ~(X86_FLAG_MASK(DR7L3) | X86_FLAG_MASK(DR7RW3) | X86_FLAG_MASK(DR7LEN3)),
   };
   return masks[index];
 }
@@ -101,10 +97,10 @@ uint64_t WatchpointDR7SetMask(size_t index) {
   // TODO(donosoc): This is only setting write-only watchpoints.
   //                When enabled in the client, we need to allow read/write.
   static uint64_t masks[4] = {
-    X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
-    X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
-    X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
-    X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
+      X86_FLAG_MASK(DR7L0) | 0b01 << kDR7RW0Shift | 0b10 << kDR7LEN0Shift,
+      X86_FLAG_MASK(DR7L1) | 0b01 << kDR7RW1Shift | 0b10 << kDR7LEN1Shift,
+      X86_FLAG_MASK(DR7L2) | 0b01 << kDR7RW2Shift | 0b10 << kDR7LEN2Shift,
+      X86_FLAG_MASK(DR7L3) | 0b01 << kDR7RW3Shift | 0b10 << kDR7LEN3Shift,
   };
   return masks[index];
 }
@@ -188,11 +184,9 @@ zx_status_t RemoveHWBreakpoint(uint64_t address,
 
 namespace {
 
-inline uint64_t AlignedAddress(uint64_t address) {
-  return address & ~0b111;
-}
+inline uint64_t AlignedAddress(uint64_t address) { return address & ~0b111; }
 
-}
+}  // namespace
 
 zx_status_t SetupWatchpoint(uint64_t address,
                             zx_thread_state_debug_regs_t* debug_regs) {
@@ -214,7 +208,7 @@ zx_status_t SetupWatchpoint(uint64_t address,
     return ZX_ERR_NO_RESOURCES;
 
   // We found a slot, we bind the watchpoint.
-  debug_regs->dr[slot] = AlignedAddress(address);   // 8-byte aligned.
+  debug_regs->dr[slot] = AlignedAddress(address);  // 8-byte aligned.
   debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
   debug_regs->dr7 |= WatchpointDR7SetMask(slot);
   return ZX_OK;

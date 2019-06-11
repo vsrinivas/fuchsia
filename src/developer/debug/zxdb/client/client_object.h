@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CLIENT_OBJECT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CLIENT_OBJECT_H_
 
 namespace zxdb {
 
@@ -24,3 +25,5 @@ class ClientObject {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CLIENT_OBJECT_H_

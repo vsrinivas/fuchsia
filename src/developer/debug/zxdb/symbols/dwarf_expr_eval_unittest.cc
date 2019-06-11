@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
+
 #include "gtest/gtest.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

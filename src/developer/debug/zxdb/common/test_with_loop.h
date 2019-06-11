@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TEST_WITH_LOOP_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TEST_WITH_LOOP_H_
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
@@ -32,3 +33,5 @@ class TestWithLoop : public testing::Test {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TEST_WITH_LOOP_H_

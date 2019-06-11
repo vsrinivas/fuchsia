@@ -93,9 +93,7 @@ namespace {
 //    (The compiler *really* likes to strip anonymous namespace functions, even
 //    when marked "noinline". The parameter being passed in from a parameter
 //    from an exported function is required to prevent this).
-NOINLINE int AnonNSFunction(int i) {
-  return i + 5;
-}
+NOINLINE int AnonNSFunction(int i) { return i + 5; }
 
 }  // namespace
 
@@ -107,7 +105,8 @@ NOINLINE int AnonNSFunction(int i) {
 //
 //   (This one has no declaration nor specification attributes because there
 //   wasn't a separate declaration.)
-EXPORT int MyFunction(int i) {  // Must be on line # ModuleSymbols::kMyFunctionLine.
+EXPORT int MyFunction(
+    int i) {  // Must be on line # ModuleSymbols::kMyFunctionLine.
   // DW_TAG_variable
   //   DW_AT_name = "my_class"
   //   DW_AT_type = <reference to MyClass DIE above>

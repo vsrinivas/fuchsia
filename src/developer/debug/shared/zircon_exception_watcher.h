@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_DEBUG_IPC_HELPER_ZIRCON_EXCEPTION_WATCHER_H_
-#define GARNET_LIB_DEBUG_IPC_HELPER_ZIRCON_EXCEPTION_WATCHER_H_
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_ZIRCON_EXCEPTION_WATCHER_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_ZIRCON_EXCEPTION_WATCHER_H_
 
 #include <zircon/types.h>
 
@@ -24,4 +24,4 @@ class ZirconExceptionWatcher {
 
 }  // namespace debug_ipc
 
-#endif  // GARNET_LIB_DEBUG_IPC_HELPER_ZIRCON_EXCEPTION_WATCHER_H_
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_ZIRCON_EXCEPTION_WATCHER_H_

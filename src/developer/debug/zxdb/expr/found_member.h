@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FOUND_MEMBER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FOUND_MEMBER_H_
 
 #include <stdint.h>
 
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 
@@ -46,3 +47,5 @@ class FoundMember {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FOUND_MEMBER_H_

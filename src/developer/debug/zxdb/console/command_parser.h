@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_PARSER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_PARSER_H_
 
 #include <functional>
 #include <string>
@@ -35,3 +36,5 @@ std::vector<std::string> GetCommandCompletions(
     const std::string& input, const FillCommandContextCallback& fill_context);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_PARSER_H_

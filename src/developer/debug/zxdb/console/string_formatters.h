@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_STRING_FORMATTERS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_STRING_FORMATTERS_H_
 
 #include <string>
 
@@ -26,3 +27,5 @@ Err GetFPString(const std::vector<uint8_t>& value, std::string* out,
                 int precision = 0);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_STRING_FORMATTERS_H_

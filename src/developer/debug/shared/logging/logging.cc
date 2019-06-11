@@ -23,5 +23,5 @@ LogStatement::~LogStatement() {
   fprintf(stderr, "\r%s %s\r\n", preamble.c_str(), stream_.str().c_str());
 }
 
-}
+}  // namespace debug_ipc
 // namespace debug_ipc

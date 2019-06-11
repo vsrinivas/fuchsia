@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/threads.h>
 
 #include "src/lib/fxl/logging.h"
-
-#include <unistd.h>
 
 // This is a self contained binary that is meant to be run *manually*.
 // This is the smallest code that can be used to reproduce a HW breakpoint

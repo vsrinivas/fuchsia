@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_DISASSEMBLER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_DISASSEMBLER_H_
 
 #include <inttypes.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -110,3 +112,5 @@ class Disassembler {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_DISASSEMBLER_H_

@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

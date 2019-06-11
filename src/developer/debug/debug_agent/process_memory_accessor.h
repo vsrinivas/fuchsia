@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_MEMORY_ACCESSOR_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_MEMORY_ACCESSOR_H_
 
 namespace debug_agent {
 
@@ -18,3 +19,5 @@ class ProcessMemoryAccessor {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_MEMORY_ACCESSOR_H_

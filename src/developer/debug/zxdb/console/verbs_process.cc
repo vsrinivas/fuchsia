@@ -251,8 +251,9 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
 
   // Output warning about this possibly not working.
   OutputBuffer warning(Syntax::kWarning, GetExclamation());
-  warning.Append(" Run won't work for many processes and components. "
-                 "See \"help run\".\n");
+  warning.Append(
+      " Run won't work for many processes and components. "
+      "See \"help run\".\n");
   Console::get()->Output(warning);
 
   if (!cmd.HasSwitch(kRunComponentSwitch)) {

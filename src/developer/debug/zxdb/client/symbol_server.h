@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SYMBOL_SERVER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SYMBOL_SERVER_H_
 
 #include <functional>
 #include <memory>
@@ -92,3 +93,5 @@ class SymbolServer : public ClientObject {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SYMBOL_SERVER_H_

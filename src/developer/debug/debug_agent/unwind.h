@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_UNWIND_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_UNWIND_H_
 
 #include <lib/zx/thread.h>
 #include <stdint.h>
@@ -26,3 +27,5 @@ zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
                         std::vector<debug_ipc::StackFrame>* stack);
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_UNWIND_H_

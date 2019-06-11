@@ -4,7 +4,8 @@
 
 // Do not include directly, use "arch.h".
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_H_
 
 #include <stdint.h>
 #include <zircon/syscalls/debug.h>
@@ -17,3 +18,5 @@ using BreakInstructionType = uint8_t;
 
 }  // namespace arch
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_H_

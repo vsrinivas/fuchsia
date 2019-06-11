@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
-#define GARNET_BIN_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
 
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/job_context.h"
@@ -31,9 +31,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   //
   // If the job is explicitly detached, this flag will be cleared (because the
   // user is taking responsibility for where it's attached).
-  bool is_implicit_root() const {
-    return is_implicit_root_;
-  }
+  bool is_implicit_root() const { return is_implicit_root_; }
 
   // Allocates a new job_context with the same settings as this one. This isn't
   // a real copy, because any job information is not cloned.
@@ -92,4 +90,4 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_

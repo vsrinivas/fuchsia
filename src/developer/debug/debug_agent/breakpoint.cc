@@ -70,8 +70,7 @@ zx_status_t Breakpoint::SetSettings(
   return result;
 }
 
-bool Breakpoint::AppliesToThread(zx_koid_t pid,
-                                 zx_koid_t tid) const {
+bool Breakpoint::AppliesToThread(zx_koid_t pid, zx_koid_t tid) const {
   for (auto& location : settings_.locations) {
     if (location.process_koid == pid) {
       if (location.thread_koid == 0 || location.thread_koid == tid) {

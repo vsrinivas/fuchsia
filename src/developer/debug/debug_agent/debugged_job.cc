@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/shared/message_loop_target.h"
-
-#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
+
 #include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -80,7 +80,6 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   // exception.
   debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
       thread_koid, initial_thread, 0);
-
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {

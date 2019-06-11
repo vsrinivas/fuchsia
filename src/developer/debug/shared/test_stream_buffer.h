@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_TEST_STREAM_BUFFER_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_TEST_STREAM_BUFFER_H_
 
 #include <deque>
 
-#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/shared/stream_buffer.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debug_ipc {
 
@@ -46,3 +47,5 @@ class TestStreamBuffer : public StreamBuffer::Writer {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_TEST_STREAM_BUFFER_H_

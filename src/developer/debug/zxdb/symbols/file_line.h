@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_FILE_LINE_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_FILE_LINE_H_
 
 #include <string>
 
@@ -31,3 +32,5 @@ bool operator==(const FileLine& a, const FileLine& b);
 bool operator!=(const FileLine& a, const FileLine& b);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_FILE_LINE_H_

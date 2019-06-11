@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_ARCH_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_ARCH_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -27,3 +28,5 @@ using TargetPointer = uint64_t;
 constexpr size_t kTargetPointerSize = sizeof(TargetPointer);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_ARCH_H_

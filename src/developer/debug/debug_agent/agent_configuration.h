@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_AGENT_CONFIGURATION_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_AGENT_CONFIGURATION_H_
 
 #include "src/developer/debug/ipc/protocol.h"
 
@@ -21,3 +22,5 @@ std::vector<debug_ipc::zx_status_t> HandleActions(
     AgentConfiguration* config);
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_AGENT_CONFIGURATION_H_

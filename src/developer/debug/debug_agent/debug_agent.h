@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
-#define GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUG_AGENT_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUG_AGENT_H_
+
+#include <zircon/types.h>
 
 #include <map>
 #include <memory>
 
-#include <zircon/types.h>
-
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/agent_configuration.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
@@ -21,6 +19,8 @@
 #include "src/developer/debug/debug_agent/remote_api.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/shared/stream_buffer.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_agent {
 
@@ -191,4 +191,4 @@ class DebugAgent : public RemoteAPI,
 
 }  // namespace debug_agent
 
-#endif  // GARNET_BIN_DEBUG_AGENT_DEBUG_AGENT_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUG_AGENT_H_

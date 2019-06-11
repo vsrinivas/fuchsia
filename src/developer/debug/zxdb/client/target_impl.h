@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
-#define GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_IMPL_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_IMPL_H_
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/target.h"
@@ -105,4 +105,4 @@ class TargetImpl : public Target, public SettingStoreObserver {
 
 }  // namespace zxdb
 
-#endif  // GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_IMPL_H_

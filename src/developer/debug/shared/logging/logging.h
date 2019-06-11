@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_LOGGING_LOGGING_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_LOGGING_LOGGING_H_
 
 // This header is meant to be the hub of debug logging: timers, logging, etc.
 // There is no need to include the other headers directly.
@@ -42,3 +43,5 @@ class LogStatement {
 };
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_LOGGING_LOGGING_H_

@@ -150,9 +150,12 @@ const char* TaskTypeToString(TaskType type) {
 
 const char* NotifyIO::TypeToString(Type type) {
   switch (type) {
-    case Type::kStderr: return "Stderr";
-    case Type::kStdout: return "Stdout";
-    case Type::kLast: return "Last";
+    case Type::kStderr:
+      return "Stderr";
+    case Type::kStdout:
+      return "Stdout";
+    case Type::kLast:
+      return "Last";
   }
 
   FXL_NOTREACHED();

@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <zircon/syscalls.h>
 
 // This is a simple app for testing various aspects of the debugger. To build,

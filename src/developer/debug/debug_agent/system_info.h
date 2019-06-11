@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_
-#define GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INFO_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INFO_H_
 
 #include <lib/zx/process.h>
 #include <zircon/types.h>
+
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
@@ -30,4 +31,4 @@ zx_koid_t GetComponentJobKoid();
 
 }  // namespace debug_agent
 
-#endif  // GARNET_BIN_DEBUG_AGENT_SYSTEM_INFO_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INFO_H_

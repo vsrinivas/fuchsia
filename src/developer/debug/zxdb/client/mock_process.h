@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_PROCESS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_PROCESS_H_
+
 #include "src/developer/debug/zxdb/client/process.h"
 
 namespace zxdb {
@@ -49,3 +52,5 @@ class MockProcess : public Process {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_PROCESS_H_

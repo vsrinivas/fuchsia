@@ -101,4 +101,3 @@ void SoftwareBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
 }
 
 }  // namespace debug_agent
-

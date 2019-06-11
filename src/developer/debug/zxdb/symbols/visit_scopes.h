@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VISIT_SCOPES_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VISIT_SCOPES_H_
 
 #include <functional>
 
@@ -37,3 +38,5 @@ VisitResult VisitClassHierarchy(
     std::function<VisitResult(const Collection*, uint64_t offset)> cb);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VISIT_SCOPES_H_

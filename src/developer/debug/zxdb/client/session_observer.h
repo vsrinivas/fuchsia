@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SESSION_OBSERVER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SESSION_OBSERVER_H_
 
 #include <string>
 
@@ -19,7 +20,7 @@ class SessionObserver {
   // debug agent and the fact the the cli console has special states for the
   // terminal state.
   enum class NotificationType {
-    kNone,      // Meant to signal a no-op.
+    kNone,  // Meant to signal a no-op.
     kError,
     kProcessStderr,
     kProcessStdout,
@@ -31,3 +32,5 @@ class SessionObserver {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SESSION_OBSERVER_H_

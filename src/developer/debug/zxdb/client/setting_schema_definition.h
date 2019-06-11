@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_DEFINITION_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_DEFINITION_H_
 
 namespace zxdb {
 
@@ -47,3 +48,5 @@ struct ClientSettings {
 void InitializeSchemas();
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_DEFINITION_H_

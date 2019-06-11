@@ -7,8 +7,8 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 
-#include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zircon_utils.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
@@ -110,7 +110,7 @@ ExceptionHandler& ExceptionHandler::operator=(ExceptionHandler&&) = default;
 zx_status_t ExceptionHandler::Init(int id, zx_handle_t object,
                                    uint32_t options) {
   auto handle = std::make_unique<async_exception_t>();
-  *handle = {};     // Need to zero it out.
+  *handle = {};  // Need to zero it out.
   handle->state = ASYNC_STATE_INIT;
   handle->handler = Handler;
   handle->task = object;
@@ -149,7 +149,6 @@ void ExceptionHandler::Handler(async_dispatcher_t*,
                            << exception;
     FXL_NOTREACHED();
   }
-
 
   const ExceptionHandler& exception_handler = handler_it->second;
 

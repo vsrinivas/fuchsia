@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/debug_agent/breakpoint.h"
+
 #include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "src/developer/debug/debug_agent/breakpoint.h"
 
 namespace debug_agent {
 
@@ -55,8 +56,8 @@ TEST(Breakpoint, Registration) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                  settings));
+  ASSERT_EQ(ZX_OK,
+            bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
             delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
@@ -70,8 +71,8 @@ TEST(Breakpoint, Registration) {
   pr_settings.thread_koid = 0;
   pr_settings.address = kAddress2;
 
-  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                  settings));
+  ASSERT_EQ(ZX_OK,
+            bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   EXPECT_EQ(CallVector({CallPair{kProcess2, kAddress2}}),
             delegate.register_calls());
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
@@ -98,8 +99,8 @@ TEST(Breakpoint, Registration) {
   settings.locations.push_back(old_pr_settings);
   settings.locations.push_back(new_pr_settings);
 
-  ASSERT_EQ(ZX_OK, bp.SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                  settings));
+  ASSERT_EQ(ZX_OK,
+            bp.SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
 
   EXPECT_EQ(CallVector({{kProcess1, kAddress1}, {kProcess3, kAddress3}}),
             delegate.register_calls());
@@ -124,8 +125,8 @@ TEST(Breakpoint, Destructor) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                   settings));
+  ASSERT_EQ(ZX_OK,
+            bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   EXPECT_EQ(CallVector({CallPair{kProcess1, kAddress1}}),
             delegate.register_calls());
   EXPECT_TRUE(delegate.unregister_calls().empty());
@@ -157,8 +158,8 @@ TEST(Breakpoint, HitCount) {
   pr_settings.address = kAddress1;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                   settings));
+  ASSERT_EQ(ZX_OK,
+            bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);
@@ -194,8 +195,8 @@ TEST(Breakpoint, OneShot) {
   pr_settings.address = kAddress;
 
   // Apply the settings.
-  ASSERT_EQ(ZX_OK, bp->SetSettings(debug_ipc::BreakpointType::kSoftware,
-                                   settings));
+  ASSERT_EQ(ZX_OK,
+            bp->SetSettings(debug_ipc::BreakpointType::kSoftware, settings));
   delegate.Clear();
 
   EXPECT_EQ(kBreakpointId, bp->stats().id);

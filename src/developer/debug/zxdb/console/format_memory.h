@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_MEMORY_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_MEMORY_H_
 
 #include <stdint.h>
 
@@ -27,3 +28,5 @@ std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
                          const MemoryFormatOptions& opts);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_MEMORY_H_

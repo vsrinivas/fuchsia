@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_LOGGING_DEBUG_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_LOGGING_DEBUG_H_
 
 #include <initializer_list>
-#include <vector>
 #include <set>
+#include <vector>
 
 #include "src/developer/debug/shared/logging/file_line_function.h"
 
@@ -92,3 +93,5 @@ std::string LogPreamble(LogCategory, const FileLineFunction& origin);
 double SecondsSinceStart();
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_LOGGING_DEBUG_H_

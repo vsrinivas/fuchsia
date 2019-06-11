@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_H_
 
 #include <map>
 
@@ -22,7 +23,7 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   // complex settings such as enums, by using the |options| field.
   struct SchemaSetting {
     Setting setting;
-    std::vector<std::string> options; // Used only for string lists.
+    std::vector<std::string> options;  // Used only for string lists.
   };
 
   bool HasSetting(const std::string& key);
@@ -63,3 +64,5 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
 };
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SETTING_SCHEMA_H_

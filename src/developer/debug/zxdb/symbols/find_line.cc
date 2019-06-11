@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/symbols/find_line.h"
 
-#include "src/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/symbols/line_table.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

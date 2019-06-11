@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MOCK_STREAM_BACKEND_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MOCK_STREAM_BACKEND_H_
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/ipc/client_protocol.h"
@@ -55,3 +56,5 @@ class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MOCK_STREAM_BACKEND_H_

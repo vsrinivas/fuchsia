@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_ARCH_ARM64_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_ARCH_ARM64_H_
 
 #include <stdint.h>
 
@@ -129,7 +130,8 @@ constexpr uint64_t kDBGWCR_WT_Shift = 20u;
 constexpr uint64_t kDBGWCR_WT_Mask = 1u;
 // Mask. How many address bits to mask.
 // This permits the watchpoint to track up to 2G worth of addresses.
-// TODO(donosoc): Initially the debugger is going for parity with x64, which only permits 8 bytes.
+// TODO(donosoc): Initially the debugger is going for parity with x64, which
+// only permits 8 bytes.
 //                Eventually expose the ability to track bigger ranges.
 constexpr uint64_t kDBGWCR_MASK_Shift = 24u;
 constexpr uint64_t kDBGWCR_MASK_Mask = 0b11111u;
@@ -187,3 +189,5 @@ constexpr uint64_t kMDSCR_EL1_RXfull_Shift = 30;
 constexpr uint64_t kMDSCR_EL1_RXfull_Mask = 0b1;
 
 }  // namespace debug_ipc
+
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_ARCH_ARM64_H_

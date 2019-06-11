@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <unistd.h>
-
-#include <iostream>
-#include <vector>
-
 #include <lib/fdio/spawn.h>
+#include <lib/zx/job.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/zx/job.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+
+#include <iostream>
+#include <vector>
 
 // ProcessSpawner is a simple utility that waits for user input on stdin and
 // creates a new process when anything that doens't say "exit" in it is entered.

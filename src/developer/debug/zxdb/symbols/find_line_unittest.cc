@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/symbols/find_line.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/symbols/mock_line_table.h"
 

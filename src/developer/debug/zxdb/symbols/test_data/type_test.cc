@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test.h"
-
 #include <stddef.h>
+
+#include "src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test.h"
 
 // This file is compiled into a library and used in the DWARFSymboLFactory
 // tests to query symbol information. The actual code is not run.

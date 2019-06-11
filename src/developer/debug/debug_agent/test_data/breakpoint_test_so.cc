@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/test_data/test_so_symbols.h"
+#include <stdio.h>
 
 #include <atomic>
 
-#include <stdio.h>
+#include "src/developer/debug/debug_agent/test_data/test_so_symbols.h"
 
 int gWatchpointVariable = 0;
 
