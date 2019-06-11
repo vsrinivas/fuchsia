@@ -270,33 +270,6 @@ bool MountEvilMemfs() {
     END_TEST;
 }
 
-bool MountEvilMinfs() {
-    BEGIN_TEST;
-    ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
-    const char* ramdisk_path = ramdisk_get_path(ramdisk);
-    ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
-              ZX_OK);
-    const char* parent_path = "/tmp/parent";
-    ASSERT_EQ(mkdir(parent_path, 0666), 0);
-    int mountfd = open(parent_path, O_RDONLY | O_DIRECTORY | O_ADMIN);
-    ASSERT_GT(mountfd, 0, "Couldn't open mount point");
-    int ramdiskfd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(ramdiskfd, 0);
-    ASSERT_EQ(
-        fmount(ramdiskfd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
-        ZX_OK);
-    ASSERT_EQ(close(mountfd), 0);
-
-    const char* mount_path = "/tmp/parent/mount_evil";
-    ASSERT_TRUE(DoMountEvil("minfs", mount_path));
-
-    ASSERT_EQ(umount(parent_path), 0);
-    ASSERT_EQ(rmdir(parent_path), 0);
-    ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
-    END_TEST;
-}
-
 bool UmountTestEvil() {
     const char* mount_path = "/tmp/umount_test_evil";
 
@@ -776,7 +749,6 @@ RUN_TEST_MEDIUM(MountUnmountLargeBlock)
 RUN_TEST_MEDIUM(MountMkdirUnmount)
 RUN_TEST_MEDIUM(FmountFunmount)
 RUN_TEST_MEDIUM(MountEvilMemfs)
-RUN_TEST_MEDIUM(MountEvilMinfs)
 RUN_TEST_MEDIUM(UmountTestEvil)
 RUN_TEST_MEDIUM(DoubleMountRoot)
 RUN_TEST_MEDIUM(MountRemount)

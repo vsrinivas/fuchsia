@@ -1061,11 +1061,6 @@ zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
     return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
-zx::channel VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(); }
-zx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeMinfs::SetRemote(zx::channel remote) { return remoter_.SetRemote(std::move(remote)); }
-
 #endif
 
 void VnodeMinfs::Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out) {

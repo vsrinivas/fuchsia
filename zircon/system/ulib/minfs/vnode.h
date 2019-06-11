@@ -422,11 +422,6 @@ protected:
     void Notify(fbl::StringPiece name, unsigned event) final;
     zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
 
-    // The vnode is acting as a mount point for a remote filesystem or device.
-    bool IsRemote() const final;
-    zx::channel DetachRemote() final;
-    zx_handle_t GetRemote() const final;
-    void SetRemote(zx::channel remote) final;
 #else  // !__Fuchsia__
     // Clears the block at |bno| on disk.
     void ClearIndirectBlock(blk_t bno);
@@ -454,7 +449,6 @@ protected:
     fuchsia_hardware_block_VmoID vmoid_{};
     fuchsia_hardware_block_VmoID vmoid_indirect_{};
 
-    fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};
 #endif
 
