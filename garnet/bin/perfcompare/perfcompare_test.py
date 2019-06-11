@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -143,6 +144,26 @@ class PerfCompareTest(TempDirTestCase):
             fh.write('dummy_data')
 
         return dir_path
+
+    def test_reading_results_from_dir(self):
+        dir_path = self.ExampleDataDir()
+        results = perfcompare.ResultsFromDir(dir_path)
+        self.assertEquals(
+            results['ClockGetTimeExample'].FormatConfidenceInterval(),
+            '991 +/- 26')
+
+    def test_reading_results_from_tar_file(self):
+        dir_path = self.ExampleDataDir()
+        # Create a tar file containing the example results files.
+        tar_filename = os.path.join(self.MakeTempDir(), 'out.tar')
+        tar = tarfile.open(tar_filename, 'w')
+        for name in os.listdir(dir_path):
+            tar.add(os.path.join(dir_path, name), arcname=name)
+        tar.close()
+        results = perfcompare.ResultsFromDir(tar_filename)
+        self.assertEquals(
+            results['ClockGetTimeExample'].FormatConfidenceInterval(),
+            '991 +/- 26')
 
     # Returns the output of compare_perf when run on the given directories.
     def ComparePerf(self, before_dir, after_dir):

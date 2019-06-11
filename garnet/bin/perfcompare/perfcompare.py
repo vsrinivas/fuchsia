@@ -11,6 +11,7 @@ import json
 import math
 import os
 import sys
+import tarfile
 
 import scipy.stats
 
@@ -96,18 +97,39 @@ def ReadJsonFile(filename):
         return json.load(fh)
 
 
-def ResultsFromDir(dir_path):
+def IsResultsFilename(name):
+    return name.endswith('.json') and name != 'summary.json'
+
+
+# Read the raw perf test results from a directory or a tar file.  Returns a
+# sequence (iterator) of JSON trees.
+#
+# Accepting tar files here is a convenience for when doing local testing of
+# the statistics.  The Swarming system used for the bots produces "out.tar"
+# files as results.
+def RawResultsFromDir(filename):
+    # Note that sorting the filename listing (from os.listdir() or from
+    # tarfile) is not essential, but it helps to make any later processing
+    # more deterministic.
+    if os.path.isfile(filename) and filename.endswith('.tar'):
+        # Read from tar file.
+        tar = tarfile.TarFile(filename)
+        for member in sorted(tar.getmembers(), key=lambda member: member.name):
+            if IsResultsFilename(member.name):
+                yield json.load(tar.extractfile(member))
+    else:
+        # Read from directory.
+        for name in sorted(os.listdir(filename)):
+            if IsResultsFilename(name):
+                yield ReadJsonFile(os.path.join(filename, name))
+
+
+def ResultsFromDir(filename):
     results_map = {}
-    # Sorting the result of os.listdir() is not essential, but it makes any
-    # later behaviour more deterministic.
-    for filename in sorted(os.listdir(dir_path)):
-        if filename == 'summary.json':
-            continue
-        if filename.endswith('.json'):
-            file_path = os.path.join(dir_path, filename)
-            for data in ReadJsonFile(file_path):
-                new_value = Mean(data['values'])
-                results_map.setdefault(data['label'], []).append(new_value)
+    for process_run_results in RawResultsFromDir(filename):
+        for test_case in process_run_results:
+            new_value = Mean(test_case['values'])
+            results_map.setdefault(test_case['label'], []).append(new_value)
     return {name: Stats(values) for name, values in results_map.iteritems()}
 
 
