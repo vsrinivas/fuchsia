@@ -53,7 +53,9 @@ void sync_completion_signal(sync_completion_t* completion) {
     _zx_futex_wake(futex, UINT32_MAX);
 }
 
-void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* futex) {
+void sync_completion_signal_requeue(sync_completion_t* completion,
+                                    zx_futex_t* requeue_target,
+                                    zx_handle_t requeue_target_owner) {
     atomic_store(&completion->futex, SIGNALED);
     // Note that _zx_futex_requeue() will check the value of &completion->futex
     // and return ZX_ERR_BAD_STATE if it is not SIGNALED. The only way that could
@@ -64,7 +66,8 @@ void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* f
     // However, if this theoretical scenario actually occurs, we can still safely
     // ignore the error: there is no point in waking up the waiters since they
     // would find an UNSIGNALED value and go back to sleep.
-    _zx_futex_requeue(&completion->futex, 0, SIGNALED, futex, UINT32_MAX, ZX_HANDLE_INVALID);
+    _zx_futex_requeue(&completion->futex, 0, SIGNALED,
+                      requeue_target, UINT32_MAX, requeue_target_owner);
 }
 
 void sync_completion_reset(sync_completion_t* completion) {

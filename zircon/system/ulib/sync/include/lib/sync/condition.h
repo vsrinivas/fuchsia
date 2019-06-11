@@ -23,6 +23,9 @@ typedef struct sync_condition {
 #endif
 } sync_condition_t;
 
+static_assert(sizeof(((sync_condition*)0)->lock) == sizeof(sync_mutex_t),
+        "sync_condition lock storage must be the same size as sync_mutex_t");
+
 #if !defined(__cplusplus)
 #define SYNC_CONDITION_INIT ((sync_condition_t){0})
 #endif

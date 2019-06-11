@@ -6,6 +6,7 @@ library("sync") {
   sdk = "static"
   sdk_headers = [
     "lib/sync/internal/condition-template.h",
+    "lib/sync/internal/mutex-internal.h",
     "lib/sync/completion.h",
     "lib/sync/condition.h",
     "lib/sync/mutex.h",

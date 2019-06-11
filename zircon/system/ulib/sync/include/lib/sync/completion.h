@@ -38,14 +38,19 @@ zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time
 // completion will also see the signal and immediately return.
 void sync_completion_signal(sync_completion_t* completion);
 
-// Marks the completion as signaled, but doesn't awaken all waiters
-// right away. Instead, all waiters are requeued to the |futex|.
-// Waits after this call but before a reset of the
-// completion will also see the signal and immediately return.
+// Marks the completion as signaled, but doesn't awaken all waiters right away.
+// Instead, all waiters are requeued to the |requeue_target|, and the owner of
+// the |requeue_target| is set to |requeue_target_owner|, or to no one if
+// ZX_HANDLE_INVALID is passed.
+//
+// Waits after this call but before a reset of the completion will also see the
+// signal and immediately return.
 //
 // Intended to be used by libsync internally, e.g. the condition variable
 // implementation.
-void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* futex);
+void sync_completion_signal_requeue(sync_completion_t* completion,
+                                    zx_futex_t* requeue_target,
+                                    zx_handle_t requeue_target_owner);
 
 // Resets the completion's signaled state to unsignaled.
 void sync_completion_reset(sync_completion_t* completion);

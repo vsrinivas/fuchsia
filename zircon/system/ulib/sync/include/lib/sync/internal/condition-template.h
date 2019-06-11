@@ -7,7 +7,7 @@
 
 #include <zircon/syscalls.h>
 #include <lib/sync/completion.h>
-#include <lib/sync/mutex.h>
+#include <lib/sync/internal/mutex-internal.h>
 
 namespace condition_impl_internal {
 
@@ -40,6 +40,9 @@ struct MutexOps {
 
     // Unlock the mutex
     static void unlock(Mutex* mutex);
+
+    // Requeue all of the memebrs waiting in |completion| to the futex backing |mutex|.
+    static void signal_requeue(sync_completion_t* completion, Mutex* mutex);
 };
 
 // Note that this library is used by libc, and as such needs to use
@@ -224,7 +227,7 @@ static inline zx_status_t timedwait(Condition* c, Mutex* mutex, zx_time_t deadli
         // Signal the completion that's holding back the next waiter, and
         // requeue it to the mutex so that it will be woken when the
         // mutex is unlocked.
-        sync_completion_signal_requeue(&node.prev->ready, MutexOps<Mutex>::get_futex(mutex));
+        MutexOps<Mutex>::signal_requeue(&node.prev->ready, mutex);
     }
 
     // Even if the first call to sync_completion_wait_deadline() timed out,

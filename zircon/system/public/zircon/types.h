@@ -435,6 +435,7 @@ typedef int zx_futex_t;
 typedef atomic_int zx_futex_t;
 #endif
 #endif
+typedef int zx_futex_storage_t;
 
 __END_CDECLS
 

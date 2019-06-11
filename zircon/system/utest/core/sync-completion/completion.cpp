@@ -141,7 +141,7 @@ static bool test_signal_requeue() {
     }
 
     zx_futex_t futex = 0;
-    sync_completion_signal_requeue(&cc.completion, &futex);
+    sync_completion_signal_requeue(&cc.completion, &futex, ZX_HANDLE_INVALID);
 
     // The threads should still be blocked on a futex
     ASSERT_TRUE(all_blocked_on_futex(wait_thread, NUM_THREADS));

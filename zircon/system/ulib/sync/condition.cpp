@@ -28,6 +28,13 @@ struct condition_impl_internal::MutexOps<sync_mutex_t> {
     static void unlock(sync_mutex_t* mutex) __TA_RELEASE(mutex) {
         sync_mutex_unlock(mutex);
     }
+
+    static void signal_requeue(sync_completion_t* completion, sync_mutex_t* mutex) {
+        zx_futex_storage_t mutex_val = __atomic_load_n(&mutex->futex, __ATOMIC_ACQUIRE);
+        sync_completion_signal_requeue(completion,
+                                       &mutex->futex,
+                                       libsync_mutex_make_owner_from_state(mutex_val));
+    }
 };
 
 void sync_condition_wait(sync_condition_t* condition, sync_mutex_t* mutex) {
