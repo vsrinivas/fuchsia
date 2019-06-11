@@ -82,13 +82,13 @@ xunion Rule {
 
 /// Manages fuchsia-pkg:// rewrite rules.
 ///
-/// When a package resolver is asked to resolve a fuchsia-pkg URI, it must first
+/// When a package resolver is asked to resolve a fuchsia-pkg URL, it must first
 /// iterate through its sequence of rewrite rules (given by
-/// |Engine::List|). The rewrite engine will rewrite the given URI with
+/// |Engine::List|). The rewrite engine will rewrite the given URL with
 /// the first rule that:
-/// * matches the given URI
-/// * produces a valid URI when applied to the given URI
-/// If no rules match, the URI is resolved as-is.
+/// * matches the given URL
+/// * produces a valid URL when applied to the given URL
+/// If no rules match, the URL is resolved as-is.
 ///
 /// This interface is intended to be implemented by package resolver components,
 /// and used by repository administration tools.

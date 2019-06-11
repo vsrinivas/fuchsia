@@ -146,7 +146,7 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
             .parse()
             .map_err(|err| RepositoryParseError::InvalidRepoUrl(err))?;
 
-        let update_package_url = if let Some(url) = other.update_package_uri {
+        let update_package_url = if let Some(url) = other.update_package_url {
             let url =
                 url.parse().map_err(|err| RepositoryParseError::InvalidUpdatePackageUrl(err))?;
             Some(url)
@@ -179,7 +179,7 @@ impl Into<fidl::RepositoryConfig> for RepositoryConfig {
             repo_url: Some(self.repo_url.to_string()),
             root_keys: Some(self.root_keys.into_iter().map(RepositoryKey::into).collect()),
             mirrors: Some(self.mirrors.into_iter().map(MirrorConfig::into).collect()),
-            update_package_uri: self.update_package_url.map(|url| url.to_string()),
+            update_package_url: self.update_package_url.map(|url| url.to_string()),
         }
     }
 }
@@ -472,7 +472,7 @@ mod tests {
                     subscribe: Some(true),
                     blob_key: Some(fidl::RepositoryBlobKey::AesKey(vec![0xf1, 15, 16, 3])),
                 }]),
-                update_package_uri: Some(
+                update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
             }
@@ -489,7 +489,7 @@ mod tests {
                 subscribe: Some(true),
                 blob_key: Some(fidl::RepositoryBlobKey::AesKey(vec![0xf1, 15, 16, 3])),
             }]),
-            update_package_uri: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
         };
         assert_eq!(
             RepositoryConfig::try_from(as_fidl),
@@ -514,7 +514,7 @@ mod tests {
             repo_url: None,
             root_keys: Some(vec![]),
             mirrors: Some(vec![]),
-            update_package_uri: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
+            update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
         };
         assert_eq!(RepositoryConfig::try_from(as_fidl), Err(RepositoryParseError::RepoUrlMissing));
     }

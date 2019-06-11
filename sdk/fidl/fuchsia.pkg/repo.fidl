@@ -74,7 +74,7 @@ protocol RepositoryManager {
 
 /// Describes the configuration necessary to connect to a repository and it's mirrors.
 table RepositoryConfig {
-    /// A fuchsia-pkg URI identifying the repository. Required.
+    /// A fuchsia-pkg URL identifying the repository. Required.
     ///
     /// Example: fuchsia-pkg://example.com/
     1: string repo_url;
@@ -87,10 +87,10 @@ table RepositoryConfig {
     /// The repository mirrors that serve the package contents. Required.
     3: vector<MirrorConfig> mirrors;
 
-    /// The package URI of the system update package. Optional.
+    /// The package URL of the system update package. Optional.
     ///
     /// Only used for the fuchsia-pkg://fuchsia.com/ repo.
-    4: string update_package_uri;
+    4: string update_package_url;
 };
 
 /// Describes the keys used by the repository to authenticate it's packages.
