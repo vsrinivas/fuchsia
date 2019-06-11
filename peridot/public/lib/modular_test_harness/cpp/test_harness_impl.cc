@@ -224,22 +224,6 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
     std::set<std::string>* added_svcs) {
   // Wire up client-specified injected services, and remove them from the
   // default injected services.
-  if (spec_.has_env_services_to_inject()) {
-    for (const auto& svc : spec_.env_services_to_inject()) {
-      if (added_svcs->find(svc.name) != added_svcs->end()) {
-        FXL_LOG(ERROR) << svc.name
-                       << " has already been injected into the environment, "
-                          "cannot add twice.";
-        return ZX_ERR_ALREADY_EXISTS;
-      }
-      added_svcs->insert(svc.name);
-
-      fuchsia::sys::LaunchInfo info;
-      info.url = svc.url;
-      env_services->AddServiceWithLaunchInfo(std::move(info), svc.name);
-    }
-  }
-
   if (!spec_.has_env_services() ||
       !spec_.env_services().has_services_from_components()) {
     return ZX_OK;
@@ -257,6 +241,7 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
     info.url = svc.url;
     env_services->AddServiceWithLaunchInfo(std::move(info), svc.name);
   }
+
   return ZX_OK;
 }  // namespace modular::testing
 

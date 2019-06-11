@@ -140,8 +140,7 @@ table TestHarnessSpec {
     /// parent environment.
     3: vector<string> env_services_to_inherit;
 
-    /// DEPRECATED. Use |env_services.services_from_components| instead.
-    5: vector<InjectedService> env_services_to_inject;
+    5: reserved;
 };
 
 /// Options for configuring the test harness environment with services.
@@ -197,14 +196,4 @@ table InterceptSpec {
     ///   }
     /// }
     2: fuchsia.mem.Buffer extra_cmx_contents;
-};
-
-/// DEPRECATED. Renamed to ComponentService.
-struct InjectedService {
-    /// Name of the service.
-    string name;
-
-    /// URL of the component which will provide the service.
-    /// The service is retrieved from this component's /out/svc namespace.
-    fuchsia.sys.component_url url;
 };
