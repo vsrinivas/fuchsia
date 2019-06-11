@@ -181,4 +181,11 @@ Status VmoObject::Initialize() const {
   return Status::OK;
 }
 
+DiscardableToken::DiscardableToken(ObjectIdentifier identifier)
+    : identifier_(std::move(identifier)) {}
+
+const ObjectIdentifier& DiscardableToken::GetIdentifier() const {
+  return identifier_;
+}
+
 }  // namespace storage

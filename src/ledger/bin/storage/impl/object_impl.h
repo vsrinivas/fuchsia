@@ -115,6 +115,17 @@ class VmoObject : public BaseObject {
   mutable fxl::StringView data_;
 };
 
+// Token that does not hold a reference, when it is safe to discard the piece
+// but a token needs to be returned.
+class DiscardableToken : public ObjectToken {
+ public:
+  DiscardableToken(ObjectIdentifier identifier);
+  const ObjectIdentifier& GetIdentifier() const override;
+
+ private:
+  ObjectIdentifier identifier_;
+};
+
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_IMPL_OBJECT_IMPL_H_

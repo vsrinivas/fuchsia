@@ -296,5 +296,14 @@ TEST_F(ObjectImplTest, ObjectReferences) {
             invalid_object.AppendReferences(&references));
 }
 
+TEST_F(ObjectImplTest, DiscardableToken) {
+  std::string data = RandomString(environment_.random(), 12);
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+
+  const DiscardableToken token(identifier);
+  EXPECT_EQ(token.GetIdentifier(), identifier);
+}
+
 }  // namespace
 }  // namespace storage
