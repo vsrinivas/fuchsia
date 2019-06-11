@@ -113,6 +113,24 @@ shell script.
 
 The `runner` property is a JSON string.
 
+### facets
+
+`facets` is an optional property that contains free-form JSON about the
+component. Facets can be consumed by things on the system to acquire additional
+metadata about a component.
+
+The schema for `facets` is:
+
+```
+{
+    "type": "object"
+}
+```
+
+As an example of a facet, the `fuchsia.test` field is used to convey what
+additional services should be [injected into testing
+environments][test-components].
+
 ### sandbox
 
 The `sandbox` property controls the environment in which the component
@@ -244,3 +262,4 @@ See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
+[test-components]: ../development/testing/running_tests_as_components.md
