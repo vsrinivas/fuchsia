@@ -9,7 +9,8 @@
 // See <trace-engine/handler.h> for the C API and more detailed documentation.
 //
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_HANDLER_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_HANDLER_H_
 
 #include <trace-engine/handler.h>
 
@@ -77,3 +78,5 @@ private:
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_HANDLER_H_

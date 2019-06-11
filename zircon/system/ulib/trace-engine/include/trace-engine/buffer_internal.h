@@ -6,7 +6,8 @@
 // This is an internal header between trace-engine and trace-provider.
 // It may also be used by various tests.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_BUFFER_INTERNAL_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_BUFFER_INTERNAL_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -133,3 +134,5 @@ static_assert(sizeof(trace_buffer_header) == 128, "");
 void trace_context_snapshot_buffer_header(
     trace_prolonged_context_t* context,
     ::trace::internal::trace_buffer_header* header);
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_BUFFER_INTERNAL_H_

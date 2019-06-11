@@ -9,7 +9,8 @@
 // different from fuchsia.tracelink in name only).
 // ***************************************************************************
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_TRACELINK_PROVIDER_IMPL_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_TRACELINK_PROVIDER_IMPL_H_
 
 #include <string>
 #include <vector>
@@ -71,3 +72,5 @@ private:
 
 } // namespace internal
 } // namespace trace
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_TRACELINK_PROVIDER_IMPL_H_

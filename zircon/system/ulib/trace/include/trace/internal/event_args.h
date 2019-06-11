@@ -5,8 +5,8 @@
 // Internal implementation of <trace/event_args.h>.
 // This is not part of the public API: use <trace/event_args.h> instead.
 
-#ifndef TRACE_INTERNAL_EVENT_ARGS_H_
-#define TRACE_INTERNAL_EVENT_ARGS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_ARGS_H_
 
 #include <assert.h>
 
@@ -233,4 +233,4 @@ trace_arg_value_t MakeArgumentValue(const T& value) {
 
 #endif // __cplusplus
 
-#endif // TRACE_INTERNAL_EVENT_ARGS_H_
+#endif // ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_ARGS_H_

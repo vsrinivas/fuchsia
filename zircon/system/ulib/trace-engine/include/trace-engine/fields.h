@@ -6,7 +6,8 @@
 // Field declarations for the trace record format.
 //
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_FIELDS_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_FIELDS_H_
 
 #include <trace-engine/types.h>
 
@@ -163,3 +164,5 @@ struct LogRecordFields : RecordFields {
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_FIELDS_H_

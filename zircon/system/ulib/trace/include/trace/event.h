@@ -20,10 +20,10 @@
 // For more control over how trace events are written, see <trace-engine/context.h>.
 //
 
-#ifndef TRACE_EVENT_H_
-#define TRACE_EVENT_H_
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_EVENT_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_EVENT_H_
 
 // For now userspace and DDK tracing share the same API and implementation.
 #include <trace/internal/event_common.h>
 
-#endif // TRACE_EVENT_H_
+#endif // ZIRCON_SYSTEM_ULIB_TRACE_EVENT_H_

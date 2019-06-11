@@ -8,8 +8,8 @@
 // C/C++ and -O0/-On the inline functions are "static inline".
 //
 
-#ifndef TRACE_ENGINE_TYPES_H_
-#define TRACE_ENGINE_TYPES_H_
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_TYPES_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_TYPES_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -452,4 +452,4 @@ using RecordHeader = uint64_t;
 
 #endif // __cplusplus
 
-#endif // TRACE_ENGINE_TYPES_H_
+#endif // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_TYPES_H_

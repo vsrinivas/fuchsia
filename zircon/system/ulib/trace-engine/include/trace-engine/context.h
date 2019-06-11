@@ -21,7 +21,8 @@
 // See <trace/event.h> for instrumentation macros.
 //
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -605,3 +606,5 @@ void trace_context_write_thread_record(
 void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes);
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_H_

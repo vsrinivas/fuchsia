@@ -10,8 +10,8 @@
 // documentation.
 //
 
-#ifndef TRACE_OBSERVER_H_
-#define TRACE_OBSERVER_H_
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_OBSERVER_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_OBSERVER_H_
 
 #include <trace-engine/instrumentation.h>
 
@@ -55,4 +55,4 @@ private:
 
 #endif // __cplusplus
 
-#endif // TRACE_OBSERVER_H_
+#endif // ZIRCON_SYSTEM_ULIB_TRACE_OBSERVER_H_

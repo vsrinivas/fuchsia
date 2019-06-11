@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_
 
 #include <memory>
 #include <string>
@@ -111,3 +112,5 @@ private:
 
 } // namespace internal
 } // namespace trace
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_

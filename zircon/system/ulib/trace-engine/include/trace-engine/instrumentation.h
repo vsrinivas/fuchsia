@@ -23,7 +23,8 @@
 // See <trace/event.h> for instrumentation macros.
 //
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_INSTRUMENTATION_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_INSTRUMENTATION_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -376,3 +377,5 @@ private:
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_INSTRUMENTATION_H_

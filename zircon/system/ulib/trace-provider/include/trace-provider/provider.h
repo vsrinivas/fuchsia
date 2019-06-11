@@ -6,7 +6,8 @@
 // The API for initializing the trace provider for a process.
 //
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_PROVIDER_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_PROVIDER_H_
 
 #include <assert.h>
 #include <zircon/compiler.h>
@@ -230,3 +231,5 @@ private:
 } // namespace trace
 
 #endif // __cplusplus
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_PROVIDER_H_

@@ -15,7 +15,8 @@
 // See <trace/event.h> for instrumentation macros.
 //
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_HANDLER_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_HANDLER_H_
 
 #include <stdbool.h>
 
@@ -173,3 +174,5 @@ zx_status_t trace_engine_mark_buffer_saved(uint32_t wrapped_count,
                                            uint64_t durable_data_end);
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_HANDLER_H_

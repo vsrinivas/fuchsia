@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_IMPL_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_IMPL_H_
 
 #include <atomic>
 
@@ -351,3 +352,5 @@ private:
     std::atomic<trace_string_index_t> next_string_index_{
         TRACE_ENCODED_STRING_REF_MIN_INDEX};
 };
+
+#endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_CONTEXT_IMPL_H_

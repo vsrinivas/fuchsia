@@ -7,8 +7,8 @@
 // This is not part of the public API: use <trace/event.h> instead.
 //
 
-#ifndef TRACE_INTERNAL_EVENT_INTERNAL_H_
-#define TRACE_INTERNAL_EVENT_INTERNAL_H_
+#ifndef ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
+#define ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
@@ -384,4 +384,4 @@ static inline void trace_internal_cleanup_duration_scope(
 
 __END_CDECLS
 
-#endif // TRACE_INTERNAL_EVENT_INTERNAL_H_
+#endif // ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
