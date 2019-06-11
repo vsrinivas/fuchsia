@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This target provides public configs and dependencies to the host side
+# Vulkan loader.
+
+graphics_compute_host_vulkan = "//prebuilt/third_party/vulkansdk/linux/x86_64"
+
+config("vulkan_host_config") {
+  include_dirs = [ "${graphics_compute_host_vulkan}/include" ]
+  lib_dirs = [ "${graphics_compute_host_vulkan}/lib" ]
+  libs = [ "vulkan" ]
+}
+
+group("vulkan") {
+  public_configs = [ ":vulkan_host_config" ]
+}
