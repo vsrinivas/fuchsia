@@ -25,6 +25,15 @@ SherlockAudioStreamIn::SherlockAudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {
 }
 
+zx_status_t SherlockAudioStreamIn::Create(void* ctx, zx_device_t* parent) {
+    auto stream = audio::SimpleAudioStream::Create<SherlockAudioStreamIn>(parent);
+    if (stream == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t SherlockAudioStreamIn::Init() {
     zx_status_t status;
 
@@ -229,16 +238,20 @@ zx_status_t SherlockAudioStreamIn::InitBuffer(size_t size) {
     return ZX_OK;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = SherlockAudioStreamIn::Create;
+    return ops;
+}();
+
 } //namespace sherlock
 } //namespace audio
 
-extern "C" zx_status_t pdm_audio_bind(void* ctx, zx_device_t* parent) {
-
-    auto stream =
-        audio::SimpleAudioStream::Create<audio::sherlock::SherlockAudioStreamIn>(parent);
-    if (stream == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    return ZX_OK;
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(aml_pdm, audio::sherlock::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SHERLOCK_PDM),
+ZIRCON_DRIVER_END(aml_pdm)
+// clang-format on
