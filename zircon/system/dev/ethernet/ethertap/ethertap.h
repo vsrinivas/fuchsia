@@ -24,6 +24,7 @@ class TapCtl : public ddk::Device<TapCtl, ddk::Messageable> {
 public:
     TapCtl(zx_device_t* device);
 
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
     void DdkRelease();
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     zx_status_t

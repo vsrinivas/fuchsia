@@ -4,7 +4,6 @@
 
 driver("ethertap") {
   sources = [
-    "binding.c",
     "ethertap.cpp",
   ]
   deps = [

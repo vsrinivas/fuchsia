@@ -4,7 +4,10 @@
 
 #include "ethertap.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
@@ -49,6 +52,18 @@ static const fuchsia_hardware_ethertap_TapControl_ops_t tap_ctl_ops_ = {
 
 TapCtl::TapCtl(zx_device_t* device)
     : ddk::Device<TapCtl, ddk::Messageable>(device) {}
+
+zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
+    auto dev = fbl::unique_ptr<TapCtl>(new TapCtl(parent));
+    zx_status_t status = dev->DdkAdd("tapctl");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    } else {
+        // devmgr owns the memory now
+        __UNUSED auto* ptr = dev.release();
+    }
+    return status;
+}
 
 void TapCtl::DdkRelease() {
     delete this;
@@ -403,16 +418,17 @@ int TapDevice::Thread() {
     return static_cast<int>(status);
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = TapCtl::Create;
+    return ops;
+}();
+
 } // namespace eth
 
-extern "C" zx_status_t tapctl_bind(void* ctx, zx_device_t* device, void** cookie) {
-    auto dev = fbl::unique_ptr<eth::TapCtl>(new eth::TapCtl(device));
-    zx_status_t status = dev->DdkAdd("tapctl");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
-    } else {
-        // devmgr owns the memory now
-        __UNUSED auto ptr = dev.release();
-    }
-    return status;
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(tapctl, eth::driver_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+ZIRCON_DRIVER_END(tapctl)
+// clang-format on
