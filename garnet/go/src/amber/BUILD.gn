@@ -163,6 +163,10 @@ test_targets = [
     gopkg = "amber/daemon"
   },
   {
+    name = "amber_install_test"
+    gopkg = "amber/install"
+  },
+  {
     name = "amber_source_test"
     gopkg = "amber/source"
   },

@@ -325,7 +325,11 @@ func TestAddPackage(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := string(b), f+"\n"; got != want {
+		expected, err := ioutil.ReadFile(manifest.Paths[f])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := string(b), string(expected); got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	}

@@ -1,0 +1,344 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//TODO(PKG-710) Replace with Rust/isolated pkgfs when available
+
+package install
+
+import (
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
+	"syscall/zx"
+	"testing"
+	"time"
+
+	"fidl/fuchsia/amber"
+	"fidl/fuchsia/pkg"
+
+	"amber/daemon"
+	"amber/source"
+
+	"fuchsia.googlesource.com/pm/build"
+	"fuchsia.googlesource.com/pm/repo"
+)
+
+func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
+	// Make the test package
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.BuildTestPackage(cfg)
+
+	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	blobs, err := cfg.BlobInfo()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metaFar, blobs := blobs[0], blobs[1:]
+
+	// Ensure pkgfs is in a good state (no previous test has written this test package)
+	if _, err := os.Stat(filepath.Join("/pkgfs/versions", metaFar.Merkle.String())); err == nil {
+		t.Fatal("test package already readable")
+	}
+
+	if _, err := os.Stat(filepath.Join("/pkgfs/needs/packages", metaFar.Merkle.String())); err == nil {
+		t.Fatal("test package already has needs dir")
+	}
+
+	// Make the test repo, and start serving it over http
+	repoDir, err := ioutil.TempDir("", "amber-install-test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	repo, err := repo.New(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.GenKeys(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.PublishManifest(pkgManifestPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CommitUpdates(false); err != nil {
+		t.Fatal(err)
+	}
+
+	keys, err := repo.RootKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server, err := serveStaticRepo(t, filepath.Join(repoDir, "repository"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	// Start a new amber daemon, and register this source
+	store, err := ioutil.TempDir("", "amber-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(store)
+
+	d, err := daemon.NewDaemon(store, "", "", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootKeys := []amber.KeyConfig{}
+	for _, key := range keys {
+		rootKeys = append(rootKeys, amber.KeyConfig{
+			Type:  "ed25519",
+			Value: fmt.Sprintf("%x", ([]byte)(key.Value.Public)),
+		})
+	}
+	if err := d.AddSource(&amber.SourceConfig{
+		Id:           "installtest",
+		RepoUrl:      server.baseURL,
+		RootKeys:     rootKeys,
+		StatusConfig: &amber.StatusConfig{Enabled: true},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write the meta FAR as a blob (so the package installation flow is not triggered)
+	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size))
+
+	// Now attempt to install the package
+	if err := d.GetPkg(metaFar.Merkle.String(), int64(metaFar.Size)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure the package now exists and is readable
+	pkgDir := filepath.Join("/pkgfs/versions", metaFar.Merkle.String())
+	if _, err := os.Stat(pkgDir); err != nil {
+		t.Fatal(err)
+	}
+
+	actualMerkle := readMerkle(t, filepath.Join(pkgDir, "meta"))
+	if metaFar.Merkle.String() != actualMerkle {
+		t.Fatalf("invalid merkle: expected %q, got %q", metaFar.Merkle, actualMerkle)
+	}
+}
+
+func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
+	// Make the test package
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.BuildTestPackage(cfg)
+
+	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	blobs, err := cfg.BlobInfo()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metaFar, blobs := blobs[0], blobs[1:]
+
+	// Ensure pkgfs is in a good state (no previous test has written this test package)
+	if _, err := os.Stat(filepath.Join("/pkgfs/versions", metaFar.Merkle.String())); err == nil {
+		t.Fatal("test package already readable")
+	}
+
+	if _, err := os.Stat(filepath.Join("/pkgfs/needs/packages", metaFar.Merkle.String())); err == nil {
+		t.Fatal("test package already has needs dir")
+	}
+
+	// Make the test repo, and start serving it over http
+	repoDir, err := ioutil.TempDir("", "amber-install-test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	repo, err := repo.New(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.GenKeys(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.PublishManifest(pkgManifestPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CommitUpdates(false); err != nil {
+		t.Fatal(err)
+	}
+
+	server, err := serveStaticRepo(t, filepath.Join(repoDir, "repository"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	// Open a new repository, and register this source
+	keys, err := repo.RootKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootKeys := []pkg.RepositoryKeyConfig{}
+	for _, key := range keys {
+		keyConfig := &pkg.RepositoryKeyConfig{}
+		keyConfig.SetEd25519Key(([]byte)(key.Value.Public))
+		rootKeys = append(rootKeys, *keyConfig)
+	}
+
+	r, err := source.OpenRepository(&pkg.RepositoryConfig{
+		RepoUrl:        "fuchsia-pkg://installtest",
+		RepoUrlPresent: true,
+		Mirrors: []pkg.MirrorConfig{
+			{
+				MirrorUrl:        server.baseURL,
+				MirrorUrlPresent: true,
+			},
+		},
+		MirrorsPresent:  true,
+		RootKeys:        rootKeys,
+		RootKeysPresent: true,
+	}, daemon.DefaultPkgInstallDir, daemon.DefaultBlobInstallDir, daemon.DefaultPkgNeedsDir)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write the meta FAR as a blob (so the package installation flow is not triggered)
+	installBlob(t, metaFar.SourcePath, metaFar.Merkle.String(), int64(metaFar.Size))
+
+	// Now attempt to install the package
+	noMerklePin := ""
+	actualMerkle, zxStatus, err := r.GetUpdateComplete(cfg.PkgName, &cfg.PkgVersion, &noMerklePin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if zxStatus != zx.ErrOk {
+		t.Fatal(zxStatus)
+	}
+	if metaFar.Merkle.String() != actualMerkle {
+		t.Fatalf("invalid merkle: expected %q, got %q", metaFar.Merkle, actualMerkle)
+	}
+
+	// Ensure the package now exists and is readable
+	pkgDir := filepath.Join("/pkgfs/versions", metaFar.Merkle.String())
+	if _, err := os.Stat(pkgDir); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// staticHttpServer serves a static directory
+type staticHttpServer struct {
+	baseURL  string
+	server   http.Server
+	waitStop sync.WaitGroup
+}
+
+// Close stops the server, waiting for it to terminate
+func (s *staticHttpServer) Close() {
+	s.server.Close()
+	s.waitStop.Wait()
+}
+
+// waitForUp waits for the server to respond to GET /
+func (s *staticHttpServer) waitForUp() error {
+	// without restructuring the runtime significantly, there's not a good way to
+	// detect the server is up, so we try a few times and fail if there are no
+	// successes.
+	for i := 0; i < 10; i++ {
+		_, err := http.Get(s.baseURL + "/")
+		if err != nil {
+			time.Sleep(time.Second / 10)
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+// serveStaticRepo serves a static directory over Http
+func serveStaticRepo(t *testing.T, repoDir string) (*staticHttpServer, error) {
+	port := getPort(t)
+	listen := fmt.Sprintf("127.0.0.1:%d", port)
+
+	s := &staticHttpServer{
+		baseURL: fmt.Sprintf("http://%s", listen),
+	}
+	s.server.Addr = listen
+	s.server.Handler = http.FileServer(http.Dir(repoDir))
+
+	s.waitStop.Add(1)
+	go func() {
+		defer s.waitStop.Done()
+		err := s.server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}()
+
+	err := s.waitForUp()
+	if err != nil {
+		s.Close()
+		return nil, err
+	}
+
+	return s, nil
+}
+
+// get a free port, with a very small chance of race
+func getPort(t *testing.T) int {
+	t.Helper()
+	s, err := net.ListenTCP("tcp", &net.TCPAddr{net.IPv4(127, 0, 0, 1), 0, ""})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	return s.Addr().(*net.TCPAddr).Port
+}
+
+// readMerkle reads a hex encoded merkle root from path, or fails the test
+func readMerkle(t *testing.T, path string) string {
+	t.Helper()
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(bytes)
+}
+
+// installBlob writes a blob to pkgfs through the blob install path
+func installBlob(t *testing.T, path string, merkle string, length int64) {
+	t.Helper()
+	src, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer src.Close()
+
+	dest, err := os.OpenFile(filepath.Join("/pkgfs/install/blob", merkle), os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dest.Close()
+
+	if err := dest.Truncate(length); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := io.Copy(dest, src); err != nil {
+		t.Fatal(err)
+	}
+}

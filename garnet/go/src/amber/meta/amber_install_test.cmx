@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/amber_install_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "pkgfs": [ "install", "needs", "versions" ],
+        "services": [
+            "fuchsia.net.SocketProvider"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.SocketProvider"
+            ]
+        }
+    }
+}

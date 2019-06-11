@@ -404,6 +404,19 @@ func (d *Daemon) GetPkg(merkle string, length int64) error {
 	}
 
 	if err != nil {
+		// If the package already existed but was missing the meta FAR (or the
+		// meta FAR wasn't indexed), it may now be valid and readable.
+		if _, e := os.Stat(filepath.Join("/pkgfs/versions", merkle)); e == nil {
+			return nil
+		}
+
+		// If the needs dir now exists, ignore a failure to write the meta FAR
+		// and move on to processing the package's needs.
+		if _, e := os.Stat(filepath.Join(d.pkgNeedsDir, merkle)); e == nil {
+			err = nil
+		}
+	}
+	if err != nil {
 		log.Printf("error fetching pkg %q: %s", merkle, err)
 		return err
 	}

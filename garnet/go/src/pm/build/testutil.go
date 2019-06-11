@@ -16,7 +16,7 @@ import (
 )
 
 // TestFiles is the list of files created by the default factories in this package.
-var TestFiles = []string{"a", "b", "dir/c", "meta/test/t"}
+var TestFiles = []string{"a", "b", "dir/c", "meta/test/t", "pubkey"}
 
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest
@@ -39,7 +39,7 @@ func TestPackage(cfg *Config) {
 		panic(err)
 	}
 
-	_, pkey, err := ed25519.GenerateKey(nil)
+	pubkey, pkey, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		panic(err)
 	}
@@ -68,6 +68,11 @@ func TestPackage(cfg *Config) {
 		}
 		if _, err := fmt.Fprintf(f, "%s\n", name); err != nil {
 			panic(err)
+		}
+		if name == "pubkey" {
+			if _, err := fmt.Fprintf(f, "%x\n", []byte(pubkey)); err != nil {
+				panic(err)
+			}
 		}
 		err = f.Close()
 		if err != nil {
