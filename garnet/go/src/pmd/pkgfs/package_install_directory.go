@@ -295,6 +295,7 @@ func (f *installFile) importPackage() error {
 		log.Printf("error opening package blob after writing: %s: %s", f.name, err)
 		return fs.ErrFailedPrecondition
 	}
+	defer b.Close()
 
 	r, err := far.NewReader(b)
 	if err != nil {
