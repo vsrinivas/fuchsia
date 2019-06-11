@@ -14,6 +14,7 @@
 ##   -I <ifname> Uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
+##   -w <size> window size, default is 1280x800
 ##   --audio run with audio hardware added to the virtual machine
 
 set -e
@@ -30,6 +31,7 @@ AUDIO=0
 AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=no
+WINDOW_SIZE="1280x800"
 
 while [[ $# -ge 1 ]]; do
   case "$1" in
@@ -63,6 +65,10 @@ while [[ $# -ge 1 ]]; do
   -e)
     shift
     AEMU_DIR="$1"
+    ;;
+  -w)
+    shift
+    WINDOW_SIZE="$1"
     ;;
   --audio)
     AUDIO=1
@@ -114,8 +120,10 @@ else
   # for coherent host visible memory.
   FEATURES+=",-Vulkan,-GLDirectMem";
 fi
+
 OPTIONS=()
 OPTIONS+=("-feature" "$FEATURES")
+OPTIONS+=("-window-size" "$WINDOW_SIZE")
 
 if (( $NET )); then
   if [[ "$(uname -s)" == "Darwin" ]]; then
