@@ -123,8 +123,6 @@ void AmlPdmDevice::InitRegs() {
     Stop();
     zx::nanosleep(zx::deadline_after(zx::msec(100)));
 
-    //Start pdm_dclk
-    audio_mmio_.SetBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
     //Enable cts_pdm_clk gate (clock gate within pdm module)
     pdm_mmio_.SetBits32(0x01, PDM_CLKG_CTRL);
 
@@ -233,6 +231,8 @@ void AmlPdmDevice::PdmInDisable() {
 
 // Enables the pdm to clock data
 void AmlPdmDevice::PdmInEnable() {
+    //Start pdm_dclk
+    audio_mmio_.SetBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
     pdm_mmio_.SetBits32((1 << 31) | (1 << 16), PDM_CTRL);
 }
 
