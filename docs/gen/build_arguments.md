@@ -16,12 +16,22 @@ archives.
 
 From //build/images/BUILD.gn:53
 
+### additional_bootserver_arguments
+Additional bootserver args to add to pave.sh. New uses of this should be
+added with caution, and ideally discussion. The present use case is to
+enable throttling of netboot when specific network adapters are combined
+with specific boards, due to driver and hardware challenges.
+
+**Current value (from the default):** `""`
+
+From //build/images/BUILD.gn:59
+
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:833
+From //build/images/BUILD.gn:839
 
 ### auto_login_to_guest
 Whether basemgr should automatically login as a persistent guest user.
@@ -150,7 +160,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:509
+From //build/images/BUILD.gn:515
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -572,7 +582,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:492
+From //build/images/BUILD.gn:498
 
 ### embedder_for_target
 By default, the dynamic library target exposing the embedder API is only
@@ -933,7 +943,7 @@ See also //zircon/docs/kernel_cmdline.md and
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:497
+From //build/images/BUILD.gn:503
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -943,7 +953,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:503
+From //build/images/BUILD.gn:509
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -2087,7 +2097,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:515
+From //build/images/BUILD.gn:521
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -2291,10 +2301,11 @@ silently clobber the default value shown here.
 From //BUILD.gn:81
 
 ### zircon_asserts
+Whether to enable <zircon/assert.h> ZX_DEBUG_ASSERT assertions.
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:205
+From //build/config/fuchsia/zircon.gni:9
 
 ### zircon_b_partition
 
