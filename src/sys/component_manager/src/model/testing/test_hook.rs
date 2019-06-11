@@ -36,7 +36,7 @@ impl Eq for ComponentInstance {}
 
 impl ComponentInstance {
     pub async fn print(&self) -> String {
-        let mut s: String = format!("{}", self.abs_moniker.name().unwrap_or(String::new()));
+        let mut s: String = self.abs_moniker.path().last().map_or("", |m| m.as_str()).to_string();
         let mut children = await!(self.children.lock());
         if children.is_empty() {
             return s;
@@ -141,6 +141,10 @@ impl Hook for TestHook {
     }
 
     fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
+    }
+
+    fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
     }
 }

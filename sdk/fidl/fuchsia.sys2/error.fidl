@@ -6,16 +6,21 @@ library fuchsia.sys2;
 
 /// Standard error codes for component framework protocols.
 enum Error {
+    /// Component manager encountered an otherwise unspecified error while
+    /// performing the operation.
+    INTERNAL = 1;
     /// At least one argument had an invalid format.
-    INVALID_ARGUMENTS = 1;
+    INVALID_ARGUMENTS = 2;
+    /// The feature is not yet supported.
+    UNSUPPORTED = 3;
     /// The component instance was not found.
-    INSTANCE_NOT_FOUND = 2;
+    INSTANCE_NOT_FOUND = 4;
     /// The component instance already exists.
-    INSTANCE_ALREADY_EXISTS = 3;
+    INSTANCE_ALREADY_EXISTS = 5;
     /// The component instance could not be started.
-    INSTANCE_CANNOT_START = 4;
+    INSTANCE_CANNOT_START = 6;
     /// The component collection was not found.
-    COLLECTION_NOT_FOUND = 5;
+    COLLECTION_NOT_FOUND = 7;
     /// There was insufficient space to perform the operation.
-    NO_SPACE = 6;
+    NO_SPACE = 8;
 };

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{directory_broker, model::tests::mocks::*, model::*},
+    crate::{ambient::*, directory_broker, model::testing::mocks::*, model::*},
     cm_rust::{
-        Capability, CapabilityPath, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
-        OfferSource, UseDecl,
+        Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource,
+        NativeIntoFidl, OfferDecl, OfferSource, UseDecl,
     },
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
@@ -33,6 +33,16 @@ use {
         sync::Arc,
     },
 };
+
+/// Return all monikers of the children of the given `realm`.
+pub async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
+    await!(realm.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()
+}
+
+/// Return the child realm of the given `realm` with moniker `child`.
+pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
+    await!(realm.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
+}
 
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
@@ -250,6 +260,38 @@ async fn call_realm_svc(
     }
 }
 
+async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
+    let expected_res: Result<(), ModelError> = Ok(());
+    assert_eq!(
+        format!("{:?}", await!(model.look_up_and_bind_instance(moniker.clone()))),
+        format!("{:?}", expected_res),
+    );
+    moniker.path().last().expect("didn't expect a root component").name().to_string()
+}
+
+fn resolved_url(component_name: &str) -> String {
+    format!("test:///{}_resolved", component_name)
+}
+
+/// Call `fuchsia.sys2.Realm.CreateChild` to create a dynamic child.
+async fn call_create_child<'a>(
+    resolved_url: String,
+    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    collection: &'a str,
+    child_decl: ChildDecl,
+) {
+    let path = CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").expect("no realm service");
+    let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
+    let node_proxy =
+        io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
+            .expect("failed to open realm service");
+    let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
+    let collection_ref = fsys::CollectionRef { name: Some(collection.to_string()) };
+    let child_decl = child_decl.native_into_fidl();
+    let res = await!(realm_proxy.create_child(collection_ref, child_decl));
+    let _ = res.expect("failed to create child");
+}
+
 // Installs a new directory at /hippo in our namespace. Does nothing if this directory already
 // exists.
 pub fn install_hippo_dir() {
@@ -317,6 +359,9 @@ pub struct TestInputs<'a> {
     /// The use decls on a component which should be checked. The bool marks if this usage is
     /// expected to succeed or not.
     pub users_to_check: Vec<(AbsoluteMoniker, Capability, bool)>,
+    /// The declarations for dynamic child components:
+    /// (parent's moniker, collection name, child declaration)
+    pub dynamic_children: Vec<(AbsoluteMoniker, String, ChildDecl)>,
     /// The component declarations that comprise the component tree
     pub components: Vec<(&'a str, ComponentDecl)>,
 }
@@ -336,14 +381,17 @@ pub fn new_directory_capability() -> Capability {
     Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
 }
 
-/// construct the given component topology, host `/svc/foo` and `/data/foo` from the outgoing
+/// Construct the given component topology, host `/svc/foo` and `/data/foo` from the outgoing
 /// directory of any component offering or exposing from `Self`, and attempt to use the use
-/// declarations referenced in `test.users_to_check`
+/// declarations referenced in `test.users_to_check`.
+// TODO: Break up this function. Routing tests could be written more imperatively, with separate
+// functions to add static components, add dynamic components, and test capability usage.
 pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
     let mut resolver = ResolverRegistry::new();
     let mut runner = MockRunner::new();
     let namespaces = runner.namespaces.clone();
 
+    // Host capabilities exposed or offered from `self`.
     let mut mock_resolver = MockResolver::new();
     for (name, decl) in test.components.clone() {
         // if this decl is offering/exposing something from Self, let's host it
@@ -373,21 +421,46 @@ pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
 
         mock_resolver.add_component(name, decl);
     }
+
+    // Set up ambient environment.
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let ambient = MockAmbientEnvironment::new();
-    let bind_calls = ambient.bind_calls.clone();
+    let (ambient, bind_calls): (Box<dyn AmbientEnvironment>, _) =
+        if test.dynamic_children.is_empty() {
+            let ambient = Box::new(MockAmbientEnvironment::new());
+            let bind_calls = ambient.bind_calls.clone();
+            (ambient, bind_calls)
+        } else {
+            // To create dynamic children, we require a RealAmbientEnvironment.
+            let ambient = Box::new(RealAmbientEnvironment::new());
+            (ambient, Arc::new(Mutex::new(vec![])))
+        };
+
+    // Create the model.
     let model = Model::new(ModelParams {
-        ambient: Box::new(ambient),
+        ambient,
         root_component_url: format!("test:///{}", test.root_component),
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
         hooks: Vec::new(),
     });
+
+    // Create dynamic children.
+    for (moniker, collection, child_decl) in test.dynamic_children {
+        let component_name = await!(bind_instance(&model, &moniker));
+        let component_resolved_url = resolved_url(&component_name);
+        await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
+        await!(call_create_child(
+            component_resolved_url,
+            namespaces.clone(),
+            &collection,
+            child_decl
+        ));
+    }
+
+    // Check uses.
     for (moniker, capability, should_succeed) in test.users_to_check {
-        assert!(await!(model.look_up_and_bind_instance(moniker.clone())).is_ok());
-        let component_name =
-            moniker.path().last().expect("didn't expect a root component").name().to_string();
-        let component_resolved_url = format!("test:///{}_resolved", &component_name);
+        let component_name = await!(bind_instance(&model, &moniker));
+        let component_resolved_url = resolved_url(&component_name);
         await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
         match capability {
             Capability::Service(path) => match &path.to_string() as &str {

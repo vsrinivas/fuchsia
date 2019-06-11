@@ -24,15 +24,18 @@ use {
 // break down each event type into a separate trait so that clients can pick
 // and choose which events they'd like to monitor.
 pub trait Hook {
-    // Called when a component instance is bound to the given |realm|.
+    // Called when a component instance is bound to the given `realm`.
     fn on_bind_instance<'a>(
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
     ) -> BoxFuture<Result<(), ModelError>>;
 
-    // Called when a new |realm|'s declaration has been resolved.
+    // Called when a new `realm`'s declaration has been resolved.
     fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+
+    // Called when a dynamic instance is added with `realm`.
+    fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
 }
 
 pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
@@ -65,7 +68,7 @@ pub struct ModelParams {
 pub struct Model {
     pub root_realm: Arc<Realm>,
     pub ambient: Arc<dyn AmbientEnvironment>,
-    pub hooks: Hooks,
+    pub hooks: Arc<Hooks>,
 }
 
 impl Model {
@@ -82,7 +85,7 @@ impl Model {
                 startup: fsys::StartupMode::Lazy,
                 state: Mutex::new(RealmState { execution: None, child_realms: None, decl: None }),
             }),
-            hooks: params.hooks,
+            hooks: Arc::new(params.hooks),
         }
     }
 

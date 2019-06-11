@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, ComponentDecl},
+    cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
@@ -47,19 +47,75 @@ impl Realm {
         Ok(())
     }
 
+    /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
+    /// added, the component instance exists but is not bound.
+    pub async fn add_dynamic_child<'a>(
+        &'a self,
+        collection_name: String,
+        child_decl: &'a ChildDecl,
+        hooks: &'a Hooks,
+    ) -> Result<(), ModelError> {
+        match child_decl.startup {
+            fsys::StartupMode::Lazy => {}
+            fsys::StartupMode::Eager => {
+                return Err(ModelError::unsupported("Eager startup"));
+            }
+        }
+        await!(self.resolve_decl())?;
+        let child_realm = {
+            let mut state = await!(self.state.lock());
+            let decl = state.decl.as_ref().unwrap();
+            let collection_decl = decl
+                .collections
+                .iter()
+                .find(|c| c.name == collection_name)
+                .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?;
+            match collection_decl.durability {
+                fsys::Durability::Transient => {}
+                fsys::Durability::Persistent => {
+                    return Err(ModelError::unsupported("Persistent durability"));
+                }
+            }
+            let (child_moniker, realm) = self.new_child(child_decl, Some(collection_name));
+            if let Some(_) =
+                state.child_realms.as_mut().unwrap().insert(child_moniker.clone(), realm.clone())
+            {
+                return Err(ModelError::instance_already_exists(
+                    self.abs_moniker.child(child_moniker),
+                ));
+            }
+            realm
+        };
+        // Call hooks outside of lock
+        for hook in hooks.iter() {
+            await!(hook.on_add_dynamic_child(child_realm.clone()))?;
+        }
+        Ok(())
+    }
+
+    /// Creates a new child of this realm for the given ChildDecl.
+    fn new_child(
+        &self,
+        child: &ChildDecl,
+        collection: Option<String>,
+    ) -> (ChildMoniker, Arc<Self>) {
+        let child_moniker = ChildMoniker::new(child.name.clone(), collection);
+        let abs_moniker = self.abs_moniker.child(child_moniker.clone());
+        let realm = Arc::new(Realm {
+            resolver_registry: self.resolver_registry.clone(),
+            default_runner: self.default_runner.clone(),
+            abs_moniker: abs_moniker,
+            component_url: child.url.clone(),
+            startup: child.startup,
+            state: Mutex::new(RealmState { execution: None, child_realms: None, decl: None }),
+        });
+        (child_moniker, realm)
+    }
+
     fn make_static_child_realms(&self, decl: &ComponentDecl) -> ChildRealmMap {
         let mut child_realms = HashMap::new();
         for child in decl.children.iter() {
-            let moniker = ChildMoniker::new(child.name.clone(), None);
-            let abs_moniker = self.abs_moniker.child(moniker.clone());
-            let realm = Arc::new(Realm {
-                resolver_registry: self.resolver_registry.clone(),
-                default_runner: self.default_runner.clone(),
-                abs_moniker: abs_moniker,
-                component_url: child.url.clone(),
-                startup: child.startup,
-                state: Mutex::new(RealmState { execution: None, child_realms: None, decl: None }),
-            });
+            let (moniker, realm) = self.new_child(child, None);
             child_realms.insert(moniker, realm);
         }
         child_realms

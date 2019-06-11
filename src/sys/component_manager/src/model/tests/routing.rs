@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::tests::routing_test_helpers::*,
+    crate::model::testing::routing_test_helpers::*,
     cm_rust::{
-        self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeServiceDecl, ExposeSource, OfferDecl, OfferDest, OfferDirectoryDecl,
-        OfferServiceDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl, UseServiceDecl,
+        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDest,
+        OfferDirectoryDecl, OfferServiceDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl,
+        UseServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryFrom,
@@ -23,6 +24,7 @@ async fn use_ambient() {
     await!(run_routing_test(TestInputs {
         root_component: "a",
         users_to_check: vec![(vec!["b"].into(), new_ambient_capability(), true),],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -65,6 +67,7 @@ async fn use_from_parent() {
             (vec!["b"].into(), new_directory_capability(), true),
             (vec!["b"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -135,6 +138,7 @@ async fn use_from_grandparent() {
             (vec!["b", "c"].into(), new_directory_capability(), true),
             (vec!["b", "c"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -231,6 +235,7 @@ async fn use_from_sibling_no_root() {
             (vec!["b", "c"].into(), new_directory_capability(), true),
             (vec!["b", "c"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -332,6 +337,7 @@ async fn use_from_sibling_root() {
             (vec!["c"].into(), new_directory_capability(), true),
             (vec!["c"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -425,6 +431,7 @@ async fn use_from_niece() {
             (vec!["c"].into(), new_directory_capability(), true),
             (vec!["c"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -545,6 +552,7 @@ async fn use_kitchen_sink() {
             (vec!["c", "f"].into(), new_directory_capability(), true),
             (vec!["c", "f"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -755,6 +763,7 @@ async fn use_from_component_manager_namespace() {
             (vec!["b"].into(), new_directory_capability(), true),
             (vec!["b"].into(), new_service_capability(), true),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -820,6 +829,7 @@ async fn use_not_offered() {
             (vec!["b"].into(), new_directory_capability(), false),
             (vec!["b"].into(), new_service_capability(), false),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -869,6 +879,7 @@ async fn use_offer_source_not_exposed() {
             (vec!["c"].into(), new_directory_capability(), false),
             (vec!["c"].into(), new_service_capability(), false),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -946,6 +957,7 @@ async fn use_offer_source_not_offered() {
             (vec!["b", "c"].into(), new_directory_capability(), false),
             (vec!["b", "c"].into(), new_service_capability(), false),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -1026,6 +1038,7 @@ async fn use_from_expose() {
             (vec!["b"].into(), new_directory_capability(), false),
             (vec!["b"].into(), new_service_capability(), false),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -1098,6 +1111,7 @@ async fn offer_from_non_executable() {
             (vec!["b"].into(), new_directory_capability(), false),
             (vec!["b"].into(), new_service_capability(), false),
         ],
+        dynamic_children: vec![],
         components: vec![
             (
                 "a",
@@ -1141,6 +1155,218 @@ async fn offer_from_non_executable() {
                             source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         }),
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///    / \
+///  [c] [d]
+/// a: offers service /svc/hippo to b
+/// b: offers service /svc/hippo to collection, creates [c]
+/// [c]: instance in collection uses service /svc/hippo
+/// [d]: ditto, but with /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_in_collection() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (vec!["b", "coll:c"].into(), new_directory_capability(), true),
+            (vec!["b", "coll:d"].into(), new_service_capability(), true),
+        ],
+        dynamic_children: vec![
+            (
+                vec!["b"].into(),
+                "coll".to_string(),
+                ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }
+            ),
+            (
+                vec!["b"].into(),
+                "coll".to_string(),
+                ChildDecl {
+                    name: "d".to_string(),
+                    url: "test:///d".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }
+            ),
+        ],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    offers: vec![
+                        OfferDecl::Directory(OfferDirectoryDecl {
+                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                            source: OfferSource::Self_,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                                dest: OfferDest::Child("b".to_string()),
+                            }],
+                        }),
+                        OfferDecl::Service(OfferServiceDecl {
+                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                            source: OfferSource::Self_,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                                dest: OfferDest::Child("b".to_string()),
+                            }],
+                        }),
+                    ],
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    }),],
+                    offers: vec![
+                        OfferDecl::Directory(OfferDirectoryDecl {
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            source: OfferSource::Realm,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                                dest: OfferDest::Collection("coll".to_string()),
+                            }],
+                        }),
+                        OfferDecl::Service(OfferServiceDecl {
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source: OfferSource::Realm,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                                dest: OfferDest::Collection("coll".to_string()),
+                            }],
+                        }),
+                    ],
+                    collections: vec![CollectionDecl {
+                        name: "coll".to_string(),
+                        durability: fsys::Durability::Transient,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "d",
+                ComponentDecl {
+                    uses: vec![UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),],
+                    ..default_component_decl()
+                },
+            ),
+        ],
+    }));
+}
+
+///   a
+///    \
+///     b
+///      \
+///      [c]
+/// a: offers service /svc/hippo to b
+/// b: creates [c]
+/// [c]: tries to use /svc/hippo, but can't because service was not offered to its collection
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_in_collection_not_offered() {
+    await!(run_routing_test(TestInputs {
+        root_component: "a",
+        users_to_check: vec![
+            (vec!["b", "coll:c"].into(), new_directory_capability(), false),
+            (vec!["b", "coll:c"].into(), new_service_capability(), false),
+        ],
+        dynamic_children: vec![(
+            vec!["b"].into(),
+            "coll".to_string(),
+            ChildDecl {
+                name: "c".to_string(),
+                url: "test:///c".to_string(),
+                startup: fsys::StartupMode::Lazy,
+            }
+        ),],
+        components: vec![
+            (
+                "a",
+                ComponentDecl {
+                    offers: vec![
+                        OfferDecl::Directory(OfferDirectoryDecl {
+                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                            source: OfferSource::Self_,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                                dest: OfferDest::Child("b".to_string()),
+                            }],
+                        }),
+                        OfferDecl::Service(OfferServiceDecl {
+                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                            source: OfferSource::Self_,
+                            targets: vec![OfferTarget {
+                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                                dest: OfferDest::Child("b".to_string()),
+                            }],
+                        }),
+                    ],
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    uses: vec![UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    }),],
+                    collections: vec![CollectionDecl {
+                        name: "coll".to_string(),
+                        durability: fsys::Durability::Transient,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl::Directory(UseDirectoryDecl {
+                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        }),
+                        UseDecl::Service(UseServiceDecl {
+                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        })
                     ],
                     ..default_component_decl()
                 },

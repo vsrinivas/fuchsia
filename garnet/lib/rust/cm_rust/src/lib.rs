@@ -225,32 +225,45 @@ impl ComponentDecl {
     }
 
     /// Returns the `OfferDecl` that offers `capability` to `child_name`, if it exists.
+    // TODO: Expose the `moniker` module in its own crate. Then this function can take a
+    // `ChildMoniker`.
     pub fn find_offer_source<'a>(
         &'a self,
         capability: &Capability,
         child_name: &str,
+        collection: Option<&str>,
     ) -> Option<&'a OfferDecl> {
         self.offers.iter().find(|&offer| match (capability, offer) {
             (Capability::Service(p), OfferDecl::Service(d)) => d
                 .targets
                 .iter()
-                .find(|&e| {
-                    if let OfferDest::Child(target_child_name) = &e.dest {
-                        e.target_path == *p && target_child_name == child_name
-                    } else {
-                        false
-                    }
+                .find(|&e| match &e.dest {
+                    OfferDest::Child(target_child_name) => match collection {
+                        Some(_) => false,
+                        None => e.target_path == *p && target_child_name == child_name,
+                    },
+                    OfferDest::Collection(target_collection_name) => match collection {
+                        Some(collection) => {
+                            e.target_path == *p && target_collection_name == collection
+                        }
+                        None => false,
+                    },
                 })
                 .is_some(),
             (Capability::Directory(p), OfferDecl::Directory(d)) => d
                 .targets
                 .iter()
-                .find(|&e| {
-                    if let OfferDest::Child(target_child_name) = &e.dest {
-                        e.target_path == *p && target_child_name == child_name
-                    } else {
-                        false
-                    }
+                .find(|&e| match &e.dest {
+                    OfferDest::Child(target_child_name) => match collection {
+                        Some(_) => false,
+                        None => e.target_path == *p && target_child_name == child_name,
+                    },
+                    OfferDest::Collection(target_collection_name) => match collection {
+                        Some(collection) => {
+                            e.target_path == *p && target_collection_name == collection
+                        }
+                        None => false,
+                    },
                 })
                 .is_some(),
             _ => false,

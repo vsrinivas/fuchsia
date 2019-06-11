@@ -12,6 +12,12 @@ use {
 pub enum ModelError {
     #[fail(display = "component instance not found with moniker {}", moniker)]
     InstanceNotFound { moniker: AbsoluteMoniker },
+    #[fail(display = "component instance with moniker {} already exists", moniker)]
+    InstanceAlreadyExists { moniker: AbsoluteMoniker },
+    #[fail(display = "component collection not found with name {}", name)]
+    CollectionNotFound { name: String },
+    #[fail(display = "{} is not supported", feature)]
+    Unsupported { feature: String },
     #[fail(display = "component declaration invalid")]
     ComponentInvalid,
     #[fail(display = "Hub operation failed")]
@@ -55,6 +61,18 @@ pub enum ModelError {
 impl ModelError {
     pub fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
         ModelError::InstanceNotFound { moniker }
+    }
+
+    pub fn instance_already_exists(moniker: AbsoluteMoniker) -> ModelError {
+        ModelError::InstanceAlreadyExists { moniker }
+    }
+
+    pub fn collection_not_found(name: impl Into<String>) -> ModelError {
+        ModelError::CollectionNotFound { name: name.into() }
+    }
+
+    pub fn unsupported(feature: impl Into<String>) -> ModelError {
+        ModelError::Unsupported { feature: feature.into() }
     }
 
     pub fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {

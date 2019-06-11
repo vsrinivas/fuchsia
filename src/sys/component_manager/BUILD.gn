@@ -18,6 +18,7 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/lib/rust/cm_fidl_translator",
+    "//garnet/lib/rust/cm_fidl_validator",
     "//garnet/lib/rust/cm_rust",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",

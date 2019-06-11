@@ -3,22 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::tests::mocks::*,
-    crate::model::tests::routing_test_helpers::*,
-    crate::model::tests::test_hook::TestHook,
+    crate::model::testing::mocks::*,
+    crate::model::testing::routing_test_helpers::*,
+    crate::model::testing::test_hook::TestHook,
     crate::model::*,
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
-    std::{collections::HashSet, sync::Arc},
+    std::collections::HashSet,
+    std::sync::Arc,
 };
-
-async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
-    await!(realm.state.lock()).child_realms.as_ref().unwrap().keys().cloned().collect()
-}
-
-async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    await!(realm.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
-}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_root() {
@@ -96,9 +89,9 @@ async fn bind_instance_child() {
     mock_resolver.add_component("system", default_component_decl());
     mock_resolver.add_component("echo", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let observer = Arc::new(TestHook::new());
+    let hook = Arc::new(TestHook::new());
     let mut hooks: Hooks = Vec::new();
-    hooks.push(observer.clone());
+    hooks.push(hook.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
@@ -135,7 +128,7 @@ async fn bind_instance_child() {
     assert!(actual_children.is_empty());
 
     // Verify that the component topology matches expectations.
-    assert_eq!("(echo,system)", observer.print());
+    assert_eq!("(echo,system)", hook.print());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -250,9 +243,9 @@ async fn bind_instance_eager_children() {
     );
     mock_resolver.add_component("e", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let observer = Arc::new(TestHook::new());
+    let hook = Arc::new(TestHook::new());
     let mut hooks: Hooks = Vec::new();
-    hooks.push(observer.clone());
+    hooks.push(hook.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
@@ -287,7 +280,7 @@ async fn bind_instance_eager_children() {
         );
     }
     // Verify that the component topology matches expectations.
-    assert_eq!("(a(b,c(d(e))))", observer.print());
+    assert_eq!("(a(b,c(d(e))))", hook.print());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -376,9 +369,9 @@ async fn bind_instance_recursive_child() {
     mock_resolver.add_component("logger", default_component_decl());
     mock_resolver.add_component("netstack", default_component_decl());
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    let observer = Arc::new(TestHook::new());
+    let hook = Arc::new(TestHook::new());
     let mut hooks: Hooks = Vec::new();
-    hooks.push(observer.clone());
+    hooks.push(hook.clone());
     let model = Model::new(ModelParams {
         ambient: Box::new(MockAmbientEnvironment::new()),
         root_component_url: "test:///root".to_string(),
@@ -408,5 +401,5 @@ async fn bind_instance_recursive_child() {
     assert_eq!(*await!(urls_run.lock()), expected_urls);
 
     // validate the component topology.
-    assert_eq!("(system(logger,netstack))", observer.print());
+    assert_eq!("(system(logger,netstack))", hook.print());
 }

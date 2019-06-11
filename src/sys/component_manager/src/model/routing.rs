@@ -91,6 +91,7 @@ async fn route_capability<'a>(
             await!(AmbientEnvironment::serve(
                 model.ambient.clone(),
                 realm,
+                model.hooks.clone(),
                 &source_capability_path,
                 server_chan
             ))?;
@@ -137,8 +138,8 @@ async fn find_capability_source<'a>(
     struct State {
         // The capability as it's represented in the current component
         capability: Capability,
-        // The name of the child we came from
-        name: Option<ChildMoniker>,
+        // The moniker of the child we came from
+        child_moniker: Option<ChildMoniker>,
         // The moniker of the component we are currently looking at
         moniker: AbsoluteMoniker,
     }
@@ -148,17 +149,20 @@ async fn find_capability_source<'a>(
     };
     let mut s = State {
         capability: used_capability.clone(),
-        name: abs_moniker.path().last().map(|c| c.clone()),
+        child_moniker: abs_moniker.path().last().map(|c| c.clone()),
         moniker: moniker,
     };
+
     // Walk offer chain
     'offerloop: loop {
         let current_realm = await!(model.look_up_realm(&s.moniker))?;
         let realm_state = await!(current_realm.state.lock());
-        // This unwrap is safe because look_up_realm populates this field
+        // This unwrap is safe because `look_up_realm` populates this field
         let decl = realm_state.decl.as_ref().expect("missing offer decl");
-
-        if let Some(offer) = decl.find_offer_source(&s.capability, &s.name.unwrap().name()) {
+        let child_moniker = s.child_moniker.as_ref().unwrap();
+        if let Some(offer) =
+            decl.find_offer_source(&s.capability, child_moniker.name(), child_moniker.collection())
+        {
             let source = match offer {
                 OfferDecl::Service(s) => &s.source,
                 OfferDecl::Directory(d) => &d.source,
@@ -173,7 +177,7 @@ async fn find_capability_source<'a>(
                     // The offered capability comes from the realm, so follow the
                     // parent
                     s.capability = offer.clone().into();
-                    s.name = s.moniker.path().last().map(|c| c.clone());
+                    s.child_moniker = s.moniker.path().last().map(|c| c.clone());
                     s.moniker = match s.moniker.parent() {
                         Some(m) => m,
                         None => {
@@ -208,6 +212,7 @@ async fn find_capability_source<'a>(
             )));
         }
     }
+
     // Walk expose chain
     loop {
         let current_realm = await!(model.look_up_realm(&s.moniker))?;

@@ -213,6 +213,14 @@ impl Hub {
         }
         Ok(())
     }
+
+    pub async fn on_add_dynamic_child_async(
+        &self,
+        _realm: Arc<model::Realm>,
+    ) -> Result<(), ModelError> {
+        // TODO: Update the hub with the new child
+        Ok(())
+    }
 }
 
 impl model::Hook for Hub {
@@ -230,6 +238,10 @@ impl model::Hook for Hub {
     ) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(self.on_resolve_realm_async(realm))
     }
+
+    fn on_add_dynamic_child(&self, realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_add_dynamic_child_async(realm))
+    }
 }
 
 #[cfg(test)]
@@ -237,7 +249,7 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            self, hub::Hub, tests::mocks, tests::routing_test_helpers::default_component_decl,
+            self, hub::Hub, testing::mocks, testing::routing_test_helpers::default_component_decl,
         },
         cm_rust::{self, ChildDecl, ComponentDecl},
         fidl::endpoints::{ClientEnd, ServerEnd},

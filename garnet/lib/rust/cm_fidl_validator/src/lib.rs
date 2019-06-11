@@ -144,7 +144,7 @@ impl fmt::Display for ErrorList {
 /// of what is validated (which may evolve in the future):
 /// - That all semantically required fields are present
 /// - That a child_name referenced in a source actually exists in the list of children
-/// - That there are no duplicate target ptahs
+/// - That there are no duplicate target paths.
 pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
     let ctx = ValidationContext {
         decl,
@@ -156,6 +156,21 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         errors: vec![],
     };
     ctx.validate().map_err(|errs| ErrorList::new(errs))
+}
+
+/// Validates an independent ChildDecl. Performs the same validation on it as `validate`.
+pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
+    let mut errors = vec![];
+    NAME.check(child.name.as_ref(), "ChildDecl", "name", &mut errors);
+    URL.check(child.url.as_ref(), "ChildDecl", "url", &mut errors);
+    if child.startup.is_none() {
+        errors.push(Error::missing_field("ChildDecl", "startup"));
+    }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ErrorList { errs: errors })
+    }
 }
 
 struct ValidationContext<'a> {
@@ -271,16 +286,14 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_child_decl(&mut self, child: &'a fsys::ChildDecl) {
-        let name = child.name.as_ref();
-        if NAME.check(name, "ChildDecl", "name", &mut self.errors) {
-            let name: &str = name.unwrap();
+        if let Err(mut e) = validate_child(child) {
+            self.errors.append(&mut e.errs);
+        }
+        if let Some(name) = child.name.as_ref() {
+            let name: &str = name;
             if !self.all_children.insert(name) {
                 self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
             }
-        }
-        URL.check(child.url.as_ref(), "ChildDecl", "url", &mut self.errors);
-        if child.startup.is_none() {
-            self.errors.push(Error::missing_field("ChildDecl", "startup"));
         }
     }
 

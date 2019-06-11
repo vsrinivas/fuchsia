@@ -12,6 +12,7 @@ mod namespace;
 mod resolver;
 mod routing;
 mod runner;
+pub mod testing;
 #[cfg(test)]
 pub(crate) mod tests;
 
