@@ -124,5 +124,31 @@ TEST_F(RollSumSplitTest, CheckWindowed) {
   }
 }
 
+TEST_F(RollSumSplitTest, ReversingPermutation) {
+  auto reversing_permutation = [](uint64_t hash) { return ~hash; };
+  const size_t min = 4 * 1024;
+  const size_t max = 8 * 1024;
+  RollSumSplit r1(min, max);
+  RollSumSplit r2(min, max, reversing_permutation);
+  for (size_t i = 0; i < 256; i++) {
+    fxl::StringView value = GetValue(max + 1);
+    auto f1 = r1.Feed(value, nullptr);
+    auto f2 = r2.Feed(value, nullptr);
+    EXPECT_TRUE((f1 != f2) || (f1 == max) || (f1 == min));
+  }
+}
+
+TEST_F(RollSumSplitTest, ZeroesPermutation) {
+  auto zeroes_permutation = [](uint64_t hash) { return 0; };
+  const size_t min = 4 * 1024;
+  const size_t max = 8 * 1024;
+  RollSumSplit r2(min, max, zeroes_permutation);
+  for (size_t i = 0; i < 256; i++) {
+    fxl::StringView value = GetValue(max + 1);
+    auto f2 = r2.Feed(value, nullptr);
+    EXPECT_TRUE(f2 == max);
+  }
+}
+
 }  // namespace
 }  // namespace bup

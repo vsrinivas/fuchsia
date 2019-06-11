@@ -11,14 +11,17 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 
 namespace storage {
 namespace {
@@ -84,19 +87,30 @@ struct Call {
   ObjectDigest digest;
 };
 
+bool operator==(const Call& lhs, const Call& rhs) {
+  return (lhs.digest == rhs.digest) && (lhs.status == rhs.status);
+}
+
 struct SplitResult {
   std::vector<Call> calls;
   std::map<ObjectDigest, std::unique_ptr<Piece>> pieces;
 };
 
 void DoSplit(DataSource* source, ObjectType object_type,
-             fit::function<void(SplitResult)> callback) {
+             fit::function<void(SplitResult)> callback,
+             fit::function<uint64_t(uint64_t)> chunk_permutation = nullptr) {
   auto result = std::make_unique<SplitResult>();
+  if (!chunk_permutation) {
+    chunk_permutation = [](uint64_t chunk_window_hash) {
+      return chunk_window_hash;
+    };
+  }
   SplitDataSource(
       source, object_type,
       [](ObjectDigest digest) {
         return encryption::MakeDefaultObjectIdentifier(std::move(digest));
       },
+      std::move(chunk_permutation),
       [result = std::move(result), callback = std::move(callback)](
           IterationStatus status, std::unique_ptr<Piece> piece) mutable {
         EXPECT_TRUE(result);
@@ -405,6 +419,37 @@ TEST(SplitTest, CollectPiecesError) {
       });
   EXPECT_GE(called, nb_successfull_called);
   ASSERT_EQ(IterationStatus::ERROR, status);
+}
+
+using SplitTestWithEnvironment = ledger::TestWithEnvironment;
+
+// Test that changing the hash permutation function changes the resulting split.
+TEST_F(SplitTestWithEnvironment, DifferentPermutations) {
+  const std::string content = RandomString(
+      environment_.random(), 4ul * std::numeric_limits<uint16_t>::max());
+  auto bit_generator = environment_.random()->NewBitGenerator<uint64_t>();
+
+  auto source = DataSource::Create(content);
+  SplitResult split_result1;
+  uint64_t d1 = std::uniform_int_distribution(
+      0ul, std::numeric_limits<uint64_t>::max())(bit_generator);
+  DoSplit(
+      source.get(), ObjectType::BLOB,
+      [&split_result1](SplitResult c) { split_result1 = std::move(c); },
+      [&d1](uint64_t chunk_window_hash) { return chunk_window_hash ^ d1; });
+  EXPECT_EQ(IterationStatus::DONE, split_result1.calls.back().status);
+
+  source = DataSource::Create(content);
+  SplitResult split_result2;
+  uint64_t d2 = std::uniform_int_distribution(
+      0ul, std::numeric_limits<uint64_t>::max())(bit_generator);
+  DoSplit(
+      source.get(), ObjectType::BLOB,
+      [&split_result2](SplitResult c) { split_result2 = std::move(c); },
+      [&d2](uint64_t chunk_window_hash) { return chunk_window_hash ^ d2; });
+  EXPECT_EQ(IterationStatus::DONE, split_result2.calls.back().status);
+
+  EXPECT_NE(split_result1.calls, split_result2.calls);
 }
 
 }  // namespace

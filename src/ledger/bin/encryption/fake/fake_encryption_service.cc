@@ -28,6 +28,10 @@ storage::ObjectIdentifier MakeDefaultObjectIdentifier(
   return {1u, 1u, std::move(digest)};
 }
 
+uint64_t DefaultPermutation(uint64_t chunk_window_hash) {
+  return 1 + chunk_window_hash;
+}
+
 FakeEncryptionService::FakeEncryptionService(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
 
@@ -86,6 +90,11 @@ void FakeEncryptionService::DecryptObject(
                                 result = std::move(result)]() mutable {
     callback(Status::OK, std::move(result));
   });
+}
+
+uint64_t FakeEncryptionService::ChunkingPermutation(
+    uint64_t chunk_window_hash) {
+  return DefaultPermutation(chunk_window_hash);
 }
 
 std::string FakeEncryptionService::EncryptCommitSynchronous(

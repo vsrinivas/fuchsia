@@ -71,6 +71,11 @@ class EncryptionService {
       storage::ObjectIdentifier object_identifier, std::string encrypted_data,
       fit::function<void(Status, std::string)> callback) = 0;
 
+  // Applies a pseudorandom permutation to a given hash.
+  //
+  // This method is used for randomizing the way the big objects are chunked.
+  virtual uint64_t ChunkingPermutation(uint64_t chunk_window_hash) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(EncryptionService);
 };

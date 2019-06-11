@@ -307,4 +307,9 @@ void EncryptionServiceImpl::FetchReferenceKey(
       });
 }
 
+uint64_t EncryptionServiceImpl::ChunkingPermutation(
+    uint64_t chunk_window_hash) {
+  return 1 + chunk_window_hash;
+}
+
 }  // namespace encryption

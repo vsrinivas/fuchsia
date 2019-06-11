@@ -412,6 +412,9 @@ void PageStorageImpl::AddObjectFromLocal(
         return encryption_service_->MakeObjectIdentifier(
             std::move(object_digest));
       },
+      [this](uint64_t chunk_window_hash) {
+        return encryption_service_->ChunkingPermutation(chunk_window_hash);
+      },
       [this, waiter, managed_data_source = std::move(managed_data_source),
        tree_references = std::move(tree_references),
        callback = std::move(traced_callback)](

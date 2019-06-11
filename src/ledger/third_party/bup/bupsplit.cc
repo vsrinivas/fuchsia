@@ -29,6 +29,7 @@
  */
 #include "src/ledger/third_party/bup/bupsplit.h"
 
+#include <lib/fit/function.h>
 #include <memory.h>
 #include <stdint.h>
 
@@ -50,7 +51,13 @@ RollSumSplit::RollSumSplit(size_t min_length, size_t max_length)
   Reset();
 }
 
-RollSumSplit::RollSumSplit(const RollSumSplit& other) = default;
+RollSumSplit::RollSumSplit(size_t min_length, size_t max_length,
+                           fit::function<uint64_t(uint64_t)> hash_permutation)
+    : min_length_(min_length),
+      max_length_(max_length),
+      hash_permutation_(std::move(hash_permutation)) {
+  Reset();
+}
 
 void RollSumSplit::Reset() {
   current_length_ = 0u;
@@ -65,7 +72,7 @@ size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
     Roll(buffer[i]);
     ++current_length_;
     if (current_length_ >= min_length_ &&
-        ((s2_ & (kBlobSize - 1)) == ((~0) & (kBlobSize - 1)) ||
+        ((p_s2_ & (kBlobSize - 1)) == ((~0) & (kBlobSize - 1)) ||
          current_length_ >= max_length_)) {
       if (bits) {
         uint32_t rsum = Digest();
@@ -85,6 +92,7 @@ size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
 void RollSumSplit::Add(uint8_t drop, uint8_t add) {
   s1_ += add - drop;
   s2_ += s1_ - (kWindowSize * (drop + kRollsumCharOffset));
+  p_s2_ = hash_permutation_ ? hash_permutation_(s2_) : s2_;
 }
 
 void RollSumSplit::Roll(uint8_t c) {
@@ -93,6 +101,6 @@ void RollSumSplit::Roll(uint8_t c) {
   window_index_ = (window_index_ + 1) % kWindowSize;
 }
 
-uint32_t RollSumSplit::Digest() { return (s1_ << 16) | (s2_ & 0xffff); }
+uint32_t RollSumSplit::Digest() { return (s1_ << 16) | (p_s2_ & 0xffff); }
 
 }  // namespace bup

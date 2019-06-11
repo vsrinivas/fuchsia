@@ -108,6 +108,9 @@ ObjectIdentifier ForEachPiece(
         return encryption::MakeDefaultObjectIdentifier(
             std::move(object_digest));
       },
+      [](uint64_t chunk_window_hash) {
+        return encryption::DefaultPermutation(chunk_window_hash);
+      },
       [&result, callback = std::move(callback)](IterationStatus status,
                                                 std::unique_ptr<Piece> piece) {
         if (status == IterationStatus::DONE) {

@@ -11,6 +11,7 @@
 #include <memory>
 #include <sstream>
 
+#include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
@@ -64,13 +65,16 @@ class SplitContext {
  public:
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
+      fit::function<uint64_t(uint64_t)> chunk_permutation,
       fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback,
       ObjectType object_type)
       : make_object_identifier_(std::move(make_object_identifier)),
         callback_(std::move(callback)),
         object_type_(object_type),
-        roll_sum_split_(kMinChunkSize, kMaxChunkSize) {}
+        roll_sum_split_(kMinChunkSize, kMaxChunkSize,
+                        std::move(chunk_permutation)) {}
   SplitContext(SplitContext&& other) = default;
+  SplitContext& operator=(SplitContext&& other) = default;
   ~SplitContext() {}
 
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk,
@@ -324,7 +328,7 @@ class SplitContext {
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
   fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback_;
   // The object encoded by DataSource.
-  const ObjectType object_type_;
+  ObjectType object_type_;
   bup::RollSumSplit roll_sum_split_;
   // The list of chunks from the initial source that are not yet entirely
   // consumed.
@@ -401,8 +405,10 @@ void CollectPiecesInternal(ObjectIdentifier root,
 void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
+    fit::function<uint64_t(uint64_t)> chunk_permutation,
     fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback) {
-  SplitContext context(std::move(make_object_identifier), std::move(callback),
+  SplitContext context(std::move(make_object_identifier),
+                       std::move(chunk_permutation), std::move(callback),
                        object_type);
   source->Get([context = std::move(context)](
                   std::unique_ptr<DataSource::DataChunk> chunk,

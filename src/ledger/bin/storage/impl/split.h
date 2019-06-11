@@ -14,7 +14,7 @@
 
 namespace storage {
 
-// Status for the |SplitDataSource| and |CollectXXXPieces| callbacks.
+// Status for the |SplitDataSource| and |CollectPieces| callbacks.
 enum class IterationStatus {
   DONE,
   IN_PROGRESS,
@@ -31,6 +31,7 @@ enum class IterationStatus {
 void SplitDataSource(
     DataSource* source, ObjectType type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
+    fit::function<uint64_t(uint64_t)> chunk_permutation,
     fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback);
 
 // Iterates over the children of an index object.

@@ -30,6 +30,7 @@
 #ifndef SRC_LEDGER_THIRD_PARTY_BUP_BUPSPLIT_H_
 #define SRC_LEDGER_THIRD_PARTY_BUP_BUPSPLIT_H_
 
+#include <lib/fit/function.h>
 #include <stdint.h>
 
 #include "src/lib/fxl/macros.h"
@@ -56,8 +57,14 @@ class RollSumSplit {
   // |max_length| is the maximal size of a chunk.
   RollSumSplit(size_t min_length, size_t max_length);
 
-  // Copy constructor.
-  RollSumSplit(const RollSumSplit& other);
+  // |hash_permutation| is a function applied to the current hash while
+  // determining the split points.
+  RollSumSplit(size_t min_length, size_t max_length,
+               fit::function<uint64_t(uint64_t)> hash_permutation);
+
+  // Disallow copy and assignment.
+  RollSumSplit(RollSumSplit&&) = default;
+  RollSumSplit& operator=(RollSumSplit&&) = default;
 
   // Reset the state of the rolling hash.
   void Reset();
@@ -74,10 +81,11 @@ class RollSumSplit {
   void Roll(uint8_t c);
   uint32_t Digest();
 
-  const size_t min_length_;
-  const size_t max_length_;
+  size_t min_length_;
+  size_t max_length_;
+  fit::function<uint64_t(uint64_t)> hash_permutation_;
   size_t current_length_;
-  uint64_t s1_, s2_;
+  uint64_t s1_, s2_, p_s2_;
   uint8_t window_[kWindowSize];
   size_t window_index_;
 };

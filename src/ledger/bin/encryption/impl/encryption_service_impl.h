@@ -43,6 +43,7 @@ class EncryptionServiceImpl : public EncryptionService {
   void DecryptObject(
       storage::ObjectIdentifier object_identifier, std::string encrypted_data,
       fit::function<void(Status, std::string)> callback) override;
+  uint64_t ChunkingPermutation(uint64_t chunk_window_hash) override;
 
  private:
   class KeyService;

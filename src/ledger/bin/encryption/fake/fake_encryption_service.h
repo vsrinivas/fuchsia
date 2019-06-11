@@ -23,6 +23,11 @@ namespace encryption {
 storage::ObjectIdentifier MakeDefaultObjectIdentifier(
     storage::ObjectDigest digest);
 
+// Do a static permutation.
+// This method applies a static permutation to a |chunk_window_hash|. It does
+// not depend on any keys.
+uint64_t DefaultPermutation(uint64_t chunk_window_hash);
+
 class FakeEncryptionService : public EncryptionService {
  public:
   explicit FakeEncryptionService(async_dispatcher_t* dispatcher);
@@ -46,6 +51,7 @@ class FakeEncryptionService : public EncryptionService {
   void DecryptObject(
       storage::ObjectIdentifier object_identifier, std::string encrypted_data,
       fit::function<void(Status, std::string)> callback) override;
+  uint64_t ChunkingPermutation(uint64_t chunk_window_hash) override;
 
   // Synchronously encrypts the given commit.
   std::string EncryptCommitSynchronous(
