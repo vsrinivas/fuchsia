@@ -92,21 +92,12 @@ zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& rootdir, const fbl:
 
 // Waits for the relative |path| starting in |dir| to appear, and opens it.
 zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fbl::unique_fd* out) {
-    // TODO(FLK-299): Remove this once the root cause is found.
-    printf("[%ld ms] RecursiveWaitForFile: %s\n", zx::clock::get_monotonic().get() / ZX_MSEC(1),
-        path);
     char path_copy[PATH_MAX];
     if (strlen(path) >= sizeof(path_copy)) {
         return ZX_ERR_INVALID_ARGS;
     }
     strcpy(path_copy, path);
-    zx_status_t status = RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, out);
-    if (status != ZX_OK) {
-        // TODO(FLK-299): Remove this once the root cause is found.
-        printf("[%ld ms] RecursiveWaitForFile: %s, failed %d\n",
-            zx::clock::get_monotonic().get() / ZX_MSEC(1), path, status);
-    }
-    return status;
+    return RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, out);
 }
 
 } // namespace devmgr_integration_test
