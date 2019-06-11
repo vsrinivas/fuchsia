@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <new>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
@@ -19,6 +20,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/idle_states.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
@@ -27,6 +29,7 @@
 #include <dev/interrupt.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <zircon/types.h>
 
@@ -50,6 +53,10 @@ static uint8_t unsafe_kstack[PAGE_SIZE] __ALIGNED(16);
 // used in a non-smp environment.
 volatile uint8_t fake_monitor;
 
+// Also set up a fake table of idle states.
+x86_idle_states_t fake_supported_idle_states = {.states = {X86_BASE_CSTATE(0)}};
+X86IdleStates fake_idle_states = X86IdleStates(&fake_supported_idle_states);
+
 // Pre-initialize the per cpu structure for the boot cpu. Referenced by
 // early boot code prior to being able to initialize via code.
 struct x86_percpu bp_percpu = {
@@ -62,6 +69,7 @@ struct x86_percpu bp_percpu = {
 
     .blocking_disallowed = {},
     .monitor = &fake_monitor,
+    .idle_states = &fake_idle_states,
 
     // Start with an invalid ID until we know the local APIC is set up.
     .apic_id = INVALID_APIC_ID,
@@ -103,6 +111,26 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
             bp_percpu.monitor = monitors;
             for (uint i = 1; i < cpu_count; ++i) {
                 ap_percpus[i - 1].monitor = monitors + (i * monitor_size);
+            }
+
+            uint16_t idle_states_size = sizeof(X86IdleStates);
+            if (idle_states_size < MAX_CACHE_LINE) {
+                idle_states_size = MAX_CACHE_LINE;
+            }
+            X86IdleStates* idle_states =
+                (X86IdleStates*)memalign(idle_states_size, idle_states_size * cpu_count);
+            if (idle_states == nullptr) {
+                return ZX_ERR_NO_MEMORY;
+            }
+            const x86_idle_states_t* supported_idle_states = x86_get_idle_states();
+            bp_percpu.idle_states = idle_states;
+            // Placement new the BP idle-states table.
+            new (bp_percpu.idle_states) X86IdleStates(supported_idle_states);
+            for (uint i = 1; i < cpu_count; ++i) {
+                ap_percpus[i - 1].idle_states = reinterpret_cast<X86IdleStates*>(
+                    reinterpret_cast<uintptr_t>(idle_states) + (i * idle_states_size));
+                // Placement new the other idle-states tables.
+                new (ap_percpus[i - 1].idle_states) X86IdleStates(supported_idle_states);
             }
         }
     }
@@ -300,12 +328,18 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
         struct x86_percpu* percpu = x86_get_percpu();
         for (;;) {
             while (*percpu->monitor) {
+                X86IdleState* next_state = percpu->idle_states->PickIdleState();
                 x86_monitor(percpu->monitor);
                 // Check percpu->monitor in case it was cleared between the first check and
                 // the monitor being armed. Any writes after arming the monitor will trigger
                 // it and cause mwait to return, so there aren't races after this check.
                 if (*percpu->monitor) {
-                    x86_mwait();
+                    auto start = current_time();
+                    x86_mwait(next_state->MwaitHint());
+                    auto duration = zx_time_sub_time(current_time(), start);
+
+                    next_state->RecordDuration(duration);
+                    next_state->CountEntry();
                 }
             }
             thread_preempt();
@@ -458,3 +492,48 @@ void arch_flush_state_and_halt(event_t* flush_done) {
                          : "memory");
     }
 }
+
+static void reset_idle_counters(X86IdleStates* idle_states) {
+    for (int i = 0; i < idle_states->NumStates(); i++) {
+        idle_states->States()[i].ResetCounters();
+    }
+}
+
+static void report_idlestats(int cpu_num, const X86IdleStates& idle_states) {
+    printf("CPU %d:\n", cpu_num);
+    const X86IdleState* states = idle_states.ConstStates();
+    for (int i = 0; i < idle_states.NumStates(); i++) {
+        printf("\t%4s (MWAIT %02X): %lu entries, %lu ns avg duration (%ld ns total)\n",
+               states[i].Name(), states[i].MwaitHint(), states[i].TimesEntered(),
+               states[i].TimesEntered() > 0
+                   ? states[i].CumulativeDuration() / (states[i].TimesEntered())
+                   : 0l,
+               states[i].CumulativeDuration());
+    }
+}
+
+static int cmd_idlestats(int argc, const cmd_args* argv, uint32_t flags) {
+    if (argc < 2) {
+    usage:
+        printf("Usage: %s (reset|print)\n", argv[0].str);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (!strcmp(argv[1].str, "reset")) {
+        reset_idle_counters(bp_percpu.idle_states);
+        for (int i = 1; i < x86_num_cpus; ++i) {
+            reset_idle_counters(ap_percpus[i - 1].idle_states);
+        }
+    } else if (!strcmp(argv[1].str, "print")) {
+        report_idlestats(0, *bp_percpu.idle_states);
+        for (int i = 1; i < x86_num_cpus; ++i) {
+            report_idlestats(i, *ap_percpus[i - 1].idle_states);
+        }
+    } else {
+        goto usage;
+    }
+    return ZX_OK;
+}
+
+STATIC_COMMAND_START
+STATIC_COMMAND("idlestats", "print idle stats or reset counters", &cmd_idlestats)
+STATIC_COMMAND_END(idlestats)

@@ -10,6 +10,7 @@
 #include <zircon/compiler.h>
 #include <stdint.h>
 #include <arch/x86.h>
+#include <arch/x86/idle_states.h>
 
 #ifdef __cplusplus
 
@@ -318,6 +319,8 @@ typedef struct {
     x86_reboot_system_func_t reboot_system;
 
     bool disable_c1e;
+
+    x86_idle_states_t idle_states;
 } x86_microarch_config_t;
 
 static inline const x86_microarch_config_t* x86_get_microarch_config(void) {

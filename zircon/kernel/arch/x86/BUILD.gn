@@ -82,6 +82,7 @@ library("x86") {
     "feature.cpp",
     "gdt.S",
     "hwp.cpp",
+    "idle_states.cpp",
     "idt.cpp",
     "intel.cpp",
     "ioapic.cpp",
@@ -167,6 +168,7 @@ source_set("syscall") {
 
 source_set("tests") {
   sources = [
+    "idle_states_test.cpp",
     "mmu_tests.cpp",
     "platform_tests.cpp",
     "system_topology_test.cpp",

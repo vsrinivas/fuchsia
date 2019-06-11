@@ -15,9 +15,9 @@
 //      ZX_TLS_STACK_GUARD_OFFSET      0x10
 //      ZX_TLS_UNSAFE_SP_OFFSET        0x18
 #define PERCPU_SAVED_USER_SP_OFFSET    0x20
-#define PERCPU_GPF_RETURN_OFFSET       0x40
-#define PERCPU_CPU_NUM_OFFSET          0x48
-#define PERCPU_DEFAULT_TSS_OFFSET      0x50
+#define PERCPU_GPF_RETURN_OFFSET       0x48
+#define PERCPU_CPU_NUM_OFFSET          0x50
+#define PERCPU_DEFAULT_TSS_OFFSET      0x60
 
 /* offset of default_tss.rsp0 */
 #define PERCPU_KERNEL_SP_OFFSET        (PERCPU_DEFAULT_TSS_OFFSET + 4)
@@ -25,6 +25,7 @@
 #ifndef __ASSEMBLER__
 
 #include <arch/x86.h>
+#include <arch/x86/idle_states.h>
 #include <arch/x86/idt.h>
 #include <assert.h>
 #include <kernel/align.h>
@@ -58,6 +59,9 @@ struct x86_percpu {
 
     /* Memory for IPI-free rescheduling of idle CPUs with monitor/mwait. */
     volatile uint8_t* monitor;
+
+    /* Supported mwait C-states for idle CPUs. */
+    X86IdleStates *idle_states;
 
     /* local APIC id */
     uint32_t apic_id;
