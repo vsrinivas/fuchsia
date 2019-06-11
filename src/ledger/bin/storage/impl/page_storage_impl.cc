@@ -569,8 +569,10 @@ void PageStorageImpl::GetPiece(
           fit::function<void(Status, std::unique_ptr<const Piece>)>
               callback) mutable {
         std::unique_ptr<const Piece> piece;
-        Status status =
-            db_->ReadObject(handler, std::move(object_identifier), &piece);
+        std::unique_ptr<const ObjectToken> token;
+        Status status = db_->ReadObject(handler, std::move(object_identifier),
+                                        &piece, &token);
+        // TODO(kerneis): handle token.
         callback(status, std::move(piece));
       });
 }
@@ -689,10 +691,15 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     if (GetObjectDigestInfo(object_identifier.object_digest()).piece_type ==
         PieceType::INDEX) {
       std::unique_ptr<const Piece> piece;
-      status = db_->ReadObject(handler, object_identifier, &piece);
+      std::unique_ptr<const ObjectToken> token;
+      status = db_->ReadObject(handler, object_identifier, &piece, &token);
       if (status != Status::OK) {
         return status;
       }
+      // The token can be safely discarded: either the read piece is provided by
+      // the caller, which is responsible for keeping it alive, or it is
+      // referenced by its parent piece so it has on-disk references.
+      token.reset();
 
       fxl::StringView content = piece->GetData();
 

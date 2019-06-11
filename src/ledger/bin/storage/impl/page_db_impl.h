@@ -12,6 +12,7 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
+#include "src/ledger/bin/storage/impl/piece_tracker.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -27,6 +28,10 @@ class PageDbImpl : public PageDb {
   PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db);
   ~PageDbImpl() override;
 
+  // Provides read-only access to the object tracker for statistics and tests.
+  const PieceTracker& object_tracker() { return object_tracker_; }
+
+  // PageDb:
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<PageDb::Batch>* batch) override;
   Status GetHeads(
@@ -40,7 +45,8 @@ class PageDbImpl : public PageDb {
                                std::string* storage_bytes) override;
   Status ReadObject(coroutine::CoroutineHandler* handler,
                     const ObjectIdentifier& object_identifier,
-                    std::unique_ptr<const Piece>* piece) override;
+                    std::unique_ptr<const Piece>* piece,
+                    std::unique_ptr<const ObjectToken>* token) override;
   Status HasObject(coroutine::CoroutineHandler* handler,
                    const ObjectIdentifier& object_identifier) override;
   Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
@@ -93,6 +99,7 @@ class PageDbImpl : public PageDb {
 
  private:
   ledger::Environment* environment_;
+  PieceTracker object_tracker_;
   std::unique_ptr<Db> db_;
 };
 

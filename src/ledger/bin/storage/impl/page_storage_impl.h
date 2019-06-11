@@ -147,6 +147,8 @@ class PageStorageImpl : public PageStorage {
       fit::function<void(Status, std::unique_ptr<const Object>)>)>;
 
   // Marks all pieces needed for the given objects as local.
+  // The caller is responsible for keeping an ObjectToken to objects in
+  // |object_identifiers|; this method will not attempt to keep them alive.
   FXL_WARN_UNUSED_RESULT Status
   MarkAllPiecesLocal(coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
                      std::vector<ObjectIdentifier> object_identifiers);
