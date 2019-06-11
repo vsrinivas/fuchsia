@@ -60,7 +60,9 @@ std::unique_ptr<CodecAdmission> CodecAdmissionControl::TryAddCodecInternal(
 
 CodecAdmissionControl::CodecAdmissionControl(
     async_dispatcher_t* shared_fidl_dispatcher)
-    : shared_fidl_dispatcher_(shared_fidl_dispatcher) {
+    : shared_fidl_dispatcher_(shared_fidl_dispatcher),
+      single_instance_codec_count_(0),
+      multi_instance_codec_count_(0) {
   ZX_DEBUG_ASSERT(shared_fidl_dispatcher_);
 }
 

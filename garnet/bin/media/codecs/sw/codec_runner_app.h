@@ -39,14 +39,10 @@ class CodecRunnerApp {
               // This runner only expects a single Local Codec Factory to ever
               // be requested.
               FXL_DCHECK(!codec_factory_);
-              startup_context_->outgoing()
-                  .deprecated_services()
-                  ->RemoveService<fuchsia::mediacodec::CodecFactory>();
 
               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
               startup_context_->ConnectToEnvironmentService(
                   sysmem.NewRequest());
-
               codec_factory_ =
                   std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(
                       loop_.dispatcher(), std::move(sysmem), std::move(request),
@@ -67,6 +63,12 @@ class CodecRunnerApp {
                         // Drop factory and close factory channel on error.
                         codec_factory_.reset();
                       });
+              // This call deletes the presently-running lambda, so nothing
+              // after this call can use the lambda's captures, including the
+              // "this" pointer implicitly.
+              startup_context_->outgoing()
+                  .deprecated_services()
+                  ->RemoveService<fuchsia::mediacodec::CodecFactory>();
             }));
 
     loop_.Run();
