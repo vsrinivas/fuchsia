@@ -164,9 +164,13 @@ pub async fn test_forget(test_state: HostDriverHarness) -> Result<(), Error> {
     // Start discovery and let bt-host process the fake peers.
     await!(test_state.host_proxy().start_discovery())?;
 
+    // Wait for fake peer to be discovered.
+    let expected_peer = expectation::peer::address(FAKE_LE_DEVICE_ADDR);
+    await!(test_state.expect_peer(None, expected_peer))?;
+
     let peers = await!(test_state.host_proxy().list_devices())?;
 
-    // Obtain bt-host assigned IDs of the peer.
+    // Obtain bt-host assigned ID of the peer.
     let le_peer = peers
         .iter()
         .find(|x| x.address == FAKE_LE_DEVICE_ADDR)
