@@ -273,7 +273,11 @@ zx_status_t DeviceControllerConnection::HandleRead() {
             fuchsia_io_DirectoryOpenOrdinal);
 
     auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-    if (hdr->ordinal == fuchsia_io_DirectoryOpenOrdinal) {
+    // Depending on the state of the migration, GenOrdinal and Ordinal may be the
+    // same value.  See FIDL-524.
+    uint32_t ordinal = hdr->ordinal;
+    if (ordinal == fuchsia_io_DirectoryOpenOrdinal ||
+        ordinal == fuchsia_io_DirectoryOpenGenOrdinal) {
         log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
 
         fidl_txn_t dh_null_txn = {

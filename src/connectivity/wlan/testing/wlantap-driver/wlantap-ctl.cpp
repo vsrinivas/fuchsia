@@ -78,7 +78,11 @@ zx_status_t DecodeCreatePhyRequest(
   }
   auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
   *out_txid = hdr->txid;
-  if (hdr->ordinal != fuchsia_wlan_tap_WlantapCtlCreatePhyOrdinal) {
+  // Depending on the state of the migration, GenOrdinal and Ordinal may be the
+  // same value.  See FIDL-524.
+  uint32_t ordinal = hdr->ordinal;
+  if (ordinal != fuchsia_wlan_tap_WlantapCtlCreatePhyOrdinal &&
+      ordinal != fuchsia_wlan_tap_WlantapCtlCreatePhyGenOrdinal) {
     zxlogf(ERROR, "wlantapctl: ordinal not supported, expecting %u, got %u\n",
            fuchsia_wlan_tap_WlantapCtlCreatePhyOrdinal, hdr->ordinal);
     return ZX_ERR_NOT_SUPPORTED;

@@ -93,7 +93,7 @@ size_t FillLogMessagePayload(fuchsia_logger_LogMessage* lm, fidl_string_t* strin
 
 // Encode |log_msgs| with help from other helpers and writes the msg to
 // |listener|.
-zx_status_t SendLogMessagesHelper(const zx::channel& listener, int oridinal,
+zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint32_t ordinal,
                                   const fbl::Vector<LogMessage>& log_msgs) {
     size_t n_msgs = log_msgs.size();
     if (n_msgs == 0) {
@@ -108,7 +108,8 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, int oridinal,
 
     size_t msg_len = sizeof(fidl_message_header_t) + n_msgs * sizeof(fuchsia_logger_LogMessage) +
                      tags_n_msgs * sizeof(fidl_string_t) + FIDL_ALIGN(len);
-    if (oridinal == fuchsia_logger_LogListenerLogManyOrdinal || oridinal == fuchsia_logger_LogListenerLogManyGenOrdinal) {
+    if (ordinal == fuchsia_logger_LogListenerLogManyOrdinal ||
+        ordinal == fuchsia_logger_LogListenerLogManyGenOrdinal) {
         msg_len += sizeof(fidl_vector_t);
     }
     if (msg_len > UINT32_MAX) {
@@ -117,9 +118,10 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, int oridinal,
     uint8_t msg[msg_len];
     memset(msg, 0, msg_len);
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg);
-    hdr->ordinal = oridinal;
+    hdr->ordinal = ordinal;
     fuchsia_logger_LogMessage* fidl_log_msg = reinterpret_cast<fuchsia_logger_LogMessage*>(hdr + 1);
-    if (oridinal == fuchsia_logger_LogListenerLogManyOrdinal || oridinal == fuchsia_logger_LogListenerLogManyGenOrdinal) {
+    if (ordinal == fuchsia_logger_LogListenerLogManyOrdinal ||
+        ordinal == fuchsia_logger_LogListenerLogManyGenOrdinal) {
         fidl_vector_t* vector = reinterpret_cast<fidl_vector_t*>(hdr + 1);
         vector->count = n_msgs;
         vector->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);

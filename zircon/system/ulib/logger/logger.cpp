@@ -171,12 +171,13 @@ zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer, asyn
         return ZX_ERR_INVALID_ARGS;
 
     // This is an if statement because, depending on the state of the ordinal
-    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
-    if (message.ordinal() == fuchsia_logger_LogSinkConnectOrdinal ||
-        message.ordinal() == fuchsia_logger_LogSinkConnectGenOrdinal) {
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = message.ordinal();
+    if (ordinal == fuchsia_logger_LogSinkConnectOrdinal ||
+        ordinal == fuchsia_logger_LogSinkConnectGenOrdinal) {
         return Connect(std::move(message), dispatcher);
     } else {
-        fprintf(stderr, "logger: error: Unknown message ordinal: %d\n", message.ordinal());
+        fprintf(stderr, "logger: error: Unknown message ordinal: %u\n", ordinal);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }

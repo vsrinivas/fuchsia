@@ -1413,7 +1413,7 @@ int ftruncate(int fd, off_t len) {
 // Using zircon kernel primitives (cookies) to authenticate the vnode token, this
 // allows these multi-path operations to mix absolute / relative paths and cross
 // mount points with ease.
-static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
+static int two_path_op_at(uint32_t ordinal, int olddirfd, const char* oldpath,
                           int newdirfd, const char* newpath) {
     char oldname[NAME_MAX + 1];
     fdio_t* io_oldparent;
@@ -1434,11 +1434,13 @@ static int two_path_op_at(uint32_t op, int olddirfd, const char* oldpath,
         goto newparent_open;
     }
 
-    if (op == fuchsia_io_DirectoryRenameOrdinal) {
+    if (ordinal == fuchsia_io_DirectoryRenameOrdinal ||
+        ordinal == fuchsia_io_DirectoryRenameGenOrdinal) {
         status = fdio_get_ops(io_oldparent)->rename(io_oldparent, oldname,
                                                     strlen(oldname), token, newname,
                                                     strlen(newname));
-    } else if (op == fuchsia_io_DirectoryLinkOrdinal) {
+    } else if (ordinal == fuchsia_io_DirectoryLinkOrdinal ||
+               ordinal == fuchsia_io_DirectoryLinkGenOrdinal) {
         status = fdio_get_ops(io_oldparent)->link(io_oldparent, oldname, strlen(oldname),
                                                   token, newname, strlen(newname));
     } else {

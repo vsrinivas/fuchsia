@@ -129,8 +129,11 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
     }
 
     auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
-    switch (hdr->ordinal) {
-    case fuchsia_tracing_provider_ProviderInitializeOrdinal: {
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = hdr->ordinal;
+    if (ordinal == fuchsia_tracing_provider_ProviderInitializeOrdinal ||
+        ordinal == fuchsia_tracing_provider_ProviderInitializeGenOrdinal) {
         zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderInitializeRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
@@ -165,8 +168,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
         impl_->Initialize(trace_buffering_mode, std::move(buffer), std::move(fifo),
                           std::move(categories));
         return true;
-    }
-    case fuchsia_tracing_provider_ProviderStartOrdinal: {
+    } else if (ordinal == fuchsia_tracing_provider_ProviderStartOrdinal ||
+               ordinal == fuchsia_tracing_provider_ProviderStartGenOrdinal) {
         zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderStartRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
@@ -197,8 +200,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
         }
         impl_->Start(start_mode, std::move(categories));
         return true;
-    }
-    case fuchsia_tracing_provider_ProviderStopOrdinal: {
+    } else if (ordinal == fuchsia_tracing_provider_ProviderStopOrdinal ||
+               ordinal == fuchsia_tracing_provider_ProviderStopGenOrdinal) {
         zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderStopRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
@@ -208,8 +211,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
 
         impl_->Stop();
         return true;
-    }
-    case fuchsia_tracing_provider_ProviderTerminateOrdinal: {
+    } else if (ordinal == fuchsia_tracing_provider_ProviderTerminateOrdinal ||
+               ordinal == fuchsia_tracing_provider_ProviderTerminateGenOrdinal) {
         zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderTerminateRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
@@ -219,10 +222,9 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
 
         impl_->Terminate();
         return true;
+    } else {
+        return false;
     }
-    }
-
-    return false;
 }
 
 void TraceProviderImpl::Connection::Close() {

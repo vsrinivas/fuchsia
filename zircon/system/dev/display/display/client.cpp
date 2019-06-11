@@ -19,57 +19,63 @@
 
 #include "client.h"
 
-#define SELECT_TABLE_CASE(NAME) case NAME ## Ordinal: table = &NAME ## RequestTable; break
+#define BEGIN_TABLE_CASE                                                                           \
+    if (false) {
+#define SELECT_TABLE_CASE(NAME)                                                                    \
+    } else if (ordinal == NAME ## Ordinal ||                                                       \
+               ordinal == NAME ## GenOrdinal) {                                                    \
+        table = &NAME ## RequestTable;
 #define HANDLE_REQUEST_CASE(NAME)                                                                  \
-    case fuchsia_hardware_display_Controller##NAME##Ordinal: {                                     \
+    } else if (ordinal == fuchsia_hardware_display_Controller##NAME##Ordinal ||                    \
+               ordinal == fuchsia_hardware_display_Controller##NAME##GenOrdinal) {                 \
         auto req = reinterpret_cast<const fuchsia_hardware_display_Controller##NAME##Request*>(    \
             msg.bytes().data());                                                                   \
-        Handle##NAME(req, &builder, &out_type);                                                    \
-        break;                                                                                     \
-    }
+        Handle##NAME(req, &builder, &out_type);
 
 namespace {
 
 zx_status_t decode_message(fidl::Message* msg) {
     zx_status_t res;
     const fidl_type_t* table = nullptr;
-    switch (msg->ordinal()) {
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportVmoImage);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportImage);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseImage);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportEvent);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseEvent);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCreateLayer);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerDestroyLayer);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayMode);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayColorConversion);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayLayers);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryConfig);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryPosition);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryAlpha);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorConfig);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorPosition);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerColorConfig);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerImage);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCheckConfig);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerApplyConfig);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerEnableVsync);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetVirtconMode);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerComputeLinearImageStride);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerAllocateVmo);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportBufferCollection);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetBufferCollectionConstraints);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseBufferCollection);
-        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerGetSingleBufferFramebuffer);
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = msg->ordinal();
+    BEGIN_TABLE_CASE
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportVmoImage);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportImage);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseImage);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportEvent);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseEvent);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCreateLayer);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerDestroyLayer);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayMode);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayColorConversion);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayLayers);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryConfig);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryPosition);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryAlpha);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorConfig);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorPosition);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerColorConfig);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerImage);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCheckConfig);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerApplyConfig);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerEnableVsync);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetVirtconMode);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerComputeLinearImageStride);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerAllocateVmo);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportBufferCollection);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetBufferCollectionConstraints);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseBufferCollection);
+    SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerGetSingleBufferFramebuffer);
     }
-    if (table != nullptr) {
-        const char* err;
-        if ((res = msg->Decode(table, &err)) != ZX_OK) {
-            zxlogf(INFO, "Error decoding message %d: %s\n", msg->ordinal(), err);
-        }
-    } else {
-        zxlogf(INFO, "Unknown fidl ordinal %d\n", msg->ordinal());
-        res = ZX_ERR_NOT_SUPPORTED;
+    if (!table) {
+        zxlogf(INFO, "Unknown fidl ordinal %u\n", ordinal);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* err;
+    if ((res = msg->Decode(table, &err)) != ZX_OK) {
+        zxlogf(INFO, "Error decoding message %u: %s\n", ordinal, err);
     }
     return res;
 }
@@ -167,7 +173,10 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
     bool has_out_handle = false;
     const fidl_type_t* out_type = nullptr;
 
-    switch (msg.ordinal()) {
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = msg.ordinal();
+    BEGIN_TABLE_CASE
     HANDLE_REQUEST_CASE(ImportVmoImage);
     HANDLE_REQUEST_CASE(ImportImage);
     HANDLE_REQUEST_CASE(ReleaseImage);
@@ -193,21 +202,19 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
     HANDLE_REQUEST_CASE(ImportBufferCollection);
     HANDLE_REQUEST_CASE(ReleaseBufferCollection);
     HANDLE_REQUEST_CASE(SetBufferCollectionConstraints);
-    case fuchsia_hardware_display_ControllerAllocateVmoOrdinal: {
+    } else if (ordinal == fuchsia_hardware_display_ControllerAllocateVmoOrdinal ||
+               ordinal == fuchsia_hardware_display_ControllerAllocateVmoGenOrdinal) {
         auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
             msg.bytes().data());
         HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
-        break;
-    }
-    case fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal: {
+    } else if (ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal ||
+               ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferGenOrdinal) {
         auto r = reinterpret_cast<
             const fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequest*>(
             msg.bytes().data());
         HandleGetSingleBufferFramebuffer(r, &builder, &out_handle, &has_out_handle, &out_type);
-        break;
-    }
-    default:
-        zxlogf(INFO, "Unknown ordinal %d\n", msg.ordinal());
+    } else {
+        zxlogf(INFO, "Unknown ordinal %u\n", msg.ordinal());
     }
 
     fidl::BytePart resp_bytes = builder.Finalize();

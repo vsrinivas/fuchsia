@@ -366,7 +366,7 @@ zx_status_t Device::HandleRead() {
 
     // TODO: Check txid on the message
     // This is an if statement because, depending on the state of the ordinal
-    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
     uint32_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_device_manager_DeviceControllerBindDriverOrdinal ||
         ordinal == fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal) {

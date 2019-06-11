@@ -79,7 +79,7 @@ void vc_toggle_framebuffer() {
 }
 
 static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
-    fidl_message_header_t* header = (fidl_message_header_t*) bytes;
+    fidl_message_header_t* hdr = (fidl_message_header_t*) bytes;
 
     if (num_bytes < sizeof(fidl_message_header_t)) {
         printf("vc: Unexpected short message (size=%d)\n", num_bytes);
@@ -88,18 +88,23 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     zx_status_t res;
 
     const fidl_type_t* table = nullptr;
-    if (header->ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal) {
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = hdr->ordinal;
+    if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
+        ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
         table = &fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
-    } else if (header->ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal) {
+    } else if (ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal ||
+               ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal) {
         table = &fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
     }
     if (table != nullptr) {
         const char* err;
         if ((res = fidl_decode(table, bytes, num_bytes, nullptr, 0, &err)) != ZX_OK) {
-            printf("vc: Error decoding message %d: %s\n", header->ordinal, err);
+            printf("vc: Error decoding message %u: %s\n", ordinal, err);
         }
     } else {
-        printf("vc: Error unknown ordinal %d\n", header->ordinal);
+        printf("vc: Error unknown ordinal %u\n", ordinal);
         res = ZX_ERR_NOT_SUPPORTED;
     }
     return res;
@@ -592,23 +597,22 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
         return ZX_OK;
     }
 
-    fidl_message_header_t* header = (fidl_message_header_t*) fidl_buffer;
-    switch (header->ordinal) {
-    case fuchsia_hardware_display_ControllerDisplaysChangedOrdinal: {
+    fidl_message_header_t* hdr = (fidl_message_header_t*) fidl_buffer;
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = hdr->ordinal;
+    if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
+        ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
         handle_display_changed(
             reinterpret_cast<fuchsia_hardware_display_ControllerDisplaysChangedEvent*>(
                 fidl_buffer));
-        break;
-    }
-    case fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal: {
+    } else if (ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal ||
+               ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal) {
         auto evt = reinterpret_cast<fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*>(
             fidl_buffer);
         handle_ownership_change(evt);
-        break;
-    }
-    default:
-        printf("vc: Unknown display callback message %d\n", header->ordinal);
-        break;
+    } else {
+        printf("vc: Unknown display callback message %u\n", ordinal);
     }
 
     return ZX_OK;

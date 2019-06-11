@@ -93,7 +93,7 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     if (!message.has_header())
         return ZX_ERR_INVALID_ARGS;
     // This is an if statement because, depending on the state of the ordinal
-    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
     uint32_t ordinal = message.ordinal();
     if (ordinal == fuchsia_process_LauncherLaunchOrdinal ||
         ordinal == fuchsia_process_LauncherLaunchGenOrdinal) {

@@ -105,7 +105,7 @@ static bool bind_display(fbl::Vector<Display>* displays) {
             const char* err_msg;
             if (msg.Decode(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable,
                            &err_msg) != ZX_OK) {
-                printf("Fidl decode error %d %s\n", msg.ordinal(), err_msg);
+                printf("Fidl decode error %u %s\n", msg.ordinal(), err_msg);
                 return false;
             }
 
@@ -124,7 +124,7 @@ static bool bind_display(fbl::Vector<Display>* displays) {
                 ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
                     ->has_ownership;
         } else {
-            printf("Got unexpected message %d\n", msg.ordinal());
+            printf("Got unexpected message %u\n", msg.ordinal());
             return false;
         }
     }
@@ -263,20 +263,23 @@ zx_status_t wait_for_vsync(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& lay
         return ZX_ERR_STOP;
     }
 
-    switch (msg.ordinal()) {
-    case fuchsia_hardware_display_ControllerDisplaysChangedOrdinal:
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
+    uint32_t ordinal = msg.ordinal();
+    if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
+        ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
         printf("Display disconnected\n");
         return ZX_ERR_STOP;
-    case fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal:
+    } else if (ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal ||
+               ordinal == fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal) {
         printf("Ownership change\n");
         has_ownership =
             ((fuchsia_hardware_display_ControllerClientOwnershipChangeEvent*)msg.bytes().data())
                 ->has_ownership;
         return ZX_ERR_NEXT;
-    case fuchsia_hardware_display_ControllerVsyncOrdinal:
-        break;
-    default:
-        printf("Unknown ordinal %d\n", msg.ordinal());
+    } else if (ordinal == fuchsia_hardware_display_ControllerVsyncOrdinal ||
+               ordinal == fuchsia_hardware_display_ControllerVsyncGenOrdinal) {
+        printf("Unknown ordinal %u\n", ordinal);
         return ZX_ERR_STOP;
     }
 

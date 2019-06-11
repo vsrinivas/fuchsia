@@ -208,12 +208,16 @@ static zx_status_t AwaitIoOnOpenStatus(const zx::channel& channel) {
         return status;
     }
 
-    auto header = reinterpret_cast<fidl_message_header_t*>(buffer.get());
-    if (header->ordinal != fuchsia_io_NodeOnOpenOrdinal) {
+    auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer.get());
+    // Depending on the state of the migration, GenOrdinal and Ordinal may be the
+    // same value.  See FIDL-524.
+    uint32_t ordinal = hdr->ordinal;
+    if (ordinal != fuchsia_io_NodeOnOpenOrdinal &&
+        ordinal != fuchsia_io_NodeOnOpenGenOrdinal) {
         // The `OnOpen` event should be the first event fired. See the function description for
         // preconditions and details.
         zxlogf(ERROR, "optee::%s: received unexpected message ordinal %x\n",
-               __FUNCTION__, header->ordinal);
+            __FUNCTION__, ordinal);
         return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
     }
 
