@@ -5,7 +5,6 @@
 driver("alc5514") {
   sources = [
     "alc5514.cpp",
-    "binding.c",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

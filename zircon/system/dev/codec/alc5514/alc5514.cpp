@@ -4,7 +4,10 @@
 
 #include "alc5514.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <endian.h>
 #include <fbl/algorithm.h>
@@ -230,32 +233,38 @@ zx_status_t Alc5514Device::Bind() {
     return DdkAdd("alc5514");
 }
 
-fbl::unique_ptr<Alc5514Device> Alc5514Device::Create(zx_device_t* parent) {
+zx_status_t Alc5514Device::Create(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Alc5514Device> ret(new (&ac) Alc5514Device(parent));
+    fbl::unique_ptr<Alc5514Device> dev(new (&ac) Alc5514Device(parent));
     if (!ac.check()) {
         zxlogf(ERROR, "alc5514: out of memory attempting to allocate device\n");
-        return nullptr;
-    }
-    return ret;
-}
-}  // namespace alc5514
-}  // namespace audio
-
-extern "C" {
-zx_status_t alc5514_bind_hook(void* ctx, zx_device_t* parent) {
-    auto dev = audio::alc5514::Alc5514Device::Create(parent);
-    if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_status_t st = dev->Bind();
     if (st == ZX_OK) {
         // devmgr is now in charge of the memory for dev
-        __UNUSED auto ptr = dev.release();
+        __UNUSED auto* ptr = dev.release();
         return st;
     }
 
     return ZX_OK;
 }
-}  // extern "C"
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = Alc5514Device::Create;
+    return ops;
+}();
+
+}  // namespace alc5514
+}  // namespace audio
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(alc5514, audio::alc5514::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, 0x31304543), // '10EC'
+    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x35353134), // '5514'
+ZIRCON_DRIVER_END(alc5514)
+// clang-format on

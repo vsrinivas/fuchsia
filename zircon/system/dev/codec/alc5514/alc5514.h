@@ -19,7 +19,7 @@ using DeviceType = ddk::Device<Alc5514Device, ddk::Ioctlable, ddk::Unbindable>;
 class Alc5514Device : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
 public:
-    static fbl::unique_ptr<Alc5514Device> Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     Alc5514Device(zx_device_t* parent) : DeviceType(parent) { }
     ~Alc5514Device() { }
