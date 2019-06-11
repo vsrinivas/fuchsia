@@ -24,15 +24,15 @@ using AmlSdEmmcType = ddk::Device<AmlSdEmmc, ddk::Unbindable>;
 
 class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk::base_protocol> {
 public:
-    explicit AmlSdEmmc(zx_device_t* parent, const ddk::PDev& pdev, zx::bti bti,
+    explicit AmlSdEmmc(zx_device_t* parent, zx::bti bti,
                        ddk::MmioBuffer mmio, ddk::MmioPinnedBuffer pinned_mmio,
                        aml_sd_emmc_config_t config, zx::interrupt irq,
                        const ddk::GpioProtocolClient& gpio)
-        : AmlSdEmmcType(parent), pdev_(pdev), bti_(std::move(bti)), mmio_(std::move(mmio)),
+        : AmlSdEmmcType(parent), bti_(std::move(bti)), mmio_(std::move(mmio)),
           pinned_mmio_(std::move(pinned_mmio)), reset_gpio_(gpio), irq_(std::move(irq)),
           board_config_(config) {}
 
-    ~AmlSdEmmc();
+    ~AmlSdEmmc() {}
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Device protocol implementation
@@ -49,7 +49,9 @@ public:
     zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
     zx_status_t SdmmcRequest(sdmmc_req_t* req);
     zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
-
+protected:
+    // Visible for tests
+    zx_status_t Bind();
 private:
     void DumpRegs();
     void DumpSdmmcStatus(uint32_t status) const;
@@ -77,10 +79,8 @@ private:
                                aml_sd_emmc_desc_t** last_desc);
     zx_status_t FinishReq(sdmmc_req_t* req);
     int IrqThread();
-    zx_status_t Bind();
     zx_status_t Init();
 
-    ddk::PDev pdev_;
     zx::bti bti_;
 
     ddk::MmioBuffer mmio_;
