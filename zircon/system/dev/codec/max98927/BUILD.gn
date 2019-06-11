@@ -4,7 +4,6 @@
 
 driver("max98927") {
   sources = [
-    "binding.c",
     "max98927.cpp",
   ]
   deps = [

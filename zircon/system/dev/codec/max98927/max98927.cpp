@@ -4,7 +4,10 @@
 
 #include "max98927.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <endian.h>
 #include <fbl/alloc_checker.h>
@@ -228,23 +231,11 @@ zx_status_t Max98927Device::Bind() {
     return DdkAdd("max98927");
 }
 
-fbl::unique_ptr<Max98927Device> Max98927Device::Create(zx_device_t* parent) {
+zx_status_t Max98927Device::Create(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Max98927Device> ret(new (&ac) Max98927Device(parent));
+    fbl::unique_ptr<Max98927Device> dev(new (&ac) Max98927Device(parent));
     if (!ac.check()) {
         zxlogf(ERROR, "max98927: out of memory attempting to allocate device\n");
-        return nullptr;
-    }
-    return ret;
-}
-
-}  // namespace max98927
-}  // namespace audio
-
-extern "C" {
-zx_status_t max98927_bind_hook(void* ctx, zx_device_t* parent) {
-    auto dev = audio::max98927::Max98927Device::Create(parent);
-    if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -257,4 +248,21 @@ zx_status_t max98927_bind_hook(void* ctx, zx_device_t* parent) {
 
     return ZX_OK;
 }
-}  // extern "C"
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = Max98927Device::Create;
+    return ops;
+}();
+
+}  // namespace max98927
+}  // namespace audio
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(max98927, audio::max98927::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, 0x4d583938), // 'MX98'
+    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x39323700), // '927\0'
+ZIRCON_DRIVER_END(max98927)
+// clang-format on

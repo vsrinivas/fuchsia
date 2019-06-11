@@ -19,7 +19,7 @@ using DeviceType = ddk::Device<Max98927Device, ddk::Messageable, ddk::Unbindable
 class Max98927Device : public DeviceType,
                        public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
 public:
-    static fbl::unique_ptr<Max98927Device> Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     Max98927Device(zx_device_t* parent) : DeviceType(parent) { }
     ~Max98927Device() { }
