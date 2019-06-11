@@ -51,6 +51,12 @@ declare_args() {
   # Whether to include images necessary to run Fuchsia in QEMU in build
   # archives.
   add_qemu_to_build_archives = false
+
+  # Additional bootserver args to add to pave.sh. New uses of this should be
+  # added with caution, and ideally discussion. The present use case is to
+  # enable throttling of netboot when specific network adapters are combined
+  # with specific boards, due to driver and hardware challenges.
+  additional_bootserver_arguments = ""
 }
 
 assert(
@@ -1267,6 +1273,13 @@ foreach(target, paver_targets) {
       target.switch + rebase_path(outputs[0], root_build_dir),
       "--board_name=${board_name}",
     ]
+
+    if (additional_bootserver_arguments != "") {
+      args += [
+        "--additional_bootserver_arguments=${additional_bootserver_arguments}",
+      ]
+    }
+
     args += rebase_path(sources, root_build_dir)
   }
 }

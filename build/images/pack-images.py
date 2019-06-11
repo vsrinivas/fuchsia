@@ -15,7 +15,7 @@ import time
 import zipfile
 
 
-def generate_script(images, board_name, type):
+def generate_script(images, board_name, type, additional_bootserver_arguments):
     # The bootserver must be in there or we lose.
     # TODO(mcgrathr): Multiple bootservers for different platforms
     # and switch in the script.
@@ -32,12 +32,14 @@ set -x
     cmd = ['exec', '"$dir/%s"' % bootserver]
     if board_name:
         cmd += ['--board_name', '"%s"' % board_name]
-
-        # CONN-50: important mitigation for USB reliability issues with
-        # specific USB adapters, slowing down the pave process keeps the flow
-        # working.
+        # TODO(raggi): the following can be removed shortly, once the argument
+        # is moved into the board paramters via additional_bootserver_arguments
+        # below.
         if board_name == "astro":
             cmd += ['-w', '10']
+
+    if additional_bootserver_arguments:
+        cmd += [additional_bootserver_arguments]
 
     for switch, path in sorted(switches.iteritems()):
         cmd += [switch, path]
@@ -105,7 +107,7 @@ def format_archiver(outfile, format):
     return {'tgz': TGZArchiver, 'zip': ZipArchiver}[format](outfile)
 
 
-def write_archive(outfile, format, images, board_name):
+def write_archive(outfile, format, images, board_name, additional_bootserver_arguments):
     # Synthesize a sanitized form of the input.
     path_images = []
     for image in images:
@@ -118,13 +120,13 @@ def write_archive(outfile, format, images, board_name):
     # Generate scripts that use the sanitized file names.
     content_images = [
         (generate_script([image for path, image in path_images], board_name,
-                                 'bootserver_pave'), {
+                                 'bootserver_pave', additional_bootserver_arguments), {
             'name': 'pave',
             'type': 'sh',
             'path': 'pave.sh'
         }),
         (generate_script([image for path, image in path_images], board_name,
-                                 'bootserver_netboot'), {
+                                 'bootserver_netboot', additional_bootserver_arguments), {
             'name': 'netboot',
             'type': 'sh',
             'path': 'netboot.sh'
@@ -208,6 +210,8 @@ def main():
                         help='Archive format (default: from FILE suffix)')
     parser.add_argument('--board_name',
                         help='Board name images were built for')
+    parser.add_argument('--additional_bootserver_arguments',
+                        help='additional arguments to pass to bootserver in generated scripts')
     args = parser.parse_args()
 
     # Keep track of every input file for the depfile.
@@ -228,7 +232,8 @@ def main():
         with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY,
                                0o777),
                        'w') as script_file:
-            script_file.write(generate_script(images, args.board_name, mode))
+            script_file.write(generate_script(images, args.board_name, mode,
+                                              args.additional_bootserver_arguments))
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:
@@ -245,7 +250,8 @@ def main():
                               'bootserver_pave' in image or
                               'bootserver_netboot' in image)]
         files_read |= set(image['path'] for image in archive_images)
-        write_archive(outfile, archive_format(args, outfile), archive_images, args.board_name)
+        write_archive(outfile, archive_format(args, outfile), archive_images,
+                      args.board_name, args.additional_bootserver_arguments)
 
     if args.symbol_archive:
         outfile = args.symbol_archive
