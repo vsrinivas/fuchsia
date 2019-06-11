@@ -139,9 +139,58 @@ class Parent {
 
 ## Rust
 
-> Rust support for inspect is currently in development.
->
-> TODO(crjohns,miguelfrde)
+### Setup
+
+This section assumes you are writing an asynchronous component and that some
+part of your component (typically main.rs) looks similar to this:
+
+```
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+  ...
+  let mut fs = ServiceFs::new_local();
+  ...
+  Ok(())
+}
+```
+
+Add the following to your initialization code:
+
+```
+// This creates the root of an inspect tree.
+let inspector = inspect::Inspector::new();
+
+// This exports the VMO to the default path for reading at the standard
+// location "/root.inspect".
+inspector.export(&mut fs);
+
+// This will give you a reference to the root node of the inspect tree.
+let root = inspector.root();
+```
+
+Don't forget to `use fuchsia_inspect as inspect;`!
+
+Now you can use inspect! For example try the following:
+
+```
+let hello_world_property = inspect.create_string("hello", "world!");
+```
+
+See [this example](garnet/examples/rust/inspect-rs/src/main.rs) for further
+learning of other types offer by the API, and how to test your inspect usage.
+
+See [the docs](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
+to learn about other methods offered by the Rust API.
+
+See [Viewing Inspect Data](#viewing-inspect-data) below to view what you are now exporting.
+
+See [Supported Data Types](#supported-data-types) for a full list of data types you can try.
+
+### Rust Library Concepts
+
+Refer to [C++ Library Concepts](#c_library-concepts), as similar concepts
+apply in Rust.
+
 
 ## Dart
 
