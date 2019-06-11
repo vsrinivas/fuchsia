@@ -15,6 +15,8 @@ mod file_provider;
 mod flags;
 mod merge_dart_library;
 mod tarball;
+#[cfg(test)]
+mod testing;
 
 use crate::app::{Error, Result};
 use crate::file_provider::FileProvider;
@@ -176,7 +178,7 @@ fn main() -> Result<()> {
 
     let merged_manifest = merge_manifests(&base_manifest, &complement_manifest)?;
 
-    output.write_json(&MANIFEST_PATH.to_string(), &merged_manifest)?;
+    output.write_json(MANIFEST_PATH, &merged_manifest)?;
     output.export()?;
 
     Ok(())

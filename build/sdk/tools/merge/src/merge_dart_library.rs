@@ -28,3 +28,42 @@ pub fn merge_dart_library<F>(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::testing::{MockInputTarball, MockOutputTarball};
+
+    use super::*;
+
+    #[test]
+    fn test_merge() {
+        let meta = "dart/foobar/meta.json";
+        let data = r#"
+        {
+            "name": "foobar",
+            "type": "dart_library",
+            "root": "dart/foobar",
+            "sources": [
+                "dart/foobar/lib/one.dart",
+                "dart/foobar/lib/two.dart"
+            ],
+            "deps": [],
+            "fidl_deps": [],
+            "third_party_deps": []
+        }
+        "#;
+        let base = MockInputTarball::new();
+        base.add(meta, data);
+        base.add("dart/foobar/lib/one.dart", "one");
+        base.add("dart/foobar/lib/two.dart", "two");
+        let complement = MockInputTarball::new();
+        complement.add(meta, data);
+        complement.add("dart/foobar/lib/one.dart", "one");
+        complement.add("dart/foobar/lib/two.dart", "two");
+        let mut output = MockOutputTarball::new();
+        merge_dart_library(meta, &base, &complement, &mut output).expect("Should not fail!");
+        output.assert_has_file(meta);
+        output.assert_has_file("dart/foobar/lib/one.dart");
+        output.assert_has_file("dart/foobar/lib/two.dart");
+    }
+}
