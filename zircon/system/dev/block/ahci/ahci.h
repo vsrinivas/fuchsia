@@ -65,7 +65,7 @@ static_assert(PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD m
 #define AHCI_PORT_SCTL_DET_MASK    0xf
 #define AHCI_PORT_SCTL_DET_INIT    1
 
-class AhciController;
+namespace ahci {
 
 struct ahci_port_reg_t {
     uint32_t clb;           // command list base address 1024-byte aligned
@@ -167,3 +167,5 @@ static_assert(sizeof(ahci_cl_t) == 0x20, "unexpected command list size");
 static_assert(sizeof(ahci_fis_t) == 0x100, "unexpected fis size");
 static_assert(sizeof(ahci_ct_t) == 0x80, "unexpected command table header size");
 static_assert(sizeof(ahci_prd_t) == 0x10, "unexpected prd entry size");
+
+} // namespace ahci

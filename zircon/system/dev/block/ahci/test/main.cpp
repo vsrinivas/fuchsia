@@ -6,9 +6,9 @@
 
 #include <zxtest/zxtest.h>
 
-void string_fix(uint16_t* buf, size_t size);
+namespace ahci {
 
-namespace {
+void string_fix(uint16_t* buf, size_t size);
 
 TEST(SataTest, StringFixTest) {
     // Nothing to do.
@@ -69,4 +69,4 @@ TEST(SataTest, StringFixTest) {
     }
 }
 
-} // namespace
+} // namespace ahci

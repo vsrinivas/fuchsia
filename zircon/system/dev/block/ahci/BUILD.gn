@@ -30,7 +30,8 @@ test("ahci-unittest") {
 source_set("shared") {
   visibility = [ "./*" ]
   sources = [
-    "ahci.cpp",
+    "controller.cpp",
+    "port.cpp",
     "sata.cpp",
   ]
   deps = [

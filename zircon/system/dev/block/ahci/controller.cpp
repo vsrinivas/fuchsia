@@ -1,0 +1,425 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
+#include <threads.h>
+#include <unistd.h>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/io-buffer.h>
+#include <ddk/phys-iter.h>
+#include <ddk/protocol/pci.h>
+#include <ddk/protocol/pci-lib.h>
+
+#include <fbl/alloc_checker.h>
+#include <zircon/assert.h>
+#include <zircon/listnode.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include "controller.h"
+#include "sata.h"
+
+namespace ahci {
+
+//clang-format on
+
+zx_status_t Controller::WaitForClear(const volatile uint32_t* reg, uint32_t mask,
+                                     zx::duration timeout) {
+    int i = 0;
+    zx::time deadline = zx::clock::get_monotonic() + timeout;
+    do {
+        if (!(RegRead(reg) & mask)) return ZX_OK;
+        usleep(10 * 1000);
+        i++;
+    } while (zx::clock::get_monotonic() < deadline);
+    return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t Controller::WaitForSet(const volatile uint32_t* reg, uint32_t mask,
+                                   zx::duration timeout) {
+    int i = 0;
+    zx::time deadline = zx::clock::get_monotonic() + timeout;
+    do {
+        if (RegRead(reg) & mask) return ZX_OK;
+        usleep(10 * 1000);
+        i++;
+    } while (zx::clock::get_monotonic() < deadline);
+    return ZX_ERR_TIMED_OUT;
+}
+
+void Controller::AhciEnable() {
+    uint32_t ghc = RegRead(&regs_->ghc);
+    if (ghc & AHCI_GHC_AE) return;
+    for (int i = 0; i < 5; i++) {
+        ghc |= AHCI_GHC_AE;
+        RegWrite(&regs_->ghc, ghc);
+        ghc = RegRead(&regs_->ghc);
+        if (ghc & AHCI_GHC_AE) return;
+        usleep(10 * 1000);
+    }
+}
+
+void Controller::HbaReset() {
+    // AHCI 1.3: Software may perform an HBA reset prior to initializing the controller
+    uint32_t ghc = RegRead(&regs_->ghc);
+    ghc |= AHCI_GHC_AE;
+    RegWrite(&regs_->ghc, ghc);
+    ghc |= AHCI_GHC_HR;
+    RegWrite(&regs_->ghc, ghc);
+    // reset should complete within 1 second
+    zx_status_t status = WaitForClear(&regs_->ghc, AHCI_GHC_HR, zx::sec(1));
+    if (status) {
+        zxlogf(ERROR, "ahci: hba reset timed out\n");
+    }
+}
+
+zx_status_t Controller::SetDevInfo(uint32_t portnr, sata_devinfo_t* devinfo) {
+    if (portnr >= AHCI_MAX_PORTS) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    ports_[portnr].SetDevInfo(devinfo);
+    return ZX_OK;
+}
+
+void Controller::Queue(uint32_t portnr, sata_txn_t* txn) {
+    ZX_DEBUG_ASSERT(portnr < AHCI_MAX_PORTS);
+    Port* port = &ports_[portnr];
+    zx_status_t status = port->Queue(txn);
+    if (status == ZX_OK) {
+        zxlogf(SPEW, "ahci.%u: queue txn %p offset_dev 0x%" PRIx64 " length 0x%x\n",
+                port->num(), txn, txn->bop.rw.offset_dev, txn->bop.rw.length);
+        // hit the worker thread
+        sync_completion_signal(&worker_completion_);
+    } else {
+        zxlogf(INFO, "ahci.%u: failed to queue txn %p: %d\n",
+                port->num(), txn, status);
+        // TODO: close transaction.
+    }
+}
+
+Controller::~Controller() {
+    // TODO: Join threads.
+    // The current driver doesn't do this - it will be done in a following CL.
+
+    if (regs_ != nullptr) {
+        mmio_buffer_release(&mmio_);
+    }
+}
+
+void Controller::Release(void* ctx) {
+    // FIXME - join threads created by this driver
+    Controller* controller = static_cast<Controller*>(ctx);
+    delete controller;
+}
+
+// worker thread
+
+int Controller::WorkerLoop() {
+    Port* port;
+    for (;;) {
+        // iterate all the ports and run or complete commands
+        for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
+            port = &ports_[i];
+
+            // Complete commands first.
+            port->Complete();
+            // Process queued txns.
+            port->ProcessQueued();
+        }
+        // wait here until more commands are queued, or a port becomes idle
+        sync_completion_wait(&worker_completion_, ZX_TIME_INFINITE);
+        sync_completion_reset(&worker_completion_);
+    }
+}
+
+int Controller::WatchdogLoop() {
+    for (;;) {
+        bool idle = true;
+        for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
+            bool txn_pending = ports_[i].HandleWatchdog();
+            if (txn_pending) idle = false;
+        }
+
+        // no need to run the watchdog if there are no active xfers
+        sync_completion_wait(&watchdog_completion_, idle ? ZX_TIME_INFINITE : ZX_SEC(5));
+        sync_completion_reset(&watchdog_completion_);
+    }
+    return 0;
+}
+
+// irq handler:
+
+int Controller::IrqLoop() {
+    zx_status_t status;
+    for (;;) {
+        status = zx_interrupt_wait(irq_handle_.get(), nullptr);
+        if (status) {
+            zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
+            continue;
+        }
+        // mask hba interrupts while interrupts are being handled
+        uint32_t ghc = RegRead(&regs_->ghc);
+        RegWrite(&regs_->ghc, ghc & ~AHCI_GHC_IE);
+
+        // handle interrupt for each port
+        uint32_t is = RegRead(&regs_->is);
+        RegWrite(&regs_->is, is);
+        for (uint32_t i = 0; is && i < AHCI_MAX_PORTS; i++) {
+            if (is & 0x1) {
+                bool txn_handled = ports_[i].HandleIrq();
+                if (txn_handled) {
+                    // hit the worker thread to complete commands
+                    sync_completion_signal(&worker_completion_);
+                }
+            }
+            is >>= 1;
+        }
+
+        // unmask hba interrupts
+        ghc = RegRead(&regs_->ghc);
+        RegWrite(&regs_->ghc, ghc | AHCI_GHC_IE);
+    }
+}
+
+// implement device protocol:
+
+zx_protocol_device_t ahci_device_proto = []() {
+    zx_protocol_device_t device;
+    device.version = DEVICE_OPS_VERSION;
+    device.release = Controller::Release;
+    return device;
+}();
+
+int Controller::InitScan() {
+    // reset
+    HbaReset();
+
+    // enable ahci mode
+    AhciEnable();
+
+    cap_ = RegRead(&regs_->cap);
+
+    // count number of ports
+    uint32_t port_map = RegRead(&regs_->pi);
+
+    // initialize ports
+    zx_status_t status;
+    for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
+        if (!(port_map & (1u << i))) continue; // port not implemented
+        status = ports_[i].Configure(i, this, &regs_->ports[i]);
+        if (status) {
+            return status;
+        }
+    }
+
+    // clear hba interrupts
+    RegWrite(&regs_->is, RegRead(&regs_->is));
+
+    // enable hba interrupts
+    uint32_t ghc = RegRead(&regs_->ghc);
+    ghc |= AHCI_GHC_IE;
+    RegWrite(&regs_->ghc, ghc);
+
+    // this part of port init happens after enabling interrupts in ghc
+    for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
+        Port* port = &ports_[i];
+        if (!(port->is_implemented())) continue;
+
+        // enable port
+        port->Enable();
+
+        // enable interrupts
+        ahci_port_reg_t* port_regs = port->regs();
+        RegWrite(&port_regs->ie, AHCI_PORT_INT_MASK);
+
+        // reset port
+        port->Reset();
+
+        // FIXME proper layering?
+        if (RegRead(&port_regs->ssts) & AHCI_PORT_SSTS_DET_PRESENT) {
+            port->set_present(true);
+            if (RegRead(&port_regs->sig) == AHCI_PORT_SIG_SATA) {
+                sata_bind(this, zxdev_, port->num());
+            }
+        }
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t Controller::Create(zx_device_t* parent, std::unique_ptr<Controller>* con_out) {
+    fbl::AllocChecker ac;
+    std::unique_ptr<Controller> controller(new (&ac) Controller());
+    if (!ac.check()) {
+        zxlogf(ERROR, "ahci: out of memory\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &controller->pci_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error getting config information\n");
+        return status;
+    }
+
+    // Map register window.
+    status = pci_map_bar_buffer(&controller->pci_, 5u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                &controller->mmio_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d mapping register window\n", status);
+        return status;
+    }
+    controller->regs_ = static_cast<ahci_hba_t*>(controller->mmio_.vaddr);
+
+    zx_pcie_device_info_t config;
+    status = pci_get_device_info(&controller->pci_, &config);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error getting config information\n");
+        return status;
+    }
+
+    // TODO: move this to SATA.
+    if (config.sub_class != 0x06 && config.base_class == 0x01) { // SATA
+        zxlogf(ERROR, "ahci: device class 0x%x unsupported\n", config.sub_class);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // FIXME intel devices need to set SATA port enable at config + 0x92
+    // ahci controller is bus master
+    status = pci_enable_bus_master(&controller->pci_, true);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d enabling bus master\n", status);
+        return status;
+    }
+
+    // Query and configure IRQ modes by trying MSI first and falling back to
+    // legacy if necessary.
+    uint32_t irq_cnt = 0;
+    zx_pci_irq_mode_t irq_mode = ZX_PCIE_IRQ_MODE_MSI;
+    status = pci_query_irq_mode(&controller->pci_, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+        status = pci_query_irq_mode(&controller->pci_, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported\n");
+            return status;
+        }
+        irq_mode = ZX_PCIE_IRQ_MODE_LEGACY;
+    }
+
+    if (irq_cnt == 0) {
+        zxlogf(ERROR, "ahci: no interrupts available\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    zxlogf(INFO, "ahci: using %s interrupt\n", (irq_mode == ZX_PCIE_IRQ_MODE_MSI) ? "MSI" : "legacy");
+    status = pci_set_irq_mode(&controller->pci_, irq_mode, 1);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d setting irq mode\n", status);
+        return status;
+    }
+
+    // Get bti handle.
+    status = pci_get_bti(&controller->pci_, 0, controller->bti_handle_.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d getting bti handle\n", status);
+        return status;
+    }
+
+    // Get irq handle.
+    status = pci_map_interrupt(&controller->pci_, 0, controller->irq_handle_.reset_and_get_address());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d getting irq handle\n", status);
+        return status;
+    }
+
+    *con_out = std::move(controller);
+    return ZX_OK;
+}
+
+zx_status_t Controller::LaunchThreads() {
+    int ret = thrd_create_with_name(&irq_thread_, IrqThread, this, "ahci-irq");
+    if (ret != thrd_success) {
+        zxlogf(ERROR, "ahci: error %d creating irq thread\n", ret);
+        return ZX_ERR_NO_MEMORY;
+    }
+    ret = thrd_create_with_name(&worker_thread_, WorkerThread, this, "ahci-worker");
+    if (ret != thrd_success) {
+        zxlogf(ERROR, "ahci: error %d creating worker thread\n", ret);
+        return ZX_ERR_NO_MEMORY;
+    }
+    ret = thrd_create_with_name(&watchdog_thread_, WatchdogThread, this, "ahci-watchdog");
+    if (ret != thrd_success) {
+        zxlogf(ERROR, "ahci: error %d creating watchdog thread\n", ret);
+        return ZX_ERR_NO_MEMORY;
+    }
+    return ZX_OK;
+}
+
+// implement driver object:
+
+zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
+    std::unique_ptr<Controller> controller;
+    zx_status_t status = Controller::Create(parent, &controller);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: failed to create ahci controller (%d)\n", status);
+        return status;
+    }
+
+    if ((status = controller->LaunchThreads()) != ZX_OK) {
+        zxlogf(ERROR, "ahci: failed to start controller threads (%d)\n", status);
+        return status;
+    }
+
+    // add the device for the controller
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ahci";
+    args.ctx = controller.get();
+    args.ops = &ahci_device_proto;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
+
+    status = device_add(parent, &args, controller->zxdev_ptr());
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d in device_add\n", status);
+        return status;
+    }
+
+    // initialize controller and detect devices
+    thrd_t t;
+    int ret = thrd_create_with_name(&t, Controller::InitThread, controller.get(), "ahci-init");
+    if (ret != thrd_success) {
+        zxlogf(ERROR, "ahci: error %d in init thread create\n", status);
+        // This is an error in that no devices will be found, but the AHCI controller is enabled.
+        // Not returning an error, but the controller should be removed.
+        // TODO: handle this better in upcoming init cleanup CL.
+    }
+
+    // Controller is retained by device_add().
+    controller.release();
+    return ZX_OK;
+}
+
+constexpr zx_driver_ops_t ahci_driver_ops = []() {
+    zx_driver_ops_t driver = {};
+    driver.version = DRIVER_OPS_VERSION;
+    driver.bind = ahci_bind;
+    return driver;
+}();
+
+} // namespace ahci
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(ahci, ahci::ahci_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x01),
+    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x06),
+    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
+ZIRCON_DRIVER_END(ahci)

@@ -23,6 +23,10 @@
 
 #define BLOCK_OP(op) ((op) & BLOCK_OP_MASK)
 
+namespace ahci {
+
+class Controller;
+
 // SATA disk identifier. Response to SATA_CMD_IDENTIFY_DEVICE command.
 // Generated from ATA Command Set spec (ACS-4).
 struct sata_devinfo_response_t {            // 16-bit word offset
@@ -105,7 +109,7 @@ struct sata_devinfo_response_t {            // 16-bit word offset
     uint16_t _obsolete_127;                 // 127
     uint16_t security_status;               // 128
     uint16_t vendor_specific[31];           // 129-159
-    uint16_t cfa_reserved2[8];              // 160 - 167
+    uint16_t cfa_reserved2[8];              // 160-167
     uint16_t form_factor;                   // 168
     uint16_t data_management_support;       // 169
     uint16_t additional_product_id[4];      // 170-173
@@ -154,14 +158,10 @@ struct sata_devinfo_t {
     uint32_t max_cmd;
 };
 
-zx_status_t sata_bind(AhciController* controller, zx_device_t* parent, uint32_t port);
-
-// sets the device info for the device at portnr
-void ahci_set_devinfo(AhciController* controller, uint32_t portnr, sata_devinfo_t* devinfo);
-
-// queue a txn on the controller
-void ahci_queue(AhciController* controller, uint32_t portnr, sata_txn_t* txn);
+zx_status_t sata_bind(Controller* controller, zx_device_t* parent, uint32_t port);
 
 static inline void block_complete(sata_txn_t* txn, zx_status_t status) {
     txn->completion_cb(txn->cookie, status, &txn->bop);
 }
+
+} // namespace ahci

@@ -23,13 +23,16 @@
 #include <zircon/types.h>
 
 #include "sata.h"
+#include "controller.h"
 
 #define SATA_FLAG_DMA   (1 << 0)
 #define SATA_FLAG_LBA48 (1 << 1)
 
+namespace ahci {
+
 struct sata_device_t {
     zx_device_t* zxdev = nullptr;
-    AhciController* controller = nullptr;
+    Controller* controller = nullptr;
 
     block_info_t info{};
 
@@ -58,13 +61,13 @@ static bool model_id_is_qemu(char* model_id) {
     return !memcmp(model_id, QEMU_MODEL_ID, sizeof(QEMU_MODEL_ID)-1);
 }
 
-static zx_status_t sata_device_identify(sata_device_t* dev, AhciController* controller,
+static zx_status_t sata_device_identify(sata_device_t* dev, Controller* controller,
                                         const char* name) {
     // Set default devinfo
     sata_devinfo_t di;
     di.block_size = 512;
     di.max_cmd = 1;
-    ahci_set_devinfo(controller, dev->port, &di);
+    controller->SetDevInfo(dev->port, &di);
 
     // send IDENTIFY DEVICE
     zx::vmo vmo;
@@ -85,7 +88,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, AhciController* cont
     txn.completion_cb = sata_device_identify_complete;
     txn.cookie = &completion;
 
-    ahci_queue(controller, dev->port, &txn);
+    controller->Queue(dev->port, &txn);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
     if (txn.status != ZX_OK) {
@@ -185,7 +188,7 @@ static zx_status_t sata_device_identify(sata_device_t* dev, AhciController* cont
     di.block_size = block_size,
     di.max_cmd = dev->max_cmd,
 
-    ahci_set_devinfo(controller, dev->port, &di);
+    controller->SetDevInfo(dev->port, &di);
 
     return ZX_OK;
 }
@@ -251,7 +254,7 @@ static void sata_queue(void* ctx, block_op_t* bop, block_impl_queue_callback com
         return;
     }
 
-    ahci_queue(dev->controller, dev->port, txn);
+    dev->controller->Queue(dev->port, txn);
 }
 
 static block_impl_protocol_ops_t sata_block_proto = {
@@ -259,7 +262,7 @@ static block_impl_protocol_ops_t sata_block_proto = {
     .queue = sata_queue,
 };
 
-zx_status_t sata_bind(AhciController* controller, zx_device_t* parent, uint32_t port) {
+zx_status_t sata_bind(Controller* controller, zx_device_t* parent, uint32_t port) {
     // initialize the device
     fbl::AllocChecker ac;
     std::unique_ptr<sata_device_t> device(new (&ac) sata_device_t);
@@ -295,3 +298,5 @@ zx_status_t sata_bind(AhciController* controller, zx_device_t* parent, uint32_t 
     device.release(); // Device has been retained by device_add().
     return ZX_OK;
 }
+
+} // namespace ahci

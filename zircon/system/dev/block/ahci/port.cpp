@@ -1,0 +1,564 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <algorithm>
+#include <inttypes.h>
+#include <unistd.h>
+
+#include <ddk/debug.h>
+#include <ddk/io-buffer.h>
+#include <ddk/phys-iter.h>
+
+#include "port.h"
+#include "controller.h"
+
+#define PAGE_MASK (PAGE_SIZE - 1ull)
+
+namespace ahci {
+
+constexpr uint32_t hi32(uint64_t val) { return static_cast<uint32_t>(val >> 32); }
+constexpr uint32_t lo32(uint64_t val) { return static_cast<uint32_t>(val); }
+
+// Calculate the physical base of a virtual address.
+zx_paddr_t vtop(zx_paddr_t phys_base, void* virt_base, void* virt_addr) {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(virt_addr);
+    uintptr_t base = reinterpret_cast<uintptr_t>(virt_base);
+    return phys_base + (addr - base);
+}
+
+bool cmd_is_read(uint8_t cmd) {
+    if (cmd == SATA_CMD_READ_DMA ||
+        cmd == SATA_CMD_READ_DMA_EXT ||
+        cmd == SATA_CMD_READ_FPDMA_QUEUED) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool cmd_is_write(uint8_t cmd) {
+    if (cmd == SATA_CMD_WRITE_DMA ||
+        cmd == SATA_CMD_WRITE_DMA_EXT ||
+        cmd == SATA_CMD_WRITE_FPDMA_QUEUED) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool cmd_is_queued(uint8_t cmd) {
+    return (cmd == SATA_CMD_READ_FPDMA_QUEUED) || (cmd == SATA_CMD_WRITE_FPDMA_QUEUED);
+}
+
+Port::Port() {
+    list_initialize(&txn_list_);
+}
+
+Port::~Port() {
+    ZX_DEBUG_ASSERT(list_is_empty(&txn_list_));
+}
+
+uint32_t Port::RegRead(const volatile uint32_t* reg) {
+    return con_->RegRead(reg);
+}
+
+void Port::RegWrite(volatile uint32_t* reg, uint32_t val) {
+    con_->RegWrite(reg, val);
+}
+
+bool Port::SlotBusyLocked(uint32_t slot) {
+    // a command slot is busy if a transaction is in flight or pending to be completed
+    return ((RegRead(&regs_->sact) | RegRead(&regs_->ci)) & (1u << slot)) ||
+           (commands_[slot] != nullptr) ||
+           (running_ & (1u << slot)) || (completed_ & (1u << slot));
+}
+
+zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs) {
+    mtx_lock(&lock_);
+    num_ = num;
+    con_ = con;
+    regs_ = regs;
+    flags_ = kPortFlagImplemented;
+    uint32_t cmd = RegRead(&regs_->cmd);
+    if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
+        zxlogf(ERROR, "ahci.%u: port busy\n", num_);
+        mtx_unlock(&lock_);
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    // Allocate memory for the command list, FIS receive area, command table and PRDT.
+    zx_status_t status = io_buffer_init(&buffer_, con_->bti_handle(), sizeof(ahci_port_mem_t),
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci.%u: error %d allocating dma memory\n", num_, status);
+        mtx_unlock(&lock_);
+        return status;
+    }
+    zx_paddr_t phys_base = io_buffer_phys(&buffer_);
+    mem_ = static_cast<ahci_port_mem_t*>(io_buffer_virt(&buffer_));
+
+    // clear memory area
+    // order is command list (1024-byte aligned)
+    //          FIS receive area (256-byte aligned)
+    //          command table + PRDT (128-byte aligned)
+    memset(mem_, 0, sizeof(*mem_));
+
+    // command list.
+    zx_paddr_t paddr = vtop(phys_base, mem_, &mem_->cl);
+    RegWrite(&regs_->clb, lo32(paddr));
+    RegWrite(&regs_->clbu, hi32(paddr));
+
+    // FIS receive area.
+    paddr = vtop(phys_base, mem_, &mem_->fis);
+    RegWrite(&regs_->fb, lo32(paddr));
+    RegWrite(&regs_->fbu, hi32(paddr));
+
+    // command table, followed by PRDT.
+    for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
+        paddr = vtop(phys_base, mem_, &mem_->tab[i].ct);
+        mem_->cl[i].ctba = lo32(paddr);
+        mem_->cl[i].ctbau = hi32(paddr);
+    }
+
+    // clear port interrupts
+    RegWrite(&regs_->is, RegRead(&regs_->is));
+
+    // clear error
+    RegWrite(&regs_->serr, RegRead(&regs_->serr));
+
+    // spin up
+    cmd |= AHCI_PORT_CMD_SUD;
+    RegWrite(&regs_->cmd, cmd);
+
+    // activate link
+    cmd &= ~AHCI_PORT_CMD_ICC_MASK;
+    cmd |= AHCI_PORT_CMD_ICC_ACTIVE;
+    RegWrite(&regs_->cmd, cmd);
+
+    // enable FIS receive
+    cmd |= AHCI_PORT_CMD_FRE;
+    RegWrite(&regs_->cmd, cmd);
+
+    mtx_unlock(&lock_);
+    return ZX_OK;
+}
+
+void Port::Enable() {
+    uint32_t cmd = RegRead(&regs_->cmd);
+    if (cmd & AHCI_PORT_CMD_ST) return;
+    if (!(cmd & AHCI_PORT_CMD_FRE)) {
+        zxlogf(ERROR, "ahci.%u: cannot enable port without FRE enabled\n", num_);
+        return;
+    }
+    zx_status_t status = con_->WaitForClear(&regs_->cmd, AHCI_PORT_CMD_CR, zx::msec(500));
+    if (status) {
+        zxlogf(ERROR, "ahci.%u: dma engine still running when enabling port\n", num_);
+    }
+    cmd |= AHCI_PORT_CMD_ST;
+    RegWrite(&regs_->cmd, cmd);
+}
+
+void Port::Disable() {
+    uint32_t cmd = RegRead(&regs_->cmd);
+    if (!(cmd & AHCI_PORT_CMD_ST)) return;
+    cmd &= ~AHCI_PORT_CMD_ST;
+    RegWrite(&regs_->cmd, cmd);
+    zx_status_t status = con_->WaitForClear(&regs_->cmd, AHCI_PORT_CMD_CR, zx::msec(500));
+    if (status) {
+        zxlogf(ERROR, "ahci.%u: port disable timed out\n", num_);
+    }
+}
+
+void Port::Reset() {
+    // disable port
+    Disable();
+
+    // clear error
+    RegWrite(&regs_->serr, RegRead(&regs_->serr));
+
+    // wait for device idle
+    zx_status_t status = con_->WaitForClear(&regs_->tfd,
+                                            AHCI_PORT_TFD_BUSY | AHCI_PORT_TFD_DATA_REQUEST,
+                                            zx::sec(1));
+    if (status != ZX_OK) {
+        // if busy is not cleared, do a full comreset
+        zxlogf(SPEW, "ahci.%u: timed out waiting for port idle, resetting\n", num_);
+        // v1.3.1, 10.4.2 port reset
+        uint32_t sctl = AHCI_PORT_SCTL_IPM_ACTIVE | AHCI_PORT_SCTL_IPM_PARTIAL | AHCI_PORT_SCTL_DET_INIT;
+        RegWrite(&regs_->sctl, sctl);
+        usleep(1000);
+        sctl = RegRead(&regs_->sctl);
+        sctl &= ~AHCI_PORT_SCTL_DET_MASK;
+        RegWrite(&regs_->sctl, sctl);
+    }
+
+    // enable port
+    Enable();
+
+    // wait for device detect
+    status = con_->WaitForSet(&regs_->ssts, AHCI_PORT_SSTS_DET_PRESENT, zx::sec(1));
+    if ((driver_get_log_flags() & DDK_LOG_SPEW) && (status < 0)) {
+        zxlogf(SPEW, "ahci.%u: no device detected\n", num_);
+    }
+
+    // clear error
+    RegWrite(&regs_->serr, RegRead(&regs_->serr));
+}
+
+void Port::SetDevInfo(const sata_devinfo_t* devinfo) {
+    mtx_lock(&lock_);
+    memcpy(&devinfo_, devinfo, sizeof(devinfo_));
+    mtx_unlock(&lock_);
+}
+
+zx_status_t Port::Queue(sata_txn_t* txn) {
+    mtx_lock(&lock_);
+    if (!is_valid()) {
+        mtx_unlock(&lock_);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // reset the physical address
+    txn->pmt = ZX_HANDLE_INVALID;
+
+    // put the cmd on the queue
+    list_add_tail(&txn_list_, &txn->node);
+
+    mtx_unlock(&lock_);
+    return ZX_OK;
+}
+
+void Port::Complete() {
+    mtx_lock(&lock_);
+    if (!is_valid()) {
+        mtx_unlock(&lock_);
+        return;
+    }
+
+    sata_txn_t* txn_complete[AHCI_MAX_COMMANDS];
+    size_t complete_count = 0;
+    while (completed_) {
+        uint32_t slot = 32 - __builtin_clz(completed_) - 1;
+        sata_txn_t* txn = commands_[slot];
+        commands_[slot] = nullptr;
+        completed_ &= ~(1u << slot);
+        running_ &= ~(1u << slot);
+        if (txn == nullptr) {
+            // Transaction was completed by watchdog.
+        } else {
+            txn_complete[complete_count] = txn;
+            complete_count++;
+        }
+    }
+
+    sata_txn_t* sync_op = nullptr;
+    // resume the port if paused for sync and no outstanding transactions
+    if ((is_paused()) && !running_) {
+        flags_ &= ~kPortFlagSyncPaused;
+        if (sync_) {
+            sync_op = sync_;
+            sync_ = nullptr;
+        }
+    }
+    mtx_unlock(&lock_);
+
+    for (size_t i = 0; i < complete_count; i++) {
+        sata_txn_t* txn = txn_complete[i];
+        if (txn->pmt != ZX_HANDLE_INVALID) {
+            zx_pmt_unpin(txn->pmt);
+        }
+        zxlogf(SPEW, "ahci.%u: complete txn %p\n", num_, txn);
+        block_complete(txn, ZX_OK);
+    }
+
+    if (sync_op != nullptr) {
+        block_complete(sync_op, ZX_OK);
+    }
+}
+
+void Port::ProcessQueued() {
+    mtx_lock(&lock_);
+    if ((!is_valid()) || is_paused()) {
+        mtx_unlock(&lock_);
+        return;
+    }
+
+    for (;;) {
+        sata_txn_t* txn = list_peek_head_type(&txn_list_, sata_txn_t, node);
+        if (!txn) {
+            break;
+        }
+
+        // find a free command tag
+        uint32_t max = std::min(devinfo_.max_cmd, con_->MaxCommands());
+        uint32_t i = 0;
+        for (i = 0; i <= max; i++) {
+            if (!SlotBusyLocked(i)) break;
+        }
+        if (i > max) {
+            break;
+        }
+
+        list_delete(&txn->node);
+
+        if (BLOCK_OP(txn->bop.command) == BLOCK_OP_FLUSH) {
+            if (running_) {
+                ZX_DEBUG_ASSERT(sync_ == nullptr);
+                // pause the port if FLUSH command
+                flags_ |= kPortFlagSyncPaused;
+                sync_ = txn;
+            } else {
+                // complete immediately if nothing in flight
+                mtx_unlock(&lock_);
+                block_complete(txn, ZX_OK);
+                mtx_lock(&lock_);
+            }
+        } else {
+            // run the transaction
+            zx_status_t st = TxnBeginLocked(i, txn);
+            // complete the transaction with if it failed during processing
+            if (st != ZX_OK) {
+                mtx_unlock(&lock_);
+                block_complete(txn, st);
+                mtx_lock(&lock_);
+                continue;
+            }
+        }
+    }
+    mtx_unlock(&lock_);
+}
+
+void Port::TxnComplete(zx_status_t status) {
+    mtx_lock(&lock_);
+    uint32_t active = RegRead(&regs_->sact); // Transactions active in hardware.
+    uint32_t running = running_;               // Transactions tagged as running.
+    // Transactions active in hardware but not tagged as running.
+    uint32_t unaccounted = active & ~running;
+    // Remove transactions that have been completed by the watchdog.
+    unaccounted &= ~completed_;
+    // assert if a command slot without an outstanding transaction is active.
+    ZX_DEBUG_ASSERT(unaccounted == 0);
+
+    // Transactions tagged as running but completed by hardware.
+    uint32_t done = running & ~active;
+    completed_ |= done;
+    mtx_unlock(&lock_);
+}
+
+zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
+    ZX_DEBUG_ASSERT(slot < AHCI_MAX_COMMANDS);
+    ZX_DEBUG_ASSERT(!SlotBusyLocked(slot));
+
+    uint64_t offset_vmo = txn->bop.rw.offset_vmo * devinfo_.block_size;
+    uint64_t bytes = txn->bop.rw.length * devinfo_.block_size;
+    size_t pagecount = ((offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) /
+                       PAGE_SIZE;
+    zx_paddr_t pages[AHCI_MAX_PAGES];
+    if (pagecount > AHCI_MAX_PAGES) {
+        zxlogf(SPEW, "ahci.%u: txn %p too many pages (%zu)\n", num_, txn, pagecount);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_handle_t vmo = txn->bop.rw.vmo;
+    bool is_write = cmd_is_write(txn->cmd);
+    uint32_t options = is_write ? ZX_BTI_PERM_READ : ZX_BTI_PERM_WRITE;
+    zx_handle_t pmt;
+    zx_status_t st = zx_bti_pin(con_->bti_handle(), options, vmo, offset_vmo & ~PAGE_MASK,
+                                pagecount * PAGE_SIZE, pages, pagecount, &pmt);
+    if (st != ZX_OK) {
+        zxlogf(SPEW, "ahci.%u: failed to pin pages, err = %d\n", num_, st);
+        return st;
+    }
+    txn->pmt = pmt;
+
+    phys_iter_buffer_t physbuf = {};
+    physbuf.phys = pages;
+    physbuf.phys_count = pagecount;
+    physbuf.length = bytes;
+    physbuf.vmo_offset = offset_vmo;
+
+    phys_iter_t iter;
+    phys_iter_init(&iter, &physbuf, AHCI_PRD_MAX_SIZE);
+
+    uint8_t cmd = txn->cmd;
+    uint8_t device = txn->device;
+    uint64_t lba = txn->bop.rw.offset_dev;
+    uint64_t count = txn->bop.rw.length;
+
+    // use queued command if available
+    if (con_->HasCommandQueue()) {
+        if (cmd == SATA_CMD_READ_DMA_EXT) {
+            cmd = SATA_CMD_READ_FPDMA_QUEUED;
+        } else if (cmd == SATA_CMD_WRITE_DMA_EXT) {
+            cmd = SATA_CMD_WRITE_FPDMA_QUEUED;
+        }
+    }
+
+    // build the command
+    ahci_cl_t* cl = &mem_->cl[slot];
+    // don't clear the cl since we set up ctba/ctbau at init
+    cl->prdtl_flags_cfl = 0;
+    cl->cfl = 5; // 20 bytes
+    cl->w = is_write ? 1 : 0;
+    cl->prdbc = 0;
+    memset(&mem_->tab[slot].ct, 0, sizeof(ahci_ct_t));
+
+    uint8_t* cfis = mem_->tab[slot].ct.cfis;
+    cfis[0] = 0x27; // host-to-device
+    cfis[1] = 0x80; // command
+    cfis[2] = cmd;
+    cfis[7] = device;
+
+    // some commands have lba/count fields
+    if (cmd == SATA_CMD_READ_DMA_EXT ||
+        cmd == SATA_CMD_WRITE_DMA_EXT) {
+        cfis[4] = lba & 0xff;
+        cfis[5] = (lba >> 8) & 0xff;
+        cfis[6] = (lba >> 16) & 0xff;
+        cfis[8] = (lba >> 24) & 0xff;
+        cfis[9] = (lba >> 32) & 0xff;
+        cfis[10] = (lba >> 40) & 0xff;
+        cfis[12] = count & 0xff;
+        cfis[13] = (count >> 8) & 0xff;
+    } else if (cmd_is_queued(cmd)) {
+        cfis[4] = lba & 0xff;
+        cfis[5] = (lba >> 8) & 0xff;
+        cfis[6] = (lba >> 16) & 0xff;
+        cfis[8] = (lba >> 24) & 0xff;
+        cfis[9] = (lba >> 32) & 0xff;
+        cfis[10] = (lba >> 40) & 0xff;
+        cfis[3] = count & 0xff;
+        cfis[11] = (count >> 8) & 0xff;
+        cfis[12] = (slot << 3) & 0xff; // tag
+        cfis[13] = 0; // normal priority
+    }
+
+    cl->prdtl = 0;
+    size_t length;
+    zx_paddr_t paddr;
+    for (uint32_t i = 0; i < AHCI_MAX_PRDS; i++) {
+        length = phys_iter_next(&iter, &paddr);
+        if (length == 0) {
+            break;
+        } else if (length > AHCI_PRD_MAX_SIZE) {
+            zxlogf(ERROR, "ahci.%u: chunk size > %zu is unsupported\n", num_, length);
+            return ZX_ERR_NOT_SUPPORTED;;
+        } else if (cl->prdtl == AHCI_MAX_PRDS) {
+            zxlogf(ERROR, "ahci.%u: txn with more than %d chunks is unsupported\n",
+                    num_, cl->prdtl);
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        ahci_prd_t* prd = &mem_->tab[slot].prd[i];
+        prd->dba = lo32(paddr);
+        prd->dbau = hi32(paddr);
+        prd->dbc = ((length - 1) & (AHCI_PRD_MAX_SIZE - 1)); // 0-based byte count
+        cl->prdtl++;
+    }
+
+    running_ |= (1u << slot);
+    commands_[slot] = txn;
+
+    zxlogf(SPEW, "ahci.%u: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64
+                  " slot %d prdtl %u\n",
+            num_, txn, cl->w ? 'w' : 'r', lba, count, slot, cl->prdtl);
+    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+        for (uint32_t i = 0; i < cl->prdtl; i++) {
+            ahci_prd_t* prd = &mem_->tab[slot].prd[i];
+            zxlogf(SPEW, "%04u: dbau=0x%08x dba=0x%08x dbc=0x%x\n",
+                   i, prd->dbau, prd->dba, prd->dbc);
+        }
+    }
+
+    // start command
+    if (cmd_is_queued(cmd)) {
+        RegWrite(&regs_->sact, (1u << slot));
+    }
+    RegWrite(&regs_->ci, (1u << slot));
+
+    // set the watchdog
+    // TODO: general timeout mechanism
+    txn->timeout = zx_clock_get_monotonic() + ZX_SEC(1);
+    con_->SignalWatchdog();
+    return ZX_OK;
+}
+
+// HandleIrq does not lock the port or check whether it is valid.
+// It is assumed that an invalid port can not have scheduled operations that trigger an interrupt.
+// The port may have been disabled or unplugged, but is still valid.
+bool Port::HandleIrq() {
+    // Clear interrupt status.
+    uint32_t int_status = RegRead(&regs_->is);
+    RegWrite(&regs_->is, int_status);
+
+    if (int_status & AHCI_PORT_INT_PRC) { // PhyRdy change
+        uint32_t serr = RegRead(&regs_->serr);
+        RegWrite(&regs_->serr, serr & ~0x1);
+    }
+    if (int_status & AHCI_PORT_INT_ERROR) { // error
+        zxlogf(ERROR, "ahci.%u: error is=0x%08x\n", num_, int_status);
+        TxnComplete(ZX_ERR_INTERNAL);
+        return true;
+    } else if (int_status) {
+        TxnComplete(ZX_OK);
+        return true;
+    }
+    return false;
+}
+
+bool Port::HandleWatchdog() {
+    mtx_lock(&lock_);
+    if (!is_valid()) {
+        mtx_unlock(&lock_);
+        return false;
+    }
+    zx_time_t now = zx_clock_get_monotonic();
+    uint32_t pending = running_ & ~completed_;
+    sata_txn_t* failed_txn[AHCI_MAX_COMMANDS] = {0};
+    static_assert(AHCI_MAX_COMMANDS >= 32,
+                  "Failed TXN insufficiently sized to handle all commmand");
+    bool txn_pending = false;
+    while (pending) {
+        txn_pending = true;
+        unsigned slot = 32 - __builtin_clz(pending) - 1;
+        failed_txn[slot] = nullptr;
+        sata_txn_t* txn = commands_[slot];
+        pending &= ~(1u << slot);
+        if (!txn) {
+            zxlogf(ERROR, "ahci: command %u pending but txn is NULL\n", slot);
+            continue;
+        }
+        if (txn->timeout >= now) {
+            continue;
+        }
+        // Check whether this is a real timeout.
+        uint32_t active = RegRead(&regs_->sact);
+        if ((active & (1u << slot)) == 0) {
+            // Command is no longer active, it has completed but not yet serviced by
+            // IRQ thread. Get the time this event happened, compare to time
+            // watchdog loop started to determine whether it has blocked for too
+            // long.
+            zx_time_t looptime = zx_clock_get_monotonic() - now;
+            zxlogf(ERROR,
+                   "ahci: spurious watchdog timeout port %u txn %p, time in watchdog = %lu\n",
+                   num_, txn, looptime);
+        } else {
+            // time out
+            zxlogf(ERROR, "ahci: txn time out on port %d txn %p\n", num_, txn);
+            running_ &= ~(1u << slot);
+            completed_ |= (1u << slot);
+            commands_[slot] = nullptr;
+            failed_txn[slot] = txn;
+        }
+    }
+    mtx_unlock(&lock_);
+    for (uint32_t i = 0; i < countof(failed_txn); i++) {
+        if (failed_txn[i] != nullptr) {
+            block_complete(failed_txn[i], ZX_ERR_TIMED_OUT);
+        }
+    }
+    return txn_pending;
+}
+
+} // namespace ahci
