@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 
 #include <dispatcher-pool/dispatcher-thread-pool.h>
@@ -21,8 +24,10 @@ void RealtekCodec::PrintDebugPrefix() const {
     printf("RealtekCodec : ");
 }
 
-fbl::RefPtr<RealtekCodec> RealtekCodec::Create() {
-    return fbl::AdoptRef(new RealtekCodec);
+zx_status_t RealtekCodec::Create(void* ctx, zx_device_t* parent) {
+    fbl::RefPtr<RealtekCodec> codec = fbl::AdoptRef(new RealtekCodec);
+    ZX_DEBUG_ASSERT(codec != nullptr);
+    return codec->Init(parent);
 }
 
 zx_status_t RealtekCodec::Init(zx_device_t* codec_dev) {
@@ -383,16 +388,22 @@ zx_status_t RealtekCodec::CreateAndStartStreams(const StreamProperties* streams,
     return ZX_OK;
 }
 
-extern "C" zx_status_t realtek_ihda_codec_bind_hook(void* ctx,
-                                                    zx_device_t* codec_dev) {
-    auto codec = RealtekCodec::Create();
-    ZX_DEBUG_ASSERT(codec != nullptr);
-
-    // Init our codec.
-    return codec->Init(codec_dev);
-}
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = RealtekCodec::Create;
+    return ops;
+}();
 
 }  // namespace codecs
-}  // namespace audio
 }  // namespace intel_hda
+}  // namespace audio
 
+// clang-format off
+ZIRCON_DRIVER_BEGIN(realtek_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_IHDA_CODEC),
+    BI_ABORT_IF(NE, BIND_IHDA_CODEC_VID, 0x10ec),   // Realtek
+    BI_MATCH_IF(EQ, BIND_IHDA_CODEC_DID, 0x0255),   // ALC255
+    BI_MATCH_IF(EQ, BIND_IHDA_CODEC_DID, 0x0283),   // ALC283
+ZIRCON_DRIVER_END(realtek_ihda_codec)
+// clang-format on
