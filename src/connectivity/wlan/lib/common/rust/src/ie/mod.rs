@@ -4,6 +4,7 @@
 
 pub mod id;
 pub mod rsn;
+pub mod wpa;
 
 mod constants;
 mod fields;
