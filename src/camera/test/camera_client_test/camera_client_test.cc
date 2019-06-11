@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/camera/camera_client/camera_client.h"
+#include "src/camera/test/camera_client_test/camera_client_test.h"
 
 #include <fbl/unique_fd.h>
 #include <fcntl.h>

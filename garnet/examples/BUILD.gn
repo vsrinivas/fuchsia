@@ -7,7 +7,6 @@ group("examples") {
 
   deps = [
     "benchmark",
-    "camera",
     "components",
     "escher",
 

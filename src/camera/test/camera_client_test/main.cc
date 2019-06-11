@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-#include "garnet/examples/camera/camera_client/camera_client.h"
+#include "src/camera/test/camera_client_test/camera_client_test.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
