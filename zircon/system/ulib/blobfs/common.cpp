@@ -287,7 +287,7 @@ int Mkfs(int fd, uint64_t block_count) {
             return -1;
         }
 
-        if (fvm::ResetAllSlices(fd) != ZX_OK) {
+        if (fvm::ResetAllSlices(zx::unowned_channel(caller.borrow_channel())) != ZX_OK) {
             FS_TRACE_ERROR("blobfs mkfs: Failed to reset slices\n");
             return -1;
         }

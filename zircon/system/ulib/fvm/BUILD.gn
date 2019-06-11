@@ -5,7 +5,6 @@
 library("fvm") {
   host = true
   sources = [
-    "client.cpp",
     "format.cpp",
     "fvm-check.cpp",
     "fvm.cpp",
@@ -28,8 +27,11 @@ library("fvm") {
     "$zx/third_party/ulib/lz4:headers",
   ]
   if (is_fuchsia) {
+    sources += [ "client.cpp" ]
+
     deps += [
       "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+      "$zx/system/ulib/block-client",
       "$zx/system/ulib/fzl",
       "$zx/system/ulib/gpt",
       "$zx/system/ulib/sync",

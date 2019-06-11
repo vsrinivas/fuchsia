@@ -21,7 +21,9 @@ test("fvm-unit") {
     "$zx/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
+    sources += [ "client-test.cpp" ]
     deps += [
+      "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",

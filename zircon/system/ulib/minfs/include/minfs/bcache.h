@@ -100,7 +100,8 @@ public:
     zx_status_t FVMShrink(const extend_request_t* request);
 
     zx_status_t FVMReset() {
-        return fvm::ResetAllSlices(fd_.get());
+        fzl::UnownedFdioCaller caller(fd_.get());
+        return fvm::ResetAllSlices(zx::unowned_channel(caller.borrow_channel()));
     }
 
 #else
