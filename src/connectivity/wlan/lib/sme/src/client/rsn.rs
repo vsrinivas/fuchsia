@@ -31,7 +31,7 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<&[u8]>,
     ) -> Result<(), failure::Error>;
 }
 
@@ -47,7 +47,7 @@ impl Supplicant for wlan_rsn::Supplicant {
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<&[u8]>,
     ) -> Result<(), failure::Error> {
         wlan_rsn::Supplicant::on_eapol_frame(self, update_sink, frame)
     }

@@ -18,6 +18,7 @@ use eapol;
 use failure::{self, bail};
 use log::{error, info};
 use std::collections::HashSet;
+use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
 enum Pmksa {
@@ -299,10 +300,10 @@ impl EssSa {
         Ok(())
     }
 
-    pub fn on_eapol_frame(
+    pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<B>,
     ) -> Result<(), failure::Error> {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let updates = match frame {
@@ -313,19 +314,26 @@ impl EssSa {
                 // Authenticator updates its key replay counter with every outbound EAPOL frame.
                 if let Role::Authenticator = self.role {
                     for update in &updates {
-                        if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
-                            if frame.key_replay_counter <= self.key_replay_counter {
+                        if let SecAssocUpdate::TxEapolKeyFrame(eapol_frame) = update {
+                            let krc = eapol_frame
+                                .keyframe()
+                                .key_frame_fields
+                                .key_replay_counter
+                                .to_native();
+
+                            if krc <= self.key_replay_counter {
                                 error!("tx EAPOL Key frame uses invalid key replay counter: {:?} ({:?})",
-                                          frame.key_replay_counter,
+                                       krc,
                                           self.key_replay_counter);
                             }
-                            self.key_replay_counter = frame.key_replay_counter;
+                            self.key_replay_counter = krc;
                         }
                     }
                 }
 
                 updates
             }
+            _ => UpdateSink::default(),
         };
 
         let was_esssa_established = self.is_established();
@@ -351,10 +359,10 @@ impl EssSa {
         Ok(())
     }
 
-    fn on_eapol_key_frame(
+    fn on_eapol_key_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::KeyFrame,
+        frame: &eapol::KeyFrameRx<B>,
     ) -> Result<(), failure::Error> {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
         let result = VerifiedKeyFrame::from_key_frame(
@@ -363,7 +371,7 @@ impl EssSa {
             &self.negotiated_rsne,
             self.key_replay_counter,
         );
-        // TODO(hahnr): The status should not be pushed as an update but isntead as a Result.
+        // TODO(hahnr): The status should not be pushed as an update but instead as a Result.
         let verified_frame = match result {
             Err(e) => match e.as_fail().downcast_ref::<Error>() {
                 Some(Error::WrongAesKeywrapKey) => {
@@ -379,9 +387,9 @@ impl EssSa {
         // Update key replay counter if MIC was set and is valid. Only applicable for Supplicant.
         // TODO(hahnr): We should verify the MIC here and only increase the counter if the MIC
         // is valid.
-        if frame.key_info.key_mic() {
+        if frame.key_frame_fields.key_info().key_mic() {
             if let Role::Supplicant = self.role {
-                self.key_replay_counter = frame.key_replay_counter;
+                self.key_replay_counter = frame.key_frame_fields.key_replay_counter.to_native();
             }
         }
 
@@ -396,14 +404,14 @@ impl EssSa {
 
         // Once PMKSA was established PTKSA and GTKSA can process frames.
         // IEEE Std 802.11-2016, 12.7.2 b.2)
-        if frame.key_info.key_type() == eapol::KEY_TYPE_PAIRWISE {
+        if frame.key_frame_fields.key_info().key_type() == eapol::KeyType::PAIRWISE {
             match self.ptksa.mut_state() {
                 Ptksa::Uninitialized { .. } => Ok(()),
                 Ptksa::Initialized { method } | Ptksa::Established { method, .. } => {
                     method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
                 }
             }
-        } else if frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK {
+        } else if frame.key_frame_fields.key_info().key_type() == eapol::KeyType::GROUP_SMK {
             match self.gtksa.mut_state() {
                 Gtksa::Uninitialized { .. } => Ok(()),
                 Gtksa::Initialized { method } | Gtksa::Established { method, .. } => match method {
@@ -419,7 +427,10 @@ impl EssSa {
                 },
             }
         } else {
-            error!("unsupported EAPOL Key frame key type: {:?}", frame.key_info.key_type());
+            error!(
+                "unsupported EAPOL Key frame key type: {:?}",
+                frame.key_frame_fields.key_info().key_type()
+            );
             Ok(())
         }
     }
@@ -430,6 +441,7 @@ mod tests {
     use super::*;
     use crate::key::exchange::compute_mic;
     use crate::rsna::test_util;
+    use crate::rsna::test_util::expect_eapol_resp;
     use crate::Supplicant;
 
     const ANONCE: [u8; 32] = [0x1A; 32];
@@ -452,21 +464,22 @@ mod tests {
 
         // Send msg #1 to Supplicant and wait for response.
         let mut s_updates = vec![];
-        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg1.clone()));
+        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg1.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         assert_eq!(s_updates.len(), 1);
         let msg2 = test_util::expect_eapol_resp(&s_updates[..]);
 
         // Send msg #2 to Authenticator and wait for response.
         let mut a_updates = vec![];
-        let result = authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg2.clone()));
+        let result =
+            authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg2.keyframe()));
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 1);
         let msg3 = test_util::expect_eapol_resp(&a_updates[..]);
 
         // Send msg #3 to Supplicant and wait for response.
         let mut s_updates = vec![];
-        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg3.clone()));
+        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg3.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
         assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
         let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
@@ -476,7 +489,8 @@ mod tests {
 
         // Send msg #4 to Authenticator.
         let mut a_updates = vec![];
-        let result = authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg4.clone()));
+        let result =
+            authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg4.keyframe()));
         assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 3);
         let a_ptk = test_util::expect_reported_ptk(&a_updates[..]);
@@ -497,21 +511,21 @@ mod tests {
 
         // Send first message of handshake.
         let (result, _) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 1;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
 
         // Replay first message which should restart the entire handshake.
         // Verify the second message of the handshake was received.
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 3;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(3);
         });
         assert!(result.is_ok());
 
         // Extract second message response and verify Supplicant responded to the replayed first
         // message.
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        assert_eq!(msg2.key_replay_counter, 3);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        assert_eq!(msg2.keyframe().key_frame_fields.key_replay_counter.to_native(), 3);
     }
 
     #[test]
@@ -520,11 +534,11 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 0;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2.keyframe());
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
@@ -536,7 +550,7 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, _) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 1;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
     }
@@ -547,14 +561,14 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 1;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2.keyframe());
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
-            msg3.key_replay_counter = 0;
+            msg3.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
     }
@@ -565,14 +579,14 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 0;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2.keyframe());
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
-            msg3.key_replay_counter = 1;
+            msg3.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
     }
@@ -583,14 +597,14 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         let (result, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 0;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(0);
         });
         assert!(result.is_ok());
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let ptk = derive_ptk(&msg2.keyframe());
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
-            msg3.key_replay_counter = 2;
+            msg3.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert!(result.is_ok());
 
@@ -599,13 +613,13 @@ mod tests {
 
         // Send an invalid message.
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
-            msg3.key_replay_counter = 2;
+            msg3.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert!(result.is_err());
 
         // Send a valid message.
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
-            msg3.key_replay_counter = 3;
+            msg3.key_frame_fields.key_replay_counter.set_from_native(3);
         });
         assert!(result.is_ok());
     }
@@ -621,26 +635,28 @@ mod tests {
 
         // Send 1st message of 4-Way Handshake for the first time and derive PTK.
         let (_, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 1;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let first_ptk = derive_ptk(&msg2);
-        let first_nonce = msg2.key_nonce;
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let msg2_frame = msg2.keyframe();
+        let first_ptk = derive_ptk(&msg2_frame);
+        let first_nonce = msg2_frame.key_frame_fields.key_nonce;
 
         // Send 1st message of 4-Way Handshake a second time and derive PTK.
         let (_, updates) = send_msg1(&mut supplicant, |msg1| {
-            msg1.key_replay_counter = 2;
+            msg1.key_frame_fields.key_replay_counter.set_from_native(2);
         });
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let second_ptk = derive_ptk(&msg2);
-        let second_nonce = msg2.key_nonce;
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let msg2_frame = msg2.keyframe();
+        let second_ptk = derive_ptk(&msg2_frame);
+        let second_nonce = msg2_frame.key_frame_fields.key_nonce;
 
         // Send 3rd message of 4-Way Handshake.
         // The Supplicant now finished the 4-Way Handshake and should report its PTK.
         let (_, updates) = send_msg3(&mut supplicant, &second_ptk, |msg3| {
-            msg3.key_replay_counter = 3;
+            msg3.key_frame_fields.key_replay_counter.set_from_native(3);
         });
 
         let installed_ptk = test_util::expect_reported_ptk(&updates[..]);
@@ -661,22 +677,24 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify 2nd message.
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let msg2_buf = expect_eapol_resp(&updates[..]);
+        let msg2 = msg2_buf.keyframe();
         let s_rsne = test_util::get_s_rsne();
         let s_rsne_data = test_util::get_rsne_bytes(&s_rsne);
-        assert_eq!(msg2.version, 1);
-        assert_eq!(msg2.packet_type, 3);
-        assert_eq!(msg2.packet_body_len as usize, msg2.len() - 4);
-        assert_eq!(msg2.descriptor_type, 2);
-        assert_eq!(msg2.key_info.value(), 0x010A);
-        assert_eq!(msg2.key_len, 0);
-        assert_eq!(msg2.key_replay_counter, 1);
-        assert!(!test_util::is_zero(&msg2.key_nonce[..]));
-        assert!(test_util::is_zero(&msg2.key_iv[..]));
-        assert_eq!(msg2.key_rsc, 0);
+        assert_eq!({ msg2.eapol_fields.version }, eapol::ProtocolVersion::IEEE802DOT1X2001);
+        assert_eq!({ msg2.eapol_fields.packet_type }, eapol::PacketType::KEY);
+        let mut buf = vec![];
+        msg2.write_into(false, &mut buf).expect("error converting message to bytes");
+        assert_eq!(msg2.eapol_fields.packet_body_len.to_native() as usize, buf.len() - 4);
+        assert_eq!({ msg2.key_frame_fields.descriptor_type }, eapol::KeyDescriptor::IEEE802DOT11);
+        assert_eq!(msg2.key_frame_fields.key_info(), eapol::KeyInformation(0x010A));
+        assert_eq!(msg2.key_frame_fields.key_len.to_native(), 0);
+        assert_eq!(msg2.key_frame_fields.key_replay_counter.to_native(), 1);
+        assert!(!test_util::is_zero(&msg2.key_frame_fields.key_nonce[..]));
+        assert!(test_util::is_zero(&msg2.key_frame_fields.key_iv[..]));
+        assert_eq!(msg2.key_frame_fields.key_rsc.to_native(), 0);
         assert!(!test_util::is_zero(&msg2.key_mic[..]));
         assert_eq!(msg2.key_mic.len(), test_util::mic_len());
-        assert_eq!(msg2.key_data.len(), msg2.key_data_len as usize);
         assert_eq!(msg2.key_data.len(), 20);
         assert_eq!(&msg2.key_data[..], &s_rsne_data[..]);
 
@@ -686,17 +704,18 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify 4th message was received and is correct.
-        let msg4 = test_util::expect_eapol_resp(&updates[..]);
-        assert_eq!(msg4.version, 1);
-        assert_eq!(msg4.packet_type, 3);
-        assert_eq!(msg4.packet_body_len as usize, msg4.len() - 4);
-        assert_eq!(msg4.descriptor_type, 2);
-        assert_eq!(msg4.key_info.value(), 0x030A);
-        assert_eq!(msg4.key_len, 0);
-        assert_eq!(msg4.key_replay_counter, 2);
-        assert!(test_util::is_zero(&msg4.key_nonce[..]));
-        assert!(test_util::is_zero(&msg4.key_iv[..]));
-        assert_eq!(msg4.key_rsc, 0);
+        let msg4_buf = expect_eapol_resp(&updates[..]);
+        let msg4 = msg4_buf.keyframe();
+        assert_eq!({ msg4.eapol_fields.version }, eapol::ProtocolVersion::IEEE802DOT1X2001);
+        assert_eq!({ msg4.eapol_fields.packet_type }, eapol::PacketType::KEY);
+        assert_eq!(msg4.eapol_fields.packet_body_len.to_native() as usize, &msg4_buf[..].len() - 4);
+        assert_eq!({ msg4.key_frame_fields.descriptor_type }, eapol::KeyDescriptor::IEEE802DOT11);
+        assert_eq!(msg4.key_frame_fields.key_info(), eapol::KeyInformation(0x030A));
+        assert_eq!(msg4.key_frame_fields.key_len.to_native(), 0);
+        assert_eq!(msg4.key_frame_fields.key_replay_counter.to_native(), 2);
+        assert!(test_util::is_zero(&msg4.key_frame_fields.key_nonce[..]));
+        assert!(test_util::is_zero(&msg4.key_frame_fields.key_iv[..]));
+        assert_eq!(msg4.key_frame_fields.key_rsc.to_native(), 0);
         assert!(!test_util::is_zero(&msg4.key_mic[..]));
         assert_eq!(msg4.key_mic.len(), test_util::mic_len());
         assert_eq!(msg4.key_data.len(), 0);
@@ -724,17 +743,18 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify 2th message was received and is correct.
-        let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        assert_eq!(msg2.version, 1);
-        assert_eq!(msg2.packet_type, 3);
-        assert_eq!(msg2.packet_body_len as usize, msg2.len() - 4);
-        assert_eq!(msg2.descriptor_type, 2);
-        assert_eq!(msg2.key_info.value(), 0x0302);
-        assert_eq!(msg2.key_len, 0);
-        assert_eq!(msg2.key_replay_counter, 3);
-        assert!(test_util::is_zero(&msg2.key_nonce[..]));
-        assert!(test_util::is_zero(&msg2.key_iv[..]));
-        assert_eq!(msg2.key_rsc, 0);
+        let msg2_buf = expect_eapol_resp(&updates[..]);
+        let msg2 = msg2_buf.keyframe();
+        assert_eq!({ msg2.eapol_fields.version }, eapol::ProtocolVersion::IEEE802DOT1X2001);
+        assert_eq!({ msg2.eapol_fields.packet_type }, eapol::PacketType::KEY);
+        assert_eq!(msg2.eapol_fields.packet_body_len.to_native() as usize, &msg2_buf[..].len() - 4);
+        assert_eq!({ msg2.key_frame_fields.descriptor_type }, eapol::KeyDescriptor::IEEE802DOT11);
+        assert_eq!(msg2.key_frame_fields.key_info(), eapol::KeyInformation(0x0302));
+        assert_eq!(msg2.key_frame_fields.key_len.to_native(), 0);
+        assert_eq!(msg2.key_frame_fields.key_replay_counter.to_native(), 3);
+        assert!(test_util::is_zero(&msg2.key_frame_fields.key_nonce[..]));
+        assert!(test_util::is_zero(&msg2.key_frame_fields.key_iv[..]));
+        assert_eq!(msg2.key_frame_fields.key_rsc.to_native(), 0);
         assert!(!test_util::is_zero(&msg2.key_mic[..]));
         assert_eq!(msg2.key_mic.len(), test_util::mic_len());
         assert_eq!(msg2.key_data.len(), 0);
@@ -763,36 +783,36 @@ mod tests {
         // Complete 4-Way Handshake.
         let updates = send_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2);
+        let ptk = derive_ptk(&msg2.keyframe());
         let _ = send_msg3(&mut supplicant, &ptk, |_| {});
 
         // Cause re-keying of GTK via Group-Key Handshake.
         // Rekey same GTK which has been already installed via the 4-Way Handshake.
         // This GTK should not be re-installed.
-
         let (result, updates) = send_group_key_msg1(&mut supplicant, &ptk, GTK, 2, 3);
         assert!(result.is_ok());
 
         // Verify 2th message was received and is correct.
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        assert_eq!(msg2.version, 1);
-        assert_eq!(msg2.packet_type, 3);
-        assert_eq!(msg2.packet_body_len as usize, msg2.len() - 4);
-        assert_eq!(msg2.descriptor_type, 2);
-        assert_eq!(msg2.key_info.value(), 0x0302);
-        assert_eq!(msg2.key_len, 0);
-        assert_eq!(msg2.key_replay_counter, 3);
-        assert!(test_util::is_zero(&msg2.key_nonce[..]));
-        assert!(test_util::is_zero(&msg2.key_iv[..]));
-        assert_eq!(msg2.key_rsc, 0);
-        assert!(!test_util::is_zero(&msg2.key_mic[..]));
-        assert_eq!(msg2.key_mic.len(), test_util::mic_len());
-        assert_eq!(msg2.key_data.len(), 0);
-        assert!(test_util::is_zero(&msg2.key_data[..]));
+        let keyframe = msg2.keyframe();
+        assert_eq!(keyframe.eapol_fields.version, eapol::ProtocolVersion::IEEE802DOT1X2001);
+        assert_eq!(keyframe.eapol_fields.packet_type, eapol::PacketType::KEY);
+        assert_eq!(keyframe.eapol_fields.packet_body_len.to_native() as usize, msg2.len() - 4);
+        assert_eq!(keyframe.key_frame_fields.descriptor_type, eapol::KeyDescriptor::IEEE802DOT11);
+        assert_eq!(keyframe.key_frame_fields.key_info().0, 0x0302);
+        assert_eq!(keyframe.key_frame_fields.key_len.to_native(), 0);
+        assert_eq!(keyframe.key_frame_fields.key_replay_counter.to_native(), 3);
+        assert!(test_util::is_zero(&keyframe.key_frame_fields.key_nonce[..]));
+        assert!(test_util::is_zero(&keyframe.key_frame_fields.key_iv[..]));
+        assert_eq!(keyframe.key_frame_fields.key_rsc.to_native(), 0);
+        assert!(!test_util::is_zero(&keyframe.key_mic[..]));
+        assert_eq!(keyframe.key_mic.len(), test_util::mic_len());
+        assert_eq!(keyframe.key_data.len(), 0);
+        assert!(test_util::is_zero(&keyframe.key_data[..]));
         // Verify the message's MIC.
         let mic =
-            compute_mic(ptk.kck(), &test_util::get_akm(), &msg2).expect("error computing MIC");
-        assert_eq!(&msg2.key_mic[..], &mic[..]);
+            compute_mic(ptk.kck(), &test_util::get_akm(), &keyframe).expect("error computing MIC");
+        assert_eq!(&keyframe.key_mic[..], &mic[..]);
 
         // Verify neither PTK nor GTK were re-installed.
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
@@ -809,7 +829,7 @@ mod tests {
         // Complete 4-Way Handshake.
         let updates = send_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2);
+        let ptk = derive_ptk(&msg2.keyframe());
         let _ = send_msg3(&mut supplicant, &ptk, |_| {});
 
         // Cause re-keying of GTK via Group-Key Handshake.
@@ -839,8 +859,8 @@ mod tests {
     // Nonce reuse
     // (in)-compatible protocol and RSNE versions
 
-    fn derive_ptk(msg2: &eapol::KeyFrame) -> Ptk {
-        let snonce = msg2.key_nonce;
+    fn derive_ptk<B: ByteSlice>(msg2: &eapol::KeyFrameRx<B>) -> Ptk {
+        let snonce = msg2.key_frame_fields.key_nonce;
         test_util::get_ptk(&ANONCE[..], &snonce[..])
     }
 
@@ -849,11 +869,12 @@ mod tests {
         msg_modifier: F,
     ) -> (Result<(), failure::Error>, UpdateSink)
     where
-        F: Fn(&mut eapol::KeyFrame),
+        F: Fn(&mut eapol::KeyFrameTx),
     {
         let msg = test_util::get_4whs_msg1(&ANONCE[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
-        let result = supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
+        let result =
+            supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
     }
 
@@ -863,11 +884,12 @@ mod tests {
         msg_modifier: F,
     ) -> (Result<(), failure::Error>, UpdateSink)
     where
-        F: Fn(&mut eapol::KeyFrame),
+        F: Fn(&mut eapol::KeyFrameTx),
     {
         let msg = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
-        let result = supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
+        let result =
+            supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
     }
 
@@ -879,9 +901,9 @@ mod tests {
         key_replay_counter: u64,
     ) -> (Result<(), failure::Error>, UpdateSink) {
         let msg = test_util::get_group_key_hs_msg1(ptk, &gtk[..], key_id, key_replay_counter);
-
         let mut update_sink = UpdateSink::default();
-        let result = supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg));
+        let result =
+            supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
     }
 }

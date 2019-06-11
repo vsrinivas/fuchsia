@@ -6,6 +6,7 @@ pub mod psk;
 
 use crate::rsna::{UpdateSink, VerifiedKeyFrame};
 use failure;
+use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
 pub enum Method {
@@ -20,10 +21,10 @@ impl Method {
     }
 
     // Unused as only PSK is supported so far.
-    pub fn on_eapol_key_frame(
+    pub fn on_eapol_key_frame<B: ByteSlice>(
         &self,
         _update_sink: &mut UpdateSink,
-        _frame: VerifiedKeyFrame,
+        _frame: VerifiedKeyFrame<B>,
     ) -> Result<(), failure::Error> {
         Ok(())
     }

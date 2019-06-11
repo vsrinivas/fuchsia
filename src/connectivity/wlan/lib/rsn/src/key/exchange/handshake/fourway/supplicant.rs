@@ -4,7 +4,7 @@
 
 use crate::crypto_utils::nonce::Nonce;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
-use crate::key::exchange::{compute_mic, Key};
+use crate::key::exchange::{compute_mic_from_buf, Key};
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
@@ -13,26 +13,27 @@ use crate::rsna::{
     KeyFrameKeyDataState, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
 };
 use crate::Error;
-use bytes::Bytes;
 use crypto::util::fixed_time_eq;
 use eapol;
+use eapol::KeyFrameBuf;
 use failure::{self, bail, ensure};
 use log::error;
 use wlan_common::ie::rsn::rsne::Rsne;
+use zerocopy::ByteSlice;
 
 // IEEE Std 802.11-2016, 12.7.6.2
-fn handle_message_1(
+fn handle_message_1<B: ByteSlice>(
     cfg: &Config,
     pmk: &[u8],
     snonce: &[u8],
-    msg1: FourwayHandshakeFrame,
-) -> Result<(eapol::KeyFrame, Ptk, Nonce), failure::Error> {
+    msg1: FourwayHandshakeFrame<B>,
+) -> Result<(KeyFrameBuf, Ptk, Nonce), failure::Error> {
     let frame = match msg1.get() {
         // Note: This is only true if PTK re-keying is not supported.
         KeyFrameState::UnverifiedMic(_) => bail!("msg1 of 4-Way Handshake cannot carry a MIC"),
         KeyFrameState::NoMic(frame) => frame,
     };
-    let anonce = frame.key_nonce;
+    let anonce = frame.key_frame_fields.key_nonce;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
     let pairwise = rsne.pairwise.clone();
@@ -43,51 +44,50 @@ fn handle_message_1(
 }
 
 // IEEE Std 802.11-2016, 12.7.6.3
-fn create_message_2(
+fn create_message_2<B: ByteSlice>(
     cfg: &Config,
     kck: &[u8],
     rsne: &NegotiatedRsne,
-    msg1: &eapol::KeyFrame,
+    msg1: &eapol::KeyFrameRx<B>,
     snonce: &[u8],
-) -> Result<eapol::KeyFrame, failure::Error> {
+) -> Result<KeyFrameBuf, failure::Error> {
     let mut key_info = eapol::KeyInformation(0);
-    key_info.set_key_descriptor_version(msg1.key_info.key_descriptor_version());
-    key_info.set_key_type(msg1.key_info.key_type());
+    key_info.set_key_descriptor_version(msg1.key_frame_fields.key_info().key_descriptor_version());
+    key_info.set_key_type(msg1.key_frame_fields.key_info().key_type());
     key_info.set_key_mic(true);
 
     let mut w = kde::Writer::new(vec![]);
     w.write_rsne(&cfg.s_rsne)?;
     let key_data = w.finalize_for_plaintext()?;
 
-    let mut msg2 = eapol::KeyFrame {
-        version: msg1.version,
-        packet_type: eapol::PacketType::Key as u8,
-        packet_body_len: 0, // Updated afterwards
-        descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
-        key_info: key_info,
-        key_len: 0,
-        key_replay_counter: msg1.key_replay_counter,
-        key_mic: Bytes::from(vec![0u8; msg1.key_mic.len()]),
-        key_rsc: 0,
-        key_iv: [0u8; 16],
-        key_nonce: eapol::to_array(snonce),
-        key_data_len: key_data.len() as u16,
-        key_data: Bytes::from(key_data),
-    };
-    msg2.update_packet_body_len();
+    let msg2 = eapol::KeyFrameTx::new(
+        msg1.eapol_fields.version,
+        eapol::KeyFrameFields::new(
+            eapol::KeyDescriptor::IEEE802DOT11,
+            key_info,
+            0,
+            msg1.key_frame_fields.key_replay_counter.to_native(),
+            eapol::to_array(snonce),
+            [0u8; 16], // iv
+            0,         // rsc
+        ),
+        key_data,
+        msg1.key_mic.len(),
+    )
+    .serialize();
 
-    msg2.key_mic = Bytes::from(compute_mic(kck, &rsne.akm, &msg2)?);
-
-    Ok(msg2)
+    let mic = compute_mic_from_buf(kck, &rsne.akm, msg2.unfinalized_buf())
+        .map_err(|e| failure::Error::from(e))?;
+    msg2.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
 
 // IEEE Std 802.11-2016, 12.7.6.4
-fn handle_message_3(
+fn handle_message_3<B: ByteSlice>(
     cfg: &Config,
     kck: &[u8],
     kek: &[u8],
-    msg3: FourwayHandshakeFrame,
-) -> Result<(eapol::KeyFrame, Gtk), failure::Error> {
+    msg3: FourwayHandshakeFrame<B>,
+) -> Result<(KeyFrameBuf, Gtk), failure::Error> {
     let negotiated_rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let frame = match &msg3.get() {
         KeyFrameState::UnverifiedMic(unverified) => {
@@ -123,7 +123,7 @@ fn handle_message_3(
         (Some(gtk), Some(rsne)) => {
             ensure!(&rsne == &cfg.a_rsne, Error::InvalidKeyDataRsne);
             let msg4 = create_message_4(&negotiated_rsne, kck, frame)?;
-            let rsc = msg3.frame.key_rsc;
+            let rsc = msg3.frame.key_frame_fields.key_rsc.to_native();
             Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_rsne.group_data, rsc)?))
         }
         _ => bail!(Error::InvalidKeyDataContent),
@@ -131,37 +131,36 @@ fn handle_message_3(
 }
 
 // IEEE Std 802.11-2016, 12.7.6.5
-fn create_message_4(
+fn create_message_4<B: ByteSlice>(
     rsne: &NegotiatedRsne,
     kck: &[u8],
-    msg3: &eapol::KeyFrame,
-) -> Result<eapol::KeyFrame, failure::Error> {
-    let mut key_info = eapol::KeyInformation(0);
-    key_info.set_key_descriptor_version(msg3.key_info.key_descriptor_version());
-    key_info.set_key_type(msg3.key_info.key_type());
-    key_info.set_key_mic(true);
-    key_info.set_secure(true);
+    msg3: &eapol::KeyFrameRx<B>,
+) -> Result<KeyFrameBuf, failure::Error> {
+    let key_info = eapol::KeyInformation(0)
+        .with_key_descriptor_version(msg3.key_frame_fields.key_info().key_descriptor_version())
+        .with_key_type(msg3.key_frame_fields.key_info().key_type())
+        .with_key_mic(true)
+        .with_secure(true);
 
-    let mut msg4 = eapol::KeyFrame {
-        version: msg3.version,
-        packet_type: eapol::PacketType::Key as u8,
-        packet_body_len: 0, // Updated afterwards
-        descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
-        key_info: key_info,
-        key_len: 0,
-        key_replay_counter: msg3.key_replay_counter,
-        key_mic: Bytes::from(vec![0u8; msg3.key_mic.len()]),
-        key_rsc: 0,
-        key_iv: [0u8; 16],
-        key_nonce: [0u8; 32],
-        key_data_len: 0,
-        key_data: Bytes::from(vec![]),
-    };
-    msg4.update_packet_body_len();
+    let msg4 = eapol::KeyFrameTx::new(
+        msg3.eapol_fields.version,
+        eapol::KeyFrameFields::new(
+            eapol::KeyDescriptor::IEEE802DOT11,
+            key_info,
+            0,
+            msg3.key_frame_fields.key_replay_counter.to_native(),
+            [0u8; 32], // nonce
+            [0u8; 16], // iv
+            0,         // rsc
+        ),
+        vec![],
+        msg3.key_mic.len(),
+    )
+    .serialize();
 
-    msg4.key_mic = Bytes::from(compute_mic(kck, &rsne.akm, &msg4)?);
-
-    Ok(msg4)
+    let mic = compute_mic_from_buf(kck, &rsne.akm, msg4.unfinalized_buf())
+        .map_err(|e| failure::Error::from(e))?;
+    msg4.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
 
 #[derive(Debug, PartialEq)]
@@ -176,10 +175,10 @@ pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
 }
 
 impl State {
-    pub fn on_eapol_key_frame(
+    pub fn on_eapol_key_frame<B: ByteSlice>(
         self,
         update_sink: &mut UpdateSink,
-        frame: FourwayHandshakeFrame,
+        frame: FourwayHandshakeFrame<B>,
     ) -> Self {
         match self {
             State::AwaitingMsg1 { pmk, cfg } => {

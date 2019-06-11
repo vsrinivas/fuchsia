@@ -36,6 +36,7 @@ pub use crate::key::gtk;
 pub use crate::key::gtk::GtkProvider;
 pub use crate::rsna::NegotiatedRsne;
 use wlan_common::ie::rsn::rsne;
+use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {
@@ -98,10 +99,10 @@ impl Supplicant {
     /// unsupported types; the Supplicant will filter and drop all unexpected frames.
     /// Outbound EAPOL frames, status and key updates will be pushed into the `update_sink`.
     /// The method will return an `Error` if the frame was invalid.
-    pub fn on_eapol_frame(
+    pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<B>,
     ) -> Result<(), failure::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
@@ -171,10 +172,10 @@ impl Authenticator {
     /// unsupported types; the Authenticator will filter and drop all unexpected frames.
     /// Outbound EAPOL frames, status and key updates will be pushed into the `update_sink`.
     /// The method will return an `Error` if the frame was invalid.
-    pub fn on_eapol_frame(
+    pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<B>,
     ) -> Result<(), failure::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
@@ -233,9 +234,9 @@ pub enum Error {
     #[fail(display = "cannot initiate Fourway Handshake as Supplicant")]
     UnexpectedInitiationRequest,
     #[fail(display = "unsupported Key Descriptor Type: {:?}", _0)]
-    UnsupportedKeyDescriptor(u8),
+    UnsupportedKeyDescriptor(eapol::KeyDescriptor),
     #[fail(display = "unexpected Key Descriptor Type {:?}; expected {:?}", _0, _1)]
-    InvalidKeyDescriptor(u8, eapol::KeyDescriptor),
+    InvalidKeyDescriptor(eapol::KeyDescriptor, eapol::KeyDescriptor),
     #[fail(display = "unsupported Key Descriptor Version: {:?}", _0)]
     UnsupportedKeyDescriptorVersion(u16),
     #[fail(display = "only PTK and GTK derivation is supported")]
@@ -301,7 +302,7 @@ pub enum Error {
     #[fail(display = "invalid nonce; nonce must match nonce from 1st message")]
     ErrorNonceDoesntMatch,
     #[fail(display = "invalid IV; EAPOL protocol version: {:?}; message: {:?}", _0, _1)]
-    InvalidIv(u8, MessageNumber),
+    InvalidIv(eapol::ProtocolVersion, MessageNumber),
     #[fail(display = "PMKSA was not yet established")]
     PmksaNotEstablished,
     #[fail(display = "invalid nonce size; expected 32 bytes, found: {:?}", _0)]

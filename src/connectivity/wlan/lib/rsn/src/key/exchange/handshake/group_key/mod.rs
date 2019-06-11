@@ -8,6 +8,7 @@ use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
 use wlan_common::ie::rsn::{akm::Akm, cipher::Cipher};
+use zerocopy::ByteSlice;
 
 mod supplicant;
 
@@ -18,15 +19,15 @@ enum RoleHandler {
 
 // Struct which carries EAPOL key frames which comply with IEEE Std 802.11-2016, 12.7.2 and
 // IEEE Std 802.11-2016, 12.7.7.
-pub struct GroupKeyHandshakeFrame<'a> {
-    frame: &'a eapol::KeyFrame,
+pub struct GroupKeyHandshakeFrame<'a, B: ByteSlice> {
+    frame: &'a eapol::KeyFrameRx<B>,
 }
 
-impl<'a> GroupKeyHandshakeFrame<'a> {
+impl<'a, B: ByteSlice> GroupKeyHandshakeFrame<'a, B> {
     pub fn from_verified(
-        valid_frame: VerifiedKeyFrame<'a>,
+        valid_frame: VerifiedKeyFrame<'a, B>,
         role: Role,
-    ) -> Result<GroupKeyHandshakeFrame<'a>, failure::Error> {
+    ) -> Result<Self, failure::Error> {
         // Safe since the frame will be wrapped again in a `KeyFrameState` when being accessed.
         let frame = valid_frame.get().unsafe_get_raw();
 
@@ -35,25 +36,18 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
             Role::Authenticator => Role::Supplicant,
         };
 
+        let key_info = frame.key_frame_fields.key_info();
+
         // IEEE Std 802.11-2016, 12.7.7.2 & IEEE Std 802.11-2016, 12.7.7.3
         ensure!(
-            frame.key_info.key_type() == eapol::KEY_TYPE_GROUP_SMK,
+            key_info.key_type() == eapol::KeyType::GROUP_SMK,
             "only group key messages are allowed in Group Key Handshake"
         );
-        ensure!(
-            !frame.key_info.install(),
-            "installbit must not be set in Group Key Handshake messages"
-        );
-        ensure!(frame.key_info.key_mic(), "MIC bit must be set in Group Key Handshake messages");
-        ensure!(frame.key_info.secure(), "secure bit must be set in Group Key Handshake messages");
-        ensure!(
-            !frame.key_info.error(),
-            "error bit must not be set in Group Key Handshake messages"
-        );
-        ensure!(
-            !frame.key_info.request(),
-            "request bit must not be set in Group Key Handshake messages"
-        );
+        ensure!(!key_info.install(), "installbit must not be set in Group Key Handshake messages");
+        ensure!(key_info.key_mic(), "MIC bit must be set in Group Key Handshake messages");
+        ensure!(key_info.secure(), "secure bit must be set in Group Key Handshake messages");
+        ensure!(!key_info.error(), "error bit must not be set in Group Key Handshake messages");
+        ensure!(!key_info.request(), "request bit must not be set in Group Key Handshake messages");
 
         // IEEE Std 802.11-2016, 12.7.7.2 requires the key length to be set to 0 in
         // group key handshakes messages. Some routers, such as Apple Airport Extreme
@@ -70,11 +64,11 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
             // IEEE Std 802.11-2016, 12.7.7.2
             Role::Authenticator => {
                 ensure!(
-                    frame.key_info.key_ack(),
+                    key_info.key_ack(),
                     "ACK bit must be set in 1st message of Group Key Handshake"
                 );
                 ensure!(
-                    frame.key_info.encrypted_key_data(),
+                    key_info.encrypted_key_data(),
                     "encrypted data bit must be set in 1st message of Group Key Handshake"
                 );
 
@@ -88,19 +82,19 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
             // IEEE Std 802.11-2016, 12.7.7.3
             Role::Supplicant => {
                 ensure!(
-                    !frame.key_info.key_ack(),
+                    !key_info.key_ack(),
                     "ACK bit must not be set in 2nd message of Group Key Handshake"
                 );
                 ensure!(
-                    !frame.key_info.encrypted_key_data(),
+                    !key_info.encrypted_key_data(),
                     "encrypted data bit must not be set in 2nd message of Group Key Handshake"
                 );
                 ensure!(
-                    is_zero(&frame.key_iv[..]),
+                    is_zero(&frame.key_frame_fields.key_iv[..]),
                     "IV must be zero in 2nd message of Group Key Handshake"
                 );
                 ensure!(
-                    frame.key_rsc == 0,
+                    frame.key_frame_fields.key_rsc.to_native() == 0,
                     "RSC must be zero in 2nd message of Group Key Handshake"
                 );
             }
@@ -109,7 +103,7 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
         Ok(GroupKeyHandshakeFrame { frame })
     }
 
-    pub fn get(&self) -> KeyFrameState<'a> {
+    pub fn get(&self) -> KeyFrameState<'a, B> {
         KeyFrameState::from_frame(self.frame)
     }
 
@@ -148,11 +142,11 @@ impl GroupKey {
         }
     }
 
-    pub fn on_eapol_key_frame(
+    pub fn on_eapol_key_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
         _key_replay_counter: u64,
-        frame: VerifiedKeyFrame,
+        frame: VerifiedKeyFrame<B>,
     ) -> Result<(), failure::Error> {
         match &mut self.0 {
             RoleHandler::Supplicant(s) => {
@@ -172,62 +166,71 @@ mod tests {
     use super::*;
     use crate::rsna::{test_util, NegotiatedRsne};
 
-    fn verify_group_key_frame(
-        key_frame: &eapol::KeyFrame,
-        role: Role,
-    ) -> Result<GroupKeyHandshakeFrame, failure::Error> {
+    fn verify_group_key_frame(key_frame: eapol::KeyFrameBuf, role: Role) {
         let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
-        let frame = VerifiedKeyFrame::from_key_frame(&key_frame, &role, &rsne, 0)
+        let parsed_frame = eapol::KeyFrameRx::parse(test_util::mic_len(), &key_frame[..])
+            .expect("failed to parse group key frame");
+        let frame = VerifiedKeyFrame::from_key_frame(&parsed_frame, &role, &rsne, 0)
             .expect("couldn't verify frame");
-        GroupKeyHandshakeFrame::from_verified(frame, role)
+        GroupKeyHandshakeFrame::from_verified(frame, role).expect("error verifying group_frame");
     }
 
-    fn fake_key_frame() -> eapol::KeyFrame {
-        eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
-            packet_type: eapol::PacketType::Key as u8,
-            descriptor_type: eapol::KeyDescriptor::Ieee802dot11 as u8,
-            key_info: eapol::KeyInformation(0b01001110000010),
-            ..Default::default()
-        }
+    fn fake_key_frame() -> eapol::KeyFrameTx {
+        let mut key_frame_fields = eapol::KeyFrameFields::default();
+        key_frame_fields.descriptor_type = eapol::KeyDescriptor::IEEE802DOT11;
+        key_frame_fields.set_key_info(eapol::KeyInformation(0b01001110000010));
+        eapol::KeyFrameTx::new(
+            eapol::ProtocolVersion::IEEE802DOT1X2004,
+            key_frame_fields,
+            vec![],
+            test_util::mic_len(),
+        )
     }
 
     #[test]
     fn zeroed_iv_8021x2004() {
-        let key_frame = eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
-            ..fake_key_frame()
-        };
-        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+        let mut key_frame = fake_key_frame();
+        key_frame.protocol_version = eapol::ProtocolVersion::IEEE802DOT1X2004;
+        let key_frame = key_frame
+            .serialize()
+            .finalize_with_mic(&vec![0u8; test_util::mic_len()][..])
+            .expect("failed to construct key frame");
+        verify_group_key_frame(key_frame, Role::Supplicant);
     }
 
     #[test]
     fn random_iv_8021x2004() {
-        let key_frame = eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2004 as u8,
-            // IEEE does not allow random IV in combination with 802.1X-2004, however, not
-            key_iv: [1; 16],
-            ..fake_key_frame()
-        };
-        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+        let mut key_frame = fake_key_frame();
+        key_frame.protocol_version = eapol::ProtocolVersion::IEEE802DOT1X2004;
+        // IEEE does not allow random IV in combination with 802.1X-2004.
+        key_frame.key_frame_fields.key_iv.copy_from_slice(&[1; 16]);
+        let key_frame = key_frame
+            .serialize()
+            .finalize_with_mic(&vec![0u8; test_util::mic_len()][..])
+            .expect("failed to construct key frame");
+        verify_group_key_frame(key_frame, Role::Supplicant);
     }
 
     #[test]
     fn zeroed_iv_8021x2001() {
-        let key_frame = eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2001 as u8,
-            ..fake_key_frame()
-        };
-        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+        let mut key_frame = fake_key_frame();
+        key_frame.protocol_version = eapol::ProtocolVersion::IEEE802DOT1X2001;
+        let key_frame = key_frame
+            .serialize()
+            .finalize_with_mic(&vec![0u8; test_util::mic_len()][..])
+            .expect("failed to construct key frame");
+        verify_group_key_frame(key_frame, Role::Supplicant);
     }
 
     #[test]
     fn random_iv_8021x2001() {
-        let key_frame = eapol::KeyFrame {
-            version: eapol::ProtocolVersion::Ieee802dot1x2001 as u8,
-            key_iv: [1; 16],
-            ..fake_key_frame()
-        };
-        verify_group_key_frame(&key_frame, Role::Supplicant).expect("error verifying group frame");
+        let mut key_frame = fake_key_frame();
+        key_frame.protocol_version = eapol::ProtocolVersion::IEEE802DOT1X2001;
+        key_frame.key_frame_fields.key_iv.copy_from_slice(&[1; 16]);
+        let key_frame = key_frame
+            .serialize()
+            .finalize_with_mic(&vec![0u8; test_util::mic_len()][..])
+            .expect("failed to construct key frame");
+        verify_group_key_frame(key_frame, Role::Supplicant);
     }
 }

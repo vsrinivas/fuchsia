@@ -67,12 +67,12 @@ impl RemoteClient {
             None => bail!("ignoring EapolInd msg; BSS is not protected"),
         };
         let mic_size = authenticator.get_negotiated_rsne().mic_size;
-        match eapol::key_frame_from_bytes(&ind.data, mic_size).to_full_result() {
+        match eapol::KeyFrameRx::parse(mic_size as usize, &ind.data[..]) {
             Ok(key_frame) => {
                 let frame = eapol::Frame::Key(key_frame);
                 let mut update_sink = UpdateSink::default();
                 match authenticator.on_eapol_frame(&mut update_sink, &frame) {
-                    Ok(()) => self.process_authenticator_updates(&update_sink, ctx),
+                    Ok(()) => self.process_authenticator_updates(update_sink, ctx),
                     Err(e) => bail!("failed processing EAPoL key frame: {}", e),
                 }
             }
@@ -88,7 +88,7 @@ impl RemoteClient {
             Some(authenticator) => {
                 let mut update_sink = UpdateSink::default();
                 match authenticator.initiate(&mut update_sink) {
-                    Ok(()) => self.process_authenticator_updates(&update_sink, ctx),
+                    Ok(()) => self.process_authenticator_updates(update_sink, ctx),
                     Err(e) => error!("error initiating key exchange: {}", e),
                 }
             }
@@ -100,20 +100,18 @@ impl RemoteClient {
         ctx.timer.schedule(Event::Client { addr: self.addr.clone(), event })
     }
 
-    fn process_authenticator_updates(&mut self, update_sink: &UpdateSink, ctx: &mut Context) {
+    fn process_authenticator_updates(&mut self, update_sink: UpdateSink, ctx: &mut Context) {
         for update in update_sink {
             match update {
                 SecAssocUpdate::TxEapolKeyFrame(frame) => {
-                    let mut buf = Vec::with_capacity(frame.len());
-                    frame.as_bytes(false, &mut buf);
                     let a_addr = ctx.device_info.addr.clone();
                     ctx.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
                         src_addr: a_addr,
                         dst_addr: self.addr.clone(),
-                        data: buf,
+                        data: frame.into(),
                     }));
                 }
-                SecAssocUpdate::Key(key) => self.send_key(key, ctx),
+                SecAssocUpdate::Key(key) => self.send_key(&key, ctx),
                 SecAssocUpdate::Status(status) => match status {
                     SecAssocStatus::EssSaEstablished => {
                         cancel(&mut self.key_exchange_timeout);
@@ -240,7 +238,7 @@ mod tests {
             MlmeRequest::Eapol(eapol_req) => {
                 assert_eq!(eapol_req.src_addr, AP_ADDR);
                 assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
-                assert_eq!(eapol_req.data, test_utils::eapol_key_frame_bytes());
+                assert_eq!(eapol_req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
             }
             _ => panic!("expect eapol response sent to MLME"),
         }
@@ -253,7 +251,7 @@ mod tests {
         let eapol_ind = fidl_mlme::EapolIndication {
             src_addr: CLIENT_ADDR,
             dst_addr: AP_ADDR,
-            data: test_utils::eapol_key_frame_bytes(),
+            data: test_utils::eapol_key_frame().into(),
         };
         remote_client
             .handle_eapol_ind(eapol_ind, &mut ctx)
@@ -314,7 +312,7 @@ mod tests {
                 MlmeRequest::Eapol(eapol_req) => {
                     assert_eq!(eapol_req.src_addr, AP_ADDR);
                     assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
-                    assert_eq!(eapol_req.data, test_utils::eapol_key_frame_bytes());
+                    assert_eq!(eapol_req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
                 }
                 _ => panic!("expect eapol response sent to MLME - attempt {}", i),
             }

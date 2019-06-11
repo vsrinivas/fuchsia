@@ -643,7 +643,7 @@ fn process_eapol_ind(
 ) -> RsnaStatus {
     let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
-    let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_size).to_full_result() {
+    let eapol_frame = match eapol::KeyFrameRx::parse(mic_size as usize, eapol_pdu) {
         Ok(key_frame) => eapol::Frame::Key(key_frame),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
@@ -737,7 +737,7 @@ fn send_eapol_frame(
     context: &mut Context,
     bssid: [u8; 6],
     sta_addr: [u8; 6],
-    frame: eapol::KeyFrame,
+    frame: eapol::KeyFrameBuf,
     attempt: u32,
 ) -> EventId {
     let resp_timeout_id = context.timer.schedule(Event::KeyFrameExchangeTimeout {
@@ -747,13 +747,11 @@ fn send_eapol_frame(
         attempt,
     });
 
-    let mut buf = Vec::with_capacity(frame.len());
-    frame.as_bytes(false, &mut buf);
-    inspect_log!(context.inspect.rsn_events.lock(), tx_eapol_frame: InspectBytes(&buf));
+    inspect_log!(context.inspect.rsn_events.lock(), tx_eapol_frame: InspectBytes(&frame[..]));
     context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
         src_addr: sta_addr,
         dst_addr: bssid,
-        data: buf,
+        data: frame.into(),
     }));
     resp_timeout_id
 }
@@ -1212,7 +1210,7 @@ mod tests {
         suppl_mock.set_on_eapol_frame_failure(format_err!("supplicant::on_eapol_frame fails"));
 
         // (mlme->sme) Send an EapolInd
-        let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame_bytes());
+        let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame().into());
         let state = state.on_mlme_event(eapol_ind, &mut h.context);
 
         assert_eq!(Ok(None), receiver.try_recv());
@@ -1239,7 +1237,7 @@ mod tests {
         });
 
         // Send an EapolInd from foreign BSS.
-        let eapol_ind = create_eapol_ind([1; 6], test_utils::eapol_key_frame_bytes());
+        let eapol_ind = create_eapol_ind([1; 6], test_utils::eapol_key_frame().into());
         let state = state.on_mlme_event(eapol_ind, &mut h.context);
 
         // Verify state did not change.
@@ -1489,7 +1487,7 @@ mod tests {
     ) -> State {
         suppl_mock.set_on_eapol_frame_results(update_sink);
         // (mlme->sme) Send an EapolInd
-        let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame_bytes());
+        let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame().into());
         state.on_mlme_event(eapol_ind, &mut helper.context)
     }
 
@@ -1601,7 +1599,7 @@ mod tests {
             Some(MlmeRequest::Eapol(req)) => {
                 assert_eq!(req.src_addr, fake_device_info().addr);
                 assert_eq!(req.dst_addr, bssid);
-                assert_eq!(req.data, test_utils::eapol_key_frame_bytes());
+                assert_eq!(req.data, Vec::<u8>::from(test_utils::eapol_key_frame()));
             }
             other => panic!("expected an Eapol request, got {:?}", other),
         }

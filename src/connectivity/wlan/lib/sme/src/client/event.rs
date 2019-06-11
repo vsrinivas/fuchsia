@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use eapol;
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
 use crate::timer::TimeoutDuration;
@@ -18,7 +17,7 @@ pub enum Event {
     KeyFrameExchangeTimeout {
         bssid: MacAddr,
         sta_addr: MacAddr,
-        frame: eapol::KeyFrame,
+        frame: eapol::KeyFrameBuf,
         attempt: u32,
     },
 }

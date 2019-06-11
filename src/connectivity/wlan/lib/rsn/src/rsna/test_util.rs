@@ -4,8 +4,8 @@
 
 use super::*;
 use crate::crypto_utils::nonce::NonceReader;
-use crate::key::exchange::compute_mic;
 use crate::key::exchange::handshake::fourway::{self, Fourway};
+use crate::key::exchange::{compute_mic, compute_mic_from_buf};
 use crate::key::{
     gtk::{Gtk, GtkProvider},
     ptk::Ptk,
@@ -16,6 +16,7 @@ use crate::psk;
 use crate::rsna::{NegotiatedRsne, SecAssocUpdate, VerifiedKeyFrame};
 use crate::{Authenticator, Supplicant};
 use bytes::Bytes;
+use eapol::KeyFrameTx;
 use hex::FromHex;
 use std::sync::{Arc, Mutex};
 use wlan_common::ie::rsn::{
@@ -24,6 +25,7 @@ use wlan_common::ie::rsn::{
     rsne::Rsne,
     suite_selector::OUI,
 };
+use zerocopy::ByteSlice;
 
 pub const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
 pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
@@ -121,33 +123,36 @@ pub fn get_akm() -> akm::Akm {
     get_s_rsne().akm_suites.remove(0)
 }
 
-pub fn get_4whs_msg1<F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrame
+pub fn get_4whs_msg1<'a, F>(anonce: &[u8], msg_modifier: F) -> eapol::KeyFrameBuf
 where
-    F: Fn(&mut eapol::KeyFrame),
+    F: Fn(&mut KeyFrameTx),
 {
-    let mut msg = eapol::KeyFrame {
-        version: 1,
-        packet_type: 3,
-        packet_body_len: 0, // Updated afterwards
-        descriptor_type: 2,
-        key_info: eapol::KeyInformation(0x008a),
-        key_len: 16,
-        key_replay_counter: 1,
-        key_mic: Bytes::from(vec![0u8; mic_len()]),
-        key_rsc: 0,
-        key_iv: [0u8; 16],
-        key_nonce: eapol::to_array(anonce),
-        key_data_len: 0,
-        key_data: Bytes::from(vec![]),
-    };
-    msg_modifier(&mut msg);
-    msg.update_packet_body_len();
-    msg
+    let mut msg1 = KeyFrameTx::new(
+        eapol::ProtocolVersion::IEEE802DOT1X2001,
+        eapol::KeyFrameFields::new(
+            eapol::KeyDescriptor::IEEE802DOT11,
+            eapol::KeyInformation(0x008a),
+            16,
+            1,
+            eapol::to_array(anonce),
+            [0u8; 16],
+            0,
+        ),
+        vec![],
+        mic_len(),
+    );
+    msg_modifier(&mut msg1);
+    msg1.serialize().finalize_without_mic().expect("failed to construct 4whs msg 1")
 }
 
-pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F) -> eapol::KeyFrame
+pub fn get_4whs_msg3<'a, F>(
+    ptk: &Ptk,
+    anonce: &[u8],
+    gtk: &[u8],
+    msg_modifier: F,
+) -> eapol::KeyFrameBuf
 where
-    F: Fn(&mut eapol::KeyFrame),
+    F: Fn(&mut KeyFrameTx),
 {
     let mut w = kde::Writer::new(vec![]);
     w.write_gtk(&kde::Gtk::new(2, kde::GtkInfoTx::BothRxTx, gtk)).expect("error writing GTK KDE");
@@ -155,28 +160,25 @@ where
     let key_data = w.finalize_for_encryption().expect("error finalizing key data");
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &key_data[..]);
 
-    let mut msg = eapol::KeyFrame {
-        version: 1,
-        packet_type: 3,
-        packet_body_len: 0, // Updated afterwards
-        descriptor_type: 2,
-        key_info: eapol::KeyInformation(0x13ca),
-        key_len: 16,
-        key_replay_counter: 2,
-        key_mic: Bytes::from(vec![0u8; mic_len()]),
-        key_rsc: 0,
-        key_iv: [0u8; 16],
-        key_nonce: eapol::to_array(anonce),
-        key_data_len: encrypted_key_data.len() as u16,
-        key_data: Bytes::from(encrypted_key_data),
-    };
-    msg_modifier(&mut msg);
-    msg.update_packet_body_len();
-
-    let mic = compute_mic(ptk.kck(), &get_akm(), &msg).expect("error computing MIC");
-    msg.key_mic = Bytes::from(mic);
-
-    msg
+    let mut msg3 = KeyFrameTx::new(
+        eapol::ProtocolVersion::IEEE802DOT1X2001,
+        eapol::KeyFrameFields::new(
+            eapol::KeyDescriptor::IEEE802DOT11,
+            eapol::KeyInformation(0x13ca),
+            16,
+            2, // replay counter
+            eapol::to_array(anonce),
+            [0u8; 16], // iv
+            0,         // rsc
+        ),
+        encrypted_key_data,
+        mic_len(),
+    );
+    msg_modifier(&mut msg3);
+    let msg3 = msg3.serialize();
+    let mic = compute_mic_from_buf(ptk.kck(), &get_akm(), msg3.unfinalized_buf())
+        .expect("failed to compute msg3 mic");
+    msg3.finalize_with_mic(&mic[..]).expect("failed to construct 4whs msg 3")
 }
 
 pub fn get_group_key_hs_msg1(
@@ -184,34 +186,31 @@ pub fn get_group_key_hs_msg1(
     gtk: &[u8],
     key_id: u8,
     key_replay_counter: u64,
-) -> eapol::KeyFrame {
+) -> eapol::KeyFrameBuf {
     let mut w = kde::Writer::new(vec![]);
     w.write_gtk(&kde::Gtk::new(key_id, kde::GtkInfoTx::BothRxTx, gtk))
         .expect("error writing GTK KDE");
     let key_data = w.finalize_for_encryption().expect("error finalizing key data");
     let encrypted_key_data = encrypt_key_data(ptk.kek(), &key_data[..]);
 
-    let mut msg = eapol::KeyFrame {
-        version: 1,
-        packet_type: 3,
-        packet_body_len: 0, // Updated afterwards
-        descriptor_type: 2,
-        key_info: eapol::KeyInformation(0x1382),
-        key_len: 0,
-        key_replay_counter,
-        key_mic: Bytes::from(vec![0u8; mic_len()]),
-        key_rsc: 0,
-        key_iv: [0u8; 16],
-        key_nonce: [0u8; 32],
-        key_data_len: encrypted_key_data.len() as u16,
-        key_data: Bytes::from(encrypted_key_data),
-    };
-    msg.update_packet_body_len();
-
-    let mic = compute_mic(ptk.kck(), &get_akm(), &msg).expect("error computing MIC");
-    msg.key_mic = Bytes::from(mic);
-
-    msg
+    let msg1 = KeyFrameTx::new(
+        eapol::ProtocolVersion::IEEE802DOT1X2001,
+        eapol::KeyFrameFields::new(
+            eapol::KeyDescriptor::IEEE802DOT11,
+            eapol::KeyInformation(0x1382),
+            16,
+            key_replay_counter,
+            [0u8; 32], // nonce
+            [0u8; 16], // iv
+            0,         // rsc
+        ),
+        encrypted_key_data,
+        mic_len(),
+    );
+    let msg1 = msg1.serialize();
+    let mic = compute_mic_from_buf(ptk.kck(), &get_akm(), msg1.unfinalized_buf())
+        .expect("failed to compute mic");
+    msg1.finalize_with_mic(&mic[..]).expect("failed to construct group key hs msg 1")
 }
 
 pub fn is_zero(slice: &[u8]) -> bool {
@@ -240,18 +239,18 @@ pub fn make_handshake(role: Role) -> Fourway {
     Fourway::new(make_fourway_cfg(role), pmk).expect("error while creating 4-Way Handshake")
 }
 
-pub fn finalize_key_frame(mut frame: eapol::KeyFrame, kck: Option<&[u8]>) -> eapol::KeyFrame {
-    frame.update_packet_body_len();
-
+pub fn finalize_key_frame(frame: &mut eapol::KeyFrameRx<&mut [u8]>, kck: Option<&[u8]>) {
     if let Some(kck) = kck {
-        let mic = compute_mic(kck, &get_akm(), &frame).expect("error computing MIC");
-        frame.key_mic = Bytes::from(mic);
+        let mic = compute_mic(kck, &get_akm(), &frame).expect("failed to compute mic");
+        frame.key_mic.copy_from_slice(&mic[..]);
     }
-
-    frame
 }
 
-fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64) -> VerifiedKeyFrame {
+fn make_verified<B: ByteSlice + std::fmt::Debug>(
+    frame: &eapol::KeyFrameRx<B>,
+    role: Role,
+    key_replay_counter: u64,
+) -> VerifiedKeyFrame<B> {
     let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
         .expect("could not derive negotiated RSNE");
 
@@ -260,7 +259,7 @@ fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64) -
     result.unwrap()
 }
 
-pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrame> {
+pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrameBuf> {
     updates
         .iter()
         .filter_map(|u| match u {
@@ -271,7 +270,7 @@ pub fn get_eapol_resp(updates: &[SecAssocUpdate]) -> Option<eapol::KeyFrame> {
         .map(|x| x.clone())
 }
 
-pub fn expect_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
+pub fn expect_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrameBuf {
     get_eapol_resp(updates).expect("updates do not contain EAPOL frame")
 }
 
@@ -333,7 +332,7 @@ impl FourwayTestEnv {
         }
     }
 
-    pub fn initiate(&mut self, krc: u64) -> eapol::KeyFrame {
+    pub fn initiate<'a>(&mut self, krc: u64) -> eapol::KeyFrameBuf {
         // Initiate 4-Way Handshake. The Authenticator will send message #1 of the handshake.
         let mut a_update_sink = vec![];
         let result = self.authenticator.initiate(&mut a_update_sink, krc);
@@ -344,11 +343,11 @@ impl FourwayTestEnv {
         expect_eapol_resp(&a_update_sink[..])
     }
 
-    pub fn send_msg1_to_supplicant(
+    pub fn send_msg1_to_supplicant<'a, B: ByteSlice + std::fmt::Debug>(
         &mut self,
-        msg1: eapol::KeyFrame,
+        msg1: eapol::KeyFrameRx<B>,
         krc: u64,
-    ) -> (eapol::KeyFrame, Ptk) {
+    ) -> (eapol::KeyFrameBuf, Ptk) {
         let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -356,12 +355,18 @@ impl FourwayTestEnv {
         let result = self.supplicant.on_eapol_key_frame(&mut s_update_sink, 0, verified_msg1);
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         let msg2 = expect_eapol_resp(&s_update_sink[..]);
-        let ptk = get_ptk(&msg1.key_nonce[..], &msg2.key_nonce[..]);
+        let keyframe = msg2.keyframe();
+        let ptk =
+            get_ptk(&msg1.key_frame_fields.key_nonce[..], &keyframe.key_frame_fields.key_nonce[..]);
 
         (msg2, ptk)
     }
 
-    pub fn send_msg1_to_supplicant_expect_err(&mut self, msg1: eapol::KeyFrame, krc: u64) {
+    pub fn send_msg1_to_supplicant_expect_err<B: ByteSlice + std::fmt::Debug>(
+        &mut self,
+        msg1: eapol::KeyFrameRx<B>,
+        krc: u64,
+    ) {
         let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -370,12 +375,12 @@ impl FourwayTestEnv {
         assert!(result.is_err(), "Supplicant successfully processed illegal msg #1");
     }
 
-    pub fn send_msg2_to_authenticator(
+    pub fn send_msg2_to_authenticator<'a, B: ByteSlice + std::fmt::Debug>(
         &mut self,
-        msg2: eapol::KeyFrame,
+        msg2: eapol::KeyFrameRx<B>,
         expected_krc: u64,
         next_krc: u64,
-    ) -> eapol::KeyFrame {
+    ) -> eapol::KeyFrameBuf {
         let verified_msg2 = make_verified(&msg2, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -386,11 +391,11 @@ impl FourwayTestEnv {
         expect_eapol_resp(&a_update_sink[..])
     }
 
-    pub fn send_msg3_to_supplicant(
+    pub fn send_msg3_to_supplicant<'a, B: ByteSlice + std::fmt::Debug>(
         &mut self,
-        msg3: eapol::KeyFrame,
+        msg3: eapol::KeyFrameRx<B>,
         krc: u64,
-    ) -> (eapol::KeyFrame, Ptk, Gtk) {
+    ) -> (eapol::KeyFrameBuf, Ptk, Gtk) {
         let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -404,9 +409,9 @@ impl FourwayTestEnv {
         (msg4, s_ptk, s_gtk)
     }
 
-    pub fn send_msg3_to_supplicant_capture_updates(
+    pub fn send_msg3_to_supplicant_capture_updates<B: ByteSlice + std::fmt::Debug>(
         &mut self,
-        msg3: eapol::KeyFrame,
+        msg3: eapol::KeyFrameRx<B>,
         krc: u64,
         mut update_sink: &mut UpdateSink,
     ) {
@@ -417,7 +422,11 @@ impl FourwayTestEnv {
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
     }
 
-    pub fn send_msg3_to_supplicant_expect_err(&mut self, msg3: eapol::KeyFrame, krc: u64) {
+    pub fn send_msg3_to_supplicant_expect_err<B: ByteSlice + std::fmt::Debug>(
+        &mut self,
+        msg3: eapol::KeyFrameRx<B>,
+        krc: u64,
+    ) {
         let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -426,9 +435,9 @@ impl FourwayTestEnv {
         assert!(result.is_err(), "Supplicant successfully processed illegal msg #3");
     }
 
-    pub fn send_msg4_to_authenticator(
+    pub fn send_msg4_to_authenticator<B: ByteSlice + std::fmt::Debug>(
         &mut self,
-        msg4: eapol::KeyFrame,
+        msg4: eapol::KeyFrameRx<B>,
         expected_krc: u64,
     ) -> (Ptk, Gtk) {
         let verified_msg4 = make_verified(&msg4, Role::Authenticator, expected_krc);

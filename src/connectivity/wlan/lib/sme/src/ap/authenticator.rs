@@ -13,7 +13,7 @@ pub trait Authenticator: std::fmt::Debug + std::marker::Send {
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<&[u8]>,
     ) -> Result<(), failure::Error>;
 }
 
@@ -33,7 +33,7 @@ impl Authenticator for wlan_rsn::Authenticator {
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame,
+        frame: &eapol::Frame<&[u8]>,
     ) -> Result<(), failure::Error> {
         wlan_rsn::Authenticator::on_eapol_frame(self, update_sink, frame)
     }

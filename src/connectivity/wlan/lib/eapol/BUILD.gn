@@ -10,11 +10,13 @@ rustc_library("eapol") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/public/rust/zerocopy",
+    "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:nom",
   ]
 }
 
@@ -24,9 +26,9 @@ unittest_package("eapol-tests") {
   ]
 
   tests = [
-      {
-          name = "eapol_lib_test"
-          environments = basic_envs
-      }
+    {
+      name = "eapol_lib_test"
+      environments = basic_envs
+    },
   ]
 }
