@@ -12,6 +12,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/usb/dci.h>
+#include <ddktl/protocol/usb/phy.h>
 #include <fbl/mutex.h>
 #include <lib/mmio/mmio.h>
 #include <usb/request-cpp.h>
@@ -137,6 +138,7 @@ private:
 
     ddk::PDev pdev_;
     std::optional<ddk::UsbDciInterfaceProtocolClient> dci_intf_;
+    std::optional<ddk::UsbPhyProtocolClient> usb_phy_;
 
     std::optional<ddk::MmioBuffer> mmio_;
 

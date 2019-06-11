@@ -31,7 +31,7 @@ static pbus_dev_t rtc_dev = []() {
     return dev;
 }();
 
-zx_status_t Sherlock::Create(zx_device_t* parent) {
+zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
     pbus_protocol_t pbus;
     iommu_protocol_t iommu;
 
@@ -187,8 +187,17 @@ void Sherlock::DdkRelease() {
     delete this;
 }
 
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = Sherlock::Create;
+    return ops;
+}();
+
 } // namespace sherlock
 
-zx_status_t sherlock_bind(void* ctx, zx_device_t* parent) {
-    return sherlock::Sherlock::Create(parent);
-}
+ZIRCON_DRIVER_BEGIN(sherlock, sherlock::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
+ZIRCON_DRIVER_END(sherlock)

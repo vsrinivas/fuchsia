@@ -66,6 +66,7 @@ group("banjo") {
     "ddk.protocol.usb.hci",
     "ddk.protocol.usb.hub",
     "ddk.protocol.usb.modeswitch",
+    "ddk.protocol.usb.phy",
     "ddk.protocol.usb.request",
     "ddk.protocol.wlanphy",
     "ddk.protocol.wlanphyimpl",

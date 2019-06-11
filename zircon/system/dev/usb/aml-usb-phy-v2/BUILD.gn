@@ -8,6 +8,7 @@ driver("aml-usb-phy-v2") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.usb.phy",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",

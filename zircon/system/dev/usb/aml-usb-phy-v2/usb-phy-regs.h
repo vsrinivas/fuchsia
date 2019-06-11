@@ -115,4 +115,13 @@ public:
     static auto Get(uint32_t i) { return hwreg::RegisterAddr<PLL_REGISTER>(i); }
 };
 
+class PLL_REGISTER_40 : public hwreg::RegisterBase<PLL_REGISTER_40, uint32_t> {
+public:
+    DEF_FIELD(27, 0, value);
+    DEF_BIT(28, enable);
+    DEF_BIT(29, reset);
+    static auto Get() { return hwreg::RegisterAddr<PLL_REGISTER_40>(0x40); }
+};
+
+
 } // namespace aml_usb_phy

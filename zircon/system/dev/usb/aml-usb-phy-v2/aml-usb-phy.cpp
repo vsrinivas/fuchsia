@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,11 +16,10 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
+#include <fbl/auto_lock.h>
 #include <fbl/algorithm.h>
-#include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <lib/zx/time.h>
 #include <soc/aml-common/aml-g12-reset.h>
 
 #include "usb-phy-regs.h"
@@ -28,9 +27,12 @@
 namespace aml_usb_phy {
 
 // Based on set_usb_pll() in phy-aml-new-usb2-v2.c
-void AmlUsbPhy::SetupPLL(ddk::MmioBuffer* mmio) {
-    PLL_REGISTER::Get(0x40)
-        .FromValue(0x30000000 | pll_settings_[0])
+void AmlUsbPhy::InitPll(ddk::MmioBuffer* mmio) {
+    PLL_REGISTER_40::Get()
+        .FromValue(0)
+        .set_value(pll_settings_[0])
+        .set_enable(1)
+        .set_reset(1)
         .WriteTo(mmio);
 
     PLL_REGISTER::Get(0x44)
@@ -41,15 +43,18 @@ void AmlUsbPhy::SetupPLL(ddk::MmioBuffer* mmio) {
         .FromValue(pll_settings_[2])
         .WriteTo(mmio);
 
-    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+    zx::nanosleep(zx::deadline_after(zx::usec(100)));
 
-    PLL_REGISTER::Get(0x40)
-        .FromValue(0x10000000 | pll_settings_[0])
+    PLL_REGISTER_40::Get()
+        .FromValue(0)
+        .set_value(pll_settings_[0])
+        .set_enable(1)
+        .set_reset(0)
         .WriteTo(mmio);
 
     // PLL
 
-    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+    zx::nanosleep(zx::deadline_after(zx::usec(100)));
 
     PLL_REGISTER::Get(0x50)
         .FromValue(pll_settings_[3])
@@ -75,7 +80,7 @@ void AmlUsbPhy::SetupPLL(ddk::MmioBuffer* mmio) {
 
     // Tuning
 
-    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+    zx::nanosleep(zx::deadline_after(zx::usec(100)));
 
     PLL_REGISTER::Get(0x38)
         .FromValue(pll_settings_[6])
@@ -85,48 +90,51 @@ void AmlUsbPhy::SetupPLL(ddk::MmioBuffer* mmio) {
         .FromValue(pll_settings_[5])
         .WriteTo(mmio);
 
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    zx::nanosleep(zx::deadline_after(zx::usec(100)));
 }
 
 zx_status_t AmlUsbPhy::InitPhy() {
+    auto* reset_mmio = &*reset_mmio_;
+    auto* usbctrl_mmio = &*usbctrl_mmio_;
+
     // first reset USB
-    auto reset_1_level = aml_reset::RESET_1::GetLevel().ReadFrom(&*reset_mmio_);
+    auto reset_1_level = aml_reset::RESET_1::GetLevel().ReadFrom(reset_mmio);
     // The bits being manipulated here are not documented.
     reset_1_level.set_reg_value(reset_1_level.reg_value() | (0x3 << 16));
-    reset_1_level.WriteTo(&*reset_mmio_);
+    reset_1_level.WriteTo(reset_mmio);
 
     // amlogic_new_usbphy_reset_v2()
-    auto reset_1 = aml_reset::RESET_1::Get().ReadFrom(&*reset_mmio_);
+    auto reset_1 = aml_reset::RESET_1::Get().ReadFrom(reset_mmio);
     reset_1.set_usb(1);
-    reset_1.WriteTo(&*reset_mmio_);
+    reset_1.WriteTo(reset_mmio);
     // FIXME(voydanoff) this delay is very long, but it is what the Amlogic Linux kernel is doing.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
+    zx::nanosleep(zx::deadline_after(zx::usec(500)));
 
     // amlogic_new_usb2_init()
     for (int i = 0; i < 2; i++) {
-        auto u2p_r0 = U2P_R0_V2::Get(i).ReadFrom(&*usbctrl_mmio_);
+        auto u2p_r0 = U2P_R0_V2::Get(i).ReadFrom(usbctrl_mmio);
         u2p_r0.set_por(1);
         u2p_r0.set_host_device(1);
         if (i == 1) {
             u2p_r0.set_idpullup0(1);
             u2p_r0.set_drvvbus0(1);
         }
-        u2p_r0.WriteTo(&*usbctrl_mmio_);
+        u2p_r0.WriteTo(usbctrl_mmio);
 
-        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+        zx::nanosleep(zx::deadline_after(zx::usec(10)));
 
         // amlogic_new_usbphy_reset_phycfg_v2()
-        reset_1.ReadFrom(&*reset_mmio_);
+        reset_1.ReadFrom(reset_mmio);
         // The bit being manipulated here is not documented.
         reset_1.set_reg_value(reset_1.reg_value() | (1 << 16));
-        reset_1.WriteTo(&*reset_mmio_);
+        reset_1.WriteTo(reset_mmio);
 
-        zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
+        zx::nanosleep(zx::deadline_after(zx::usec(50)));
 
         auto u2p_r1 = U2P_R1_V2::Get(i);
 
         int count = 0;
-        while (!u2p_r1.ReadFrom(&*usbctrl_mmio_).phy_rdy()) {
+        while (!u2p_r1.ReadFrom(usbctrl_mmio).phy_rdy()) {
             // wait phy ready max 1ms, common is 100us
             if (count > 200) {
                 zxlogf(ERROR, "AmlUsbPhy::InitPhy U2P_R1_PHY_RDY wait failed\n");
@@ -134,23 +142,127 @@ zx_status_t AmlUsbPhy::InitPhy() {
             }
 
             count++;
-            zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
+            zx::nanosleep(zx::deadline_after(zx::usec(5)));
         }
     }
-
-    // set up PLLs
-    SetupPLL(&*usbphy20_mmio_);
-    SetupPLL(&*usbphy30_mmio_);
 
     return ZX_OK;
 }
 
-zx_status_t AmlUsbPhy::Create(void* ctx, zx_device_t* parent) {
-    fbl::AllocChecker ac;
-    auto dev = fbl::make_unique_checked<AmlUsbPhy>(&ac, parent);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
+zx_status_t AmlUsbPhy::InitOtg() {
+    auto* mmio = &*usbctrl_mmio_;
+
+    USB_R1_V2::Get()
+        .ReadFrom(mmio)
+        .set_u3h_fladj_30mhz_reg(0x20)
+        .WriteTo(mmio);
+
+    USB_R5_V2::Get()
+        .ReadFrom(mmio)
+        .set_iddig_en0(1)
+        .set_iddig_en1(1)
+        .set_iddig_th(255)
+        .WriteTo(mmio);
+
+    return ZX_OK;
+}
+
+void AmlUsbPhy::SetMode(UsbMode mode) {
+    ZX_DEBUG_ASSERT(mode == UsbMode::HOST || mode == UsbMode::PERIPHERAL);
+    if (mode == mode_) return;
+
+    auto* usbctrl_mmio = &*usbctrl_mmio_;
+
+    auto r0 = USB_R0_V2::Get().ReadFrom(usbctrl_mmio);
+    if (mode == UsbMode::HOST) {
+        r0.set_u2d_act(0);
+    } else {
+        r0.set_u2d_act(1);
+        r0.set_u2d_ss_scaledown_mode(0);
     }
+    r0.WriteTo(usbctrl_mmio);
+
+    USB_R4_V2::Get()
+        .ReadFrom(usbctrl_mmio)
+        .set_p21_sleepm0(mode == UsbMode::PERIPHERAL)
+        .WriteTo(usbctrl_mmio);
+
+    U2P_R0_V2::Get(0)
+        .ReadFrom(usbctrl_mmio)
+        .set_host_device(mode == UsbMode::HOST)
+        .set_por(0)
+        .WriteTo(usbctrl_mmio);
+
+    zx::nanosleep(zx::deadline_after(zx::usec(500)));
+
+    auto old_mode = mode_;
+    mode_ = mode;
+
+    if (old_mode == UsbMode::UNKNOWN) {
+        // One time PLL initialization
+        InitPll(&*usbphy20_mmio_);
+        InitPll(&*usbphy21_mmio_);
+    } else {
+         auto* phy_mmio = &*usbphy21_mmio_;
+
+         PLL_REGISTER::Get(0x38)
+            .FromValue(mode == UsbMode::HOST ? pll_settings_[6] : 0)
+            .WriteTo(phy_mmio);
+         PLL_REGISTER::Get(0x34)
+            .FromValue(pll_settings_[5])
+            .WriteTo(phy_mmio);
+    }
+
+    if (mode == UsbMode::HOST) {
+        AddXhciDevice();
+        RemoveDwc2Device();
+    } else {
+        AddDwc2Device();
+        RemoveXhciDevice();
+    }
+}
+
+int AmlUsbPhy::IrqThread() {
+    auto* mmio = &*usbctrl_mmio_;
+
+    // Wait for PHY to stabilize before reading initial mode.
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+
+    lock_.Acquire();
+
+    while (true) {
+        auto r5 = USB_R5_V2::Get().ReadFrom(mmio);
+
+        // Read current host/device role.
+        if (r5.iddig_curr() == 0) {
+            zxlogf(INFO, "Entering USB Host Mode\n");
+            SetMode(UsbMode::HOST);
+        } else {
+            zxlogf(INFO, "Entering USB Peripheral Mode\n");
+            SetMode(UsbMode::PERIPHERAL);
+        }
+
+        lock_.Release();
+        auto status = irq_.wait(nullptr);
+        if (status == ZX_ERR_CANCELED) {
+            return 0;
+        } else if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: irq_.wait failed: %d\n", __func__, status);
+            return -1;
+        }
+        lock_.Acquire();
+
+        // Acknowledge interrupt
+        r5.ReadFrom(mmio).set_usb_iddig_irq(0).WriteTo(mmio);
+    }
+
+    lock_.Release();
+
+    return 0;
+}
+
+zx_status_t AmlUsbPhy::Create(void* ctx, zx_device_t* parent) {
+    auto dev = std::make_unique<AmlUsbPhy>(parent);
 
     auto status = dev->Init();
     if (status != ZX_OK) {
@@ -158,8 +270,56 @@ zx_status_t AmlUsbPhy::Create(void* ctx, zx_device_t* parent) {
     }
 
     // devmgr is now in charge of the device.
-    __UNUSED auto* dummy = dev.release();
+    __UNUSED auto* _ = dev.release();
     return ZX_OK;
+}
+
+zx_status_t AmlUsbPhy::AddXhciDevice() {
+    if (xhci_device_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    xhci_device_ = std::make_unique<XhciDevice>(zxdev());
+
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_XHCI_COMPOSITE},
+    };
+
+    return xhci_device_->DdkAdd("xhci", 0, props, countof(props), ZX_PROTOCOL_USB_PHY);
+}
+
+void AmlUsbPhy::RemoveXhciDevice() {
+    if (xhci_device_) {
+        // devmgr will own the device until it is destroyed.
+        auto* dev = xhci_device_.release();
+        dev->DdkRemove();
+    }
+}
+
+zx_status_t AmlUsbPhy::AddDwc2Device() {
+    if (dwc2_device_) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    dwc2_device_ = std::make_unique<Dwc2Device>(zxdev());
+
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_DWC2},
+    };
+
+    return dwc2_device_->DdkAdd("dwc2", 0, props, countof(props), ZX_PROTOCOL_USB_PHY);
+}
+
+void AmlUsbPhy::RemoveDwc2Device() {
+    if (dwc2_device_) {
+        // devmgr will own the device until it is destroyed.
+        auto* dev = dwc2_device_.release();
+        dev->DdkRemove();
+    }
 }
 
 zx_status_t AmlUsbPhy::Init() {
@@ -188,7 +348,11 @@ zx_status_t AmlUsbPhy::Init() {
     if (status != ZX_OK) {
         return status;
     }
-    status = pdev_.MapMmio(3, &usbphy30_mmio_);
+    status = pdev_.MapMmio(3, &usbphy21_mmio_);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = pdev_.GetInterrupt(0, &irq_);
     if (status != ZX_OK) {
         return status;
     }
@@ -197,8 +361,55 @@ zx_status_t AmlUsbPhy::Init() {
     if (status != ZX_OK) {
         return status;
     }
+    status = InitOtg();
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    return DdkAdd("aml-usb-phy-v2", 0, nullptr, 0, ZX_PROTOCOL_USB_PHY);
+    status = DdkAdd("aml-usb-phy-v2", DEVICE_ADD_NON_BINDABLE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    int rc = thrd_create_with_name(&irq_thread_,
+                                   [](void* arg) -> int {
+                                       return reinterpret_cast<AmlUsbPhy*>(arg)->IrqThread();
+                                   },
+                                   reinterpret_cast<void*>(this),
+                                   "amlogic-usb-thread");
+    if (rc != thrd_success) {
+        DdkRemove();
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+}
+
+// PHY tuning based on connection state
+void AmlUsbPhy::UsbPhyConnectStatusChanged(bool connected) {
+    fbl::AutoLock lock(&lock_);
+
+    if (dwc2_connected_ == connected) return;
+
+    auto* mmio = &*usbphy21_mmio_;
+
+     PLL_REGISTER::Get(0x38)
+        .FromValue(connected ? pll_settings_[7] : 0)
+        .WriteTo(mmio);
+     PLL_REGISTER::Get(0x34)
+        .FromValue(pll_settings_[5])
+        .WriteTo(mmio);
+
+    dwc2_connected_ = connected;
+}
+
+void AmlUsbPhy::DdkUnbind() {
+    irq_.destroy();
+    thrd_join(irq_thread_, nullptr);
+
+    RemoveXhciDevice();
+    RemoveDwc2Device();
+    DdkRemove();
 }
 
 void AmlUsbPhy::DdkRelease() {

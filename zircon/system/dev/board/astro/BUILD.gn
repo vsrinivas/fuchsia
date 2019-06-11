@@ -34,6 +34,7 @@ driver("astro") {
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/broadcom",
     "$zx/system/dev/lib/focaltech",
+    "$zx/system/dev/lib/usb",
     "$zx/system/fidl/fuchsia-hardware-light:c",
     "$zx/system/fidl/fuchsia-hardware-serial:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",

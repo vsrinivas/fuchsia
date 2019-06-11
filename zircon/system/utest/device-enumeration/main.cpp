@@ -144,7 +144,10 @@ bool astro_enumeration_test() {
         "sys/platform/05:00:2/aml-i2c",
         "sys/platform/05:03:17/aml-gpu",
         "sys/platform/05:00:18/aml-usb-phy-v2",
-        "xhci/xhci/usb-bus",
+
+        // XHCI driver will not be loaded if we are in USB peripheral mode.
+        // "xhci/xhci/usb-bus",
+
         // TODO(ZX-4087): Astro can have one of two possible touch screens
         // so we can't just test that one of them is bound. That is why the
         // following test is disabled.
@@ -241,7 +244,10 @@ bool sherlock_enumeration_test() {
         "sys/platform/00:00:1e/dw-dsi",
         "display/astro-display/display-controller",
         "sys/platform/05:00:18/aml-usb-phy-v2",
-        "xhci/xhci/usb-bus",
+
+        // XHCI driver will not be loaded if we are in USB peripheral mode.
+        // "xhci/xhci/usb-bus",
+
         "sys/platform/05:00:8/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-000/block",
         "sys/platform/05:00:8/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-002/block",
         "sys/platform/05:00:8/aml-sd-emmc/sdmmc/sdmmc-mmc/block/part-003/block",

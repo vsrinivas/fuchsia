@@ -11,6 +11,7 @@ driver("dwc2") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.usb",
     "$zx/system/banjo/ddk.protocol.usb.dci",
+    "$zx/system/banjo/ddk.protocol.usb.phy",
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/usb",

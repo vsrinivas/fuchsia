@@ -126,6 +126,9 @@
 #define T931_USB0_BASE                  0xff500000
 #define T931_USB0_LENGTH                0x100000
 
+#define T931_USB1_BASE                  0xff400000
+#define T931_USB1_LENGTH                0x40000
+
 #define T931_USBCTRL_BASE               0xffe09000
 #define T931_USBCTRL_LENGTH             0x2000
 
@@ -176,10 +179,12 @@
 
 // IRQs
 #define T931_VIU1_VSYNC_IRQ             35
+#define T931_USB_IDDIG_IRQ              48
 #define T931_I2C0_IRQ                   53
 #define T931_DEMUX_IRQ                  55
 #define T931_UART_A_IRQ                 58
 #define T931_USB0_IRQ                   62
+#define T931_USB1_IRQ                   63
 #define T931_PARSER_IRQ                 64
 #define T931_TS_PLL_IRQ                 67
 #define T931_I2C3_IRQ                   71

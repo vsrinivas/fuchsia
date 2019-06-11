@@ -68,7 +68,7 @@ public:
     explicit Sherlock(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
         : SherlockType(parent), pbus_(pbus), iommu_(iommu) {}
 
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Device protocol implementation.
     void DdkRelease();
@@ -107,7 +107,3 @@ private:
 };
 
 } // namespace sherlock
-
-__BEGIN_CDECLS
-zx_status_t sherlock_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS
