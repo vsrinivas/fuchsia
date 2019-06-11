@@ -1,0 +1,19 @@
+{{#if bits_declarations}}
+## **BITS**
+{{#each bits_declarations ~}}
+### {{rpn name}} {:#{{rpn name}}}
+Type: <code>{{type.subtype}}</code>
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+    {{~ #each members ~}}
+        <tr>
+            <td>{{~ name ~}}</td>
+            <td>{{~ value.literal.value ~}}</td>
+            <td>{{~> doc ~}}</td>
+        </tr>
+    {{~ /each ~}}
+</table>
+{{~ /each}}
+{{/if ~}}

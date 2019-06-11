@@ -1,0 +1,10 @@
+{{> header }}
+
+<table>
+<tr><th>Name</th></tr>
+{{#each table_of_contents ~}}
+<tr><td><a href="{{link}}">{{name}}</a></td></tr>
+{{/each ~}}
+</table>
+
+{{> footer }}

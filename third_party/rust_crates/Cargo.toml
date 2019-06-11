@@ -15,6 +15,7 @@ failure = "0.1.1"
 heck = "0.3.1"
 json5 = "0.2.4"
 lazy_static = "1"
+log = { version = "0.4.4", features = ["std"] }
 parking_lot = "0.7.1"
 pest = "2.1"
 pest_derive = "2.1"
@@ -64,7 +65,6 @@ hyper-rustls = { version = "0.16.1", default-features = false }
 itertools = "0.8"
 itoa = "0.4"
 libc = "0.2"
-log = { version = "0.4.4", features = ["std"] }
 maplit = "1.0"
 memchr = "2.0"
 net2 = "0.2"

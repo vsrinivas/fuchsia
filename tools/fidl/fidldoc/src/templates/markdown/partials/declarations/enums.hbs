@@ -1,0 +1,22 @@
+{{#if enum_declarations}}
+## **ENUMS**
+{{#each enum_declarations}}
+### {{rpn name}} {:#{{rpn name}}}
+Type: <code>{{type}}</code>
+
+*Defined in [{{@root.name}}{{@root.config.source.package}}{{rpn location.filename}}]({{@root.config.source.baseUrl}}{{rpf location.filename}}{{@root.config.source.line}}{{location.line}})*
+
+{{> doc }}
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+    {{~ #each members ~}}
+        <tr>
+            <td><code>{{~ name ~}}</code></td>
+            <td><code>{{~ value.literal.value ~}}</code></td>
+            <td>{{~> docs ~}}</td>
+        </tr>
+    {{~ /each ~}}
+</table>
+{{/each ~}}
+{{/if ~}}

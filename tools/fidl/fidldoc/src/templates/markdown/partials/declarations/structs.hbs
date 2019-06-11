@@ -1,0 +1,49 @@
+{{#if struct_declarations}}
+## **STRUCTS**
+{{#each struct_declarations}}
+### {{rpn name}} {:#{{rpn name}}}
+*Defined in [{{@root.name}}{{@root.config.source.package}}{{rpn location.filename}}]({{@root.config.source.baseUrl}}{{rpf location.filename}}{{@root.config.source.line}}{{location.line}})*
+
+{{#if anonymous}}*anonymous struct*{{/if}}
+
+{{> doc }}
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
+    {{~ #each members ~}}
+        <tr>
+            <td><code>{{~ name ~}}</code></td>
+            <td>
+                <code>
+                    {{~> type ~}}
+                </code>
+            </td>
+            <td>
+                {{~ #each maybe_attributes ~}}
+                    {{~ #if (eq name "Doc") ~}}
+                        {{~ value ~}}
+                    {{~ /if ~}}
+                {{~ /each ~}}
+            </td>
+            <td>
+                {{~ #if maybe_default_value ~}}
+                    {{~ #if (eq maybe_default_value.kind "identifier") ~}}
+                        {{~ pl maybe_default_value.identifier @root.name ~}}
+                    {{~ else ~}}
+                        {{~ #if (eq maybe_default_value.kind "literal") ~}}
+                            {{~ #if maybe_default_value.literal.value ~}}
+                                {{~ maybe_default_value.literal.value ~}}
+                            {{~ else ~}}
+                                {{~ maybe_default_value.literal.kind ~}}
+                            {{~ /if ~}}
+                        {{~ /if ~}}
+                    {{~ /if ~}}
+                {{~ else ~}}
+                    No default
+                {{~ /if ~}}
+            </td>
+        </tr>
+    {{~ /each}}
+</table>
+{{/each ~}}
+{{~ /if ~}}

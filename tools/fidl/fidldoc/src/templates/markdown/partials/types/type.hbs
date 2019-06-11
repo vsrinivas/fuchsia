@@ -1,0 +1,29 @@
+{{#if (eq type.kind "vector") ~}}
+    {{> vector }}
+{{~ else ~}}
+    {{~ #if (eq type.kind "array") ~}}
+        {{~ type.element_type.subtype ~}}[{{~ type.element_count ~}}]
+    {{~ else ~}}
+        {{~ #if (eq type.kind "identifier") ~}}
+            {{~ pl type.identifier @root.name ~}}
+        {{~ else ~}}
+            {{~ #if (eq type.kind "primitive") ~}}
+                {{~ type.subtype ~}}
+            {{~ else ~}}
+                {{~ #if (eq type.kind "handle") ~}}
+                    handle&lt;{{type.subtype}}&gt;
+                {{~ else ~}}
+                    {{~ #if (eq type.kind "request") ~}}
+                        request&lt;{{~ pl type.subtype @root.name ~}}&gt;
+                    {{~ else ~}}
+                        {{~ type.kind ~}}
+                    {{~ /if ~}}
+                {{~ /if ~}}
+            {{~ /if ~}}
+        {{~ /if ~}}
+    {{~ /if ~}}
+{{~ /if ~}}
+{{~ #if type.maybe_element_count ~}}
+    [{{~ type.maybe_element_count ~}}]
+{{~ /if ~}}
+{{~ #if type.nullable ~}}?{{~ /if}}

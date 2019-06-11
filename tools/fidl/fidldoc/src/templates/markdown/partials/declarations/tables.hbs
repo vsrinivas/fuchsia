@@ -1,0 +1,29 @@
+{{#if table_declarations}}
+## **TABLES**
+{{#each table_declarations}}
+### {{rpn name}} {:#{{rpn name}}}
+{{#if type}}Type: <code>{{type}}</code>{{/if}}
+
+*Defined in [{{@root.name}}{{@root.config.source.package}}{{rpn location.filename}}]({{@root.config.source.baseUrl}}{{rpf location.filename}}{{@root.config.source.line}}{{location.line}})*
+
+{{> doc }}
+
+<table>
+    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    {{#each members ~}}
+        <tr>
+            <td>{{~ ordinal ~}}</td>
+            <td><code>{{~ name ~}}</code></td>
+            <td>
+                <code>
+                    {{~> type ~}}
+                </code>
+            </td>
+            <td>
+                {{~> doc ~}}
+            </td>
+        </tr>
+    {{~ /each ~}}
+</table>
+{{/each ~}}
+{{/if}}

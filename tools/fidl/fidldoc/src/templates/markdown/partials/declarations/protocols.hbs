@@ -1,0 +1,55 @@
+{{#if interface_declarations}}
+## **PROTOCOLS**
+{{#each interface_declarations}}
+## {{rpn name}} {:#{{rpn name}}}
+*Defined in [{{@root.name}}{{@root.config.source.package}}{{rpn location.filename}}]({{@root.config.source.baseUrl}}{{rpf location.filename}}{{@root.config.source.line}}{{location.line}})*
+
+{{> doc ~}}
+
+{{#each methods}}
+### {{rpn name}} {:#{{rpn name}}}
+
+{{#if maybe_attributes}}
+    {{~ #each maybe_attributes ~}}
+        {{~ #if (eq name "Doc") ~}}
+            {{~ value ~}}
+        {{~ /if ~}}
+    {{~ /each ~}}
+{{~ /if}}
+
+{{#if has_request}}
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    {{#each maybe_request ~}}
+        <tr>
+            <td><code>{{~ name ~}}</code></td>
+            <td>
+                <code>
+                    {{~> type ~}}
+                </code>
+            </td>
+        </tr>
+    {{~ /each ~}}
+</table>
+{{~ /if}}
+
+{{#if has_response}}
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    {{#each maybe_response ~}}
+        <tr>
+            <td><code>{{~ name ~}}</code></td>
+            <td>
+                <code>
+                    {{~> type ~}}
+                </code>
+            </td>
+        </tr>
+    {{~ /each ~}}
+</table>
+{{~ /if}}
+{{/each ~}}
+{{~ /each ~}}
+{{~ /if ~}}

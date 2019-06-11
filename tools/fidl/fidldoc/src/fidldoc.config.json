@@ -1,0 +1,12 @@
+{
+    "title": "Fuchsia FIDLs",
+    "links": [{
+        "label": "Fuchsia Developer",
+        "href": "https://fuchsia.googlesource.com"
+    }],
+    "source": {
+        "baseUrl": "https://fuchsia.googlesource.com/fuchsia/+/master/",
+        "package": "/",
+        "line": "#"
+    }
+}

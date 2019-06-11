@@ -1,0 +1,7 @@
+toc:
+- title: Overview
+  path: {{url_path}}index.md
+{{#each table_of_contents ~}}
+- title: {{name}}
+  path: {{@root.url_path}}{{name}}
+{{/each}}
