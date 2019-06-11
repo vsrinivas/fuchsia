@@ -43,29 +43,32 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process,
     };
   }
 
-  for (auto it = threads.begin(); it != threads.end(); ++it) {
+  for (auto it = threads.begin(); it != threads.end();) {
     zx_info_thread_t thread_info;
     it->thread.get_info(ZX_INFO_THREAD, &thread_info, sizeof(thread_info),
                         nullptr, nullptr);
 
+    auto prev = it++;
     // All threads will resume when their suspend token goes out of scope.
-    if ((status = it->thread.suspend(&it->suspend_token)) != ZX_OK) {
+    if ((status = prev->thread.suspend(&prev->suspend_token)) != ZX_OK) {
       FXL_LOG(INFO) << "Failed to suspend thread: " << status;
-      threads.erase(it);
+      threads.erase(prev);
     }
   }
 
-  for (auto it = threads.begin(); it != threads.end(); ++it) {
+  for (auto it = threads.begin(); it != threads.end();) {
     // Wait for the thread to actually get suspended, but also react if the
     // thread was terminated in between these operations.
     zx_signals_t signals = 0;
-    if ((status = it->thread.wait_one(
+
+    auto prev = it++;
+    if ((status = prev->thread.wait_one(
              ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
              zx::deadline_after(zx::msec(100)), &signals)) != ZX_OK ||
         (signals & ZX_THREAD_TERMINATED)) {
       FXL_LOG(INFO) << "Thread failed to suspend in time. Status: " << status
                     << ", signals: " << signals;
-      threads.erase(it);
+      threads.erase(prev);
     }
   }
 
