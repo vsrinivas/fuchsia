@@ -587,6 +587,100 @@ TEST(CatapultConverter, ConvertBytesUnit) {
   AssertJsonEqual(output, expected_output);
 }
 
+TEST(CatapultConverter, ConvertPercentageUnit) {
+  const char* input_str = R"JSON(
+[
+    {
+        "label": "ExampleWithPercentages",
+        "test_suite": "my_test_suite",
+        "values": [0.001, 19.3224, 100.0],
+        "unit": "percent"
+    }
+]
+)JSON";
+
+  const char* expected_output_str = R"JSON(
+[
+    {
+        "guid": "dummy_guid_0",
+        "type": "GenericSet",
+        "values": [
+            123004005006
+        ]
+    },
+    {
+        "guid": "dummy_guid_1",
+        "type": "GenericSet",
+        "values": [
+            "example_bots"
+        ]
+    },
+    {
+        "guid": "dummy_guid_2",
+        "type": "GenericSet",
+        "values": [
+            "example_masters"
+        ]
+    },
+    {
+        "guid": "dummy_guid_3",
+        "type": "GenericSet",
+        "values": [
+            [
+                "Build Log",
+                "https://ci.example.com/build/100"
+            ]
+        ]
+    },
+    {
+        "guid": "dummy_guid_4",
+        "type": "GenericSet",
+        "values": [
+            "my_test_suite"
+        ]
+    },
+    {
+        "name": "ExampleWithPercentages",
+        "unit": "n%_smallerIsBetter",
+        "description": "",
+        "diagnostics": {
+            "pointId": "dummy_guid_0",
+            "bots": "dummy_guid_1",
+            "masters": "dummy_guid_2",
+            "logUrls": "dummy_guid_3",
+            "benchmarks": "dummy_guid_4"
+        },
+        "running": [
+            3,
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere",
+            "compared_elsewhere"
+        ],
+        "guid": "dummy_guid_5",
+        "maxNumSampleValues": 3,
+        "numNans": 0
+    }]
+)JSON";
+
+  rapidjson::Document expected_output;
+  CheckParseResult(expected_output.Parse(expected_output_str));
+
+  rapidjson::Document output;
+  TestConverter(input_str, &output);
+
+  AssertApproxEqual(&output, &output[5]["running"][1], 100);
+  AssertApproxEqual(&output, &output[5]["running"][2], 0.21955998);
+  AssertApproxEqual(&output, &output[5]["running"][3], 39.7741);
+  AssertApproxEqual(&output, &output[5]["running"][4], 0.001);
+  AssertApproxEqual(&output, &output[5]["running"][5], 119.3224);
+  AssertApproxEqual(&output, &output[5]["running"][6], 2813.705);
+
+  AssertJsonEqual(output, expected_output);
+}
+
 // Test handling of zero values.  The meanlogs field in the output should
 // be 'null' in this case.
 TEST(CatapultConverter, ZeroValues) {

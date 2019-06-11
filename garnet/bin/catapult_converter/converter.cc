@@ -161,7 +161,7 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
   } else if (strcmp(input_unit, "frames/second") == 0) {
     return "Hz_biggerIsBetter";
   } else if (strcmp(input_unit, "percent") == 0) {
-    return "n%";
+    return "n%_smallerIsBetter";
   } else if (strcmp(input_unit, "count") == 0) {
     return "count";
   } else {
