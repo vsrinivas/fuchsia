@@ -4,7 +4,10 @@
 
 #include "hidctl.h"
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
@@ -18,6 +21,18 @@
 #include <utility>
 
 namespace hidctl {
+
+zx_status_t HidCtl::Create(void* ctx, zx_device_t* parent) {
+   auto dev = fbl::unique_ptr<HidCtl>(new HidCtl(parent));
+   zx_status_t status = dev->DdkAdd("hidctl");
+   if (status != ZX_OK) {
+       zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+   } else {
+       // devmgr owns the memory now
+       __UNUSED auto* ptr = dev.release();
+   }
+   return status;
+}
 
 zx_status_t HidCtl::FidlMakeHidDevice(void* ctx, const fuchsia_hardware_hidctl_HidCtlConfig* config,
                                       const uint8_t* rpt_desc_data, size_t rpt_desc_count,
@@ -273,16 +288,19 @@ zx_status_t HidDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     return ZX_OK;
 }
 
-}  // namespace hidctl
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = HidCtl::Create;
+    return ops;
+}();
 
-extern "C" zx_status_t hidctl_bind(void* ctx, zx_device_t* device, void** cookie) {
-    auto dev = fbl::unique_ptr<hidctl::HidCtl>(new hidctl::HidCtl(device));
-    zx_status_t status = dev->DdkAdd("hidctl");
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
-    } else {
-        // devmgr owns the memory now
-        __UNUSED auto ptr = dev.release();
-    }
-    return status;
-}
+} // namespace hidctl
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(hidctl, hidctl::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_HIDCTL_TEST),
+    BI_MATCH()
+ZIRCON_DRIVER_END(hidctl)
+// clang-format on

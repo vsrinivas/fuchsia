@@ -4,7 +4,6 @@
 
 driver("hidctl") {
   sources = [
-    "binding.c",
     "hidctl.cpp",
   ]
   deps = [
