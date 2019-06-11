@@ -293,7 +293,7 @@ private:
     void DumpDrivers(VmoWriter* vmo) const;
 
     void BuildSuspendList();
-    void Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback);
+    void Suspend(SuspendContext ctx);
 
     fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
     const Driver* LibnameToDriver(const fbl::String& libname) const;
