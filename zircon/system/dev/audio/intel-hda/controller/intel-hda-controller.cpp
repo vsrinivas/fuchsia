@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/pci.h>
 #include <zircon/assert.h>
 #include <fbl/auto_call.h>
@@ -358,6 +359,11 @@ zx_status_t IntelHDAController::DriverInit(void** out_ctx) {
     // Note: It is assumed that calls to Init/Release are serialized by the
     // pci_dev manager.  If this assumption ever needs to be relaxed, explicit
     // serialization will need to be added here.
+    zx_status_t res = DriverVmars::Initialize();
+    if (res != ZX_OK) {
+        DriverVmars::Shutdown();
+        return res;
+    }
 
     return ZX_OK;
 }
@@ -399,33 +405,30 @@ zx_status_t IntelHDAController::DriverBind(void* ctx,
 void IntelHDAController::DriverRelease(void* ctx) {
     // If we are the last one out the door, turn off the lights in the thread pool.
     dispatcher::ThreadPool::ShutdownAll();
+    DriverVmars::Shutdown();
 }
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.init = IntelHDAController::DriverInit;
+    ops.bind = IntelHDAController::DriverBind;
+    ops.release = IntelHDAController::DriverRelease;
+    return ops;
+}();
 
 }  // namespace intel_hda
 }  // namespace audio
 
-extern "C" {
-zx_status_t ihda_init_hook(void** out_ctx) {
-    zx_status_t res = ::audio::intel_hda::DriverVmars::Initialize();
-
-    if (res == ZX_OK) {
-        res = ::audio::intel_hda::IntelHDAController::DriverInit(out_ctx);
-    }
-
-    if (res != ZX_OK) {
-        ::audio::intel_hda::DriverVmars::Shutdown();
-    }
-
-    return res;
-}
-
-zx_status_t ihda_bind_hook(void* ctx, zx_device_t* pci_dev) {
-    return ::audio::intel_hda::IntelHDAController::DriverBind(ctx, pci_dev);
-}
-
-void ihda_release_hook(void* ctx) {
-    ::audio::intel_hda::IntelHDAController::DriverRelease(ctx);
-    ::audio::intel_hda::DriverVmars::Shutdown();
-}
-}  // extern "C"
-
+// clang-format off
+ZIRCON_DRIVER_BEGIN(intel_hda, audio::intel_hda::driver_ops, "zircon", "0.1", 8)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_HDA_PCI_VID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_STANDARD),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_BROADWELL),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_100_C230),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_200_C400),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_SKYLAKE),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_HDA_PCI_DID_KABYLAKE),
+ZIRCON_DRIVER_END(intel_hda)
+// clang-format on

@@ -6,8 +6,6 @@ import("$zx/public/gn/firmware.gni")
 
 driver("controller") {
   sources = [
-    "binding.c",
-    "binding.h",
     "codec-cmd-job.cpp",
     "codec-cmd-job.h",
     "debug-logging.h",

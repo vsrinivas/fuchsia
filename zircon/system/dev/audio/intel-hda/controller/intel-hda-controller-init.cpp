@@ -8,7 +8,6 @@
 
 #include <utility>
 
-#include "binding.h"
 #include "debug-logging.h"
 #include "intel-dsp.h"
 #include "intel-hda-controller.h"
