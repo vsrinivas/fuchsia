@@ -624,6 +624,66 @@ bool vmo_clone_resize_parent_ok() {
     END_TEST;
 }
 
+// Pages exposed by growing the parent after shrinking it aren't visible to the child.
+bool vmo_clone_shrink_grow_parent() {
+    BEGIN_TEST;
+
+    struct {
+        uint64_t vmo_size;
+        uint64_t clone_offset;
+        uint64_t clone_size;
+        uint64_t clone_test_offset;
+        uint64_t resize_size;
+    } configs[3] = {
+        // Aligned, truncate to parent offset.
+        {PAGE_SIZE, 0, PAGE_SIZE, 0, 0},
+        // Offset, truncate to before parent offset.
+        {2 * PAGE_SIZE, PAGE_SIZE, PAGE_SIZE, 0, 0},
+        // Offset, truncate to partway through clone.
+        {3 * PAGE_SIZE, PAGE_SIZE, 2 * PAGE_SIZE, PAGE_SIZE, 2 * PAGE_SIZE},
+    };
+
+    for (auto& config : configs) {
+        zx_handle_t vmo;
+        ASSERT_EQ(ZX_OK, zx_vmo_create(config.vmo_size, ZX_VMO_RESIZABLE, &vmo));
+
+        zx_handle_t clone_vmo;
+        EXPECT_EQ(ZX_OK,
+                  zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+                                      config.clone_offset, config.clone_size, &clone_vmo));
+
+        uintptr_t ptr_rw;
+        EXPECT_EQ(ZX_OK, zx_vmar_map(
+                zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                clone_vmo, 0, config.clone_size, &ptr_rw));
+
+        auto ptr = reinterpret_cast<int*>(ptr_rw + config.clone_test_offset);
+        EXPECT_EQ(0, *ptr);
+
+        uint32_t data = 1;
+        const uint64_t vmo_offset = config.clone_offset + config.clone_test_offset;
+        EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &data, vmo_offset, sizeof(data)));
+
+        EXPECT_EQ(1, *ptr);
+
+        EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, 0u));
+
+        EXPECT_EQ(0, *ptr);
+
+        EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, config.vmo_size));
+        data = 2;
+        EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &data, vmo_offset, sizeof(data)));
+
+        EXPECT_EQ(0, *ptr);
+
+        EXPECT_EQ(ZX_OK, zx_handle_close(vmo));
+        EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo));
+        EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, config.clone_size));
+    }
+
+    END_TEST;
+}
+
 // Check that non-resizable VMOs cannot get resized.
 bool vmo_clone_no_resize_test_helper(bool flag) {
     BEGIN_TEST;
@@ -690,6 +750,7 @@ RUN_TEST(vmo_clone_commit_test);
 RUN_TEST(vmo_clone_rights_test);
 RUN_TEST(vmo_clone_resize_clone_hazard);
 RUN_TEST(vmo_clone_resize_parent_ok);
+RUN_TEST(vmo_clone_shrink_grow_parent);
 RUN_TEST(vmo_clone_no_resize_test);
 RUN_TEST(vmo_clone_legacy_no_resize_test);
 END_TEST_CASE(vmo_clone_tests)

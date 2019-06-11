@@ -1735,6 +1735,9 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
         } else {
             parent_limit_ = fbl::min(parent_limit_, s);
         }
+        // If the tail of a parent disappears, the children shouldn't be able to see that region
+        // again, even if the parent is later reenlarged. So update the child parent limits.
+        UpdateChildParentLimitsLocked(s);
 
         page_list_.RemovePages(start, end, &free_list);
     } else if (s > size_) {
@@ -1755,6 +1758,18 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     pmm_free(&free_list);
 
     return ZX_OK;
+}
+
+void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
+    // Note that a child's parent_limit_ will limit that child's descendants' views into
+    // this vmo, so this method only needs to touch the direct children.
+    for (auto& child : children_list_) {
+        if (new_size < child.parent_offset_) {
+            child.parent_limit_ = 0;
+        } else {
+            child.parent_limit_ = fbl::min(child.parent_limit_, new_size - child.parent_offset_);
+        }
+    }
 }
 
 // perform some sort of copy in/out on a range of the object using a passed in lambda

@@ -301,6 +301,12 @@ private:
             // Calling into the parents confuses analysis
             TA_NO_THREAD_SAFETY_ANALYSIS;
 
+    // Updates the parent limits of all children so that they will never be able to
+    // see above |new_size| in this vmo, even if the vmo is enlarged in the future.
+    void UpdateChildParentLimitsLocked(uint64_t new_size)
+            // Calling into the children confuses analysis
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
     // Outside of initialization/destruction, hidden vmos always have two children. For
     // clarity, whichever child is first in the list is the 'left' child, and whichever
     // child is second is the 'right' child.
