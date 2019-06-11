@@ -463,6 +463,7 @@ template("package") {
                                "components",
                                "data_deps",
                                "deprecated_misc_storage",
+                               "deprecated_shell",
                                "deprecated_system_image",
                                "deps",
                                "public_deps",
@@ -580,6 +581,16 @@ template("package") {
               {
                 schema = "//build/cmx/block_deprecated_misc_storage.json"
                 error_msg = "The 'deprecated-misc-storage' feature is deprecated and guarded by an allowlist."
+              },
+            ]
+          }
+
+          # TODO(jseibert): Remove this validation when the "deprecated-shell" feature is removed.
+          if (!defined(pkg.deprecated_shell)) {
+            extra_schemas += [
+              {
+                schema = "//build/cmx/block_deprecated_shell.json"
+                error_msg = "The 'deprecated-shell' feature is deprecated and guarded by an allowlist."
               },
             ]
           }
@@ -943,6 +954,9 @@ template("package") {
         if (defined(require_bare_tests_allowlist) &&
             require_bare_tests_allowlist) {
           deps += [ "//build:deprecated_bare_tests_allowlist" ]
+        }
+        if (defined(pkg.deprecated_shell)) {
+          deps += [ "${pkg.deprecated_shell}:deprecated_shell_allowlist" ]
         }
       }
     }

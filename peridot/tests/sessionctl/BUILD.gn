@@ -37,6 +37,8 @@ executable("sessionctl_test") {
 }
 
 hermetic_tests_package("sessionctl_integration_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":sessionctl_test",
   ]

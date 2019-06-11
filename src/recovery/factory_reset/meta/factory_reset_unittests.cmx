@@ -3,7 +3,7 @@
     "binary": "test/factory_reset_unittests"
   },
   "sandbox": {
-    "features": ["shell"],
+    "features": ["deprecated-shell"],
     "services": [
       "fuchsia.process.Launcher"
     ]

@@ -120,6 +120,8 @@ executable("bin") {
 }
 
 package("debug_agent") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
   ]
@@ -169,6 +171,8 @@ executable("unit_tests") {
 }
 
 test_package("debug_agent_tests") {
+  deprecated_shell = "//build"
+
   package_name = "debug_agent_tests"
   deps = []
   binaries = []

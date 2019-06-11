@@ -179,6 +179,8 @@ config_data("appmgr_scheme_config") {
 }
 
 test_package("appmgr_unittests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":tests",
   ]

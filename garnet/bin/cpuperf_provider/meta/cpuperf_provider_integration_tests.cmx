@@ -23,7 +23,7 @@
     "sandbox": {
         "dev": [ "sys/cpu-trace" ],
         "features": [
-            "shell",
+            "deprecated-shell",
             "system-temp"
         ],
         "services": [

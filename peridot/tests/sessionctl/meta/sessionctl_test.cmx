@@ -14,7 +14,7 @@
     },
     "sandbox": {
         "features": [
-            "shell"
+            "deprecated-shell"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",

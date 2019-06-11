@@ -115,6 +115,8 @@ executable("test-health") {
 }
 
 test_package("inspect_integration_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
     ":test",
@@ -142,6 +144,8 @@ test_package("inspect_integration_tests") {
 }
 
 test_package("inspect_vmo_integration_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin-health",
     ":bin-vmo",

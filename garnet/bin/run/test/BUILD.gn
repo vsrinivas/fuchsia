@@ -85,6 +85,8 @@ package("run_test_exiter") {
 }
 
 test_package("run_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
     ":run_return_value_test",

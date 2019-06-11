@@ -47,3 +47,51 @@ group("deprecated_bare_tests_allowlist") {
     "//src/lib/rust_backtrace:rust_backtrace_tests",
   ]
 }
+
+group("deprecated_shell_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of packages that have components manifests that include
+  # the "deprecated-shell" feature. Do not add to this list. If the manifest
+  # does not otherwise include the feature you need, please file a feature
+  # request for that fine-grained feature to help us support least-privileged
+  # components.
+  visibility = [
+    "//garnet/bin/appmgr:appmgr_unittests",
+    "//garnet/bin/appmgr/integration_tests:appmgr_integration_tests",
+    "//garnet/bin/appmgr/integration_tests/components:components_binary_tests",
+    "//garnet/bin/appmgr/integration_tests/inspect:inspect_integration_tests",
+    "//garnet/bin/appmgr/integration_tests/inspect:inspect_vmo_integration_tests",
+    "//garnet/bin/chrealm/integration_tests:chrealm_integrationtests",
+    "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
+    "//garnet/bin/glob:glob",
+    "//garnet/bin/iquery/testing:iquery_golden_test",
+    "//garnet/bin/run/test:run_tests",
+    "//garnet/bin/run_test_component/test:run_test_component_test",
+    "//garnet/bin/sl4f:sl4f",
+    "//garnet/bin/sshd-host:sshd-host",
+    "//garnet/bin/system_monitor/harvester:system_monitor_harvester",
+    "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
+    "//garnet/bin/trace:trace",
+    "//garnet/bin/trace/tests:trace_tests",
+    "//garnet/go/src/amber:amber",
+    "//garnet/go/src/amber/system_updater:system_updater_tests",
+    "//garnet/public/lib/inspect/integration:libinspect_integration_tests",
+    "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
+    "//peridot/bin/module_resolver/module_package_indexer:module_package_indexer",
+    "//peridot/bin/sessionctl:sessionctl",
+    "//peridot/tests/sessionctl:sessionctl_integration_tests",
+    "//src/connectivity/network/netstack:netstack_gotests",
+    "//src/developer/debug/debug_agent:debug_agent",
+    "//src/developer/debug/debug_agent:debug_agent_tests",
+    "//src/developer/feedback_agent:feedback_agent",
+    "//src/developer/feedback_agent/tests:feedback_agent_tests",
+    "//src/recovery/factory_reset:factory_reset_tests",
+  ]
+}

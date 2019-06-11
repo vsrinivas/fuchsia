@@ -71,6 +71,8 @@ package("chrealm_test_get_message") {
 }
 
 test_package("chrealm_integrationtests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":tests",
   ]

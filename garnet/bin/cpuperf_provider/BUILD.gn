@@ -125,6 +125,8 @@ if (current_cpu == "x64") {
 }
 
 test_package("cpuperf_provider_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":cpuperf_provider_tests_bin",
   ]

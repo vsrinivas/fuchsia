@@ -7,7 +7,7 @@
             "misc/sysinfo"
         ],
         "features": [
-            "shell"
+            "deprecated-shell"
         ],
         "services": [
             "fuchsia.net.SocketProvider"

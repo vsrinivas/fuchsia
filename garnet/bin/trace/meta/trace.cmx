@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "features": [
+            "deprecated-shell",
             "isolated-persistent-storage",
-            "shell",
             "system-temp"
         ],
         "services": [

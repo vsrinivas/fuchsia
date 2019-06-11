@@ -64,6 +64,8 @@ action("devmgr-manifest") {
 }
 
 test_package("libdriver-integration-test") {
+  deprecated_shell = "//build"
+
   deps = [
     ":devmgr-manifest",
     ":tests",

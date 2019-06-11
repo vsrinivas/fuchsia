@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("module_package_indexer") {
+  deprecated_shell = "//build"
+
   sources = [
     "main.cc",
   ]

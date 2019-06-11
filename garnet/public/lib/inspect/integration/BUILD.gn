@@ -36,6 +36,8 @@ executable("test") {
 }
 
 test_package("libinspect_integration_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
     ":test",

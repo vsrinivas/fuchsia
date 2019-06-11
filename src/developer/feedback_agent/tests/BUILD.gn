@@ -6,6 +6,8 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 test_package("feedback_agent_tests") {
+  deprecated_shell = "//build"
+
   tests = [
     {
       name = "data_provider_unittest"

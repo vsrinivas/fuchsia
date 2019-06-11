@@ -64,6 +64,8 @@ rustc_binary("bin") {
 }
 
 package("sl4f") {
+  deprecated_shell = "//build"
+
   meta = [
     {
       path = "meta/sl4f.cmx"

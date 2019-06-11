@@ -89,6 +89,8 @@ source_set("unittests") {
 }
 
 package("trace") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
   ]

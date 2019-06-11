@@ -4,6 +4,6 @@
   },
   "sandbox": {
     "services": [ "fuchsia.sys.Environment", "fuchsia.sys.Loader" ],
-    "features": [ "shell" ]
+    "features": [ "deprecated-shell" ]
   }
 }

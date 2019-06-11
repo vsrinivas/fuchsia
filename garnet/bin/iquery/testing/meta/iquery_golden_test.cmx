@@ -3,7 +3,7 @@
     "binary": "test/iquery_golden_test"
   },
   "sandbox": {
-    "features": [ "shell" ],
+    "features": [ "deprecated-shell" ],
     "services": [
       "fuchsia.process.Launcher",
       "fuchsia.process.Resolver",

@@ -134,6 +134,7 @@ template("test_package") {
                              "binaries",
                              "components",
                              "data_deps",
+                             "deprecated_shell",
                              "deps",
                              "extra",
                              "public_deps",

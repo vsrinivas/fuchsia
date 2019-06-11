@@ -68,6 +68,8 @@ executable("components_binary_test") {
 }
 
 test_package("components_binary_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":components_binary_test",
     ":echo1",

@@ -5,7 +5,7 @@
     "sandbox": {
         "features": [
             "build-info",
-            "shell",
+            "deprecated-shell",
             "deprecated-misc-storage",
             "isolated-persistent-storage"
         ],

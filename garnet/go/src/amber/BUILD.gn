@@ -84,6 +84,7 @@ package("pkgfs") {
 # FIXME: Until fuchsia_component exists again, ensure this and //garnet/tests/amberctl:amberctl-tests stay in sync
 package("amber") {
   deprecated_misc_storage = "//build"
+  deprecated_shell = "//build"
 
   extra = [ manifest_file ]
 

@@ -48,6 +48,8 @@ package("netstack_tools") {
 }
 
 test_package("netstack_gotests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":netstack_connectivity_test",
     ":netstack_fidlconv_test",

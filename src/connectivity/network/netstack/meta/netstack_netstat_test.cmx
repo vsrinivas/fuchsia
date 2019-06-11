@@ -12,7 +12,7 @@
     },
     "sandbox": {
         "features": [
-            "shell"
+            "deprecated-shell"
         ],
         "services": [
             "fuchsia.net.SocketProvider",

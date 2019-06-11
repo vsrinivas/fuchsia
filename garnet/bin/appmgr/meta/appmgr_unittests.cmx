@@ -4,9 +4,9 @@
     },
     "sandbox": {
         "features": [
-            "system-temp",
+            "deprecated-shell",
             "shell-commands",
-            "shell"
+            "system-temp"
         ],
         "services": [
             "fuchsia.process.Resolver",

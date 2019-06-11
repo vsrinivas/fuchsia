@@ -44,6 +44,8 @@ executable("bin") {
 }
 
 package("system_monitor_harvester") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
   ]
@@ -90,6 +92,8 @@ executable("system_monitor_harvester_test") {
 }
 
 test_package("system_monitor_harvester_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":system_monitor_harvester_test",
   ]

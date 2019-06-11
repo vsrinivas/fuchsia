@@ -71,6 +71,7 @@ template("hermetic_tests_package") {
   test_package(target_name) {
     forward_variables_from(invoker,
                            [
+                             "deprecated_shell",
                              "deps",
                              "meta",
                              "resources",

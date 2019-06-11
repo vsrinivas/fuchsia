@@ -3,7 +3,7 @@
         "binary": "test/chrealm_integration_test"
     },
     "sandbox": {
-        "features": [ "shell" ],
+        "features": [ "deprecated-shell" ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",

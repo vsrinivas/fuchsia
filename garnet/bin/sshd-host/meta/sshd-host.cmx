@@ -4,8 +4,8 @@
     },
     "sandbox": {
         "features": [
-            "shell",
-            "build-info"
+            "build-info",
+            "deprecated-shell"
         ],
         "services": [
             "fuchsia.process.Launcher",

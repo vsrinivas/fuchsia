@@ -29,6 +29,8 @@ executable("bin") {
 }
 
 test_package("run_test_component_test") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
   ]

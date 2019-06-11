@@ -78,6 +78,8 @@ executable("hub_tests") {
 }
 
 test_package("appmgr_integration_tests") {
+  deprecated_shell = "//build"
+
   deps = [
     ":hub_tests",
     ":realm_tests",

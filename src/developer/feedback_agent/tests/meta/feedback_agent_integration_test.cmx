@@ -15,7 +15,7 @@
     },
     "sandbox": {
         "features": [
-            "shell",
+            "deprecated-shell",
             "vulkan"
         ],
         "services": [
