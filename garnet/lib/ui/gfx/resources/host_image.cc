@@ -114,6 +114,7 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
       escher_image_info.usage = vk::ImageUsageFlagBits::eSampled;
       escher_image_info.tiling = vk::ImageTiling::eLinear;
       escher_image_info.is_mutable = false;
+      escher_image_info.is_external = true;
       // TODO(SCN-1012): This code assumes that Memory::GetGpuMem() will only
       // return device local memory.
       escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;

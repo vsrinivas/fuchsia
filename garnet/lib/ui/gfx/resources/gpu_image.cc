@@ -83,6 +83,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
                             vk::ImageUsageFlagBits::eTransferDst |
                             vk::ImageUsageFlagBits::eSampled |
                             vk::ImageUsageFlagBits::eColorAttachment;
+  escher_image_info.is_external = true;
   // TODO(SCN-1182): Add unit tests to verify this logic.
   switch (image_info.tiling) {
     case fuchsia::images::Tiling::LINEAR:

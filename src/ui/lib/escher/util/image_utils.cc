@@ -18,6 +18,16 @@ struct RGBA {
   uint8_t b;
   uint8_t a;
 };
+
+constexpr VkExternalMemoryImageCreateInfo kExternalImageCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
+    .pNext = nullptr,
+#ifdef __Fuchsia__
+    .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+#else
+    .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
+#endif
+};
 }  // namespace
 
 namespace escher {
@@ -102,6 +112,7 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
 
 vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   vk::ImageCreateInfo create_info;
+  create_info.pNext = info.is_external ? &kExternalImageCreateInfo : nullptr;
   create_info.imageType = vk::ImageType::e2D;
   create_info.format = info.format;
   create_info.extent = vk::Extent3D{info.width, info.height, 1};
