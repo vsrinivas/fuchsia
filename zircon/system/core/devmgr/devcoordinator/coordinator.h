@@ -252,7 +252,6 @@ private:
     bool system_loaded_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
 
-
     // Services offered to the rest of the system.
     svc::Outgoing outgoing_services_;
 

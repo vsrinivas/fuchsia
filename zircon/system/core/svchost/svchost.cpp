@@ -99,30 +99,8 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
     return ZX_OK;
 }
 
-static zx_handle_t appmgr_svc;
 static zx_handle_t root_job;
 static zx_handle_t root_resource;
-
-// TODO(PT-127): fuchsia.tracelink is being renamed to fuchsia.tracing.provider.
-static zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
-    const char* service_name = "fuchsia.tracelink.Registry";
-    return dir->AddEntry(
-        service_name,
-        fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
-            return fdio_service_connect_at(appmgr_svc, service_name, request.release());
-        }));
-}
-
-// We should host the fuchsia.tracing.provider service ourselves instead of
-// routing the request to appmgr.
-static zx_status_t publish_tracing_provider(const fbl::RefPtr<fs::PseudoDir>& dir) {
-    const char* service_name = "fuchsia.tracing.provider.Registry";
-    return dir->AddEntry(
-        service_name,
-        fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
-            return fdio_service_connect_at(appmgr_svc, service_name, request.release());
-        }));
-}
 
 // We shouldn't need to access these non-Zircon services from svchost, but
 // currently some tests assume they can reach these services from the test
@@ -144,6 +122,11 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
+    // We should host the tracelink service ourselves instead of routing the
+    // request to appmgr.
+    "fuchsia.tracelink.Registry",
+    // TODO(PT-127): fuchsia.tracelink is being renamed to fuchsia.tracing.provider.
+    "fuchsia.tracing.provider.Registry",
     // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
     "fuchsia.tracing.controller.Controller",
     // For amberctl over serial shell.
@@ -169,9 +152,17 @@ static constexpr const char* miscsvc_services[] = {
     nullptr,
 };
 
-// List of services which are re-routed to the bootsvc service provider.
+// List of services which are re-routed to bootsvc.
 static constexpr const char* bootsvc_services[] = {
     fuchsia_boot_Items_Name,
+    fuchsia_boot_Log_Name,
+    nullptr,
+};
+
+// List of services which are re-routed to devmgr.
+static constexpr const char* devmgr_services[] = {
+    fuchsia_device_manager_Administrator_Name,
+    fuchsia_device_manager_DebugDumper_Name,
     nullptr,
 };
 
@@ -229,10 +220,9 @@ void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir,
 
 void publish_remote_service(const fbl::RefPtr<fs::PseudoDir>& dir,
                            const char* name, zx::unowned_channel forwarding_channel) {
-    fbl::String path = fbl::StringPrintf("public/%s", name);
     dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
-            [path, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
-                return fdio_service_connect_at(forwarding_channel->get(), path.c_str(), request.release());
+            [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
+                return fdio_service_connect_at(forwarding_channel->get(), name, request.release());
             }));
 }
 
@@ -256,7 +246,7 @@ int main(int argc, char** argv) {
     async_dispatcher_t* dispatcher = loop.dispatcher();
     svc::Outgoing outgoing(dispatcher);
 
-    appmgr_svc = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    zx::channel appmgr_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
     root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
     zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
@@ -317,31 +307,12 @@ int main(int argc, char** argv) {
       }
     }
 
-    status = publish_tracelink(outgoing.public_dir());
-    if (status != ZX_OK) {
-        fprintf(stderr, "svchost: error: Failed to publish tracelink: %d (%s).\n",
-                status, zx_status_get_string(status));
-        return 1;
-    }
-
-    status = publish_tracing_provider(outgoing.public_dir());
-    if (status != ZX_OK) {
-        fprintf(stderr, "svchost: error: Failed to publish tracing.provider: %d (%s).\n",
-                status, zx_status_get_string(status));
-        return 1;
-    }
-
     publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
     publish_services(outgoing.public_dir(), fshost_services, zx::unowned_channel(fshost_svc));
     publish_services(outgoing.public_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
     publish_services(outgoing.public_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
-
-    publish_remote_service(outgoing.public_dir(),
-                          fuchsia_device_manager_DebugDumper_Name,
-                          zx::unowned_channel(devmgr_proxy_channel));
-    publish_remote_service(outgoing.public_dir(),
-                          fuchsia_device_manager_Administrator_Name,
-                          zx::unowned_channel(devmgr_proxy_channel));
+    publish_services(outgoing.public_dir(), devmgr_services,
+                     zx::unowned_channel(devmgr_proxy_channel));
 
     if (virtcon_proxy_channel.is_valid()) {
         publish_proxy_service(outgoing.public_dir(),
@@ -350,7 +321,8 @@ int main(int argc, char** argv) {
     }
 
     thrd_t thread;
-    status = start_crashsvc(zx::job(root_job), require_system ? appmgr_svc : ZX_HANDLE_INVALID,
+    status = start_crashsvc(zx::job(root_job),
+                            require_system ? appmgr_svc.get() : ZX_HANDLE_INVALID,
                             &thread);
     if (status != ZX_OK) {
         // The system can still function without crashsvc, log the error but

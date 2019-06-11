@@ -466,17 +466,27 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
         }
     }
 
-    zx::channel fidl_client;
+    zx::channel coordinator_client;
     {
-        zx::channel fidl_server;
-        status = zx::channel::create(0, &fidl_server, &fidl_client);
+        zx::channel root_server, root_client;
+        status = zx::channel::create(0, &root_server, &root_client);
         if (status != ZX_OK) {
             return status;
         }
 
-        status = coordinator->BindOutgoingServices(std::move(fidl_server));
+        status = coordinator->BindOutgoingServices(std::move(root_server));
         if (status != ZX_OK) {
-            printf("Unable to start fidl services.\n");
+            return status;
+        }
+
+        zx::channel coordinator_server;
+        status = zx::channel::create(0, &coordinator_server, &coordinator_client);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = fdio_service_connect_at(root_client.get(), "public", coordinator_server.release());
+        if (status != ZX_OK) {
             return status;
         }
     }
@@ -496,9 +506,8 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
             return status;
         }
 
-        status =
-            fdio_service_connect_at(g_handles.miscsvc_client.get(), "public",
-                                    miscsvc_svc_req.release());
+        status = fdio_service_connect_at(g_handles.miscsvc_client.get(), "public",
+                                         miscsvc_svc_req.release());
         if (status != ZX_OK) {
             return status;
         }
@@ -512,7 +521,7 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
             return status;
         }
 
-        status = fdio_open("/bootsvc", FS_DIR_FLAGS, bootsvc_svc_req.release());
+        status = fdio_service_connect("/bootsvc", bootsvc_svc_req.release());
         if (status != ZX_OK) {
             return status;
         }
@@ -553,12 +562,12 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
         launchpad_add_handle(lp, root_resource_copy.release(), PA_HND(PA_USER0, 2));
     }
 
-    // TODO(smklein): Merge "fidl_client" (proxying requests to devmgr) and
+    // TODO(smklein): Merge "coordinator_client" (proxying requests to devmgr) and
     // "fshost_client" (proxying requests to fshost) into one service provider
     // PseudoDirectory.
 
     // Add handle to channel to allow svchost to proxy fidl services to us.
-    launchpad_add_handle(lp, fidl_client.release(), PA_HND(PA_USER0, 3));
+    launchpad_add_handle(lp, coordinator_client.release(), PA_HND(PA_USER0, 3));
 
     // Add a handle to allow svchost to proxy services to fshost.
     launchpad_add_handle(lp, fshost_client.release(), PA_HND(PA_USER0, 4));
