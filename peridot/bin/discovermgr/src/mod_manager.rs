@@ -4,7 +4,7 @@
 
 use {
     crate::models::{AddMod, Suggestion},
-    failure::{format_err, Error},
+    failure::{bail, Error},
     fidl_fuchsia_modular::{
         ExecuteStatus, FocusMod, PuppetMasterProxy, StoryCommand, StoryPuppetMasterMarker,
     },
@@ -68,11 +68,11 @@ impl ModManager {
         story_puppet_master.enqueue(&mut commands.iter_mut())?;
         let result = await!(story_puppet_master.execute())?;
         if result.status != ExecuteStatus::Ok {
-            Err(format_err!(
+            bail!(
                 "Modular error status:{:?} message:{}",
                 result.status,
                 result.error_message.unwrap_or("none".to_string())
-            ))
+            );
         } else {
             Ok(())
         }
