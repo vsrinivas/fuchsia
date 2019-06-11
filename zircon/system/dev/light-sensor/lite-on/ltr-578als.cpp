@@ -4,6 +4,9 @@
 
 #include "ltr-578als.h"
 
+#include <ddk/binding.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <endian.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -84,7 +87,7 @@ zx_status_t Ltr578Als::GetInputReport(ltr_578als_input_rpt_t* report) {
     return ZX_OK;
 }
 
-zx_status_t Ltr578Als::Create(zx_device_t* parent) {
+zx_status_t Ltr578Als::Create(void* ctx, zx_device_t* parent) {
     i2c_protocol_t i2c;
     auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
     if (status != ZX_OK) {
@@ -223,8 +226,19 @@ zx_status_t Ltr578Als::HidbusSetProtocol(hid_protocol_t protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = Ltr578Als::Create;
+    return ops;
+}();
+
 }  // namespace light
 
-extern "C" zx_status_t ltr_578als_bind(void* ctx, zx_device_t* parent) {
-    return light::Ltr578Als::Create(parent);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(ltr_578als, light::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_LITE_ON_ALS),
+ZIRCON_DRIVER_END(ltr_578als)
+// clang-format on

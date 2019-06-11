@@ -20,7 +20,7 @@ using DeviceType = ddk::Device<Ltr578Als>;
 
 class Ltr578Als : public DeviceType, public ddk::HidbusProtocol<Ltr578Als, ddk::base_protocol> {
 public:
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     void DdkRelease() { delete this; }
 

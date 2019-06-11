@@ -4,7 +4,6 @@
 
 driver("lite-on") {
   sources = [
-    "binding.c",
     "ltr-578als.cpp",
   ]
   deps = [
