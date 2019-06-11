@@ -65,10 +65,10 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
   fit::closure on_idle;
 };
 
-class PageManagerTest : public TestWithEnvironment {
+class ActivePageManagerTest : public TestWithEnvironment {
  public:
-  PageManagerTest() {}
-  ~PageManagerTest() override {}
+  ActivePageManagerTest() {}
+  ~ActivePageManagerTest() override {}
 
  protected:
   // ApplicationTestBase:
@@ -89,10 +89,10 @@ class PageManagerTest : public TestWithEnvironment {
   storage::PageId page_id_;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerTest);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManagerTest);
 };
 
-TEST_F(PageManagerTest, OnEmptyCallback) {
+TEST_F(ActivePageManagerTest, OnEmptyCallback) {
   bool on_empty_called = false;
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
@@ -158,7 +158,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
+TEST_F(ActivePageManagerTest, DeletingPageManagerClosesConnections) {
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
   auto active_page_manager = std::make_unique<ActivePageManager>(
@@ -184,7 +184,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   EXPECT_TRUE(page_closed);
 }
 
-TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
+TEST_F(ActivePageManagerTest, OnEmptyCallbackWithWatcher) {
   bool on_empty_called = false;
   auto storage = MakeStorage();
   auto merger = GetDummyResolver(&environment_, storage.get());
@@ -238,7 +238,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
+TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
   auto storage = MakeStorage();
@@ -302,7 +302,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
+TEST_F(ActivePageManagerTest, DelayBindingUntilSyncTimeout) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
   auto storage = MakeStorage();
@@ -338,7 +338,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
+TEST_F(ActivePageManagerTest, ExitWhenSyncFinishes) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
   auto storage = MakeStorage();
@@ -366,7 +366,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   EXPECT_TRUE(active_page_manager.IsEmpty());
 }
 
-TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
+TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
   auto fake_page_sync = std::make_unique<FakePageSync>();
   auto fake_page_sync_ptr = fake_page_sync.get();
   auto storage = MakeStorage();
