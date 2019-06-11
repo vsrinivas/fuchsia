@@ -10,7 +10,6 @@ group("qemu") {
 
 driver("qemu-audio") {
   sources = [
-    "binding.c",
     "qemu-codec.cpp",
     "qemu-stream.cpp",
   ]

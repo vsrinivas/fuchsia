@@ -15,7 +15,7 @@ namespace codecs {
 
 class QemuCodec : public IntelHDACodecDriverBase {
 public:
-    static fbl::RefPtr<QemuCodec> Create();
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     zx_status_t Init(zx_device_t* codec_dev);
     zx_status_t Start() override;

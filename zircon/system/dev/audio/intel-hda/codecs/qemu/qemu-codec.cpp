@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 
 #include <dispatcher-pool/dispatcher-thread-pool.h>
@@ -32,8 +35,10 @@ void QemuCodec::PrintDebugPrefix() const {
     printf("QEMUCodec : ");
 }
 
-fbl::RefPtr<QemuCodec> QemuCodec::Create() {
-    return fbl::AdoptRef(new QemuCodec);
+zx_status_t QemuCodec::Create(void* ctx, zx_device_t* parent) {
+    fbl::RefPtr<QemuCodec> codec = fbl::AdoptRef(new QemuCodec);
+    ZX_DEBUG_ASSERT(codec != nullptr);
+    return codec->Init(parent);
 }
 
 zx_status_t QemuCodec::Init(zx_device_t* codec_dev) {
@@ -70,16 +75,21 @@ zx_status_t QemuCodec::Start() {
     return ZX_OK;
 }
 
-extern "C" zx_status_t qemu_ihda_codec_bind_hook(void* ctx,
-                                                 zx_device_t* codec_dev) {
-    auto codec = QemuCodec::Create();
-    ZX_DEBUG_ASSERT(codec != nullptr);
-
-    // Init our codec.
-    return codec->Init(codec_dev);
-}
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = QemuCodec::Create;
+    return ops;
+}();
 
 }  // namespace codecs
 }  // namespace audio
 }  // namespace intel_hda
 
+// clang-format off
+ZIRCON_DRIVER_BEGIN(qemu_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_IHDA_CODEC),
+    BI_ABORT_IF(NE, BIND_IHDA_CODEC_VID, 0x1af4),
+    BI_MATCH_IF(EQ, BIND_IHDA_CODEC_DID, 0x0022),
+ZIRCON_DRIVER_END(qemu_ihda_codec)
+// clang-format on
