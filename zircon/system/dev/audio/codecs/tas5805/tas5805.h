@@ -58,7 +58,7 @@ public:
     zx_status_t ResetAndInitialize();
 
 protected:
-    bool initialized_ = false; // Protected for unit tests.
+    std::atomic<bool> initialized_ = false; // Protected for unit tests.
 
 private:
     static constexpr float kMaxGain = 24.0;

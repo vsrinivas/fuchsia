@@ -213,7 +213,6 @@ zx_status_t Mt8167::AudioInit() {
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO56_I2S_LRCK, MT8167_GPIO56_I2S_8CH_LRCK_FN);
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO25_I2S_BCK, MT8167_GPIO57_I2S_8CH_BCK_FN);
 
-    // No reset/mute on Cleo.
     if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         // ~AMP_RESET.
         gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, MT8167_GPIO_GPIO_FN);
@@ -222,6 +221,27 @@ zx_status_t Mt8167::AudioInit() {
         // ~AMP_MUTE.
         gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO108_MSDC1_DAT2, MT8167_GPIO_GPIO_FN);
         gpio_impl_config_out(&gpio_impl_, MT8167_GPIO108_MSDC1_DAT2, 1); // Set to "not mute".
+    } else {                                                             // Cleo.
+        // From the TAS5805m codec reference manual:
+        // "9.5.3.1 Startup Procedures
+        // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
+        // 2. Bring up power supplies (it does not matter if PVDD or DVDD comes up first).
+        // 3. Once power supplies are stable, bring up PDN to High and wait 5ms at least, then
+        // start SCLK, LRCLK.
+        // 4. Once I2S clocks are stable, set the device into HiZ state and enable DSP via the I2C
+        // control port.
+        // 5. Wait 5ms at least. Then initialize the DSP Coefficient, then set the device to Play
+        // state.
+        // 6. The device is now in normal operation."
+        // ADR/FAULT is hardwired to VIO18_PMU (always on).
+        // PVDD is hardwired to DC_IN.
+        // DVDD is hardwired to VIO18_PMU (always on).
+        // Step 3 PDN setup and 5ms delay is executed below.
+        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, MT8167_GPIO_GPIO_FN);
+        gpio_impl_config_out(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, 1); // Set PDN to High.
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+        // I2S clocks are configured by the controller and the rest of the initialization is done
+        // in the codec itself.
     }
 
     // Input pin assignments.
@@ -275,8 +295,7 @@ zx_status_t Mt8167::AudioInit() {
     if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
         constexpr zx_device_prop_t props[] = {
             {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-            {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782}
-        };
+            {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5782}};
         status = DdkAddComposite("audio-tas5782", props, countof(props), mt8167s_codec_components,
                                  countof(mt8167s_codec_components), UINT32_MAX);
         if (status != ZX_OK) {
@@ -293,8 +312,7 @@ zx_status_t Mt8167::AudioInit() {
     } else {
         constexpr zx_device_prop_t props[] = {
             {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-            {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}
-        };
+            {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}};
         status = DdkAddComposite("audio-tas5805", props, countof(props), cleo_codec_components,
                                  countof(cleo_codec_components), UINT32_MAX);
         if (status != ZX_OK) {

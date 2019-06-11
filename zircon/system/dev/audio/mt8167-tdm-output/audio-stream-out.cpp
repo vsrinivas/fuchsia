@@ -102,6 +102,22 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         return ZX_ERR_NO_MEMORY;
     }
 
+    // Initialize the ring buffer
+    InitBuffer(kRingBufferSize);
+
+    mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
+                         pinned_ring_buffer_.region(0).size);
+
+    // Configure XO and PLLs for interface aud1.
+
+    // Power up playback for I2S2 by clearing the power down bit for div1.
+    CLK_SEL_9::Get().ReadFrom(&*mmio_clk).set_apll12_div1_pdn(0).WriteTo(&*mmio_clk);
+
+    // Enable aud1 PLL.
+    APLL1_CON0::Get().ReadFrom(&*mmio_pll).set_APLL1_EN(1).WriteTo(&*mmio_pll);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(2))); // For I2S clocks to settle, arbitrary.
+
+    // Reset and initialize codec after we have configured I2S.
     status = codec_.Reset();
     if (status != ZX_OK) {
         return status;
@@ -131,20 +147,6 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     if (status != ZX_OK) {
         return status;
     }
-
-    // Initialize the ring buffer
-    InitBuffer(kRingBufferSize);
-
-    mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
-                         pinned_ring_buffer_.region(0).size);
-
-    // Configure XO and PLLs for interface aud1.
-
-    // Power up playback for I2S2 by clearing the power down bit for div1.
-    CLK_SEL_9::Get().ReadFrom(&*mmio_clk).set_apll12_div1_pdn(0).WriteTo(&*mmio_clk);
-
-    // Enable aud1 PLL.
-    APLL1_CON0::Get().ReadFrom(&*mmio_pll).set_APLL1_EN(1).WriteTo(&*mmio_pll);
 
     return ZX_OK;
 }
@@ -342,9 +344,7 @@ zx_status_t Mt8167AudioStreamOut::InitBuffer(size_t size) {
 } // namespace mt8167
 } // namespace audio
 
-__BEGIN_CDECLS
-
-zx_status_t mt_audio_out_bind(void* ctx, zx_device_t* device) {
+static zx_status_t mt_audio_out_bind(void* ctx, zx_device_t* device) {
 
     auto stream =
         audio::SimpleAudioStream::Create<audio::mt8167::Mt8167AudioStreamOut>(device);
@@ -371,4 +371,3 @@ ZIRCON_DRIVER_BEGIN(mt8167_audio_out, mt_audio_out_driver_ops, "zircon", "0.1", 
 ZIRCON_DRIVER_END(mt8167_audio_out)
 // clang-format on
 
-__END_CDECLS

@@ -145,7 +145,8 @@ TEST(Tas5805Test, GetInfo) {
             EXPECT_EQ(strcmp(info->unique_id, ""), 0);
             EXPECT_EQ(strcmp(info->manufacturer, "Texas Instruments"), 0);
             EXPECT_EQ(strcmp(info->product_name, "TAS5805m"), 0);
-        }, nullptr);
+        },
+        nullptr);
 }
 
 TEST(Tas5805Test, BridgedMode) {
@@ -155,7 +156,8 @@ TEST(Tas5805Test, BridgedMode) {
     device.CodecIsBridgeable(
         [](void* ctx, bool supports_bridged_mode) {
             EXPECT_EQ(supports_bridged_mode, false);
-        }, nullptr);
+        },
+        nullptr);
 }
 
 TEST(Tas5805Test, GetGainFormat) {
@@ -168,7 +170,8 @@ TEST(Tas5805Test, GetGainFormat) {
             EXPECT_EQ(format->min_gain, -103.0);
             EXPECT_EQ(format->max_gain, 24.0);
             EXPECT_EQ(format->gain_step, 0.5);
-        }, nullptr);
+        },
+        nullptr);
 }
 
 TEST(Tas5805Test, GetPlugState) {
@@ -179,17 +182,24 @@ TEST(Tas5805Test, GetPlugState) {
         [](void* ctx, const plug_state_t* state) {
             EXPECT_EQ(state->hardwired, true);
             EXPECT_EQ(state->plugged, true);
-        }, nullptr);
+        },
+        nullptr);
 }
 
 TEST(Tas5805Test, Reset) {
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
         .ExpectWriteStop({0x00, 0x00})  // Page 0.
-        .ExpectWriteStop({0x03, 0x00})  // Enter standby.
-        .ExpectWriteStop({0x01, 0x11})  // Reset registers and modules.
-        .ExpectWriteStop({0x02, 0x05})  // Normal modulation, stereo.
-        .ExpectWriteStop({0x03, 0x03}); // Exit standby.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x03, 0x02})  // HiZ, Enables DSP.
+        .ExpectWriteStop({0x01, 0x11})  // Reset.
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x02, 0x05})  // Normal modulation, mono.
+        .ExpectWriteStop({0x03, 0x03})  // Play,
+        .ExpectWriteStop({0x00, 0x00})  // Page 0.
+        .ExpectWriteStop({0x7f, 0x00})  // book 0.
+        .ExpectWriteStop({0x78, 0x80}); // Clear analog fault.
 
     ddk::I2cChannel i2c(mock_i2c.GetProto());
     Tas5805 device(nullptr, std::move(i2c));

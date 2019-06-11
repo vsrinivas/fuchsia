@@ -286,7 +286,7 @@ zx_status_t Tas5782::WriteReg(uint8_t reg, uint8_t value) {
         return status;
     }
     uint8_t buffer = 0;
-    i2c_.ReadSync(reg, &buffer, 1);
+    status = i2c_.ReadSync(reg, &buffer, 1);
     if (status != ZX_OK) {
         printf("Could not I2C read %d\n", status);
         return status;

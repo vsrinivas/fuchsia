@@ -22,15 +22,18 @@ constexpr uint8_t kRegReset       = 0x01;
 constexpr uint8_t kRegDeviceCtrl1 = 0x02;
 constexpr uint8_t kRegDeviceCtrl2 = 0x03;
 constexpr uint8_t kRegSapCtrl1    = 0x33;
-constexpr uint8_t kRegDigitalVol  = 0x4C;
+constexpr uint8_t kRegDigitalVol  = 0x4c;
+constexpr uint8_t kRegClearFault  = 0x78;
+constexpr uint8_t kRegSelectbook  = 0x7f;
 
-constexpr uint8_t kRegResetBitsCtrl            = 0x11;
+constexpr uint8_t kRegResetRegsAndModulesCtrl  = 0x11;
 constexpr uint8_t kRegDeviceCtrl1BitsPbtlMode  = 0x04;
 constexpr uint8_t kRegDeviceCtrl1Bits1SpwMode  = 0x01;
 constexpr uint8_t kRegSapCtrl1Bits16bits       = 0x00;
 constexpr uint8_t kRegSapCtrl1Bits32bits       = 0x03;
-constexpr uint8_t kRegDeviceCtrl2BitsDeepSleep = 0x00;
+constexpr uint8_t kRegDeviceCtrl2BitsHiZ       = 0x02;
 constexpr uint8_t kRegDeviceCtrl2BitsPlay      = 0x03;
+constexpr uint8_t kRegClearFaultBitsAnalog     = 0x80;
 // clang-format on
 
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
@@ -65,19 +68,49 @@ enum {
 namespace audio {
 
 zx_status_t Tas5805::ResetAndInitialize() {
+    // From the reference manual:
+    // "9.5.3.1 Startup Procedures
+    // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
+    // 2. Bring up power supplies (it does not matter if PVDD or DVDD comes up first).
+    // 3. Once power supplies are stable, bring up PDN to High and wait 5ms at least, then start
+    // SCLK, LRCLK.
+    // 4. Once I2S clocks are stable, set the device into HiZ state and enable DSP via the I2C
+    // control port.
+    // 5. Wait 5ms at least. Then initialize the DSP Coefficient, then set the device to Play state.
+    // 6. The device is now in normal operation."
+    // Steps 4+ are execute below.
 
-    constexpr uint8_t defaults[][2] = {
+    constexpr uint8_t kDefaultsStart[][2] = {
         {kRegSelectPage, 0x00},
-        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsDeepSleep}, // Enter standby.
-        {kRegReset, kRegResetBitsCtrl},
-         // Nomal Modulation, stereo.
-        {kRegDeviceCtrl1, kRegDeviceCtrl1BitsPbtlMode | kRegDeviceCtrl1Bits1SpwMode},
-        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay}, // Exit standby.
+        {kRegSelectbook, 0x00},
+        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ}, // Enables DSP.
+        {kRegReset, kRegResetRegsAndModulesCtrl},
     };
-    for (auto& i : defaults) {
+    for (auto& i : kDefaultsStart) {
         auto status = WriteReg(i[0], i[1]);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "%s Failed to write I2C register 0x%02X\n", __FILE__, i[0]);
+            zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s\n", __FILE__, i[0],
+                   __func__);
+            return status;
+        }
+    }
+
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+
+    constexpr uint8_t kDefaultsEnd[][2] = {
+        {kRegSelectPage, 0x00},
+        {kRegSelectbook, 0x00},
+        // TODO(andresoportus): Configure bridging (e.g. PBTL) from outside this driver.
+        {kRegDeviceCtrl1, kRegDeviceCtrl1BitsPbtlMode | kRegDeviceCtrl1Bits1SpwMode},
+        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
+        {kRegSelectPage, 0x00},
+        {kRegSelectbook, 0x00},
+        {kRegClearFault, kRegClearFaultBitsAnalog}};
+    for (auto& i : kDefaultsEnd) {
+        auto status = WriteReg(i[0], i[1]);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s Failed to write I2C register 0x%02X for %s\n",
+                   __FILE__, i[0], __func__);
             return status;
         }
     }
@@ -282,7 +315,7 @@ zx_status_t Tas5805::WriteReg(uint8_t reg, uint8_t value) {
         return status;
     }
     uint8_t buffer = 0;
-    i2c_.ReadSync(reg, &buffer, 1);
+    status = i2c_.ReadSync(reg, &buffer, 1);
     if (status != ZX_OK) {
         printf("Could not I2C read %d\n", status);
         return status;
@@ -314,4 +347,3 @@ ZIRCON_DRIVER_BEGIN(ti_tas5805, audio::driver_ops, "zircon", "0.1", 3)
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),
 ZIRCON_DRIVER_END(ti_tas5805)
 // clang-format on
-
