@@ -4,18 +4,20 @@
 
 use byteorder::{ByteOrder, NativeEndian};
 use fidl_fuchsia_media::*;
+use itertools::Itertools;
 use stream_processor_test::*;
 
 const PCM_SAMPLE_SIZE: usize = 2;
 const PCM_MIME_TYPE: &str = "audio/pcm";
 
+#[derive(Clone, Debug)]
 pub struct PcmAudio {
     pcm_format: PcmFormat,
     buffer: Vec<u8>,
 }
 
 impl PcmAudio {
-    fn create_saw_wave(pcm_format: PcmFormat, frame_count: usize) -> Self {
+    pub fn create_saw_wave(pcm_format: PcmFormat, frame_count: usize) -> Self {
         const FREQUENCY: f32 = 20.0;
         const AMPLITUDE: f32 = 0.2;
 
@@ -49,10 +51,10 @@ impl PcmAudio {
 
 #[allow(dead_code)]
 pub struct PcmAudioStream<I, E> {
-    pcm_audio: PcmAudio,
-    encoder_settings: E,
-    frames_per_packet: I,
-    timebase: Option<u64>,
+    pub pcm_audio: PcmAudio,
+    pub encoder_settings: E,
+    pub frames_per_packet: I,
+    pub timebase: Option<u64>,
 }
 
 impl<I, E> PcmAudioStream<I, E>
@@ -97,17 +99,25 @@ where
     fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
         let data = self.pcm_audio.buffer.as_slice();
         let frame_size = self.pcm_audio.frame_size();
-        let mut i = 0;
+        let mut offset = 0;
         let mut frames_per_packet = self.frames_per_packet.clone();
 
-        let chunks = (0..).filter_map(move |_| {
-            let number_of_frames_for_this_packet = frames_per_packet.next()?;
-            let payload_size = number_of_frames_for_this_packet * frame_size;
-            let range = i..(i + payload_size);
-            i += payload_size;
+        let chunks = (0..)
+            .map(move |_| {
+                let number_of_frames_for_this_packet = frames_per_packet.next()?;
+                let payload_size = number_of_frames_for_this_packet * frame_size;
+                let payload_size = data
+                    .len()
+                    .checked_sub(offset)
+                    .map(|remaining_bytes| std::cmp::min(remaining_bytes, payload_size))
+                    .filter(|payload_size| *payload_size > 0)?;
 
-            data.get(range)
-        });
+                let range = offset..(offset + payload_size);
+                offset += payload_size;
+
+                data.get(range)
+            })
+            .while_some();
         Box::new(chunks.map(|data| ElementaryStreamChunk {
             start_access_unit: false,
             known_end_access_unit: false,
@@ -116,6 +126,37 @@ where
             timestamp: None,
         }))
     }
+}
+
+#[test]
+fn elementary_chunk_data() {
+    let pcm_format = PcmFormat {
+        pcm_mode: AudioPcmMode::Linear,
+        bits_per_sample: 16,
+        frames_per_second: 44100,
+        channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+    };
+    let pcm_audio = PcmAudio::create_saw_wave(pcm_format, /*frame_count=*/ 100);
+
+    let encoder_settings = move || -> EncoderSettings {
+        // Settings are arbitrary; we just need to construct an instance.
+        EncoderSettings::Sbc(SbcEncoderSettings {
+            sub_bands: SbcSubBands::SubBands8,
+            allocation: SbcAllocation::AllocLoudness,
+            block_count: SbcBlockCount::BlockCount16,
+            channel_mode: SbcChannelMode::JointStereo,
+            bit_pool: 59,
+        })
+    };
+    let stream = PcmAudioStream {
+        pcm_audio: pcm_audio.clone(),
+        encoder_settings,
+        frames_per_packet: (0..).map(|_| 40),
+        timebase: None,
+    };
+
+    let actual: Vec<u8> = stream.stream().flat_map(|chunk| chunk.data.iter()).cloned().collect();
+    assert_eq!(pcm_audio.buffer, actual);
 }
 
 #[test]
