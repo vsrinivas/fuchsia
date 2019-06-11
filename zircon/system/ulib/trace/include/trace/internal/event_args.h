@@ -4,10 +4,6 @@
 
 // Internal implementation of <trace/event_args.h>.
 // This is not part of the public API: use <trace/event_args.h> instead.
-//
-// TODO(dje): The presence of NEW_ on macros everywhere here is to avoid
-// collisions with external use of our internal macros. Remove "NEW_" when
-// all external usage has been removed.
 
 #ifndef TRACE_INTERNAL_EVENT_ARGS_H_
 #define TRACE_INTERNAL_EVENT_ARGS_H_
@@ -20,9 +16,7 @@
 #include <trace-engine/types.h>
 #include <trace/internal/pairs_internal.h>
 
-// TODO(dje): Remove "NEW_". It exists for now to minimize changes to
-// internal/event_internal.h.
-#define TRACE_INTERNAL_NEW_NUM_ARGS(variable_name) \
+#define TRACE_INTERNAL_NUM_ARGS(variable_name) \
     (sizeof(variable_name) / sizeof((variable_name)[0]))
 
 // Note: Argument names are processed in two steps. The first step is here
@@ -33,47 +27,47 @@
     TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)
 #define TRACE_INTERNAL_ALLOCATE_ARGS(var_name, args...)    \
     trace_arg_t var_name[TRACE_INTERNAL_COUNT_ARGS(args)]; \
-    static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
+    static_assert(TRACE_INTERNAL_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
 #ifdef __cplusplus
 
-#define TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) \
+#define TRACE_INTERNAL_SCOPE_ARG_LABEL(var_name, idx) \
     __trace_arg_##var_name##idx
 
-#define TRACE_INTERNAL_NEW_HOLD_ARG(var_name, idx, name_literal, arg_value) \
-    const auto& TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx) = (arg_value);
-#define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
-    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)},    \
-      .value = ::trace::internal::MakeArgumentValue(                        \
-          TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx)) }
+#define TRACE_INTERNAL_HOLD_ARG(var_name, idx, name_literal, arg_value) \
+    const auto& TRACE_INTERNAL_SCOPE_ARG_LABEL(var_name, idx) = (arg_value);
+#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value)  \
+    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)}, \
+      .value = ::trace::internal::MakeArgumentValue(                     \
+          TRACE_INTERNAL_SCOPE_ARG_LABEL(var_name, idx)) }
 
-#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...)            \
-    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_NEW_HOLD_ARG, var_name, args) \
-    trace_arg_t var_name[] = {                                                 \
-        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG,         \
-                                          var_name, args)};                    \
-    static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
+#define TRACE_INTERNAL_DECLARE_ARGS(context, var_name, args...)            \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_HOLD_ARG, var_name, args) \
+    trace_arg_t var_name[] = {                                             \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG,         \
+                                          var_name, args)};                \
+    static_assert(TRACE_INTERNAL_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
 #define TRACE_INTERNAL_ASSIGN_ARG(var_name, idx, name_literal, arg_value) \
     var_name[idx - 1].name_ref.encoded_value = 0;                         \
     var_name[idx - 1].name_ref.inline_string = (name_literal);            \
     var_name[idx - 1].value = ::trace::internal::MakeArgumentValue(       \
-        TRACE_INTERNAL_NEW_SCOPE_ARG_LABEL(var_name, idx));
-#define TRACE_INTERNAL_INIT_ARGS(var_name, args...)                            \
-    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_NEW_HOLD_ARG, var_name, args) \
+        TRACE_INTERNAL_SCOPE_ARG_LABEL(var_name, idx));
+#define TRACE_INTERNAL_INIT_ARGS(var_name, args...)                          \
+    TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_HOLD_ARG, var_name, args)   \
     TRACE_INTERNAL_APPLY_PAIRWISE(TRACE_INTERNAL_ASSIGN_ARG, var_name, args)
 
 #else
 
-#define TRACE_INTERNAL_NEW_MAKE_ARG(var_name, idx, name_literal, arg_value) \
-    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)},    \
+#define TRACE_INTERNAL_MAKE_ARG(var_name, idx, name_literal, arg_value)  \
+    { .name_ref = {.encoded_value = 0, .inline_string = (name_literal)}, \
       .value = (arg_value) }
 
-#define TRACE_INTERNAL_NEW_DECLARE_ARGS(context, var_name, args...)    \
-    trace_arg_t var_name[] = {                                         \
-        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_NEW_MAKE_ARG, \
-                                          var_name, args)};            \
-    static_assert(TRACE_INTERNAL_NEW_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
+#define TRACE_INTERNAL_DECLARE_ARGS(context, var_name, args...)    \
+    trace_arg_t var_name[] = {                                     \
+        TRACE_INTERNAL_APPLY_PAIRWISE_CSV(TRACE_INTERNAL_MAKE_ARG, \
+                                          var_name, args)};        \
+    static_assert(TRACE_INTERNAL_NUM_ARGS(var_name) <= TRACE_MAX_ARGS, "too many args")
 
 #define TRACE_INTERNAL_ASSIGN_ARG(var_name, idx, name_literal, arg_value) \
     var_name[idx - 1].name_ref.encoded_value = 0;                         \

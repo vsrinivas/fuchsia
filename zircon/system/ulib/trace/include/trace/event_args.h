@@ -150,9 +150,8 @@
 // The tracing system recognizes "#define NTRACE" as a way of completely
 // disabling tracing by not emitting any code; you may wish to have your macro
 // emit zero code if NTRACE is defined.
-// TODO(dje): Remove "NEW_" when external uses of internal macros are gone.
 #define TRACE_DECLARE_ARGS(context, variable_name, args...) \
-    TRACE_INTERNAL_NEW_DECLARE_ARGS((context), variable_name, args)
+    TRACE_INTERNAL_DECLARE_ARGS((context), variable_name, args)
 
 // Before the argument list created by |TRACE_DECLARE_ARGS()| can be passed to
 // the trace-engine API it must be passed through this. This is done in a
@@ -162,9 +161,7 @@
     TRACE_INTERNAL_COMPLETE_ARGS((context), (arg_array), (num_args))
 
 // Return the number of arguments in |variable_name|.
-// TODO(dje): Remove "NEW_". It exists for now to minimize changes to
-// internal/event_internal.h.
 #define TRACE_NUM_ARGS(variable_name) \
-    TRACE_INTERNAL_NEW_NUM_ARGS(variable_name)
+    TRACE_INTERNAL_NUM_ARGS(variable_name)
 
 #endif // TRACE_EVENT_ARGS_H_
