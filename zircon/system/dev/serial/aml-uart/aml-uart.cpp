@@ -12,6 +12,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
 #include <hw/reg.h>
@@ -27,7 +28,7 @@
 
 namespace serial {
 
-zx_status_t AmlUart::Create(zx_device_t* parent) {
+zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
     pdev_protocol_t pdev;
@@ -334,8 +335,19 @@ zx_status_t AmlUart::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
     return ZX_OK;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = AmlUart::Create;
+    return ops;
+}();
+
 } // namespace serial
 
-extern "C" zx_status_t aml_uart_bind(void* ctx, zx_device_t* parent) {
-    return serial::AmlUart::Create(parent);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(aml_uart, serial::driver_ops, "zircon", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_UART),
+ZIRCON_DRIVER_END(aml_uart)
+// clang-format on

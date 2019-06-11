@@ -29,7 +29,7 @@ class AmlUart : public DeviceType,
                 public ddk::SerialImplProtocol<AmlUart, ddk::base_protocol> {
 public:
     // Spawns device node.
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Device protocol implementation.
     void DdkUnbind() {
