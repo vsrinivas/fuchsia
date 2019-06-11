@@ -4,7 +4,7 @@
 
 use {
     crate::{block::Block, block_type::BlockType, constants, utils},
-    failure::{format_err, Error},
+    failure::{bail, Error},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
     std::{cmp::min, sync::Arc},
@@ -31,7 +31,7 @@ impl Heap {
     pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Arc<Mapping>>, Error> {
         let min_fit_order = utils::fit_order(min_size);
         if min_fit_order >= constants::NUM_ORDERS {
-            return Err(format_err!("order is bigger than maximum order"));
+            bail!("order is bigger than maximum order");
         }
         // Find free block with order >= min_fit_order
         let order_found = (min_fit_order..constants::NUM_ORDERS)
@@ -56,7 +56,7 @@ impl Heap {
     pub fn free_block(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
         let block_type = block.block_type();
         if block_type == BlockType::Free {
-            return Err(format_err!("can't free block of type {}", block_type));
+            bail!("can't free block of type {}", block_type);
         }
         let mut buddy_index = self.buddy(block.index(), block.order());
         let mut buddy_block = self.get_block(buddy_index).unwrap();
@@ -81,11 +81,11 @@ impl Heap {
     pub fn get_block(&self, index: u32) -> Result<Block<Arc<Mapping>>, Error> {
         let offset = utils::offset_for_index(index);
         if offset >= self.current_size_bytes {
-            return Err(format_err!("invalid index"));
+            bail!("invalid index");
         }
         let block = Block::new(self.mapping.clone(), index);
         if self.current_size_bytes - offset < utils::order_to_size(block.order()) {
-            return Err(format_err!("invalid_index"));
+            bail!("invalid_index");
         }
         Ok(block)
     }
@@ -101,7 +101,7 @@ impl Heap {
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
         let mapping_size = self.mapping.len();
         if self.current_size_bytes == mapping_size && requested_size > mapping_size {
-            return Err(format_err!("Heap already at maxium size"));
+            bail!("Heap already at maxium size");
         }
         let new_size = min(mapping_size, requested_size);
         let min_index = utils::index_for_offset(self.current_size_bytes);
@@ -161,11 +161,7 @@ impl Heap {
 
     fn split_block(&mut self, block: &Block<Arc<Mapping>>) -> Result<(), Error> {
         if block.order() >= constants::NUM_ORDERS {
-            return Err(format_err!(
-                "order {} in block {} is invalid",
-                block.order(),
-                block.index()
-            ));
+            bail!("order {} in block {} is invalid", block.order(), block.index());
         }
         self.remove_free(&block)?;
         let order = block.order();

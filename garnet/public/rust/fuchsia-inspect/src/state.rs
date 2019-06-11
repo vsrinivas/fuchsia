@@ -10,7 +10,7 @@ use {
         heap::Heap,
         utils,
     },
-    failure::{format_err, Error},
+    failure::{bail, Error},
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
     std::sync::Arc,
@@ -192,14 +192,14 @@ impl State {
                 parent_block.set_child_count(parent_block.child_count().unwrap() + 1)
             }
             BlockType::Header => Ok(()),
-            _ => Err(format_err!("Invalid block type:{}", parent_block.block_type())),
+            _ => bail!("Invalid block type:{}", parent_block.block_type()),
         });
         match result {
             Ok(()) => Ok((block, name_block)),
             Err(e) => {
                 self.heap.free_block(name_block).expect("Failed to free name block");
                 self.heap.free_block(block).expect("Failed to free block");
-                Err(format_err!("Invalid parent index {}: {}", parent_index, e))
+                bail!("Invalid parent index {}: {}", parent_index, e)
             }
         }
     }

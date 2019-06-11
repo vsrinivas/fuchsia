@@ -4,7 +4,7 @@
 
 use {
     crate::{block::Block, block_type::BlockType, constants, utils, Inspector},
-    failure::{self, format_err, Error},
+    failure::{self, bail, format_err, Error},
     fuchsia_zircon::Vmo,
     std::convert::TryFrom,
 };
@@ -70,7 +70,7 @@ impl Snapshot {
                 }
             }
         }
-        return Err(format_err!("Failed to read snapshot from vmo"));
+        bail!("Failed to read snapshot from vmo");
     }
 
     // Used for snapshot tests.
@@ -106,7 +106,7 @@ impl TryFrom<&[u8]> for Snapshot {
         if header_generation_count(&bytes[..16]).is_some() {
             Ok(Snapshot { buffer: bytes.to_vec() })
         } else {
-            return Err(format_err!("expected block with at least a header"));
+            bail!("expected block with at least a header");
         }
     }
 }
@@ -119,7 +119,7 @@ impl TryFrom<Vec<u8>> for Snapshot {
         if header_generation_count(&bytes[..16]).is_some() {
             Ok(Snapshot { buffer: bytes })
         } else {
-            return Err(format_err!("expected block with at least a header"));
+            bail!("expected block with at least a header");
         }
     }
 }

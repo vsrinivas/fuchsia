@@ -9,7 +9,7 @@ use {
         constants, utils,
     },
     byteorder::{ByteOrder, LittleEndian},
-    failure::{format_err, Error},
+    failure::{bail, Error},
     mapped_vmo::Mapping,
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
@@ -221,7 +221,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Check that the block type is |block_type|
     fn check_type(&self, block_type: BlockType) -> Result<(), Error> {
         if self.block_type() != block_type {
-            Err(format_err!("Expected type {}, got type {}", block_type, self.block_type()))
+            bail!("Expected type {}, got type {}", block_type, self.block_type())
         } else {
             Ok(())
         }
@@ -255,7 +255,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub(in crate) fn check_locked(&self, value: bool) -> Result<(), Error> {
         let payload = self.read_payload();
         if (payload.header_generation_count() & 1 == 1) != value {
-            return Err(format_err!("Expected locked={}, actual={}", value, !value));
+            bail!("Expected locked={}, actual={}", value, !value);
         }
         Ok(())
     }
@@ -265,7 +265,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         if self.block_type().is_node_or_tombstone() {
             return Ok(());
         }
-        Err(format_err!("Expected NODE|TOMBSTONE, got: {}", self.block_type()))
+        bail!("Expected NODE|TOMBSTONE, got: {}", self.block_type())
     }
 
     /// Check if the block is of *_VALUE.
@@ -273,7 +273,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         if self.block_type().is_any_value() {
             return Ok(());
         }
-        Err(format_err!("Block type {} is not *_VALUE", self.block_type()))
+        bail!("Block type {} is not *_VALUE", self.block_type())
     }
 }
 
@@ -281,7 +281,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Initializes an empty reserved block.
     pub fn new_free(container: T, index: u32, order: usize, next_free: u32) -> Result<Self, Error> {
         if order >= constants::NUM_ORDERS {
-            return Err(format_err!("Order {} must be less than {}", order, constants::NUM_ORDERS));
+            bail!("Order {} must be less than {}", order, constants::NUM_ORDERS);
         }
         let mut header = BlockHeader(0);
         header.set_order(order.to_u8().unwrap());
@@ -295,7 +295,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Swaps two blocks if they are the same order.
     pub fn swap(&mut self, other: &mut Block<T>) -> Result<(), Error> {
         if self.order() != other.order() || !self.container.ptr_eq(&other.container) {
-            return Err(format_err!("cannot swap blocks of different order or container"));
+            bail!("cannot swap blocks of different order or container");
         }
         std::mem::swap(&mut self.index, &mut other.index);
         Ok(())
@@ -304,11 +304,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Set the order of the block.
     pub fn set_order(&self, order: usize) -> Result<(), Error> {
         if order >= constants::NUM_ORDERS {
-            return Err(format_err!(
-                "Order {} must be less than max {}",
-                order,
-                constants::NUM_ORDERS
-            ));
+            bail!("Order {} must be less than max {}", order, constants::NUM_ORDERS);
         }
         let mut header = self.read_header();
         header.set_order(order.to_u8().unwrap());
@@ -550,7 +546,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         parent_index: u32,
     ) -> Result<(), Error> {
         if !block_type.is_any_value() {
-            return Err(format_err!("Block type {} is not *_VALUE", block_type));
+            bail!("Block type {} is not *_VALUE", block_type);
         }
         self.check_type(BlockType::Reserved)?;
         let mut header = self.read_header();

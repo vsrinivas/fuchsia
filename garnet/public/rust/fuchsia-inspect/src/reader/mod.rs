@@ -9,7 +9,7 @@ use {
         reader::snapshot::{ScannedBlock, Snapshot},
         Inspector,
     },
-    failure::{format_err, Error},
+    failure::{bail, format_err, Error},
     fuchsia_zircon::Vmo,
     std::{cmp::min, collections::BTreeMap, convert::TryFrom},
 };
@@ -105,7 +105,7 @@ fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
     let mut result = ScanResult::new(snapshot);
     for block in snapshot.scan() {
         if block.index() == 0 && block.block_type() != BlockType::Header {
-            return Err(format_err!("expected header block on index 0"));
+            bail!("expected header block on index 0");
         }
         match block.block_type() {
             BlockType::NodeValue => {
@@ -218,7 +218,7 @@ impl<'a> ScanResult<'a> {
             }
         }
 
-        Err(format_err!("Malformed tree, no complete node with parent=0"))
+        bail!("Malformed tree, no complete node with parent=0");
     }
 
     fn get_name(&self, index: u32) -> Option<String> {
