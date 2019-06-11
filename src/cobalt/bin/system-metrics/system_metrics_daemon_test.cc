@@ -23,6 +23,8 @@ using cobalt::FakeMemoryStatsFetcher;
 using cobalt::FakeSteadyClock;
 using cobalt::LogMethod;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
+using fuchsia_system_metrics::
+    FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using std::chrono::hours;
 using std::chrono::minutes;
@@ -65,6 +67,11 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
       daemon_->cpu_percentages_.push_back(static_cast<double>(i));
     }
     return daemon_->LogCpuUsage();
+  }
+
+  FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot GetUpTimeEventCode(
+      const std::chrono::seconds& uptime) {
+    return daemon_->GetUpTimeEventCode(uptime);
   }
 
   void CheckValues(LogMethod expected_log_method_invoked,
@@ -219,10 +226,15 @@ TEST_F(SystemMetricsDaemonTest, LogFuchsiaUpPing) {
   DoFuchsiaUpPingTest(hours(25), hours(1), 6,
                       FuchsiaUpPingMetricDimensionUptime::UpOneDay);
 
-  // If we've been up for 250 hours, expect 6 log events, the last one being
+  // If we've been up for 73 hours, expect 7 log events, the last one being
   // of type UpOneDay, and a return value of 1 hour
-  DoFuchsiaUpPingTest(hours(250), hours(1), 6,
-                      FuchsiaUpPingMetricDimensionUptime::UpOneDay);
+  DoFuchsiaUpPingTest(hours(73), hours(1), 7,
+                      FuchsiaUpPingMetricDimensionUptime::UpThreeDays);
+
+  // If we've been up for 250 hours, expect 8 log events, the last one being
+  // of type UpSixDays, and a return value of 1 hour
+  DoFuchsiaUpPingTest(hours(250), hours(1), 8,
+                      FuchsiaUpPingMetricDimensionUptime::UpSixDays);
 }
 
 // Tests the method LogFuchsiaLifetimeEvents(). Uses a local FakeLogger_Sync and
@@ -430,4 +442,17 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
   // in 1 FIDL call, and return 1 second.
   EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
   CheckValues(cobalt::kLogCobaltEvents, 1, -1, -1, 60);
+}
+
+TEST_F(SystemMetricsDaemonTest, GetUpTimeEventCode) {
+  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixDays,
+            GetUpTimeEventCode(seconds(518400)));
+  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixDays,
+            GetUpTimeEventCode(seconds(600000)));
+  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpThreeDays,
+            GetUpTimeEventCode(seconds(360000)));
+  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpTwoDays,
+            GetUpTimeEventCode(seconds(172800)));
+  EXPECT_EQ(FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::Up,
+            GetUpTimeEventCode(seconds(59)));
 }

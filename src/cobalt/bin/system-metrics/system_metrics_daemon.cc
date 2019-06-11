@@ -221,6 +221,28 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
     FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
                    << StatusToString(status);
   }
+  if (uptime < std::chrono::hours(72)) {
+    return std::chrono::hours(1);
+  }
+  // Log UpThreeDays.
+  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                    Uptime::UpThreeDays, &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
+                   << StatusToString(status);
+  }
+  if (uptime < std::chrono::hours(144)) {
+    return std::chrono::hours(1);
+  }
+  // Log UpSixDays.
+  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                    Uptime::UpSixDays, &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
+                   << StatusToString(status);
+  }
   // As above, come back in one hour.
   return std::chrono::hours(1);
 }
@@ -389,9 +411,10 @@ SystemMetricsDaemon::GetUpTimeEventCode(const std::chrono::seconds& uptime) {
     return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpOneDay;
   } else if (uptime < std::chrono::hours(72)) {
     return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpTwoDays;
+  } else if (uptime < std::chrono::hours(144)) {
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpThreeDays;
   } else {
-    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::
-        UpThreeDaysOrMore;
+    return FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot::UpSixDays;
   }
 }
 
