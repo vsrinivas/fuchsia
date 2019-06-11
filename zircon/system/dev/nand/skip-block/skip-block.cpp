@@ -6,7 +6,10 @@
 
 #include <string.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/badblock.h>
 #include <ddk/protocol/nand.h>
@@ -144,7 +147,7 @@ fuchsia_hardware_skipblock_SkipBlock_ops fidl_ops = {
 
 } // namespace
 
-zx_status_t SkipBlockDevice::Create(zx_device_t* parent) {
+zx_status_t SkipBlockDevice::Create(void*, zx_device_t* parent) {
     // Get NAND protocol.
     ddk::NandProtocolClient nand(parent);
     if (!nand.is_valid()) {
@@ -401,8 +404,18 @@ zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_skipblock_SkipBlock_dispatch(this, txn, msg, &fidl_ops);
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = SkipBlockDevice::Create;
+    return ops;
+}();
+
 } // namespace nand
 
-extern "C" zx_status_t skip_block_bind(void* ctx, zx_device_t* parent) {
-    return nand::SkipBlockDevice::Create(parent);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(skip_block, nand::driver_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
+    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_BBS),
+ZIRCON_DRIVER_END(skip_block)
+// clang-format on

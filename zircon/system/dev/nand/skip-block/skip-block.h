@@ -37,7 +37,7 @@ class SkipBlockDevice : public DeviceType,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
 public:
     // Spawns device node based on parent node.
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void*, zx_device_t* parent);
 
     zx_status_t Bind();
 

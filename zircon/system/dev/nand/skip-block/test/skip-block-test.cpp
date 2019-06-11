@@ -211,11 +211,11 @@ private:
 };
 
 TEST_F(SkipBlockTest, Create) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(parent()));
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 }
 
 TEST_F(SkipBlockTest, GrowBadBlock) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(parent()));
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
     nand().set_result(ZX_OK);
     nand().set_result(ZX_ERR_IO);
@@ -238,7 +238,7 @@ TEST_F(SkipBlockTest, GrowBadBlock) {
 }
 
 TEST_F(SkipBlockTest, GrowMultipleBadBlock) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(parent()));
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
     // Erase Block 5
     nand().set_result(ZX_OK);
@@ -268,7 +268,7 @@ TEST_F(SkipBlockTest, GrowMultipleBadBlock) {
 }
 
 TEST_F(SkipBlockTest, MappingFailure) {
-    ASSERT_OK(nand::SkipBlockDevice::Create(parent()));
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
     // Erase Block 5
     nand().set_result(ZX_OK);

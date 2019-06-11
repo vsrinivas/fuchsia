@@ -3,13 +3,9 @@
 # found in the LICENSE file.
 
 driver("skip-block") {
-  sources = [
-    "binding.c",
-  ]
+  sources = []
   deps = [
     ":common",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/zircon",
   ]
 }
 
