@@ -236,6 +236,20 @@ zx_status_t ArmIspDevice::IspContextInit() {
         return ZX_ERR_NO_MEMORY;
     }
 
+    zx_status_t status = DmaManager::Create(bti_, isp_mmio_local_,
+                                            DmaManager::Stream::FullResolution,
+                                            &full_resolution_dma_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Unable to start Full Resolution DMA Module \n", __func__);
+        return status;
+    }
+    status = DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::Downscaled,
+                                &downscaled_dma_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Unable to start Downscaled DMA Module \n", __func__);
+        return status;
+    }
+
     // We are setting up assuming kWDR_MODE_LINEAR as default mode
     IspLoadSeq_linear();
 

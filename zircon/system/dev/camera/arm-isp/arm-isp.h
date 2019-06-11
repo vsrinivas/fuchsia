@@ -6,6 +6,7 @@
 #include "global_regs.h"
 #include "pingpong_regs.h"
 #include "stats-mgr.h"
+#include "modules/dma-mgr.h"
 
 #include <atomic>
 #include <ddk/metadata/camera.h>
@@ -123,6 +124,8 @@ private:
     ddk::CameraSensorProtocolClient camera_sensor_;
 
     fbl::unique_ptr<camera::StatsManager> statsMgr_;
+    fbl::unique_ptr<camera::DmaManager> full_resolution_dma_;
+    fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
 
     sync_completion_t frame_processing_signal_;
 

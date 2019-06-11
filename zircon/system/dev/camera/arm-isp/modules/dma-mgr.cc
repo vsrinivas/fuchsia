@@ -11,8 +11,21 @@
 
 namespace camera {
 
+zx_status_t DmaManager::Create(const zx::bti& bti, ddk::MmioView isp_mmio_local,
+                               DmaManager::Stream stream_type, std::unique_ptr<DmaManager>* out) {
+    *out = std::make_unique<DmaManager>(stream_type, isp_mmio_local);
+
+    zx_status_t status = bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &(*out)->bti_);
+    if (status != ZX_OK) {
+        FX_LOGF(ERROR, "", "%s: Unable to duplicate bti for DmaManager \n", __func__);
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 auto DmaManager::GetPrimaryMisc() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Primary::DmaWriter_Misc::Get();
     } else {
         return ping::FullResolution::Primary::DmaWriter_Misc::Get();
@@ -20,7 +33,7 @@ auto DmaManager::GetPrimaryMisc() {
 }
 
 auto DmaManager::GetUvMisc() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Uv::DmaWriter_Misc::Get();
     } else {
         return ping::FullResolution::Uv::DmaWriter_Misc::Get();
@@ -28,7 +41,7 @@ auto DmaManager::GetUvMisc() {
 }
 
 auto DmaManager::GetPrimaryBank0() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Primary::DmaWriter_Bank0Base::Get();
     } else {
         return ping::FullResolution::Primary::DmaWriter_Bank0Base::Get();
@@ -36,7 +49,7 @@ auto DmaManager::GetPrimaryBank0() {
 }
 
 auto DmaManager::GetUvBank0() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Uv::DmaWriter_Bank0Base::Get();
     } else {
         return ping::FullResolution::Uv::DmaWriter_Bank0Base::Get();
@@ -44,7 +57,7 @@ auto DmaManager::GetUvBank0() {
 }
 
 auto DmaManager::GetPrimaryLineOffset() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Primary::DmaWriter_LineOffset::Get();
     } else {
         return ping::FullResolution::Primary::DmaWriter_LineOffset::Get();
@@ -52,7 +65,7 @@ auto DmaManager::GetPrimaryLineOffset() {
 }
 
 auto DmaManager::GetUvLineOffset() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Uv::DmaWriter_LineOffset::Get();
     } else {
         return ping::FullResolution::Uv::DmaWriter_LineOffset::Get();
@@ -60,7 +73,7 @@ auto DmaManager::GetUvLineOffset() {
 }
 
 auto DmaManager::GetPrimaryActiveDim() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Primary::DmaWriter_ActiveDim::Get();
     } else {
         return ping::FullResolution::Primary::DmaWriter_ActiveDim::Get();
@@ -68,27 +81,88 @@ auto DmaManager::GetPrimaryActiveDim() {
 }
 
 auto DmaManager::GetUvActiveDim() {
-    if (downscaled_) {
+    if (stream_type_ == Stream::Downscaled) {
         return ping::DownScaled::Uv::DmaWriter_ActiveDim::Get();
     } else {
         return ping::FullResolution::Uv::DmaWriter_ActiveDim::Get();
     }
 }
 
-void DmaManager::OnFrameWritten(bool is_uv) {
-    // TODO(garratt): this assumes that the uv component is always written second.
-    if (current_format_->HasSecondaryChannel() && !is_uv) {
-        return;
+zx_status_t DmaManager::Start(
+    fuchsia_sysmem_BufferCollectionInfo buffer_collection,
+    fit::function<void(fuchsia_camera_common_FrameAvailableEvent)> frame_available_callback) {
+    current_format_ = DmaFormat(buffer_collection.format.image);
+    // TODO(CAM-54): Provide a way to dump the previous set of write locked buffers.
+    write_locked_buffers_.clear();
+
+    if (current_format_->GetImageSize() > buffer_collection.vmo_size) {
+        FX_LOGF(ERROR, "", "%s: Buffer size (%lu) is less than image size (%lu)!\n", __func__,
+                buffer_collection.vmo_size, current_format_->GetImageSize());
+        return ZX_ERR_INTERNAL;
     }
-    ZX_ASSERT(publish_buffer_callback_ != nullptr);
-    publish_buffer_callback_(write_locked_buffers_.back().ReleaseWriteLockAndGetIndex());
+    if (buffer_collection.buffer_count > countof(buffer_collection.vmos)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx::vmo vmos[countof(buffer_collection.vmos)];
+    for (uint32_t i = 0; i < buffer_collection.buffer_count; ++i) {
+        vmos[i] = zx::vmo(buffer_collection.vmos[i]);
+    }
+    // Pin the buffers
+    zx_status_t status = buffers_.Init(vmos, buffer_collection.buffer_count);
+    if (status != ZX_OK) {
+        FX_LOGF(ERROR, "", "%s: Unable to initialize buffers for DmaManager \n", __func__);
+        return status;
+    }
+    // Release the vmos so that the buffer collection could be reused.
+    for (uint32_t i = 0; i < buffer_collection.buffer_count; ++i) {
+        buffer_collection.vmos[i] = vmos[i].release();
+    }
+    status =
+        buffers_.PinVmos(bti_, fzl::VmoPool::RequireContig::Yes, fzl::VmoPool::RequireLowMem::Yes);
+    if (status != ZX_OK) {
+        FX_LOGF(ERROR, "", "%s: Unable to pin buffers for DmaManager \n", __func__);
+        return status;
+    }
+    frame_available_callback_ = std::move(frame_available_callback);
+    enabled_ = true;
+    return ZX_OK;
+}
+
+void DmaManager::OnPrimaryFrameWritten() {
+    if (!current_format_->HasSecondaryChannel() || secondary_frame_written_) {
+        secondary_frame_written_ = false;
+        OnFrameWritten();
+    } else {
+        primary_frame_written_ = true;
+    }
+}
+
+void DmaManager::OnSecondaryFrameWritten() {
+    if (primary_frame_written_) {
+        primary_frame_written_ = false;
+        OnFrameWritten();
+    } else {
+        secondary_frame_written_ = true;
+    }
+}
+
+void DmaManager::OnFrameWritten() {
+    ZX_ASSERT(frame_available_callback_ != nullptr);
+    ZX_ASSERT(write_locked_buffers_.size() > 0);
+    fuchsia_camera_common_FrameAvailableEvent event;
+    event.buffer_id = write_locked_buffers_.back().ReleaseWriteLockAndGetIndex();
+    event.frame_status = fuchsia_camera_common_FrameStatus_OK;
+    // TODO(garratt): set metadata
+    event.metadata.timestamp = 0;
+    frame_available_callback_(event);
     write_locked_buffers_.pop_back();
 }
 
 // Called as one of the later steps when a new frame arrives.
 void DmaManager::OnNewFrame() {
     // If we have not initialized yet with a format, just skip.
-    if (!current_format_) {
+    if (!enabled_) {
         return;
     }
     // 1) Get another buffer
@@ -96,6 +170,24 @@ void DmaManager::OnNewFrame() {
     if (!buffer) {
         FX_LOG(ERROR, "", "Failed to get buffer\n");
         // TODO(garratt): what should we do when we run out of buffers?
+        // If we run out of buffers, disable write and send the callback for
+        // out of buffers:
+        // clang-format off
+        GetPrimaryMisc().ReadFrom(&isp_mmio_local_)
+           .set_frame_write_on(0)
+           .WriteTo(&isp_mmio_local_);
+        if (current_format_->HasSecondaryChannel()) {
+          GetUvMisc().ReadFrom(&isp_mmio_local_)
+              .set_frame_write_on(0)
+              .WriteTo(&isp_mmio_local_);
+        }
+        // clang-format on
+        // Send callback:
+        fuchsia_camera_common_FrameAvailableEvent event;
+        event.buffer_id = 0;
+        event.frame_status = fuchsia_camera_common_FrameStatus_ERROR_BUFFER_FULL;
+        event.metadata.timestamp = 0;
+        frame_available_callback_(event);
         return;
     }
     // 2) Optional?  Set the DMA settings again... seems unnecessary
@@ -120,42 +212,42 @@ void DmaManager::OnNewFrame() {
             .set_frame_write_on(1)
             .WriteTo(&isp_mmio_local_);
     }
-   // clang-format on
+    // clang-format on
+    WriteFormat();
     // Add buffer to queue of buffers we are writing:
-    write_locked_buffers_.push_back(std::move(*buffer));
+    write_locked_buffers_.push_front(std::move(*buffer));
 }
 
-void DmaManager::ReleaseFrame(uint32_t buffer_index) {
-    buffers_.ReleaseBuffer(buffer_index);
+zx_status_t DmaManager::ReleaseFrame(uint32_t buffer_index) {
+    return buffers_.ReleaseBuffer(buffer_index);
 }
 
-void DmaManager::SetFormat(DmaFormat format) {
-    current_format_ = format;
+void DmaManager::WriteFormat() {
     // Write format to registers
     // clang-format off
     GetPrimaryMisc().ReadFrom(&isp_mmio_local_)
-        .set_base_mode(format.GetBaseMode())
-        .set_plane_select(format.GetPlaneSelect())
+        .set_base_mode(current_format_->GetBaseMode())
+        .set_plane_select(current_format_->GetPlaneSelect())
         .WriteTo(&isp_mmio_local_);
     GetPrimaryActiveDim().ReadFrom(&isp_mmio_local_)
-        .set_active_width(format.width())
-        .set_active_height(format.height())
+        .set_active_width(current_format_->width())
+        .set_active_height(current_format_->height())
         .WriteTo(&isp_mmio_local_);
     GetPrimaryLineOffset().ReadFrom(&isp_mmio_local_)
-        .set_value(format.GetLineOffset())
+        .set_value(current_format_->GetLineOffset())
         .WriteTo(&isp_mmio_local_);
-    if (format.HasSecondaryChannel()) {
+    if (current_format_->HasSecondaryChannel()) {
         // TODO: should there be a format.WidthUv() ?
         GetUvMisc().ReadFrom(&isp_mmio_local_)
-            .set_base_mode(format.GetBaseMode())
-            .set_plane_select(format.GetPlaneSelect())
+            .set_base_mode(current_format_->GetBaseMode())
+            .set_plane_select(current_format_->GetPlaneSelect())
             .WriteTo(&isp_mmio_local_);
         GetUvActiveDim().ReadFrom(&isp_mmio_local_)
-            .set_active_width(format.width())
-            .set_active_height(format.height())
+            .set_active_width(current_format_->width())
+            .set_active_height(current_format_->height())
             .WriteTo(&isp_mmio_local_);
         GetUvLineOffset().ReadFrom(&isp_mmio_local_)
-            .set_value(format.GetLineOffset())
+            .set_value(current_format_->GetLineOffset())
             .WriteTo(&isp_mmio_local_);
     }
     // clang-format on
