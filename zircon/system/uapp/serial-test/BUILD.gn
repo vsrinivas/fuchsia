@@ -4,10 +4,10 @@
 
 executable("serial-test") {
   sources = [
-    "serial-test.c",
+    "serial-test.cpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]

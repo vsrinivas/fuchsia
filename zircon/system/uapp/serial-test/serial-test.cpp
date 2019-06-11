@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
+#include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,12 +44,11 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        fuchsia_hardware_serial_Class device_class;
+        fuchsia::hardware::serial::Class device_class;
         fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
-        zx_status_t status = fuchsia_hardware_serial_DeviceGetClass(
-                fdio_unsafe_borrow_channel(fdio), &device_class);
+        zx_status_t status = fuchsia::hardware::serial::Device::Call::GetClass(zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)), &device_class);
         fdio_unsafe_release(fdio);
-        if (status != ZX_OK || device_class != fuchsia_hardware_serial_Class_GENERIC) {
+        if (status != ZX_OK || device_class != fuchsia::hardware::serial::Class::GENERIC) {
             close(fd);
             continue;
         } else {
