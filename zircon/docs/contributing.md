@@ -99,6 +99,9 @@ incomplete and will be expanded over time.
       Note that this rule isn't enforced by `clang-fmt`, so please pay attention to it when writing
       code and reviewing commits.
 
+    - Use "#pragma once" in the header file instead of using header guards. Place it right after
+      license statement and before include's.
+
 * You can run `./scripts/clang-fmt` to reformat files.  Pass in the filenames as arguments, e.g.
 
       scripts/clang-fmt kernel/top/main.c kernel/top/init.c
