@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "gdc-test.h"
-#include "gdc-regs.h"
-#include "gdc.h"
+#include "../gdc-regs.h"
+#include "../gdc.h"
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>

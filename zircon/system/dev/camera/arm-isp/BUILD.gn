@@ -43,7 +43,10 @@ driver("arm-isp") {
 }
 
 source_set("isp-common") {
-  visibility = [ "./*" ]
+  visibility = [
+    "./*",
+    "../gdc/test/*",
+  ]
   sources = [
     "modules/dma-format.cpp",
     "modules/dma-mgr.cc",

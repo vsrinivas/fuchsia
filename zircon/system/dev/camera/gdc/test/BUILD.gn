@@ -2,19 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("gdc") {
+test("gdc-task") {
   sources = [
-    "gdc.cpp",
-    "test/gdc-test.cpp",
+    "task-test.cpp",
   ]
   deps = [
-    ":gdc-task",
-    "$zx/system/banjo/ddk.protocol.clock",
-    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.gdc",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/dev/camera/arm-isp:isp-common",
+    "$zx/system/dev/camera/gdc:gdc-task",
+    "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
@@ -25,29 +24,10 @@ driver("gdc") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/syslog",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
-}
-
-source_set("gdc-task") {
-  visibility = [ "./*" ]
-  sources = [
-    "task.cpp",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk.protocol.gdc",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/syslog",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-  ]
+  configs += [ "$zx/public/gn/config:static-libc++" ]
 }

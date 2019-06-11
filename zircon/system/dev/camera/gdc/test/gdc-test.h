@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <ddktl/device.h>
 #include <memory>
 #include <zxtest/zxtest.h>
 
