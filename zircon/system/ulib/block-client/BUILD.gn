@@ -29,3 +29,20 @@ library("block-client") {
     "$zx/system/ulib/zx",
   ]
 }
+
+library("fake-device") {
+  testonly = true
+  sources = [
+    "fake-device.cpp",
+  ]
+  public_deps = [
+    ":block-client",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/range",
+    "$zx/system/ulib/zx",
+  ]
+  deps = [
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/zxtest",
+  ]
+}

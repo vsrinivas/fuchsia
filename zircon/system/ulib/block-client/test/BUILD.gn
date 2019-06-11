@@ -12,6 +12,7 @@ group("test") {
 test("block-client-unit") {
   test_group = "fs"
   sources = [
+    "fake-block-device-test.cpp",
     "remote-block-device-test.cpp",
   ]
   deps = [
@@ -19,7 +20,9 @@ test("block-client-unit") {
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/block-client",
+    "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zxtest",
   ]
