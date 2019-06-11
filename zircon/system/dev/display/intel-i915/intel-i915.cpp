@@ -2330,7 +2330,7 @@ static constexpr zx_driver_ops_t intel_i915_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(intel_i915, intel_i915_driver_ops, "zircon", "0.1", 27)
+ZIRCON_DRIVER_BEGIN(intel_i915, intel_i915_driver_ops, "zircon", "0.1", 28)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_I915_VID),
     // Skylake DIDs
@@ -2350,6 +2350,7 @@ ZIRCON_DRIVER_BEGIN(intel_i915, intel_i915_driver_ops, "zircon", "0.1", 27)
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x193d),
     // Kaby lake DIDs
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x5916),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x591c),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x591e),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x591b),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x5912),

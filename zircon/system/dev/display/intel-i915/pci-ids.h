@@ -33,7 +33,7 @@ static bool is_kbl_u(uint16_t device_id) {
 }
 
 static bool is_kbl_y(uint16_t device_id) {
-    return device_id == 0x591e;
+    return device_id == 0x591c || device_id == 0x591e;
 }
 
 } // namespace i915
