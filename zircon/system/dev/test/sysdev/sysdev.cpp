@@ -27,7 +27,8 @@ class Sysdev : public SysdevType {
 public:
     explicit Sysdev(zx_device_t* device) : SysdevType(device) { }
 
-    static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
+    static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+                              zx_handle_t items_svc_handle);
 
     // Device protocol implementation.
     void DdkRelease() {
@@ -38,7 +39,9 @@ public:
     zx_status_t MakeComposite();
 };
 
-zx_status_t Sysdev::Create(zx_device_t* parent, const char* name, zx::channel items_svc) {
+zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+                           zx_handle_t items_svc_handle) {
+    zx::channel items_svc(items_svc_handle);
     auto sysdev = std::make_unique<Sysdev>(parent);
 
     // Check if we were sent configuration data
@@ -128,10 +131,17 @@ zx_status_t Sysdev::MakeComposite() {
                                 components, countof(components), UINT32_MAX);
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.create = Sysdev::Create;
+    return ops;
+}();
+
 } // namespace
 
-zx_status_t test_sysdev_create(void* ctx, zx_device_t* parent, const char* name,
-                               const char* args, zx_handle_t items_svc_handle) {
-    zx::channel items_svc(items_svc_handle);
-    return Sysdev::Create(parent, name, std::move(items_svc));
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(test_sysdev, driver_ops, "zircon", "0.1", 1)
+    BI_ABORT_IF_AUTOBIND,
+ZIRCON_DRIVER_END(test_sysdev)
+// clang-format on
