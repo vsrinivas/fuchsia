@@ -22,7 +22,7 @@ use fidl_fuchsia_auth_account::{
 };
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_inspect::{Inspector, Property};
-use futures::lock::{Mutex, MutexGuard};
+use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::{info, warn};
@@ -166,31 +166,14 @@ impl AccountManager {
 
     /// Returns an `AccountHandlerConnection` for the specified `LocalAccountId`, either by
     /// returning the existing entry from the map or by creating and adding a new entry to the map.
-    /// This method automatically locks and unlocks the mutex for the account map.
     async fn get_handler_for_existing_account<'a>(
         &'a self,
+        ids_to_handlers: &'a mut AccountMap,
         account_id: &'a LocalAccountId,
     ) -> Result<Arc<AccountHandlerConnection>, AccountManagerError> {
-        let ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
-        await!(self.get_handler_for_existing_account_with_lock(account_id, ids_to_handlers_lock))
-            .map(|(new_handler, _ids_to_handlers_lock)| new_handler)
-    }
-
-    /// Returns an `AccountHandlerConnection` for the specified `LocalAccountId`, either by
-    /// returning the existing entry from the map or by creating and adding a new entry to the map.
-    /// This method accepts a mutex guard in cases where the lock needs to be kept longer than for
-    /// the duration of this method.
-    async fn get_handler_for_existing_account_with_lock<'a>(
-        &'a self,
-        account_id: &'a LocalAccountId,
-        mut ids_to_handlers_lock: MutexGuard<'a, AccountMap>,
-    ) -> Result<(Arc<AccountHandlerConnection>, MutexGuard<'a, AccountMap>), AccountManagerError>
-    {
-        match ids_to_handlers_lock.get(account_id) {
+        match ids_to_handlers.get(account_id) {
             None => return Err(AccountManagerError::new(Status::NotFound)),
-            Some(Some(existing_handler)) => {
-                return Ok((Arc::clone(existing_handler), ids_to_handlers_lock))
-            }
+            Some(Some(existing_handler)) => return Ok(Arc::clone(existing_handler)),
             Some(None) => { /* ID is valid but a handler doesn't exist yet */ }
         }
 
@@ -198,9 +181,9 @@ impl AccountManager {
             account_id,
             Arc::clone(&self.context)
         ))?);
-        ids_to_handlers_lock.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
-        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers_lock) as u64);
-        Ok((new_handler, ids_to_handlers_lock))
+        ids_to_handlers.insert(account_id.clone(), Some(Arc::clone(&new_handler)));
+        let _ = self.accounts_inspect.active.set(count_populated(ids_to_handlers) as u64);
+        Ok(new_handler)
     }
 
     async fn get_account_ids(&self) -> Vec<FidlLocalAccountId> {
@@ -231,11 +214,14 @@ impl AccountManager {
         auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
         account: ServerEnd<AccountMarker>,
     ) -> Status {
-        let account_handler = match await!(self.get_handler_for_existing_account(&id)) {
-            Ok(account_handler) => account_handler,
-            Err(err) => {
-                warn!("Failure getting account handler connection: {:?}", err);
-                return err.status;
+        let account_handler = {
+            let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
+            match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &id)) {
+                Ok(account_handler) => account_handler,
+                Err(err) => {
+                    warn!("Failure getting account handler connection: {:?}", err);
+                    return err.status;
+                }
             }
         };
 
@@ -278,11 +264,8 @@ impl AccountManager {
     async fn remove_account(&self, id: LocalAccountId) -> Status {
         let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
         let account_handler =
-            match await!(self.get_handler_for_existing_account_with_lock(&id, ids_to_handlers)) {
-                Ok((account_handler, lock)) => {
-                    ids_to_handlers = lock;
-                    account_handler
-                }
+            match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &id)) {
+                Ok(account_handler) => account_handler,
                 Err(err) => return err.status,
             };
         match await!(account_handler.proxy().remove_account()) {
