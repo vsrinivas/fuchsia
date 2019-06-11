@@ -20,6 +20,7 @@
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.sh || exit $?
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 KVM=0
@@ -172,33 +173,15 @@ if [[ ! -d "${img_dir}" ]]; then
 fi
 trap 'rm -rf "$img_dir"' EXIT
 
-# TODO: move image creation logic into a lib file that both `run` and `aeemu` will use.
-KERNEL="${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}"
-kernelzbi="${img_dir}/fuchsia-ssh.zbi"
-"${ZIRCON_TOOLS_DIR}/zbi" -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
+KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
+"${ZIRCON_TOOLS_DIR}/zbi" -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
   --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
 
 if [ -n "$IMAGE_FVM_RAW" ]; then
   fvmimg="${img_dir}/fvm.blk"
+  fx-fvm-extend-image "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" $fvmimg
   ARGS+=("-drive" "file=${fvmimg},format=raw,if=none,id=mydisk")
   ARGS+=("-device" "ich9-ahci,id=ahci" "-device" "ide-drive,drive=mydisk,bus=ahci.0")
-  stat_flags=()
-  if [[ $(uname) == "Darwin" ]]; then
-    stat_flags+=("-x")
-  fi
-  stat_output=$(stat "${stat_flags[@]}" "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}")
-  if [[ "$stat_output" =~ Size:\ ([0-9]+) ]]; then
-    size="${BASH_REMATCH[1]}"
-    newsize=$(($size * 2))
-    # We must take a copy of the build artifact, rather than re-use it, as we
-    # need to modify it in order to extend it.
-    echo -n "Creating disk image..."
-    cp "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" "${fvmimg}"
-    "${ZIRCON_TOOLS_DIR}/fvm" "${fvmimg}" extend --length "${newsize}"
-    echo "done"
-  else
-    fx-error "Could not extend fvm, unable to stat fvm image"
-  fi
 fi
 
 # construct the kernel cmd line for aemu
@@ -219,5 +202,5 @@ CMDLINE+="kernel.halt-on-panic=true "
 # run aemu
 set -x
 exec "${AEMU_DIR}${AEMU}" "${OPTIONS[@]}" -fuchsia \
-     -kernel "$KERNEL" -initrd "$kernelzbi" "${ARGS[@]}" \
-     -append "$CMDLINE" "$@"
+     -kernel "${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}" \
+     -initrd "$KERNEL_ZBI" "${ARGS[@]}" -append "$CMDLINE" "$@"
