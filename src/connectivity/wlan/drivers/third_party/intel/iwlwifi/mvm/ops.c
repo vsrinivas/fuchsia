@@ -659,7 +659,6 @@ static void iwl_mvm_tm_cmd_exec_end(struct iwl_testmode* testmode) {
 static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const struct iwl_cfg* cfg,
                                                  const struct iwl_fw* fw,
                                                  struct dentry* dbgfs_dir) {
-    struct ieee80211_hw* hw;
     struct iwl_op_mode* op_mode;
     struct iwl_mvm* mvm;
     struct iwl_trans_config trans_cfg = {};
@@ -677,11 +676,19 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
      */
     BUILD_BUG_ON(ARRAY_SIZE(mvm->fw_id_to_mac_id) != IWL_MVM_STATION_COUNT);
 
-    /********************************
-     * 1. Allocating and configuring HW data
-     ********************************/
-    hw = ieee80211_alloc_hw(sizeof(struct iwl_op_mode) + sizeof(struct iwl_mvm), &iwl_mvm_hw_ops);
-    if (!hw) { return NULL; }
+    // Allocate op_mode and mvm. In the Linux driver these are private members of a ieee80211_hw
+    // struct |hw|, which also contains iwl_mvm_hw_ops. The equivalent functionality of ieee80211_hw 
+    // has not yet been ported.
+    op_mode = calloc(1, sizeof(struct iwl_op_mode));
+    if (!op_mode) {
+        IWL_ERR(trans, "Failed to allocate op mode\n");
+    }
+    mvm = calloc(1, sizeof(struct iwl_mvm));
+    if (!mvm) {
+        IWL_ERR(trans, "Failed to allocate mvm\n");
+    }
+
+    op_mode->op_mode_specific = mvm;
 
 #if 0   // NEEDS_PORTING
     if (cfg->max_rx_agg_size) {
@@ -697,14 +704,10 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     }
 #endif  // NEEDS_PORTING
 
-    op_mode = hw->priv;
-
-    mvm = IWL_OP_MODE_GET_MVM(op_mode);
     mvm->dev = trans->dev;
     mvm->trans = trans;
     mvm->cfg = cfg;
     mvm->fw = fw;
-    mvm->hw = hw;
 
     iwl_fw_runtime_init(&mvm->fwrt, trans, fw, &iwl_mvm_fwrt_ops, mvm, dbgfs_dir);
 
@@ -984,9 +987,8 @@ out_free:
     kfree(mvm->scan_cmd);
     iwl_trans_op_mode_leave(trans);
 
-#if 0   // NEEDS_PORTING
-    ieee80211_free_hw(mvm->hw);
-#endif  // NEEDS_PORTING
+    free(op_mode);
+    free(mvm);
     return NULL;
 }
 
@@ -1054,9 +1056,8 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
     mtx_destroy(&mvm->mutex);
     mtx_destroy(&mvm->d0i3_suspend_mutex);
 
-#if 0   // NEEDS_PORTING
-    ieee80211_free_hw(mvm->hw);
-#endif  // NEEDS_PORTING
+    free(op_mode);
+    free(mvm);
 }
 
 struct iwl_async_handler_entry {
@@ -1281,7 +1282,9 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
         mvmtxq = iwl_mvm_txq_from_mac80211(txq);
         mvmtxq->stopped = !start;
 
+#if 0   // NEEDS_PORTING
         if (start) { iwl_mvm_mac_itxq_xmit(mvm->hw, txq); }
+#endif  // NEEDS_PORTING
     }
 
 out:

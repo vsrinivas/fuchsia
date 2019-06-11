@@ -847,7 +847,6 @@ struct iwl_mvm {
   const struct iwl_fw* fw;
   const struct iwl_cfg* cfg;
   struct iwl_phy_db* phy_db;
-  struct ieee80211_hw* hw;
 
   /* for protecting access to iwl_mvm */
   mtx_t mutex;
