@@ -11,6 +11,12 @@
 
 namespace board_as370 {
 
+// BTI IDs for our devices
+enum {
+    BTI_BOARD,
+    BTI_USB,
+};
+
 class As370 : public ddk::Device<As370> {
 public:
     As370(zx_device_t* parent, const ddk::PBusProtocolClient pbus)
@@ -26,6 +32,7 @@ private:
 
     zx_status_t GpioInit();
     zx_status_t I2cInit();
+    zx_status_t UsbInit();
 
     ddk::PBusProtocolClient pbus_;
     thrd_t thread_;

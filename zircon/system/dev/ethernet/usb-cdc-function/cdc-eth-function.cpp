@@ -18,6 +18,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/usb/function.h>
 #include <fbl/algorithm.h>
@@ -210,12 +211,17 @@ static void usb_request_queue(void* ctx, usb_function_protocol_t* function, usb_
     usb_function_request_queue(function, req, &internal_completion);
 }
 
-static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
-    zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
+static zx_status_t cdc_generate_mac_address(zx_device_t* parent, usb_cdc_t* cdc) {
+    size_t actual;
+    auto status = device_get_metadata(parent, DEVICE_METADATA_MAC_ADDRESS, &cdc->mac_addr,
+                                      sizeof(cdc->mac_addr), &actual);
+    if (status != ZX_OK || actual != sizeof(cdc->mac_addr)) {
+        zxlogf(WARN, "CDC: MAC address metadata not found. Generating random address\n");
 
-    // set most significant byte so we are using a locally managed address
-    // TODO(voydanoff) add a way to configure a real MAC address here
-    cdc->mac_addr[0] = 0x02;
+        zx_cprng_draw(cdc->mac_addr, sizeof(cdc->mac_addr));
+        cdc->mac_addr[0] = 0x02;
+    }
+
     char buffer[sizeof(cdc->mac_addr) * 3];
     snprintf(buffer, sizeof(buffer), "%02X%02X%02X%02X%02X%02X",
              cdc->mac_addr[0], cdc->mac_addr[1], cdc->mac_addr[2],
@@ -732,7 +738,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     descriptors.bulk_in_ep.bEndpointAddress = cdc->bulk_in_addr;
     descriptors.intr_ep.bEndpointAddress = cdc->intr_addr;
 
-    status = cdc_generate_mac_address(cdc.get());
+    status = cdc_generate_mac_address(parent, cdc.get());
     if (status != ZX_OK) {
         goto fail;
     }

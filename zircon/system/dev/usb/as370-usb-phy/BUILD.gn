@@ -2,26 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("as370") {
+driver("as370-usb-phy") {
   sources = [
-    "as370.cpp",
-    "as370-gpio.cpp",
-    "as370-i2c.cpp",
-    "as370-usb.cpp",
+    "as370-usb-phy.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/as370",
     "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/usb",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
-  ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:as370",
   ]
 }

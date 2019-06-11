@@ -352,6 +352,8 @@ bool as370_enumeration_test() {
         "sys/platform/14:01:1/as370-gpio",
         "sys/platform/00:00:9",
         "sys/platform/00:00:9/dw-i2c",
+        "sys/platform/14:01:2/as370-usb-phy",
+        "dwc2-usb",
     };
 
     ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
