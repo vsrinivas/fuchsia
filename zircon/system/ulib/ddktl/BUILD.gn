@@ -8,6 +8,7 @@ library("ddktl") {
     "ddktl/protocol/empty-protocol.h",
     "ddktl/device-internal.h",
     "ddktl/device.h",
+    "ddktl/fidl.h",
     "ddktl/i2c-channel.h",
     "ddktl/pdev.h",
   ]

@@ -38,6 +38,9 @@ group("dev") {
     "serial",
     "sysmem",
     "tee",
+
+    # test/ allows drivers to be used by IsolateDevmgr
+    "test/fidl-llcpp-driver",
     "test/isolateddevmgr:isolateddevmgr-test",
     "test/mock-device",
     "test/sysdev",

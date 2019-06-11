@@ -232,7 +232,8 @@ int main(int argc, char** argv) {
         }
         // Don't try to bind the fake sysdev or the mock device
         if (strcmp(de->d_name, "sysdev.so") == 0 ||
-            strcmp(de->d_name, "mock-device.so") == 0) {
+            strcmp(de->d_name, "mock-device.so") == 0 ||
+            strcmp(de->d_name, "fidl-llcpp-driver.so") == 0) {
             continue;
         }
         fuchsia_device_test_TestReport one_report = {};
