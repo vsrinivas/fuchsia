@@ -40,6 +40,7 @@ public:
     OpteeController(const OpteeController&) = delete;
     OpteeController& operator=(const OpteeController&) = delete;
 
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
     zx_status_t Bind();
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);

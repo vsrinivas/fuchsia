@@ -11,6 +11,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
+#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fidl-utils/bind.h>
@@ -188,6 +189,23 @@ zx_status_t OpteeController::DiscoverSharedMemoryConfig(zx_paddr_t* out_start_ad
 
     *out_start_addr = result.response.start;
     *out_size = result.response.size;
+
+    return status;
+}
+
+zx_status_t OpteeController::Create(void* ctx, zx_device_t* parent) {
+    fbl::AllocChecker ac;
+    auto tee = fbl::make_unique_checked<OpteeController>(&ac, parent);
+
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    auto status = tee->Bind();
+    if (status == ZX_OK) {
+        // devmgr is now in charge of the memory for tee
+        __UNUSED auto ptr = tee.release();
+    }
 
     return status;
 }
@@ -377,21 +395,21 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message,
 
     return return_value;
 }
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = OpteeController::Create;
+    return ops;
+}();
+
 } // namespace optee
 
-extern "C" zx_status_t optee_bind(void* ctx, zx_device_t* parent) {
-    fbl::AllocChecker ac;
-    auto tee = fbl::make_unique_checked<::optee::OpteeController>(&ac, parent);
-
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    auto status = tee->Bind();
-    if (status == ZX_OK) {
-        // devmgr is now in charge of the memory for tee
-        __UNUSED auto ptr = tee.release();
-    }
-
-    return status;
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(optee, optee::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_OPTEE),
+ZIRCON_DRIVER_END(optee)
+// clang-format on
