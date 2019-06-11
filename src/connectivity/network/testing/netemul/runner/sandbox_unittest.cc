@@ -840,9 +840,11 @@ TEST_F(SandboxTest, SyslogWithNoKlog) {
   EnableLogCapture([this](const fuchsia::logger::LogMessage& msg) {
     if (std::find(msg.tags.begin(), msg.tags.end(), "dummy-proc") !=
         msg.tags.end()) {
+      FXL_LOG(INFO) << "Got log tagged with 'dummy-proc'! Sending event...";
       sync::Event evt;
       evt.set_code(100);
       bus()->Publish(std::move(evt));
+      FXL_LOG(INFO) << "Published event!";
     } else {
       FAIL() << "Got log unexpected log message tags:"
              << fxl::JoinStrings(msg.tags);

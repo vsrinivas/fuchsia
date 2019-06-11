@@ -77,43 +77,54 @@ impl BusConnection {
         await!(stream.try_next())?;
         Ok(())
     }
-}
 
-async fn perform_bus_ops(
-    publish: Option<i32>,
-    wait: Option<i32>,
-    name: String,
-) -> Result<(), Error> {
-    let bus = BusConnection::new(&name)?;
-    if let Some(code) = wait {
-        let () = await!(bus.wait_for_event(code))?;
+    pub async fn perform_bus_ops(
+        &self,
+        publish: Option<i32>,
+        wait: Option<i32>,
+    ) -> Result<(), Error> {
+        if let Some(code) = wait {
+            let () = await!(self.wait_for_event(code))?;
+        }
+        if let Some(code) = publish {
+            let () = await!(self.publish_code(code))?;
+        }
+        Ok(())
     }
-    if let Some(code) = publish {
-        let () = await!(bus.publish_code(code))?;
-    }
-    Ok(())
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
+    // Attempt to connect to the bus early on so that we do not miss any events.
+    //
+    // We won't actually unwrap `bus` until later in case this
+    // test does not actually need the bus.
+    let bus = BusConnection::new(&opt.name);
+
     if let Some(log) = opt.log {
+        println!("Initing syslog...");
         fuchsia_syslog::init_with_tags(&["dummy-proc"])?;
+
+        println!("Logging to syslog: {}", log);
         fx_log_info!("{}", log);
     }
 
     if let Some(svc) = opt.service {
+        println!("Connecting to service [{}]...", svc);
         let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
         let (_dummy, server) = zx::Channel::create()?;
         env.connect_to_service(&svc, server)?;
     }
 
     if let Some(wait) = opt.wait {
+        println!("Sleeping for {}...", wait);
         std::thread::sleep(std::time::Duration::from_millis(wait));
     }
 
     let _file = if opt.look_at_data {
+        println!("Looking at data...");
         Some(
             std::fs::File::open(std::path::Path::new("/vdata/.THIS_IS_A_VIRTUAL_FS"))
                 .context("failed to get vdata")?,
@@ -123,12 +134,18 @@ async fn main() -> Result<(), Error> {
     };
 
     if opt.publish != None || opt.event != None {
-        let () = await!(perform_bus_ops(opt.publish, opt.event, opt.name))?;
+        // Unwrap the `bus` which should be an error
+        // if the test requires publish or event waiting operations.
+        let bus = bus.context("Failed to connect to bus")?;
+
+        println!("Publishing: {:?} | Waiting for event: {:?}", opt.publish, opt.event);
+        let () = await!(bus.perform_bus_ops(opt.publish, opt.event))?;
     }
 
     if opt.fail {
         Err(format_err!("Failing because was asked to."))
     } else {
+        println!("All done!");
         Ok(())
     }
 }
