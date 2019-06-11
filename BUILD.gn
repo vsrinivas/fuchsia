@@ -95,6 +95,9 @@ declare_args() {
     }
     enable_kernel_debugging_features = zircon_enable_kernel_debugging_features
     enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
+    if (!zircon_asserts) {
+      assert_level = 0
+    }
     forward_variables_from(zircon_extra_args, "*")
   }
 }

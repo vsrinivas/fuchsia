@@ -4,6 +4,11 @@
 
 import("//build/config/clang/clang.gni")
 
+declare_args() {
+  # Whether to enable <zircon/assert.h> ZX_DEBUG_ASSERT assertions.
+  zircon_asserts = is_debug
+}
+
 # This is $root_build_dir in the Zircon GN build.
 # **NOTE!** This is not a subdirectory of $root_build_dir because that
 # makes GN insist that it understand where all files in there come from.
