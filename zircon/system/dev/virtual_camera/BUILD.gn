@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("virtual_camera") {
+driver("virtual_camera_device") {
   sources = [
     "virtual_camera_device.cpp",
     "virtual_camera_stream.cpp",
@@ -22,4 +22,24 @@ driver("virtual_camera") {
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
+}
+
+driver("virtual_camera_factory") {
+  sources = [
+    "virtual_camera_factory.cpp",
+  ]
+
+  deps = [
+    "$zx/system/fidl/fuchsia-camera-common:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fzl",
+  ]
+}
+
+group("virtual_camera") {
+  deps = [
+    ":virtual_camera_device",
+    ":virtual_camera_factory",
+  ]
 }

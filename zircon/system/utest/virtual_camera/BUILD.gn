@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("virtual_camera") {
+test("virtual_camera_device") {
   sources = [
     "virtual_camera.cpp",
   ]
@@ -18,5 +18,28 @@ test("virtual_camera") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("virtual_camera_factory") {
+  sources = [
+    "virtual_camera_factory.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":virtual_camera_device",
+    ":virtual_camera_factory",
   ]
 }

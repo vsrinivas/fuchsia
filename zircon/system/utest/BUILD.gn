@@ -227,7 +227,7 @@ if (current_cpu != "") {
       "vdso-base",
       "vdso-variant",
       "virtio",
-      "virtual_camera",
+      "virtual_camera:test",
       "vmo",
       "zxcrypt",
 

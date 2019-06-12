@@ -208,6 +208,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_VCAMERA       11
 #define PDEV_DID_TEST_AUDIO_CODEC   12
 #define PDEV_DID_TEST_DDKFIDL       13
+#define PDEV_DID_TEST_VCAM_FACTORY  14
 
 // ARM
 #define PDEV_VID_ARM                18
