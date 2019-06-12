@@ -151,8 +151,7 @@ impl Player {
         source_proxy.add_stream(&mut stream_type, 44100, 1, stream_source_sink)?;
 
         // TODO: vmar map this for faster access.
-        let buffer =
-            zx::Vmo::create_with_opts(zx::VmoOptions::NON_RESIZABLE, DEFAULT_BUFFER_LEN as u64)?;
+        let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
 
         stream_source.add_payload_buffer(
             0,

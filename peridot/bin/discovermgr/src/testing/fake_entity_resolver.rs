@@ -93,10 +93,7 @@ impl FakeEntityServer {
                         }
                         EntityRequest::GetData { responder, .. } => {
                             let data = self.entity.data.as_bytes();
-                            let vmo = zx::Vmo::create_with_opts(
-                                zx::VmoOptions::NON_RESIZABLE,
-                                data.len() as u64,
-                            )?;
+                            let vmo = zx::Vmo::create(data.len() as u64)?;
                             vmo.write(&data, 0)?;
                             responder.send(Some(OutOfLine(&mut Buffer {
                                 vmo,

@@ -46,10 +46,7 @@ impl Mapping {
     ///
     /// The resulting VMO will not be resizeable.
     pub fn allocate(size: usize) -> Result<(Self, zx::Vmo), zx::Status> {
-        let vmo = zx::Vmo::create_with_opts(
-            zx::VmoOptions::NON_RESIZABLE,
-            size as u64,
-        )?;
+        let vmo = zx::Vmo::create(size as u64)?;
         let flags = zx::VmarFlags::PERM_READ
             | zx::VmarFlags::PERM_WRITE
             | zx::VmarFlags::MAP_RANGE
@@ -63,7 +60,7 @@ impl Mapping {
 
     /// Create a `Mapping` from an existing VMO.
     ///
-    /// Requires that the VMO was created with the `NON_RESIZABLE`
+    /// Requires that the VMO was not created with the `RESIZABLE`
     /// option, and returns `ZX_ERR_NOT_SUPPORTED` otherwise.
     pub fn create_from_vmo(vmo: &zx::Vmo, size: usize, flags: zx::VmarFlags)
         -> Result<Self, zx::Status>
@@ -129,16 +126,13 @@ mod tests {
         let size = PAGE_SIZE;
         let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
         {
-            // Requires NON_RESIZEABLE
+            // Mapping::create_from_vmo requires a non-resizable vmo
             let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, size as u64).unwrap();
             let status = Mapping::create_from_vmo(&vmo, size, flags).unwrap_err();
             assert_eq!(status, zx::Status::NOT_SUPPORTED);
         }
         {
-            let vmo = zx::Vmo::create_with_opts(
-                zx::VmoOptions::NON_RESIZABLE,
-                size as u64,
-            ).unwrap();
+            let vmo = zx::Vmo::create(size as u64).unwrap();
             let mapping = Mapping::create_from_vmo(&vmo, size, flags).unwrap();
             assert_eq!(size, mapping.len());
         }

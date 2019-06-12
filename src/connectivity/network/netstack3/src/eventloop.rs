@@ -142,10 +142,7 @@ impl EthernetSetupWorker {
     fn spawn(mut self, sender: mpsc::UnboundedSender<Event>) {
         fasync::spawn_local(
             async move {
-                let vmo = zx::Vmo::create_with_opts(
-                    zx::VmoOptions::NON_RESIZABLE,
-                    256 * eth::DEFAULT_BUFFER_SIZE as u64,
-                )?;
+                let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
                 let eth_client = await!(eth::Client::new(
                     self.dev,
                     vmo,

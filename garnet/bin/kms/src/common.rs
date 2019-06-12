@@ -169,7 +169,7 @@ pub fn buffer_to_data(buffer: Buffer) -> Result<Vec<u8>, Status> {
 
 /// Write data into a VMO buffer.
 pub fn data_to_buffer(data: &[u8]) -> Result<Buffer, Status> {
-    let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::NON_RESIZABLE, data.len() as u64)
+    let vmo = zx::Vmo::create(data.len() as u64)
         .map_err(debug_err_fn!(Status::InternalError, "Failed to create vmo: {:?}"))?;
     vmo.write(&data, 0)
         .map_err(debug_err_fn!(Status::InternalError, "Failed to write data to vmo: {:?}"))?;

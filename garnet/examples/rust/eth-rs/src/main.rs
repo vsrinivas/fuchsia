@@ -12,10 +12,7 @@ use std::env;
 use std::fs::File;
 
 fn main() -> Result<(), Error> {
-    let vmo = zx::Vmo::create_with_opts(
-        zx::VmoOptions::NON_RESIZABLE,
-        256 * ethernet::DEFAULT_BUFFER_SIZE as u64,
-    )?;
+    let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
     let mut executor = fasync::Executor::new().context("could not create executor")?;
 

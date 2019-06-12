@@ -111,10 +111,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     };
 
     // Create an EthernetClient to wrap around the Endpoint's ethernet device.
-    let vmo = zx::Vmo::create_with_opts(
-        zx::VmoOptions::NON_RESIZABLE,
-        256 * ethernet::DEFAULT_BUFFER_SIZE as u64,
-    )?;
+    let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
     let eth_dev = await!(ep.get_ethernet_device())?;
     let eth_proxy = match eth_dev.into_proxy() {

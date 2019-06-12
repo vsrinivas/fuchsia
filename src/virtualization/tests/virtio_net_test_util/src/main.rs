@@ -28,10 +28,7 @@ async fn main() -> Result<(), failure::Error> {
     let config = Config::from_args();
 
     let dev = File::open(DEFAULT_ETH)?;
-    let vmo = zx::Vmo::create_with_opts(
-        zx::VmoOptions::NON_RESIZABLE,
-        256 * eth::DEFAULT_BUFFER_SIZE as u64,
-    )?;
+    let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
 
     let mut eth_client =
         await!(eth::Client::from_file(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "test"))?;

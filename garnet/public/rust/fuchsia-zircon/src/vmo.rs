@@ -142,7 +142,6 @@ bitflags! {
     /// Options that may be used when creating a `Vmo`.
     #[repr(transparent)]
     pub struct VmoOptions: u32 {
-        const NON_RESIZABLE = sys::ZX_VMO_NON_RESIZABLE;
         const RESIZABLE = sys::ZX_VMO_RESIZABLE;
     }
 }
@@ -152,7 +151,6 @@ bitflags! {
     #[repr(transparent)]
     pub struct VmoChildOptions: u32 {
         const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
-        const NON_RESIZABLE = sys::ZX_VMO_CHILD_NON_RESIZEABLE;
         const RESIZABLE = sys::ZX_VMO_CHILD_RESIZABLE;
     }
 }
@@ -209,7 +207,7 @@ mod tests {
     #[test]
     fn vmo_set_size_fails_on_non_resizable() {
         let size = 4096;
-        let vmo = Vmo::create_with_opts(VmoOptions::NON_RESIZABLE, size).unwrap();
+        let vmo = Vmo::create(size).unwrap();
         assert_eq!(size, vmo.get_size().unwrap());
 
         let new_size = 8192;

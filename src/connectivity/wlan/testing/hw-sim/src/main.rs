@@ -530,10 +530,7 @@ mod simulation_tests {
         const ETH_PATH: &str = "/dev/class/ethernet";
         let files = fs::read_dir(ETH_PATH)?;
         for file in files {
-            let vmo = zx::Vmo::create_with_opts(
-                zx::VmoOptions::NON_RESIZABLE,
-                256 * ethernet::DEFAULT_BUFFER_SIZE as u64,
-            )?;
+            let vmo = zx::Vmo::create(256 * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
             let path = file?.path();
             let dev = File::open(path)?;
