@@ -31,3 +31,30 @@ pub fn process_account_mutation(mutation: &Mutation) -> Result<Option<SettingDat
         return Err(format_err!("invalid error"));
     }
 }
+
+pub fn should_sync_account_mutation(mutation: &Mutation) -> bool {
+    if let Mutation::AccountMutationValue(mutation_info) = mutation {
+        if let Some(operation) = mutation_info.operation {
+            return operation == AccountOperation::SetLoginOverride;
+        }
+    }
+
+    return false;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_should_sync_account_mutation() {
+        assert!(should_sync_account_mutation(&Mutation::AccountMutationValue(AccountMutation {
+            operation: Some(AccountOperation::SetLoginOverride),
+            login_override: Some(LoginOverride::AutologinGuest),
+        })));
+        assert!(!should_sync_account_mutation(&Mutation::AccountMutationValue(AccountMutation {
+            operation: None,
+            login_override: None,
+        })));
+    }
+}

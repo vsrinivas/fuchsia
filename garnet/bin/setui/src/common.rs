@@ -7,6 +7,8 @@ use fidl_fuchsia_setui::*;
 use futures::channel::oneshot::Sender;
 
 pub type ProcessMutation = dyn Fn(&Mutation) -> Result<Option<SettingData>, Error> + Send + Sync;
+pub type CheckSync = dyn Fn(&Mutation) -> bool + Send + Sync;
+
 pub type BoxedSettingCodec<T> = Box<dyn SettingCodec<T> + Send + Sync>;
 pub type BoxedStore = Box<dyn Store + Send + Sync>;
 
@@ -34,8 +36,9 @@ pub trait SettingCodec<T: ToString> {
 }
 
 pub trait Store {
-    /// Writes value to presistent storage.
-    fn write(&self, data: SettingData) -> Result<(), Error>;
+    /// Writes value to presistent storage. If sync is true, the write will be
+    /// blocked until fully persisted to the backing store.
+    fn write(&self, data: SettingData, sync: bool) -> Result<(), Error>;
 
     /// Reads value from persistent storage
     fn read(&self) -> Result<Option<SettingData>, Error>;

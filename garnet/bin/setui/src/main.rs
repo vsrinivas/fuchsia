@@ -7,7 +7,7 @@ use {
     crate::default_store::DefaultStore,
     crate::json_codec::JsonCodec,
     crate::mutation::*,
-    crate::setting_adapter::SettingAdapter,
+    crate::setting_adapter::{MutationHandler, SettingAdapter},
     failure::Error,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
@@ -40,14 +40,17 @@ fn main() -> Result<(), Error> {
     handler.register_adapter(Box::new(SettingAdapter::new(
         SettingType::Unknown,
         Box::new(DefaultStore::new("/data/unknown.dat".to_string(), Box::new(JsonCodec::new()))),
-        Box::new(process_string_mutation),
+        MutationHandler { process: &process_string_mutation, check_sync: None },
         None,
     )));
 
     handler.register_adapter(Box::new(SettingAdapter::new(
         SettingType::Account,
         Box::new(DefaultStore::new("/data/account.dat".to_string(), Box::new(JsonCodec::new()))),
-        Box::new(process_account_mutation),
+        MutationHandler {
+            process: &process_account_mutation,
+            check_sync: Some(&should_sync_account_mutation),
+        },
         Some(SettingData::Account(AccountSettings { mode: None })),
     )));
 

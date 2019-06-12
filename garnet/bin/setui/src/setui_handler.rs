@@ -125,7 +125,7 @@ mod tests {
     use super::*;
     use crate::common::Store;
     use crate::mutation::*;
-    use crate::setting_adapter::SettingAdapter;
+    use crate::setting_adapter::{MutationHandler, SettingAdapter};
 
     struct TestStore {}
 
@@ -136,7 +136,7 @@ mod tests {
     }
 
     impl Store for TestStore {
-        fn write(&self, _data: SettingData) -> Result<(), Error> {
+        fn write(&self, _data: SettingData, _sync: bool) -> Result<(), Error> {
             Ok(())
         }
 
@@ -173,7 +173,7 @@ mod tests {
         handler.register_adapter(Box::new(SettingAdapter::new(
             SettingType::Unknown,
             Box::new(TestStore::new()),
-            Box::new(process_string_mutation),
+            MutationHandler { process: &process_string_mutation, check_sync: None },
             None,
         )));
 
@@ -236,7 +236,7 @@ mod tests {
         let mut adapter = SettingAdapter::new(
             SettingType::Account,
             Box::new(TestStore::new()),
-            Box::new(process_account_mutation),
+            MutationHandler { process: &process_account_mutation, check_sync: None },
             Some(SettingData::Account(AccountSettings { mode: None })),
         );
 
