@@ -66,7 +66,7 @@ public:
         {
             auto context = trace::TraceProlongedContext::Acquire();
             trace_engine_terminate();
-            trace_context_snapshot_buffer_header(context.get(), &header);
+            trace_context_snapshot_buffer_header_internal(context.get(), &header);
         }
 
         // Tracing hasn't actually stopped yet. It's stopping, but that won't

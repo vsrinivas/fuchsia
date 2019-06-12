@@ -1134,7 +1134,7 @@ EXPORT_NO_DDK void* trace_context_alloc_record(trace_context_t* context, size_t 
     return context->AllocRecord(num_bytes);
 }
 
-EXPORT_NO_DDK void trace_context_snapshot_buffer_header(
+EXPORT_NO_DDK void trace_context_snapshot_buffer_header_internal(
     trace_prolonged_context_t* context,
     ::trace::internal::trace_buffer_header* header) {
     auto ctx = reinterpret_cast<trace_context_t*>(context);

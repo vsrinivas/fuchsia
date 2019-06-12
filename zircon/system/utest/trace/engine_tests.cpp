@@ -691,7 +691,7 @@ bool TestStreamingMode() {
     // Pretend to save the older of the two buffers.
     {
         auto context = trace::TraceProlongedContext::Acquire();
-        trace_context_snapshot_buffer_header(context.get(), &header);
+        trace_context_snapshot_buffer_header_internal(context.get(), &header);
     }
     EXPECT_EQ(header.wrapped_count, 1);
 
@@ -700,7 +700,7 @@ bool TestStreamingMode() {
 
     {
         auto context = trace::TraceProlongedContext::Acquire();
-        trace_context_snapshot_buffer_header(context.get(), &header);
+        trace_context_snapshot_buffer_header_internal(context.get(), &header);
     }
     EXPECT_EQ(header.rolling_data_end[0], 0);
     // The wrapped count shouldn't be updated until the next record is written.
@@ -718,7 +718,7 @@ bool TestStreamingMode() {
 
     {
         auto context = trace::TraceProlongedContext::Acquire();
-        trace_context_snapshot_buffer_header(context.get(), &header);
+        trace_context_snapshot_buffer_header_internal(context.get(), &header);
     }
     EXPECT_EQ(header.wrapped_count, 2);
     EXPECT_NE(header.rolling_data_end[0], 0);
@@ -820,7 +820,7 @@ bool TestShutdownWhenFull() {
                           "k1", TA_INT32(1));
 
             trace_buffer_header header;
-            trace_context_snapshot_buffer_header(context.get(), &header);
+            trace_context_snapshot_buffer_header_internal(context.get(), &header);
             if (header.wrapped_count > 0) {
                 break;
             }

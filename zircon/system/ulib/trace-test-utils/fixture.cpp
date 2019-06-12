@@ -316,5 +316,5 @@ bool fixture_compare_records(const char* expected) {
 
 void fixture_snapshot_buffer_header(trace_buffer_header* header) {
     auto context = trace::TraceProlongedContext::Acquire();
-    trace_context_snapshot_buffer_header(context.get(), header);
+    trace_context_snapshot_buffer_header_internal(context.get(), header);
 }

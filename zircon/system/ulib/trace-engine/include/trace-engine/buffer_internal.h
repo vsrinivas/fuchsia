@@ -131,8 +131,13 @@ static_assert(sizeof(trace_buffer_header) == 128, "");
 //
 // This function is not thread-safe relative to the collected data, and
 // assumes tracing is stopped or at least paused.
-void trace_context_snapshot_buffer_header(
+
+__BEGIN_CDECLS
+
+void trace_context_snapshot_buffer_header_internal(
     trace_prolonged_context_t* context,
     ::trace::internal::trace_buffer_header* header);
+
+__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_BUFFER_INTERNAL_H_
