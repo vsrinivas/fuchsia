@@ -34,6 +34,7 @@ if (current_cpu != "") {
       "$zx/system/dev/block/aml-sd-emmc:aml-sd-emmc-test",
       "$zx/system/dev/block/ftl/test",
       "$zx/system/dev/block/fvm/test",
+      "$zx/system/dev/block/mbr:mbr-test",
       "$zx/system/dev/block/mtk-sdmmc:mtk-sdmmc-test",
       "$zx/system/dev/block/usb-mass-storage:tests",
       "$zx/system/dev/bluetooth/bt-hci-mediatek:bt-hci-mediatek-test",

@@ -4,14 +4,42 @@
 
 driver("mbr") {
   sources = [
-    "mbr.c",
+    "mbr-device.cpp",
+    "mbr-device.h",
+    "mbr.cpp",
+    "mbr.h",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.block.partition",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("mbr-test") {
+  output_name = "mbr-test"
+  sources = [
+    "mbr-device-test.cpp",
+    "mbr-device.cpp",
+    "mbr-test.cpp",
+    "mbr.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.block.partition",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
