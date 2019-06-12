@@ -51,7 +51,6 @@ struct Config {
     uint32 baud_rate;
 };
 
-[Layout = "Simple"]
 protocol Device {
     /// Lookup what type of serial device this is.
     GetClass() -> (Class device_class);

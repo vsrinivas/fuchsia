@@ -9,6 +9,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
@@ -286,48 +287,69 @@ zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, 
     return serial_.Write(buf, count, actual);
 }
 
-zx_status_t SerialDevice::FidlSerialGetClass(fidl_txn_t* txn) {
-    return fuchsia_hardware_serial_DeviceGetClass_reply(txn, static_cast<uint8_t>(serial_class_));
+void SerialDevice::GetClass(GetClassCompleter::Sync completer) {
+    completer.Reply(static_cast<fuchsia::hardware::serial::Class>(serial_class_));
 }
 
-zx_status_t SerialDevice::FidlSerialSetConfig(const fuchsia_hardware_serial_Config* config,
-                                              fidl_txn_t* txn) {
+void SerialDevice::SetConfig(fuchsia::hardware::serial::Config config, SetConfigCompleter::Sync completer) {
+    using fuchsia::hardware::serial::CharacterWidth;
+    using fuchsia::hardware::serial::FlowControl;
+    using fuchsia::hardware::serial::Parity;
+    using fuchsia::hardware::serial::StopWidth;
     uint32_t flags = 0;
-    switch (config->character_width) {
-    case fuchsia_hardware_serial_CharacterWidth_BITS_5: flags |= SERIAL_DATA_BITS_5; break;
-    case fuchsia_hardware_serial_CharacterWidth_BITS_6: flags |= SERIAL_DATA_BITS_6; break;
-    case fuchsia_hardware_serial_CharacterWidth_BITS_7: flags |= SERIAL_DATA_BITS_7; break;
-    case fuchsia_hardware_serial_CharacterWidth_BITS_8: flags |= SERIAL_DATA_BITS_8; break;
+    switch (config.character_width) {
+    case CharacterWidth::BITS_5:
+        flags |= SERIAL_DATA_BITS_5;
+        break;
+    case CharacterWidth::BITS_6:
+        flags |= SERIAL_DATA_BITS_6;
+        break;
+    case CharacterWidth::BITS_7:
+        flags |= SERIAL_DATA_BITS_7;
+        break;
+    case CharacterWidth::BITS_8:
+        flags |= SERIAL_DATA_BITS_8;
+        break;
     }
 
-    switch (config->stop_width) {
-    case fuchsia_hardware_serial_StopWidth_BITS_1: flags |= SERIAL_STOP_BITS_1; break;
-    case fuchsia_hardware_serial_StopWidth_BITS_2: flags |= SERIAL_STOP_BITS_2; break;
+    switch (config.stop_width) {
+    case StopWidth::BITS_1:
+        flags |= SERIAL_STOP_BITS_1;
+        break;
+    case StopWidth::BITS_2:
+        flags |= SERIAL_STOP_BITS_2;
+        break;
     }
 
-    switch (config->parity) {
-    case fuchsia_hardware_serial_Parity_NONE: flags |= SERIAL_PARITY_NONE; break;
-    case fuchsia_hardware_serial_Parity_EVEN: flags |= SERIAL_PARITY_EVEN; break;
-    case fuchsia_hardware_serial_Parity_ODD: flags |= SERIAL_PARITY_ODD; break;
+    switch (config.parity) {
+    case Parity::NONE:
+        flags |= SERIAL_PARITY_NONE;
+        break;
+    case Parity::EVEN:
+        flags |= SERIAL_PARITY_EVEN;
+        break;
+    case Parity::ODD:
+        flags |= SERIAL_PARITY_ODD;
+        break;
     }
 
-    switch (config->control_flow) {
-    case fuchsia_hardware_serial_FlowControl_NONE: flags |= SERIAL_FLOW_CTRL_NONE; break;
-    case fuchsia_hardware_serial_FlowControl_CTS_RTS: flags |= SERIAL_FLOW_CTRL_CTS_RTS; break;
+    switch (config.control_flow) {
+    case FlowControl::NONE:
+        flags |= SERIAL_FLOW_CTRL_NONE;
+        break;
+    case FlowControl::CTS_RTS:
+        flags |= SERIAL_FLOW_CTRL_CTS_RTS;
+        break;
     }
 
-    zx_status_t status = SerialConfig(config->baud_rate, flags);
-    return fuchsia_hardware_serial_DeviceSetConfig_reply(txn, status);
+    zx_status_t status = SerialConfig(config.baud_rate, flags);
+    completer.Reply(status);
 }
 
 zx_status_t SerialDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    using Binder = fidl::Binder<SerialDevice>;
-    static const fuchsia_hardware_serial_Device_ops kOps = {
-        .GetClass = Binder::BindMember<&SerialDevice::FidlSerialGetClass>,
-        .SetConfig = Binder::BindMember<&SerialDevice::FidlSerialSetConfig>,
-    };
-
-    return fuchsia_hardware_serial_Device_dispatch(this, txn, msg, &kOps);
+    DdkTransaction transaction(txn);
+    fuchsia::hardware::serial::Device::Dispatch(this, msg, &transaction);
+    return transaction.Status();
 }
 
 void SerialDevice::DdkRelease() {

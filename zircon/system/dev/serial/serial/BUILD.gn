@@ -17,6 +17,7 @@ source_set("common") {
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl",
     "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

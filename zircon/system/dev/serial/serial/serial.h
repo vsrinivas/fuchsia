@@ -6,10 +6,11 @@
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/serial.h>
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
+#include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
 #include <zircon/thread_annotations.h>
@@ -26,6 +27,7 @@ using DeviceType = ddk::Device<SerialDevice,
                                ddk::Messageable>;
 
 class SerialDevice : public DeviceType,
+                     public fuchsia::hardware::serial::Device::Interface,
                      public ddk::SerialProtocol<SerialDevice, ddk::base_protocol> {
 public:
     explicit SerialDevice(zx_device_t* parent)
@@ -55,9 +57,9 @@ private:
     void StateCallback(serial_state_t state);
 
     // Fidl protocol implementation.
-    zx_status_t FidlSerialGetClass(fidl_txn_t* txn);
-    zx_status_t FidlSerialSetConfig(const fuchsia_hardware_serial_Config* config,
-                                    fidl_txn_t* txn);
+    void GetClass(GetClassCompleter::Sync completer) override;
+    void SetConfig(fuchsia::hardware::serial::Config config,
+                   SetConfigCompleter::Sync completer) override;
 
     // The serial protocol of the device we are binding against.
     ddk::SerialImplProtocolClient serial_;
