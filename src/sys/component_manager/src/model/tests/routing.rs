@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    crate::ambient::RealAmbientEnvironment,
+    crate::model::testing::mocks::*,
     crate::model::testing::routing_test_helpers::*,
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
@@ -21,34 +23,33 @@ use {
 /// b: uses ambient service /svc/fuchsia.sys2.Realm
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_ambient() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![(vec!["b"].into(), new_ambient_capability(), true),],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![UseDecl::Service(UseServiceDecl {
-                        source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                    }),],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::Service(UseServiceDecl {
+                    source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let bind_calls = ambient.bind_calls.clone();
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use_realm(vec!["b"].into(), bind_calls));
 }
 
 ///   a
@@ -61,61 +62,57 @@ async fn use_ambient() {
 /// b: uses service /svc/bar as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_parent() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b"].into(), new_directory_capability(), true),
-            (vec!["b"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Self_,
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["b"].into(), new_service_capability(), true));
 }
 
 ///   a
@@ -132,90 +129,86 @@ async fn use_from_parent() {
 /// c: uses /svc/baz as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_grandparent() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b", "c"].into(), new_directory_capability(), true),
-            (vec!["b", "c"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Self_,
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Realm,
-                            source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Realm,
-                            source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Realm,
+                        source_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b", "c"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["b", "c"].into(), new_service_capability(), true));
 }
 
 ///     a
@@ -229,97 +222,93 @@ async fn use_from_grandparent() {
 /// c: uses /data/foobar as /data/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_sibling_no_root() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b", "c"].into(), new_directory_capability(), true),
-            (vec!["b", "c"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
                         startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "d",
-                ComponentDecl {
-                    exposes: vec![
-                        ExposeDecl::Directory(ExposeDirectoryDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        }),
-                        ExposeDecl::Service(ExposeServiceDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                    },
+                    ChildDecl {
+                        name: "d".to_string(),
+                        url: "test:///d".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "d",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b", "c"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["b", "c"].into(), new_service_capability(), true));
 }
 
 ///   a
@@ -331,86 +320,82 @@ async fn use_from_sibling_no_root() {
 /// c: uses /data/baz as /data/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_sibling_root() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["c"].into(), new_directory_capability(), true),
-            (vec!["c"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Child("b".to_string()),
-                            source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Child("b".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![
-                        ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    exposes: vec![
-                        ExposeDecl::Directory(ExposeDirectoryDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        }),
-                        ExposeDecl::Service(ExposeServiceDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["c"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["c"].into(), new_service_capability(), true));
 }
 
 ///     a
@@ -425,109 +410,105 @@ async fn use_from_sibling_root() {
 /// c: uses /data/foobar as /data/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_niece() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["c"].into(), new_directory_capability(), true),
-            (vec!["c"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Child("b".to_string()),
-                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Child("b".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![
-                        ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    exposes: vec![
-                        ExposeDecl::Directory(ExposeDirectoryDecl {
-                            source: ExposeSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                        }),
-                        ExposeDecl::Service(ExposeServiceDecl {
-                            source: ExposeSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "d".to_string(),
-                        url: "test:///d".to_string(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "d",
-                ComponentDecl {
-                    exposes: vec![
-                        ExposeDecl::Directory(ExposeDirectoryDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        }),
-                        ExposeDecl::Service(ExposeServiceDecl {
-                            source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                    },
+                    ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "d".to_string(),
+                    url: "test:///d".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/foobar").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "d",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["c"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["c"].into(), new_service_capability(), true));
 }
 
 ///      a
@@ -544,204 +525,200 @@ async fn use_from_niece() {
 /// f: uses /data/foo from d as /data/hippo, uses /svc/foo from h as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_kitchen_sink() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b", "e"].into(), new_directory_capability(), true),
-            (vec!["b", "e"].into(), new_service_capability(), true),
-            (vec!["c", "f"].into(), new_directory_capability(), true),
-            (vec!["c", "f"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Child("b".to_string()),
-                            source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![
-                        ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    program: None,
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                                dest: OfferDest::Child("e".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Realm,
-                            source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                                dest: OfferDest::Child("e".to_string()),
-                            }],
-                        }),
-                    ],
-                    exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: ExposeSource::Child("d".to_string()),
-                        source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                        target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                    }),],
-                    children: vec![
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "e".to_string(),
-                            url: "test:///e".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    program: None,
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Realm,
-                            source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                                dest: OfferDest::Child("f".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Child("g".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                                dest: OfferDest::Child("f".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![
-                        ChildDecl {
-                            name: "f".to_string(),
-                            url: "test:///f".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "g".to_string(),
-                            url: "test:///g".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "d",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
-                        source: ExposeSource::Self_,
-                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                        target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                    }),],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "e",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "f",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "g",
-                ComponentDecl {
-                    program: None,
-                    exposes: vec![ExposeDecl::Service(ExposeServiceDecl {
-                        source: ExposeSource::Child("h".to_string()),
-                        source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                    }),],
-                    children: vec![ChildDecl {
-                        name: "h".to_string(),
-                        url: "test:///h".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "h",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::Service(ExposeServiceDecl {
-                        source: ExposeSource::Self_,
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                    }),],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                program: None,
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                            dest: OfferDest::Child("e".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
+                            dest: OfferDest::Child("e".to_string()),
+                        }],
+                    }),
+                ],
+                exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Child("d".to_string()),
+                    source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                })],
+                children: vec![
+                    ChildDecl {
+                        name: "d".to_string(),
+                        url: "test:///d".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "e".to_string(),
+                        url: "test:///e".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                program: None,
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Realm,
+                        source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                            dest: OfferDest::Child("f".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Child("g".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                            dest: OfferDest::Child("f".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "f".to_string(),
+                        url: "test:///f".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "g".to_string(),
+                        url: "test:///g".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "d",
+            ComponentDecl {
+                exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "e",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "f",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "g",
+            ComponentDecl {
+                program: None,
+                exposes: vec![ExposeDecl::Service(ExposeServiceDecl {
+                    source: ExposeSource::Child("h".to_string()),
+                    source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                })],
+                children: vec![ChildDecl {
+                    name: "h".to_string(),
+                    url: "test:///h".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "h",
+            ComponentDecl {
+                exposes: vec![ExposeDecl::Service(ExposeServiceDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b", "e"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["b", "e"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["c", "f"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["c", "f"].into(), new_service_capability(), true));
 }
 
 ///  component manager's namespace
@@ -756,63 +733,59 @@ async fn use_kitchen_sink() {
 /// b: uses service /echo/echo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_component_manager_namespace() {
-    install_hippo_dir();
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b"].into(), new_directory_capability(), true),
-            (vec!["b"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source: OfferSource::Realm,
-                            source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/foo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source: OfferSource::Realm,
-                            source_path: CapabilityPath::try_from("/svc/fidl.examples.echo.Echo")
-                                .unwrap(),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/echo/echo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Realm,
+                        source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/foo").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/fidl.examples.echo.Echo")
+                            .unwrap(),
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/echo/echo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    test.install_hippo_dir();
+    await!(test.check_use(vec!["b"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["b"].into(), new_service_capability(), true));
 }
 
 ///   a
@@ -823,44 +796,40 @@ async fn use_from_component_manager_namespace() {
 /// b: uses service /svc/hippo as /svc/hippo, but it's not in its realm
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_not_offered() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b"].into(), new_directory_capability(), false),
-            (vec!["b"].into(), new_service_capability(), false),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    program: None,
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                program: None,
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b"].into(), new_directory_capability(), false));
+    await!(test.check_use(vec!["b"].into(), new_service_capability(), false));
 }
 
 ///   a
@@ -873,70 +842,66 @@ async fn use_not_offered() {
 /// c: uses service /svc/hippo as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_offer_source_not_exposed() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["c"].into(), new_directory_capability(), false),
-            (vec!["c"].into(), new_service_capability(), false),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    program: None,
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            source: OfferSource::Child("b".to_string()),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            source: OfferSource::Child("b".to_string()),
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![
-                        ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-            ("b", default_component_decl()),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                program: None,
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        source: OfferSource::Child("b".to_string()),
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        source: OfferSource::Child("b".to_string()),
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        ("b", default_component_decl()),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["c"].into(), new_directory_capability(), false));
+    await!(test.check_use(vec!["c"].into(), new_service_capability(), false));
 }
 
 ///   a
@@ -951,73 +916,69 @@ async fn use_offer_source_not_exposed() {
 /// c: uses service /svc/hippo as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_offer_source_not_offered() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b", "c"].into(), new_directory_capability(), false),
-            (vec!["b", "c"].into(), new_service_capability(), false),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    program: None,
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            source: OfferSource::Realm,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            source: OfferSource::Realm,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                dest: OfferDest::Child("c".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                program: None,
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        source: OfferSource::Realm,
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        source: OfferSource::Realm,
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                            dest: OfferDest::Child("c".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b", "c"].into(), new_directory_capability(), false));
+    await!(test.check_use(vec!["b", "c"].into(), new_service_capability(), false));
 }
 
 ///   a
@@ -1032,67 +993,63 @@ async fn use_offer_source_not_offered() {
 /// c: exposes /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_from_expose() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b"].into(), new_directory_capability(), false),
-            (vec!["b"].into(), new_service_capability(), false),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    program: None,
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    exposes: vec![
-                        ExposeDecl::Directory(ExposeDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            source: ExposeSource::Self_,
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        ExposeDecl::Service(ExposeServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            source: ExposeSource::Self_,
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                program: None,
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        source: ExposeSource::Self_,
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        source: ExposeSource::Self_,
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b"].into(), new_directory_capability(), false));
+    await!(test.check_use(vec!["b"].into(), new_service_capability(), false));
 }
 
 ///   a
@@ -1105,62 +1062,58 @@ async fn use_from_expose() {
 /// b: uses service /svc/hippo as /svc/hippo, but it's not in its realm
 #[fuchsia_async::run_singlethreaded(test)]
 async fn offer_from_non_executable() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b"].into(), new_directory_capability(), false),
-            (vec!["b"].into(), new_service_capability(), false),
-        ],
-        dynamic_children: vec![],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    program: None,
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            source: OfferSource::Self_,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            source: OfferSource::Self_,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                program: None,
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        source: OfferSource::Self_,
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        source: OfferSource::Self_,
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use(vec!["b"].into(), new_directory_capability(), false));
+    await!(test.check_use(vec!["b"].into(), new_service_capability(), false));
 }
 
 ///   a
@@ -1174,116 +1127,112 @@ async fn offer_from_non_executable() {
 /// [d]: ditto, but with /data/hippo
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_in_collection() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b", "coll:c"].into(), new_directory_capability(), true),
-            (vec!["b", "coll:d"].into(), new_service_capability(), true),
-        ],
-        dynamic_children: vec![
-            (
-                vec!["b"].into(),
-                "coll".to_string(),
-                ChildDecl {
-                    name: "c".to_string(),
-                    url: "test:///c".to_string(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        source: OfferSource::Self_,
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        source: OfferSource::Self_,
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
                     startup: fsys::StartupMode::Lazy,
-                }
-            ),
-            (
-                vec!["b"].into(),
-                "coll".to_string(),
-                ChildDecl {
-                    name: "d".to_string(),
-                    url: "test:///d".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }
-            ),
-        ],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            source: OfferSource::Self_,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            source: OfferSource::Self_,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![UseDecl::Service(UseServiceDecl {
-                        source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                    }),],
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            source: OfferSource::Realm,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                dest: OfferDest::Collection("coll".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            source: OfferSource::Realm,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                dest: OfferDest::Collection("coll".to_string()),
-                            }],
-                        }),
-                    ],
-                    collections: vec![CollectionDecl {
-                        name: "coll".to_string(),
-                        durability: fsys::Durability::Transient,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![UseDecl::Directory(UseDirectoryDecl {
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::Service(UseServiceDecl {
+                    source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                })],
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    }),],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "d",
-                ComponentDecl {
-                    uses: vec![UseDecl::Service(UseServiceDecl {
+                        source: OfferSource::Realm,
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            dest: OfferDest::Collection("coll".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                    }),],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                        source: OfferSource::Realm,
+                        targets: vec![OfferTarget {
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            dest: OfferDest::Collection("coll".to_string()),
+                        }],
+                    }),
+                ],
+                collections: vec![CollectionDecl {
+                    name: "coll".to_string(),
+                    durability: fsys::Durability::Transient,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![UseDecl::Directory(UseDirectoryDecl {
+                    source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "d",
+            ComponentDecl {
+                uses: vec![UseDecl::Service(UseServiceDecl {
+                    source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    // `RealAmbientEnvironment` is needed to create dynamic children.
+    let ambient = Box::new(RealAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.create_dynamic_child(
+        vec!["b"].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+        }
+    ));
+    await!(test.create_dynamic_child(
+        vec!["b"].into(),
+        "coll",
+        ChildDecl {
+            name: "d".to_string(),
+            url: "test:///d".to_string(),
+            startup: fsys::StartupMode::Lazy,
+        }
+    ));
+    await!(test.check_use(vec!["b", "coll:c"].into(), new_directory_capability(), true));
+    await!(test.check_use(vec!["b", "coll:d"].into(), new_service_capability(), true));
 }
 
 ///   a
@@ -1296,81 +1245,79 @@ async fn use_in_collection() {
 /// [c]: tries to use /svc/hippo, but can't because service was not offered to its collection
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_in_collection_not_offered() {
-    await!(run_routing_test(TestInputs {
-        root_component: "a",
-        users_to_check: vec![
-            (vec!["b", "coll:c"].into(), new_directory_capability(), false),
-            (vec!["b", "coll:c"].into(), new_service_capability(), false),
-        ],
-        dynamic_children: vec![(
-            vec!["b"].into(),
-            "coll".to_string(),
-            ChildDecl {
-                name: "c".to_string(),
-                url: "test:///c".to_string(),
-                startup: fsys::StartupMode::Lazy,
-            }
-        ),],
-        components: vec![
-            (
-                "a",
-                ComponentDecl {
-                    offers: vec![
-                        OfferDecl::Directory(OfferDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                            source: OfferSource::Self_,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                        OfferDecl::Service(OfferServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            source: OfferSource::Self_,
-                            targets: vec![OfferTarget {
-                                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                                dest: OfferDest::Child("b".to_string()),
-                            }],
-                        }),
-                    ],
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "b",
-                ComponentDecl {
-                    uses: vec![UseDecl::Service(UseServiceDecl {
-                        source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
-                    }),],
-                    collections: vec![CollectionDecl {
-                        name: "coll".to_string(),
-                        durability: fsys::Durability::Transient,
-                    }],
-                    ..default_component_decl()
-                },
-            ),
-            (
-                "c",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::Directory(UseDirectoryDecl {
-                            source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        source: OfferSource::Self_,
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                        }),
-                        UseDecl::Service(UseServiceDecl {
-                            source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                    OfferDecl::Service(OfferServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        source: OfferSource::Self_,
+                        targets: vec![OfferTarget {
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                        })
-                    ],
-                    ..default_component_decl()
-                },
-            ),
-        ],
-    }));
+                            dest: OfferDest::Child("b".to_string()),
+                        }],
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::Service(UseServiceDecl {
+                    source_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                })],
+                collections: vec![CollectionDecl {
+                    name: "coll".to_string(),
+                    durability: fsys::Durability::Transient,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::Service(UseServiceDecl {
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    // `RealAmbientEnvironment` is needed to create dynamic children.
+    let ambient = Box::new(RealAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.create_dynamic_child(
+        vec!["b"].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+        }
+    ));
+    await!(test.check_use(vec!["b", "coll:c"].into(), new_directory_capability(), false));
+    await!(test.check_use(vec!["b", "coll:c"].into(), new_service_capability(), false));
 }

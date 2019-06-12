@@ -54,9 +54,11 @@ impl Resolver for MockResolver {
 
 pub struct MockRunner {
     pub urls_run: Arc<Mutex<Vec<String>>>,
-    pub namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    pub namespaces: Namespaces,
     pub host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
 }
+
+pub type Namespaces = Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>;
 
 impl MockRunner {
     pub fn new() -> Self {

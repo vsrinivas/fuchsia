@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{ambient::*, directory_broker, model::testing::mocks::*, model::*},
+    crate::{directory_broker, model::testing::mocks::*, model::*},
     cm_rust::{
-        Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource,
-        NativeIntoFidl, OfferDecl, OfferSource, UseDecl,
+        Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
+        OfferSource, UseDecl,
     },
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
@@ -25,7 +25,7 @@ use {
     futures::TryStreamExt,
     std::{
         collections::{HashMap, HashSet},
-        convert::TryFrom,
+        convert::{TryFrom, TryInto},
         ffi::CString,
         iter,
         path::PathBuf,
@@ -44,6 +44,21 @@ pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm>
     await!(realm.state.lock()).child_realms.as_ref().unwrap()[&child.into()].clone()
 }
 
+/// Construct a capability for the hippo service.
+pub fn new_service_capability() -> Capability {
+    Capability::Service(CapabilityPath::try_from("/svc/hippo").unwrap())
+}
+
+/// Construct a capability for the ambient service fuchsia.sys2.Realm.
+pub fn new_ambient_capability() -> Capability {
+    Capability::Service(CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap())
+}
+
+/// Construct a capability for the hippo directory.
+pub fn new_directory_capability() -> Capability {
+    Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
+}
+
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
     ComponentDecl {
@@ -58,29 +73,364 @@ pub fn default_component_decl() -> ComponentDecl {
     }
 }
 
-/// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of `resolved_url`.
-pub async fn get_dir(
-    dir_string: &str,
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-) -> DirectoryProxy {
-    let mut ns_guard = await!(namespaces.lock());
-    let ns = ns_guard.get_mut(&resolved_url).unwrap();
+/// A test for capability routing.
+///
+/// All string arguments are referring to component names, not URLs, ex: "a", not "test:///a" or
+/// "test:///a_resolved".
+pub struct RoutingTest {
+    components: Vec<(&'static str, ComponentDecl)>,
+    model: Model,
+    namespaces: Namespaces,
+}
 
-    // Find the index of our directory in the namespace, and remove the directory and path. The
-    // path is removed so that the paths/dirs aren't shuffled in the namespace.
-    let index = ns.paths.iter().position(|path| path == dir_string).expect("didn't find dir");
-    let directory = ns.directories.remove(index);
-    let path = ns.paths.remove(index);
+impl RoutingTest {
+    /// Initializes a new test.
+    pub fn new(
+        root_component: &'static str,
+        components: Vec<(&'static str, ComponentDecl)>,
+        ambient: Box<dyn AmbientEnvironment>,
+    ) -> Self {
+        let mut resolver = ResolverRegistry::new();
+        let mut runner = MockRunner::new();
 
-    // Clone our directory, and then put the directory and path back on the end of the namespace so
-    // that the namespace is (somewhat) unmodified.
-    let dir_proxy = directory.into_proxy().unwrap();
-    let dir_proxy_clone = io_util::clone_directory(&dir_proxy).unwrap();
-    ns.directories.push(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel()));
-    ns.paths.push(path);
+        let mut mock_resolver = MockResolver::new();
+        for (name, decl) in &components {
+            Self::host_capabilities(name, decl.clone(), &mut runner);
+            mock_resolver.add_component(name, decl.clone());
+        }
+        resolver.register("test".to_string(), Box::new(mock_resolver));
 
-    dir_proxy_clone
+        let namespaces = runner.namespaces.clone();
+        let model = Model::new(ModelParams {
+            ambient,
+            root_component_url: format!("test:///{}", root_component),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+            hooks: Vec::new(),
+        });
+        Self { components, model, namespaces }
+    }
+
+    /// Installs a new directory at /hippo in our namespace. Does nothing if this directory already
+    /// exists.
+    pub fn install_hippo_dir(&self) {
+        let (client_chan, server_chan) = zx::Channel::create().unwrap();
+
+        let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
+        let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
+        if status != zx::sys::ZX_OK {
+            panic!(
+                "bad status returned for fdio_ns_get_installed: {}",
+                zx::Status::from_raw(status)
+            );
+        }
+        let cstr = CString::new("/hippo").unwrap();
+        let status =
+            unsafe { fdio::fdio_sys::fdio_ns_bind(ns_ptr, cstr.as_ptr(), client_chan.into_raw()) };
+        if status != zx::sys::ZX_OK && status != zx::sys::ZX_ERR_ALREADY_EXISTS {
+            panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
+        }
+        let mut out_dir = OutDir::new();
+        out_dir.add_directory();
+        out_dir.host_fn()(ServerEnd::new(server_chan));
+    }
+
+    /// Creates a dynamic child `child_decl` in `moniker`'s `collection`.
+    pub async fn create_dynamic_child<'a>(
+        &'a self,
+        moniker: AbsoluteMoniker,
+        collection: &'a str,
+        decl: ChildDecl,
+    ) {
+        let component_name = await!(Self::bind_instance(&self.model, &moniker));
+        let component_resolved_url = Self::resolved_url(&component_name);
+        await!(Self::check_namespace(
+            component_name,
+            self.namespaces.clone(),
+            self.components.clone()
+        ));
+        await!(capability_util::call_create_child(
+            component_resolved_url,
+            self.namespaces.clone(),
+            collection,
+            decl
+        ));
+    }
+
+    /// Checks a `use` declaration at `moniker` by trying to use `capability`.
+    pub async fn check_use(
+        &self,
+        moniker: AbsoluteMoniker,
+        capability: Capability,
+        should_succeed: bool,
+    ) {
+        let component_name = await!(Self::bind_instance(&self.model, &moniker));
+        let component_resolved_url = Self::resolved_url(&component_name);
+        await!(Self::check_namespace(
+            component_name,
+            self.namespaces.clone(),
+            self.components.clone()
+        ));
+        match capability {
+            Capability::Service(path) => match &path.to_string() as &str {
+                "/svc/hippo" => {
+                    await!(capability_util::call_echo_svc(
+                        path,
+                        component_resolved_url,
+                        self.namespaces.clone(),
+                        should_succeed
+                    ));
+                }
+                p => {
+                    panic!("Unexpected service capability {}", p);
+                }
+            },
+            Capability::Directory(path) => await!(capability_util::read_data(
+                path,
+                component_resolved_url,
+                self.namespaces.clone(),
+                should_succeed
+            )),
+            Capability::Storage(_) => panic!("storage capabilities are not supported"),
+        }
+    }
+
+    /// check_namespace will ensure that the paths in `namespaces` for `component_name` match the use
+    /// declarations for the the component by the same name in `components`.
+    async fn check_namespace(
+        component_name: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        components: Vec<(&str, ComponentDecl)>,
+    ) {
+        let (_, decl) = components
+            .into_iter()
+            .find(|(name, _)| name == &component_name)
+            .expect("component not in component decl list");
+        // Two services installed into the same dir will cause duplicates, so use a HashSet to remove
+        // them.
+        let expected_paths_hs: HashSet<String> = decl
+            .uses
+            .into_iter()
+            .map(|u| match u {
+                UseDecl::Directory(d) => d.target_path.to_string(),
+                UseDecl::Service(s) => s.target_path.dirname,
+                UseDecl::Storage(_) => panic!("storage capabilites are not supported"),
+            })
+            .collect();
+        let mut expected_paths = vec![];
+        expected_paths.extend(expected_paths_hs.into_iter());
+
+        let namespaces = await!(namespaces.lock());
+        let ns = namespaces
+            .get(&format!("test:///{}_resolved", component_name))
+            .expect("component not in namespace");
+        let mut actual_paths = ns.paths.clone();
+
+        expected_paths.sort_unstable();
+        actual_paths.sort_unstable();
+        assert_eq!(expected_paths, actual_paths);
+    }
+
+    /// Checks a `use /svc/fuchsia.sys2.Realm` declaration at `moniker` by calling
+    /// `BindChild`.
+    pub async fn check_use_realm(
+        &self,
+        moniker: AbsoluteMoniker,
+        bind_calls: Arc<Mutex<Vec<String>>>,
+    ) {
+        let component_name = await!(Self::bind_instance(&self.model, &moniker));
+        let component_resolved_url = Self::resolved_url(&component_name);
+        let path = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
+        await!(Self::check_namespace(
+            component_name,
+            self.namespaces.clone(),
+            self.components.clone()
+        ));
+        await!(capability_util::call_realm_svc(
+            path,
+            component_resolved_url,
+            self.namespaces.clone(),
+            bind_calls.clone(),
+        ));
+    }
+
+    /// Host all capabilities in `decl` that come from `self`.
+    fn host_capabilities(name: &str, decl: ComponentDecl, runner: &mut MockRunner) {
+        // if this decl is offering/exposing something from `Self`, let's host it
+        let mut out_dir = None;
+        for expose in decl.exposes.iter() {
+            let source = match expose {
+                ExposeDecl::Service(s) => &s.source,
+                ExposeDecl::Directory(d) => &d.source,
+            };
+            if *source == ExposeSource::Self_ {
+                Self::host_capability(&mut out_dir, &expose.clone().into());
+            }
+        }
+        for offer in decl.offers.iter() {
+            let source = match offer {
+                OfferDecl::Service(s) => &s.source,
+                OfferDecl::Directory(d) => &d.source,
+                OfferDecl::Storage(_) => panic!("storage capabilities are not supported"),
+            };
+            if *source == OfferSource::Self_ {
+                Self::host_capability(&mut out_dir, &offer.clone().into());
+            }
+        }
+        if let Some(out_dir) = out_dir {
+            runner.host_fns.insert(format!("test:///{}_resolved", name), out_dir.host_fn());
+        }
+    }
+
+    fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
+        match capability {
+            Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
+            Capability::Directory(_) => out_dir.get_or_insert(OutDir::new()).add_directory(),
+            Capability::Storage(_) => panic!("storage capabilities are not supported"),
+        }
+    }
+
+    async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
+        let expected_res: Result<(), ModelError> = Ok(());
+        assert_eq!(
+            format!("{:?}", await!(model.look_up_and_bind_instance(moniker.clone()))),
+            format!("{:?}", expected_res),
+        );
+        moniker.path().last().expect("didn't expect a root component").name().to_string()
+    }
+
+    fn resolved_url(component_name: &str) -> String {
+        format!("test:///{}_resolved", component_name)
+    }
+}
+
+/// Contains functions to use capabilities in routing tests.
+mod capability_util {
+    use super::*;
+    use cm_rust::NativeIntoFidl;
+
+    /// Looks up `resolved_url` in the namespace, and attempts to read ${dir_path}/hippo. The file
+    /// should contain the string "hippo".
+    pub async fn read_data(
+        path: CapabilityPath,
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        should_succeed: bool,
+    ) {
+        let path = path.to_string();
+        let dir_proxy = await!(get_dir(&path, resolved_url, namespaces));
+        let file = PathBuf::from("hippo");
+        let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
+        let res = await!(io_util::read_file(&file_proxy));
+
+        match should_succeed {
+            true => assert_eq!("hippo", res.expect("failed to read file")),
+            false => {
+                let err = res.expect_err("read file successfully when it should fail");
+                assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
+            }
+        }
+    }
+
+    /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
+    /// to be fidl.examples.echo.Echo.
+    pub async fn call_echo_svc(
+        path: CapabilityPath,
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        should_succeed: bool,
+    ) {
+        let dir_proxy = await!(get_dir(&path.dirname, resolved_url, namespaces));
+        let node_proxy =
+            io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
+                .expect("failed to open echo service");
+        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+        let res = await!(echo_proxy.echo_string(Some("hippos")));
+
+        match should_succeed {
+            true => {
+                assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
+            }
+            false => {
+                let err = res.expect_err("used echo service successfully when it should fail");
+                if let fidl::Error::ClientRead(status) = err {
+                    assert_eq!(status, zx::Status::PEER_CLOSED);
+                } else {
+                    panic!("unexpected error value: {}", err);
+                }
+            }
+        }
+    }
+
+    /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
+    /// to be fuchsia.sys2.Realm.
+    pub async fn call_realm_svc(
+        path: CapabilityPath,
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        bind_calls: Arc<Mutex<Vec<String>>>,
+    ) {
+        let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
+        let node_proxy =
+            io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
+                .expect("failed to open realm service");
+        let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
+        let child_ref = fsys::ChildRef { name: Some("my_child".to_string()), collection: None };
+        let (_client_chan, server_chan) = zx::Channel::create().unwrap();
+        let exposed_capabilities = ServerEnd::new(server_chan);
+        let res = await!(realm_proxy.bind_child(child_ref, exposed_capabilities));
+
+        // Check for side effects: ambient environment should have received the `bind_child`
+        // call.
+        let _ = res.expect("failed to use realm service");
+        let bind_url =
+            format!("test:///{}_resolved", await!(bind_calls.lock()).last().expect("no bind call"));
+        assert_eq!(bind_url, resolved_url);
+    }
+
+    /// Call `fuchsia.sys2.Realm.CreateChild` to create a dynamic child.
+    pub async fn call_create_child<'a>(
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        collection: &'a str,
+        child_decl: ChildDecl,
+    ) {
+        let path = CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").expect("no realm service");
+        let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
+        let node_proxy =
+            io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
+                .expect("failed to open realm service");
+        let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
+        let collection_ref = fsys::CollectionRef { name: Some(collection.to_string()) };
+        let child_decl = child_decl.native_into_fidl();
+        let res = await!(realm_proxy.create_child(collection_ref, child_decl));
+        let _ = res.expect("failed to create child");
+    }
+
+    /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of `resolved_url`.
+    async fn get_dir(
+        dir_string: &str,
+        resolved_url: String,
+        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    ) -> DirectoryProxy {
+        let mut ns_guard = await!(namespaces.lock());
+        let ns = ns_guard.get_mut(&resolved_url).unwrap();
+
+        // Find the index of our directory in the namespace, and remove the directory and path. The
+        // path is removed so that the paths/dirs aren't shuffled in the namespace.
+        let index = ns.paths.iter().position(|path| path == dir_string).expect("didn't find dir");
+        let directory = ns.directories.remove(index);
+        let path = ns.paths.remove(index);
+
+        // Clone our directory, and then put the directory and path back on the end of the namespace so
+        // that the namespace is (somewhat) unmodified.
+        let dir_proxy = directory.into_proxy().unwrap();
+        let dir_proxy_clone = io_util::clone_directory(&dir_proxy).unwrap();
+        ns.directories.push(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel()));
+        ns.paths.push(path);
+
+        dir_proxy_clone
+    }
 }
 
 /// OutDir can be used to construct and then host an out directory, containing a directory
@@ -115,12 +465,16 @@ impl OutDir {
             fasync::spawn(async move {
                 let mut pseudo_dir = directory::simple::empty();
                 if host_service {
-                    pseudo_dir.add_entry("svc",
+                    pseudo_dir
+                        .add_entry(
+                            "svc",
                             pseudo_directory! {
                                 "foo" =>
-                                    directory_broker::DirectoryBroker::new_service_broker(Box::new(echo_server_fn)),
-                            })
-                        .map_err(|(s,_)| s)
+                                    directory_broker::DirectoryBroker::new_service_broker(Box::new(
+                                            Self::echo_server_fn)),
+                            },
+                        )
+                        .map_err(|(s, _)| s)
                         .expect("failed to add svc entry");
                 }
                 if host_directory {
@@ -149,346 +503,17 @@ impl OutDir {
             });
         })
     }
-}
 
-/// Add `capability` to `out_dir`, initializing `out_dir` if required.
-fn host_capability(out_dir: &mut Option<OutDir>, capability: &Capability) {
-    match capability {
-        Capability::Service(_) => out_dir.get_or_insert(OutDir::new()).add_service(),
-        Capability::Directory(_) => out_dir.get_or_insert(OutDir::new()).add_directory(),
-        Capability::Storage(_) => panic!("storage capabilities are not supported"),
-    }
-}
-
-/// Hosts a new service on server_end that implements fidl.examples.echo.Echo
-fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
-    fasync::spawn(async move {
-        let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
-        let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-        while let Some(EchoRequest::EchoString { value, responder }) =
-            await!(stream.try_next()).unwrap()
-        {
-            responder.send(value.as_ref().map(|s| &**s)).unwrap();
-        }
-    });
-}
-
-/// Looks up `resolved_url` in the namespace, and attempts to read ${dir_path}/hippo. The file
-/// should contain the string "hippo".
-pub async fn read_data(
-    path: CapabilityPath,
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    should_succeed: bool,
-) {
-    let path = path.to_string();
-    let dir_proxy = await!(get_dir(&path, resolved_url, namespaces));
-    let file = PathBuf::from("hippo");
-    let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
-    let res = await!(io_util::read_file(&file_proxy));
-
-    match should_succeed {
-        true => assert_eq!("hippo", res.expect("failed to read file")),
-        false => {
-            let err = res.expect_err("read file successfully when it should fail");
-            assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
-        }
-    }
-}
-
-/// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
-/// to be fidl.examples.echo.Echo.
-async fn call_echo_svc(
-    path: CapabilityPath,
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    should_succeed: bool,
-) {
-    let dir_proxy = await!(get_dir(&path.dirname, resolved_url, namespaces));
-    let node_proxy =
-        io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
-            .expect("failed to open echo service");
-    let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
-    let res = await!(echo_proxy.echo_string(Some("hippos")));
-
-    match should_succeed {
-        true => assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string())),
-        false => {
-            let err = res.expect_err("used echo service successfully when it should fail");
-            if let fidl::Error::ClientRead(status) = err {
-                assert_eq!(status, zx::Status::PEER_CLOSED);
-            } else {
-                panic!("unexpected error value: {}", err);
+    /// Hosts a new service on server_end that implements fidl.examples.echo.Echo
+    fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
+        fasync::spawn(async move {
+            let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
+            let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
+            while let Some(EchoRequest::EchoString { value, responder }) =
+                await!(stream.try_next()).unwrap()
+            {
+                responder.send(value.as_ref().map(|s| &**s)).unwrap();
             }
-        }
-    }
-}
-
-/// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
-/// to be fuchsia.sys2.Realm.
-async fn call_realm_svc(
-    path: CapabilityPath,
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    bind_calls: Arc<Mutex<Vec<String>>>,
-    should_succeed: bool,
-) {
-    let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
-    let node_proxy =
-        io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
-            .expect("failed to open realm service");
-    let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
-    let child_ref = fsys::ChildRef { name: Some("my_child".to_string()), collection: None };
-    let (_client_chan, server_chan) = zx::Channel::create().unwrap();
-    let exposed_capabilities = ServerEnd::new(server_chan);
-    let res = await!(realm_proxy.bind_child(child_ref, exposed_capabilities));
-
-    match should_succeed {
-        true => {
-            // Check for side effects: ambient environment should have received the `bind_child`
-            // call.
-            let _ = res.expect("failed to use realm service");
-            let bind_url = format!(
-                "test:///{}_resolved",
-                await!(bind_calls.lock()).last().expect("no bind call")
-            );
-            assert_eq!(bind_url, resolved_url);
-        }
-        false => {
-            let _ = res.expect_err("used realm service successfully when it should fail");
-        }
-    }
-}
-
-async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
-    let expected_res: Result<(), ModelError> = Ok(());
-    assert_eq!(
-        format!("{:?}", await!(model.look_up_and_bind_instance(moniker.clone()))),
-        format!("{:?}", expected_res),
-    );
-    moniker.path().last().expect("didn't expect a root component").name().to_string()
-}
-
-fn resolved_url(component_name: &str) -> String {
-    format!("test:///{}_resolved", component_name)
-}
-
-/// Call `fuchsia.sys2.Realm.CreateChild` to create a dynamic child.
-async fn call_create_child<'a>(
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    collection: &'a str,
-    child_decl: ChildDecl,
-) {
-    let path = CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").expect("no realm service");
-    let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
-    let node_proxy =
-        io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
-            .expect("failed to open realm service");
-    let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
-    let collection_ref = fsys::CollectionRef { name: Some(collection.to_string()) };
-    let child_decl = child_decl.native_into_fidl();
-    let res = await!(realm_proxy.create_child(collection_ref, child_decl));
-    let _ = res.expect("failed to create child");
-}
-
-// Installs a new directory at /hippo in our namespace. Does nothing if this directory already
-// exists.
-pub fn install_hippo_dir() {
-    let (client_chan, server_chan) = zx::Channel::create().unwrap();
-
-    let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
-    let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
-    if status != zx::sys::ZX_OK {
-        panic!("bad status returned for fdio_ns_get_installed: {}", zx::Status::from_raw(status));
-    }
-    let cstr = CString::new("/hippo").unwrap();
-    let status =
-        unsafe { fdio::fdio_sys::fdio_ns_bind(ns_ptr, cstr.as_ptr(), client_chan.into_raw()) };
-    if status != zx::sys::ZX_OK && status != zx::sys::ZX_ERR_ALREADY_EXISTS {
-        panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
-    }
-    let mut out_dir = OutDir::new();
-    out_dir.add_directory();
-    out_dir.host_fn()(ServerEnd::new(server_chan));
-}
-
-/// check_namespace will ensure that the paths in `namespaces` for `component_name` match the use
-/// declarations for the the component by the same name in `components`.
-async fn check_namespace(
-    component_name: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    components: Vec<(&str, ComponentDecl)>,
-) {
-    let (_, decl) = components
-        .into_iter()
-        .find(|(name, _)| name == &component_name)
-        .expect("component not in component decl list");
-    // Two services installed into the same dir will cause duplicates, so use a HashSet to remove
-    // them.
-    let expected_paths_hs: HashSet<String> = decl
-        .uses
-        .into_iter()
-        .map(|u| match u {
-            UseDecl::Directory(d) => d.target_path.to_string(),
-            UseDecl::Service(s) => s.target_path.dirname,
-            UseDecl::Storage(_) => panic!("storage capabilites are not supported"),
-        })
-        .collect();
-    let mut expected_paths = vec![];
-    expected_paths.extend(expected_paths_hs.into_iter());
-
-    let namespaces = await!(namespaces.lock());
-    let ns = namespaces
-        .get(&format!("test:///{}_resolved", component_name))
-        .expect("component not in namespace");
-    let mut actual_paths = ns.paths.clone();
-
-    expected_paths.sort_unstable();
-    actual_paths.sort_unstable();
-    assert_eq!(expected_paths, actual_paths);
-}
-
-/// The inputs for a test in which a service is hosted from one component and accessed by another.
-///
-/// All string arguments are referring to component names, not URLs, ex: "a", not "test:///a" or
-/// "test:///a_resolved".
-pub struct TestInputs<'a> {
-    /// The name of the root component.
-    pub root_component: &'a str,
-    /// The use decls on a component which should be checked. The bool marks if this usage is
-    /// expected to succeed or not.
-    pub users_to_check: Vec<(AbsoluteMoniker, Capability, bool)>,
-    /// The declarations for dynamic child components:
-    /// (parent's moniker, collection name, child declaration)
-    pub dynamic_children: Vec<(AbsoluteMoniker, String, ChildDecl)>,
-    /// The component declarations that comprise the component tree
-    pub components: Vec<(&'a str, ComponentDecl)>,
-}
-
-/// Construct a capability for the hippo service.
-pub fn new_service_capability() -> Capability {
-    Capability::Service(CapabilityPath::try_from("/svc/hippo").unwrap())
-}
-
-/// Construct a capability for the ambient service fuchsia.sys2.Realm.
-pub fn new_ambient_capability() -> Capability {
-    Capability::Service(CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap())
-}
-
-/// Construct a capability for the hippo directory.
-pub fn new_directory_capability() -> Capability {
-    Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
-}
-
-/// Construct the given component topology, host `/svc/foo` and `/data/foo` from the outgoing
-/// directory of any component offering or exposing from `Self`, and attempt to use the use
-/// declarations referenced in `test.users_to_check`.
-// TODO: Break up this function. Routing tests could be written more imperatively, with separate
-// functions to add static components, add dynamic components, and test capability usage.
-pub async fn run_routing_test<'a>(test: TestInputs<'a>) {
-    let mut resolver = ResolverRegistry::new();
-    let mut runner = MockRunner::new();
-    let namespaces = runner.namespaces.clone();
-
-    // Host capabilities exposed or offered from `self`.
-    let mut mock_resolver = MockResolver::new();
-    for (name, decl) in test.components.clone() {
-        // if this decl is offering/exposing something from Self, let's host it
-        let mut out_dir = None;
-        for expose in decl.exposes.iter() {
-            let source = match expose {
-                ExposeDecl::Service(s) => &s.source,
-                ExposeDecl::Directory(d) => &d.source,
-            };
-            if *source == ExposeSource::Self_ {
-                host_capability(&mut out_dir, &expose.clone().into());
-            }
-        }
-        for offer in decl.offers.iter() {
-            let source = match offer {
-                OfferDecl::Service(s) => &s.source,
-                OfferDecl::Directory(d) => &d.source,
-                OfferDecl::Storage(_) => panic!("storage capabilities are not supported"),
-            };
-            if *source == OfferSource::Self_ {
-                host_capability(&mut out_dir, &offer.clone().into());
-            }
-        }
-        if let Some(out_dir) = out_dir {
-            runner.host_fns.insert(format!("test:///{}_resolved", name), out_dir.host_fn());
-        }
-
-        mock_resolver.add_component(name, decl);
-    }
-
-    // Set up ambient environment.
-    resolver.register("test".to_string(), Box::new(mock_resolver));
-    let (ambient, bind_calls): (Box<dyn AmbientEnvironment>, _) =
-        if test.dynamic_children.is_empty() {
-            let ambient = Box::new(MockAmbientEnvironment::new());
-            let bind_calls = ambient.bind_calls.clone();
-            (ambient, bind_calls)
-        } else {
-            // To create dynamic children, we require a RealAmbientEnvironment.
-            let ambient = Box::new(RealAmbientEnvironment::new());
-            (ambient, Arc::new(Mutex::new(vec![])))
-        };
-
-    // Create the model.
-    let model = Model::new(ModelParams {
-        ambient,
-        root_component_url: format!("test:///{}", test.root_component),
-        root_resolver_registry: resolver,
-        root_default_runner: Box::new(runner),
-        hooks: Vec::new(),
-    });
-
-    // Create dynamic children.
-    for (moniker, collection, child_decl) in test.dynamic_children {
-        let component_name = await!(bind_instance(&model, &moniker));
-        let component_resolved_url = resolved_url(&component_name);
-        await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
-        await!(call_create_child(
-            component_resolved_url,
-            namespaces.clone(),
-            &collection,
-            child_decl
-        ));
-    }
-
-    // Check uses.
-    for (moniker, capability, should_succeed) in test.users_to_check {
-        let component_name = await!(bind_instance(&model, &moniker));
-        let component_resolved_url = resolved_url(&component_name);
-        await!(check_namespace(component_name, namespaces.clone(), test.components.clone()));
-        match capability {
-            Capability::Service(path) => match &path.to_string() as &str {
-                "/svc/hippo" => {
-                    await!(call_echo_svc(
-                        path,
-                        component_resolved_url,
-                        namespaces.clone(),
-                        should_succeed
-                    ));
-                }
-                "/svc/fuchsia.sys2.Realm" => {
-                    await!(call_realm_svc(
-                        path,
-                        component_resolved_url,
-                        namespaces.clone(),
-                        bind_calls.clone(),
-                        should_succeed
-                    ));
-                }
-                p => {
-                    panic!("Unexpected service capability {}", p);
-                }
-            },
-            Capability::Directory(path) => {
-                await!(read_data(path, component_resolved_url, namespaces.clone(), should_succeed))
-            }
-            Capability::Storage(_) => panic!("storage capabilities are not supported"),
-        };
+        });
     }
 }
