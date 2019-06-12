@@ -12,7 +12,7 @@ MockSemanticActionListener::MockSemanticActionListener(
     sys::ComponentContext* context, fuchsia::ui::views::ViewRef view_ref)
     : context_(context), view_ref_(std::move(view_ref)) {
   context_->svc()->Connect(manager_.NewRequest());
-  manager_.set_error_handler([this](zx_status_t status) {
+  manager_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Cannot connect to SemanticsManager with status:"
                    << status;
   });

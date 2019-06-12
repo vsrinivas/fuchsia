@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     bool set_timestamps;
   };
   auto timestamp_pattern =
-      [output_packet_count](size_t frames_per_packet) -> std::vector<bool> {
+      [](size_t frames_per_packet) -> std::vector<bool> {
     std::vector<bool> expect_timestamp(output_packet_count, false);
     const size_t bytes_per_packet = frames_per_packet * kPcmFrameSize;
     for (size_t i = 0; i < output_packet_count; ++i) {

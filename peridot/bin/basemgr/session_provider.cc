@@ -132,7 +132,7 @@ void SessionProvider::OnSessionShutdown(
       FXL_LOG(ERROR) << "Sessionmgr restart limit reached. Considering "
                         "this an unrecoverable failure.";
       administrator_->Suspend(fuchsia::device::manager::SUSPEND_FLAG_REBOOT,
-                              [this](zx_status_t status) {
+                              [](zx_status_t status) {
                                 if (status != ZX_OK) {
                                   FXL_LOG(ERROR)
                                       << "Failed to reboot: "

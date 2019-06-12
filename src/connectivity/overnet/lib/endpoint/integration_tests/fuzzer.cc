@@ -197,6 +197,7 @@ class FuzzingUnreliableStreamLink final
         Callback<void>(ALLOCATED_CALLBACK, [weak_self = weak_from_this(), b,
                                             when, then = std::move(then),
                                             debug_self_ptr = this]() mutable {
+          (void)debug_self_ptr;
           OVERNET_TRACE(DEBUG) << debug_self_ptr << " SchedByte ready " << when
                                << " " << static_cast<int>(b);
           auto self = weak_self.lock();

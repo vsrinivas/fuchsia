@@ -517,8 +517,7 @@ TEST_F(CrashpadAgentTest, OneFeedbackDataProviderConnectionPerAnalysis) {
           out_results.push_back(std::move(result));
         });
   }
-  RunLoopUntil(
-      [&out_results, num_calls] { return out_results.size() == num_calls; });
+  RunLoopUntil([&out_results] { return out_results.size() == num_calls; });
 
   EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
   // The unbinding is asynchronous so we need to run the loop until all the

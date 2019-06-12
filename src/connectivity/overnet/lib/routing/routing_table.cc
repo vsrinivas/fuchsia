@@ -133,6 +133,7 @@ void RoutingTable::ApplyChanges(TimeStamp now, const StatusVecs& changes,
   }
   for (const auto& m : changes.links) {
     auto report_drop = [&m](const char* why) {
+      (void)m;
       OVERNET_TRACE(DEBUG) << "Drop link info: from=" << m.from
                            << " to=" << m.to << " label=" << m.local_id
                            << " version=" << m.version << ": " << why;

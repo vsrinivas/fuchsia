@@ -177,7 +177,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     // The story should have been previously created through CreateStory.
     FXL_CHECK(test_module_->is_running());
 
-    puppet_master_->DeleteStory(story_name, [this] {});
+    puppet_master_->DeleteStory(story_name, [] {});
 
     // Wait for the story to be deleted.
     RunLoopUntil([this] { return !test_module_->is_running(); });

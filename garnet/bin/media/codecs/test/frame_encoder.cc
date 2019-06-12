@@ -140,7 +140,7 @@ std::vector<FrameEncoder::EncodedFrame> FrameEncoder::EncodeFrames(
 
   client->Start();
   auto consumer_thread = std::make_unique<std::thread>(
-      [&fidl_loop, &encoded_format_details, &encoded_frames,
+      [&fidl_loop, &encoded_frames,
        expect_access_units, client = client.get()] {
         FXL_VLOG(3) << "Starting to receive frames from codec...";
         encoded_frames =

@@ -377,7 +377,7 @@ TEST_F(DataProviderImplTest,
           feedback_responses.push_back({std::move(screenshot)});
         });
   }
-  RunLoopUntil([&feedback_responses, num_calls] {
+  RunLoopUntil([&feedback_responses] {
     return feedback_responses.size() == num_calls;
   });
 
