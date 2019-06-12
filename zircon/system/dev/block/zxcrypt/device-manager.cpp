@@ -7,8 +7,10 @@
 #include <threads.h>
 
 #include <crypto/secret.h>
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -25,6 +27,27 @@
 #include "device.h"
 
 namespace zxcrypt {
+
+zx_status_t DeviceManager::Create(void* ctx, zx_device_t* parent) {
+    zx_status_t rc;
+    fbl::AllocChecker ac;
+
+    auto manager = fbl::make_unique_checked<DeviceManager>(&ac, parent);
+    if (!ac.check()) {
+        zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(DeviceManager));
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if ((rc = manager->Bind()) != ZX_OK) {
+        zxlogf(ERROR, "failed to bind: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    // devmgr is now in charge of the memory for |manager|.
+    __UNUSED auto* owned_by_devmgr_now = manager.release();
+
+    return ZX_OK;
+}
 
 zx_status_t DeviceManager::Bind() {
     zx_status_t rc;
@@ -151,25 +174,18 @@ zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_
     return ZX_OK;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = DeviceManager::Create;
+    return ops;
+}();
+
 } // namespace zxcrypt
 
-extern "C" zx_status_t zxcrypt_device_bind(void* ctx, zx_device_t* parent) {
-    zx_status_t rc;
-    fbl::AllocChecker ac;
-
-    auto manager = fbl::make_unique_checked<zxcrypt::DeviceManager>(&ac, parent);
-    if (!ac.check()) {
-        zxlogf(ERROR, "failed to allocate %zu bytes\n", sizeof(zxcrypt::DeviceManager));
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    if ((rc = manager->Bind()) != ZX_OK) {
-        zxlogf(ERROR, "failed to bind: %s\n", zx_status_get_string(rc));
-        return rc;
-    }
-
-    // devmgr is now in charge of the memory for |manager|.
-    __UNUSED auto owned_by_devmgr_now = manager.release();
-
-    return ZX_OK;
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(zxcrypt, zxcrypt::driver_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF_AUTOBIND,
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
+ZIRCON_DRIVER_END(zxcrypt)
+// clang-format on

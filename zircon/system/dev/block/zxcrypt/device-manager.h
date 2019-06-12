@@ -30,6 +30,8 @@ public:
     ~DeviceManager() = default;
     DISALLOW_COPY_ASSIGN_AND_MOVE(DeviceManager);
 
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
+
     // Adds the device
     zx_status_t Bind();
 
