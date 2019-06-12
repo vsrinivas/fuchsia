@@ -12,15 +12,16 @@ namespace utils {
 
 namespace {
 
-bool compare_id_to_words(std::string id, std::string lowercase_words_string) {
-    std::ostringstream ss;
+bool compare_id_to_words(std::string id, std::string expected_lowercase_words) {
+    std::ostringstream actual;
     for (auto word : id_to_words(id)) {
-        if (ss.tellp() > 0) {
-            ss << " ";
+        if (actual.tellp() > 0) {
+            actual << " ";
         }
-        ss << word;
+        actual << word;
     }
-    ASSERT_STRING_EQ(ss.str(), lowercase_words_string, std::string("Failed for " + id).c_str());
+    ASSERT_STRING_EQ(expected_lowercase_words, actual.str(),
+                     std::string("Failed for " + id).c_str());
     return true;
 }
 
@@ -63,6 +64,23 @@ bool id_to_words() {
                         "name min len");
     compare_id_to_words("OnPress",
                         "on press");
+    compare_id_to_words("URLLoader",
+                        "url loader");
+    compare_id_to_words("PPPOE",
+                        "pppoe");
+    compare_id_to_words("PPP_O_E",
+                        "ppp o e");
+    compare_id_to_words("PPP_o_E",
+                        "ppp o e");
+
+    // Note the next two tests have expected results that may seem
+    // counter-intuitive, but if IDs like "URLLoader" are expected to
+    // translate to the words "url loader", then these translations
+    // are consistent.
+    compare_id_to_words("PppOE",
+                        "ppp oe");
+    compare_id_to_words("PPPoE",
+                        "pp po e");
 
     END_TEST;
 }

@@ -78,8 +78,6 @@ std::vector<std::string> id_to_words(const std::string& astr) {
 }
 
 std::vector<std::string> id_to_words(const std::string& astr, std::set<std::string> stop_words) {
-    // TODO(fxb/FIDL-573): Add support for mixed case with underscores, as in
-    // the example:  const int kAndroid8_0_0 = 24; // Android 8.0.0
     std::string str = strip_konstant_k(astr);
     std::vector<std::string> words;
     std::string word;
