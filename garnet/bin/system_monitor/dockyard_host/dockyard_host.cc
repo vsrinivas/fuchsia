@@ -127,12 +127,10 @@ DockyardHost::GetSampleStringsForIds(
     return {};
   }
   std::unique_ptr<AsyncQuery> query = future->get();
-#ifdef VERBOSE_OUTPUT
-  GT_LOG(INFO) << "GetSampleStringsForIds query "
+  GT_LOG(DEBUG) << "GetSampleStringsForIds query "
                << dockyard::DebugPrintQuery(dockyard_, query->request,
                                             query->response)
                       .str();
-#endif  // VERBOSE_OUTPUT
   std::vector<const std::string> result;
   for (const auto& sample_values : query->response.data_sets) {
     std::string string_as_path;
@@ -147,6 +145,7 @@ DockyardHost::GetSampleStringsForIds(
 
 void DockyardHost::OnConnection(const std::string& device_name) {
   is_connected_ = true;
+  GT_LOG(DEBUG) << "Connection from " << device_name;
 
   // This might not be the right choice for all clients. For this application
   // starting fresh with the new connection is a reasonable approach.
@@ -176,14 +175,14 @@ void DockyardHost::OnConnection(const std::string& device_name) {
 
 void DockyardHost::OnPaths(const std::vector<dockyard::PathInfo>& add,
                            const std::vector<dockyard::DockyardId>& remove) {
-  GT_LOG(INFO) << "OnPaths";
+  GT_LOG(DEBUG) << "OnPaths";
   for (const auto& path_info : add) {
-    GT_LOG(INFO) << "  add " << path_info.id << ": " << path_info.path;
+    GT_LOG(DEBUG) << "  add " << path_info.id << ": " << path_info.path;
     path_to_id_.emplace(path_info.path, path_info.id);
     id_to_path_.emplace(path_info.id, path_info.path);
   }
   for (const auto& dockyard_id : remove) {
-    GT_LOG(INFO) << "  remove " << dockyard_id;
+    GT_LOG(DEBUG) << "  remove " << dockyard_id;
     auto search = id_to_path_.find(dockyard_id);
     if (search != id_to_path_.end()) {
       path_to_id_.erase(search->second);

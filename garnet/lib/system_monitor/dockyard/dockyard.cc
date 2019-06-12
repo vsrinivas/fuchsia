@@ -302,6 +302,7 @@ void Dockyard::StopCollectingFromDevice() {
 void Dockyard::Initialize() {
   std::lock_guard<std::mutex> guard(mutex_);
   if (server_thread_.joinable()) {
+    GT_LOG(INFO) << "Dockyard server already initialized";
     return;
   }
 

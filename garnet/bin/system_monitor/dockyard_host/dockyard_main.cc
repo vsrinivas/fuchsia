@@ -6,15 +6,14 @@
 #include <thread>
 
 #include "garnet/bin/system_monitor/dockyard_host/dockyard_host.h"
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings_command_line.h"
+#include "garnet/lib/system_monitor/gt_log.h"
 
-int main(int argc, char** argv) {
-  FXL_LOG(INFO) << "Starting dockyard host";
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
-    exit(1);  // General error.
+int main(int argc, const char* const* argv) {
+  if (!gt::SetUpLogging(argc, argv)) {
+    GT_LOG(FATAL) << "Invalid command line arguments.";
+    exit(1);
   }
+  GT_LOG(INFO) << "Starting dockyard host";
 
   DockyardHost host;
   host.StartCollectingFrom("");
@@ -23,6 +22,6 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     host.Dockyard().ProcessRequests();
   }
-  FXL_LOG(INFO) << "Stopping dockyard host";
+  GT_LOG(INFO) << "Stopping dockyard host";
   exit(0);
 }

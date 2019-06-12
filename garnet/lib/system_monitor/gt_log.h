@@ -79,7 +79,8 @@ class Logger {
 
 // Initialize the logging systems. The parameters are similar to those passed to
 // main().
-void SetUpLogging(int argc, const char* argv[]);
+// Returns true on success.
+bool SetUpLogging(int argc, const char* const * argv);
 
 // Provides an ostream to send output to. Avoid calling this function directly.
 // Use the GT_LOG macro provided below.

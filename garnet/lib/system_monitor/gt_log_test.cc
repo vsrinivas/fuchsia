@@ -71,6 +71,33 @@ TEST_F(GtLogTest, BadInput) {
   EXPECT_EQ("[UNKNOWN]:-1: carrot\n dog\n", test_stream.str());
 }
 
+TEST_F(GtLogTest, SetUpLogging) {
+#define ARRAY_SIZE(a)  ( sizeof(a) / sizeof(*(a)) )
+  {
+    EXPECT_EQ(gt::g_log_level, INFO);
+    const char* args[] = { "log_test", "foo", "bar" };
+    EXPECT_TRUE(SetUpLogging(ARRAY_SIZE(args), args));
+    // No log setting was changed.
+    EXPECT_EQ(gt::g_log_level, INFO);
+  }
+  {
+    EXPECT_EQ(gt::g_log_level, INFO);
+    const char* args[] = { "log_test", "--verbose" };
+    EXPECT_TRUE(SetUpLogging(ARRAY_SIZE(args), args));
+    EXPECT_EQ(gt::g_log_level, DEBUG);
+    gt::g_log_level = INFO;
+  }
+  {
+    EXPECT_EQ(gt::g_log_level, INFO);
+    // Values compound.
+    const char* args[] = { "log_test", "--quiet", "--quiet" };
+    EXPECT_TRUE(SetUpLogging(ARRAY_SIZE(args), args));
+    EXPECT_EQ(gt::g_log_level, ERROR);
+    gt::g_log_level = INFO;
+  }
+#undef ARRAY_SIZE
+}
+
 }  // namespace
 
 }  // namespace gt
