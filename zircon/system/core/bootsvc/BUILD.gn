@@ -2,7 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bootsvc") {
+import("$zx/public/gn/package.gni")
+import("$zx/public/gn/zbi.gni")
+
+package("bootsvc") {
+  deps = [
+    ":bin",
+  ]
+  data_deps = [
+    # When this package() is included in a zbi(), the cmdline
+    # entry to set userboot.root will be included too.
+    ":cmdline",
+
+    # At runtime, bootsvc launches devcoordinator, so it needs to be in the
+    # zbi() as well.  Note this is in data_deps of the package() rather
+    # than the executable() so that as long as devcoordinator is just an
+    # executable() target itself, it will just go into the zbi() and not
+    # into this package().  When devcoordinator becomes a package() target
+    # itself, then having this on either the package() or the executable()
+    # will have the same effect: just include that whole package() in any
+    # zbi() that contains this one, but don't include anything related to
+    # devcoordinator into this package itself.
+    "$zx/system/core/devmgr/devcoordinator",
+  ]
+}
+
+zbi_input("cmdline") {
+  visibility = [ ":*" ]
+  type = "cmdline"
+  args = [ "--entry=userboot.root=${bootfs_package_prefix}bootsvc" ]
+}
+
+executable("bin") {
+  output_name = "bootsvc"
   sources = [
     "bootfs-loader-service.cpp",
     "bootfs-loader-service.h",
@@ -35,10 +67,6 @@ executable("bootsvc") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/lz4",
-  ]
-
-  data_deps = [
-    "$zx/system/core/devmgr/devcoordinator",
   ]
 }
 

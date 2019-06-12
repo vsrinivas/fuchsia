@@ -9,11 +9,11 @@
 
 #include <elf.h>
 #include <elfload/elfload.h>
+#include <stdbool.h>
+#include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <stdbool.h>
-#include <string.h>
 
 #define INTERP_PREFIX "lib/"
 
@@ -118,20 +118,15 @@ static void stuff_loader_bootstrap(zx_handle_t log,
         [BOOTSTRAP_THREAD] = ZX_HANDLE_INVALID,
         [BOOTSTRAP_LOADER_SVC] = ZX_HANDLE_INVALID,
     };
-    check(log, zx_handle_duplicate(log, ZX_RIGHT_SAME_RIGHTS,
-                                   &handles[BOOTSTRAP_LOGGER]),
+    check(log, zx_handle_duplicate(log, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]),
           "zx_handle_duplicate failed");
-    check(log, zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS,
-                                   &handles[BOOTSTRAP_PROC]),
+    check(log, zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]),
           "zx_handle_duplicate failed");
-    check(log, zx_handle_duplicate(root_vmar, ZX_RIGHT_SAME_RIGHTS,
-                                   &handles[BOOTSTRAP_ROOT_VMAR]),
+    check(log, zx_handle_duplicate(root_vmar, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_ROOT_VMAR]),
           "zx_handle_duplicate failed");
-    check(log, zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS,
-                                   &handles[BOOTSTRAP_THREAD]),
+    check(log, zx_handle_duplicate(thread, ZX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_THREAD]),
           "zx_handle_duplicate failed");
-    check(log, zx_channel_create(0, loader_svc,
-                                 &handles[BOOTSTRAP_LOADER_SVC]),
+    check(log, zx_channel_create(0, loader_svc, &handles[BOOTSTRAP_LOADER_SVC]),
           "zx_channel_create failed");
 
     zx_status_t status = zx_channel_write(
@@ -140,11 +135,13 @@ static void stuff_loader_bootstrap(zx_handle_t log,
           "zx_channel_write of loader bootstrap message failed");
 }
 
-zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
-                           zx_handle_t vmar, zx_handle_t thread,
+zx_vaddr_t elf_load_bootfs(zx_handle_t log,
+                           struct bootfs* fs, const char* root_prefix,
+                           zx_handle_t proc, zx_handle_t vmar,
+                           zx_handle_t thread,
                            const char* filename, zx_handle_t to_child,
                            size_t* stack_size, zx_handle_t* loader_svc) {
-    zx_handle_t vmo = bootfs_open(log, "program", fs, filename);
+    zx_handle_t vmo = bootfs_open(log, "program", fs, root_prefix, filename);
 
     uintptr_t interp_off = 0;
     size_t interp_len = 0;
@@ -164,7 +161,7 @@ zx_vaddr_t elf_load_bootfs(zx_handle_t log, struct bootfs *fs, zx_handle_t proc,
         printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
 
         zx_handle_t interp_vmo =
-            bootfs_open(log, "dynamic linker", fs, interp);
+            bootfs_open(log, "dynamic linker", fs, root_prefix, interp);
         zx_handle_t interp_vmar;
         entry = load(log, interp, vmar, interp_vmo,
                      NULL, NULL, &interp_vmar, NULL, true, true);

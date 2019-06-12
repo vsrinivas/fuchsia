@@ -7,6 +7,9 @@
 #include <zircon/types.h>
 
 enum option {
+    OPTION_ROOT,
+#define OPTION_ROOT_STRING "userboot.root"
+#define OPTION_ROOT_DEFAULT ""
     OPTION_FILENAME,
 #define OPTION_FILENAME_STRING "userboot"
 #define OPTION_FILENAME_DEFAULT "bin/bootsvc"
@@ -23,4 +26,4 @@ struct options {
     const char* value[OPTION_MAX];
 };
 
-void parse_options(zx_handle_t log, struct options *o, char** strings);
+void parse_options(zx_handle_t log, struct options* o, char** strings);

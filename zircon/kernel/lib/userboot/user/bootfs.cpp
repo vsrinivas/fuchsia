@@ -5,11 +5,11 @@
 #include "bootfs.h"
 #include "util.h"
 
+#include <string.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/syscalls.h>
-#include <string.h>
 
-void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs *fs) {
+void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs* fs) {
     uint64_t size;
     zx_status_t status = zx_vmo_get_size(vmo, &size);
     check(log, status, "zx_vmo_get_size failed on bootfs vmo\n");
@@ -21,12 +21,12 @@ void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct boo
     status = zx_handle_duplicate(
         vmo,
         ZX_RIGHT_READ | ZX_RIGHT_MAP |
-        ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
+            ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
         &fs->vmo);
     check(log, status, "zx_handle_duplicate failed on bootfs VMO handle\n");
 }
 
-void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs *fs) {
+void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs* fs) {
     zx_status_t status = zx_vmar_unmap(vmar, (uintptr_t)fs->contents, fs->len);
     check(log, status, "zx_vmar_unmap failed\n");
     status = zx_handle_close(fs->vmo);
@@ -34,7 +34,8 @@ void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs *fs) {
 }
 
 static const bootfs_entry_t* bootfs_search(zx_handle_t log,
-                                           struct bootfs *fs,
+                                           struct bootfs* fs,
+                                           const char* root_prefix,
                                            const char* filename) {
     const std::byte* p = fs->contents;
 
@@ -45,6 +46,7 @@ static const bootfs_entry_t* bootfs_search(zx_handle_t log,
     if ((hdr->magic != BOOTFS_MAGIC) || (hdr->dirsize > fs->len))
         fail(log, "bootfs bad magic or size");
 
+    size_t prefix_len = strlen(root_prefix);
     size_t filename_len = strlen(filename) + 1;
 
     p += sizeof(bootfs_header_t);
@@ -57,9 +59,10 @@ static const bootfs_entry_t* bootfs_search(zx_handle_t log,
         if ((e->name_len < 1) || (sz > avail))
             fail(log, "bootfs has bogus namelen in header");
 
-        if (e->name_len == filename_len) {
-            if (!memcmp(e->name, filename, filename_len))
-                return e;
+        if (e->name_len == prefix_len + filename_len &&
+            !memcmp(e->name, root_prefix, prefix_len) &&
+            !memcmp(&e->name[prefix_len], filename, filename_len)) {
+            return e;
         }
 
         p += sz;
@@ -70,10 +73,12 @@ static const bootfs_entry_t* bootfs_search(zx_handle_t log,
 }
 
 zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
-                        struct bootfs *fs, const char* filename) {
-    printl(log, "searching bootfs for '%s'", filename);
+                        struct bootfs* fs,
+                        const char* root_prefix,
+                        const char* filename) {
+    printl(log, "searching bootfs for '%s%s'", root_prefix, filename);
 
-    const bootfs_entry_t* e = bootfs_search(log, fs, filename);
+    const bootfs_entry_t* e = bootfs_search(log, fs, root_prefix, filename);
     if (e == NULL) {
         printl(log, "file not found");
         return ZX_HANDLE_INVALID;
@@ -99,7 +104,7 @@ zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
     status = zx_handle_replace(
         vmo,
         ZX_RIGHT_READ | ZX_RIGHT_MAP |
-        ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
+            ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY,
         &vmo);
     if (status != ZX_OK)
         fail(log, "zx_handle_replace failed: %d", status);

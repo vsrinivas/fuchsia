@@ -13,8 +13,9 @@ struct bootfs {
     size_t len;
 };
 
-void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs *fs);
-void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs *fs);
+void bootfs_mount(zx_handle_t vmar, zx_handle_t log, zx_handle_t vmo, struct bootfs* fs);
+void bootfs_unmount(zx_handle_t vmar, zx_handle_t log, struct bootfs* fs);
 
 zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
-                        struct bootfs *fs, const char* filename);
+                        struct bootfs* fs, const char* root_prefix,
+                        const char* filename);

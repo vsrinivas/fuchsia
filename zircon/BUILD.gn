@@ -257,7 +257,7 @@ foreach(cpu, standard_fuchsia_cpus) {
       ]
     }
 
-    zbi_input("legacy-image-$cpu") {
+    zbi("legacy-image-$cpu") {
       output_dir = root_build_dir
       testonly = true
       cpu = cpu
@@ -533,6 +533,44 @@ build_api_module("legacy_images") {
   foreach(cpu, standard_fuchsia_cpus) {
     deps += [ ":legacy-$cpu" ]
   }
+}
+
+# Packages defined in the build.
+#
+# Type: list(scope)
+#
+#   * name
+#     - Required: Name of the package.
+#     - Type: string
+#
+#   * label
+#     - Required: GN label of the package() target.
+#     - Type: label_with_toolchain
+#
+#   * cpu, os
+#     - Required: $current_cpu and $current_os values, respectively, for
+#       which this package is intended.
+#     - Type: string
+#
+#   * manifest
+#     - Required: Manifest file of the package's sandbox filesystem contents.
+#     - Type: path relative to $root_build_dir
+#
+#   * tags
+#     - Optional: List of tags to associate with the package.
+#     - Type: list(string)
+#
+#   * testonly
+#     - Optional: True is this package should never be in a production build.
+#     - Type: bool
+#     - Default: false
+#
+build_api_module("packages") {
+  testonly = true
+  data_keys = [ "packages" ]
+  deps = [
+    ":all-cpu",
+  ]
 }
 
 # This describes all the generated source files in the build.

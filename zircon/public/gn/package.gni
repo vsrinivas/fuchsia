@@ -1,0 +1,114 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("manifest.gni")
+
+# Each `package(target_name)` in zbi() deps populates BOOTFS at
+# "$bootfs_package_prefix$target_name/..."
+bootfs_package_prefix = "pkg/"
+
+# Describe a Fuchsia package.
+#
+# A package is really just a name and a package filesystem.
+# TODO(BLD-353): Figure out what else it should be. How do components work?
+#
+# The main functions of a package() target are to generate a manifest file of
+# its package filesystem contents, and to depend on targets that identify
+# build artifacts or assets that go into the filesystem.  The dependency graph
+# reaching resource(), executable(), etc. will cause those files to be built
+# as necessary and included in the package filesystem according to their
+# `install_path` variables (or `outputs` for resource() and friends).  See
+# manifest_file() for details on how the manifest is collected.
+#
+# A package() target acts like a zbi_input() target, so it can be used in the
+# dependency graph of zbi() or zbi_input() targets to build the package
+# filesystem into the BOOTFS as a subtree under the package name.  The exact
+# directory name is "$bootfs_package_prefix$output_name".
+#
+# TODO(BLD-353): In future there will also be targets to build things like
+# blobfs images and pkgfs/pkgsvr indices from a dependency graph reaching
+# package() targets.
+#
+# Parameters
+#
+#   * data_deps
+#     - Optional: Has no effect on this target, but dependents will depend on
+#     these targets.  For example, it makes sense to list another package()
+#     target here if any set of packages including _this_ package() should
+#     also include _that_ package().
+#     - Type: list(label)
+#
+#   * deps, manifest
+#     - Optional: See manifest_file().  These contribute to the package
+#     filesystem manifest.  Often $deps is all a package() needs to set.
+#
+#   * output_name
+#     - Optional: Name of the package.  This must be unique among all packages
+#     installed on a single system.
+#     - Type: string
+#     - Default: target_name
+#
+#   * tags
+#     - Optional: List of tags to annotate `metadata.packages`.
+#     - Type: list(string)
+#
+template("package") {
+  manifest_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "manifest",
+                             "output_name",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    manifest_file = "$target_gen_dir/$output_name.manifest"
+
+    metadata = {
+      package_barrier = []
+      package_names = []
+      packages = []
+      zbi_bootfs_manifest = []
+      zbi_input_args = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      package_names += [ output_name ]
+      packages += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = output_name
+          cpu = current_cpu
+          os = current_os
+          manifest = rebase_path(manifest_file, root_build_dir)
+          forward_variables_from(invoker,
+                                 [
+                                   "tags",
+                                   "testonly",
+                                 ])
+        },
+      ]
+
+      zbi_bootfs_manifest += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          prefix = "$bootfs_package_prefix$output_name"
+          path = rebase_path(manifest_file, root_build_dir)
+        },
+      ]
+      zbi_input_args += [
+        "--files",
+        "--prefix=$bootfs_package_prefix$output_name",
+        rebase_path(manifest_file, root_build_dir),
+      ]
+    }
+  }
+}

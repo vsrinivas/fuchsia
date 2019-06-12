@@ -95,6 +95,7 @@ template("zbi_input") {
     metadata = {
       # TODO(mcgrathr): seems to tickle a gn bug, see below
       #zbi_barrier = []
+      zbi_bootfs_manifest = []
       zbi_input_args = []
 
       if (defined(invoker.metadata)) {
@@ -112,10 +113,16 @@ template("zbi_input") {
       if (defined(invoker.type) && invoker.type != "") {
         zbi_input_args += [ "--type=${invoker.type}" ]
       } else if (defined(invoker.args) || defined(invoker.sources)) {
-        # The implicit type is always --files, and needs to be reset in
-        # case the previous `zbi_input_args` list collected left a
-        # different `--type=...` as the last state.
-        zbi_input_args += [ "--files" ]
+        zbi_input_args += [
+          # The implicit type is always --files, and needs to be reset in
+          # case the previous `zbi_input_args` list collected left a
+          # different `--type=...` as the last state.
+          "--files",
+
+          # Following $args and $sources entries shouldn't get a
+          # previously-set prefix.
+          "--prefix=",
+        ]
       }
 
       # Explicit $args come first, for e.g. "-u" or "-g" to affect inputs.
@@ -135,6 +142,13 @@ template("zbi_input") {
         "--prefix=$prefix",
         "--files",
         rebase_path(manifest_file, root_build_dir),
+      ]
+      zbi_bootfs_manifest += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          prefix = prefix
+          path = rebase_path(manifest_file, root_build_dir)
+        },
       ]
     }
   }
@@ -182,9 +196,14 @@ template("zbi") {
   input_target = "_zbi.input.$target_name"
   rspfile_target = "_zbi.rsp.$target_name"
   rspfile = "$target_gen_dir/$target_name.zbi.rsp"
+  json_target = "_zbi.manifest.$target_name"
+  json_file = "$target_gen_dir/$target_name.manifest.json"
 
   zbi_input(input_target) {
-    visibility = [ ":$rspfile_target" ]
+    visibility = [
+      ":$rspfile_target",
+      ":$json_target",
+    ]
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -237,6 +256,35 @@ template("zbi") {
     output_conversion = "list lines"
   }
 
+  # Generate a JSON file that describes all the separate manifest files
+  # that feed into the BOOTFS construction.  This could be used to produce
+  # a single flat manifest, though we don't need one to produce the ZBI.
+  # The same information is in the zbi_input_args metadata that feeds into
+  # the response file (above) in the form of --prefix=... switch and
+  # manifest file arguments.
+  generated_file(json_target) {
+    visibility = [ ":$zbi_target" ]
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":$input_target",
+    ]
+    outputs = [
+      json_file,
+    ]
+    data_keys = [ "zbi_bootfs_manifest" ]
+    walk_keys = [ "zbi_barrier" ]
+    output_conversion = "json"
+    metadata = {
+      images = [
+        {
+          name = "$zbi_target.bootfs"
+          type = "json"
+          path = rebase_path(json_file, root_build_dir)
+        },
+      ]
+    }
+  }
+
   host_tool_action(zbi_target) {
     forward_variables_from(invoker,
                            [
@@ -246,6 +294,7 @@ template("zbi") {
                              "testonly",
                            ])
     deps = [
+      ":$json_target",
       ":$rspfile_target",
     ]
     outputs = [
@@ -284,8 +333,19 @@ template("zbi") {
     }
 
     metadata = {
+      images = []
+      zbi_input_args = []
+
+      # Another zbi() target that depends on this one will include this ZBI as
+      # input, but not this ZBI's inputs.
+      zbi_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
       # For the //:images build_api_module().
-      images = [
+      images += [
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = output_name
@@ -300,21 +360,8 @@ template("zbi") {
       # zbi_input() with `type = "zbi"` and $sources of this target's $outputs.
       # Thus a zbi() target can be a dependency of another zbi() target to
       # combine them without requiring an intervening zbi_input() target.
-      zbi_input_args =
+      zbi_input_args +=
           [ "--type=container" ] + rebase_path(outputs, root_build_dir)
-
-      # Another zbi() target that depends on this one will include this ZBI as
-      # input, but not this ZBI's inputs.
-      zbi_barrier = []
-
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata,
-                               "*",
-                               [
-                                 "images",
-                                 "zbi_input_args",
-                               ])
-      }
     }
   }
 }

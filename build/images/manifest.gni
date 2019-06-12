@@ -22,10 +22,12 @@ declare_args() {
   extra_manifest_args = []
 }
 
+zircon_boot_manifests = []
 foreach(image, zircon_images) {
   if (image.type == "manifest") {
-    if (image.name == "legacy-image-$target_cpu") {
-      zircon_boot_manifests = [ "$zircon_root_build_dir/${image.path}" ]
+    if (image.name == "legacy-image-$target_cpu" ||
+        (image.cpu == target_cpu && image.name == "bootsvc")) {
+      zircon_boot_manifests += [ "$zircon_root_build_dir/${image.path}" ]
     } else if (image.name == "legacy-aux-$target_cpu") {
       zircon_aux_manifests = [ "$zircon_root_build_dir/${image.path}" ]
     }

@@ -403,13 +403,25 @@ normal userspace startup process (launching the device manager, etc).
 It is useful for alternate boot modes (like a factory test or system
 unit tests).
 
-The pathname used here is relative to `/boot`, so it should not start with
-a `/` prefix.
+The pathname used here is relative to `userboot.root` (below), if set,
+or else relative to the root of the BOOTFS (which later is ordinarily
+seen at `/boot`).  It should not start with a `/` prefix.
 
-Note that this option does not work for executables that are linked with
-libraries other than libc and the dynamic linker.
+If this executable uses `PT_INTERP` (i.e. the dynamic linker), the userboot
+process provides a [loader service](program_loading.md#the-loader-service) to
+resolve the `PT_INTERP` (dynamic linker) name and any shared library names it
+may request.  That service simply looks in the `lib/` directory (under
+`userboot.root`) in the BOOTFS.
 
 Example: `userboot=bin/core-tests`
+
+## userboot.root=\<path>
+
+This sets a "root" path prefix within the BOOTFS where the `userboot` path and
+the `lib/` directory for the loader service will be found.  By default, there
+is no prefix so paths are treated as exact relative paths from the root of the
+BOOTFS.  e.g. with `userboot.root=pkg/foo` and `userboot=bin/app`, the names
+found in the BOOTFS will be `pkg/foo/bin/app`, `pkg/foo/lib/ld.so.1`, etc.
 
 ## userboot.reboot
 

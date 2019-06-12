@@ -7,13 +7,16 @@
 
 #include <string.h>
 
-#define OPTION_DEFAULT(option) \
-    case OPTION_##option: value = OPTION_##option##_DEFAULT; break
+#define OPTION_DEFAULT(option)             \
+    case OPTION_##option:                  \
+        value = OPTION_##option##_DEFAULT; \
+        break
 
 static void initialize_options(struct options* o) {
     for (int i = 0; i < OPTION_MAX; ++i) {
         const char* value = NULL;
         switch (option(i)) {
+            OPTION_DEFAULT(ROOT);
             OPTION_DEFAULT(FILENAME);
             OPTION_DEFAULT(SHUTDOWN);
             OPTION_DEFAULT(REBOOT);
@@ -24,10 +27,10 @@ static void initialize_options(struct options* o) {
     }
 }
 
-#define OPTION_STRING(option)                               \
-    case OPTION_##option:                                   \
-        string = OPTION_##option##_STRING;                  \
-        string_len = sizeof(OPTION_##option##_STRING) - 1;  \
+#define OPTION_STRING(option)                              \
+    case OPTION_##option:                                  \
+        string = OPTION_##option##_STRING;                 \
+        string_len = sizeof(OPTION_##option##_STRING) - 1; \
         break
 
 static void apply_option(struct options* o, const char* arg) {
@@ -36,6 +39,7 @@ static void apply_option(struct options* o, const char* arg) {
         const char* string = NULL;
         size_t string_len = 0;
         switch (option(i)) {
+            OPTION_STRING(ROOT);
             OPTION_STRING(FILENAME);
             OPTION_STRING(SHUTDOWN);
             OPTION_STRING(REBOOT);
@@ -50,7 +54,7 @@ static void apply_option(struct options* o, const char* arg) {
     }
 }
 
-void parse_options(zx_handle_t log, struct options *o, char** strings) {
+void parse_options(zx_handle_t log, struct options* o, char** strings) {
     initialize_options(o);
     for (char** sp = strings; *sp != NULL; ++sp) {
         const char* arg = *sp;

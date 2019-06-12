@@ -9,10 +9,12 @@
 #include "userboot-elf.h"
 #include "util.h"
 
+#include <climits>
 #include <cstring>
 #include <lib/elf-psabi/sp.h>
 #include <lib/processargs/processargs.h>
 #include <lib/zircon-internal/default_stack_size.h>
+#include <lib/zx/channel.h>
 #include <sys/param.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
@@ -35,7 +37,8 @@
 }
 
 static void load_child_process(zx_handle_t log,
-                               const struct options* o, struct bootfs* bootfs,
+                               const struct options* o,
+                               struct bootfs* bootfs, const char* root_prefix,
                                zx_handle_t vdso_vmo, zx_handle_t proc,
                                zx_handle_t vmar, zx_handle_t thread,
                                zx_handle_t to_child,
@@ -43,7 +46,7 @@ static void load_child_process(zx_handle_t log,
                                size_t* stack_size, zx_handle_t* loader_svc) {
     // Examine the bootfs image and find the requested file in it.
     // This will handle a PT_INTERP by doing a second lookup in bootfs.
-    *entry = elf_load_bootfs(log, bootfs, proc, vmar, thread,
+    *entry = elf_load_bootfs(log, bootfs, root_prefix, proc, vmar, thread,
                              o->value[OPTION_FILENAME], to_child, stack_size,
                              loader_svc);
 
@@ -61,8 +64,7 @@ static void load_child_process(zx_handle_t log,
 static zx_handle_t reserve_low_address_space(zx_handle_t log,
                                              zx_handle_t root_vmar) {
     zx_info_vmar_t info;
-    check(log, zx_object_get_info(root_vmar, ZX_INFO_VMAR,
-                                  &info, sizeof(info), NULL, NULL),
+    check(log, zx_object_get_info(root_vmar, ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
           "zx_object_get_info failed on child root VMAR handle");
     zx_handle_t vmar;
     uintptr_t addr;
@@ -221,6 +223,29 @@ enum {
     struct bootfs bootfs;
     bootfs_mount(vmar_self, log, bootfs_vmo, &bootfs);
 
+    // Canonicalize the (possibly empty) userboot.root option string so that
+    // it never starts with a slash but always ends with a slash unless it's
+    // empty.  That lets us use it as a simple prefix on the full file name
+    // strings in the BOOTFS directory.
+    const char* root_option = o.value[OPTION_ROOT];
+    while (*root_option == '/') {
+        ++root_option;
+    }
+    size_t root_len = strlen(root_option);
+    char root_prefix[NAME_MAX + 1];
+    if (root_len >= sizeof(root_prefix) - 1) {
+        fail(log, "`userboot.root` string too long (%zu > %zu)",
+             root_len, sizeof(root_prefix) - 1);
+    }
+    memcpy(root_prefix, root_option, root_len);
+    while (root_len > 0 && root_prefix[root_len - 1] == '/') {
+        --root_len;
+    }
+    if (root_len > 0) {
+        root_prefix[root_len++] = '/';
+    }
+    root_prefix[root_len] = '\0';
+
     // Make the channel for the bootstrap message.
     zx_handle_t to_child;
     zx_handle_t child_start_handle;
@@ -245,10 +270,10 @@ enum {
 
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
-    zx_handle_t loader_service_channel = ZX_HANDLE_INVALID;
-    load_child_process(log, &o, &bootfs, vdso_vmo, proc, vmar,
+    zx::channel loader_service_channel;
+    load_child_process(log, &o, &bootfs, root_prefix, vdso_vmo, proc, vmar,
                        thread, to_child, &entry, &vdso_base, &stack_size,
-                       &loader_service_channel);
+                       loader_service_channel.reset_and_get_address());
 
     // Allocate the stack for the child.
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
@@ -315,8 +340,10 @@ enum {
     printl(log, "process %s started.", o.value[OPTION_FILENAME]);
 
     // Now become the loader service for as long as that's needed.
-    if (loader_service_channel != ZX_HANDLE_INVALID)
-        loader_service(log, &bootfs, loader_service_channel);
+    if (loader_service_channel) {
+        LoaderService ldsvc(log, &bootfs, root_prefix);
+        ldsvc.Serve(std::move(loader_service_channel));
+    }
 
     // All done with bootfs!
     bootfs_unmount(vmar_self, log, &bootfs);

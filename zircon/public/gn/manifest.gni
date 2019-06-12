@@ -30,10 +30,7 @@
 #   deps
 #     Optional: Dependencies examined for metadata.  Transitive dependencies
 #     from here defining `metadata.manifest_lines` contribute to the manifest,
-#     pruned at targets that set `metadata.manifest_barrier`.  Likewise,
-#     `metadata.manifest_files` contributes manifests (like $sources).
-#     Each manifest_file() target itself contributes that way, so another
-#     manifest_file() in the deps will be folded into this one.
+#     pruned at targets that set `metadata.manifest_barrier`.
 #     Type: list(label)
 #
 #   output_dir
@@ -55,12 +52,12 @@
 #     Optional: Fixed entries for the manifest file.  These augment the
 #     entries collected from `manifest_lines` metadata.  Each entry is
 #     either a string that's a literal manifest entry line, or a scope
-#     with $sources and $outputs like a resource() target.
+#     with $sources and $outputs like a resource() target.  **Note:**
+#     This does not express any dependency on the $sources files;
+#     they will be noted in a depfile for incremental builds, but
+#     if they are created by the build the actions that create them
+#     must also be in $deps and this is not enforced by GN.
 #     Type: list(string or scope)
-#
-#   sources
-#     Optional: Additional manifest files to be concatenated onto this one.
-#     Type: list(file)
 #
 template("manifest_file") {
   forward_variables_from(invoker,
@@ -85,120 +82,82 @@ template("manifest_file") {
   }
 
   manifest_target = target_name
-  list_file = "$target_gen_dir/$target_name.list"
-  raw_file = "$target_gen_dir/$target_name.raw.manifest"
-  list_file_target = "_manifest_file.$target_name.list"
-  raw_file_target = "_manifest_file.$target_name.raw"
+  file_target = "_manifest_file.$target_name.manifest"
 
   # An embedded manifest contributes to metadata.manifest_lines directly.
-  manifest_entries = []
-  manifest_inputs = []
+  entries = []
   if (defined(invoker.manifest)) {
     foreach(entry, invoker.manifest) {
       if (entry == "$entry") {
         # It's a literal manifest entry string.
-        # Note this doesn't express any dependency on its source file!
-        manifest_entries += [ entry ]
+        entries += [ entry ]
       } else {
         # It's a manifest entry in the style of a copy() target.
         foreach(source, entry.sources) {
-          manifest_inputs += [ source ]
           source_path = rebase_path(source, root_build_dir)
           foreach(target, process_file_template([ source ], entry.outputs)) {
-            manifest_entries += [ "${target}=${source_path}" ]
+            entries += [ "${target}=${source_path}" ]
           }
         }
       }
     }
   }
 
-  # This target produces the raw manifest file from metadata and fixed entries.
-  generated_file(raw_file_target) {
-    visibility = [ ":$list_file_target" ]
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
+  manifest_deps = []
+  if (defined(invoker.deps)) {
+    manifest_deps += invoker.deps
+  }
+
+  if (entries != []) {
+    # generated_file() doesn't collect its own metadata, so we need an
+    # extra group() here just to contain the explicit manifest metadata.
+    metadata_target = "_manifest_file.$target_name.metadata"
+    manifest_deps += [ ":$metadata_target" ]
+    group(metadata_target) {
+      visibility = [ ":$file_target" ]
+      metadata = {
+        manifest_lines = entries
+      }
+    }
+  }
+
+  # This target produces the actual manifest file.
+  generated_file(file_target) {
+    visibility = [ ":$manifest_target" ]
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = manifest_deps
     outputs = [
-      raw_file,
+      manifest_file,
     ]
     output_conversion = "list lines"
     data_keys = [ "manifest_lines" ]
     walk_keys = [ "manifest_barrier" ]
     metadata = {
-      # This will be picked up by raw_file_target, below.
-      manifest_files = rebase_path(outputs, root_build_dir)
-      if (defined(invoker.sources)) {
-        manifest_files += rebase_path(invoker.sources, root_build_dir)
-      }
-
-      # This will be picked up by this target's own collection.
-      manifest_lines = manifest_entries
+      manifest_barrier = []
     }
   }
 
-  # This target produces the list of manifest files to combine.
-  # It always includes the raw file just produced and $sources,
-  # but can also pick up more files from metadata.
-  generated_file(list_file_target) {
-    visibility = [ ":$manifest_target" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    outputs = [
-      list_file,
-    ]
-    output_conversion = "list lines"
-    data_keys = [ "manifest_files" ]
-    walk_keys = [ "manifest_barrier" ]
-    deps = [
-      ":$raw_file_target",
-    ]
-  }
-
-  # This target produces the final manifest by combining all those files.
-  # The metadata from the invoker and for other manifest_file() targets
-  # goes here.  It shouldn't be seen by the generated_file() targets above.
-  action(manifest_target) {
+  # Putting $data_deps into the generated_file() would mean those all get
+  # visited for the metadata collection, which is not right.  So we always
+  # have a group() target wrapping the generated_file().  For clarity we
+  # pass the invoker's metadata on here instead of inside the
+  # generated_file() though it doesn't really matter for collections.
+  group(manifest_target) {
     forward_variables_from(invoker,
                            [
                              "data_deps",
                              "testonly",
                              "visibility",
                            ])
-
-    script = "$zx/public/gn/manifest-cat.sh"
-    sources = [
-      list_file,
-    ]
-    outputs = [
-      manifest_file,
-    ]
     deps = [
-      ":$list_file_target",
+      ":$file_target",
     ]
-    inputs = manifest_inputs
-    if (defined(invoker.sources)) {
-      # These are listed in $list_file and will appear in the depfile.
-      # Make sure they're built before the first run if necessary and let
-      # GN enforce that they come from the deps.  This is the only reason
-      # to include deps and not just data_deps in this action() target.
-      # The deps are reached by $raw_file_target already.
-      inputs += invoker.sources
-      if (defined(invoker.deps)) {
-        deps += invoker.deps
-      }
-    }
-    depfile = "$manifest_file.d"
-    args = rebase_path(sources + outputs + [ depfile ], root_build_dir)
-
     metadata = {
       images = []
-      manifest_barrier = []
-      manifest_files = []
 
       if (defined(invoker.metadata)) {
-        # This lets the invoker add to `images` and `manifest_barrier`,
-        # though our implicit contributions will always be there too.
+        # This lets the invoker add to `images`, though our implicit
+        # contributions will always be there too.
         forward_variables_from(invoker.metadata, "*")
       }
 
@@ -213,12 +172,6 @@ template("manifest_file") {
           os = current_os
         },
       ]
-
-      # Another manifest_file() depending on this one will fold it in,
-      # just as this one folded in any `manifest_files` from its deps.
-      # The `manifest_barrier` set here (above) prevents any dependents
-      # from reaching dependencies we've already folded in.
-      manifest_files += [ rebase_path(manifest_file, root_build_dir) ]
     }
   }
 }
