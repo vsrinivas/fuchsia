@@ -173,22 +173,6 @@ TEST(FixedDevicePartitionerTests, FinalizePartitionTest) {
     ASSERT_EQ(partitioner->FinalizePartition(paver::Partition::kFuchsiaVolumeManager), ZX_OK);
 }
 
-class AsyncLoop {
-public:
-    explicit AsyncLoop()
-        : loop_(&kAsyncLoopConfigNoAttachToThread), dispatcher_(loop_.dispatcher()),
-          fake_sysinfo_(dispatcher_) {
-        loop_.StartThread("device-partitioner-test-loop");
-    }
-
-    FakeSysinfo& fake_sysinfo() { return fake_sysinfo_; }
-
-private:
-    async::Loop loop_;
-    async_dispatcher_t* dispatcher_;
-    FakeSysinfo fake_sysinfo_;
-};
-
 void CreateIsolatedDevmgr(IsolatedDevmgr* out) {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
@@ -213,9 +197,7 @@ TEST(FixedDevicePartitionerTests, FindPartitionTest) {
     ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr.devfs_root(), kVbMetaBType, &vbmeta_b));
     ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr.devfs_root(), kFvmType, &fvm));
 
-    AsyncLoop loop;
     auto partitioner = paver::DevicePartitioner::Create(devmgr.devfs_root().duplicate(),
-                                                        std::move(loop.fake_sysinfo().svc_chan()),
                                                         paver::Arch::kArm64);
     ASSERT_NE(partitioner.get(), nullptr);
 
@@ -240,9 +222,7 @@ TEST(FixedDevicePartitionerTests, GetBlockSizeTest) {
     ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr.devfs_root(), kVbMetaBType, &vbmeta_b));
     ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr.devfs_root(), kFvmType, &fvm));
 
-    AsyncLoop loop;
     auto partitioner = paver::DevicePartitioner::Create(devmgr.devfs_root().duplicate(),
-                                                        std::move(loop.fake_sysinfo().svc_chan()),
                                                         paver::Arch::kArm64);
     ASSERT_NE(partitioner.get(), nullptr);
 
@@ -285,9 +265,7 @@ TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
     fbl::unique_ptr<BlockDevice> zircon_a;
     ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kZirconAType, &zircon_a));
 
-    AsyncLoop loop;
     auto partitioner = paver::DevicePartitioner::Create(std::move(devfs_root),
-                                                        std::move(loop.fake_sysinfo().svc_chan()),
                                                         paver::Arch::kArm64);
     ASSERT_NE(partitioner.get(), nullptr);
     ASSERT_TRUE(partitioner->UseSkipBlockInterface());

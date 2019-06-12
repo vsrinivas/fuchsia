@@ -16,7 +16,6 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
 #include <gpt/cros.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -261,14 +260,13 @@ const char* PartitionName(Partition type) {
     }
 }
 
-fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
-                                                             zx::channel sysinfo, Arch arch) {
+fbl::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root, Arch arch) {
     fbl::unique_ptr<DevicePartitioner> device_partitioner;
     if ((SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(),
                                                 &device_partitioner) == ZX_OK) ||
-        (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), sysinfo, arch,
+        (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), arch,
                                            &device_partitioner) == ZX_OK) ||
-        (EfiDevicePartitioner::Initialize(devfs_root.duplicate(), sysinfo, arch,
+        (EfiDevicePartitioner::Initialize(devfs_root.duplicate(), arch,
                                           &device_partitioner) == ZX_OK) ||
         (FixedDevicePartitioner::Initialize(std::move(devfs_root),
                                             &device_partitioner) == ZX_OK)) {
@@ -336,7 +334,6 @@ bool GptDevicePartitioner::FindTargetGptPath(const fbl::unique_fd& devfs_root, f
 }
 
 zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
-                                                const zx::channel& sysinfo,
                                                 Arch arch,
                                                 fbl::unique_ptr<GptDevicePartitioner>* gpt_out) {
     if (arch != Arch::kX64) {
@@ -638,11 +635,10 @@ zx_status_t GptDevicePartitioner::WipeFvm() const {
  *                 EFI SPECIFIC                       *
  *====================================================*/
 
-zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                             Arch arch,
+zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                              fbl::unique_ptr<DevicePartitioner>* partitioner) {
     fbl::unique_ptr<GptDevicePartitioner> gpt;
-    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo, arch,
+    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), arch,
                                                              &gpt);
     if (status != ZX_OK) {
         return status;
@@ -763,11 +759,10 @@ zx_status_t EfiDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
  *                CROS SPECIFIC                       *
  *====================================================*/
 
-zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                              Arch arch,
+zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                               fbl::unique_ptr<DevicePartitioner>* partitioner) {
     fbl::unique_ptr<GptDevicePartitioner> gpt_partitioner;
-    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), sysinfo, arch,
+    zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), arch,
                                                              &gpt_partitioner);
     if (status != ZX_OK) {
         return status;

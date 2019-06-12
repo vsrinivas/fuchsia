@@ -1054,20 +1054,6 @@ bool Paver::InitializePartitioner() {
         if (!devfs_root_) {
             devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
         }
-        if (!sysinfo_) {
-            zx::channel server, client;
-            auto status = zx::channel::create(0, &server, &client);
-            if (status != ZX_OK) {
-                ERROR("Unable to create channel.\n");
-                return false;
-            }
-            status = fdio_service_connect("/dev/misc/sysinfo", server.release());
-            if (status != ZX_OK) {
-                ERROR("Unable to open sysinfo.\n");
-                return false;
-            }
-            sysinfo_ = std::move(client);
-        }
 #if defined(__x86_64__)
         Arch arch = Arch::kX64;
 #elif defined(__aarch64__)
@@ -1075,8 +1061,7 @@ bool Paver::InitializePartitioner() {
 #else
 #error "Unknown arch"
 #endif
-        partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate(), std::move(sysinfo_),
-                                                 arch);
+        partitioner_ = DevicePartitioner::Create(devfs_root_.duplicate(), arch);
         if (!partitioner_) {
             ERROR("Unable to initialize a partitioner.\n");
             return false;

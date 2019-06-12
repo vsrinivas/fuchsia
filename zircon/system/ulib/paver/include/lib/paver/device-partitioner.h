@@ -53,8 +53,7 @@ class DevicePartitioner {
 public:
     // Factory method which automatically returns the correct DevicePartitioner
     // implementation. Returns nullptr on failure.
-    static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, zx::channel sysinfo,
-                                                     Arch arch);
+    static fbl::unique_ptr<DevicePartitioner> Create(fbl::unique_fd devfs_root, Arch arch);
 
     virtual ~DevicePartitioner() = default;
 
@@ -88,8 +87,8 @@ public:
     using FilterCallback = fbl::Function<bool(const gpt_partition_t&)>;
 
     // Find and initialize a GPT based device.
-    static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                     Arch arch, fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
+    static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, Arch arch,
+                                     fbl::unique_ptr<GptDevicePartitioner>* gpt_out);
 
     // Returns block info for a specified block device.
     zx_status_t GetBlockInfo(fuchsia_hardware_block_BlockInfo* block_info) const {
@@ -144,8 +143,8 @@ private:
 // DevicePartitioner implementation for EFI based devices.
 class EfiDevicePartitioner : public DevicePartitioner {
 public:
-    static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                  Arch arch, fbl::unique_ptr<DevicePartitioner>* partitioner);
+    static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
+                                  fbl::unique_ptr<DevicePartitioner>* partitioner);
 
     bool UseSkipBlockInterface() const override { return false; }
 
@@ -169,8 +168,8 @@ private:
 // DevicePartitioner implementation for ChromeOS devices.
 class CrosDevicePartitioner : public DevicePartitioner {
 public:
-    static zx_status_t Initialize(fbl::unique_fd devfs_root, const zx::channel& sysinfo,
-                                  Arch arch, fbl::unique_ptr<DevicePartitioner>* partitioner);
+    static zx_status_t Initialize(fbl::unique_fd devfs_root, Arch arch,
+                                  fbl::unique_ptr<DevicePartitioner>* partitioner);
 
     bool UseSkipBlockInterface() const override { return false; }
 
