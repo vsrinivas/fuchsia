@@ -28,6 +28,7 @@ use crate::{
     station,
     stats_scheduler::{self, StatsScheduler},
     watchable_map::WatchableMap,
+    ServiceCfg,
 };
 
 // TODO(WLAN-927): Obsolete once all drivers support this feature.
@@ -112,6 +113,7 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
 }
 
 pub async fn serve_ifaces(
+    cfg: ServiceCfg,
     ifaces: Arc<IfaceMap>,
     cobalt_sender: CobaltSender,
     inspect_tree: Arc<inspect::WlanstackTree>,
@@ -131,6 +133,7 @@ pub async fn serve_ifaces(
                     let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
                     #[allow(deprecated)]
                     let fut = query_and_serve_iface_deprecated(
+                    cfg.clone(),
                             new_iface, &ifaces, cobalt_sender.clone(), iface_tree_holder
                         ).then(move |_| async move {
                             inspect_tree.notify_iface_removed(iface_id);
@@ -145,6 +148,7 @@ pub async fn serve_ifaces(
 
 #[deprecated(note = "function is obsolete once WLAN-927 landed")]
 async fn query_and_serve_iface_deprecated(
+    cfg: ServiceCfg,
     new_iface: NewIfaceDevice,
     ifaces: &IfaceMap,
     cobalt_sender: CobaltSender,
@@ -162,6 +166,7 @@ async fn query_and_serve_iface_deprecated(
         }
     };
     let result = create_sme(
+        cfg,
         proxy.clone(),
         event_stream,
         &device_info,
@@ -198,6 +203,7 @@ async fn query_and_serve_iface_deprecated(
 }
 
 pub async fn query_and_serve_iface(
+    cfg: ServiceCfg,
     iface_id: u16,
     mlme_proxy: fidl_mlme::MlmeProxy,
     ifaces: Arc<IfaceMap>,
@@ -210,6 +216,7 @@ pub async fn query_and_serve_iface(
     let device_info = await!(mlme_proxy.query_device_info())
         .map_err(|e| format_err!("failed querying iface: {}", e))?;
     let (sme, sme_fut) = create_sme(
+        cfg,
         mlme_proxy.clone(),
         event_stream,
         &device_info,
@@ -233,6 +240,7 @@ pub async fn query_and_serve_iface(
 }
 
 fn create_sme<S>(
+    cfg: ServiceCfg,
     proxy: fidl_mlme::MlmeProxy,
     event_stream: fidl_mlme::MlmeEventStream,
     device_info: &DeviceInfo,
@@ -254,6 +262,7 @@ where
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
+                cfg.into(),
                 proxy,
                 device_info,
                 event_stream,

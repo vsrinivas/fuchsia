@@ -20,7 +20,7 @@ use wlan_sme::client::{
     BssInfo, ConnectResult, ConnectionAttemptId, DiscoveryError, EssDiscoveryResult, EssInfo,
     InfoEvent, ScanTxnId,
 };
-use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
+use wlan_sme::{self as sme, client as client_sme, DeviceInfo, InfoStream};
 
 use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;
@@ -40,6 +40,7 @@ struct ConnectionTimes {
 }
 
 pub async fn serve<S>(
+    cfg: sme::Config,
     proxy: MlmeProxy,
     device_info: DeviceInfo,
     event_stream: MlmeEventStream,
@@ -51,8 +52,7 @@ pub async fn serve<S>(
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
-    // TODO(hahnr): Use configuration spawned by wlanstack.
-    let cfg = client_sme::ClientConfig::default();
+    let cfg = client_sme::ClientConfig::from_config(cfg);
     let (sme, mlme_stream, info_stream, time_stream) =
         Sme::new(cfg, device_info, iface_tree_holder);
     let sme = Arc::new(Mutex::new(sme));

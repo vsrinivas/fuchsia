@@ -32,6 +32,8 @@ use futures::future::{try_join, try_join5};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
+use structopt::StructOpt;
+use wlan_sme;
 
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watcher_service::WatcherService;
@@ -42,12 +44,32 @@ const CONCURRENT_LIMIT: usize = 1000;
 
 static LOGGER: logger::Logger = logger::Logger;
 
+/// Configuration for wlanstack service.
+/// This configuration is a super set of individual component configurations such as SME.
+#[derive(StructOpt, Clone, Debug)]
+pub struct ServiceCfg {
+    /// |true| if WEP should be supported by the service instance.
+    #[structopt(long = "wep_supported")]
+    pub wep_supported: bool,
+}
+
+impl From<ServiceCfg> for wlan_sme::Config {
+    fn from(cfg: ServiceCfg) -> Self {
+        if cfg.wep_supported {
+            Self::with_wep_support()
+        } else {
+            Self::default()
+        }
+    }
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     log::set_logger(&LOGGER)?;
     log::set_max_level(MAX_LOG_LEVEL);
 
     info!("Starting");
+    let cfg = ServiceCfg::from_args();
     let mut fs = ServiceFs::new_local();
     let inspect_tree =
         Arc::new(inspect::WlanstackTree::new(&mut fs).expect("fail creating Inspect tree"));
@@ -64,12 +86,17 @@ async fn main() -> Result<(), Error> {
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     // TODO(WLAN-927): Remove once drivers support SME channel.
-    let iface_server =
-        device::serve_ifaces(ifaces.clone(), cobalt_sender.clone(), inspect_tree.clone())
-            .map_ok(|x| match x {});
+    let iface_server = device::serve_ifaces(
+        cfg.clone(),
+        ifaces.clone(),
+        cobalt_sender.clone(),
+        inspect_tree.clone(),
+    )
+        .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let serve_fidl_fut = serve_fidl(fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
+    let serve_fidl_fut =
+        serve_fidl(cfg, fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
     let services_server = try_join(serve_fidl_fut, watcher_fut);
 
     await!(try_join5(
@@ -87,6 +114,7 @@ enum IncomingServices {
 }
 
 async fn serve_fidl(
+    cfg: ServiceCfg,
     mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
     phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
@@ -101,10 +129,12 @@ async fn serve_fidl(
         let ifaces = ifaces.clone();
         let watcher_service = watcher_service.clone();
         let cobalt_sender = cobalt_sender.clone();
+        let cfg = cfg.clone();
         let inspect_tree = inspect_tree.clone();
         async move {
             match s {
                 IncomingServices::Device(stream) => await!(service::serve_device_requests(
+                    cfg,
                     phys,
                     ifaces,
                     watcher_service,
@@ -118,4 +148,36 @@ async fn serve_fidl(
     });
     await!(fdio_server);
     Ok(())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        std::panic,
+    };
+
+    #[test]
+    fn parse_svc_cfg_wep() {
+        let cfg = ServiceCfg::from_iter(vec!["bin/app", "--wep_supported"].iter());
+        assert!(cfg.wep_supported);
+    }
+
+    #[test]
+    fn parse_svc_cfg_default() {
+        let cfg = ServiceCfg::from_iter(vec!["bin/app"].iter());
+        assert!(!cfg.wep_supported);
+    }
+
+    #[test]
+    fn svc_to_sme_cfg() {
+        let svc_cfg = ServiceCfg::from_iter(vec!["bin/app"].iter());
+        let sme_cfg: wlan_sme::Config = svc_cfg.into();
+        assert!(!sme_cfg.wep_supported);
+
+        let svc_cfg = ServiceCfg::from_iter(vec!["bin/app", "--wep_supported"].iter());
+        let sme_cfg: wlan_sme::Config = svc_cfg.into();
+        assert!(sme_cfg.wep_supported);
+    }
 }

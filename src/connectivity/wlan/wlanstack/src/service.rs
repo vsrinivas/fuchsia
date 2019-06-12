@@ -21,8 +21,10 @@ use crate::inspect;
 use crate::station;
 use crate::stats_scheduler::StatsRef;
 use crate::watcher_service::WatcherService;
+use crate::ServiceCfg;
 
 pub async fn serve_device_requests(
+    cfg: ServiceCfg,
     phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
@@ -68,6 +70,7 @@ pub async fn serve_device_requests(
                             let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
 
                             let serve_sme_fut = device::query_and_serve_iface(
+                                cfg.clone(),
                                 new_iface.id,
                                 mlme_proxy,
                                 ifaces.clone(),
