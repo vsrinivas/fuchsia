@@ -673,5 +673,32 @@ TEST_F(SystemMonitorDockyardTest, ServerListening) {
   EXPECT_FALSE(IsGrpcServerActive());
 }
 
+TEST_F(SystemMonitorDockyardTest, StreamRef) {
+  SampleStreamMap stream_map;
+  EXPECT_EQ(stream_map.size(), 0ULL);
+  {
+    SampleStream& ref1 = stream_map.StreamRef(11);
+    SampleStream& ref2 = stream_map.StreamRef(22);
+    // The streams should be empty.
+    EXPECT_TRUE(ref1.empty());
+    EXPECT_TRUE(ref2.empty());
+    ref1.emplace(0, 100ULL);
+    ref2.emplace(0, 200ULL);
+  }
+  // Requesting the stream ref caused the stream to be created.
+  EXPECT_EQ(stream_map.size(), 2ULL);
+  {
+    SampleStream& ref1 = stream_map.StreamRef(11);
+    SampleStream& ref2 = stream_map.StreamRef(22);
+    // The streams should not be empty, they should have the values above.
+    EXPECT_FALSE(ref1.empty());
+    EXPECT_FALSE(ref2.empty());
+    EXPECT_EQ(ref1[0], 100ULL);
+    EXPECT_EQ(ref2[0], 200ULL);
+  }
+  // Requesting the same streams reuse the existing streams.
+  EXPECT_EQ(stream_map.size(), 2ULL);
+}
+
 }  // namespace
 }  // namespace dockyard

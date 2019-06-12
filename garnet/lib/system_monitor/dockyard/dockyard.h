@@ -200,6 +200,17 @@ struct StreamSetsResponse {
                                   const StreamSetsResponse& response);
 };
 
+class SampleStreamMap
+    : public std::map<DockyardId, std::unique_ptr<SampleStream>> {
+ public:
+  // Get a reference to the sample stream for the given |dockyard_id|.
+  // The stream will be created if necessary.
+  SampleStream& StreamRef(DockyardId dockyard_id) {
+    return *emplace(dockyard_id, std::make_unique<SampleStream>())
+                .first->second.get();
+  }
+};
+
 // Lookup for a sample stream name string, given the sample stream ID.
 typedef std::map<DockyardId, std::string> DockyardIdToPathMap;
 typedef std::map<std::string, DockyardId> DockyardPathToIdMap;
@@ -352,7 +363,6 @@ class Dockyard {
   std::vector<StreamSetsRequest*> pending_requests_;
 
   // Storage of sample data.
-  typedef std::map<DockyardId, SampleStream*> SampleStreamMap;
   SampleStreamMap sample_streams_;
   std::map<DockyardId, std::pair<SampleValue, SampleValue>>
       sample_stream_low_high_;

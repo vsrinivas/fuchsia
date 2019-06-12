@@ -119,13 +119,7 @@ Dockyard::Dockyard()
       on_paths_handler_(nullptr),
       on_stream_sets_handler_(nullptr) {}
 
-Dockyard::~Dockyard() {
-  StopCollectingFromDevice();
-  for (SampleStreamMap::iterator i = sample_streams_.begin();
-       i != sample_streams_.end(); ++i) {
-    delete i->second;
-  }
-}
+Dockyard::~Dockyard() { StopCollectingFromDevice(); }
 
 SampleTimeNs Dockyard::DeviceDeltaTimeNs() const {
   return device_time_delta_ns_;
@@ -142,16 +136,9 @@ SampleTimeNs Dockyard::LatestSampleTimeNs() const {
 void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {
   std::lock_guard<std::mutex> guard(mutex_);
   // Find or create a sample_stream for this dockyard_id.
-  SampleStream* sample_stream;
-  auto search = sample_streams_.find(dockyard_id);
-  if (search == sample_streams_.end()) {
-    sample_stream = new SampleStream();
-    sample_streams_.emplace(dockyard_id, sample_stream);
-  } else {
-    sample_stream = search->second;
-  }
+  SampleStream& sample_stream = sample_streams_.StreamRef(dockyard_id);
+  sample_stream.emplace(sample.time, sample.value);
   latest_sample_time_ns_ = sample.time;
-  sample_stream->emplace(sample.time, sample.value);
 
   // Track the overall lowest and highest values encountered.
   sample_stream_low_high_.try_emplace(dockyard_id,
@@ -176,14 +163,7 @@ void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {
 void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
   std::lock_guard<std::mutex> guard(mutex_);
   // Find or create a sample_stream for this dockyard_id.
-  SampleStream* sample_stream;
-  auto search = sample_streams_.find(dockyard_id);
-  if (search == sample_streams_.end()) {
-    sample_stream = new SampleStream();
-    sample_streams_.emplace(dockyard_id, sample_stream);
-  } else {
-    sample_stream = search->second;
-  }
+  SampleStream& sample_stream = sample_streams_.StreamRef(dockyard_id);
 
   // Track the overall lowest and highest values encountered.
   sample_stream_low_high_.try_emplace(dockyard_id,
@@ -198,7 +178,7 @@ void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
     if (highest < i->value) {
       highest = i->value;
     }
-    sample_stream->emplace(i->time, i->value);
+    sample_stream.emplace(i->time, i->value);
   }
   sample_stream_low_high_[dockyard_id] = std::make_pair(lowest, highest);
 }
@@ -273,10 +253,6 @@ void Dockyard::ResetHarvesterData() {
   // Maybe send error responses.
   pending_requests_.clear();
 
-  for (SampleStreamMap::iterator i = sample_streams_.begin();
-       i != sample_streams_.end(); ++i) {
-    delete i->second;
-  }
   sample_streams_.clear();
   sample_stream_low_high_.clear();
 
