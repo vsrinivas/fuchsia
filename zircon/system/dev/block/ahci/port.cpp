@@ -8,6 +8,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
+#include <fbl/auto_lock.h>
 
 #include "port.h"
 #include "controller.h"
@@ -74,7 +75,7 @@ bool Port::SlotBusyLocked(uint32_t slot) {
 }
 
 zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs) {
-    mtx_lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     num_ = num;
     con_ = con;
     regs_ = regs;
@@ -82,7 +83,6 @@ zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs
     uint32_t cmd = RegRead(&regs_->cmd);
     if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
         zxlogf(ERROR, "ahci.%u: port busy\n", num_);
-        mtx_unlock(&lock_);
         return ZX_ERR_UNAVAILABLE;
     }
 
@@ -94,7 +94,6 @@ zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs
                                            IO_BUFFER_RW | IO_BUFFER_CONTIG, &phys_base, &virt_base);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ahci.%u: error %d allocating dma memory\n", num_, status);
-        mtx_unlock(&lock_);
         return status;
     }
     mem_ = static_cast<ahci_port_mem_t*>(virt_base);
@@ -141,7 +140,6 @@ zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs
     cmd |= AHCI_PORT_CMD_FRE;
     RegWrite(&regs_->cmd, cmd);
 
-    mtx_unlock(&lock_);
     return ZX_OK;
 }
 
@@ -208,15 +206,13 @@ void Port::Reset() {
 }
 
 void Port::SetDevInfo(const sata_devinfo_t* devinfo) {
-    mtx_lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     memcpy(&devinfo_, devinfo, sizeof(devinfo_));
-    mtx_unlock(&lock_);
 }
 
 zx_status_t Port::Queue(sata_txn_t* txn) {
-    mtx_lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (!is_valid()) {
-        mtx_unlock(&lock_);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -226,14 +222,12 @@ zx_status_t Port::Queue(sata_txn_t* txn) {
     // put the cmd on the queue
     list_add_tail(&txn_list_, &txn->node);
 
-    mtx_unlock(&lock_);
     return ZX_OK;
 }
 
 void Port::Complete() {
-    mtx_lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (!is_valid()) {
-        mtx_unlock(&lock_);
         return;
     }
 
@@ -262,7 +256,7 @@ void Port::Complete() {
             sync_ = nullptr;
         }
     }
-    mtx_unlock(&lock_);
+    lock.release();
 
     for (size_t i = 0; i < complete_count; i++) {
         sata_txn_t* txn = txn_complete[i];
@@ -279,9 +273,9 @@ void Port::Complete() {
 }
 
 void Port::ProcessQueued() {
-    mtx_lock(&lock_);
+    lock_.Acquire();
     if ((!is_valid()) || is_paused()) {
-        mtx_unlock(&lock_);
+        lock_.Release();
         return;
     }
 
@@ -311,27 +305,27 @@ void Port::ProcessQueued() {
                 sync_ = txn;
             } else {
                 // complete immediately if nothing in flight
-                mtx_unlock(&lock_);
+                lock_.Release();
                 block_complete(txn, ZX_OK);
-                mtx_lock(&lock_);
+                lock_.Acquire();
             }
         } else {
             // run the transaction
             zx_status_t st = TxnBeginLocked(i, txn);
             // complete the transaction with if it failed during processing
             if (st != ZX_OK) {
-                mtx_unlock(&lock_);
+                lock_.Release();
                 block_complete(txn, st);
-                mtx_lock(&lock_);
+                lock_.Acquire();
                 continue;
             }
         }
     }
-    mtx_unlock(&lock_);
+    lock_.Release();
 }
 
 void Port::TxnComplete(zx_status_t status) {
-    mtx_lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     uint32_t active = RegRead(&regs_->sact); // Transactions active in hardware.
     uint32_t running = running_;               // Transactions tagged as running.
     // Transactions active in hardware but not tagged as running.
@@ -344,7 +338,6 @@ void Port::TxnComplete(zx_status_t status) {
     // Transactions tagged as running but completed by hardware.
     uint32_t done = running & ~active;
     completed_ |= done;
-    mtx_unlock(&lock_);
 }
 
 zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
@@ -509,9 +502,8 @@ bool Port::HandleIrq() {
 }
 
 bool Port::HandleWatchdog() {
-    mtx_lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (!is_valid()) {
-        mtx_unlock(&lock_);
         return false;
     }
     zx_time_t now = zx_clock_get_monotonic();
@@ -553,7 +545,7 @@ bool Port::HandleWatchdog() {
             failed_txn[slot] = txn;
         }
     }
-    mtx_unlock(&lock_);
+    lock.release();
     for (uint32_t i = 0; i < countof(failed_txn); i++) {
         if (failed_txn[i] != nullptr) {
             block_complete(failed_txn[i], ZX_ERR_TIMED_OUT);

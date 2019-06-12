@@ -21,6 +21,8 @@ public:
     Controller() {}
     ~Controller();
 
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Controller);
+
     // Create a new AHCI Controller.
     static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Controller>* con_out);
 
@@ -95,7 +97,7 @@ private:
     sync_completion_t watchdog_completion_;
 
     std::unique_ptr<Bus> bus_;
-    Port ports_[AHCI_MAX_PORTS]{};
+    Port ports_[AHCI_MAX_PORTS];
 };
 
 } // namespace ahci

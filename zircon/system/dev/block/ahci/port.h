@@ -8,6 +8,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
+#include <fbl/mutex.h>
 #include <zircon/types.h>
 
 #include "sata.h"
@@ -44,6 +45,8 @@ class Port {
 public:
     Port();
     ~Port();
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Port);
 
     // Configure a port for use.
     zx_status_t Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs);
@@ -100,18 +103,18 @@ private:
     uint32_t num_ = 0; // 0-based
     Controller* con_ = nullptr;
 
-    mtx_t lock_;
+    fbl::Mutex lock_;
     uint32_t flags_ = 0;
-    list_node_t txn_list_;
+    list_node_t txn_list_{};
     uint32_t running_ = 0;   // bitmask of running commands
     uint32_t completed_ = 0; // bitmask of completed commands
     sata_txn_t* sync_ = nullptr;   // FLUSH command in flight
 
-    io_buffer_t buffer_;
+    io_buffer_t buffer_{};
     ahci_port_reg_t* regs_ = nullptr;
     ahci_port_mem_t* mem_ = nullptr;
 
-    sata_devinfo_t devinfo_;
+    sata_devinfo_t devinfo_{};
     sata_txn_t* commands_[AHCI_MAX_COMMANDS] = {}; // commands in flight
 };
 
