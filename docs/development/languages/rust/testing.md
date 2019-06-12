@@ -82,4 +82,4 @@ to the provided name. In our example here, that means that one executable named
 For information on packaging and running tests, please refer to the
 [documentation on running tests as components][component_tests].
 
-[component_tests]:../../tests/running_tests_as_components.md
+[component_tests]:../../testing/running_tests_as_components.md
