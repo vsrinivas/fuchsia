@@ -184,21 +184,19 @@ class Sl4f {
     if (stdin != null) {
       process.stdin.write(stdin);
       await process.stdin.flush();
-      await process.stdin.close();
     }
-    if (await process.exitCode != 0) {
+    await process.stdin.close();
+    final exitCode = await process.exitCode;
+    if (exitCode != 0) {
       _log
+        ..warning('$cmd; exit code: $exitCode')
         ..warning(await process.stdout.transform(utf8.decoder).join())
         ..warning(await process.stderr.transform(utf8.decoder).join());
       return false;
     }
 
     // We must read all data otherwise the program might hang.
-    await Future.wait([
-      process.stdin.close(),
-      process.stdout.drain(),
-      process.stderr.drain()
-    ]);
+    await Future.wait([process.stdout.drain(), process.stderr.drain()]);
 
     return true;
   }
@@ -230,9 +228,8 @@ class Sl4f {
     // Kill SL4F first, we'll use it to try to guess when the reboot is done.
     await stopServer();
     // Issue a reboot command and wait.
-    if (!await ssh('dm reboot')) {
-      throw Sl4fException('Failed rebooting device.');
-    }
+    // TODO(DNO-621): trap errors
+    await ssh('dm reboot');
     await Future.delayed(Duration(seconds: 20));
 
     // Try to restart SL4F
