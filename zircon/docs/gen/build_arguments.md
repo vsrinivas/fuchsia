@@ -154,11 +154,12 @@ system-installed tools found by the shell via `PATH` will be used.
 From //public/gn/toolchain/gcc.gni:17
 
 ### goma_dir
-Absolute directory containing the Goma source code.
+Directory containing the Goma source code.  This can be a GN
+source-absolute path ("//...") or a system absolute path.
 
 **Current value (from the default):** `"/home/swarming/goma"`
 
-From //public/gn/toolchain/goma.gni:12
+From //public/gn/toolchain/goma.gni:13
 
 ### host_cpu
 
