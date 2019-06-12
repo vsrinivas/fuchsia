@@ -316,7 +316,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   if (linkage_name)
     function->set_linkage_name(*linkage_name);
   function->set_code_ranges(GetCodeRanges(die));
-  function->set_decl_line(MakeFileLine(decl_file, decl_line));
+  if (decl_file)
+    function->set_decl_line(MakeFileLine(decl_file, decl_line));
   function->set_call_line(MakeFileLine(call_file, call_line));
   if (return_type)
     function->set_return_type(MakeLazy(return_type));

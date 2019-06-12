@@ -206,46 +206,6 @@ TEST(CommandUtils, FormatIdentifier) {
       FormatIdentifier(ident, true).GetDebugString());
 }
 
-TEST(CommandUtils, FormatFunctionName) {
-  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  function->set_assigned_name("Function");
-
-  // Function with no parameters.
-  EXPECT_EQ("Function()", FormatFunctionName(function.get(), false).AsString());
-  EXPECT_EQ("Function()", FormatFunctionName(function.get(), true).AsString());
-
-  // Add two parameters.
-  auto int32_type = MakeInt32Type();
-  auto param_value = MakeVariableForTest("value", int32_type, 0x100, 0x200,
-                                         std::vector<uint8_t>());
-  auto param_other = MakeVariableForTest("other_param", int32_type, 0x100,
-                                         0x200, std::vector<uint8_t>());
-  function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
-
-  EXPECT_EQ("Function(…)",
-            FormatFunctionName(function.get(), false).AsString());
-  EXPECT_EQ("Function(int32_t, int32_t)",
-            FormatFunctionName(function.get(), true).AsString());
-
-  // Put in a namespace and add some templates. This needs a new function
-  // because the name will be cached above.
-  function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  function->set_assigned_name("Function<int>");
-  function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
-
-  auto ns = fxl::MakeRefCounted<Namespace>();
-  ns->set_assigned_name("ns");
-  function->set_parent(LazySymbol(ns));
-
-  EXPECT_EQ(
-      "kNormal \"ns::\", "
-      "kHeading \"Function\", "
-      "kComment \"<int>(…)\"",
-      FormatFunctionName(function.get(), false).GetDebugString());
-
-  function->set_parent(LazySymbol());
-}
-
 TEST(CommandUtils, FormatLocation) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 

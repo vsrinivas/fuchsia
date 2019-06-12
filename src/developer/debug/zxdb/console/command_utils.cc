@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/format_function.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
@@ -489,31 +490,6 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
     }
   }
 
-  return result;
-}
-
-OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
-  OutputBuffer result = FormatIdentifier(function->GetIdentifier(), true);
-
-  const auto& params = function->parameters();
-  std::string params_str;
-  if (show_params) {
-    params_str.push_back('(');
-    for (size_t i = 0; i < params.size(); i++) {
-      if (i > 0)
-        params_str += ", ";
-      if (const Variable* var = params[i].Get()->AsVariable())
-        params_str += var->type().Get()->GetFullName();
-    }
-    params_str.push_back(')');
-  } else {
-    if (params.empty())
-      params_str += "()";
-    else
-      params_str += "(…)";
-  }
-
-  result.Append(Syntax::kComment, std::move(params_str));
   return result;
 }
 

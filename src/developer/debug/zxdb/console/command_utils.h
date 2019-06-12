@@ -119,14 +119,6 @@ OutputBuffer FormatInputLocation(const InputLocation& location);
 OutputBuffer FormatIdentifier(const Identifier& str, bool bold_last);
 OutputBuffer FormatIdentifier(const ParsedIdentifier& str, bool bold_last);
 
-// Formats the function name with syntax highlighting. If show_params is true,
-// the types of the function parameters will be output. Otherwise the
-// function name will end with "()" if there are no parameters, or "(...)" if
-// there are some. The goal is to be as short as possible without being
-// misleading (showing "()" when there are parameters may be misleading, and
-// no parens at all don't look like a function).
-OutputBuffer FormatFunctionName(const Function* function, bool show_params);
-
 // Formats the location. Normally if a function name is present the code
 // address will be omitted, but always_show_address will override this.
 //
