@@ -103,20 +103,36 @@ func (u *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
 const (
 	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint32 = 503576693
 	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal uint32 = 503576693
+	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal64 uint64 = 503576693 << 32
+	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal64 uint64 = 503576693 << 32
 	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal uint32 = 1308023765
 	WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal uint32 = 1308023765
+	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal64 uint64 = 1308023765 << 32
+	WithAndWithoutRequestResponseNoRequestEmptyResponseGenOrdinal64 uint64 = 1308023765 << 32
 	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal uint32 = 107534328
 	WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal uint32 = 107534328
+	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal64 uint64 = 107534328 << 32
+	WithAndWithoutRequestResponseNoRequestWithResponseGenOrdinal64 uint64 = 107534328 << 32
 	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal uint32 = 432149361
 	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal uint32 = 432149361
+	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal64 uint64 = 432149361 << 32
+	WithAndWithoutRequestResponseWithRequestNoResponseGenOrdinal64 uint64 = 432149361 << 32
 	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint32 = 1995585907
 	WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal uint32 = 1995585907
+	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal64 uint64 = 1995585907 << 32
+	WithAndWithoutRequestResponseWithRequestEmptyResponseGenOrdinal64 uint64 = 1995585907 << 32
 	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal uint32 = 426977568
 	WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal uint32 = 426977568
+	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal64 uint64 = 426977568 << 32
+	WithAndWithoutRequestResponseWithRequestWithResponseGenOrdinal64 uint64 = 426977568 << 32
 	WithAndWithoutRequestResponseOnEmptyResponseOrdinal uint32 = 1769985842
 	WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal uint32 = 1769985842
+	WithAndWithoutRequestResponseOnEmptyResponseOrdinal64 uint64 = 1769985842 << 32
+	WithAndWithoutRequestResponseOnEmptyResponseGenOrdinal64 uint64 = 1769985842 << 32
 	WithAndWithoutRequestResponseOnWithResponseOrdinal uint32 = 2051478023
 	WithAndWithoutRequestResponseOnWithResponseGenOrdinal uint32 = 2051478023
+	WithAndWithoutRequestResponseOnWithResponseOrdinal64 uint64 = 2051478023 << 32
+	WithAndWithoutRequestResponseOnWithResponseGenOrdinal64 uint64 = 2051478023 << 32
 )
 
 type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
@@ -190,21 +206,21 @@ type WithAndWithoutRequestResponseInterface _bindings.ChannelProxy
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestNoResponse() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(WithAndWithoutRequestResponseNoRequestNoResponseOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseNoRequestNoResponseOrdinal64, req_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestEmptyResponse() error {
 	var req_ _bindings.Message
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal64, req_, resp_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestWithResponse() (string, error) {
 	var req_ _bindings.Message
 	resp_ := &withAndWithoutRequestResponseNoRequestWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(WithAndWithoutRequestResponseNoRequestWithResponseOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseOrdinal64, req_, resp_)
 	return resp_.Ret, err
 }
 
@@ -212,7 +228,7 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg strin
 	req_ := &withAndWithoutRequestResponseWithRequestNoResponseRequest{
 		Arg: arg,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal64, req_)
 	return err
 }
 
@@ -221,7 +237,7 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestEmptyResponse(arg st
 		Arg: arg,
 	}
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal64, req_, resp_)
 	return err
 }
 
@@ -230,19 +246,19 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg str
 		Arg: arg,
 	}
 	resp_ := &withAndWithoutRequestResponseWithRequestWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(WithAndWithoutRequestResponseWithRequestWithResponseOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseOrdinal64, req_, resp_)
 	return resp_.Ret, err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnEmptyResponse() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).RecvNew(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnEmptyResponseOrdinal64, resp_)
 	return err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnWithResponse() (string, error) {
 	resp_ := &withAndWithoutRequestResponseOnWithResponseResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).RecvNew(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal64, resp_)
 	return resp_.Ret, err
 }
 
@@ -270,39 +286,43 @@ type WithAndWithoutRequestResponseStub struct {
 	Impl WithAndWithoutRequestResponse
 }
 
-func (s *WithAndWithoutRequestResponseStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
-		err_ := s.Impl.NoRequestNoResponse()
+func (s_ *WithAndWithoutRequestResponseStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *WithAndWithoutRequestResponseStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal64:
+		err_ := s_.Impl.NoRequestNoResponse()
 		return nil, err_
-	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal:
-		err_ := s.Impl.NoRequestEmptyResponse()
+	case WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal64:
+		err_ := s_.Impl.NoRequestEmptyResponse()
 		return nil, err_
-	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
-		ret, err_ := s.Impl.NoRequestWithResponse()
+	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal64:
+		ret, err_ := s_.Impl.NoRequestWithResponse()
 		out_ := withAndWithoutRequestResponseNoRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, err_
-	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
+	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal64:
 		in_ := withAndWithoutRequestResponseWithRequestNoResponseRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.WithRequestNoResponse(in_.Arg)
+		err_ := s_.Impl.WithRequestNoResponse(in_.Arg)
 		return nil, err_
-	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
+	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal64:
 		in_ := withAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.WithRequestEmptyResponse(in_.Arg)
+		err_ := s_.Impl.WithRequestEmptyResponse(in_.Arg)
 		return nil, err_
-	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
+	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal64:
 		in_ := withAndWithoutRequestResponseWithRequestWithResponseRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		ret, err_ := s.Impl.WithRequestWithResponse(in_.Arg)
+		ret, err_ := s_.Impl.WithRequestWithResponse(in_.Arg)
 		out_ := withAndWithoutRequestResponseWithRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, err_
@@ -326,21 +346,25 @@ type WithAndWithoutRequestResponseEventProxy _bindings.ChannelProxy
 
 func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).SendNew(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseOrdinal64, event_)
 }
 func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) error {
 	event_ := &withAndWithoutRequestResponseOnWithResponseResponse{
 		Ret: ret,
 	}
-	return ((*_bindings.ChannelProxy)(p)).SendNew(WithAndWithoutRequestResponseOnWithResponseOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseOrdinal64, event_)
 }
 
 
 const (
 	WithErrorSyntaxErrorAsPrimitiveOrdinal uint32 = 2069369145
 	WithErrorSyntaxErrorAsPrimitiveGenOrdinal uint32 = 2069369145
+	WithErrorSyntaxErrorAsPrimitiveOrdinal64 uint64 = 2069369145 << 32
+	WithErrorSyntaxErrorAsPrimitiveGenOrdinal64 uint64 = 2069369145 << 32
 	WithErrorSyntaxErrorAsEnumOrdinal uint32 = 1284890143
 	WithErrorSyntaxErrorAsEnumGenOrdinal uint32 = 1284890143
+	WithErrorSyntaxErrorAsEnumOrdinal64 uint64 = 1284890143 << 32
+	WithErrorSyntaxErrorAsEnumGenOrdinal64 uint64 = 1284890143 << 32
 )
 
 type withErrorSyntaxErrorAsPrimitiveResponse struct {
@@ -371,14 +395,14 @@ type WithErrorSyntaxInterface _bindings.ChannelProxy
 func (p *WithErrorSyntaxInterface) ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error) {
 	var req_ _bindings.Message
 	resp_ := &withErrorSyntaxErrorAsPrimitiveResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(WithErrorSyntaxErrorAsPrimitiveOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsPrimitiveOrdinal64, req_, resp_)
 	return resp_.Result, err
 }
 
 func (p *WithErrorSyntaxInterface) ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResult, error) {
 	var req_ _bindings.Message
 	resp_ := &withErrorSyntaxErrorAsEnumResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(WithErrorSyntaxErrorAsEnumOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsEnumOrdinal64, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -402,15 +426,19 @@ type WithErrorSyntaxStub struct {
 	Impl WithErrorSyntax
 }
 
-func (s *WithErrorSyntaxStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
-		result, err_ := s.Impl.ErrorAsPrimitive()
+func (s_ *WithErrorSyntaxStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *WithErrorSyntaxStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case WithErrorSyntaxErrorAsPrimitiveOrdinal64:
+		result, err_ := s_.Impl.ErrorAsPrimitive()
 		out_ := withErrorSyntaxErrorAsPrimitiveResponse{}
 		out_.Result = result
 		return &out_, err_
-	case WithErrorSyntaxErrorAsEnumOrdinal:
-		result, err_ := s.Impl.ErrorAsEnum()
+	case WithErrorSyntaxErrorAsEnumOrdinal64:
+		result, err_ := s_.Impl.ErrorAsEnum()
 		out_ := withErrorSyntaxErrorAsEnumResponse{}
 		out_.Result = result
 		return &out_, err_
@@ -437,12 +465,20 @@ type WithErrorSyntaxEventProxy _bindings.ChannelProxy
 const (
 	OvernetInternalProtocolMethodAOrdinal uint32 = 1993818253
 	OvernetInternalProtocolMethodAGenOrdinal uint32 = 1993818253
+	OvernetInternalProtocolMethodAOrdinal64 uint64 = 1993818253 << 32
+	OvernetInternalProtocolMethodAGenOrdinal64 uint64 = 1993818253 << 32
 	OvernetInternalProtocolEventAOrdinal uint32 = 1746007436
 	OvernetInternalProtocolEventAGenOrdinal uint32 = 1746007436
+	OvernetInternalProtocolEventAOrdinal64 uint64 = 1746007436 << 32
+	OvernetInternalProtocolEventAGenOrdinal64 uint64 = 1746007436 << 32
 	OvernetInternalProtocolMethodBOrdinal uint32 = 952134976
 	OvernetInternalProtocolMethodBGenOrdinal uint32 = 952134976
+	OvernetInternalProtocolMethodBOrdinal64 uint64 = 952134976 << 32
+	OvernetInternalProtocolMethodBGenOrdinal64 uint64 = 952134976 << 32
 	OvernetInternalProtocolMutateSocketOrdinal uint32 = 1691201382
 	OvernetInternalProtocolMutateSocketGenOrdinal uint32 = 1691201382
+	OvernetInternalProtocolMutateSocketOrdinal64 uint64 = 1691201382 << 32
+	OvernetInternalProtocolMutateSocketGenOrdinal64 uint64 = 1691201382 << 32
 )
 
 type overnetInternalProtocolMethodARequest struct {
@@ -522,13 +558,13 @@ func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(OvernetInternalProtocolMethodAOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolMethodAOrdinal64, req_)
 	return err
 }
 
 func (p *OvernetInternalProtocolInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &overnetInternalProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).RecvNew(OvernetInternalProtocolEventAOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetInternalProtocolEventAOrdinal64, resp_)
 	return resp_.A, resp_.B, err
 }
 
@@ -538,7 +574,7 @@ func (p *OvernetInternalProtocolInterface) MethodB(a int64,b int64) (int64, erro
 		B: b,
 	}
 	resp_ := &overnetInternalProtocolMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(OvernetInternalProtocolMethodBOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMethodBOrdinal64, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -547,7 +583,7 @@ func (p *OvernetInternalProtocolInterface) MutateSocket(a _zx.Socket) (_zx.Socke
 		A: a,
 	}
 	resp_ := &overnetInternalProtocolMutateSocketResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(OvernetInternalProtocolMutateSocketOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMutateSocketOrdinal64, req_, resp_)
 	return resp_.B, err
 }
 
@@ -572,30 +608,34 @@ type OvernetInternalProtocolStub struct {
 	Impl OvernetInternalProtocol
 }
 
-func (s *OvernetInternalProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case OvernetInternalProtocolMethodAOrdinal:
+func (s_ *OvernetInternalProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *OvernetInternalProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case OvernetInternalProtocolMethodAOrdinal64:
 		in_ := overnetInternalProtocolMethodARequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.MethodA(in_.A,in_.B)
+		err_ := s_.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
-	case OvernetInternalProtocolMethodBOrdinal:
+	case OvernetInternalProtocolMethodBOrdinal64:
 		in_ := overnetInternalProtocolMethodBRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
 		out_ := overnetInternalProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
-	case OvernetInternalProtocolMutateSocketOrdinal:
+	case OvernetInternalProtocolMutateSocketOrdinal64:
 		in_ := overnetInternalProtocolMutateSocketRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		b, err_ := s.Impl.MutateSocket(in_.A)
+		b, err_ := s_.Impl.MutateSocket(in_.A)
 		out_ := overnetInternalProtocolMutateSocketResponse{}
 		out_.B = b
 		return &out_, err_
@@ -622,19 +662,27 @@ func (p *OvernetInternalProtocolEventProxy) EventA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).SendNew(OvernetInternalProtocolEventAOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(OvernetInternalProtocolEventAOrdinal64, event_)
 }
 
 
 const (
 	SocketControlProtocolMethodAOrdinal uint32 = 1007842318
 	SocketControlProtocolMethodAGenOrdinal uint32 = 1007842318
+	SocketControlProtocolMethodAOrdinal64 uint64 = 1007842318 << 32
+	SocketControlProtocolMethodAGenOrdinal64 uint64 = 1007842318 << 32
 	SocketControlProtocolEventAOrdinal uint32 = 955483393
 	SocketControlProtocolEventAGenOrdinal uint32 = 955483393
+	SocketControlProtocolEventAOrdinal64 uint64 = 955483393 << 32
+	SocketControlProtocolEventAGenOrdinal64 uint64 = 955483393 << 32
 	SocketControlProtocolMethodBOrdinal uint32 = 677342235
 	SocketControlProtocolMethodBGenOrdinal uint32 = 677342235
+	SocketControlProtocolMethodBOrdinal64 uint64 = 677342235 << 32
+	SocketControlProtocolMethodBGenOrdinal64 uint64 = 677342235 << 32
 	SocketControlProtocolMutateSocketOrdinal uint32 = 255772213
 	SocketControlProtocolMutateSocketGenOrdinal uint32 = 255772213
+	SocketControlProtocolMutateSocketOrdinal64 uint64 = 255772213 << 32
+	SocketControlProtocolMutateSocketGenOrdinal64 uint64 = 255772213 << 32
 )
 
 type socketControlProtocolMethodARequest struct {
@@ -714,13 +762,13 @@ func (p *SocketControlProtocolInterface) MethodA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.SocketControlProxy)(p)).SendNew(SocketControlProtocolMethodAOrdinal, req_)
+	err := ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolMethodAOrdinal64, req_)
 	return err
 }
 
 func (p *SocketControlProtocolInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &socketControlProtocolEventAResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).RecvNew(SocketControlProtocolEventAOrdinal, resp_)
+	err := ((*_bindings.SocketControlProxy)(p)).Recv(SocketControlProtocolEventAOrdinal64, resp_)
 	return resp_.A, resp_.B, err
 }
 
@@ -730,7 +778,7 @@ func (p *SocketControlProtocolInterface) MethodB(a int64,b int64) (int64, error)
 		B: b,
 	}
 	resp_ := &socketControlProtocolMethodBResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).CallNew(SocketControlProtocolMethodBOrdinal, req_, resp_)
+	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMethodBOrdinal64, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -739,7 +787,7 @@ func (p *SocketControlProtocolInterface) MutateSocket(a _zx.Socket) (_zx.Socket,
 		A: a,
 	}
 	resp_ := &socketControlProtocolMutateSocketResponse{}
-	err := ((*_bindings.SocketControlProxy)(p)).CallNew(SocketControlProtocolMutateSocketOrdinal, req_, resp_)
+	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMutateSocketOrdinal64, req_, resp_)
 	return resp_.B, err
 }
 
@@ -758,30 +806,34 @@ type SocketControlProtocolStub struct {
 	Impl SocketControlProtocol
 }
 
-func (s *SocketControlProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case SocketControlProtocolMethodAOrdinal:
+func (s_ *SocketControlProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *SocketControlProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case SocketControlProtocolMethodAOrdinal64:
 		in_ := socketControlProtocolMethodARequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.MethodA(in_.A,in_.B)
+		err_ := s_.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
-	case SocketControlProtocolMethodBOrdinal:
+	case SocketControlProtocolMethodBOrdinal64:
 		in_ := socketControlProtocolMethodBRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
 		out_ := socketControlProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
-	case SocketControlProtocolMutateSocketOrdinal:
+	case SocketControlProtocolMutateSocketOrdinal64:
 		in_ := socketControlProtocolMutateSocketRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		b, err_ := s.Impl.MutateSocket(in_.A)
+		b, err_ := s_.Impl.MutateSocket(in_.A)
 		out_ := socketControlProtocolMutateSocketResponse{}
 		out_.B = b
 		return &out_, err_
@@ -796,19 +848,27 @@ func (p *SocketControlProtocolEventProxy) EventA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.SocketControlProxy)(p)).SendNew(SocketControlProtocolEventAOrdinal, event_)
+	return ((*_bindings.SocketControlProxy)(p)).Send(SocketControlProtocolEventAOrdinal64, event_)
 }
 
 
 const (
 	ChannelProtocolMethodAOrdinal uint32 = 1432785874
 	ChannelProtocolMethodAGenOrdinal uint32 = 1432785874
+	ChannelProtocolMethodAOrdinal64 uint64 = 1432785874 << 32
+	ChannelProtocolMethodAGenOrdinal64 uint64 = 1432785874 << 32
 	ChannelProtocolEventAOrdinal uint32 = 477676034
 	ChannelProtocolEventAGenOrdinal uint32 = 477676034
+	ChannelProtocolEventAOrdinal64 uint64 = 477676034 << 32
+	ChannelProtocolEventAGenOrdinal64 uint64 = 477676034 << 32
 	ChannelProtocolMethodBOrdinal uint32 = 180770075
 	ChannelProtocolMethodBGenOrdinal uint32 = 180770075
+	ChannelProtocolMethodBOrdinal64 uint64 = 180770075 << 32
+	ChannelProtocolMethodBGenOrdinal64 uint64 = 180770075 << 32
 	ChannelProtocolMutateSocketOrdinal uint32 = 1258480262
 	ChannelProtocolMutateSocketGenOrdinal uint32 = 1258480262
+	ChannelProtocolMutateSocketOrdinal64 uint64 = 1258480262 << 32
+	ChannelProtocolMutateSocketGenOrdinal64 uint64 = 1258480262 << 32
 )
 
 type channelProtocolMethodARequest struct {
@@ -888,13 +948,13 @@ func (p *ChannelProtocolInterface) MethodA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(ChannelProtocolMethodAOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolMethodAOrdinal64, req_)
 	return err
 }
 
 func (p *ChannelProtocolInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &channelProtocolEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).RecvNew(ChannelProtocolEventAOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal64, resp_)
 	return resp_.A, resp_.B, err
 }
 
@@ -904,7 +964,7 @@ func (p *ChannelProtocolInterface) MethodB(a int64,b int64) (int64, error) {
 		B: b,
 	}
 	resp_ := &channelProtocolMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(ChannelProtocolMethodBOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBOrdinal64, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -913,7 +973,7 @@ func (p *ChannelProtocolInterface) MutateSocket(a _zx.Socket) (_zx.Socket, error
 		A: a,
 	}
 	resp_ := &channelProtocolMutateSocketResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(ChannelProtocolMutateSocketOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMutateSocketOrdinal64, req_, resp_)
 	return resp_.B, err
 }
 
@@ -938,30 +998,34 @@ type ChannelProtocolStub struct {
 	Impl ChannelProtocol
 }
 
-func (s *ChannelProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case ChannelProtocolMethodAOrdinal:
+func (s_ *ChannelProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *ChannelProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case ChannelProtocolMethodAOrdinal64:
 		in_ := channelProtocolMethodARequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.MethodA(in_.A,in_.B)
+		err_ := s_.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
-	case ChannelProtocolMethodBOrdinal:
+	case ChannelProtocolMethodBOrdinal64:
 		in_ := channelProtocolMethodBRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
 		out_ := channelProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
-	case ChannelProtocolMutateSocketOrdinal:
+	case ChannelProtocolMutateSocketOrdinal64:
 		in_ := channelProtocolMutateSocketRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		b, err_ := s.Impl.MutateSocket(in_.A)
+		b, err_ := s_.Impl.MutateSocket(in_.A)
 		out_ := channelProtocolMutateSocketResponse{}
 		out_.B = b
 		return &out_, err_
@@ -988,19 +1052,27 @@ func (p *ChannelProtocolEventProxy) EventA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).SendNew(ChannelProtocolEventAOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(ChannelProtocolEventAOrdinal64, event_)
 }
 
 
 const (
 	KitchenSinkMethodAOrdinal uint32 = 450577456
 	KitchenSinkMethodAGenOrdinal uint32 = 450577456
+	KitchenSinkMethodAOrdinal64 uint64 = 450577456 << 32
+	KitchenSinkMethodAGenOrdinal64 uint64 = 450577456 << 32
 	KitchenSinkEventAOrdinal uint32 = 1795426833
 	KitchenSinkEventAGenOrdinal uint32 = 1795426833
+	KitchenSinkEventAOrdinal64 uint64 = 1795426833 << 32
+	KitchenSinkEventAGenOrdinal64 uint64 = 1795426833 << 32
 	KitchenSinkMethodBOrdinal uint32 = 1999489700
 	KitchenSinkMethodBGenOrdinal uint32 = 1999489700
+	KitchenSinkMethodBOrdinal64 uint64 = 1999489700 << 32
+	KitchenSinkMethodBGenOrdinal64 uint64 = 1999489700 << 32
 	KitchenSinkMutateSocketOrdinal uint32 = 115851270
 	KitchenSinkMutateSocketGenOrdinal uint32 = 115851270
+	KitchenSinkMutateSocketOrdinal64 uint64 = 115851270 << 32
+	KitchenSinkMutateSocketGenOrdinal64 uint64 = 115851270 << 32
 )
 
 type kitchenSinkMethodARequest struct {
@@ -1080,13 +1152,13 @@ func (p *KitchenSinkInterface) MethodA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(KitchenSinkMethodAOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkMethodAOrdinal64, req_)
 	return err
 }
 
 func (p *KitchenSinkInterface) ExpectEventA() (int64, int64, error) {
 	resp_ := &kitchenSinkEventAResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).RecvNew(KitchenSinkEventAOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(KitchenSinkEventAOrdinal64, resp_)
 	return resp_.A, resp_.B, err
 }
 
@@ -1096,7 +1168,7 @@ func (p *KitchenSinkInterface) MethodB(a int64,b int64) (int64, error) {
 		B: b,
 	}
 	resp_ := &kitchenSinkMethodBResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(KitchenSinkMethodBOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMethodBOrdinal64, req_, resp_)
 	return resp_.Result, err
 }
 
@@ -1105,7 +1177,7 @@ func (p *KitchenSinkInterface) MutateSocket(a _zx.Socket) (_zx.Socket, error) {
 		A: a,
 	}
 	resp_ := &kitchenSinkMutateSocketResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(KitchenSinkMutateSocketOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMutateSocketOrdinal64, req_, resp_)
 	return resp_.B, err
 }
 
@@ -1130,30 +1202,34 @@ type KitchenSinkStub struct {
 	Impl KitchenSink
 }
 
-func (s *KitchenSinkStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case KitchenSinkMethodAOrdinal:
+func (s_ *KitchenSinkStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *KitchenSinkStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case KitchenSinkMethodAOrdinal64:
 		in_ := kitchenSinkMethodARequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.MethodA(in_.A,in_.B)
+		err_ := s_.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
-	case KitchenSinkMethodBOrdinal:
+	case KitchenSinkMethodBOrdinal64:
 		in_ := kitchenSinkMethodBRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		result, err_ := s.Impl.MethodB(in_.A,in_.B)
+		result, err_ := s_.Impl.MethodB(in_.A,in_.B)
 		out_ := kitchenSinkMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
-	case KitchenSinkMutateSocketOrdinal:
+	case KitchenSinkMutateSocketOrdinal64:
 		in_ := kitchenSinkMutateSocketRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		b, err_ := s.Impl.MutateSocket(in_.A)
+		b, err_ := s_.Impl.MutateSocket(in_.A)
 		out_ := kitchenSinkMutateSocketResponse{}
 		out_.B = b
 		return &out_, err_
@@ -1180,7 +1256,7 @@ func (p *KitchenSinkEventProxy) EventA(a int64,b int64) error {
 		A: a,
 		B: b,
 	}
-	return ((*_bindings.ChannelProxy)(p)).SendNew(KitchenSinkEventAOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(KitchenSinkEventAOrdinal64, event_)
 }
 
 

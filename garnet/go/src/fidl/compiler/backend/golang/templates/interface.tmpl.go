@@ -9,9 +9,11 @@ const Interface = `
 
 const (
 {{- range .Methods }}
-	{{ .OrdinalName }} uint32 = {{ .Ordinal }}
-	{{ .GenOrdinalName }} uint32 = {{ .GenOrdinal }}
-	{{- end }}
+	{{ .OrdinalName32 }} uint32 = {{ .Ordinal }}
+	{{ .GenOrdinalName32 }} uint32 = {{ .GenOrdinal }}
+	{{ .OrdinalName64 }} uint64 = {{ .Ordinal }} << 32
+	{{ .GenOrdinalName64 }} uint64 = {{ .GenOrdinal }} << 32
+{{- end }}
 )
 
 {{- range .Methods }}
@@ -72,13 +74,13 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).CallNew({{ .OrdinalName }}, req_, resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName64 }}, req_, resp_)
 		{{- else }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).SendNew({{ .OrdinalName }}, req_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName64 }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).RecvNew({{ .OrdinalName }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName64 }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName64 }}{{ end }})
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -171,19 +173,23 @@ type {{ .StubName }} struct {
 	Impl {{ .Name }}
 }
 
-func (s *{{ .StubName }}) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
+func (s_ *{{ .StubName }}) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
 	{{- if ne .Ordinal .GenOrdinal }}
-	case {{ .GenOrdinalName }}:
+	case {{ .GenOrdinalName64 }}:
 		fallthrough
 	{{ end }}
-	case {{ .OrdinalName }}:
+	case {{ .OrdinalName64 }}:
 		{{- if .Request }}
 		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
 		{{- end }}
@@ -191,7 +197,7 @@ func (s *{{ .StubName }}) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_
 		{{ if .Response }}
 		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
-		err_ := s.Impl.{{ .Name }}(
+		err_ := s_.Impl.{{ .Name }}(
 		{{- if .Request -}}
 		{{- range $index, $m := .Request.Members -}}
 		{{- if $index -}}, {{- end -}}
@@ -254,7 +260,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 	var event_ _bindings.Message
 	{{- end }}
 	{{- end }}
-	return ((*_bindings.{{ $.ProxyType }})(p)).SendNew({{ .OrdinalName }}, event_)
+	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName64 }}, event_)
 }
 {{- end }}
 {{- end }}

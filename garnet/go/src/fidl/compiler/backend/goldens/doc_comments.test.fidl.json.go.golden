@@ -100,8 +100,12 @@ func (u *Table) ClearField() {
 const (
 	InterfaceMethodOrdinal uint32 = 1061382220
 	InterfaceMethodGenOrdinal uint32 = 1061382220
+	InterfaceMethodOrdinal64 uint64 = 1061382220 << 32
+	InterfaceMethodGenOrdinal64 uint64 = 1061382220 << 32
 	InterfaceOnEventOrdinal uint32 = 325918733
 	InterfaceOnEventGenOrdinal uint32 = 325918733
+	InterfaceOnEventOrdinal64 uint64 = 325918733 << 32
+	InterfaceOnEventGenOrdinal64 uint64 = 325918733 << 32
 )
 
 type InterfaceInterface _bindings.ChannelProxy
@@ -112,7 +116,7 @@ type InterfaceInterface _bindings.ChannelProxy
 // method comment #3
 func (p *InterfaceInterface) Method() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(InterfaceMethodOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal64, req_)
 	return err
 }
 
@@ -121,7 +125,7 @@ func (p *InterfaceInterface) Method() error {
 // event comment #3
 func (p *InterfaceInterface) ExpectOnEvent() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).RecvNew(InterfaceOnEventOrdinal, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal64, resp_)
 	return err
 }
 
@@ -153,10 +157,14 @@ type InterfaceStub struct {
 	Impl Interface
 }
 
-func (s *InterfaceStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case InterfaceMethodOrdinal:
-		err_ := s.Impl.Method()
+func (s_ *InterfaceStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *InterfaceStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case InterfaceMethodOrdinal64:
+		err_ := s_.Impl.Method()
 		return nil, err_
 	}
 	return nil, _bindings.ErrUnknownOrdinal
@@ -178,7 +186,7 @@ type InterfaceEventProxy _bindings.ChannelProxy
 
 func (p *InterfaceEventProxy) OnEvent() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).SendNew(InterfaceOnEventOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventOrdinal64, event_)
 }
 
 

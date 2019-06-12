@@ -397,7 +397,7 @@ func (ios *iostate) loopControl() error {
 
 		msg := respb[:nb]
 		var header fidl.MessageHeader
-		if _, _, err := fidl.UnmarshalNew(msg, nil, &header); err != nil {
+		if _, _, err := fidl.Unmarshal(msg, nil, &header); err != nil {
 			return err
 		}
 

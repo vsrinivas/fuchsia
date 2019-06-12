@@ -35,8 +35,12 @@ type ChildStub struct {
 	Impl Child
 }
 
-func (s *ChildStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
+func (s_ *ChildStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *ChildStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
 	}
 	return nil, _bindings.ErrUnknownOrdinal
 }
@@ -60,12 +64,20 @@ type ChildEventProxy _bindings.ChannelProxy
 const (
 	ParentGetChildOrdinal uint32 = 915586153
 	ParentGetChildGenOrdinal uint32 = 915586153
+	ParentGetChildOrdinal64 uint64 = 915586153 << 32
+	ParentGetChildGenOrdinal64 uint64 = 915586153 << 32
 	ParentGetChildRequestOrdinal uint32 = 1068158078
 	ParentGetChildRequestGenOrdinal uint32 = 1068158078
+	ParentGetChildRequestOrdinal64 uint64 = 1068158078 << 32
+	ParentGetChildRequestGenOrdinal64 uint64 = 1068158078 << 32
 	ParentTakeChildOrdinal uint32 = 1275478777
 	ParentTakeChildGenOrdinal uint32 = 1275478777
+	ParentTakeChildOrdinal64 uint64 = 1275478777 << 32
+	ParentTakeChildGenOrdinal64 uint64 = 1275478777 << 32
 	ParentTakeChildRequestOrdinal uint32 = 1589872250
 	ParentTakeChildRequestGenOrdinal uint32 = 1589872250
+	ParentTakeChildRequestOrdinal64 uint64 = 1589872250 << 32
+	ParentTakeChildRequestGenOrdinal64 uint64 = 1589872250 << 32
 )
 
 type parentGetChildResponse struct {
@@ -118,14 +130,14 @@ type ParentInterface _bindings.ChannelProxy
 func (p *ParentInterface) GetChild() (ChildInterface, error) {
 	var req_ _bindings.Message
 	resp_ := &parentGetChildResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(ParentGetChildOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildOrdinal64, req_, resp_)
 	return resp_.C, err
 }
 
 func (p *ParentInterface) GetChildRequest() (ChildInterfaceRequest, error) {
 	var req_ _bindings.Message
 	resp_ := &parentGetChildRequestResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).CallNew(ParentGetChildRequestOrdinal, req_, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestOrdinal64, req_, resp_)
 	return resp_.R, err
 }
 
@@ -133,7 +145,7 @@ func (p *ParentInterface) TakeChild(c ChildInterface) error {
 	req_ := &parentTakeChildRequest{
 		C: c,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(ParentTakeChildOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildOrdinal64, req_)
 	return err
 }
 
@@ -141,7 +153,7 @@ func (p *ParentInterface) TakeChildRequest(r ChildInterfaceRequest) error {
 	req_ := &parentTakeChildRequestRequest{
 		R: r,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).SendNew(ParentTakeChildRequestOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestOrdinal64, req_)
 	return err
 }
 
@@ -167,31 +179,35 @@ type ParentStub struct {
 	Impl Parent
 }
 
-func (s *ParentStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	switch ord {
-	case ParentGetChildOrdinal:
-		c, err_ := s.Impl.GetChild()
+func (s_ *ParentStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	return s_.Dispatch(uint64(ord) << 32, b_, h_)
+}
+
+func (s_ *ParentStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
+	switch ordinal_ {
+	case ParentGetChildOrdinal64:
+		c, err_ := s_.Impl.GetChild()
 		out_ := parentGetChildResponse{}
 		out_.C = c
 		return &out_, err_
-	case ParentGetChildRequestOrdinal:
-		r, err_ := s.Impl.GetChildRequest()
+	case ParentGetChildRequestOrdinal64:
+		r, err_ := s_.Impl.GetChildRequest()
 		out_ := parentGetChildRequestResponse{}
 		out_.R = r
 		return &out_, err_
-	case ParentTakeChildOrdinal:
+	case ParentTakeChildOrdinal64:
 		in_ := parentTakeChildRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.TakeChild(in_.C)
+		err_ := s_.Impl.TakeChild(in_.C)
 		return nil, err_
-	case ParentTakeChildRequestOrdinal:
+	case ParentTakeChildRequestOrdinal64:
 		in_ := parentTakeChildRequestRequest{}
-		if _, _, err_ := _bindings.UnmarshalNew(b_, h_, &in_); err_ != nil {
+		if _, _, err_ := _bindings.Unmarshal(data_, handles_, &in_); err_ != nil {
 			return nil, err_
 		}
-		err_ := s.Impl.TakeChildRequest(in_.R)
+		err_ := s_.Impl.TakeChildRequest(in_.R)
 		return nil, err_
 	}
 	return nil, _bindings.ErrUnknownOrdinal

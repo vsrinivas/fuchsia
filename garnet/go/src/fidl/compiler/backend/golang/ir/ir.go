@@ -406,16 +406,14 @@ type Method struct {
 	// Ordinal is the ordinal for this method.
 	Ordinal types.Ordinal
 
-	// OrdinalName is the name of the ordinal for this method, including the interface
-	// name as a prefix.
-	OrdinalName string
+	OrdinalName32 string
+	OrdinalName64 string
 
 	// GenOrdinal is the generated ordinal for this method.
 	GenOrdinal types.Ordinal
 
-	// GenOrdinalName is the name of the generated ordinal for this method,
-	// including the interface name as a prefix.
-	GenOrdinalName string
+	GenOrdinalName32 string
+	GenOrdinalName64 string
 
 	// Name is the name of the Method, including the interface name as a prefix.
 	Name string
@@ -951,15 +949,17 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
-		Attributes:      val.Attributes,
-		Name:            methodName,
-		Ordinal:         val.Ordinal,
-		OrdinalName:     c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
-		GenOrdinal:      val.GenOrdinal,
-		GenOrdinalName:  c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),
-		EventExpectName: "Expect" + methodName,
-		IsEvent:         !val.HasRequest && val.HasResponse,
-		IsTransitional:  val.IsTransitional(),
+		Attributes:       val.Attributes,
+		Name:             methodName,
+		Ordinal:          val.Ordinal,
+		OrdinalName32:    c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
+		OrdinalName64:    c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal64"),
+		GenOrdinal:       val.GenOrdinal,
+		GenOrdinalName32: c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),
+		GenOrdinalName64: c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal64"),
+		EventExpectName:  "Expect" + methodName,
+		IsEvent:          !val.HasRequest && val.HasResponse,
+		IsTransitional:   val.IsTransitional(),
 	}
 	if val.HasRequest {
 		req := Struct{
