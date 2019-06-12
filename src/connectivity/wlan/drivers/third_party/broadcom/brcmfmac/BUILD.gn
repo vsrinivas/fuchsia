@@ -78,7 +78,7 @@ brcmf_core_srcs = [
 
 brcmf_core_deps = [
   "//garnet/lib/wlan/protocol",
-  "//src/connectivity/wlan/drivers/testing/lib/sim-device:simdevice",
+  "//src/connectivity/wlan/drivers/testing/lib/sim-device:sim-device",
   "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
   "//zircon/public/banjo/ddk.protocol.composite",
   "//zircon/public/banjo/ddk.protocol.ethernet",

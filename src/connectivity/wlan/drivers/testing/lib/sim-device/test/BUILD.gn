@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":sim_device_test",
+  ]
+}
+
+executable("sim_add_test") {
+  output_name = "sim_add_test"
+  testonly = true
+
+  defines = [ ]
+
+  sources = [
+    "sim_add_test.cc",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/ddk",
+  ]
+}
+
+unittest_package("sim_device_test") {
+  package_name = "sim_device_test"
+
+  deps = [
+    ":sim_add_test",
+  ]
+
+  tests = [
+    {
+      name = "sim_add_test"
+      environments = basic_envs
+    },
+  ]
+}
+

@@ -145,7 +145,7 @@ source_set("iwlwifi_sim_trans_ss") {
 
   deps = [
     ":core",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-device:simdevice",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device:sim-device",
   ]
 
   public_deps = [
