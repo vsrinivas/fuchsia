@@ -10,7 +10,7 @@
 #include <set>
 
 #include <lib/async-testing/dispatcher_stub.h>
-#include <lib/async-testing/time-keeper.h>
+#include <lib/async-testing/time_keeper.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
@@ -21,12 +21,16 @@ namespace async {
 
 // An asynchronous dispatcher with an abstracted sense of time, controlled by an
 // external time-keeping object, for use in testing.
-class TestLoopDispatcher : public DispatcherStub {
+class TestLoopDispatcher final : public DispatcherStub {
 public:
-    TestLoopDispatcher(TimeKeeper* time_keeper);
+    explicit TestLoopDispatcher(TimeKeeper* time_keeper);
     ~TestLoopDispatcher();
+
     TestLoopDispatcher(const TestLoopDispatcher&) = delete;
     TestLoopDispatcher& operator=(const TestLoopDispatcher&) = delete;
+
+    TestLoopDispatcher(TestLoopDispatcher&&) = delete;
+    TestLoopDispatcher& operator=(TestLoopDispatcher&&) = delete;
 
     // async_dispatcher_t operation implementations.
     zx::time Now() override;

@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-#include <lib/async-testing/time-keeper.h>
+#include <lib/async-testing/time_keeper.h>
 #include <lib/async/default.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

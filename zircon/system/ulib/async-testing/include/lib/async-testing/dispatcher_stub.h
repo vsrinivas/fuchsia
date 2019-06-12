@@ -16,6 +16,12 @@ public:
     DispatcherStub();
     virtual ~DispatcherStub();
 
+    DispatcherStub(const DispatcherStub&) = delete;
+    DispatcherStub& operator=(const DispatcherStub&) = delete;
+
+    DispatcherStub(DispatcherStub&&) = delete;
+    DispatcherStub& operator=(DispatcherStub&&) = delete;
+
     virtual zx::time Now();
     virtual zx_status_t BeginWait(async_wait_t* wait);
     virtual zx_status_t CancelWait(async_wait_t* wait);

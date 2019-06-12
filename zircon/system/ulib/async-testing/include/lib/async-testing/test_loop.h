@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <lib/async-testing/test_loop_dispatcher.h>
-
 #include <lib/async/dispatcher.h>
 
 namespace async {
@@ -22,15 +21,21 @@ public:
 };
 
 // A message loop with a fake clock, to be controlled within a test setting.
-class TestLoop {
+class TestLoop final {
 public:
     // Constructs a TestLoop with a seed from the environment, or a random
     // seed if absent.
     TestLoop();
     // If state is nonzero, constructs a TestLoop with the given seed.
     // Otherwise, uses a seed from the environment or a random seed.
-    TestLoop(uint32_t state);
+    explicit TestLoop(uint32_t state);
     ~TestLoop();
+
+    TestLoop(const TestLoop&) = delete;
+    TestLoop& operator=(const TestLoop&) = delete;
+
+    TestLoop(TestLoop&&) = delete;
+    TestLoop& operator=(TestLoop&&) = delete;
 
     // Returns the test loop's asynchronous dispatcher.
     async_dispatcher_t* dispatcher();

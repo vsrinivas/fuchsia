@@ -8,7 +8,7 @@ library("async-testing") {
     "lib/async-testing/dispatcher_stub.h",
     "lib/async-testing/test_loop.h",
     "lib/async-testing/test_loop_dispatcher.h",
-    "lib/async-testing/time-keeper.h",
+    "lib/async-testing/time_keeper.h",
   ]
   testonly = true
   sources = [
