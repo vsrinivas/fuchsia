@@ -8,9 +8,9 @@
 #include <netdb.h>
 #include <poll.h>
 #include <stdarg.h>
-#include <sys/param.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <threads.h>
 #include <unistd.h>
@@ -20,16 +20,16 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
-#include <lib/zircon-internal/debug.h>
-#include <lib/fdio/io.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/zxs/protocol.h>
 #include <lib/zxs/zxs.h>
 
-#include "private.h"
 #include "private-socket.h"
+#include "private.h"
 #include "unistd.h"
 
 static zx_status_t get_service_handle(const char* path, zx_handle_t* saved,
@@ -100,7 +100,7 @@ int socket(int domain, int type, int protocol) {
         return ERROR(status);
     }
     if (out_code) {
-      return ERRNO(out_code);
+        return ERRNO(out_code);
     }
 
     zxs_socket_t out_socket;
@@ -176,16 +176,16 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
 
     switch (out_code) {
-      case 0: {
-          *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
-          fdio_release(io);
-          return out_code;
-      }
+    case 0: {
+        *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
+        fdio_release(io);
+        return out_code;
+    }
 
-      default: {
-          fdio_release(io);
-          return ERRNO(out_code);
-      }
+    default: {
+        fdio_release(io);
+        return ERRNO(out_code);
+    }
     }
 }
 
@@ -418,7 +418,6 @@ int getaddrinfo(const char* __restrict node,
         service_size = strlen(service);
     }
 
-
     fuchsia_net_AddrInfoHints ht_storage, *ht;
     memset(&ht_storage, 0, sizeof(ht_storage));
     ht = &ht_storage;
@@ -435,7 +434,7 @@ int getaddrinfo(const char* __restrict node,
     uint32_t nres = 0;
     fuchsia_net_AddrInfo ai[4];
     r = fuchsia_net_SocketProviderGetAddrInfo(
-          sp, node, node_size, service, service_size, ht, &status, &nres, ai);
+        sp, node, node_size, service, service_size, ht, &status, &nres, ai);
 
     if (r != ZX_OK) {
         errno = fdio_status_to_errno(r);
@@ -461,50 +460,48 @@ int getaddrinfo(const char* __restrict node,
     struct res_entry* entry = static_cast<res_entry*>(calloc(nres, sizeof(struct res_entry)));
 
     for (uint8_t i = 0; i < nres; i++) {
-        entry[i].ai.ai_flags    = ai[i].flags;
-        entry[i].ai.ai_family   = ai[i].family;
+        entry[i].ai.ai_flags = ai[i].flags;
+        entry[i].ai.ai_family = ai[i].family;
         entry[i].ai.ai_socktype = ai[i].sock_type;
         entry[i].ai.ai_protocol = ai[i].protocol;
-        entry[i].ai.ai_addr = (struct sockaddr*) &entry[i].addr_storage;
+        entry[i].ai.ai_addr = (struct sockaddr*)&entry[i].addr_storage;
         entry[i].ai.ai_canonname = NULL; // TODO: support canonname
         switch (entry[i].ai.ai_family) {
-            case AF_INET: {
-                struct sockaddr_in
-                    * addr = (struct sockaddr_in*) entry[i].ai.ai_addr;
-                addr->sin_family = AF_INET;
-                addr->sin_port = htons(ai[i].port);
-                if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
-                    free(entry);
-                    errno = EIO;
-                    return EAI_SYSTEM;
-                }
-                memcpy(&addr->sin_addr, ai[i].addr.val, ai[i].addr.len);
-                entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in);
-
-                break;
-            }
-
-            case AF_INET6: {
-                struct sockaddr_in6
-                    * addr = (struct sockaddr_in6*) entry[i].ai.ai_addr;
-                addr->sin6_family = AF_INET6;
-                addr->sin6_port = htons(ai[i].port);
-                if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
-                    free(entry);
-                    errno = EIO;
-                    return EAI_SYSTEM;
-                }
-                memcpy(&addr->sin6_addr, ai[i].addr.val, ai[i].addr.len);
-                entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in6);
-
-                break;
-            }
-
-            default: {
+        case AF_INET: {
+            struct sockaddr_in* addr = (struct sockaddr_in*)entry[i].ai.ai_addr;
+            addr->sin_family = AF_INET;
+            addr->sin_port = htons(ai[i].port);
+            if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
                 free(entry);
                 errno = EIO;
                 return EAI_SYSTEM;
             }
+            memcpy(&addr->sin_addr, ai[i].addr.val, ai[i].addr.len);
+            entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in);
+
+            break;
+        }
+
+        case AF_INET6: {
+            struct sockaddr_in6* addr = (struct sockaddr_in6*)entry[i].ai.ai_addr;
+            addr->sin6_family = AF_INET6;
+            addr->sin6_port = htons(ai[i].port);
+            if (ai[i].addr.len > sizeof(ai[i].addr.val)) {
+                free(entry);
+                errno = EIO;
+                return EAI_SYSTEM;
+            }
+            memcpy(&addr->sin6_addr, ai[i].addr.val, ai[i].addr.len);
+            entry[i].ai.ai_addrlen = sizeof(struct sockaddr_in6);
+
+            break;
+        }
+
+        default: {
+            free(entry);
+            errno = EIO;
+            return EAI_SYSTEM;
+        }
         }
     }
     struct addrinfo* next = NULL;
