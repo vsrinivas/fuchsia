@@ -20,6 +20,9 @@ import("//build/rust/rustc_artifact.gni")
 #     Third party crates can be included through paths like
 #     "//third_party/rust_crates:<cratename>",
 #
+#   test_deps (optional)
+#     List of rust_library GN targets on which this crate's tests depend.
+#
 #   non_rust_deps (optional)
 #     List of non-rust_library GN targets on which this crate depends.
 #

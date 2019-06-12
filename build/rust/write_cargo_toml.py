@@ -49,6 +49,40 @@ default = [%(features_array_items)s]
 %(features_no_deps)s
 '''
 
+# Returns the package name and Cargo.toml dependency data for a dependency,
+# or `None` on failure.
+def add_dep(third_party_json, data_path):
+    if not os.path.isfile(data_path):
+        print TERM_COLOR_RED
+        print "Missing Rust target data for dependency " + data_path
+        print "Did you accidentally depend on a non-Rust target?"
+        print TERM_COLOR_END
+        return None
+    dep_data = json.load(open(data_path))
+    if dep_data["third_party"]:
+        package_name = dep_data["package_name"]
+        if package_name not in third_party_json["crates"]:
+            print(TERM_COLOR_RED)
+            print("Missing Rust target dependency:" + data_path)
+            print("Package is present in the third_party/ but is absent"
+                  " from dependency data: " + args.third_party_deps_data)
+            print("Maybe this package is conditionally disabled for the"
+                  " current configuration of '%s'?" % args.crate_name)
+            print(TERM_COLOR_END)
+            return None
+        crate_data = third_party_json["crates"][package_name]
+        data = crate_data["cargo_dependency_toml"]
+    else:
+        package_name = dep_data["package_name"]
+        if package_name in IN_TREE_THIRD_PARTY_PACKAGES:
+            data = { "version": "*" }
+        else:
+            data = {
+                "path": dep_data["cargo_toml_dir"],
+                "version": dep_data["version"],
+            }
+    return (package_name, data)
+
 def cur_year():
     return datetime.datetime.now().year
 
@@ -87,6 +121,10 @@ def main():
                         action="append",
                         help="Path to metadata from a previous invocation of this script",
                         required=False)
+    parser.add_argument("--test-only-dep-data",
+                        action="append",
+                        help="Path to metadata for test-only dependencies",
+                        required=False)
     parser.add_argument("--feature",
                         help="Feature to enable",
                         action="append",
@@ -102,37 +140,17 @@ def main():
     deps = {}
     if args.dep_data:
         for data_path in args.dep_data:
-            if not os.path.isfile(data_path):
-                print TERM_COLOR_RED
-                print "Missing Rust target data for dependency " + data_path
-                print "Did you accidentally depend on a non-Rust target?"
-                print TERM_COLOR_END
+            data = add_dep(third_party_json, data_path)
+            if data is None:
                 return -1
-            dep_data = json.load(open(data_path))
-            if dep_data["third_party"]:
-                package_name = dep_data["package_name"]
-                if package_name not in third_party_json["crates"]:
-                    print(TERM_COLOR_RED)
-                    print("Missing Rust target dependency:" + data_path)
-                    print("Package is present in the third_party/ but is absent"
-                          " from dependency data: " + args.third_party_deps_data)
-                    print("Maybe this package is conditionally disabled for the"
-                          " current configuration of '%s'?" % args.crate_name)
-                    print(TERM_COLOR_END)
-                    return -1
-                crate_data = third_party_json["crates"][package_name]
-                deps[package_name] = crate_data["cargo_dependency_toml"]
-            else:
-                package_name = dep_data["package_name"]
-                if package_name in IN_TREE_THIRD_PARTY_PACKAGES:
-                    deps[package_name] = {
-                        "version": "*",
-                    }
-                else:
-                    deps[package_name] = {
-                        "path": dep_data["cargo_toml_dir"],
-                        "version": dep_data["version"],
-                    }
+            deps[data[0]] = data[1]
+    test_only_deps = {}
+    if args.test_only_dep_data:
+        for data_path in args.test_only_dep_data:
+            data = add_dep(third_party_json, data_path)
+            if data is None:
+                return -1
+            deps[data[0]] = data[1]
 
     features = args.features or []
 
@@ -142,7 +160,6 @@ def main():
             "crate_name": args.crate_name,
             "version": args.version,
             "edition": args.edition,
-            "deps": deps,
             "year": cur_year(),
             "bin_or_lib": "[[bin]]" if args.crate_type == "bin" else "[lib]",
             "is_proc_macro": "proc-macro = true" if args.crate_type == "proc-macro" else "",
@@ -156,6 +173,7 @@ def main():
         dependencies = { "dependencies": deps }
         file.write(pytoml.dumps({
             "dependencies": deps,
+            "dev-dependencies": test_only_deps,
             "patch": { "crates-io": third_party_json["patches"] },
         }))
 

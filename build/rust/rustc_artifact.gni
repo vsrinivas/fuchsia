@@ -299,6 +299,7 @@ template("rustc_artifact") {
   # Iterate through the deps collecting a list of the outputs
   # of their build targets, which will be passed to rustc as
   # `--extern` crates.
+  # Note: keep this code in sync with "Iterate through..." below.
   dep_info_paths = []
   dep_info_sources = []
   if (defined(invoker.deps)) {
@@ -501,12 +502,38 @@ template("rustc_artifact") {
     }
   }
 
+  test_dep_info_paths = []
   if (with_unit_tests) {
+    test_deps = []
+    test_dep_args = []
+
+    # Note: keep this code in sync with "Iterate through..." above.
+    # Iterate through test-only dependencies and add them to flags and deps.
+    if (defined(invoker.test_deps)) {
+      test_deps = invoker.test_deps
+      foreach(dep, invoker.test_deps) {
+        dep_target_name = get_label_info(dep, "name")
+        dep_dir = get_label_info(dep, "dir")
+        dep_build_target = "${dep_dir}:${dep_target_name}_build"
+        dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
+        dep_info_path = "${dep_out_dir}/${dep_target_name}_info.json"
+        test_dep_args += [
+          "--dep-data",
+          rebase_path(dep_info_path),
+        ]
+        test_dep_info_paths += [
+          "--test-only-dep-data",
+          rebase_path(dep_info_path),
+        ]
+        dep_info_sources += [ rebase_path(dep_info_path) ]
+      }
+    }
+
     action(build_test_target_name) {
       script = rustc_target_script
       pool = rustc_target_pool
 
-      args = rustc_target_args
+      args = rustc_target_args + test_dep_args
       args += [
         "--test",
         "--output-file",
@@ -522,9 +549,12 @@ template("rustc_artifact") {
 
       testonly = true
       depfile = test_depfile
-      deps = rustc_target_deps
+      deps = rustc_target_deps + test_deps
       if (is_linux || is_mac) {
         deps += [ ":$test_spec_target_name" ]
+      }
+      if (defined(invoker.test_deps)) {
+        deps += invoker.test_deps
       }
       public_deps = rustc_target_public_deps
     }
@@ -665,6 +695,11 @@ template("rustc_artifact") {
       deps = []
     }
     deps += [ third_party_build ]  # for deps data
+    if (defined(invoker.test_deps)) {
+      foreach(test_dep, invoker.test_deps) {
+        deps += invoker.test_deps
+      }
+    }
     args = [
       "--out-dir",
       rebase_path(cargo_toml_dir),
@@ -702,6 +737,7 @@ template("rustc_artifact") {
 
     # list of paths to info about crate dependencies
     args += dep_info_paths
+    args += test_dep_info_paths
     sources = dep_info_sources
     outputs = [
       "${cargo_toml_dir}/Cargo.toml",
