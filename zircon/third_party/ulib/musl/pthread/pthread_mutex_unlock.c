@@ -4,15 +4,18 @@
 
 int pthread_mutex_unlock(pthread_mutex_t* m) {
     int waiters = atomic_load(&m->_m_waiters);
+    int type = pthread_mutex_get_type(m);
     int cont;
-    int type = m->_m_type & PTHREAD_MUTEX_MASK;
 
     if (type != PTHREAD_MUTEX_NORMAL) {
         if (pthread_mutex_state_to_tid(atomic_load(&m->_m_lock)) != __thread_get_tid())
             return EPERM;
-        if ((type & PTHREAD_MUTEX_MASK) == PTHREAD_MUTEX_RECURSIVE && m->_m_count)
+        if ((type == PTHREAD_MUTEX_RECURSIVE) && m->_m_count)
             return m->_m_count--, 0;
     }
+
+    // Cache this trait before we release the mutex
+    bool prio_inherit = pthread_mutex_prio_inherit(m);
 
     // Release the mutex.
     cont = atomic_exchange(&m->_m_lock, 0);
@@ -26,7 +29,11 @@ int pthread_mutex_unlock(pthread_mutex_t* m) {
         // Note that the mutex's memory could have been freed and reused by
         // this point, so this could cause a spurious futex wakeup for a
         // unrelated user of the memory location.
-        _zx_futex_wake(&m->_m_lock, 1);
+        if (prio_inherit) {
+            _zx_futex_wake_single_owner(&m->_m_lock);
+        } else {
+            _zx_futex_wake(&m->_m_lock, 1);
+        }
     }
     return 0;
 }

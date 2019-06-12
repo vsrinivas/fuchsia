@@ -112,7 +112,44 @@ static inline struct pthread* tp_to_pthread(void* tp) {
 
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
 
-#define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)
+#define PTHREAD_MUTEX_TYPE_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)
+#define PTHREAD_MUTEX_TYPE_SHIFT (0u)
+
+#define PTHREAD_MUTEX_ROBUST_MASK  (PTHREAD_MUTEX_ROBUST)
+#define PTHREAD_MUTEX_ROBUST_SHIFT (2u)
+
+#define PTHREAD_MUTEX_PROTOCOL_MASK  (PTHREAD_PRIO_INHERIT | PTHREAD_PRIO_PROTECT)
+#define PTHREAD_MUTEX_PROTOCOL_SHIFT (3u)
+
+#define PTHREAD_MUTEX_MAKE_ATTR(_type, _proto) \
+    (unsigned)(((_type & PTHREAD_MUTEX_TYPE_MASK) << PTHREAD_MUTEX_TYPE_SHIFT) | \
+    ((_proto & PTHREAD_MUTEX_PROTOCOL_MASK) << PTHREAD_MUTEX_PROTOCOL_SHIFT))
+
+static_assert(((PTHREAD_MUTEX_TYPE_MASK << PTHREAD_MUTEX_TYPE_SHIFT) &
+               (PTHREAD_MUTEX_ROBUST_MASK << PTHREAD_MUTEX_ROBUST_SHIFT)) == 0,
+        "pthread_mutex type attr overlaps with robust attr!");
+static_assert(((PTHREAD_MUTEX_TYPE_MASK << PTHREAD_MUTEX_TYPE_SHIFT) &
+               (PTHREAD_MUTEX_PROTOCOL_MASK << PTHREAD_MUTEX_PROTOCOL_SHIFT)) == 0,
+        "pthread_mutex type attr overlaps with protocol attr!");
+static_assert(((PTHREAD_MUTEX_ROBUST_MASK << PTHREAD_MUTEX_ROBUST_SHIFT) &
+               (PTHREAD_MUTEX_PROTOCOL_MASK << PTHREAD_MUTEX_PROTOCOL_SHIFT)) == 0,
+        "pthread_mutex robust attr overlaps with protocol attr!");
+
+static inline int pthread_mutex_get_type(pthread_mutex_t* m) {
+    return (m->_m_attr >> PTHREAD_MUTEX_TYPE_SHIFT) & PTHREAD_MUTEX_TYPE_MASK;
+}
+
+static inline int pthread_mutex_get_robust(pthread_mutex_t* m) {
+    return (m->_m_attr >> PTHREAD_MUTEX_ROBUST_SHIFT) & PTHREAD_MUTEX_ROBUST_MASK;
+}
+
+static inline int pthread_mutex_get_protocol(pthread_mutex_t* m) {
+    return (m->_m_attr >> PTHREAD_MUTEX_PROTOCOL_SHIFT) & PTHREAD_MUTEX_PROTOCOL_MASK;
+}
+
+static inline bool pthread_mutex_prio_inherit(pthread_mutex_t* m) {
+    return (m->_m_attr & (PTHREAD_PRIO_INHERIT << PTHREAD_MUTEX_PROTOCOL_MASK)) != 0;
+}
 
 // Contested state tracking bits.  Note; all users are required to use the
 // static inline functions for manipulating and checking state.  This
@@ -146,7 +183,7 @@ static inline int pthread_mutex_uncontested_to_contested_state(int state) {
 }
 
 static inline pid_t pthread_mutex_state_to_tid(int state) {
-    return ((pid_t)(state | _PTHREAD_MUTEX_CONTESTED_BIT));
+    return state ? ((pid_t)(state | _PTHREAD_MUTEX_CONTESTED_BIT)) : 0;
 }
 
 static inline bool pthread_mutex_is_state_contested(int state) {
@@ -224,8 +261,14 @@ int __pthread_join(pthread_t t, void** result) ATTR_LIBC_VISIBILITY;
 void __private_cond_signal(void* condvar, int n) ATTR_LIBC_VISIBILITY;
 
 // This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
-int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
+int __timedwait_assign_owner(atomic_int*, int, clockid_t, const struct timespec*, zx_handle_t)
     ATTR_LIBC_VISIBILITY;
+static inline int __timedwait(atomic_int* futex,
+                              int val,
+                              clockid_t clk,
+                              const struct timespec* at) {
+    return __timedwait_assign_owner(futex, val, clk, at, ZX_HANDLE_INVALID);
+}
 
 // Loading a library can introduce more thread_local variables. Thread
 // allocation bases bookkeeping decisions based on the current state

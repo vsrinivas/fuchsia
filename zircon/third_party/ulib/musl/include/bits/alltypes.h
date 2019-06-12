@@ -465,7 +465,7 @@ typedef struct {
 
 #if defined(__NEED_pthread_mutex_t) && !defined(__DEFINED_pthread_mutex_t)
 typedef struct {
-    int _m_type;
+    unsigned _m_attr;
     __C11_ATOMIC(int)
     _m_lock;
     __C11_ATOMIC(int)
@@ -502,8 +502,7 @@ typedef struct {
     void* _c_head;
     int _c_clock;
     void* _c_tail;
-    __C11_ATOMIC(int)
-    _c_lock;
+    __C11_ATOMIC(int) _c_lock;
 } cnd_t;
 #define __DEFINED_cnd_t
 #endif

@@ -32,16 +32,19 @@ enum {
 
 int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict m,
                            const struct timespec* restrict ts) {
-    int e, clock = c->_c_clock, oldstate, tmp;
+    _Static_assert(sizeof(c->_c_lock) == sizeof(mtx_t), "condvar internal lock must be a mtx_t");
 
-    if ((m->_m_type != PTHREAD_MUTEX_NORMAL) &&
+    int e, clock = c->_c_clock, oldstate, tmp;
+    int type = pthread_mutex_get_type(m);
+
+    if ((type != PTHREAD_MUTEX_NORMAL) &&
         pthread_mutex_state_to_tid(m->_m_lock) != __thread_get_tid())
         return EPERM;
 
     if (ts && (ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000L))
         return EINVAL;
 
-    lock(&c->_c_lock);
+    mtx_lock((mtx_t*)&c->_c_lock);
 
     int seq = 2;
     struct waiter node = {
@@ -59,7 +62,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     else
         node.next->prev = &node;
 
-    unlock(&c->_c_lock);
+    mtx_unlock((mtx_t*)&c->_c_lock);
 
     pthread_mutex_unlock(m);
 
@@ -91,7 +94,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
          * after seeing a LEAVING waiter without getting notified
          * via the futex notify below. */
 
-        lock(&c->_c_lock);
+        mtx_lock((mtx_t*)&c->_c_lock);
 
         /* Remove our waiter node from the list. */
         if (c->_c_head == &node)
@@ -103,7 +106,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
         else if (node.next)
             node.next->prev = node.prev;
 
-        unlock(&c->_c_lock);
+        mtx_unlock((mtx_t*)&c->_c_lock);
 
         /* It is possible that __private_cond_signal() saw our waiter node
          * after we set node.state to LEAVING but before we removed the
@@ -154,10 +157,14 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
 
     /* Unlock the barrier that's holding back the next waiter, and
      * either wake it or requeue it to the mutex. */
-    if (node.prev)
-        unlock_requeue(&node.prev->barrier, &m->_m_lock);
-    else
+    if (node.prev) {
+        zx_handle_t new_owner = pthread_mutex_prio_inherit(m)
+                              ? pthread_mutex_state_to_tid(atomic_load(&m->_m_lock))
+                              : ZX_HANDLE_INVALID;
+        unlock_requeue(&node.prev->barrier, &m->_m_lock, new_owner);
+    } else {
         atomic_fetch_sub(&m->_m_waiters, 1);
+    }
 
 done:
 
@@ -173,7 +180,7 @@ void __private_cond_signal(void* condvar, int n) {
     atomic_int ref = ATOMIC_VAR_INIT(0);
     int cur;
 
-    lock(&c->_c_lock);
+    mtx_lock((mtx_t*)&c->_c_lock);
     for (p = c->_c_tail; n && p; p = p->prev) {
         if (a_cas_shim(&p->state, WAITING, SIGNALED) != WAITING) {
             /* This waiter timed out, and it marked itself as in the
@@ -198,7 +205,7 @@ void __private_cond_signal(void* condvar, int n) {
         c->_c_head = 0;
     }
     c->_c_tail = p;
-    unlock(&c->_c_lock);
+    mtx_unlock((mtx_t*)&c->_c_lock);
 
     /* Wait for any waiters in the LEAVING state to remove
      * themselves from the list before returning or allowing

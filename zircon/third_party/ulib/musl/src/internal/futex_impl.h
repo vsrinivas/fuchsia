@@ -27,8 +27,8 @@ static inline void unlock(atomic_int* l) {
         _zx_futex_wake(l, 1);
 }
 
-static inline void unlock_requeue(atomic_int* l, zx_futex_t* r) {
+static inline void unlock_requeue(atomic_int* l, zx_futex_t* r, zx_handle_t r_owner) {
     atomic_store(l, UNLOCKED);
     _zx_futex_requeue(l, /* wake count */ 0, /* l futex value */ UNLOCKED,
-                      r, /* requeue count */ 1, /* requeue owner */ ZX_HANDLE_INVALID);
+                      r, /* requeue count */ 1, /* requeue owner */ r_owner);
 }

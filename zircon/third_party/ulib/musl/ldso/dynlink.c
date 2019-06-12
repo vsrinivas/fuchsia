@@ -135,7 +135,8 @@ static struct r_debug debug;
 static struct tls_module* tls_tail;
 static size_t tls_cnt, tls_offset = 16, tls_align = MIN_TLS_ALIGN;
 static size_t static_tls_cnt;
-static pthread_mutex_t init_fini_lock = {._m_type = PTHREAD_MUTEX_RECURSIVE};
+static pthread_mutex_t init_fini_lock = {
+    ._m_attr = PTHREAD_MUTEX_MAKE_ATTR(PTHREAD_MUTEX_RECURSIVE, PTHREAD_PRIO_NONE) };
 
 static bool log_libs = false;
 static atomic_uintptr_t unlogged_tail;

@@ -1,12 +1,27 @@
 #include <threads.h>
 
 #include <errno.h>
+#include <stdalign.h>
 
 #include <lib/sync/mutex.h>
+#include <lib/sync/internal/mutex-internal.h>
 
 #include "futex_impl.h"
 #include "libc.h"
 #include "threads_impl.h"
+
+// The storage used by the _c_lock member of a cnd_t is actually treated like a
+// sync_mutex_t under the hood.  This allows users of a cnd_t to be able to
+// allocate one without needing to know anything about the sync_mutex_t
+// implementation detail.  We need to be careful, however, to make certain that
+// storage requirements don't change in a way which might lead to a mismatch.
+//
+// So; assert that the storage size and alignment of the _c_lock member are
+// compatible with those needed by a sync_mutex_t instance.
+static_assert(sizeof(((cnd_t*)0)->_c_lock) >= sizeof(sync_mutex_t),
+              "cnd_t::_c_lock storage must be large enough to hold a sync_mutex_t instance");
+static_assert(((alignof(cnd_t) + offsetof(cnd_t, _c_lock)) % alignof(sync_mutex_t)) == 0,
+              "cnd_t::_c_lock storage must have compatible alignment with a sync_mutex_t instance");
 
 struct waiter {
     struct waiter *prev, *next;
@@ -28,7 +43,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
     if (ts && ts->tv_nsec >= 1000000000UL)
         return thrd_error;
 
-    lock(&c->_c_lock);
+    sync_mutex_lock((sync_mutex_t*)(&c->_c_lock));
 
     int seq = 2;
     struct waiter node = {
@@ -45,8 +60,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
     else
         node.next->prev = &node;
 
-    unlock(&c->_c_lock);
-
+    sync_mutex_unlock((sync_mutex_t*)(&c->_c_lock));
     sync_mutex_unlock(m);
 
     /* Wait to be signaled.  There are multiple ways this loop could exit:
@@ -77,7 +91,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
          * after seeing a LEAVING waiter without getting notified
          * via the futex notify below. */
 
-        lock(&c->_c_lock);
+        sync_mutex_lock((sync_mutex_t*)(&c->_c_lock));
 
         /* Remove our waiter node from the list. */
         if (c->_c_head == &node)
@@ -89,7 +103,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
         else if (node.next)
             node.next->prev = node.prev;
 
-        unlock(&c->_c_lock);
+        sync_mutex_unlock((sync_mutex_t*)(&c->_c_lock));
 
         /* It is possible that __private_cond_signal() saw our waiter node
          * after we set node.state to LEAVING but before we removed the
@@ -134,7 +148,11 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
         /* Unlock the barrier that's holding back the next waiter, and
          * requeue it to the mutex so that it will be woken when the
          * mutex is unlocked. */
-        unlock_requeue(&node.prev->barrier, &m->futex);
+        zx_futex_storage_t mutex_val = __atomic_load_n((zx_futex_storage_t*)&m->futex,
+                                                       __ATOMIC_ACQUIRE);
+        unlock_requeue(&node.prev->barrier,
+                       &m->futex,
+                       libsync_mutex_make_owner_from_state(mutex_val));
     }
 
     switch (e) {
