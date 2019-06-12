@@ -20,7 +20,7 @@ group("tests") {
     "spinel:tests",
     "tests/vk/vk_subgroup_info",
   ]
-  if (current_toolchain != host_toolchain && current_os == "linux") {
+  if (current_toolchain != host_toolchain && host_os == "linux") {
     # Force generation of host tests on Linux.
     deps = [
       ":tests($host_toolchain)",
