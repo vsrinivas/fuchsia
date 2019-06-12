@@ -6,6 +6,7 @@
 #define GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
 
 #include <fuchsia/camera/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
 namespace camera {
@@ -29,14 +30,15 @@ class Client {
   zx_status_t StartDriver(const char* device);
 
   zx_status_t LoadVideoFormats(
-      std::function<zx_status_t(
+      fit::function<zx_status_t(
           uint32_t index, std::vector<fuchsia::camera::VideoFormat>* formats,
           uint32_t* total_format_count)>
           get_formats);
 
-  std::vector<fuchsia::camera::VideoFormat> formats_;
+  std::vector<fuchsia::camera::VideoFormat>& formats() { return formats_; };
 
  private:
+  std::vector<fuchsia::camera::VideoFormat> formats_;
   fuchsia::camera::ControlSyncPtr camera_control_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::camera::ManagerSyncPtr manager_;

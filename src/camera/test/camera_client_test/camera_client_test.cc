@@ -25,7 +25,7 @@ fuchsia::camera::ControlSyncPtr &Client::camera() { return camera_control_; }
 fuchsia::camera::ManagerSyncPtr &Client::manager() { return manager_; }
 
 zx_status_t Client::LoadVideoFormats(
-    std::function<zx_status_t(
+    fit::function<zx_status_t(
         uint32_t index, std::vector<fuchsia::camera::VideoFormat> *formats,
         uint32_t *total_format_count)>
         get_formats) {
@@ -47,9 +47,9 @@ zx_status_t Client::LoadVideoFormats(
     format_index += call_formats.size();
   } while (formats_.size() < total_format_count);
 
-  printf("Available formats: %d\n", (int)formats_.size());
-  for (int i = 0; i < (int)formats_.size(); i++) {
-    printf("format[%d] - width: %d, height: %d, stride: %u\n", i,
+  printf("Available formats: %zd\n", formats_.size());
+  for (size_t i = 0; i < formats_.size(); i++) {
+    printf("format[%zd] - width: %d, height: %d, stride: %u\n", i,
            formats_[i].format.width, formats_[i].format.height,
            static_cast<uint32_t>(formats_[i].format.planes[0].bytes_per_row));
   }
@@ -81,8 +81,8 @@ zx_status_t Client::StartManager(int device_id) {
   }
 
   std::cout << "Obtained " << devices.size() << " devices\n";
-  for (size_t i = 0; i < devices.size(); i++) {
-    dump_device_info(devices[i]);
+  for (const auto &device : devices) {
+    dump_device_info(device);
   }
 
   return LoadVideoFormats(

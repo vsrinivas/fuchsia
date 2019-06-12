@@ -24,7 +24,7 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
       format.format.height * format.format.planes[0].bytes_per_row, PAGE_SIZE);
   buffer_collection->buffer_count = num_buffers;
   buffer_collection->vmo_size = buffer_size;
-  buffer_collection->format.set_image(std::move(format.format));
+  buffer_collection->format.set_image(format.format);
   zx_status_t status;
   for (uint32_t i = 0; i < num_buffers; ++i) {
     status = zx::vmo::create(buffer_size, 0, &buffer_collection->vmos[i]);
@@ -61,7 +61,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   static constexpr uint16_t kNumberOfBuffers = 8;
   fuchsia::sysmem::BufferCollectionInfo buffer_collection;
   zx_status_t status =
-      Gralloc(client.formats_[0], kNumberOfBuffers, &buffer_collection);
+      Gralloc(client.formats()[0], kNumberOfBuffers, &buffer_collection);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
     return status;
@@ -80,14 +80,14 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
 
   if (use_camera_manager) {
     fuchsia::camera::VideoStream request = {.camera_id = 0,
-                                            .format = client.formats_[0]};
+                                            .format = client.formats()[0]};
 
     status = client.manager()->CreateStream(
         request, std::move(buffer_collection), stream.NewRequest(),
         std::move(driver_token));
   } else {
     status = client.camera()->CreateStream(
-        std::move(buffer_collection), client.formats_[0].rate,
+        std::move(buffer_collection), client.formats()[0].rate,
         stream.NewRequest(), std::move(driver_token));
   }
 
