@@ -1,4 +1,5 @@
+# Go Language FIDL Tutorial
 
-# Go Language Bindings
+[TOC]
 
 (to be completed)

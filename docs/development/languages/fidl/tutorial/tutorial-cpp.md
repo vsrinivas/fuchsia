@@ -1,5 +1,6 @@
-
 # C++ language FIDL tutorial
+
+[TOC]
 
 ## About this tutorial
 

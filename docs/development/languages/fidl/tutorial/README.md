@@ -1,4 +1,3 @@
-
 # FIDL tutorial
 
 _Audience: Beginning to intermediate FIDL developers._
@@ -57,7 +56,7 @@ Fixed arrays and dynamically sized vectors can be constructed from both
 the basic types and the aggregate types, and these can all be combined
 into even more complex data structures.
 
-Due to the number of client implementations target languages (C,
+Due to the number of client implementation target languages (C,
 C++, Rust, Dart, and so on), we don't want to burden the developer of
 the service with providing a protocol implementation for each and every one.
 
@@ -66,6 +65,9 @@ The developer of the service creates just one `.fidl` definition file,
 which defines the protocol.
 Using this file, the FIDL compiler then generates client and server code
 in any of the supported target languages.
+
+![Figure: server written in C++ talks to clients written in multiple
+languages](fidl_architecture.png)
 
 In many cases, there will only be one implementation of the server (for example, the
 particular service might be implemented in C++), whereas there could be any number
@@ -107,8 +109,8 @@ Let's go through it line by line.
 FIDL protocols in different libraries might have the same name, so the namespace
 is used to distinguish amongst them.
 
-**Line 3:** The `[Discoverable]` attribute indicates that the protocol that
-follows should be made available for clients to connect to.
+**Line 3:** The `[Discoverable]` [**attribute**][attributes] indicates that
+the protocol that follows should be made available for clients to connect to.
 
 **Line 4:** The `protocol` keyword introduces the name of the protocol, here it's called `Echo`.
 
@@ -195,6 +197,9 @@ can fail due to transport level errors.
 
 From the point of view of the client, it consists of a call
 that blocks, while the server performs some processing.
+
+![Figure: client and server](blocking.png)
+
 Here's a step-by-step description:
 
 1.  A client makes a call (optionally containing data) and blocks.
@@ -215,7 +220,7 @@ Basically, in this model, the client and server have come to an agreement:
 *   data flow is initiated by the client,
 *   the client shall have at most only one message outstanding,
 *   the server shall send a message to the client only in response to a client's message
-*   the client waits for the server's response before continuing.
+*   the client shall wait for the server's response before continuing.
 
 This blocking model is commonly used where the client needs to get the reply to its
 current request before it can continue.
@@ -240,9 +245,12 @@ In contrast to the blocking model, the client *does not* block,
 This model is used in cases where the client doesn't need to (or cannot)
 synchronize to the processing of its request.
 
+![Figure: Fire and Forget; client sends to server but doesn't
+expect replies](faf.png)
+
 The classic example is a logging system.
-The client sends logging information to the logging server, but has
-no reason to block.
+The client sends logging information to the logging server (circles "1"
+and "2" in the diagram above), but has no reason to block.
 A lot of things can go wrong at the server end:
 
 1. the server is busy and can't handle the write request at this moment,
@@ -266,12 +274,18 @@ This allows great flexibility in the client / server interaction.
 
 While the synchronous model forces the client to wait until the server replies,
 the present model frees the client to do something else while the server is
-processing the request.
+processing the request:
+
+![Figure: client sends to server but doesn't block until later](async.png)
+
+The subtle difference in this diagram vs. the similar one above is that after
+circle "1" the client is *still running*.
+The client chooses when to give up CPU; it's not synchronous with the message.
 
 There are actually two sub-cases here &mdash; one in which the client
 gets just one response, and another in which the client can get multiple responses.
 (The one where the client gets zero responses is the "fire and forget" model,
-which we discussed above.)
+which we discussed earlier.)
 
 #### Single request, single response
 
@@ -293,14 +307,22 @@ in has happened, and thus sends the client a message.
 From a client / server point of view, this message is a "reply", with the client
 receiving it asynchronously to its request.
 
+![Figure: client sends to server, server replies multiple times](async-multiple.png)
+
 There's no reason why the server couldn't send another message when another event
 of interest occurs; this is the "multiple response" version of the model.
 Note that the second (and subsequent) responses are sent *without* the client
 sending any additional messages.
 
+> Note that the client doesn't *need* to wait for the server to send it a message.
+> In the diagram above, we showed the client in the blocked state before circle
+> "3" &mdash; the client could just as well have been running.
+
 ### Server sends to client, without client asking for data
 
 This model is also known as the "event" model.
+
+![Figure: unsolicited messages from a server to a client](event.png)
 
 In it, a client prepares to receive messages from a server, but doesn't know
 when to expect them &mdash; the messages are not only asynchronous to the client,
@@ -310,8 +332,15 @@ client didn't explicitly request them (like it did in the previous model, above)
 The client designates a function (the "event handling function") to be called when
 messages arrive from the server, but otherwise continues about its business.
 
-At the server's discretion, messages are sent asynchronously to the client,
-and handled by the client's designated function.
+At the server's discretion (circles "1" and "2" in the diagram above), messages
+are sent asynchronously to the client, and handled by the client's designated
+function.
+
+Note that the client may already be running when a message is sent (as in
+circle "1"), or the client may have nothing to do and be waiting for a
+message to be sent (as in circle "2").
+
+> It is not a requirement that the client be waiting for a message.
 
 ### Asynchronous messaging complexity
 
@@ -353,10 +382,11 @@ It does not have the `->` return declaration &mdash; that makes it into a
 "fire and forget" model (send only), because we've told the FIDL compiler that
 this particular method does not have a return associated with it.
 
-> Note that it's not the lack of "return parameters," but rather the lack of
-> "return declaration" that's the key here &mdash; putting "`-> ()`"
+> Note that it's not the lack of return **parameters**, but rather the lack of
+> return **declaration** that's the key here &mdash; putting "`-> ()`"
 > after `SendString` would change the meaning from declaring a fire-and-forget
-> style method to declaring a function call style message that doesn't have any return arguments.
+> style method to declaring a function call style method that doesn't have any
+> return arguments.
 
 **Line 7** is the `ReceiveString` method.
 It's a little different &mdash; it doesn't have the method name in the first
@@ -416,4 +446,7 @@ Currently, tutorials are available in the following languages:
 *   [C++](tutorial-cpp.md)
 *   [Dart](tutorial-dart.md)
 *   [Rust](tutorial-rust.md)
+
+<!-- xrefs -->
+[attributes]: ../reference/attributes.md
 

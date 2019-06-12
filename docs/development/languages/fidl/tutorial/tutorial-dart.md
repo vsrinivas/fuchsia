@@ -1,5 +1,6 @@
-
 # Dart language FIDL tutorial
+
+[TOC]
 
 ## About this tutorial
 
@@ -48,7 +49,7 @@ fx build
 ## `Echo` server
 
 The echo server implementation can be found at:
-[//master/examples /fidl/echo_server_async_dart/lib/main.dart](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_async_dart/).
+[//topaz/examples/fidl/echo_server_async_dart/lib/main.dart](https://fuchsia.googlesource.com//topaz/+/master/examples/fidl/echo_server_async_dart/).
 
 This file implements the `main()` function and the `EchoImpl` class:
 
@@ -96,7 +97,7 @@ import 'package:fuchsia_services/services.dart';
     for `InterfaceRequest`.
 -   `fidl_echo` contains bindings for the `Echo` protocol. This file is
     generated from the protocol defined in `echo.fidl`.
--   `services.dart` is required for ApplicationContext, which is where we 
+-   `services.dart` is required for ApplicationContext, which is where we
     register our service.
 
 ### main()
@@ -152,7 +153,7 @@ will run on different threads.
 
 Finally we reach the implementation of the server API. Your `EchoImpl` object
 receives a call to the `echoString()` function. It accepts a string value
-argument and it returns a Future of type String. 
+argument and it returns a Future of type String.
 
 
 ```dart
@@ -168,7 +169,7 @@ Future<String> echoString(String value) async {
 ## `Echo` client
 
 The echo client implementation can be found at:
-[//master/examples/fidl/echo_client_async_dart/lib/main.dart](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_async_dart/lib/main.dart)
+[//topaz/examples/fidl/echo_client_async_dart/lib/main.dart](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_async_dart/lib/main.dart)
 
 Our simple client does everything in `main()`.
 

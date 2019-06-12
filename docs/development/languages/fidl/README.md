@@ -1,6 +1,6 @@
 # FIDL
 
-FIDL (or "**F**uchsia **I**nterface **D**efinition **L**anguage) is the IPC system for Fuchsia.
+FIDL (or "**F**uchsia **I**nterface **D**efinition **L**anguage") is the IPC system for Fuchsia.
 
 The following topics are presented:
 
