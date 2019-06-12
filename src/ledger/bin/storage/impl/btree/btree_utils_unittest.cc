@@ -252,6 +252,50 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   }
 }
 
+TEST_F(BTreeUtilsTest, ApplyChangesBackToEmpty) {
+  ObjectIdentifier root_identifier;
+  ASSERT_TRUE(GetEmptyNodeIdentifier(&root_identifier));
+  std::vector<EntryChange> changes;
+  ASSERT_TRUE(CreateEntryChanges(3, &changes));
+
+  bool called;
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  // Expected layout (X is key "keyX"):
+  // [00, 01, 02]
+  ApplyChanges(environment_.coroutine_service(), &fake_storage_,
+               root_identifier, changes,
+               callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &new_root_identifier, &new_nodes),
+               &kTestNodeLevelCalculator);
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, new_nodes.size());
+  EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
+
+  for (auto& change : changes) {
+    change.deleted = true;
+  }
+
+  // Revert the changes
+  ObjectIdentifier deleted_root_identifier;
+  std::set<ObjectIdentifier> deleted_nodes;
+  ApplyChanges(environment_.coroutine_service(), &fake_storage_,
+               new_root_identifier, changes,
+               callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &deleted_root_identifier, &deleted_nodes),
+               &kTestNodeLevelCalculator);
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, deleted_nodes.size());
+  EXPECT_TRUE(deleted_nodes.find(deleted_root_identifier) !=
+              deleted_nodes.end());
+  EXPECT_EQ(root_identifier, deleted_root_identifier);
+}
+
 TEST_F(BTreeUtilsTest, UpdateValue) {
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]

@@ -643,19 +643,13 @@ void ApplyChanges(
           return;
         }
 
-        if (object_identifier.object_digest().IsValid()) {
-          callback(Status::OK, std::move(object_identifier),
-                   std::move(new_identifiers));
-          return;
-        }
-
-        TreeNode::Empty(page_storage, [callback = std::move(callback)](
-                                          Status status,
-                                          ObjectIdentifier object_identifier) {
-          std::set<ObjectIdentifier> new_identifiers({object_identifier});
-          callback(status, std::move(object_identifier),
-                   std::move(new_identifiers));
-        });
+        // NOTE(etiennej): We used to handle the case where the object_digest
+        // returned by |ApplyChangesOnRoot| is invalid, with |ApplyChangeOnRoot|
+        // still returning Status::OK. We believe we no longer need to. If you
+        // see a crash here, though, please let us know!
+        FXL_CHECK(object_identifier.object_digest().IsValid());
+        callback(Status::OK, std::move(object_identifier),
+                 std::move(new_identifiers));
       });
 }
 
