@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    crate::directory_broker,
     crate::model::{self, error::ModelError},
     failure::Fail,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{NodeMarker, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE},
     fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::{directory, file::simple::read_only},
     futures::{
@@ -145,7 +148,7 @@ impl Hub {
             if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
                 await!(instances_map[&parent_moniker]
                     .children_directory
-                    .add_entry(name.clone(), controlled))
+                    .add_entry_res(name.clone(), controlled))
                 .map_err(|_| {
                     HubError::add_directory_entry_error(abs_moniker.clone(), &name.clone())
                 })?;
@@ -186,7 +189,42 @@ impl Hub {
                         HubError::add_directory_entry_error(abs_moniker.clone(), "resolved_url")
                     })?;
 
-                await!(instance.directory.add_entry("exec", controlled)).map_err(|_| {
+                // Install the out directory if we can successfully clone it.
+                // TODO(fsamuel): We should probably preserve the original error messages
+                // instead of dropping them.
+                if let Ok(out_dir) = io_util::clone_directory(&execution.outgoing_dir) {
+                    // `route_open_fn` will cause any call on the hub's `out` directory to be
+                    // redirected to the component's outgoing directory. All directory
+                    // operations other than `Open` will be received by the outgoing
+                    // directory, because those calls are preceded by an `Open` on a path
+                    // in the hub's `out`.
+                    let route_open_fn = Box::new(
+                        move |flags: u32,
+                              mode: u32,
+                              relative_path: String,
+                              server_end: ServerEnd<NodeMarker>| {
+                            // If we want to open the out directory directly, then call clone.
+                            // Otherwise, pass long the remaining 'relative_path' to the component
+                            // hosting the out directory to resolve.
+                            if !relative_path.is_empty() {
+                                // TODO(fsamuel): Currently DirectoryEntry::open does not return
+                                // a Result so we cannot propagate this error up. We probably
+                                // want to change that.
+                                let _ = out_dir.open(flags, mode, &relative_path, server_end);
+                            } else {
+                                let _ = out_dir
+                                    .clone(OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE, server_end);
+                            }
+                        },
+                    );
+                    controlled
+                        .add_entry("out", directory_broker::DirectoryBroker::new(route_open_fn))
+                        .map_err(|_| {
+                            HubError::add_directory_entry_error(abs_moniker.clone(), "out")
+                        })?;
+                }
+
+                await!(instance.directory.add_entry_res("exec", controlled)).map_err(|_| {
                     HubError::add_directory_entry_error(abs_moniker.clone(), "exec")
                 })?;
             }
@@ -205,7 +243,7 @@ impl Hub {
             if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
                 await!(instances_map[&parent_moniker]
                     .children_directory
-                    .add_entry(name.clone(), controlled))
+                    .add_entry_res(name.clone(), controlled))
                 .map_err(|_| {
                     HubError::add_directory_entry_error(abs_moniker.clone(), &name.clone())
                 })?;
@@ -253,12 +291,67 @@ mod tests {
         },
         cm_rust::{self, ChildDecl, ComponentDecl},
         fidl::endpoints::{ClientEnd, ServerEnd},
-        fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_io::{
+            DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
+        },
+        fidl_fuchsia_sys2 as fsys, files_async,
         fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
         fuchsia_zircon as zx,
         std::{iter, path::PathBuf},
     };
+
+    /// Hosts an out directory with a 'foo' file.
+    fn foo_out_dir_fn() -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
+        Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
+            let mut out_dir = directory::simple::empty();
+            // Add a 'foo' file.
+            out_dir
+                .add_entry("foo", { read_only(move || Ok(b"bar".to_vec())) })
+                .map_err(|(s, _)| s)
+                .expect("Failed to add 'foo' entry");
+
+            out_dir.open(
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                &mut iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+
+            let mut test_dir = directory::simple::empty();
+            test_dir
+                .add_entry("aaa", { read_only(move || Ok(b"bbb".to_vec())) })
+                .map_err(|(s, _)| s)
+                .expect("Failed to add 'aaa' entry");
+            out_dir
+                .add_entry("test", test_dir)
+                .map_err(|(s, _)| s)
+                .expect("Failed to add 'test' directory.");
+
+            fasync::spawn(async move {
+                let _ = await!(out_dir);
+            });
+        })
+    }
+
+    async fn read_hub_file<'a>(hub_proxy: &'a DirectoryProxy, path: &'a str) -> String {
+        let file_proxy =
+            io_util::open_file(&hub_proxy, &PathBuf::from(path)).expect("Failed to open file.");
+        let res = await!(io_util::read_file(&file_proxy));
+        res.expect("Unable to read file.")
+    }
+
+    async fn dir_contains<'a>(
+        hub_proxy: &'a DirectoryProxy,
+        path: &'a str,
+        entry_name: &'a str,
+    ) -> bool {
+        let dir = io_util::open_directory(&hub_proxy, &PathBuf::from(path))
+            .expect("Failed to open directory");
+        let entries = await!(files_async::readdir(&dir)).expect("readdir failed");
+        let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
+        listing.contains(&String::from(entry_name))
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_hub_basic() {
@@ -290,36 +383,77 @@ mod tests {
             ServerEnd::<NodeMarker>::new(server_chan.into()),
         );
 
-        let hub =
-            Arc::new(Hub::new("/my_component_url_string".to_string(), root_directory).unwrap());
+        let root_component_url = "test:///root".to_string();
+        let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
         hooks.push(hub);
         let model = model::Model::new(model::ModelParams {
             ambient: Box::new(mocks::MockAmbientEnvironment::new()),
-            root_component_url: "test:///root".to_string(),
+            root_component_url: root_component_url.clone(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+            hooks,
+        });
+
+        let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));
+        let expected_res: Result<(), model::ModelError> = Ok(());
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+
+        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
+            .into_proxy()
+            .expect("failed to create directory proxy");
+
+        assert_eq!(root_component_url, await!(read_hub_file(&hub_proxy, "self/url")));
+        assert_eq!(
+            format!("{}_resolved", root_component_url),
+            await!(read_hub_file(&hub_proxy, "self/exec/resolved_url"))
+        );
+        assert_eq!("test:///a", await!(read_hub_file(&hub_proxy, "self/children/a/url")));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_hub_out_directory() {
+        let mut resolver = model::ResolverRegistry::new();
+        let mut runner = mocks::MockRunner::new();
+        let root_component_url = "test:///root".to_string();
+        let resolved_root_component_url = format!("{}_resolved", root_component_url);
+        runner.host_fns.insert(resolved_root_component_url, foo_out_dir_fn());
+        let mut mock_resolver = mocks::MockResolver::new();
+        mock_resolver.add_component("root", default_component_decl());
+        resolver.register("test".to_string(), Box::new(mock_resolver));
+        let mut hooks: model::Hooks = Vec::new();
+        let mut root_directory = directory::simple::empty();
+
+        let (client_chan, server_chan) = zx::Channel::create().unwrap();
+        root_directory.open(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            0,
+            &mut iter::empty(),
+            ServerEnd::<NodeMarker>::new(server_chan.into()),
+        );
+
+        let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
+        hooks.push(hub);
+        let model = model::Model::new(model::ModelParams {
+            ambient: Box::new(mocks::MockAmbientEnvironment::new()),
+            root_component_url: root_component_url.clone(),
             root_resolver_registry: resolver,
             root_default_runner: Box::new(runner),
             hooks,
         });
 
         // Bind to the top component, and check that it and the eager components were started.
-        {
-            let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));
-            let expected_res: Result<(), model::ModelError> = Ok(());
-            assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-        }
+        let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));
+        let expected_res: Result<(), model::ModelError> = Ok(());
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
 
         let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
             .into_proxy()
             .expect("failed to create directory proxy");
-        let self_url_file_proxy = io_util::open_file(&hub_proxy, &PathBuf::from("self/url"))
-            .expect("failed to open file");
-        let res = await!(io_util::read_file(&self_url_file_proxy));
-        assert_eq!("/my_component_url_string", res.expect("Unable to read URL."));
 
-        let a_url_file_proxy =
-            io_util::open_file(&hub_proxy, &PathBuf::from("self/children/a/url"))
-                .expect("failed to open file");
-        let res_a = await!(io_util::read_file(&a_url_file_proxy));
-        assert_eq!("test:///a", res_a.expect("Unable to read URL"));
+        assert!(await!(dir_contains(&hub_proxy, "self/exec", "out")));
+        assert!(await!(dir_contains(&hub_proxy, "self/exec/out", "foo")));
+        assert!(await!(dir_contains(&hub_proxy, "self/exec/out/test", "aaa")));
+        assert_eq!("bar", await!(read_hub_file(&hub_proxy, "self/exec/out/foo")));
+        assert_eq!("bbb", await!(read_hub_file(&hub_proxy, "self/exec/out/test/aaa")));
     }
 }

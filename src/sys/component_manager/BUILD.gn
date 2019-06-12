@@ -20,6 +20,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/lib/rust/cm_fidl_validator",
     "//garnet/lib/rust/cm_rust",
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",

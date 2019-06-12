@@ -470,7 +470,7 @@ impl OutDir {
                             "svc",
                             pseudo_directory! {
                                 "foo" =>
-                                    directory_broker::DirectoryBroker::new_service_broker(Box::new(
+                                    directory_broker::DirectoryBroker::new(Box::new(
                                             Self::echo_server_fn)),
                             },
                         )
@@ -505,7 +505,11 @@ impl OutDir {
     }
 
     /// Hosts a new service on server_end that implements fidl.examples.echo.Echo
-    fn echo_server_fn(server_end: ServerEnd<NodeMarker>) {
+    fn echo_server_fn(
+        _flags: u32,
+        _mode: u32,
+        _relative_path: String,
+        server_end: ServerEnd<NodeMarker>) {
         fasync::spawn(async move {
             let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
             let mut stream: EchoRequestStream = server_end.into_stream().unwrap();

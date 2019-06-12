@@ -59,7 +59,7 @@ fn read_from_pipe(f: &mut File, msg: &str) {
     let mut buf = [0; 1024];
     let mut out = String::new();
     let start = SystemTime::now();
-    while out != msg {
+    while out.find(msg).is_none() {
         let n = f.read(&mut buf).expect("failed to read pipe");
         out.push_str(str::from_utf8(&buf[0..n]).expect("string is not utf-8"));
         if start.elapsed().unwrap() > Duration::from_secs(60) {
