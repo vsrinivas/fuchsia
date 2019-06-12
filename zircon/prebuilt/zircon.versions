@@ -30,12 +30,12 @@ fuchsia/sysroot/linux-arm64
 	B1w-KMj3c3107ZQ3i05ID0Keq_kDPXLmwAkwzn2LmTIC
 
 fuchsia/third_party/aemu/linux-amd64
-	git_revision:dd0db8116a69267a84f32213da356ec844229f1b
-	vEUPThKV-pQV8jNeVaEoYI9oZpnw8v2mBho5wLYA0UIC
+	git_revision:62fc53840d24b217179873ceb89c49c29db63fb5
+	-QBPu05pVGLwV-oG-McTWn5jO6WRbMd_dp1of2-kzfEC
 
 fuchsia/third_party/aemu/mac-amd64
-	git_revision:dd0db8116a69267a84f32213da356ec844229f1b
-	f8gs9xtu39lzRoaDa-fhO0rnT0gi8aoJIqbQqqEgYJgC
+	git_revision:62fc53840d24b217179873ceb89c49c29db63fb5
+	V0sNXCrzLSG_wQEmLdJRQ0xHaZk1iyz75DDDwuwRkBUC
 
 fuchsia/third_party/qemu/linux-amd64
 	git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f,1

@@ -63,4 +63,4 @@ fuchsia/tools/banjo_bin/${os}-${arch=amd64} git_revision:94f2f30368242960dd4e6ef
 
 # AEMU
 @Subdir aemu
-fuchsia/third_party/aemu/${os}-${arch=amd64} git_revision:dd0db8116a69267a84f32213da356ec844229f1b
+fuchsia/third_party/aemu/${os}-${arch=amd64} git_revision:62fc53840d24b217179873ceb89c49c29db63fb5
