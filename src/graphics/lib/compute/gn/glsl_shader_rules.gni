@@ -80,16 +80,18 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
 
 # Compile a set of glsl shaders, each into a SPIR-V module.
 #
+# NOTE: To get the list of generated files, use target_outputs(":<name>")
+#       after calling graphics_compute_compile_glsl_shader_foreach("<name>").
+#
 # Variables:
 #    sources: list of source .comp shader files.
 #    inputs: list of other input files (headers included by the main shaders).
-#    outputs: list of output file templates.
-#    debug_outputs: list of debug output file templates, only used if
-#      graphics_compute_generate_debug_shaders is true.
+#    output_dir: output directory.
 #    include_dirs: list of additional include directories passed to the
 #      pre-processor.
 #
 template("graphics_compute_compile_glsl_shader_foreach") {
+  _output_dir = invoker.output_dir
   if (graphics_compute_generate_debug_shaders) {
     _gen_debug_target_name = "gen_debug_${target_name}"
     graphics_compute_generate_debug_glsl_shader_foreach(
@@ -102,23 +104,28 @@ template("graphics_compute_compile_glsl_shader_foreach") {
                                "public_deps",
                                "sources",
                              ])
-      outputs = invoker.debug_outputs
+      outputs = [
+        "${_output_dir}/debug/{{source_name_part}}.spv",
+      ]
     }
   } else {
     # Make GN quiet about this variable.
     assert(defined(invoker.debug_outputs) || !defined(invoker.debug_outputs))
   }
 
-  compiled_action_foreach(target_name) {
+  _gen_spv_target_name = "gen_spv_${target_name}"
+  compiled_action_foreach(_gen_spv_target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "inputs",
-                             "outputs",
                              "public_deps",
                              "sources",
                            ])
     tool = graphics_compute_glslangValidator_tool_target
+    outputs = [
+      "${_output_dir}/spv/{{source_name_part}}.spv",
+    ]
     args = [
       "-s",  # Note: '-s' silences glslangValidator printing filename
              # but detailed error messages are also silenced
@@ -141,13 +148,51 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       deps += [ ":${_gen_debug_target_name}" ]
     }
   }
-}
 
-# TODO(digit): Consider implementing these to simplify both
-# hotsort_target.gni and spinel_target.gni
+  #
+  # optimize the modules
+  #
+  _gen_opt_target_name = "gen_opt_${target_name}"
+  compiled_action_foreach(_gen_opt_target_name) {
+    tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
+    sources = get_target_outputs(":${_gen_spv_target_name}")
+    outputs = [
+      "${_output_dir}/opt/{{source_name_part}}.spv",
+    ]
+    args = [
+      "-O",
+      "{{source}}",
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+    deps = [
+      ":${_gen_spv_target_name}",
+    ]
+  }
 
-template("graphics_compute_optimize_glsl_shader_foreach") {
-}
-
-template("graphics_compute_remap_glsl_shader_foreach") {
+  #
+  # remap the optimized modules
+  #
+  # NOTE: Callers of graphics_compute_compile_glsl_shader_foreach(<name>) will
+  #       typically want to use target_outputs(":<name>") to get the list of
+  #       generated file. This implies that the last action *must* use
+  #       the invoker's target_name, or this won't work.
+  #
+  compiled_action_foreach(target_name) {
+    tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
+    sources = get_target_outputs(":${_gen_opt_target_name}")
+    outputs = [
+      "${_output_dir}/remap/{{source_name_part}}.spv",
+    ]
+    args = [
+      "--do-everything",
+      "--input",
+      "{{source}}",
+      "--output",
+      rebase_path("${_output_dir}/remap", root_build_dir),
+    ]
+    deps = [
+      ":${_gen_opt_target_name}",
+    ]
+  }
 }

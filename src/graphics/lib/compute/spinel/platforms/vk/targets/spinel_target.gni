@@ -133,10 +133,7 @@ template("spinel_target") {
   graphics_compute_compile_glsl_shader_foreach("gen_spv") {
     sources = _spn_comp_sources
     inputs = _spn_comp_includes
-    outputs = [
-      "$target_gen_dir/spv/{{source_name_part}}.spv",
-    ]
-    debug_outputs = [ "$target_gen_dir/debug/{{source_name_part}}.comp" ]
+    output_dir = target_gen_dir
     args = [
       "--target-env",
       "vulkan1.1",
@@ -148,57 +145,16 @@ template("spinel_target") {
   }
 
   #
-  # optimize the modules
-  #
-  compiled_action_foreach("gen_opt") {
-    tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
-    sources = get_target_outputs(":gen_spv")
-    outputs = [
-      "$target_gen_dir/opt/{{source_name_part}}.spv",
-    ]
-    args = [
-      "-O",
-      "{{source}}",
-      "-o",
-      rebase_path(outputs[0], root_build_dir),
-    ]
-    public_deps = [
-      ":gen_spv",
-    ]
-  }
-
-  #
-  # remap the optimized modules
-  #
-  compiled_action_foreach("gen_remap") {
-    tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
-    sources = get_target_outputs(":gen_opt")
-    outputs = [
-      "$target_gen_dir/remap/{{source_name_part}}.spv",
-    ]
-    args = [
-      "--do-everything",
-      "--input",
-      "{{source}}",
-      "--output",
-      rebase_path(target_gen_dir, root_build_dir) + "/remap",
-    ]
-    public_deps = [
-      ":gen_opt",
-    ]
-  }
-
-  #
   # dump the modules as uint32_t literals
   #
   compiled_action("gen_modules") {
     tool = "${graphics_compute_dir}/spinel/platforms/vk/targets:spinel_modules_to_literals"
-    sources = get_target_outputs(":gen_remap")
+    sources = get_target_outputs(":gen_spv")
     outputs = _spn_target_gen_includes
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
     public_deps = [
-      ":gen_remap",
+      ":gen_spv",
     ]
   }
 

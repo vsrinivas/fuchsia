@@ -169,14 +169,16 @@ template("hotsort_target") {
   #
   _gen_spv_target_name = "gen_spv_${_hs_target_name}"
   graphics_compute_compile_glsl_shader_foreach(_gen_spv_target_name) {
-    sources = _hs_comp_sources
+    # Ensure we only keep the .comp files as sources for this step.
+    set_sources_assignment_filter([
+                                    "*.h",
+                                    "*.c",
+                                  ])
+    sources = get_target_outputs(":${_gen_comp_target_name}")
     inputs = [ "${_hotsort_dir}/platforms/vk/targets/hs_glsl_macros.h" ] +
              _hs_target_gen_includes +
              get_target_outputs(":${_gen_copy_target_name}")
-    outputs = [
-      "${_hs_output_dir}/spv/{{source_name_part}}.spv",
-    ]
-    debug_outputs = [ "${_hs_output_dir}/debug/{{source_name_part}}.comp" ]
+    output_dir = _hs_output_dir
     args = [
       "--target-env",
       "vulkan1.1",
@@ -189,61 +191,17 @@ template("hotsort_target") {
   }
 
   #
-  # optimize the modules
-  #
-  _gen_opt_target_name = "gen_opt_${_hs_target_name}"
-  compiled_action_foreach(_gen_opt_target_name) {
-    tool = "//third_party/shaderc/third_party/spirv-tools:spirv-opt"
-    sources = get_target_outputs(":${_gen_spv_target_name}")
-    outputs = [
-      "${_hs_output_dir}/opt/{{source_name_part}}.spv",
-    ]
-    args = [
-      "-O",
-      "{{source}}",
-      "-o",
-      rebase_path(outputs[0], root_build_dir),
-    ]
-    deps = [
-      ":${_gen_spv_target_name}",
-    ]
-  }
-
-  #
-  # remap the optimized modules
-  #
-  _gen_remap_target_name = "gen_remap_${_hs_target_name}"
-  compiled_action_foreach(_gen_remap_target_name) {
-    tool = "//third_party/shaderc/third_party/glslang:spirv-remap"
-    sources = get_target_outputs(":${_gen_opt_target_name}")
-    _output_dir = "${_hs_output_dir}/remap"
-    outputs = [
-      "${_output_dir}/{{source_name_part}}.spv",
-    ]
-    args = [
-      "--do-everything",
-      "--input",
-      "{{source}}",
-      "--output",
-      rebase_path(_output_dir, root_build_dir),
-    ]
-    deps = [
-      ":${_gen_opt_target_name}",
-    ]
-  }
-
-  #
   # dump the modules as uint32_t literals
   #
   _gen_modules_target_name = "gen_modules_${_hs_target_name}"
   compiled_action(_gen_modules_target_name) {
     tool = "${_hotsort_dir}/platforms/vk/targets:hotsort_modules_to_literals"
-    inputs = get_target_outputs(":${_gen_remap_target_name}")
+    inputs = get_target_outputs(":${_gen_spv_target_name}")
     outputs = _hs_target_gen_inlines
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(inputs, root_build_dir)
     deps = [
-      ":${_gen_remap_target_name}",
+      ":${_gen_spv_target_name}",
     ]
   }
 
@@ -302,7 +260,7 @@ template("hotsort_target") {
       deps = [
         ":${_gen_comp_target_name}",
         ":${_gen_modules_target_name}",
-        ":${_gen_remap_target_name}",
+        ":${_gen_spv_target_name}",
       ]
     }
   }
