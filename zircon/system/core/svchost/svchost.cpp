@@ -121,10 +121,8 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
-    // We should host the tracelink service ourselves instead of routing the
-    // request to appmgr.
-    "fuchsia.tracelink.Registry",
-    // TODO(PT-127): fuchsia.tracelink is being renamed to fuchsia.tracing.provider.
+    // We should host the tracing.provider service ourselves instead of
+    // routing the request to appmgr.
     "fuchsia.tracing.provider.Registry",
     // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
     "fuchsia.tracing.controller.Controller",
