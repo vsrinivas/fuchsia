@@ -4,6 +4,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <zircon/rights.h>
 #include <zxtest/zxtest.h>
@@ -76,21 +77,18 @@ TEST(FakeBti, DuplicateHandle) {
 
 TEST(FakeBti, DuplicateRealHandle) {
     // Setup, create an event and duplicate it, to make sure that still works:
-    zx_handle_t event, event_dup;
+    zx::event event, event_dup;
 
-    ASSERT_EQ(zx_event_create(0u, &event), 0, "Error during event create");
-    EXPECT_OK(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_dup));
+    ASSERT_OK(zx::event::create(0u, &event), "Error during event create");
+    EXPECT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_dup));
 
     // The ZX_EVENT_SIGNALED bit is guaranteed to be 0 when we create the object.
     // Now signal the original event:
-    ASSERT_OK(zx_object_signal(event, 0u, ZX_EVENT_SIGNALED));
+    ASSERT_OK(event.signal(0u, ZX_EVENT_SIGNALED));
     zx_signals_t pending;
     // Now wait for that signal on the duplicated version:
-    EXPECT_OK(zx_object_wait_one(event_dup, ZX_EVENT_SIGNALED, 0, &pending));
+    EXPECT_OK(event_dup.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending));
     EXPECT_EQ(pending & ZX_EVENT_SIGNALED, ZX_EVENT_SIGNALED, "Error during wait call");
-
-    EXPECT_OK(zx_handle_close(event));
-    EXPECT_OK(zx_handle_close(event_dup));
 }
 
 constexpr zx_handle_t kPotentialHandle = 1;
