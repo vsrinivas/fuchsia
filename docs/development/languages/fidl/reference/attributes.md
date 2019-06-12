@@ -88,8 +88,7 @@ struct MyFooStruct { ...
 ```
 
 have the same effect &mdash; one ("`///`") is syntactic sugar for the other.
-
-Both have the same effect, namely that the text of the comment is
+The text of the comment is
 emitted into the generated code, in a manner compatible with the syntax of
 the target language.
 
@@ -160,7 +159,7 @@ The compiler will issue an error if the number of handles exceeds this limit.
 
 ## `[Selector]` {#selector}
 
-**USAGE**: `[Select = "`_selector_`"]`
+**USAGE**: `[Selector = "`_selector_`"]`
 
 **MEANING**:
 Allows you to change the hashing basis for the method ordinal, see
