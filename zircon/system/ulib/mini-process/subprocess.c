@@ -98,7 +98,7 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                     // zx_profile_info_t. That's to prevent the compiler from getting smart and
                     // using a pre-computed structure in the data segment. This function is
                     // "injected" into the mini-process so there can be no external dependencies.
-                    cmd.status = ctx.profile_create(ZX_HANDLE_INVALID, NULL, &handle[0]);
+                    cmd.status = ctx.profile_create(ZX_HANDLE_INVALID, 0u, NULL, &handle[0]);
                     goto reply;
                 }
                 if (what & MINIP_CMD_CREATE_CHANNEL) {

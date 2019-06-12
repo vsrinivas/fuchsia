@@ -32,7 +32,7 @@ zx_status_t GetProfileSimple(void* ctx, uint32_t priority, const char* name_data
          }}};
 
     zx::profile profile;
-    zx_status_t status = zx_profile_create(root_job, &info, profile.reset_and_get_address());
+    zx_status_t status = zx_profile_create(root_job, 0u, &info, profile.reset_and_get_address());
     return fuchsia_scheduler_ProfileProviderGetProfile_reply(
         txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
 }

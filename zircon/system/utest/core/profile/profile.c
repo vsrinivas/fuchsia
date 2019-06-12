@@ -17,21 +17,23 @@ static bool make_profile_fails(void) {
     } else {
         zx_handle_t profile;
 
-        ASSERT_EQ(zx_profile_create(root_job, NULL, &profile), ZX_ERR_INVALID_ARGS, "");
-        ASSERT_EQ(zx_profile_create(ZX_HANDLE_INVALID, NULL, &profile), ZX_ERR_BAD_HANDLE, "");
+        ASSERT_EQ(zx_profile_create(root_job, 0u, NULL, &profile), ZX_ERR_INVALID_ARGS, "");
+        ASSERT_EQ(zx_profile_create(ZX_HANDLE_INVALID, 0u, NULL, &profile), ZX_ERR_BAD_HANDLE, "");
 
         zx_profile_info_t profile_info = { 0 };
-        ASSERT_EQ(zx_profile_create(root_job, &profile_info, &profile), ZX_ERR_NOT_SUPPORTED, "");
+        ASSERT_EQ(zx_profile_create(root_job, 0u, &profile_info, &profile), ZX_ERR_NOT_SUPPORTED, "");
 
         profile_info.type = ZX_PROFILE_INFO_SCHEDULER;
         profile_info.scheduler.priority = ZX_PRIORITY_HIGHEST + 1;
-        ASSERT_EQ(zx_profile_create(root_job, &profile_info, &profile), ZX_ERR_INVALID_ARGS, "");
+        ASSERT_EQ(zx_profile_create(root_job, 0u, &profile_info, &profile), ZX_ERR_INVALID_ARGS, "");
 
         zx_handle_t child_job;
         ASSERT_EQ(zx_job_create(root_job, 0u, &child_job), ZX_OK, "");
         profile_info.scheduler.priority = ZX_PRIORITY_HIGH;
-        ASSERT_EQ(zx_profile_create(child_job, &profile_info, &profile), ZX_ERR_ACCESS_DENIED, "");
+        ASSERT_EQ(zx_profile_create(child_job, 0u, &profile_info, &profile), ZX_ERR_ACCESS_DENIED, "");
         zx_handle_close(child_job);
+
+        ASSERT_EQ(zx_profile_create(root_job, 1u, &profile_info, &profile), ZX_ERR_INVALID_ARGS, "");
     }
 
     END_TEST;
@@ -49,11 +51,11 @@ static bool change_priority_via_profile(void) {
 
         zx_handle_t profile1;
         profile_info.scheduler.priority = ZX_PRIORITY_HIGH;
-        ASSERT_EQ(zx_profile_create(root_job, &profile_info, &profile1), ZX_OK, "");
+        ASSERT_EQ(zx_profile_create(root_job, 0u, &profile_info, &profile1), ZX_OK, "");
 
         zx_handle_t profile2;
         profile_info.scheduler.priority = ZX_PRIORITY_DEFAULT;
-        ASSERT_EQ(zx_profile_create(root_job, &profile_info, &profile2), ZX_OK, "");
+        ASSERT_EQ(zx_profile_create(root_job, 0u, &profile_info, &profile2), ZX_OK, "");
 
         ASSERT_EQ(zx_object_set_profile(zx_thread_self(), profile1, 0), ZX_OK, "");
         zx_nanosleep(ZX_USEC(100));

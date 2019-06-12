@@ -57,7 +57,7 @@ and cannot have a profile applied to it.
 
 ## SEE ALSO
 
- - [`zx_profile_create()`] - apply a profile to a thread
+ - [`zx_profile_create()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

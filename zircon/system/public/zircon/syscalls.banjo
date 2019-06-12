@@ -837,7 +837,7 @@ protocol Api {
     [rights="root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.",
      argtype="profile IN",
      argtype="out handle_acquire"]
-    profile_create(handle<job> root_job, array<zx_profile_info_t>:1 profile) ->
+    profile_create(handle<job> root_job, uint32 options, array<zx_profile_info_t>:1 profile) ->
         (zx.status status, handle<profile> out);
 
 

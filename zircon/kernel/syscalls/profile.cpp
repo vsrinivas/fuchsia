@@ -25,7 +25,7 @@ KCOUNTER(profile_set,    "profile.set")
 
 
 // zx_status_t zx_profile_create
-zx_status_t sys_profile_create(zx_handle_t root_job,
+zx_status_t sys_profile_create(zx_handle_t root_job, uint32_t options,
                                user_in_ptr<const zx_profile_info_t> user_profile_info,
                                user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -33,6 +33,10 @@ zx_status_t sys_profile_create(zx_handle_t root_job,
     zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_PROFILE);
     if (status != ZX_OK) {
         return status;
+    }
+
+    if (options != 0u) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::RefPtr<JobDispatcher> job;

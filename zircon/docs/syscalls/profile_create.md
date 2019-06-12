@@ -14,6 +14,7 @@ Create a scheduler profile.
 #include <zircon/syscalls.h>
 
 zx_status_t zx_profile_create(zx_handle_t root_job,
+                              uint32_t options,
                               const zx_profile_info_t* profile,
                               zx_handle_t* out);
 ```
@@ -25,7 +26,7 @@ zx_status_t zx_profile_create(zx_handle_t root_job,
 The parameter *profile* specifies the settings in the profile, which in turn
 will be applied to threads when `zx_object_set_profile()` is called. While the
 type `zx_profile_info_t` has support for additional settings in the future,
-currently only `priority` is implemented in the kernel.
+currently only `priority` is implemented in the kernel. *options* must be zero.
 
 A profile specifying a custom profile is specified as follows:
 
@@ -61,7 +62,7 @@ event of failure, a negative error value is returned.
 right, or *root_job* is not a handle to the root job.
 
 **ZX_ERR_INVALID_ARGS**  *profile* or *out* was an invalid pointer, or
-*info.scheduler.priority* was an invalid priority.
+*info.scheduler.priority* was an invalid priority or *options* was not zero.
 
 **ZX_ERR_NOT_SUPPORTED**  *info.type* was set to a value other than
 **ZX_PROFILE_INFO_SCHEDULER**.

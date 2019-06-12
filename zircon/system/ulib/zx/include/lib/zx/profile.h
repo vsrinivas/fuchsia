@@ -28,7 +28,8 @@ public:
         return *this;
     }
 
-    static zx_status_t create(const job& job, const zx_profile_info_t* info, profile* result);
+    static zx_status_t create(
+        const job& job, uint32_t options, const zx_profile_info_t* info, profile* result);
 };
 
 using unowned_profile = unowned<profile>;
