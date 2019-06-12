@@ -60,6 +60,8 @@ public:
     Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface);
     ~Device();
 
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
+
     // Send the given command packet to the TPM and wait for a response.
     // |actual| is the number of bytes written into |resp|.
     zx_status_t ExecuteCmd(Locality loc, const uint8_t* cmd, size_t len,
@@ -120,7 +122,3 @@ enum tpm_result {
 } // namespace tpm
 
 #endif // __cplusplus
-
-__BEGIN_CDECLS
-zx_status_t tpm_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS

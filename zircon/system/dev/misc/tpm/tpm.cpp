@@ -12,9 +12,11 @@
 
 #include <assert.h>
 #include <endian.h>
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
@@ -101,6 +103,42 @@ zx_status_t Device::ShutdownLocked(uint16_t type) {
         return ZX_ERR_BAD_STATE;
     }
     return ZX_OK;
+}
+
+zx_status_t Device::Create(void* ctx, zx_device_t* parent) {
+    zx::handle irq;
+    i2c_protocol_t i2c;
+    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "tpm: could not get I2C protocol: %d\n", status);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    status = i2c_get_interrupt(&i2c, 0, irq.reset_and_get_address());
+    if (status == ZX_OK) {
+        // irq contains garbage?
+        zx_handle_t ignored __UNUSED = irq.release();
+    }
+
+    fbl::unique_ptr<I2cCr50Interface> i2c_iface;
+    status = I2cCr50Interface::Create(parent, std::move(irq), &i2c_iface);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Device> device(new (&ac) Device(parent, std::move(i2c_iface)));
+    if (!ac.check()) {
+        return status;
+    }
+
+    status = device->Bind();
+    if (status == ZX_OK) {
+        // DevMgr now owns this pointer, release it to avoid destroying the
+        // object when device goes out of scope.
+        __UNUSED auto* ptr = device.release();
+    }
+    return status;
 }
 
 zx_status_t Device::ExecuteCmd(Locality loc, const uint8_t* cmd, size_t len,
@@ -215,40 +253,21 @@ Device::Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface)
 Device::~Device() {
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DEVICE_OPS_VERSION;
+    ops.bind = tpm::Device::Create;
+    return ops;
+}();
+
 } // namespace tpm
 
-zx_status_t tpm_bind(void* ctx, zx_device_t* parent) {
-    zx::handle irq;
-    i2c_protocol_t i2c;
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "tpm: could not get I2C protocol: %d\n", status);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    status = i2c_get_interrupt(&i2c, 0, irq.reset_and_get_address());
-    if (status == ZX_OK) {
-        // irq contains garbage?
-        zx_handle_t ignored __UNUSED = irq.release();
-    }
-
-    fbl::unique_ptr<tpm::I2cCr50Interface> i2c_iface;
-    status = tpm::I2cCr50Interface::Create(parent, std::move(irq), &i2c_iface);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<tpm::Device> device(new (&ac) tpm::Device(parent, std::move(i2c_iface)));
-    if (!ac.check()) {
-        return status;
-    }
-
-    status = device->Bind();
-    if (status == ZX_OK) {
-        // DevMgr now owns this pointer, release it to avoid destroying the
-        // object when device goes out of scope.
-        __UNUSED auto ptr = device.release();
-    }
-    return status;
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(tpm, tpm::driver_ops, "zircon", "0.1", 3)
+    // Handle I2C
+    // TODO(teisenbe): Make this less hacky when we have a proper I2C protocol
+    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
+    BI_ABORT_IF(NE, BIND_PCI_DID, 0x9d61),
+    BI_MATCH_IF(EQ, BIND_TOPO_I2C, BIND_TOPO_I2C_PACK(0x0050)),
+ZIRCON_DRIVER_END(tpm)
+// clang-format on
