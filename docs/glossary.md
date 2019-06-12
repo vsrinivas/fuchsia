@@ -47,7 +47,7 @@ selection of session shells, and device recovery.
 
 #### **bootfs**
 
-The BOOTFS RAM disk contains the files needed early in the boot process when no
+The bootfs RAM disk contains the files needed early in the boot process when no
 other filesystems are available. It is part of the [ZBI](#zircon-boot-image),
 and is decompressed and served by [bootsvc](#bootsvc). After the early boot
 process is complete, the bootfs is mounted at `/boot`.
@@ -58,7 +58,7 @@ process is complete, the bootfs is mounted at `/boot`.
 
 `bootsvc` is the second process started in Fuchsia. It provides a filesystem
 service for the [bootfs](#bootfs) and a loader service that loads programs from
-the same BOOTFS. After starting these services, it loads the third program,
+the same bootfs. After starting these services, it loads the third program,
 which defaults to `devmgr`.
 
 -   [Documentation](/zircon/docs/bootsvc.md)
@@ -66,9 +66,59 @@ which defaults to `devmgr`.
 #### **Bus Driver**
 
 A [driver](#Driver) for a device that has multiple children. For example,
-hardware interfaces like PCI specify a topology in which a single
-controller is used to interface with multiple devices connected to it. In that
-situation, the driver for the controller would be a bus driver.
+hardware interfaces like PCI specify a topology in which a single controller is
+used to interface with multiple devices connected to it. In that situation, the
+driver for the controller would be a bus driver.
+
+#### **Cache directory**
+
+Similar to a [data directory](#data-directory), except that the contents of a
+cache directory may be cleared by the system at any time, such as when the
+device is under storage pressure. Canonically mapped to /cache in the component
+instance’s [namespace](#namespace).
+
+-   [Testing isolated cache storage](development/testing/testing_isolated_cache_storage.md).
+
+#### **Capability**
+
+A capability is a value which combines an *object reference* and a set of
+*rights*. When a program has a capability it is conferred the privilege to
+perform certain actions using that capability. A [handle](#handle) is a common
+example for a capability.
+
+#### **Capability routing**
+
+A way for one [component](#component-instance) to give
+[capabilities](#capability) to another instance over the
+[component instance tree](#component-instance-tree).
+[Component manifests](#component-manifest) define how routing takes place, with
+syntax for [service capabilities](#service-capability),
+[directory capabilities](#directory-capability), and
+[storage capabilities](#storage-capability).
+
+Capability routing is a [components v2](#components-v2) concept.
+
+##### expose
+
+A [component instance](#component-instance) may use the `expose`
+[manifest](#component-manifest) keyword to indicate that it is making a
+capability available to its parent to route. Parents may [offer](#offer) a
+capability exposed by any of their children to their other children or to their
+parent, but they cannot [use](#use) it themselves in order to avoid dependency
+cycles.
+
+##### offer
+
+A [component instance](#component-instance) may use the `offer`
+[manifest](#component-manifest) keyword to route a capability that was
+[exposed](#expose) to it to one of its children (other than the child that
+exposed it).
+
+##### use
+
+A [component instance](#component-instance) may use the `use`
+[manifest](#component-manifest) keyword to consume a capability that was
+[offered](#offer) to it by its parent.
 
 #### **Channel**
 
@@ -81,23 +131,103 @@ underlying transport.
 
 #### **Component**
 
-A component is a unit of execution and accounting. It consists of a manifest
-file and associated code, which comes from a Fuchsia package. A component runs
-in a sandbox, accesses objects via its [namespace](#Namespace) and publishes
-objects through its export directory. [Modules](#Module) and [Agents](#Agent)
-are examples of components. Components are most commonly distributed inside
-[Fuchsia Packages](#fuchsia-package).
+A component is a unit of executable software on Fuchsia. Components support
+[capability routing](#capability-routing), software composition, isolation
+boundaries, continuity between executions, and introspection.
 
-#### **Component manifest**
+#### **Component collection**
 
-A component manifest (.cmx) is a JSON file with the file extension `.cmx`,
-typically located in the package’s `meta/` directory with information that
-declares how to run the component and what capabilities it receives upon launch.
-In particular, the component manifest describes how the component is sandboxed.
-See [Component manifest](the-book/package_metadata.md#Component-manifest) for a
-detailed description.
+A node in the [component instance tree](#component-instance-tree) whose children
+are dynamically instantiated rather than statically defined in a
+[component manifest](#component-manifest).
 
-These files end in `.cmx`, so they are also known as "cmx files".
+Component collection is a [components v2](#components-v2) concept.
+
+#### **Component declaration**
+
+A component declaration is a [FIDL](#fidl) table ([fuchsia.sys2.ComponentDecl])
+that includes information about a [component](#component)’s runtime
+configuration, [capabilities](#capabilities) it [exposes](#expose),
+[offers](#offer), and [uses](#use), and [facets](#component-manifest-facet).
+
+Component declaration is a [components v2](#components-v2) concept.
+
+[fuchsia.sys2.ComponentDecl]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
+
+#### **Component Framework**
+
+An application framework for declaring and managing [components](#component),
+consisting of build tools, APIs, conventions, and system services.
+
+-   [Components v1](#components-v1), [Components v2](#components-v2)
+
+#### **Component instance**
+
+One of possibly many instances of a particular [component](#component) at
+runtime. A component instance has its own [environment](#environment) and
+[lifecycle](#lifecycle) independent of other instances.
+
+#### **Component instance tree**
+
+A tree structure that represents the runtime state of parent-child relationships
+between [component instances](#component-instance). If instance A launches
+instance B then in the tree A will be the parent of B. The component instance
+tree is used in [static capability routing](#static-capability-routing) such
+that parents can [offer](#offer) capabilities to their children to [use](#use),
+and children can [expose](#expose) capabilities for their parents to expose to
+their parents or offer to other children.
+
+Component instance tree is a [components v2](#components-v2) concept.
+
+#### **Component Manager**
+
+A system service which lets [component instances](#component-instance) manage
+their children and [routes capabilities](#capability-routing) between them, thus
+implementing the [component instance tree](#component-instance-tree). Component
+Manager is the system service that implements the
+[components v2](#components-v2) runtime.
+
+#### **Component Manifest**
+
+In [Components v1](#components-v1), a component manifest is a JSON file with a
+`.cmx` extension that contains information about a [component](#component)’s
+runtime configuration, services and directories it receives in its
+[namespace](#namespace), and [facets](#component-manifest-facet).
+
+In [Components v2](#components-v2), a component manifest is a file with a `.cm`
+extension, that encodes a [component declaration](#component-declaration).
+
+#### **Component Manifest Facet**
+
+Additional metadata that is carried in a
+[component manifest](#component-manifest). This is an extension point to the
+[component framework](#component-framework).
+
+#### **Components v1**
+
+A shorthand for the [Component](#component) Architecture as first implemented on
+Fuchsia. Includes a runtime as implemented by [appmgr](#appmgr) and
+[sysmgr](#sysmgr), protocols and types as defined in [fuchsia.sys], build-time
+tools such as [cmc], and SDK libraries such as [libsys] and [libsvc].
+
+-   [Components v2](#components-v2)
+
+[fuchsia.sys]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys/
+[cmc]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/cmc
+[libsys]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/sys
+[libsvc]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/svc
+
+#### **Components v2**
+
+A shorthand for the [Component](#component) Architecture in its modern
+implementation. Includes a runtime as implemented by
+[component_manager](#component-manager), protocols and types as defined in
+[fuchsia.sys2], and build-time tools such as [cmc].
+
+-   [Components v1](#components-v1)
+
+[fuchsia.sys2]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys2/
+[cmc]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/cmc
 
 #### **Concurrent Device Driver**
 
@@ -116,6 +246,12 @@ A core driver is a [driver](#Driver) that implements the application-facing RPC
 interface for a class of drivers (e.g. block drivers, ethernet drivers). It is
 hardware-agnostic. It communicates with a [hardware driver](#Hardware-Driver)
 through [banjo](#Banjo) to service its requests.
+
+#### **Data directory**
+
+A private directory within which a [component instance](#component-instance) may
+store data local to the device, canonically mapped to /data in the component
+instance’s [namespace](#namespace).
 
 #### **DevHost**
 
@@ -138,6 +274,19 @@ libraries loaded by Zircon's Device Manager.
 
 -   [DDK Overview](/zircon/docs/ddk/overview.md)
 -   [DDK includes](/zircon/system/ulib/ddk/include/ddk/)
+
+#### **Directory capability**
+
+A [capability](#capability) that permits access to a filesystem directory by
+adding it to the [namespace](#namespace) of the
+[component instance](#component-instance) that [uses](#use) it. If multiple
+[component instances](#component-instance) are offered the same directory
+capability then they will have access to the same underlying filesystem
+directory.
+
+Directory capability is a [components v2](#components-v2) concept.
+
+-   [Capability routing](#capability-routing)
 
 #### **Driver**
 
@@ -366,6 +515,11 @@ as [GN](#gn) in Fuchsia.
 -   [Ninja rules in GN](https://gn.googlesource.com/gn/+/master/docs/reference.md#ninja_rules)
 -   [Fuchsia build overview](development/build/overview.md)
 
+#### **Outgoing directory**
+
+A file system directory where a [component](#component) may [expose](#expose)
+capabilities for others to use.
+
 #### **Package**
 
 Package is an overloaded term. Package may refer to a
@@ -386,7 +540,12 @@ Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
 
 #### **Realm**
 
-Synonym for [environment](#environment).
+In [components v1](#components-v1) terminology, realm is synonymous to
+[environment](#environment).
+
+In [components v2](#components-v2) terminology, a realm is a subtree of
+component instances in the [component instance tree](#component-instance-tree).
+It acts as a container for component instances and capabilities in the subtree.
 
 #### **Scenic**
 
@@ -410,6 +569,19 @@ the interface. Long-running services, such as [Scenic](#scenic), are typically
 obtained through a [Namespace](#namespace), which lets many clients connect to a
 common implementation.
 
+#### **Service capability**
+
+A [capability](#capability) that permits communicating with a
+[service](#service) over a [channel](#channel) using a specified [FIDL](#fidl)
+protocol. The server end of the channel is held by the
+[component instance](#component-instance) that provides the capability. The
+client end of the channel is given to the
+[component instance](#component-instance) that [uses](#use) the capability.
+
+-   [Capability routing](#capability-routing)
+
+Service capability is a [components v2](#components-v2) concept.
+
 #### **Session**
 
 An interactive session with one or more users. Has a
@@ -423,6 +595,33 @@ terminals.
 The replaceable set of software functionality that works in conjunction with
 devices to create an environment in which people can interact with mods, agents
 and suggestions.
+
+#### **Storage capability**
+
+A storage capability is a [capability](#capability) that allocates per-component
+isolated storage for a designated purpose within a filesystem directory.
+Multiple [component instances](#component-instance) may be given the same
+storage capability, but underlying directories that are isolated from each other
+will be allocated for each individual use. This is different from
+[directory capabilities](#directory-capability), where a specific filesystem
+directory is routed to a specific component instance.
+
+Isolation is achieved because Fuchsia does not support
+[dotdot](the-book/dotdot.md).
+
+There are three types of storage capabilities:
+
+-   *data*: a directory is added to the [namespace](#namespace) of the
+    [component instance](#component-instance) that [uses](#use) the capability.
+    Acts as a [data directory](#data-directory).
+-   *cache*: same as data, but acts as a [cache directory](#cache-directory).
+-   *meta*: a directory is allocated to be used by component manager, where it
+    will store metadata to enable features like persistent
+    [component collections](#component-collections).
+
+Storage capability is a [components v2](#components-v2) concept.
+
+-   [Capability routing](#capability-routing)
 
 #### **Story**
 
@@ -450,14 +649,15 @@ The Virtual Dynamic Shared Object (vDSO) is a Virtual Shared Library -- it is
 provided by the [Zircon](#Zircon) kernel and does not appear in the filesystem
 or a package. It provides the Zircon System Call API/ABI to userspace processes
 in the form of an ELF library that's "always there." In the Fuchsia SDK and
-[Zircon DDK](#DDK) it exists as `libzircon.so` for the purpose of having something
-to pass to the linker representing the vDSO.
+[Zircon DDK](#DDK) it exists as `libzircon.so` for the purpose of having
+something to pass to the linker representing the vDSO.
 
 #### **Virtual Memory Address Range**
 
-A Virtual Memory Address Range (VMAR) is a Zircon [kernel object](#Kernel-Object)
-that controls where and how [Virtual Memory Objects](#virtual-memory-object) may
-be mapped into the address space of a process.
+A Virtual Memory Address Range (VMAR) is a Zircon
+[kernel object](#Kernel-Object) that controls where and how
+[Virtual Memory Objects](#virtual-memory-object) may be mapped into the address
+space of a process.
 
 -   [VMAR Overview](/zircon/docs/objects/vm_address_region.md)
 
