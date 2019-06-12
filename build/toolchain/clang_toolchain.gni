@@ -70,6 +70,7 @@ template("clang_toolchain") {
       use_goma = invoker.use_goma
     }
     if (use_goma) {
+      goma_dir = rebase_path(goma_dir)
       compiler_prefix = "$goma_dir/gomacc "
     } else {
       if (defined(invoker.use_ccache)) {

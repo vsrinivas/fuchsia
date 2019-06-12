@@ -8,6 +8,7 @@ declare_args() {
   # Set to true to enable distributed compilation using Goma.
   use_goma = false
 
-  # Absolute directory containing the Goma source code.
+  # Directory containing the Goma source code.  This can be a GN
+  # source-absolute path ("//...") or a system absolute path.
   goma_dir = getenv("HOME") + "/goma"
 }

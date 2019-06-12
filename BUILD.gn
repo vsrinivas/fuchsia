@@ -80,7 +80,7 @@ declare_args() {
   # silently clobber the default value shown here.
   zircon_args = {
     use_goma = use_goma
-    goma_dir = goma_dir
+    goma_dir = rebase_path(goma_dir)
     if (clang_prefix != default_clang_prefix) {
       # Propagate a custom value to override Zircon's default.  But don't
       # propagate the default because Zircon has proper incremental build
