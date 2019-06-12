@@ -217,6 +217,10 @@ Location arguments
 
 )" LOCATION_ARG_HELP("break")
         R"(
+  You can also specify the magic symbol "@main" to break on the process'
+  entrypoint:
+    break @main
+
 Options
 
   --enable=[ true | false ]

@@ -103,6 +103,14 @@ class ModuleSymbolIndex {
   const std::vector<unsigned>* FindFileUnitIndices(
       const std::string& name) const;
 
+  // See main_functions_ below.
+  const std::vector<ModuleSymbolIndexNode::DieRef>& main_functions() const {
+    return main_functions_;
+  }
+  std::vector<ModuleSymbolIndexNode::DieRef>& main_functions() {
+    return main_functions_;
+  }
+
   // Dumps the file index to the stream for debugging.
   void DumpFileIndex(std::ostream& out) const;
 
@@ -141,6 +149,11 @@ class ModuleSymbolIndex {
   using FileNameIndex =
       std::multimap<std::string_view, FileIndex::const_iterator>;
   FileNameIndex file_name_index_;
+
+  // All references to functions in this module found annotated with the
+  // DW_AT_main_subprogram attribute. Normally there will be 0 (not all
+  // compiler annotate this) or 1.
+  std::vector<ModuleSymbolIndexNode::DieRef> main_functions_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleSymbolIndex);
 };

@@ -91,6 +91,15 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
   return comp.name().substr(0, comp.name().size() - 4);
 }
 
+// Returns true if the given input references the special "main" function
+// annotation.
+bool ReferencesMainFunction(const InputLocation& loc) {
+  if (loc.type != InputLocation::Type::kSymbol ||
+      loc.symbol.components().size() != 1)
+    return false;
+  return loc.symbol.components()[0].name() == "@main";
+}
+
 }  // namespace
 
 ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
@@ -253,6 +262,17 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
   return index_.FindFileMatches(name);
 }
 
+std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
+  std::vector<fxl::RefPtr<Function>> result;
+  for (const auto& ref : index_.main_functions()) {
+    auto symbol_ref = IndexDieRefToSymbol(ref);
+    const Function* func = symbol_ref.Get()->AsFunction();
+    if (func)
+      result.emplace_back(const_cast<Function*>(func));
+  }
+  return result;
+}
+
 const ModuleSymbolIndex& ModuleSymbolsImpl::GetIndex() const { return index_; }
 
 LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(
@@ -264,6 +284,25 @@ llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
     uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
       context_->getDebugAranges()->findAddress(relative_address));
+}
+
+void ModuleSymbolsImpl::AppendLocationForFunction(
+    const SymbolContext& symbol_context, const ResolveOptions& options,
+    const Function* func, std::vector<Location>* result) const {
+  if (func->code_ranges().empty())
+    return;  // No code associated with this.
+
+  // Compute the full file/line information if requested. This recomputes
+  // function DIE which is unnecessary but makes the code structure
+  // simpler and ensures the results are always the same with regard to
+  // how things like inlined functions are handled (if the location maps
+  // to both a function and an inlined function inside of it).
+  uint64_t abs_addr =
+      symbol_context.RelativeToAbsolute(func->code_ranges()[0].begin());
+  if (options.symbolize)
+    result->push_back(LocationForAddress(symbol_context, abs_addr));
+  else
+    result->emplace_back(Location::State::kAddress, abs_addr);
 }
 
 std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
@@ -280,6 +319,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
+  // Special-case for PLT functions.
   if (auto plt_name = GetPLTInputLocation(input_location)) {
     auto found = plt_locations_.find(*plt_name);
     if (found == plt_locations_.end())
@@ -293,26 +333,32 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
 
   std::vector<Location> result;
 
-  for (const auto& die_ref : index_.FindExact(input_location.symbol)) {
+  auto symbol_to_find = input_location.symbol;
+
+  // Special-case for main functions.
+  if (ReferencesMainFunction(input_location)) {
+    auto main_functions = GetMainFunctions();
+    if (!main_functions.empty()) {
+      for (const auto& func : GetMainFunctions())
+        AppendLocationForFunction(symbol_context, options, func.get(), &result);
+      return result;
+    } else {
+      // Nothing explicitly marked as the main function, fall back on anything
+      // in the toplevel namespace named "main".
+      symbol_to_find = Identifier(IdentifierQualification::kGlobal,
+                                  IdentifierComponent("main"));
+
+      // Fall through to symbol finding on the new name.
+    }
+  }
+
+  for (const auto& die_ref : index_.FindExact(symbol_to_find)) {
     LazySymbol lazy_symbol = IndexDieRefToSymbol(die_ref);
     const Symbol* symbol = lazy_symbol.Get();
 
     if (const Function* function = symbol->AsFunction()) {
       // Symbol is a function.
-      if (function->code_ranges().empty())
-        continue;  // No code associated with this.
-
-      // Compute the full file/line information if requested. This recomputes
-      // function DIE which is unnecessary but makes the code structure
-      // simpler and ensures the results are always the same with regard to
-      // how things like inlined functions are handled (if the location maps
-      // to both a function and an inlined function inside of it).
-      uint64_t abs_addr =
-          symbol_context.RelativeToAbsolute(function->code_ranges()[0].begin());
-      if (options.symbolize)
-        result.push_back(LocationForAddress(symbol_context, abs_addr));
-      else
-        result.emplace_back(Location::State::kAddress, abs_addr);
+      AppendLocationForFunction(symbol_context, options, function, &result);
     } else if (const Variable* variable = symbol->AsVariable()) {
       // Symbol is a variable. This will be the case for global variables and
       // file- and class-level statics. This always symbolizes since we

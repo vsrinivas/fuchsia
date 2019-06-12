@@ -123,7 +123,17 @@ static_library("symbols") {
   deps = [
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/lib/elflib",
+
+    # TODO(brettw) include this when googletest rolls:
+    # "//third_party/googletest:gtest_prod",
   ]
+
+  # Temporary workaround for lack of "gtest_prod" target in current googletest
+  # repo.
+  # TODO(brettw) Remove when "gtest_prod" target above can be used.
+  configs += [ "//third_party/googletest:gtest_config" ]
+  sources +=
+      [ "//third_party/googletest/googletest/include/gtest/gtest_prod.h" ]
 }
 
 static_library("test_support") {

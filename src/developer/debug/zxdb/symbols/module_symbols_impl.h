@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOLS_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOLS_IMPL_H_
 
+#include "gtest/gtest_prod.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -62,12 +63,15 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                     uint64_t absolute_address) const override;
   std::vector<std::string> FindFileMatches(
       std::string_view name) const override;
+  std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
   const ModuleSymbolIndex& GetIndex() const override;
   LazySymbol IndexDieRefToSymbol(
       const ModuleSymbolIndexNode::DieRef&) const override;
   bool HasBinary() const override;
 
  private:
+  FRIEND_TEST(ModuleSymbols, ResolveMainFunction);
+
   llvm::DWARFUnit* CompileUnitForRelativeAddress(
       uint64_t relative_address) const;
 
@@ -91,6 +95,14 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // state and stack.
   Location LocationForVariable(const SymbolContext& symbol_context,
                                fxl::RefPtr<Variable> variable) const;
+
+  // Converts a Function object to a found location according to the options
+  // and adds it to the list. May append nothing if there is no code for the
+  // function.
+  void AppendLocationForFunction(const SymbolContext& symbol_context,
+                                 const ResolveOptions& options,
+                                 const Function* func,
+                                 std::vector<Location>* result) const;
 
   // Resolves the line number information for the given file, which must be an
   // exact match. This is a helper function for ResolveLineInputLocation().

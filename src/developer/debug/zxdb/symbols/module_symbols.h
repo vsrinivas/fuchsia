@@ -19,6 +19,7 @@
 namespace zxdb {
 
 class FileLine;
+class Function;
 struct InputLocation;
 class LineDetails;
 class ModuleSymbolIndex;
@@ -79,6 +80,13 @@ class ModuleSymbols {
   // unit for each of the files.
   virtual std::vector<std::string> FindFileMatches(
       std::string_view name) const = 0;
+
+  // Returns the functions marked with DW_AT_main_subprogram in this module.
+  //
+  // As of this writing, Clang doesn't mark the main function so this will be
+  // empty, but Rust does. It's theoretically possible for the compiler to mark
+  // more than one main function, but it's not obvious what that might mean.
+  virtual std::vector<fxl::RefPtr<Function>> GetMainFunctions() const = 0;
 
   // Returns the symbol index for this module.
   virtual const ModuleSymbolIndex& GetIndex() const = 0;

@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
@@ -92,6 +93,10 @@ std::vector<std::string> MockModuleSymbols::FindFileMatches(
       result.push_back(cur);
   }
   return result;
+}
+
+std::vector<fxl::RefPtr<Function>> MockModuleSymbols::GetMainFunctions() const {
+  return std::vector<fxl::RefPtr<Function>>();
 }
 
 const ModuleSymbolIndex& MockModuleSymbols::GetIndex() const { return index_; }

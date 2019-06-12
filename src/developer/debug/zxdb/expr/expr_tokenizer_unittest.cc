@@ -18,13 +18,13 @@ TEST(ExprTokenizer, Empty) {
 
 TEST(ExprTokenizer, InvalidChar) {
   // Offsets:      012345
-  ExprTokenizer t("1234 @ hello");
+  ExprTokenizer t("1234 ` hello");
 
   EXPECT_FALSE(t.Tokenize());
   EXPECT_TRUE(t.err().has_error());
   EXPECT_EQ(
-      "Invalid character '@' in expression.\n"
-      "  1234 @ hello\n"
+      "Invalid character '`' in expression.\n"
+      "  1234 ` hello\n"
       "       ^",
       t.err().msg());
   EXPECT_EQ(5u, t.error_location());

@@ -203,6 +203,8 @@ TEST(ModuleSymbolIndex, DumpFileIndex) {
   ModuleSymbolIndex index;
   index.CreateIndex(module.object_file());
 
+  std::cout << index.main_functions().size() << " main function(s) found.\n\n";
+
   std::cout << "Index dump:\n";
   index.root().Dump(std::cout, 1);
   index.DumpFileIndex(std::cout);

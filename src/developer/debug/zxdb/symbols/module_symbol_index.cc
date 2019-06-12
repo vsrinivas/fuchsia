@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/lib/fxl/logging.h"
@@ -118,10 +119,14 @@ size_t RecursiveCountDies(const ModuleSymbolIndexNode& node) {
 // the parent_indices array with the index of the parent of each DIE in the
 // unit (it will be exactly unit->getNumDIEs() long). The root node will have
 // kNoParent set.
-void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
-                                 llvm::DWARFUnit* unit,
-                                 std::vector<SymbolStorage>* symbol_storage,
-                                 std::vector<unsigned>* parent_indices) {
+//
+// All functions found with DW_AT_main_subprogram will be added to the
+// main_functions array.
+void ExtractUnitIndexableEntries(
+    llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+    std::vector<SymbolStorage>* symbol_storage,
+    std::vector<unsigned>* parent_indices,
+    std::vector<ModuleSymbolIndexNode::DieRef>* main_functions) {
   DwarfDieDecoder decoder(context, unit);
 
   // The offset of the declaration. This can be unit-relative or file-absolute.
@@ -137,6 +142,9 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
 
   llvm::Optional<bool> is_declaration;
   decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
+
+  llvm::Optional<bool> is_main_subprogram;
+  decoder.AddBool(llvm::dwarf::DW_AT_main_subprogram, &is_main_subprogram);
 
   // Stores the index of the parent DIE for each one we encounter. The root
   // DIE with no parent will be set to kNoParent.
@@ -165,6 +173,7 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
     is_declaration.reset();
     decl_unit_offset.reset();
     decl_global_offset.reset();
+    is_main_subprogram.reset();
 
     const llvm::DWARFDebugInfoEntry* die =
         unit->getDIEAtIndex(i).getDebugInfoEntry();
@@ -224,6 +233,13 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
         // This symbol has no separate definition so use it as its own
         // declaration (the name and such will be on itself).
         symbol_storage->emplace_back(die, die->getOffset(), ref_type);
+      }
+
+      // Check for "main" function annotation.
+      if (ref_type == ModuleSymbolIndexNode::RefType::kFunction &&
+          is_main_subprogram && *is_main_subprogram) {
+        main_functions->emplace_back(ModuleSymbolIndexNode::RefType::kFunction,
+                                     die->getOffset());
       }
     }
 
@@ -491,7 +507,8 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
   std::vector<SymbolStorage> symbol_storage;
   symbol_storage.reserve(256);
   std::vector<unsigned> parent_indices;
-  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &parent_indices);
+  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &parent_indices,
+                              &main_functions_);
 
   // Index each one.
   SymbolStorageIndexer indexer(context, unit, parent_indices, &root_);

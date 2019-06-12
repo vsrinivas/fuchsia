@@ -48,6 +48,7 @@ class MockModuleSymbols : public ModuleSymbols {
                                     uint64_t address) const override;
   std::vector<std::string> FindFileMatches(
       std::string_view name) const override;
+  std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
   const ModuleSymbolIndex& GetIndex() const override;
   LazySymbol IndexDieRefToSymbol(
       const ModuleSymbolIndexNode::DieRef&) const override;

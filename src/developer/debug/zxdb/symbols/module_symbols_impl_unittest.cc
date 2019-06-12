@@ -299,4 +299,55 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
   EXPECT_EQ(TestSymbolModule::kPltFunctionOffset, addrs[0].address());
 }
 
+TEST(ModuleSymbols, ResolveMainFunction) {
+  ModuleSymbolsImpl module(TestSymbolModule::GetCheckedInTestFileName(),
+                           TestSymbolModule::GetStrippedCheckedInTestFileName(),
+                           "");
+  Err err = module.Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  // The sample module is a shared library with no main function, so there
+  // should be nothing found.
+  InputLocation input_loc(Identifier(IdentifierComponent("@main")));
+  ResolveOptions options;
+  auto addrs = module.ResolveInputLocation(symbol_context, input_loc, options);
+  EXPECT_TRUE(addrs.empty());
+
+  // Inject a function named "main" (but not marked in the symbols as the
+  // official main function). This is kind of a hack. The ModuleSymbolsImpl is
+  // using a real symbol file and need to be able to generate the function
+  // symbol from the DieRef for this call to succeed. So we can't just inject a
+  // fake DieRef. Instead, redirect "main" in the index to an existing function
+  // ("MyFunction").
+  auto my_function_matches = module.index_.FindExact(
+      Identifier(IdentifierComponent(TestSymbolModule::kMyFunctionName)));
+  ASSERT_EQ(1u, my_function_matches.size());
+  auto main_node = module.index_.root().AddChild("main");
+  main_node->AddDie(my_function_matches[0]);
+
+  // Query for @main again. Since nothing is marked as the main function, the
+  // one named "main" should be returned. Since we redirected the index above,
+  // this will actually be "MyFunction".
+  addrs = module.ResolveInputLocation(symbol_context, input_loc, options);
+  ASSERT_EQ(1u, addrs.size());
+  EXPECT_EQ(TestSymbolModule::kMyFunctionName,
+            addrs[0].symbol().Get()->GetFullName());
+
+  // Now mark a different function as the official main one
+  // (kNamespaceFunctionName).
+  auto anon_function_matches = module.index_.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
+  ASSERT_EQ(1u, anon_function_matches.size());
+  module.index_.main_functions().push_back(anon_function_matches[0]);
+
+  // Query again. Now that a function is explicitly marked as the main one,
+  // only it should be returned.
+  addrs = module.ResolveInputLocation(symbol_context, input_loc, options);
+  ASSERT_EQ(1u, addrs.size());
+  EXPECT_EQ(TestSymbolModule::kNamespaceFunctionName,
+            addrs[0].symbol().Get()->GetFullName());
+}
+
 }  // namespace zxdb
