@@ -17,12 +17,12 @@ source_set("files") {
     "path.h",
     "scoped_temp_dir.cc",
     "scoped_temp_dir.h",
-    "unique_fd.cc",
     "unique_fd.h",
   ]
 
   public_deps = [
     "//src/lib/fxl:strings",
+    "//zircon/public/lib/fbl",
   ]
 
   deps = [

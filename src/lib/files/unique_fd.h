@@ -5,20 +5,13 @@
 #ifndef LIB_FXL_FILES_UNIQUE_FD_H_
 #define LIB_FXL_FILES_UNIQUE_FD_H_
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/fxl/memory/unique_object.h"
 
 namespace fxl {
-namespace internal {
 
-struct UniqueFDTraits {
-  static int InvalidValue() { return -1; }
-  static bool IsValid(int value) { return value >= 0; }
-  static void Free(int fd);
-};
-
-}  // namespace internal
-
-using UniqueFD = UniqueObject<int, internal::UniqueFDTraits>;
+using UniqueFD = fbl::unique_fd;
 
 }  // namespace fxl
 
