@@ -114,14 +114,16 @@ pub enum Offer {
 pub struct OfferService {
     pub source: Ref,
     pub source_path: String,
-    pub targets: Vec<Target>,
+    pub target: Ref,
+    pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferDirectory {
     pub source: Ref,
     pub source_path: String,
-    pub targets: Vec<Target>,
+    pub target: Ref,
+    pub target_path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -129,10 +131,10 @@ pub struct OfferStorage {
     #[serde(rename = "type")]
     pub type_: StorageType,
     pub source: Ref,
-    pub dests: Vec<Ref>,
+    pub target: Ref,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum StorageType {
     #[serde(rename = "data")]
     Data,
@@ -142,13 +144,7 @@ pub enum StorageType {
     Meta,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Target {
-    pub target_path: String,
-    pub dest: Ref,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Ref {
     #[serde(rename = "realm")]
     Realm(RealmRef),
@@ -162,23 +158,23 @@ pub enum Ref {
     Storage(StorageRef),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RealmRef {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SelfRef {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChildRef {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CollectionRef {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StorageRef {
     pub name: String,
 }

@@ -8,9 +8,8 @@ use {
     crate::model::testing::routing_test_helpers::*,
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDest,
-        OfferDirectoryDecl, OfferServiceDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl,
-        UseServiceDecl,
+        ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
+        OfferServiceDecl, OfferSource, OfferTarget, UseDecl, UseDirectoryDecl, UseServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryFrom,
@@ -70,18 +69,14 @@ async fn use_from_parent() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -137,18 +132,14 @@ async fn use_from_grandparent() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -166,18 +157,14 @@ async fn use_from_grandparent() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Realm,
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -241,18 +228,14 @@ async fn use_from_sibling_no_root() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![
@@ -328,18 +311,14 @@ async fn use_from_sibling_root() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![
@@ -418,18 +397,14 @@ async fn use_from_niece() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/foobar").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![
@@ -533,18 +508,14 @@ async fn use_kitchen_sink() {
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Child("b".to_string()),
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![
@@ -570,18 +541,14 @@ async fn use_kitchen_sink() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            dest: OfferDest::Child("e".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        target: OfferTarget::Child("e".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
-                            dest: OfferDest::Child("e".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
+                        target: OfferTarget::Child("e".to_string()),
                     }),
                 ],
                 exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -612,18 +579,14 @@ async fn use_kitchen_sink() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Realm,
                         source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
-                            dest: OfferDest::Child("f".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                        target: OfferTarget::Child("f".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Child("g".to_string()),
                         source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
-                            dest: OfferDest::Child("f".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                        target: OfferTarget::Child("f".to_string()),
                     }),
                 ],
                 children: vec![
@@ -741,19 +704,15 @@ async fn use_from_component_manager_namespace() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: OfferSource::Realm,
                         source_path: CapabilityPath::try_from("/hippo/data/foo").unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/foo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/foo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: OfferSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/fidl.examples.echo.Echo")
                             .unwrap(),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -851,18 +810,14 @@ async fn use_offer_source_not_exposed() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         source: OfferSource::Child("b".to_string()),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         source: OfferSource::Child("b".to_string()),
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![
@@ -936,18 +891,14 @@ async fn use_offer_source_not_offered() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         source: OfferSource::Realm,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         source: OfferSource::Realm,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            dest: OfferDest::Child("c".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -1071,18 +1022,14 @@ async fn offer_from_non_executable() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         source: OfferSource::Self_,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         source: OfferSource::Self_,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -1135,18 +1082,14 @@ async fn use_in_collection() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         source: OfferSource::Self_,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         source: OfferSource::Self_,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -1168,18 +1111,14 @@ async fn use_in_collection() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         source: OfferSource::Realm,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            dest: OfferDest::Collection("coll".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: OfferTarget::Collection("coll".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         source: OfferSource::Realm,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            dest: OfferDest::Collection("coll".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: OfferTarget::Collection("coll".to_string()),
                     }),
                 ],
                 collections: vec![CollectionDecl {
@@ -1253,18 +1192,14 @@ async fn use_in_collection_not_offered() {
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         source: OfferSource::Self_,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         source: OfferSource::Self_,
-                        targets: vec![OfferTarget {
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                            dest: OfferDest::Child("b".to_string()),
-                        }],
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: OfferTarget::Child("b".to_string()),
                     }),
                 ],
                 children: vec![ChildDecl {

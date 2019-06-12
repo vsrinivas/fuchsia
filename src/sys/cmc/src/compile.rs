@@ -151,23 +151,42 @@ fn translate_offer(
 ) -> Result<Vec<cm::Offer>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
-        let out = if let Some(p) = offer.service() {
+        if let Some(p) = offer.service() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
-            Ok(cm::Offer::Service(cm::OfferService { source_path: p.clone(), source, targets }))
+            for (target, target_path) in targets {
+                out_offers.push(cm::Offer::Service(cm::OfferService {
+                    source_path: p.clone(),
+                    source: source.clone(),
+                    target,
+                    target_path,
+                }));
+            }
         } else if let Some(p) = offer.directory() {
             let source = extract_offer_source(offer)?;
             let targets = extract_targets(offer, all_children, all_collections)?;
-            Ok(cm::Offer::Directory(cm::OfferDirectory { source_path: p.clone(), source, targets }))
+            for (target, target_path) in targets {
+                out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
+                    source_path: p.clone(),
+                    source: source.clone(),
+                    target,
+                    target_path,
+                }));
+            }
         } else if let Some(p) = offer.storage() {
-            let source = extract_offer_storage_source(offer)?;
-            let dests = extract_storage_dests(offer, all_children, all_collections)?;
             let type_ = str_to_storage_type(p.as_str())?;
-            Ok(cm::Offer::Storage(cm::OfferStorage { type_, source, dests }))
+            let source = extract_offer_storage_source(offer)?;
+            let targets = extract_storage_targets(offer, all_children, all_collections)?;
+            for target in targets {
+                out_offers.push(cm::Offer::Storage(cm::OfferStorage {
+                    type_: type_.clone(),
+                    source: source.clone(),
+                    target,
+                }));
+            }
         } else {
-            Err(Error::internal(format!("no capability")))
-        }?;
-        out_offers.push(out);
+            return Err(Error::internal(format!("no capability")));
+        }
     }
     Ok(out_offers)
 }
@@ -276,7 +295,7 @@ where
     Ok(ret)
 }
 
-fn extract_storage_dests(
+fn extract_storage_targets(
     in_obj: &cml::Offer,
     all_children: &HashSet<&str>,
     all_collections: &HashSet<&str>,
@@ -306,7 +325,7 @@ fn extract_targets(
     in_obj: &cml::Offer,
     all_children: &HashSet<&str>,
     all_collections: &HashSet<&str>,
-) -> Result<Vec<cm::Target>, Error> {
+) -> Result<Vec<(cm::Ref, String)>, Error> {
     let mut out_targets = vec![];
     for to in in_obj.to.iter() {
         let target_path =
@@ -316,14 +335,14 @@ fn extract_targets(
             None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
         }?;
         let name = caps[1].to_string();
-        let dest = if all_children.contains(&name as &str) {
+        let target = if all_children.contains(&name as &str) {
             cm::Ref::Child(cm::ChildRef { name: name.to_string() })
         } else if all_collections.contains(&name as &str) {
             cm::Ref::Collection(cm::CollectionRef { name: name.to_string() })
         } else {
             return Err(Error::internal(format!("dangling reference: \"{}\"", name)));
         };
-        out_targets.push(cm::Target { target_path, dest });
+        out_targets.push((target, target_path));
     }
     Ok(out_targets)
 }
@@ -574,24 +593,28 @@ mod tests {
                     }
                 },
                 "source_path": "/svc/fuchsia.logger.Log",
-                "targets": [
-                    {
-                        "target_path": "/svc/fuchsia.logger.Log",
-                        "dest": {
-                            "child": {
-                                "name": "netstack"
-                            }
-                        }
-                    },
-                    {
-                        "target_path": "/svc/fuchsia.logger.SysLog",
-                        "dest": {
-                            "collection": {
-                                "name": "modular"
-                            }
-                        }
+                "target": {
+                    "child": {
+                        "name": "netstack"
                     }
-                ]
+                },
+                "target_path": "/svc/fuchsia.logger.Log"
+            }
+        },
+        {
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.Log",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.SysLog"
             }
         },
         {
@@ -600,24 +623,26 @@ mod tests {
                     "realm": {}
                 },
                 "source_path": "/data/assets",
-                "targets": [
-                    {
-                        "target_path": "/data/assets",
-                        "dest": {
-                            "child": {
-                                "name": "netstack"
-                            }
-                        }
-                    },
-                    {
-                        "target_path": "/data",
-                        "dest": {
-                            "collection": {
-                                "name": "modular"
-                            }
-                        }
+                "target": {
+                    "child": {
+                        "name": "netstack"
                     }
-                ]
+                },
+                "target_path": "/data/assets"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/data/assets",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/data"
             }
         },
         {
@@ -628,18 +653,26 @@ mod tests {
                         "name": "logger-storage"
                     }
                 },
-                "dests": [
-                    {
-                        "child": {
-                            "name": "netstack"
-                        }
-                    },
-                    {
-                        "collection": {
-                            "name": "modular"
-                        }
+                "target": {
+                    "child": {
+                        "name": "netstack"
                     }
-                ]
+                }
+            }
+        },
+        {
+            "storage": {
+                "type": "data",
+                "source": {
+                    "storage": {
+                        "name": "logger-storage"
+                    }
+                },
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                }
             }
         }
     ],
@@ -878,24 +911,28 @@ mod tests {
                     }
                 },
                 "source_path": "/svc/fuchsia.logger.Log",
-                "targets": [
-                    {
-                        "target_path": "/svc/fuchsia.logger.Log",
-                        "dest": {
-                            "child": {
-                                "name": "netstack"
-                            }
-                        }
-                    },
-                    {
-                        "target_path": "/svc/fuchsia.logger.Log",
-                        "dest": {
-                            "collection": {
-                                "name": "modular"
-                            }
-                        }
+                "target": {
+                    "child": {
+                        "name": "netstack"
                     }
-                ]
+                },
+                "target_path": "/svc/fuchsia.logger.Log"
+            }
+        },
+        {
+            "service": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_path": "/svc/fuchsia.logger.Log",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.logger.Log"
             }
         }
     ],

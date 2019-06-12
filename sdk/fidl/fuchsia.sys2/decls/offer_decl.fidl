@@ -24,8 +24,13 @@ table OfferServiceDecl {
     /// Path identifying the service being offered.
     2: string:MAX_PATH_LENGTH source_path;
 
-    /// The list of children to which the capability should be offered.
-    3: vector<OfferTarget> targets;
+    /// Reference to the target. Must be |child| or |collection|.
+    3: Ref target;
+
+    /// The path under which the capability is being offered.
+    ///
+    /// Must be an absolute path starting with /.
+    4: string:MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a directory offered by a component to one of its children, which may
@@ -39,8 +44,14 @@ table OfferDirectoryDecl {
     /// Path identifying the directory being offered.
     2: string:MAX_PATH_LENGTH source_path;
 
-    /// The list of children to which the capability should be offered.
-    3: vector<OfferTarget> targets;
+    /// Reference to the target of the capability. Must be |child| or
+    /// |collection|.
+    3: Ref target;
+
+    /// The path under which the capability is being offered.
+    ///
+    /// Must be an absolute path starting with /.
+    4: string:MAX_PATH_LENGTH target_path;
 };
 
 /// Declares a storage capability offered by a component to one of its children,
@@ -53,19 +64,7 @@ table OfferStorageDecl {
     /// The source of the storage capability. Must be |realm| or |storage|.
     2: Ref source;
 
-    /// The destinations to which the capability should be offered. Each |Ref|
-    /// must be |child| or |collection|.
-    3: vector<Ref> dests;
-};
-
-/// Describes a target for a capability offering.
-// TODO: Split OfferTarget by capability type.
-table OfferTarget {
-    /// The path under which the capability is being offered.
-    ///
-    /// Must be an absolute path starting with /.
-    1: string:MAX_PATH_LENGTH target_path;
-
-    /// Reference to the destination. Must be |child| or |collection|.
-    2: Ref dest;
+    /// Reference to the target of the capability. Must be |child| or
+    /// |collection|.
+    3: Ref target;
 };

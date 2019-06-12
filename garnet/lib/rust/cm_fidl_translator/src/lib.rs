@@ -69,7 +69,6 @@ cm_into_opt_vec!(fsys::OfferDecl, cm::Offer);
 cm_into_opt_vec!(fsys::ChildDecl, cm::Child);
 cm_into_opt_vec!(fsys::CollectionDecl, cm::Collection);
 cm_into_opt_vec!(fsys::StorageDecl, cm::Storage);
-cm_into_vec!(fsys::OfferTarget, cm::Target);
 cm_into_vec!(fsys::Ref, cm::Ref);
 
 impl CmInto<fsys::ComponentDecl> for cm::Document {
@@ -146,8 +145,8 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
 impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
     fn cm_into(self) -> Result<fsys::ExposeServiceDecl, Error> {
         Ok(fsys::ExposeServiceDecl {
-            source_path: Some(self.source_path),
             source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path),
             target_path: Some(self.target_path),
         })
     }
@@ -156,8 +155,8 @@ impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
 impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
     fn cm_into(self) -> Result<fsys::ExposeDirectoryDecl, Error> {
         Ok(fsys::ExposeDirectoryDecl {
-            source_path: Some(self.source_path),
             source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path),
             target_path: Some(self.target_path),
         })
     }
@@ -166,9 +165,10 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
 impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
     fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
         Ok(fsys::OfferServiceDecl {
-            source_path: Some(self.source_path),
             source: Some(self.source.cm_into()?),
-            targets: Some(self.targets.cm_into()?),
+            source_path: Some(self.source_path),
+            target: Some(self.target.cm_into()?),
+            target_path: Some(self.target_path),
         })
     }
 }
@@ -176,9 +176,10 @@ impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
 impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
     fn cm_into(self) -> Result<fsys::OfferDirectoryDecl, Error> {
         Ok(fsys::OfferDirectoryDecl {
-            source_path: Some(self.source_path),
             source: Some(self.source.cm_into()?),
-            targets: Some(self.targets.cm_into()?),
+            source_path: Some(self.source_path),
+            target: Some(self.target.cm_into()?),
+            target_path: Some(self.target_path),
         })
     }
 }
@@ -188,7 +189,7 @@ impl CmInto<fsys::OfferStorageDecl> for cm::OfferStorage {
         Ok(fsys::OfferStorageDecl {
             type_: Some(self.type_.cm_into()?),
             source: Some(self.source.cm_into()?),
-            dests: Some(self.dests.cm_into()?),
+            target: Some(self.target.cm_into()?),
         })
     }
 }
@@ -259,15 +260,6 @@ impl CmInto<fsys::CollectionRef> for cm::CollectionRef {
 impl CmInto<fsys::StorageRef> for cm::StorageRef {
     fn cm_into(self) -> Result<fsys::StorageRef, Error> {
         Ok(fsys::StorageRef { name: Some(self.name) })
-    }
-}
-
-impl CmInto<fsys::OfferTarget> for cm::Target {
-    fn cm_into(self) -> Result<fsys::OfferTarget, Error> {
-        Ok(fsys::OfferTarget {
-            target_path: Some(self.target_path),
-            dest: Some(self.dest.cm_into()?),
-        })
     }
 }
 
@@ -635,25 +627,13 @@ mod tests {
                                 "realm": {}
                             },
                             "source_path": "/data/assets",
-                            "targets": [
-                                {
-                                    "target_path": "/data/realm_assets",
-                                    "dest": {
-                                        "child": {
-                                            "name": "logger"
-                                        }
-                                    }
-                                },
-                                {
-                                    "target_path": "/data/assets",
-                                    "dest": {
-                                        "collection": {
-                                            "name": "modular"
-                                        }
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "logger"
                                 }
-                            ]
-                        }
+                            },
+                            "target_path": "/data/realm_assets"
+                        },
                     },
                     {
                         "directory": {
@@ -661,16 +641,26 @@ mod tests {
                                 "self": {}
                             },
                             "source_path": "/data/config",
-                            "targets": [
-                                {
-                                    "target_path": "/data/config",
-                                    "dest": {
-                                        "child": {
-                                            "name": "netstack"
-                                        }
-                                    }
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
                                 }
-                            ]
+                            },
+                            "target_path": "/data/config"
+                        }
+                    },
+                    {
+                        "service": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/svc/fuchsia.netstack.Netstack",
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "target_path": "/svc/fuchsia.netstack.Netstack"
                         }
                     },
                     {
@@ -681,16 +671,12 @@ mod tests {
                                 }
                             },
                             "source_path": "/svc/fuchsia.logger.Log",
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.logger.SysLog",
-                                    "dest": {
-                                        "collection": {
-                                            "name": "modular"
-                                        }
-                                    }
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.logger.SysLog"
                         }
                     },
                     {
@@ -701,18 +687,26 @@ mod tests {
                                     "name": "memfs"
                                 }
                             },
-                            "dests": [
-                                {
-                                    "collection": {
-                                        "name": "modular"
-                                    }
-                                },
-                                {
-                                    "child": {
-                                        "name": "logger"
-                                    }
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
                                 }
-                            ]
+                            }
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "source": {
+                                "storage": {
+                                    "name": "memfs"
+                                }
+                            },
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            }
                         }
                     },
                     {
@@ -721,18 +715,24 @@ mod tests {
                             "source": {
                                 "realm": {}
                             },
-                            "dests": [
-                                {
-                                    "collection": {
-                                        "name": "modular"
-                                    }
-                                },
-                                {
-                                    "child": {
-                                        "name": "logger"
-                                    }
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
                                 }
-                            ]
+                            }
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "meta",
+                            "source": {
+                                "realm": {}
+                            },
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            }
                         }
                     }
                 ],
@@ -767,81 +767,81 @@ mod tests {
             output = {
                 let offers = vec![
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some("/data/assets".to_string()),
-                        source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
-                        targets: Some(vec![
-                            fsys::OfferTarget {
-                                target_path: Some("/data/realm_assets".to_string()),
-                                dest: Some(fsys::Ref::Child(
-                                   fsys::ChildRef {
-                                       name: Some("logger".to_string()),
-                                       collection: None,
-                                   }
-                                )),
-                            },
-                            fsys::OfferTarget {
-                                target_path: Some("/data/assets".to_string()),
-                                dest: Some(fsys::Ref::Collection(
-                                   fsys::CollectionRef { name: Some("modular".to_string()) }
-                                )),
-                            },
-                        ]),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: Some("logger".to_string()),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/data/realm_assets".to_string()),
                     }),
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("/data/config".to_string()),
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                        targets: Some(vec![
-                            fsys::OfferTarget{
-                                target_path: Some("/data/config".to_string()),
-                                dest: Some(fsys::Ref::Child(
-                                   fsys::ChildRef {
-                                       name: Some("netstack".to_string()),
-                                       collection: None,
-                                   }
-                                )),
-                            },
-                        ]),
+                        target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef {
+                               name: Some("modular".to_string()),
+                           }
+                        )),
+                        target_path: Some("/data/config".to_string()),
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: Some("logger".to_string()),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
+                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: Some("logger".to_string()),
                             collection: None,
                         })),
-                        targets: Some(vec![
-                            fsys::OfferTarget{
-                                target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
-                                dest: Some(fsys::Ref::Collection(
-                                   fsys::CollectionRef { name: Some("modular".to_string()) }
-                                )),
-                            },
-                        ]),
+                        source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef {
+                               name: Some("modular".to_string()),
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Data),
                         source: Some(fsys::Ref::Storage(fsys::StorageRef {
                             name: Some("memfs".to_string()),
                         })),
-                        dests: Some(vec![
-                            fsys::Ref::Collection(
-                               fsys::CollectionRef { name: Some("modular".to_string()) }
-                            ),
-                            fsys::Ref::Child(
-                               fsys::ChildRef { name: Some("logger".to_string()), collection: None }
-                            ),
-                        ]),
+                        target: Some(fsys::Ref::Collection(
+                            fsys::CollectionRef { name: Some("modular".to_string()) }
+                        )),
+                    }),
+                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                        type_: Some(fsys::StorageType::Data),
+                        source: Some(fsys::Ref::Storage(fsys::StorageRef {
+                            name: Some("memfs".to_string()),
+                        })),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef { name: Some("logger".to_string()), collection: None }
+                        )),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Meta),
                         source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
-                        dests: Some(vec![
-                            fsys::Ref::Collection(
-                               fsys::CollectionRef { name: Some("modular".to_string()) }
-                            ),
-                            fsys::Ref::Child(
-                               fsys::ChildRef { name: Some("logger".to_string()), collection: None }
-                            ),
-                        ]),
+                        target: Some(fsys::Ref::Collection(
+                            fsys::CollectionRef { name: Some("modular".to_string()) }
+                        )),
+                    }),
+                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                        type_: Some(fsys::StorageType::Meta),
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef { })),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef { name: Some("logger".to_string()), collection: None }
+                        )),
                     }),
                 ];
                 let children = vec![
@@ -979,10 +979,10 @@ mod tests {
                 "storage": [
                     {
                         "name": "memfs",
-                        "source_path": "/memfs",
                         "source": {
                             "self": {}
-                        }
+                        },
+                        "source_path": "/memfs"
                     }
                 ]
             }),
@@ -1033,24 +1033,12 @@ mod tests {
                                 }
                             },
                             "source_path": "/svc/fuchsia.logger.Log",
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.logger.Log",
-                                    "dest": {
-                                        "child": {
-                                            "name": "netstack"
-                                        }
-                                    },
-                                },
-                                {
-                                    "target_path": "/svc/fuchsia.logger.Log",
-                                    "dest": {
-                                        "collection": {
-                                            "name": "modular"
-                                        }
-                                    },
+                            "target": {
+                                "child": {
+                                    "name": "netstack"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.logger.Log"
                         }
                     }
                 ],
@@ -1113,23 +1101,13 @@ mod tests {
                             collection: None,
                         })),
                         source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                        targets: Some(vec![
-                            fsys::OfferTarget{
-                                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                                dest: Some(fsys::Ref::Child(
-                                   fsys::ChildRef {
-                                       name: Some("netstack".to_string()),
-                                       collection: None,
-                                   }
-                                )),
-                            },
-                            fsys::OfferTarget{
-                                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                                dest: Some(fsys::Ref::Collection(
-                                   fsys::CollectionRef { name: Some("modular".to_string()) }
-                                )),
-                            },
-                        ]),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: Some("netstack".to_string()),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
                 ];
                 let children = vec![
@@ -1150,7 +1128,7 @@ mod tests {
                         durability: Some(fsys::Durability::Persistent),
                     },
                 ];
-                let facets = fdata::Dictionary{entries: vec![
+                let facets = fdata::Dictionary {entries: vec![
                     fdata::Entry {
                         key: "author".to_string(),
                         value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),

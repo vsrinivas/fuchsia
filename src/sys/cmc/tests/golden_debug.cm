@@ -30,16 +30,12 @@
                     }
                 },
                 "source_path": "/svc/fuchsia.logger.Log",
-                "targets": [
-                    {
-                        "target_path": "/svc/fuchsia.logger.Log",
-                        "dest": {
-                            "collection": {
-                                "name": "modular"
-                            }
-                        }
+                "target": {
+                    "collection": {
+                        "name": "modular"
                     }
-                ]
+                },
+                "target_path": "/svc/fuchsia.logger.Log"
             }
         }
     ],

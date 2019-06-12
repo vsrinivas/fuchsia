@@ -663,74 +663,76 @@ mod tests {
                 "offers": [
                     {
                         "service": {
-                            "source_path": "/svc/fuchsia.logger.LogSink",
                             "source": {
                                 "realm": {}
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.logger.SysLog",
-                                    "dest": {
-                                        "child": {
-                                            "name": "viewer"
-                                        }
-                                    }
+                            "source_path": "/svc/fuchsia.logger.LogSink",
+                            "target": {
+                                "child": {
+                                    "name": "viewer"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.logger.SysLog"
                         }
                     },
                     {
                         "service": {
-                            "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {
                                 "self": {}
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "dest": {
-                                        "child": {
-                                            "name": "user_shell"
-                                        }
-                                    }
-                                },
-                                {
-                                    "target_path": "/services/fuchsia.ui.Scenic",
-                                    "dest": {
-                                        "collection": {
-                                            "name": "modular"
-                                        }
-                                    }
+                            "source_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.ui.Scenic"
+                        }
+                    },
+                    {
+                        "service": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/svc/fuchsia.ui.Scenic",
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
+                                }
+                            },
+                            "target_path": "/services/fuchsia.ui.Scenic"
                         }
                     },
                     {
                         "directory": {
-                            "source_path": "/data/assets",
                             "source": {
                                 "child": {
                                     "name": "cat_provider"
                                 }
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/data/kitten_assets",
-                                    "dest": {
-                                        "child": {
-                                            "name": "cat_viewer"
-                                        }
-                                    }
-                                },
-                                {
-                                    "target_path": "/data/artifacts",
-                                    "dest": {
-                                        "collection": {
-                                            "name": "tests"
-                                        }
-                                    }
+                            "source_path": "/data/assets",
+                            "target": {
+                                "child": {
+                                    "name": "cat_viewer"
                                 }
-                            ]
+                            },
+                            "target_path": "/data/kitten_assets"
+                        }
+                    },
+                    {
+                        "directory": {
+                            "source": {
+                                "child": {
+                                    "name": "cat_provider"
+                                }
+                            },
+                            "source_path": "/data/assets",
+                            "target": {
+                                "collection": {
+                                    "name": "tests"
+                                }
+                            },
+                            "target_path": "/data/artifacts",
                         }
                     },
                     {
@@ -739,18 +741,24 @@ mod tests {
                             "source": {
                                 "realm": {}
                             },
-                            "dests": [
-                                {
-                                    "child": {
-                                        "name": "cat_viewer"
-                                    }
-                                },
-                                {
-                                    "collection": {
-                                        "name": "tests"
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "cat_viewer"
                                 }
-                            ]
+                            }
+                        }
+                    },
+                    {
+                        "storage": {
+                            "type": "data",
+                            "source": {
+                                "realm": {}
+                            },
+                            "target": {
+                                "collection": {
+                                    "name": "tests"
+                                }
+                            }
                         }
                     }
                 ]
@@ -768,16 +776,12 @@ mod tests {
                                     "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                                 }
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.logger.SysLog",
-                                    "dest": {
-                                        "child": {
-                                            "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
-                                        }
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.logger.SysLog"
                         }
                     },
                     {
@@ -788,13 +792,11 @@ mod tests {
                                     "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                                 }
                             },
-                            "dests": [
-                                {
-                                    "child": {
-                                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                                 }
-                            ]
+                            }
                         }
                     }
                 ]
@@ -814,29 +816,23 @@ mod tests {
                         "service": {
                             "source_path": "/svc/fuchsia.ui.Scenic",
                             "source": {},
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "dest": {
-                                        "child": {
-                                            "name": "user_shell"
-                                        }
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.ui.Scenic"
                         }
                     },
                     {
                         "storage": {
                             "type": "meta",
                             "source": {},
-                            "dests": [
-                                {
-                                    "child": {
-                                        "name": "user_shell"
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            }
                         }
                     }
                 ]
@@ -855,16 +851,12 @@ mod tests {
                                     "name": "foo"
                                 }
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "dest": {
-                                        "child": {
-                                            "name": "user_shell"
-                                        }
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.ui.Scenic"
                         }
                     },
                     {
@@ -876,13 +868,11 @@ mod tests {
                                     "name": "foo"
                                 }
                             },
-                            "dests": [
-                                {
-                                    "child": {
-                                        "name": "user_shell"
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            }
                         }
                     }
                 ]
@@ -900,16 +890,12 @@ mod tests {
                                     "name": "bad^"
                                 }
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "dest": {
-                                        "child": {
-                                            "name": "user_shell"
-                                        }
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.ui.Scenic"
                         }
                     },
                     {
@@ -920,20 +906,18 @@ mod tests {
                                     "name": "bad^"
                                 }
                             },
-                            "dests": [
-                                {
-                                    "child": {
-                                        "name": "user_shell"
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "user_shell"
                                 }
-                            ]
+                            }
                         }
                     }
                 ]
             }),
             result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/source/child/name, Pattern condition is not met at /offers/1/storage/source/child/name")),
         },
-        test_cm_offers_target_missing_props => {
+        test_cm_offers_target_missing_variant => {
             input = json!({
                 "offers": [
                     {
@@ -944,12 +928,13 @@ mod tests {
                                     "name": "cat_viewer"
                                 }
                             },
-                            "targets": [ {} ]
+                            "target": {},
+                            "target_path": "/svc/fuchsia.ui.Scenic"
                         }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "This property is required at /offers/0/service/targets/0/dest, This property is required at /offers/0/service/targets/0/target_path")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "OneOf conditions are not met at /offers/0/service/target")),
         },
         test_cm_offers_target_bad_child_name => {
             input = json!({
@@ -960,16 +945,12 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "targets": [
-                                {
-                                    "target_path": "/svc/fuchsia.ui.Scenic",
-                                    "dest": {
-                                        "child": {
-                                            "name": "bad^"
-                                        }
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "bad^"
                                 }
-                            ]
+                            },
+                            "target_path": "/svc/fuchsia.ui.Scenic"
                         }
                     },
                     {
@@ -978,18 +959,16 @@ mod tests {
                             "source": {
                                 "realm": {}
                             },
-                            "dests": [
-                                {
-                                    "child": {
-                                        "name": "bad^"
-                                    }
+                            "target": {
+                                "child": {
+                                    "name": "bad^"
                                 }
-                            ]
+                            }
                         }
                     }
                 ]
             }),
-            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/targets/0/dest/child/name, Pattern condition is not met at /offers/1/storage/dests/0/child/name")),
+            result = Err(Error::validate_schema(CM_SCHEMA, "Pattern condition is not met at /offers/0/service/target/child/name, Pattern condition is not met at /offers/1/storage/target/child/name")),
         },
 
         // storage

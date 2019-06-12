@@ -234,40 +234,33 @@ impl ComponentDecl {
         collection: Option<&str>,
     ) -> Option<&'a OfferDecl> {
         self.offers.iter().find(|&offer| match (capability, offer) {
-            (Capability::Service(p), OfferDecl::Service(d)) => d
-                .targets
-                .iter()
-                .find(|&e| match &e.dest {
-                    OfferDest::Child(target_child_name) => match collection {
-                        Some(_) => false,
-                        None => e.target_path == *p && target_child_name == child_name,
-                    },
-                    OfferDest::Collection(target_collection_name) => match collection {
-                        Some(collection) => {
-                            e.target_path == *p && target_collection_name == collection
-                        }
-                        None => false,
-                    },
-                })
-                .is_some(),
-            (Capability::Directory(p), OfferDecl::Directory(d)) => d
-                .targets
-                .iter()
-                .find(|&e| match &e.dest {
-                    OfferDest::Child(target_child_name) => match collection {
-                        Some(_) => false,
-                        None => e.target_path == *p && target_child_name == child_name,
-                    },
-                    OfferDest::Collection(target_collection_name) => match collection {
-                        Some(collection) => {
-                            e.target_path == *p && target_collection_name == collection
-                        }
-                        None => false,
-                    },
-                })
-                .is_some(),
+            (Capability::Service(p), OfferDecl::Service(d)) => {
+                Self::is_capability_match(child_name, collection, p, &d.target, &d.target_path)
+            }
+            (Capability::Directory(p), OfferDecl::Directory(d)) => {
+                Self::is_capability_match(child_name, collection, p, &d.target, &d.target_path)
+            }
             _ => false,
         })
+    }
+
+    fn is_capability_match(
+        child_name: &str,
+        collection: Option<&str>,
+        path: &CapabilityPath,
+        target: &OfferTarget,
+        target_path: &CapabilityPath,
+    ) -> bool {
+        match target {
+            OfferTarget::Child(target_child_name) => match collection {
+                Some(_) => false,
+                None => target_path == path && target_child_name == child_name,
+            },
+            OfferTarget::Collection(target_collection_name) => match collection {
+                Some(collection) => target_path == path && target_collection_name == collection,
+                None => false,
+            },
+        }
     }
 }
 
@@ -327,19 +320,16 @@ fidl_into_struct!(OfferServiceDecl, OfferServiceDecl, fsys::OfferServiceDecl,
                   {
                       source: OfferSource,
                       source_path: CapabilityPath,
-                      targets: Vec<OfferTarget>,
+                      target: OfferTarget,
+                      target_path: CapabilityPath,
                   });
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
                   fsys::OfferDirectoryDecl,
                   {
                       source: OfferSource,
                       source_path: CapabilityPath,
-                      targets: Vec<OfferTarget>,
-                  });
-fidl_into_struct!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget,
-                  {
+                      target: OfferTarget,
                       target_path: CapabilityPath,
-                      dest: OfferDest,
                   });
 
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
@@ -361,8 +351,6 @@ fidl_into_vec!(OfferDecl, fsys::OfferDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
 fidl_into_vec!(StorageDecl, fsys::StorageDecl);
-fidl_into_vec!(OfferTarget, fsys::OfferTarget);
-fidl_into_vec!(OfferDest, fsys::Ref);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
@@ -642,7 +630,7 @@ pub enum OfferStorageDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct OfferStorage {
     source: OfferStorageSource,
-    dests: Vec<OfferDest>,
+    target: OfferTarget,
 }
 
 impl FidlIntoNative<OfferStorageDecl> for fsys::OfferStorageDecl {
@@ -650,15 +638,15 @@ impl FidlIntoNative<OfferStorageDecl> for fsys::OfferStorageDecl {
         match self.type_.unwrap() {
             fsys::StorageType::Data => OfferStorageDecl::Data(OfferStorage {
                 source: self.source.fidl_into_native(),
-                dests: self.dests.fidl_into_native(),
+                target: self.target.fidl_into_native(),
             }),
             fsys::StorageType::Cache => OfferStorageDecl::Cache(OfferStorage {
                 source: self.source.fidl_into_native(),
-                dests: self.dests.fidl_into_native(),
+                target: self.target.fidl_into_native(),
             }),
             fsys::StorageType::Meta => OfferStorageDecl::Meta(OfferStorage {
                 source: self.source.fidl_into_native(),
-                dests: self.dests.fidl_into_native(),
+                target: self.target.fidl_into_native(),
             }),
         }
     }
@@ -667,15 +655,15 @@ impl FidlIntoNative<OfferStorageDecl> for fsys::OfferStorageDecl {
 impl NativeIntoFidl<fsys::OfferStorageDecl> for OfferStorageDecl {
     fn native_into_fidl(self) -> fsys::OfferStorageDecl {
         let type_ = self.type_();
-        let (source, dests) = match self {
-            OfferStorageDecl::Data(OfferStorage { source, dests }) => (source, dests),
-            OfferStorageDecl::Cache(OfferStorage { source, dests }) => (source, dests),
-            OfferStorageDecl::Meta(OfferStorage { source, dests }) => (source, dests),
+        let (source, target) = match self {
+            OfferStorageDecl::Data(OfferStorage { source, target }) => (source, target),
+            OfferStorageDecl::Cache(OfferStorage { source, target }) => (source, target),
+            OfferStorageDecl::Meta(OfferStorage { source, target }) => (source, target),
         };
         fsys::OfferStorageDecl {
             type_: Some(type_),
             source: source.native_into_fidl(),
-            dests: dests.native_into_fidl(),
+            target: target.native_into_fidl(),
         }
     }
 }
@@ -748,41 +736,41 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferSource {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum OfferDest {
+pub enum OfferTarget {
     Child(String),
     Collection(String),
 }
 
-impl FidlIntoNative<OfferDest> for fsys::Ref {
-    fn fidl_into_native(self) -> OfferDest {
+impl FidlIntoNative<OfferTarget> for fsys::Ref {
+    fn fidl_into_native(self) -> OfferTarget {
         match self {
-            fsys::Ref::Child(c) => OfferDest::Child(c.name.unwrap()),
-            fsys::Ref::Collection(c) => OfferDest::Collection(c.name.unwrap()),
-            _ => panic!("invalid OfferDest variant"),
+            fsys::Ref::Child(c) => OfferTarget::Child(c.name.unwrap()),
+            fsys::Ref::Collection(c) => OfferTarget::Collection(c.name.unwrap()),
+            _ => panic!("invalid OfferTarget variant"),
         }
     }
 }
 
-impl NativeIntoFidl<fsys::Ref> for OfferDest {
+impl NativeIntoFidl<fsys::Ref> for OfferTarget {
     fn native_into_fidl(self) -> fsys::Ref {
         match self {
-            OfferDest::Child(child_name) => {
+            OfferTarget::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: Some(child_name), collection: None })
             }
-            OfferDest::Collection(collection_name) => {
+            OfferTarget::Collection(collection_name) => {
                 fsys::Ref::Collection(fsys::CollectionRef { name: Some(collection_name) })
             }
         }
     }
 }
 
-impl FidlIntoNative<OfferDest> for Option<fsys::Ref> {
-    fn fidl_into_native(self) -> OfferDest {
+impl FidlIntoNative<OfferTarget> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> OfferTarget {
         self.unwrap().fidl_into_native()
     }
 }
 
-impl NativeIntoFidl<Option<fsys::Ref>> for OfferDest {
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferTarget {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(self.native_into_fidl())
     }
@@ -1055,40 +1043,30 @@ mod tests {
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/netstack".to_string()),
-                       targets: Some(vec![
-                           fsys::OfferTarget{
-                               target_path: Some("/svc/mynetstack".to_string()),
-                               dest: Some(fsys::Ref::Child(
-                                  fsys::ChildRef {
-                                      name: Some("echo".to_string()),
-                                      collection: None,
-                                  }
-                               )),
-                           },
-                       ]),
+                       target: Some(fsys::Ref::Child(
+                          fsys::ChildRef {
+                              name: Some("echo".to_string()),
+                              collection: None,
+                          }
+                       )),
+                       target_path: Some("/svc/mynetstack".to_string()),
                    }),
                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/data/dir".to_string()),
-                       targets: Some(vec![
-                           fsys::OfferTarget{
-                               target_path: Some("/data".to_string()),
-                               dest: Some(fsys::Ref::Collection(
-                                   fsys::CollectionRef { name: Some("modular".to_string()) }
-                               )),
-                           },
-                       ]),
+                       target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef { name: Some("modular".to_string()) }
+                       )),
+                       target_path: Some("/data".to_string()),
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
                        source: Some(fsys::Ref::Storage(fsys::StorageRef {
                            name: Some("memfs".to_string()),
                        })),
-                       dests: Some(vec![
-                           fsys::Ref::Collection(
-                               fsys::CollectionRef { name: Some("modular".to_string()) }
-                           ),
-                       ]),
+                       target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef { name: Some("modular".to_string()) }
+                       )),
                    }),
                ]),
                children: Some(vec![
@@ -1165,27 +1143,19 @@ mod tests {
                         OfferDecl::Service(OfferServiceDecl {
                             source: OfferSource::Realm,
                             source_path: "/svc/netstack".try_into().unwrap(),
-                            targets: vec![
-                                OfferTarget {
-                                    target_path: "/svc/mynetstack".try_into().unwrap(),
-                                    dest: OfferDest::Child("echo".to_string()),
-                                },
-                            ],
+                            target: OfferTarget::Child("echo".to_string()),
+                            target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
                             source: OfferSource::Realm,
                             source_path: "/data/dir".try_into().unwrap(),
-                            targets: vec![
-                                OfferTarget {
-                                    target_path: "/data".try_into().unwrap(),
-                                    dest: OfferDest::Collection("modular".to_string()),
-                                },
-                            ],
+                            target: OfferTarget::Collection("modular".to_string()),
+                            target_path: "/data".try_into().unwrap(),
                         }),
                         OfferDecl::Storage(OfferStorageDecl::Cache(
                             OfferStorage {
                                 source: OfferStorageSource::Storage("memfs".to_string()),
-                                dests: vec![OfferDest::Collection("modular".to_string())],
+                                target: OfferTarget::Collection("modular".to_string()),
                             }
                         )),
                     ],
@@ -1309,27 +1279,19 @@ mod tests {
                 OfferDecl::Service(OfferServiceDecl {
                     source: OfferSource::Self_,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    targets: vec![
-                        OfferTarget {
-                            target_path: CapabilityPath::try_from("/blah").unwrap(),
-                            dest: OfferDest::Child("child".to_string()),
-                        }
-                    ],
+                    target: OfferTarget::Child("child".to_string()),
+                    target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),
                 OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferSource::Self_,
                     source_path: CapabilityPath::try_from("/foo/bar").unwrap(),
-                    targets: vec![
-                        OfferTarget {
-                            target_path: CapabilityPath::try_from("/blah").unwrap(),
-                            dest: OfferDest::Child("child".to_string()),
-                        }
-                    ],
+                    target: OfferTarget::Child("child".to_string()),
+                    target_path: CapabilityPath::try_from("/blah").unwrap(),
                 }),
                 OfferDecl::Storage(OfferStorageDecl::Cache(
-                    OfferStorage{
+                    OfferStorage {
                         source: OfferStorageSource::Realm,
-                        dests: vec![OfferDest::Child("child".to_string())],
+                        target: OfferTarget::Child("child".to_string()),
                     }
                 )),
             ],

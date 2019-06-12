@@ -99,26 +99,31 @@
         }
       }
     },
-    "offer-targets-clause": {
-      "title": "Offered capability targets",
-      "type": "array",
-      "uniqueItems": true,
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": [
-          "target_path",
-          "dest"
-        ],
-        "properties": {
-          "target_path": {
-            "title": "Offered capability target path",
-            "type": "string",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }]
-          },
-          "dest": {
-            "allOf": [{ "$ref": "#/definitions/reference-clause" }]
-          }
+    "offer-clause": {
+      "type": "object",
+      "required": [
+        "source",
+        "source_path",
+        "target",
+        "target_path"
+      ],
+      "properties": {
+        "source": {
+          "title": "Offered capability source component",
+          "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+        },
+        "source_path": {
+          "title": "Offered capability source path",
+          "allOf": [{ "$ref": "#/definitions/path-clause" }]
+        },
+        "target": {
+          "title": "Offered capability target",
+          "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+        },
+        "target_path": {
+          "title": "Offered capability target path",
+          "type": "string",
+          "allOf": [{ "$ref": "#/definitions/path-clause" }]
         }
       }
     }
@@ -159,8 +164,8 @@
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target_path": {
-                "allOf": [{ "$ref": "#/definitions/path-clause" }],
-                "title": "Used service target path"
+                "title": "Used service target path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
               }
             }
           },
@@ -177,8 +182,8 @@
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target_path": {
-                "allOf": [{ "$ref": "#/definitions/path-clause" }],
-                "title": "Used service target path"
+                "title": "Used service target path",
+                "allOf": [{ "$ref": "#/definitions/path-clause" }]
               }
             }
           },
@@ -286,52 +291,18 @@
         ],
         "properties": {
           "service": {
-            "required": [
-              "source",
-              "source_path",
-              "targets"
-            ],
-            "properties": {
-              "source": {
-                "title": "Offered service source component",
-                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
-              },
-              "source_path": {
-                "title": "Offered service source path",
-                "allOf": [{ "$ref": "#/definitions/path-clause" }]
-              },
-              "targets": {
-                "title": "Offered service targets",
-                "allOf": [{ "$ref": "#/definitions/offer-targets-clause" }]
-              }
-            }
+            "title": "Offered service",
+            "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
           "directory": {
-            "required": [
-              "source",
-              "source_path",
-              "targets"
-            ],
-            "properties": {
-              "source": {
-                "title": "Offered directory source component",
-                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
-              },
-              "source_path": {
-                "title": "Offered directory source path",
-                "allOf": [{ "$ref": "#/definitions/path-clause" }]
-              },
-              "targets": {
-                "title": "Offered directory targets",
-                "allOf": [{ "$ref": "#/definitions/offer-targets-clause" }]
-              }
-            }
+            "title": "Offered directory",
+            "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
           "storage": {
             "required": [
               "type",
               "source",
-              "dests"
+              "target"
             ],
             "properties": {
               "type": {
@@ -342,14 +313,9 @@
                 "title": "Offered storage source component",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
-              "dests": {
-                "title": "Offered storage targets",
-                "type": "array",
-                "uniqueItems": true,
-                "minItems": 1,
-                "items": {
-                  "allOf": [{ "$ref": "#/definitions/reference-clause" }]
-                }
+              "target": {
+                "title": "Offered storage target",
+                "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               }
             }
           }
@@ -391,21 +357,21 @@
         "type": "object",
         "required": [
           "name",
-          "source_path",
-          "source"
+          "source",
+          "source_path"
         ],
         "properties": {
           "name": {
             "allOf": [{ "$ref": "#/definitions/name-clause" }],
             "title": "Child component name"
           },
-          "source_path": {
-            "title": "Backing directory source path",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }]
-          },
           "source": {
             "title": "Backing directory source component",
             "allOf": [{ "$ref": "#/definitions/reference-clause" }]
+          },
+          "source_path": {
+            "title": "Backing directory source path",
+            "allOf": [{ "$ref": "#/definitions/path-clause" }]
           }
         }
       }

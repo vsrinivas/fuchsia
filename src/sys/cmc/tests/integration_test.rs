@@ -3,8 +3,8 @@ use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, OfferDecl, OfferServiceDecl, OfferTarget, Ref, SelfRef, StartupMode,
-    UseDecl, UseServiceDecl,
+    ExposeDirectoryDecl, OfferDecl, OfferServiceDecl, Ref, SelfRef, StartupMode, UseDecl,
+    UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -38,10 +38,8 @@ fn main() {
                 collection: None,
             })),
             source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-            targets: Some(vec![OfferTarget {
-                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                dest: Some(Ref::Collection(CollectionRef { name: Some("modular".to_string()) })),
-            }]),
+            target: Some(Ref::Collection(CollectionRef { name: Some("modular".to_string()) })),
+            target_path: Some("/svc/fuchsia.logger.Log".to_string()),
         })];
         let children = vec![ChildDecl {
             name: Some("logger".to_string()),
@@ -61,6 +59,7 @@ fn main() {
                 fd::Entry { key: "year".to_string(), value: Some(Box::new(fd::Value::Inum(2018))) },
             ],
         };
+        // TODO: test storage
         ComponentDecl {
             program: Some(program),
             uses: Some(uses),

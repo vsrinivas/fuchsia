@@ -129,7 +129,7 @@ group("scenic") {
 group("cmc") {
   testonly = true
   public_deps = [
-    "//src/sys/cmc:cmc($host_toolchain)",
+    "//src/sys/cmc:cmc_test($host_toolchain)",
   ]
 }
 
