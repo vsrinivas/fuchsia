@@ -1,0 +1,18 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.fonts.experimental") {
+  sdk_category = "experimental"
+
+  sources = [
+    "provider.test.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.intl",
+  ]
+}

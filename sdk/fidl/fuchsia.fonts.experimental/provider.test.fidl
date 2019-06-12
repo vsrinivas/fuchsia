@@ -1,0 +1,107 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// NOTE: This file is unstable and should not be depended on.
+
+library fuchsia.fonts.experimental;
+
+using fuchsia.fonts as ff;
+using fuchsia.intl;
+
+/// The maximum number of font families that can be returned in a
+/// |ListTypefacesReponse|.
+const uint32 MAX_FAMILY_RESULTS = 100;
+
+/// Experimental additions to |Provider|.
+[Discoverable]
+protocol Provider {
+    /// Get an exact font by asset ID and index. This would typically be called
+    /// after |ListTypefaces|, e.g. as part of a font selection interface.
+    /// Eventually this should probably be folded into |GetTypeface|.
+    GetTypefaceById(uint32 id, uint32 index) -> (ff.TypefaceResponse response);
+
+    /// Returns a list of |TypefaceInfo| for all typefaces that match
+    /// the request, or an empty table if no matches are found.
+    ListTypefaces(ListTypefacesRequest request) -> (ListTypefacesResponse response);
+
+    /// Returns a |TypefaceInfo| for each font in the requested |family|.
+    GetTypefacesByFamily(ff.FamilyName family) -> (vector<TypefaceInfo> response);
+};
+
+table ListTypefacesRequest {
+    /// Optional parameters to request only families that match the query.
+    /// If omitted, all families are matched.
+    1: ListTypefacesQuery query;
+
+    /// Optional maximum number of families to return.
+    /// In a future revision, this might be replaced with pagination and
+    /// collation parameters.
+    2: uint32 max_results;
+
+    3: ListTypefacesRequestFlags flags;
+};
+
+bits ListTypefacesRequestFlags:uint32 {
+    /// Match only families whose name or alias exactly matches the requested
+    /// |FamilyName|.
+    EXACT_FAMILY = 0x00000001;
+    /// Require results to support all requested |languages|.
+    ALL_LANGUAGES = 0x00000002;
+    /// Require results to contain all requested |code_points|.
+    ALL_CODE_POINTS = 0x00000004;
+};
+
+/// Query parameters for |ListTypefaces|. By default, results must match all
+/// fields. All fields are optional; omitted fields will match any font.
+/// Vector fields will match fonts that match any element of the vector.
+/// Essentially: `font.family == family && styles.contains(font.style) && ...`
+table ListTypefacesQuery {
+    /// The name or alias of a font family. For partial matching, set the
+    /// request's |PARTIAL_FAMILY| flag.
+    1: ff.FamilyName family;
+
+    /// Styles to match. Note that combining styles will change results.
+    /// For example, [{slant: UPRIGHT}, {weight: WEIGHT_BOLD}] matches fonts
+    /// that are upright *or* bold, but [{slant: UPRIGHT, weight: WEIGHT_BOLD}]
+    /// only matches fonts that are both upright *and* bold.
+    2: vector<ff.Style2>:ff.MAX_FAMILY_STYLES styles;
+
+    /// Languages to match. By default, a font will match if it supports *any*
+    /// element of |languages|. To require results to match *all* elements,
+    /// set the |ALL_LANGUAGES| flag.
+    3: vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES languages;
+
+    /// Code points which results should cover. By default, a font will match
+    /// if it supports *any* requested code point. To require results to match
+    /// *all* code points, set the |ALL_CODE_POINTS| flag.
+    4: vector<uint32> code_points;
+
+    /// Generic font families to match. Results will include fonts belonging to
+    /// any requested generic family. Note that a font can only belong to one
+    /// generic family, so there is no way to request a font belonging to
+    /// all requested generic families.
+    5: vector<ff.GenericFontFamily> generic_families;
+};
+
+table ListTypefacesResponse {
+    1: vector<TypefaceInfo>:MAX_FAMILY_RESULTS results;
+};
+
+/// Collection of typeface metadata that should be sufficient for clients to
+/// perform some kind of selection (likely via human) and request an exact font.
+table TypefaceInfo {
+    /// Identifier for the font asset. This ID is valid for the lifetime of the
+    /// font service. May be used in conjunction with |font_index| to directly
+    /// request this font.
+    1: uint32 asset_id;
+
+    /// Index of the font within its parent asset. May be used in conjunction
+    /// with |asset_id| to directly request this font.
+    2: uint32 font_index;
+
+    3: ff.FamilyName family;
+    4: ff.Style2 style;
+    5: vector<fuchsia.intl.LocaleId> languages;
+    6: ff.GenericFontFamily generic_family;
+};
