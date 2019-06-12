@@ -36,7 +36,6 @@ use std::convert::TryFrom;
 use std::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
-use packet::serialize::{Buf, BufferSerializer, Serializer};
 use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
@@ -711,22 +710,19 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
 /// Get the header bytes for a packet.
 #[specialize_ip]
 fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExt<B>>::Packet) -> Vec<u8> {
-    let builder;
-
     #[ipv4]
-    builder = packet.builder();
+    {
+        packet.copy_header_bytes_for_fragment()
+    }
 
     #[ipv6]
-    builder = packet.builder();
-
-    let mut buffer = BufferSerializer::new_vec(Buf::new(vec![], ..))
-        .encapsulate(builder)
-        .serialize_outer()
-        .unwrap();
-
-    let mut ret = Vec::new();
-    ret.extend_from_slice(buffer.as_ref());
-    ret
+    {
+        // We are guaranteed not to panic here because we will only panic if
+        // `packet` does not have a fragment extension header. We can only
+        // get here if `packet` is a fragment packet, so we know that `packet`
+        // has a fragment extension header.
+        packet.copy_header_bytes_for_fragment()
+    }
 }
 
 /// A fragment of a packet's body.
@@ -763,8 +759,6 @@ impl Ord for PacketBodyFragment {
 mod tests {
     use super::*;
 
-    use packet::ParseBuffer;
-
     use crate::ip::{IpProto, Ipv4, Ipv6};
     use crate::testutil::{
         run_for, trigger_next_timer, DummyEventDispatcher, DummyEventDispatcherBuilder,
@@ -772,6 +766,8 @@ mod tests {
     };
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+    use packet::serialize::{Buf, BufferSerializer, Serializer};
+    use packet::ParseBuffer;
 
     macro_rules! assert_frag_proc_state_need_more {
         ($lhs:expr) => {{

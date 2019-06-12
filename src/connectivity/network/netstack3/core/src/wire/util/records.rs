@@ -428,6 +428,16 @@ where
     }
 }
 
+impl<'a, R> RecordsIter<'a, R>
+where
+    R: RecordsImpl<'a>,
+{
+    /// Get a reference to the context.
+    pub(crate) fn context(&self) -> &R::Context {
+        &self.context
+    }
+}
+
 impl<'a, R> Iterator for RecordsIter<'a, R>
 where
     R: RecordsImpl<'a>,

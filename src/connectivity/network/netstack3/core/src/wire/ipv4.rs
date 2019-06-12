@@ -207,9 +207,30 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         Ipv4Addr::new(self.hdr_prefix.dst_ip)
     }
 
-    // The size of the header prefix and options.
+    /// The size of the header prefix and options.
     pub(crate) fn header_len(&self) -> usize {
         self.hdr_prefix.bytes().len() + self.options.bytes().len()
+    }
+
+    /// Return a buffer that is a copy of the header bytes in this
+    /// packet, but patched to be not fragmented.
+    ///
+    /// Return a buffer of this packet's header and options with
+    /// the fragment data zeroed out.
+    pub(crate) fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
+        let expected_bytes_len = self.header_len();
+        let mut bytes = Vec::with_capacity(expected_bytes_len);
+
+        bytes.extend_from_slice(self.hdr_prefix.bytes());
+        bytes.extend_from_slice(self.options.bytes());
+
+        // `bytes`'s length should be exactly `expected_bytes_len`.
+        assert_eq!(bytes.len(), expected_bytes_len);
+
+        // Zero out the fragment data.
+        bytes[4..8].copy_from_slice(&[0; 4][..]);
+
+        bytes
     }
 
     // The size of the packet as calculated from the header prefix, options, and
@@ -219,6 +240,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
+    #[cfg(test)]
     pub(crate) fn builder(&self) -> Ipv4PacketBuilder {
         let mut s = Ipv4PacketBuilder {
             dscp: self.dscp(),
@@ -704,5 +726,16 @@ mod tests {
             .encapsulate(new_builder())
             .serialize_outer()
             .unwrap();
+    }
+
+    #[test]
+    fn test_copy_header_bytes_for_fragment() {
+        let mut hdr_prefix = new_hdr_prefix();
+        let mut bytes = hdr_prefix_to_bytes(hdr_prefix);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv4Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        bytes[4..8].copy_from_slice(&[0; 4][..]);
+        assert_eq!(&copied_bytes[..], &bytes[..]);
     }
 }

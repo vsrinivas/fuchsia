@@ -17,7 +17,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
-use crate::ip::{IpProto, Ipv6, Ipv6Addr};
+use crate::ip::{IpProto, Ipv6, Ipv6Addr, Ipv6ExtHdrType};
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
 use crate::wire::util::records::Records;
 
@@ -362,6 +362,107 @@ impl<B: ByteSlice> Ipv6Packet<B> {
         Ipv6Addr::new(self.fixed_hdr.dst_ip)
     }
 
+    /// Return a buffer that is a copy of the header bytes in this
+    /// packet, including the fixed and extension headers, but without
+    /// the first fragment extension header.
+    ///
+    /// Note, if there are multiple fragment extension headers, only
+    /// the first fragment extension header will be removed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is no fragment extension header in this packet.
+    pub(crate) fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
+        // Since the final header will not include a fragment header,
+        // we don't need to allocate bytes for it (8 bytes).
+        let expected_bytes_len = self.header_len() - 8;
+        let mut bytes = Vec::with_capacity(expected_bytes_len);
+
+        bytes.extend_from_slice(self.fixed_hdr.bytes());
+
+        // We cannot simply copy over the extension headers because we want
+        // discard the first fragment header, so we iterate over our
+        // extension headers and find out where our fragment header starts at.
+        let mut iter = self.extension_hdrs.iter();
+
+        // This should never panic because we must only call this function
+        // when the packet is fragmented so it must have at least one extension
+        // header (the fragment extension header).
+        let ext_hdr = iter.next().unwrap();
+
+        if self.fixed_hdr.next_hdr == Ipv6ExtHdrType::Fragment.into() {
+            // The fragment header is the first extension header so
+            // we need to patch the fixed header.
+
+            // Update the next header value in the fixed header within the buffer
+            // to the next header value from the fragment header.
+            bytes[6] = ext_hdr.next_header;
+
+            // Copy extension headers that appear after the fragment header
+            bytes.extend_from_slice(&self.extension_hdrs.bytes()[8..]);
+        } else {
+            let mut ext_hdr = ext_hdr;
+            let mut ext_hdr_start = 0;
+            let mut ext_hdr_end = iter.context().bytes_parsed;
+
+            // Here we keep looping until `next_ext_hdr` points to the fragment header.
+            // Once we find the fragment header, we update the next header value within
+            // the extension header preceeding the fragment header, `ext_hdr`. Note,
+            // we keep track of where in the extension header buffer the current `ext_hdr`
+            // starts and ends so we can patch its next header value.
+            loop {
+                // This should never panic because if we panic, it means that we got a
+                // `None` value from `iter.next()` which would mean we exhausted all the
+                // extension headers while looking for the fragment header, meaning there
+                // is no fragment header. This function should never be called if there
+                // is no fragment extension header in the packet.
+                let next_ext_hdr = iter.next().unwrap();
+
+                if let Ipv6ExtensionHeaderData::Fragment { .. } = next_ext_hdr.data() {
+                    // The next extension header is the fragment header
+                    // so we copy the buffer before and after the extension header
+                    // into `bytes` and patch the next header value within the
+                    // current extension header in `bytes`.
+
+                    // Size of the fragment header should be exactly 8.
+                    let fragment_hdr_end = ext_hdr_end + 8;
+                    assert_eq!(fragment_hdr_end, iter.context().bytes_parsed);
+
+                    let extension_hdr_bytes = self.extension_hdrs.bytes();
+
+                    // Copy extension headers that appear before the fragment header
+                    bytes.extend_from_slice(&extension_hdr_bytes[..ext_hdr_end]);
+
+                    // Copy extension headers that appear after the fragment header
+                    bytes.extend_from_slice(&extension_hdr_bytes[fragment_hdr_end..]);
+
+                    // Update the current `ext_hdr`'s next header value to the next
+                    // header value within the fragment extension header.
+                    match ext_hdr.data() {
+                        // The next header value is located in the first byte of the
+                        // extension header.
+                        Ipv6ExtensionHeaderData::HopByHopOptions { .. }
+                        | Ipv6ExtensionHeaderData::Routing { .. }
+                        | Ipv6ExtensionHeaderData::DestinationOptions { .. } => {
+                            bytes[IPV6_FIXED_HDR_LEN+ext_hdr_start] = next_ext_hdr.next_header;
+                        }
+                        Ipv6ExtensionHeaderData::Fragment { .. } => unreachable!("If we had a fragment header before `ext_hdr`, we should have used that instead"),
+                    }
+
+                    break;
+                }
+
+                ext_hdr = next_ext_hdr;
+                ext_hdr_start = ext_hdr_end;
+                ext_hdr_end = iter.context().bytes_parsed;
+            }
+        }
+
+        // `bytes`'s length should be exactly `expected_bytes_len`.
+        assert_eq!(bytes.len(), expected_bytes_len);
+        bytes
+    }
+
     fn header_len(&self) -> usize {
         self.fixed_hdr.bytes().len() + self.extension_hdrs.bytes().len()
     }
@@ -371,6 +472,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     }
 
     /// Construct a builder with the same contents as this packet.
+    #[cfg(test)]
     pub(crate) fn builder(&self) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: self.ds(),
@@ -892,5 +994,399 @@ mod tests {
             .encapsulate(new_builder())
             .serialize_outer()
             .unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_copy_header_bytes_for_fragment_without_ext_hdrs() {
+        let mut buf = &fixed_hdr_to_bytes(new_fixed_hdr())[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        packet.copy_header_bytes_for_fragment();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_copy_header_bytes_for_fragment_with_1_ext_hdr_no_fragment() {
+        #[rustfmt::skip]
+        let mut buf = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // HopByHop Options Extension Header
+            IpProto::Tcp.into(),     // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                       // Pad1
+            1, 0,                    // Pad2
+            1, 1, 0,                 // Pad3
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &buf[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        packet.copy_header_bytes_for_fragment();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_copy_header_bytes_for_fragment_with_2_ext_hdr_no_fragment() {
+        #[rustfmt::skip]
+        let mut buf = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // HopByHop Options Extension Header
+            Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                       // Pad1
+            1, 0,                    // Pad2
+            1, 1, 0,                 // Pad3
+
+            // Destination Options Extension Header
+            IpProto::Tcp.into(),    // Next Header
+            1,                      // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                      // Pad1
+            1, 0,                   // Pad2
+            1, 1, 0,                // Pad3
+            1, 6, 0, 0, 0, 0, 0, 0, // Pad8
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &buf[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        packet.copy_header_bytes_for_fragment();
+    }
+
+    #[test]
+    fn test_copy_header_bytes_for_fragment() {
+        //
+        // Only a fragment extension header
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // Fragment Extension Header
+            IpProto::Tcp.into(),     // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        bytes[6] = IpProto::Tcp.into();
+        assert_eq!(&copied_bytes[..], &bytes[..IPV6_FIXED_HDR_LEN]);
+
+        //
+        // Fragment header after a single extension header
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // HopByHop Options Extension Header
+            Ipv6ExtHdrType::Fragment.into(),    // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                       // Pad1
+            1, 0,                    // Pad2
+            1, 1, 0,                 // Pad3
+
+            // Fragment Extension Header
+            IpProto::Tcp.into(),     // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        bytes[IPV6_FIXED_HDR_LEN] = IpProto::Tcp.into();
+        assert_eq!(&copied_bytes[..], &bytes[..IPV6_FIXED_HDR_LEN + 8]);
+
+        //
+        // Fragment header after many extension headers (many = 2)
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // HopByHop Options Extension Header
+            Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                       // Pad1
+            1, 0,                    // Pad2
+            1, 1, 0,                 // Pad3
+
+            // Destination Options Extension Header
+            Ipv6ExtHdrType::Fragment.into(),    // Next Header
+            1,                      // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                      // Pad1
+            1, 0,                   // Pad2
+            1, 1, 0,                // Pad3
+            1, 6, 0, 0, 0, 0, 0, 0, // Pad8
+
+            // Fragment Extension Header
+            IpProto::Tcp.into(),     // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        bytes[IPV6_FIXED_HDR_LEN + 8] = IpProto::Tcp.into();
+        assert_eq!(&copied_bytes[..], &bytes[..IPV6_FIXED_HDR_LEN + 24]);
+
+        //
+        // Fragment header before an extension header
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // Fragment Extension Header
+            Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Destination Options Extension Header
+            IpProto::Tcp.into(),    // Next Header
+            1,                      // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                      // Pad1
+            1, 0,                   // Pad2
+            1, 1, 0,                // Pad3
+            1, 6, 0, 0, 0, 0, 0, 0, // Pad8
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        let mut expected_bytes = Vec::new();
+        expected_bytes.extend_from_slice(&bytes[..IPV6_FIXED_HDR_LEN]);
+        expected_bytes.extend_from_slice(&bytes[IPV6_FIXED_HDR_LEN + 8..bytes.len() - 5]);
+        expected_bytes[6] = Ipv6ExtHdrType::DestinationOptions.into();
+        assert_eq!(&copied_bytes[..], &expected_bytes[..]);
+
+        //
+        // Fragment header before many extension headers (many = 2)
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // Fragment Extension Header
+            Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Destination Options Extension Header
+            Ipv6ExtHdrType::Routing.into(),    // Next Header
+            1,                      // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                      // Pad1
+            1, 0,                   // Pad2
+            1, 1, 0,                // Pad3
+            1, 6, 0, 0, 0, 0, 0, 0, // Pad8
+
+            // Routing extension header
+            IpProto::Tcp.into(),                // Next Header
+            4,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                                  // Routing Type (Deprecated as per RFC 5095)
+            0,                                  // Segments Left
+            0, 0, 0, 0,                         // Reserved
+            // Addresses for Routing Header w/ Type 0
+            0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+            16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        let mut expected_bytes = Vec::new();
+        expected_bytes.extend_from_slice(&bytes[..IPV6_FIXED_HDR_LEN]);
+        expected_bytes.extend_from_slice(&bytes[IPV6_FIXED_HDR_LEN + 8..bytes.len() - 5]);
+        expected_bytes[6] = Ipv6ExtHdrType::DestinationOptions.into();
+        assert_eq!(&copied_bytes[..], &expected_bytes[..]);
+
+        //
+        // Fragment header between extension headers
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // HopByHop Options Extension Header
+            Ipv6ExtHdrType::Fragment.into(),    // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                       // Pad1
+            1, 0,                    // Pad2
+            1, 1, 0,                 // Pad3
+
+            // Fragment Extension Header
+            Ipv6ExtHdrType::DestinationOptions.into(), // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Destination Options Extension Header
+            IpProto::Tcp.into(),    // Next Header
+            1,                      // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                      // Pad1
+            1, 0,                   // Pad2
+            1, 1, 0,                // Pad3
+            1, 6, 0, 0, 0, 0, 0, 0, // Pad8
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        let mut expected_bytes = Vec::new();
+        expected_bytes.extend_from_slice(&bytes[..IPV6_FIXED_HDR_LEN + 8]);
+        expected_bytes.extend_from_slice(&bytes[IPV6_FIXED_HDR_LEN + 16..bytes.len() - 5]);
+        expected_bytes[IPV6_FIXED_HDR_LEN] = Ipv6ExtHdrType::DestinationOptions.into();
+        assert_eq!(&copied_bytes[..], &expected_bytes[..]);
+
+        //
+        // Multiple fragment extension headers
+        //
+
+        #[rustfmt::skip]
+        let mut bytes = [
+            // FixedHeader (will be replaced later)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+            // Fragment Extension Header
+            Ipv6ExtHdrType::Fragment.into(),     // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            1, 1, 1, 1,              // Identification
+
+            // Fragment Extension Header
+            IpProto::Tcp.into(),     // Next Header
+            0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0, 0,                    // Fragment Offset, Res, M (M_flag)
+            2, 2, 2, 2,              // Identification
+
+            // Body
+            1, 2, 3, 4, 5,
+        ];
+        let mut fixed_hdr = new_fixed_hdr();
+        fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
+        NetworkEndian::write_u16(
+            &mut fixed_hdr.payload_len[..],
+            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
+        );
+        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
+        bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let mut buf = &bytes[..];
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        let copied_bytes = packet.copy_header_bytes_for_fragment();
+        let mut expected_bytes = Vec::new();
+        expected_bytes.extend_from_slice(&bytes[..IPV6_FIXED_HDR_LEN]);
+        expected_bytes.extend_from_slice(&bytes[IPV6_FIXED_HDR_LEN + 8..bytes.len() - 5]);
+        assert_eq!(&copied_bytes[..], &expected_bytes[..]);
     }
 }

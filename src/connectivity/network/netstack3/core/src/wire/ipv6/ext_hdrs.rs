@@ -84,7 +84,7 @@ pub(crate) struct Ipv6ExtensionHeaderParsingContext {
     headers_parsed: usize,
 
     // Byte count of successfully parsed extension headers.
-    bytes_parsed: usize,
+    pub(super) bytes_parsed: usize,
 }
 
 impl Ipv6ExtensionHeaderParsingContext {
