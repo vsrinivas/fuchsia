@@ -98,8 +98,6 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .hidden = false,
                                 .bbt = false,
                             },
-                            // TODO(ZX-2689): Remove hack once astro partition map is fixed.
-                            /*
                             {
                                 .type_guid = GUID_ZIRCON_R_VALUE,
                                 .unique_guid = {},
@@ -111,7 +109,6 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .hidden = false,
                                 .bbt = false,
                             },
-                            */
                             {
                                 .type_guid = GUID_VBMETA_A_VALUE,
                                 .unique_guid = {},

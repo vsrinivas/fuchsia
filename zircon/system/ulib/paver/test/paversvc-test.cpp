@@ -258,9 +258,8 @@ TEST_F(PaverServiceTest, WriteAssetKernelConfigRecovery) {
     ASSERT_OK(fuchsia_paver_PaverWriteAsset(client_.get(), fuchsia_paver_Configuration_RECOVERY,
                                             fuchsia_paver_Asset_KERNEL, &payload, &status));
     ASSERT_OK(status);
-    ValidateUnwritten(8, 2);
-    ValidateWritten(10, 2);
-    ValidateUnwritten(12, 2);
+    ValidateUnwritten(8, 4);
+    ValidateWritten(12, 2);
 }
 
 TEST_F(PaverServiceTest, WriteAssetVbMetaConfigA) {
