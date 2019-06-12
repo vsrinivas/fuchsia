@@ -2,7 +2,7 @@
 # Inspect Library
 
 The inspect library is documented [here][inspect]
-(//fuchsia/garnet/docs/inspect/README.md).
+(//fuchsia/docs/development/inspect/README.md).
 
 <!-- xrefs -->
-[inspect]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/inspect/README.md
+[inspect]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/inspect/README.md
