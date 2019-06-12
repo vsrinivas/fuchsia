@@ -50,7 +50,7 @@ template("fuzzer") {
   }
 
   # Generate the fuzzer component manifest
-  generated_file("$target_name.cmx") {
+  generated_file("$fuzzer_name.cmx") {
     if (defined(invoker.cmx)) {
       cmx = read_file(invoker.cmx, "json")
     } else {
@@ -197,7 +197,6 @@ set_defaults("fuzzer") {
 #     Usual GN meanings.
 template("fuzzers_package") {
   assert(defined(invoker.fuzzers), "fuzzers must be defined for $target_name}")
-  package_name = target_name
 
   if (defined(invoker.sanitizers)) {
     sanitizers = invoker.sanitizers
@@ -208,18 +207,14 @@ template("fuzzers_package") {
     ]
   }
 
-  if (defined(invoker.fuzz_host)) {
-    fuzz_host = invoker.fuzz_host
-  } else {
-    fuzz_host = false
-  }
-
   pkg = {
+    name = target_name
     meta = []
     binaries = []
     resources = []
     deps = []
     fuzzers = []
+    host = defined(invoker.fuzz_host) && invoker.fuzz_host
     host_deps = []
     host_outputs = []
     tests = []
@@ -276,11 +271,8 @@ template("fuzzers_package") {
           pkg.fuzzers += [ fuzzer_name ]
 
           # Host fuzzers
-          if (fuzz_host) {
-            pkg.deps += [ ":host_${target_name}" ]
-            pkg.host_deps += [ fuzzer_label ]
-            pkg.host_outputs += [ fuzzer_name ]
-          }
+          pkg.host_deps += [ fuzzer_label ]
+          pkg.host_outputs += [ fuzzer_name ]
         }
       }
     }
@@ -304,8 +296,25 @@ template("fuzzers_package") {
     not_needed([ "selected" ])
   }
 
-  # Assemble the Fuchsia package
-  if (pkg.deps != []) {
+  if (pkg.deps == []) {
+    # Dummy package for non-fuzzed builds
+    group(target_name) {
+    }
+    not_needed(invoker, "*")
+  } else {
+    if (pkg.host) {
+      # Treat host fuzzers as tools. If we get to the point of having name
+      # collisions, we'll need to extend `install_host_tools` to allow copying to
+      # specific subdirectories of `host_tools_dir`
+      install_host_tools("host_${target_name}") {
+        testonly = true
+        deps = pkg.host_deps
+        outputs = pkg.host_outputs
+      }
+      pkg.deps += [ ":host_${pkg.name}" ]
+    }
+
+    # Assemble the Fuchsia package
     package(target_name) {
       meta = []
       binaries = []
@@ -336,47 +345,48 @@ template("fuzzers_package") {
         }
         fuzz_spec = [
           {
-            fuzzers_package = package_name
+            fuzzers_package = pkg.name
             fuzzers = pkg.fuzzers
-            fuzz_host = fuzz_host
+            fuzz_host = pkg.host
           },
         ]
       }
     }
+  }
 
-    # Treat host fuzzers as tools. If we get to the point of having name
-    # collisions, we'll need to extend `install_host_tools` to allow copying to
-    # specific subdirectories of `host_tools_dir`
-    if (fuzz_host) {
-      install_host_tools("host_${target_name}") {
-        testonly = true
-        deps = pkg.host_deps
-        outputs = pkg.host_outputs
+  # TODO(aarongreen): Soft transition from the optional $generated_test_package
+  # to the required $test_package_name. Once template consumers are updated;
+  # drop support for $generated_test_package.
+  if (defined(invoker.test_package_name)) {
+    test_package_name = invoker.test_package_name
+  } else if (defined(invoker.generated_test_package)) {
+    test_package_name = invoker.generated_test_package
+  } else {
+    test_package_name = "${pkg.name}_tests"
+  }
+
+  # Include host unit tests as appropriate
+  if (pkg.host) {
+    group("host_$test_package_name") {
+      visibility = [ ":*" ]
+      testonly = true
+      deps = []
+      foreach(test_dep, pkg.test_deps) {
+        deps += [ "$test_dep($host_toolchain)" ]
       }
     }
-  } else {
-    # Dummy package for non-fuzzed builds
-    group(target_name) {
-    }
-    not_needed([ "fuzz_host" ])
-    not_needed(invoker, "*")
-    not_needed([
-                 "package_name",
-                 "fuzz_host",
-               ])
+    pkg.test_deps += [ ":host_$test_package_name" ]
   }
 
   # Assemble the Fuchsia test package. This uses `package` instead of
   # `test_package`, as the latter only provides an inconvenient constraint on
   # where the cmx file must come from.
-  if (defined(invoker.generated_test_package)) {
-    package(invoker.generated_test_package) {
-      forward_variables_from(invoker, [ "visibility" ])
-      testonly = true
-      meta = pkg.test_meta
-      tests = pkg.tests
-      deps = pkg.test_deps
-    }
+  package(test_package_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
+    meta = pkg.test_meta
+    tests = pkg.tests
+    deps = pkg.test_deps
   }
 }
 
