@@ -990,7 +990,8 @@ void MinidumpRemoteAPI::ThreadStatus(
   }
 
   unwindstack::Unwinder unwinder(
-      40, &maps, regs.get(), std::make_shared<MinidumpUnwindMemory>(memory_));
+      40, &maps, regs.get(), std::make_shared<MinidumpUnwindMemory>(memory_),
+      true);
 
   unwinder.Unwind();
 
@@ -1000,6 +1001,16 @@ void MinidumpRemoteAPI::ThreadStatus(
     debug_ipc::StackFrame& dest = reply.record.frames[i];
     dest.ip = src.pc;
     dest.sp = src.sp;
+    if (src.regs) {
+      src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {
+        // TODO(sadmac): It'd be nice to be using some sort of ID constant
+        // instead of a converted string here.
+        auto id = debug_ipc::StringToRegisterID(name);
+        if (id != debug_ipc::RegisterID::kUnknown) {
+          dest.regs.emplace_back(id, val);
+        }
+      });
+    }
   }
 
   Succeed(cb, reply);
