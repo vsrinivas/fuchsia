@@ -121,11 +121,7 @@ __EXPORT
 zx_status_t fdio_ns_export_root(fdio_flat_namespace_t** out) {
     zx_status_t status;
     mtx_lock(&fdio_lock);
-    if (fdio_root_ns == nullptr) {
-        status = ZX_ERR_NOT_FOUND;
-    } else {
-        status = fdio_ns_export(fdio_root_ns, out);
-    }
+    status = fdio_ns_export(fdio_root_ns, out);
     mtx_unlock(&fdio_lock);
     return status;
 }

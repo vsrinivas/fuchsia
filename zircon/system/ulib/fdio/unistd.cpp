@@ -74,7 +74,6 @@ static constexpr fdio_state_t initialize_fdio_state() {
     fdio_state_t state = {};
     state.lock = MTX_INIT;
     state.cwd_lock = MTX_INIT;
-    state.init = true;
     state.cwd_path[0] = '/';
     state.cwd_path[1] = '\0';
     return state;
@@ -637,6 +636,9 @@ void __libc_extensions_init(uint32_t handle_count,
                             uint32_t handle_info[],
                             uint32_t name_count,
                             char** names) {
+    zx_status_t status = fdio_ns_create(&fdio_root_ns);
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to create root namespace");
+
     int stdio_fd = -1;
 
     // extract handles we care about
@@ -650,7 +652,7 @@ void __libc_extensions_init(uint32_t handle_count,
         switch (PA_HND_TYPE(handle_info[n])) {
         case PA_FD: {
             fdio_t* io = NULL;
-            zx_status_t status = fdio_create(h, &io);
+            status = fdio_create(h, &io);
             if (status != ZX_OK) {
                 zx_handle_close(h);
                 continue;
@@ -665,11 +667,6 @@ void __libc_extensions_init(uint32_t handle_count,
             // also need access to the namespace
             if (arg >= name_count) {
                 continue;
-            }
-            if (fdio_root_ns == NULL) {
-                if (fdio_ns_create(&fdio_root_ns) < 0) {
-                    continue;
-                }
             }
             fdio_ns_bind(fdio_root_ns, names[arg], h);
             continue;
@@ -708,12 +705,10 @@ void __libc_extensions_init(uint32_t handle_count,
         }
     }
 
-    if (fdio_root_ns) {
-        ZX_ASSERT(!fdio_root_handle);
-        fdio_root_handle = fdio_ns_open_root(fdio_root_ns);
-    }
+    ZX_ASSERT(!fdio_root_handle);
+    fdio_root_handle = fdio_ns_open_root(fdio_root_ns);
+
     if (fdio_root_handle) {
-        fdio_root_init = true;
         __fdio_open(&fdio_cwd_handle, fdio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
     } else {
         // placeholder null handle

@@ -58,20 +58,23 @@ static int check_flags(uint32_t flags, int success) {
         return -2;
 
     bool should_have_namespace = (flags & FDIO_SPAWN_CLONE_NAMESPACE) != 0;
-    fdio_ns_t* ns = NULL;
-    bool has_namespace = fdio_ns_get_installed(&ns) != ZX_ERR_NOT_FOUND;
-    if (has_namespace != should_have_namespace)
+    fdio_flat_namespace_t* flat = NULL;
+    if (fdio_ns_export_root(&flat) != ZX_OK)
         return -3;
+    bool has_namespace = flat->count > 0;
+    fdio_ns_free_flat_ns(flat);
+    if (has_namespace != should_have_namespace)
+        return -4;
 
     bool should_have_stdio = (flags & FDIO_SPAWN_CLONE_STDIO) != 0;
     bool has_stdio = has_fd(0) || has_fd(1) || has_fd(2);
     if (has_stdio != should_have_stdio)
-        return -4;
+        return -5;
 
     bool should_have_environ = (flags & FDIO_SPAWN_CLONE_ENVIRON) != 0;
     bool has_environ = environ[0] != NULL;
     if (has_environ != should_have_environ)
-        return -5;
+        return -6;
 
     return success;
 }

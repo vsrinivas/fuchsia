@@ -10,6 +10,7 @@ test("fdio") {
     "fdio_fdio.cpp",
     "fdio_handle_fd.c",
     "fdio_io.cpp",
+    "fdio_null_namespace.cpp",
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
     "fdio_root.c",
@@ -31,6 +32,7 @@ test("fdio") {
 
   data_deps = [
     ":accept-child",
+    ":null-namespace-child",
   ]
 }
 
@@ -42,6 +44,18 @@ executable("accept-child") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-net:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+executable("null-namespace-child") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "fdio_null_namespace_child.c",
+  ]
+  deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
   ]

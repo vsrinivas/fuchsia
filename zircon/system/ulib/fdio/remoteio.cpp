@@ -65,18 +65,7 @@ static zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
 
 __EXPORT
 zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
-    // TODO: fdio_validate_path?
-    if (path == nullptr) {
-        zx_handle_close(h);
-        return ZX_ERR_INVALID_ARGS;
-    }
-    // Otherwise attempt to connect through the root namespace
-    if (fdio_root_ns != nullptr) {
-        return fdio_ns_connect(fdio_root_ns, path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
-    }
-    // Otherwise we fail
-    zx_handle_close(h);
-    return ZX_ERR_NOT_FOUND;
+    return fdio_open(path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
 }
 
 __EXPORT
@@ -107,12 +96,7 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
         return ZX_ERR_INVALID_ARGS;
     }
     // Otherwise attempt to connect through the root namespace
-    if (fdio_root_ns != nullptr) {
-        return fdio_ns_connect(fdio_root_ns, path, flags, request);
-    }
-    // Otherwise we fail
-    zx_handle_close(request);
-    return ZX_ERR_NOT_FOUND;
+    return fdio_ns_connect(fdio_root_ns, path, flags, request);
 }
 
 __EXPORT

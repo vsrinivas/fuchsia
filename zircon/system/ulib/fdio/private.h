@@ -269,7 +269,6 @@ zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
 typedef struct {
     mtx_t lock;
     mtx_t cwd_lock;
-    bool init;
     mode_t umask;
     fdio_t* root;
     fdio_t* cwd;
@@ -289,7 +288,6 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_cwd_lock (__fdio_global_state.cwd_lock)
 #define fdio_cwd_path (__fdio_global_state.cwd_path)
 #define fdio_fdtab (__fdio_global_state.fdtab)
-#define fdio_root_init (__fdio_global_state.init)
 #define fdio_root_ns (__fdio_global_state.ns)
 
 // Returns an fd number greater than or equal to |starting_fd|, following the
