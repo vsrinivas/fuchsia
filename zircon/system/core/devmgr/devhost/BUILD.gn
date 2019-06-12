@@ -53,7 +53,11 @@ source_set("common") {
     "$zx/system/ulib/zxio",
     "../shared:env",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+
+  configs += [
+    "$zx/public/gn/config:static-libc++",
+    "$zx/public/gn/config:visibility_hidden",
+  ]
 }
 
 # "$zx/system/ulib/driver" is an alias for this.
@@ -62,7 +66,6 @@ library("driver") {
   sdk_headers = []
   shared = true
   static = false
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
 
   sources = []
 
