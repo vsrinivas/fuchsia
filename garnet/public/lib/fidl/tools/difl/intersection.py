@@ -6,14 +6,17 @@ from typing import Sequence, TypeVar, Generic, List, Tuple, Callable, Dict
 
 from difl.ir import Declaration
 from difl.changes import Change, DeclAdded, DeclRemoved
+from difl.comparator import Comparator
 
 D = TypeVar('D', bound=Declaration)
 
 
-def intersect_changes(before: Sequence[D], after: Sequence[D],
-                      compare: Callable[[D, D, Dict[str, bool]], List[Change]],
-                      identifier_compatibility: Dict[str, bool],
-                      include_decl_added_and_decl_removed=True) -> List[Change]:
+def intersect_changes(
+        before: Sequence[D],
+        after: Sequence[D],
+        compare: Callable[[D, D, Comparator], List[Change]],
+        comparator: Comparator,
+        include_decl_added_and_decl_removed=True) -> List[Change]:
     # dictionaries of declarations by name
     before_by_name = {d.name: d for d in before}
     after_by_name = {d.name: d for d in after}
@@ -32,6 +35,6 @@ def intersect_changes(before: Sequence[D], after: Sequence[D],
         (before_by_name[n], after_by_name[n])
             for n in before_names.intersection(after_names)
     ]:
-        changes.extend(compare(before_decl, after_decl, identifier_compatibility))
+        changes.extend(compare(before_decl, after_decl, comparator))
 
     return changes

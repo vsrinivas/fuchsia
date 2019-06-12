@@ -13,6 +13,7 @@ from collections import defaultdict
 from difl.changes import Change
 from difl.ir import Libraries, Library, Declaration
 from difl.library import library_changes
+from difl.comparator import Comparator
 
 # All the changes for a given line
 LineChanges = Tuple[int, Set[str]]
@@ -136,9 +137,9 @@ if __name__ == '__main__':
     before_expected_changes = expected_library_changes(before, args.build_dir)
     after_expected_changes = expected_library_changes(after, args.build_dir)
 
-    identifier_compatibility: Dict[str, bool] = {}
+    comparator = Comparator()
 
-    changes: List[Change] = library_changes(before, after, identifier_compatibility)
+    changes: List[Change] = library_changes(before, after, comparator)
 
     before_actual_changes = actual_library_changes(before, changes,
                                                    before_selector)

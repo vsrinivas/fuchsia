@@ -8,9 +8,11 @@ from difl.ir import Method, Argument, Library, Protocol
 from difl.changes import *
 from difl.intersection import intersect_changes
 from difl.struct import struct_changes
+from difl.comparator import Comparator
 
 
-def method_changes(before: Method, after: Method, identifier_compatibility: Dict[str, bool]) -> List[Change]:
+def method_changes(before: Method, after: Method,
+                   comparator: Comparator) -> List[Change]:
     changes: List[Change] = []
     # Ordinal change
     if before.ordinal != after.ordinal:
@@ -29,18 +31,19 @@ def method_changes(before: Method, after: Method, identifier_compatibility: Dict
     before_request = before.request()
     after_request = after.request()
     if before_request is not None and after_request is not None:
-        changes = changes + struct_changes(before_request, after_request, identifier_compatibility)
+        changes = changes + struct_changes(before_request, after_request,
+                                           comparator)
 
     before_response = before.response()
     after_response = after.response()
     if before_response is not None and after_response is not None:
-        changes = changes + struct_changes(before_response, after_response, identifier_compatibility)
-
-    identifier_compatibility[before.name] = (len(changes) == 0)
+        changes = changes + struct_changes(before_response, after_response,
+                                           comparator)
 
     return changes
 
 
-def protocol_changes(before: Protocol, after: Protocol, identifier_compatibility: Dict[str, bool]) -> List[Change]:
-    return intersect_changes(before.methods, after.methods, method_changes, identifier_compatibility)
-
+def protocol_changes(before: Protocol, after: Protocol,
+                     comparator: Comparator) -> List[Change]:
+    return intersect_changes(before.methods, after.methods, method_changes,
+                             comparator)

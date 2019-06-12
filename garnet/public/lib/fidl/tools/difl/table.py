@@ -6,9 +6,11 @@ from typing import List, Dict
 
 from difl.ir import Table
 from difl.changes import *
-from difl.type import compare_types
+from difl.comparator import Comparator
 
-def table_changes(before: Table, after: Table, identifier_compatibility: Dict[str, bool]) -> List[Change]:
+
+def table_changes(before: Table, after: Table,
+                  comparator: Comparator) -> List[Change]:
     changes: List[Change] = []
 
     before_members = {m.ordinal: m for m in before.members}
@@ -28,18 +30,21 @@ def table_changes(before: Table, after: Table, identifier_compatibility: Dict[st
         if not before_member.reserved and after_member.reserved:
             changes.append(TableMemberReserved(before_member, after_member))
             continue
-        if  before_member.reserved and not after_member.reserved:
+        if before_member.reserved and not after_member.reserved:
             changes.append(TableMemberUnreserved(before_member, after_member))
             continue
 
         if before_member.name != after_member.name:
             changes.append(TableMemberRenamed(before_member, after_member))
 
-        equal, compatible = compare_types(before_member.type,
-                                          after_member.type, identifier_compatibility)
-        if not equal:
-            changes.append(TableMemberTypeChanged(before_member, after_member, compatible))
+        if before_member.reserved and after_member.reserved:
+            continue
 
-    identifier_compatibility[before.name] = (len(changes) == 0)
+        if not comparator.constraints_match(before_member.type,
+                                            after_member.type):
+            soft = comparator.shapes_match(before_member.type,
+                                           after_member.type)
+            changes.append(
+                TableMemberTypeChanged(before_member, after_member, not soft))
 
     return changes

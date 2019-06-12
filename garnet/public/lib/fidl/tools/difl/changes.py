@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from difl.ir import *
 

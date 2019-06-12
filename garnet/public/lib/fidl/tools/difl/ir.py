@@ -10,6 +10,21 @@ import typing as t
 __all__ = [
     'Declaration',
     'Type',
+    'PrimitiveType',
+    'NullableType',
+    'HandleType',
+    'RequestType',
+    'ArrayType',
+    'VectorType',
+    'StringType',
+    'IdentifierType',
+    'EnumIdentifierType',
+    'BitsIdentifierType',
+    'StructIdentifierType',
+    'ProtocolIdentifierType',
+    'TableIdentifierType',
+    'UnionIdentifierType',
+    'XUnionIdentifierType',
     'Const',
     'EnumMember',
     'Enum',
@@ -26,6 +41,7 @@ __all__ = [
     'Library',
     'Libraries',
 ]
+
 
 class Declaration(dict):
     def __init__(self, library: 'Library', value: dict):
@@ -59,63 +75,203 @@ class Declaration(dict):
         return self['location']['line']
 
 
+def construct_type(library: 'Library', value: dict) -> 'Type':
+    if value['kind'] == 'primitive':
+        return PrimitiveType(library, value)
+    elif value['kind'] == 'handle':
+        return HandleType(library, value)
+    elif value['kind'] == 'request':
+        return RequestType(library, value)
+    elif value['kind'] == 'array':
+        return ArrayType(library, value)
+    elif value['kind'] == 'vector':
+        return VectorType(library, value)
+    elif value['kind'] == 'string':
+        return StringType(library, value)
+    elif value['kind'] == 'identifier':
+        return _construct_identifier_type(library, value)
+    else:
+        raise Exception('Unknown type: %r' % value)
+
+
 class Type(dict):
-    def __init__(self, library, value):
+    def __init__(self, library: 'Library', value: dict, inline_size: int):
         self.library = library
+        self.inline_size = inline_size
         dict.__init__(self, value)
-
-    @property
-    def inline_size(self) -> int:
-        if self.is_primitive:
-            if self['subtype'] in {'bool', 'int8', 'uint8'}: return 1
-            if self['subtype'] in {'int16', 'uint16'}: return 2
-            if self['subtype'] in {'int32', 'uint32', 'float32'}: return 4
-            if self['subtype'] in {'int64', 'uint64', 'float64'}: return 8
-            raise Exception('Unknown primitive subtype %r' % self['subtype'])
-        if self.kind == 'array':
-            return self['element_count'] * self.element_type.inline_size
-        if self.kind == 'vector' or self.kind == 'string':
-            return 16
-        if self.kind == 'handle' or self.kind == 'request':
-            return 4
-
-        assert self.kind == 'identifier'
-        if self.is_nullable:
-            return 8
-
-        declaration = self.library.libraries.find(self['identifier'])
-        return declaration.inline_size
 
     @property
     def kind(self):
         return self['kind']
 
-    @property
-    def is_primitive(self) -> bool:
-        return self.kind == 'primitive'
 
-    @property
-    def is_nullable(self) -> bool:
-        return self.get('nullable', False)
+class PrimitiveType(Type):
+    @staticmethod
+    def from_subtype(subtype: str, library: 'Library'):
+        return PrimitiveType(library, {
+            'kind': 'primitive',
+            'subtype': subtype,
+        })
 
-    @property
-    def is_handle(self) -> bool:
-        if self.kind == 'handle' or self.kind == 'request':
-            return True
-        if self.kind == 'identifier':
-            return isinstance(self.library.find(self['identifier']), Protocol)
-        return False
+    def __init__(self, library: 'Library', value: dict):
+        assert value['kind'] == 'primitive'
+        if isinstance(value['subtype'], dict):
+            # TODO: why do we get this here?
+            value = value['subtype']
+        subtype = value['subtype']
+        if subtype in {'bool', 'int8', 'uint8'}:
+            inline_size = 1
+        elif subtype in {'int16', 'uint16'}:
+            inline_size = 2
+        elif subtype in {'int32', 'uint32', 'float32'}:
+            inline_size = 4
+        elif subtype in {'int64', 'uint64', 'float64'}:
+            inline_size = 8
+        else:
+            raise Exception('Unknown primitive subtype %r' % subtype)
+        super().__init__(library, value, inline_size)
+        self.subtype = subtype
+        self.is_float = self.subtype in ('float32', 'float64')
+        self.is_signed = self.subtype in ('int8', 'int16', 'int32',
+                                          'int64') or self.is_float
 
-    @property
-    def element_type(self):
-        if 'element_type' in self:
-            return Type(self.library, self['element_type'])
+
+class NullableType(Type):
+    def __init__(self, library: 'Library', value: dict, inline_size: int):
+        assert 'nullable' in value
+        super().__init__(library, value, inline_size)
+        self.is_nullable = self['nullable']
+
+
+class HandleType(NullableType):
+    def __init__(self, library: 'Library', value: dict):
+        assert value['kind'] == 'handle'
+        super().__init__(library, value, 4)
+        self.handle_type = self['subtype']
+
+
+class RequestType(NullableType):
+    def __init__(self, library: 'Library', value: dict):
+        assert value['kind'] == 'request'
+        super().__init__(library, value, 4)
+        self.protocol = self['subtype']
+
+
+class ArrayType(Type):
+    def __init__(self, library: 'Library', value: dict):
+        assert value['kind'] == 'array'
+        self.element_type = construct_type(library, value['element_type'])
+        super().__init__(
+            library, value,
+            value['element_count'] * self.element_type.inline_size)
+        self.count: int = self['element_count']
+
+
+class VectorType(NullableType):
+    def __init__(self, library: 'Library', value: dict):
+        assert value['kind'] == 'vector'
+        super().__init__(library, value, 16)
+        self.element_type = construct_type(library, value['element_type'])
+        self.limit: t.Optional[int] = self.get('maybe_element_count')
+
+
+class StringType(NullableType):
+    def __init__(self, library: 'Library', value: dict):
+        assert value['kind'] == 'string'
+        super().__init__(library, value, 16)
+        self.element_type = PrimitiveType.from_subtype('uint8', library)
+        self.limit: t.Optional[int] = self.get('maybe_element_count')
+
+
+def _construct_identifier_type(library: 'Library',
+                               value: dict) -> 'IdentifierType':
+    assert value['kind'] == 'identifier'
+    declaration = library.libraries.find(value['identifier'])
+    if isinstance(declaration, Enum):
+        return EnumIdentifierType(library, value, declaration)
+    if isinstance(declaration, Bits):
+        return BitsIdentifierType(library, value, declaration)
+    if isinstance(declaration, Struct):
+        return StructIdentifierType(library, value, declaration)
+    if isinstance(declaration, Protocol):
+        return ProtocolIdentifierType(library, value, declaration)
+    if isinstance(declaration, Table):
+        return TableIdentifierType(library, value, declaration)
+    if isinstance(declaration, Union):
+        return UnionIdentifierType(library, value, declaration)
+    if isinstance(declaration, XUnion):
+        return XUnionIdentifierType(library, value, declaration)
+    raise Exception("Can't construct identifier type %s for %r" %
+                    (value['identifier'], declaration))
+
+
+DECL = t.TypeVar('DECL', bound=Declaration)
+
+
+class IdentifierType(NullableType):
+    def __init__(self, library: 'Library', value: dict, declaration: DECL):
+        assert value['kind'] == 'identifier'
+        inline_size = 8
+        if not value['nullable']:
+            inline_size = declaration.inline_size
+        super().__init__(library, value, inline_size)
+        self.identifier = self['identifier']
+
+
+class EnumIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict, declararation: 'Enum'):
+        super().__init__(library, value, declararation)
+        self.primitive = declararation.type
+        self.declaration = declararation
+
+
+class BitsIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict, declararation: 'Bits'):
+        super().__init__(library, value, declararation)
+        self.primitive = declararation.type
+        self.declaration = declararation
+
+
+class StructIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict,
+                 declararation: 'Struct'):
+        super().__init__(library, value, declararation)
+        self.declaration = declararation
+
+
+class ProtocolIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict,
+                 declararation: 'Protocol'):
+        super().__init__(library, value, declararation)
+        self.declaration = declararation
+
+
+class TableIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict,
+                 declararation: 'Table'):
+        super().__init__(library, value, declararation)
+        assert not self.is_nullable
+        self.declaration = declararation
+
+
+class UnionIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict,
+                 declararation: 'Union'):
+        super().__init__(library, value, declararation)
+        self.declaration = declararation
+
+
+class XUnionIdentifierType(IdentifierType):
+    def __init__(self, library: 'Library', value: dict,
+                 declararation: 'XUnion'):
+        super().__init__(library, value, declararation)
+        self.declaration = declararation
 
 
 class Const(Declaration):
     @property
     def type(self) -> Type:
-        return Type(self.library, self['type'])
+        return construct_type(self.library, self['type'])
 
 
 class EnumMember(Declaration):
@@ -123,15 +279,18 @@ class EnumMember(Declaration):
         Declaration.__init__(self, enum.library, value)
         self.enum = enum
 
+    @property
+    def value(self) -> int:
+        literal = self['value']
+        assert literal['kind'] == 'literal'
+        assert literal['literal']['kind'] == 'numeric'
+        return int(literal['literal']['value'])
+
 
 class Enum(Declaration):
     @property
-    def type(self) -> Type:
-        return Type(self.library, {
-            'kind': 'primitive',
-            'subtype': self['type']
-        })
-
+    def type(self) -> PrimitiveType:
+        return PrimitiveType.from_subtype(self['type'], self.library)
 
     @property
     def inline_size(self) -> int:
@@ -140,6 +299,40 @@ class Enum(Declaration):
     @property
     def members(self) -> t.List[EnumMember]:
         return [EnumMember(self, m) for m in self['members']]
+
+
+class BitsMember(Declaration):
+    def __init__(self, bits: 'Bits', value: dict):
+        Declaration.__init__(self, bits.library, value)
+        self.bits = bits
+
+    @property
+    def value(self) -> int:
+        literal = self['value']
+        assert literal['kind'] == 'literal'
+        assert literal['literal']['kind'] == 'numeric'
+        return int(literal['literal']['value'])
+
+
+class Bits(Declaration):
+    def __init__(self, library: 'Library', value: dict):
+        if 'location' not in value:
+            # TODO: fix fidlc to include bits location
+            value['location'] = {'filename': 'nowhere', 'line': 42}
+        super().__init__(library, value)
+        self.mask = self['mask']
+
+    @property
+    def type(self) -> PrimitiveType:
+        return PrimitiveType.from_subtype(self['type'], self.library)
+
+    @property
+    def inline_size(self) -> int:
+        return self.type.inline_size
+
+    @property
+    def members(self) -> t.List[BitsMember]:
+        return [BitsMember(self, m) for m in self['members']]
 
 
 class StructMember(Declaration):
@@ -151,7 +344,7 @@ class StructMember(Declaration):
 
     @property
     def type(self) -> Type:
-        return Type(self.library, self['type'])
+        return construct_type(self.library, self['type'])
 
 
 class Struct(Declaration):
@@ -174,7 +367,7 @@ class Argument(Declaration):
 
     @property
     def type(self) -> Type:
-        return Type(self.library, self['type'])
+        return construct_type(self.library, self['type'])
 
 
 class Method(Declaration):
@@ -232,7 +425,7 @@ class Protocol(Declaration):
 
     @property
     def inline_size(self) -> int:
-        return 4 # it's a handle
+        return 4  # it's a handle
 
 
 class TableMember(Declaration):
@@ -256,7 +449,7 @@ class TableMember(Declaration):
     def type(self) -> Type:
         if self.reserved:
             raise Exception('Reserved table members have no type')
-        return Type(self.library, self['type'])
+        return construct_type(self.library, self['type'])
 
 
 class Table(Declaration):
@@ -272,7 +465,7 @@ class UnionMember(Declaration):
 
     @property
     def type(self) -> Type:
-        return Type(self.library, self['type'])
+        return construct_type(self.library, self['type'])
 
 
 class Union(Declaration):
@@ -280,21 +473,26 @@ class Union(Declaration):
     def members(self) -> t.List[UnionMember]:
         return [UnionMember(self, m) for m in self['members']]
 
+
+class XUnionMember(Declaration):
+    def __init__(self, xunion: 'XUnion', value):
+        Declaration.__init__(self, xunion.library, value)
+        self.xunion = xunion
+        self.ordinal = self['ordinal']
+
+    @property
+    def type(self) -> Type:
+        return construct_type(self.library, self['type'])
+
+
 class XUnion(Declaration):
-    pass
+    @property
+    def members(self) -> t.List[XUnionMember]:
+        return [XUnionMember(self, m) for m in self['members']]
 
-
-DECLARATION_TYPES = {
-    'const': ('const_declarations', Const),
-    'enum': ('enum_declarations', Enum),
-    'protocol': ('interface_declarations', Protocol),
-    'struct': ('struct_declarations', Struct),
-    'table': ('table_declarations', Table),
-    'union': ('union_declarations', Union),
-    'xunion': ('xunion_declarations', XUnion),
-}
 
 D = t.TypeVar('D', bound=Declaration)
+
 
 class Library(dict):
     def __init__(self, libraries: 'Libraries', path: str):
@@ -308,13 +506,20 @@ class Library(dict):
         self.filenames: t.Set[str] = set()
         self.consts = self._collect_declarations('const_declarations', Const)
         self.enums = self._collect_declarations('enum_declarations', Enum)
-        self.protocols = self._collect_declarations('interface_declarations', Protocol)
-        self.structs = self._collect_declarations('struct_declarations', Struct)
+        self.bits = self._collect_declarations('bits_declarations', Bits)
+        self.protocols = self._collect_declarations('interface_declarations',
+                                                    Protocol)
+        self.structs = self._collect_declarations('struct_declarations',
+                                                  Struct)
         self.tables = self._collect_declarations('table_declarations', Table)
         self.unions = self._collect_declarations('union_declarations', Union)
+        self.xunions = self._collect_declarations('xunion_declarations',
+                                                  XUnion)
 
-    def _collect_declarations(self, key: str, ctor: t.Callable[['Library', dict], D]) -> t.List[D]:
-        decls : t.List[D] = []
+    def _collect_declarations(
+            self, key: str,
+            ctor: t.Callable[['Library', dict], D]) -> t.List[D]:
+        decls: t.List[D] = []
         for json in self[key]:
             decl: D = ctor(self, json)
             decls.append(decl)
@@ -379,9 +584,9 @@ class Libraries(list):
         return [method for library in self for method in library.methods]
 
     def find(self, identifier: str
-             ) -> t.Union[None, Const, Enum, Protocol, Struct, Table, Union]:
+             ) -> t.Union[Const, Enum, Protocol, Struct, Table, Union]:
         library_name, _ = identifier.split('/')
         if library_name not in self.by_name:
-            return None
+            raise Exception('Identifier %s not found' % identifier)
         library = self.by_name[library_name]
         return library.find(identifier)

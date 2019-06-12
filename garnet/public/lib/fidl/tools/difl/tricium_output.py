@@ -9,6 +9,7 @@ from difl.ir import Declaration
 import json
 import sys
 
+
 def tricium_output(abi_changes: Iterator[ClassifiedChange]):
     '''
     Generates output to match the Message proto in:
@@ -17,11 +18,11 @@ def tricium_output(abi_changes: Iterator[ClassifiedChange]):
 
     messages: List[dict] = []
 
-    abi_category_hardness = {True: 'difl/abi-hard', False: 'difl/abi-soft'}
     for change in abi_changes:
-        message: dict = {}
-        message['category'] = abi_category_hardness[change.hard]
-        message['message'] = change.message
+        message: dict = {
+                'category': 'difl/abi-hard' if change.hard else 'difl/abi-soft',
+                'message': change.message,
+        }
         declaration: Optional[Declaration] = change.change.after
         if declaration is not None:
             message['path'] = declaration.filename

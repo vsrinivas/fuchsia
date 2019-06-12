@@ -10,16 +10,25 @@ from difl.library import libraries_changes
 from difl.abi import abi_changes
 from difl.text_output import text_output
 from difl.tricium_output import tricium_output
+from difl.comparator import Comparator
 
 ap = argparse.ArgumentParser(prog='difl')
 
 before_group = ap.add_mutually_exclusive_group(required=True)
-before_group.add_argument('--before', type=str, help='the .fidl.json from before the change')
-before_group.add_argument('--before-files', type=str, help='a list of .fidl.json files from before the change')
+before_group.add_argument(
+    '--before', type=str, help='the .fidl.json from before the change')
+before_group.add_argument(
+    '--before-files',
+    type=str,
+    help='a list of .fidl.json files from before the change')
 
 after_group = ap.add_mutually_exclusive_group(required=True)
-after_group.add_argument('--after', type=str, help='the .fidl.json from after the change')
-after_group.add_argument('--after-files', type=str, help='a list of .fidl.json files from after the change')
+after_group.add_argument(
+    '--after', type=str, help='the .fidl.json from after the change')
+after_group.add_argument(
+    '--after-files',
+    type=str,
+    help='a list of .fidl.json files from after the change')
 
 ap.add_argument('--format', choices=['text', 'tricium'], default='text')
 args = ap.parse_args()
@@ -36,7 +45,7 @@ if args.after:
 else:
     after_libraries.load_all(args.after_files)
 
-changes = libraries_changes(before_libraries, after_libraries, {})
+changes = libraries_changes(before_libraries, after_libraries, Comparator())
 
 classified_changes = abi_changes(changes)
 

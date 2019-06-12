@@ -5,7 +5,6 @@
 from typing import List, Optional, Iterator
 from difl.ir import *
 from difl.changes import *
-from difl.struct import Struct, StructMember
 
 
 def _describe_struct(struct: Optional[Declaration]) -> str:
@@ -28,50 +27,54 @@ def _describe_decl(decl: Optional[Declaration]) -> str:
         return _describe_struct(decl)
     elif isinstance(decl, StructMember):
         return 'struct member {}.{}'.format(decl.struct.name, decl.name)
+    elif isinstance(decl, TableMember):
+        return 'table member {}.{}'.format(decl.table.name, decl.name)
     elif isinstance(decl, Protocol):
         return 'protocol {}'.format(decl.name)
     elif isinstance(decl, Method):
         return 'method {}'.format(decl.name)
+    elif isinstance(decl, Table):
+        return 'table {}'.format(decl.name)
     else:
         raise Exception("Don't know how to describe {} {!r}".format(
             type(decl).__name__, decl))
 
 
 def _describe_type(type: Type) -> str:
-    if type.is_primitive:
-        return type['subtype']
+    if isinstance(type, PrimitiveType):
+        return type.subtype
 
     nullable = ''
-    if type.is_nullable: nullable = '?'
+    if isinstance(type, NullableType) and type.is_nullable:
+        nullable = '?'
 
-    if type.kind == 'identifier':
-        return type['identifier'] + nullable
+    if isinstance(type, IdentifierType):
+        return type.identifier + nullable
 
-    if type.kind == 'request':
-        return 'request<{}>{}'.format(type['subtype'], nullable)
+    if isinstance(type, RequestType):
+        return 'request<{}>{}'.format(type.protocol, nullable)
 
-    if type.kind == 'handle':
-        subtype = type['subtype']
-        if subtype == 'handle':
+    if isinstance(type, HandleType):
+        if type.handle_type == 'handle':
             return 'handle' + nullable
         else:
-            return 'handle<{}>{}'.format(subtype, nullable)
+            return 'handle<{}>{}'.format(type.handle_type, nullable)
 
-    if type.kind == 'identifier':
+    if isinstance(type, IdentifierType):
         return type['subtype'] + nullable
 
     element_count = ''
     if 'maybe_element_count' in type:
         element_count = ':{}'.format(type['maybe_element_count'])
 
-    if type.kind == 'string':
+    if isinstance(type, StringType):
         return 'string' + element_count + nullable
 
-    if type.kind == 'vector':
+    if isinstance(type, VectorType):
         return 'vector<{}>{}{}'.format(
             _describe_type(type.element_type), element_count, nullable)
 
-    if type.kind == 'array':
+    if isinstance(type, ArrayType):
         return 'array<{}>{}'.format(
             _describe_type(type.element_type), element_count)
 
@@ -80,12 +83,13 @@ def _describe_type(type: Type) -> str:
 
 def _describe_decl_type(decl: Optional[Declaration]) -> str:
     assert decl is not None
-    assert isinstance(decl, (StructMember, ))
+    assert isinstance(decl, (StructMember, TableMember))
     return _describe_type(decl.type)
 
 
 abi_nonchanges = (StructMemberRenamed, DeclAdded, TableMemberAdded,
-                  TableMemberRenamed, TableMemberReserved, TableMemberUnreserved)
+                  TableMemberRenamed, TableMemberReserved,
+                  TableMemberUnreserved)
 
 
 def abi_changes(changes: List[Change]) -> Iterator[ClassifiedChange]:
@@ -98,7 +102,7 @@ def abi_changes(changes: List[Change]) -> Iterator[ClassifiedChange]:
         if isinstance(change, DeclRemoved):
             decl = change.before
             assert decl is not None
-            if isinstance(decl, (Struct, Protocol, Method)):
+            if isinstance(decl, (Struct, Protocol, Method, Table, XUnion)):
                 yield ClassifiedChange(
                     change, False,
                     '{} removed, make sure there are no remaining users'.
@@ -152,6 +156,12 @@ def abi_changes(changes: List[Change]) -> Iterator[ClassifiedChange]:
                 change, False,
                 "{} removed, it should have been marked as reserved".format(
                     _describe_decl(change.before)))
+        elif isinstance(change, TableMemberTypeChanged):
+            yield ClassifiedChange(change, not change.compatible,
+                                   '{} changed type from {} to {}'.format(
+                                       _describe_decl(change.after),
+                                       _describe_decl_type(change.before),
+                                       _describe_decl_type(change.after)))
 
         ### Protocol Changes
         elif isinstance(change, MethodOrdinalChanged):

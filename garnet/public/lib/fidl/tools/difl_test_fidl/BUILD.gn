@@ -54,17 +54,19 @@ action("run_difl_test") {
   inputs = [
     "../difl/__init__.py",
     "../difl/__main__.py",
+    "../difl/abi.py",
     "../difl/changes.py",
-    "../difl/enum.py",
+    "../difl/comparator.py",
+    "../difl/enums.py",
     "../difl/intersection.py",
     "../difl/ir.py",
     "../difl/library.py",
     "../difl/protocol.py",
     "../difl/struct.py",
+    "../difl/table.py",
     "../difl/test.py",
     "../difl/text_output.py",
     "../difl/tricium_output.py",
-    "../difl/type.py",
   ]
   outputs = [
     stamp,
