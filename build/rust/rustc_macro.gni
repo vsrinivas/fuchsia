@@ -116,22 +116,20 @@ template("rustc_macro") {
     ]
   }
 
-  # Copy the generated _build_info.json which provides data about the target that
+  # Copy the generated _info.json which provides data about the target that
   # was built.
-  copy_out_info_target = "${target_name}_copy_info"
-  proc_macro_target_out_dir =
-      get_label_info(proc_macro_host_target, "target_out_dir")
-  copy(copy_out_info_target) {
-    visibility = [ ":${target_name}" ]
-    forward_variables_from(invoker, [ "testonly" ])
+  copy_build_info_target = "${target_name}_info"
+  copy(copy_build_info_target) {
     deps = [
-      proc_macro_host_target,
+      ":${proc_macro_target}_info($host_toolchain)",
     ]
+    proc_macro_target_out_dir =
+        get_label_info(proc_macro_host_target, "target_out_dir")
     sources = [
-      "$proc_macro_target_out_dir/${proc_macro_target}_build_info.json",
+      "$proc_macro_target_out_dir/${proc_macro_target}_info.json",
     ]
     outputs = [
-      "$target_out_dir/${target_name}_build_info.json",
+      "$target_out_dir/${copy_build_info_target}.json",
     ]
   }
 
@@ -158,10 +156,10 @@ template("rustc_macro") {
 
   # Group all of the `copy` targets into one group which is publicly exposed.
   group(target_name) {
-    deps = [
+    public_deps = [
       ":$copy_binary_target",
+      ":$copy_build_info_target",
       ":$copy_cargo_toml_target",
-      ":$copy_out_info_target",
     ]
   }
 }

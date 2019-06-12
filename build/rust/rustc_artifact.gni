@@ -106,33 +106,33 @@ template("rustc_third_party_artifact") {
 
   # Dummy build target to match the one in rustc_artifact
   build_target_name = "${target_name}_build"
-  action(build_target_name) {
-    script = "//build/rust/write_3p_crate_dep_info.py"
+  group(build_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+  }
+
+  # Dummy target to write target info
+  info_target_name = "${target_name}_info"
+  generated_file(info_target_name) {
     forward_variables_from(invoker,
                            [
                              "crate_name",
                              "testonly",
                            ])
 
-    pool = "//build/rust:pool($default_toolchain)"
-
-    out_info_path = "${target_out_dir}/${target_name}_info.json"
-
-    args = [
+    outputs = [
+      "${target_out_dir}/${target_name}.json",
+    ]
+    contents = {
       # This is a slight lie to the end user-- the crate name that
       # users provide and that appears in Cargo.toml is the package name,
       # which may be different than the crate name (the thing given to
       # --extern). One example of this is the rust-crypto crate,
       # whose real crate name is crypto, but which is published under
       # the package name rust-crypto.
-      "--package-name",
-      crate_name,
-      "--output",
-      rebase_path(out_info_path),
-    ]
-    outputs = [
-      out_info_path,
-    ]
+      package_name = crate_name
+      third_party = true
+    }
+    output_conversion = "json"
   }
 
   group(target_name) {
@@ -140,6 +140,7 @@ template("rustc_third_party_artifact") {
 
     public_deps = [
       ":${build_target_name}",
+      ":${info_target_name}",
     ]
   }
 }
@@ -299,17 +300,19 @@ template("rustc_artifact") {
   # of their build targets, which will be passed to rustc as
   # `--extern` crates.
   dep_info_paths = []
+  dep_info_sources = []
   if (defined(invoker.deps)) {
     foreach(dep, invoker.deps) {
       dep_target_name = get_label_info(dep, "name")
       dep_dir = get_label_info(dep, "dir")
       dep_build_target = "${dep_dir}:${dep_target_name}_build"
       dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
-      dep_info_path = "${dep_out_dir}/${dep_target_name}_build_info.json"
+      dep_info_path = "${dep_out_dir}/${dep_target_name}_info.json"
       dep_info_paths += [
         "--dep-data",
         rebase_path(dep_info_path),
       ]
+      dep_info_sources += [ rebase_path(dep_info_path) ]
     }
   }
 
@@ -400,8 +403,6 @@ template("rustc_artifact") {
     type,
     "--crate-name",
     crate_name,
-    "--package-name",
-    package_name,
     "--root-out-dir",
     rebase_path(root_out_dir),
     "--first-party-crate-root",
@@ -454,6 +455,26 @@ template("rustc_artifact") {
 
   rustc_target_args += dep_info_paths
 
+  info_target_name = "${target_name}_info"
+  generated_file(info_target_name) {
+    # Write out static information about the target to be used by
+    # reverse-dependencies to determine the content of their Cargo.toml
+    # files and --extern invocations.
+    outputs = [
+      "${target_out_dir}/${target_name}.json",
+    ]
+    contents = {
+      cargo_toml_dir = rebase_path(cargo_toml_dir)
+      crate_name = crate_name
+      lib_path = rebase_path(output_file)
+      package_name = package_name
+      third_party = false
+      version = version
+    }
+    output_conversion = "json"
+  }
+  group_deps += [ ":${info_target_name}" ]
+
   if (!only_unit_tests) {
     action(build_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
@@ -461,16 +482,8 @@ template("rustc_artifact") {
       script = rustc_target_script
       pool = rustc_target_pool
 
-      out_info_path = "${target_out_dir}/${target_name}_info.json"
-
       args = rustc_target_args
       args += [
-        "--cargo-toml-dir",
-        rebase_path(cargo_toml_dir),
-        "--version",
-        version,
-        "--out-info",
-        rebase_path(out_info_path),
         "--output-file",
         rebase_path(output_file),
         "--depfile",
@@ -480,7 +493,6 @@ template("rustc_artifact") {
       inputs = rustc_target_inputs
       outputs = [
         output_file,
-        out_info_path,
       ]
 
       depfile = output_depfile
@@ -652,10 +664,7 @@ template("rustc_artifact") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ third_party_build ]
-    if (defined(invoker.non_rust_deps)) {
-      public_deps = invoker.non_rust_deps
-    }
+    deps += [ third_party_build ]  # for deps data
     args = [
       "--out-dir",
       rebase_path(cargo_toml_dir),
@@ -693,6 +702,7 @@ template("rustc_artifact") {
 
     # list of paths to info about crate dependencies
     args += dep_info_paths
+    sources = dep_info_sources
     outputs = [
       "${cargo_toml_dir}/Cargo.toml",
     ]
