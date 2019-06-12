@@ -6,13 +6,16 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <string>
-
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <string>
+
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "garnet/bin/network_time/roughtime_server.h"
 #include "garnet/bin/network_time/time_server_config.h"
@@ -56,8 +59,8 @@ bool Timezone::UpdateSystemTime(uint32_t tries) {
     auto ret = server->GetTimeFromServer();
     if (ret.first == NETWORK_ERROR) {
       if (i != tries - 1) {
-        FX_VLOGS(1) << "Can't get time, sleeping for 1 sec";
-        sleep(1);
+        FX_VLOGS(1) << "Can't get time, sleeping for 500ms";
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
       } else {
         FX_LOGS(ERROR) << "Can't get time due to network error after " << tries
                        << " attempts, abort";

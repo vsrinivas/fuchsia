@@ -16,7 +16,7 @@ namespace time_server {
 const char kRealRtcDevicePath[] = "/dev/class/rtc/000";
 
 // The default number of time update attempts at startup.
-const uint32_t kDefaultUpdateAttempts = 255;
+const uint32_t kDefaultUpdateAttempts = UINT32_MAX;
 
 // TODO(CP-131): Rename to something like SystemTimeUpdater.
 class Timezone {
