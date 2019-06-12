@@ -5,7 +5,6 @@
 #ifndef LIB_ZXS_ZXS_H_
 #define LIB_ZXS_ZXS_H_
 
-#include <fuchsia/net/c/fidl.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
