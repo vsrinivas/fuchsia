@@ -313,7 +313,7 @@ trace_provider_t* trace_provider_create_synchronously(
         trace::internal::GetPid(), name, strlen(name),
         &registry_status, &manager_is_tracing_already);
     if (status != ZX_OK) {
-        fprintf(stderr, "TraceProvider: RegisterTraceProviderSynchronously failed: status=%d(%s)\n",
+        fprintf(stderr, "TraceProvider: RegisterProviderSynchronously failed: status=%d(%s)\n",
                 status, zx_status_get_string(status));
         return nullptr;
     }
