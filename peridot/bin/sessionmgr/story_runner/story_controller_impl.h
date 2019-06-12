@@ -237,15 +237,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // surface was focused.
   void OnSurfaceFocused(fidl::StringPtr surface_id);
 
-  // Initializes the Environment under which all new processes in the story are
-  // launched. Use |story_environment_| to manipulate the environment's
-  // services.
-  void InitStoryEnvironment();
-
-  // Destroys the Environment created for this story, tearing down all
-  // processes.
-  void DestroyStoryEnvironment();
-
   // Finds the active RunningModInfo for a module at the given module path. May
   // return nullptr if the module at the path is not running, regardless of
   // whether a module at that path is known to the story.
@@ -273,11 +264,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   std::unique_ptr<StoryMutator> story_mutator_;
   std::unique_ptr<StoryObserver> story_observer_;
   StoryVisibilitySystem* const story_visibility_system_;  // Not owned.
-
-  // The application environment (which abstracts a zx::job) in which the
-  // modules within this story run. This environment is only valid (not null) if
-  // the story is running.
-  std::unique_ptr<Environment> story_environment_;
 
   // Implements the primary service provided here:
   // fuchsia::modular::StoryController.

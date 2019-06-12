@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/stories_share_session_runners_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}
