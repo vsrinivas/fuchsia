@@ -236,13 +236,12 @@ static zx_status_t pci_test_driver_bind(void* ctx, zx_device_t* parent) {
     return ProtocolTestDriver::Create(parent);
 }
 
-static zx_driver_ops_t protocol_test_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .init = nullptr,
-    .bind = pci_test_driver_bind,
-    .create = nullptr,
-    .release = nullptr,
-};
+static const zx_driver_ops_t protocol_test_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = pci_test_driver_bind;
+    return ops;
+}();
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(pci_protocol_test_driver, protocol_test_driver_ops, "zircon", "0.1", 3)
