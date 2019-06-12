@@ -103,16 +103,16 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services, Config config,
     std::unique_ptr<CrashServer> crash_server) {
-  if (!files::IsDirectory(config.local_crashpad_database_path)) {
-    files::CreateDirectory(config.local_crashpad_database_path);
+  if (!files::IsDirectory(config.crashpad_database_path)) {
+    files::CreateDirectory(config.crashpad_database_path);
   }
 
   std::unique_ptr<crashpad::CrashReportDatabase> database(
       crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(config.local_crashpad_database_path)));
+          base::FilePath(config.crashpad_database_path)));
   if (!database) {
     FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << config.local_crashpad_database_path;
+                   << config.crashpad_database_path;
     FX_LOGS(FATAL) << "failed to set up crash analyzer";
     return nullptr;
   }
@@ -266,49 +266,47 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
                 << process_name;
 
   // Prepare annotations and attachments.
-  return GetFeedbackData().then(
-      [this, process = std::move(process), thread = std::move(thread),
-       process_name](fit::result<Data>& result) mutable -> fit::result<void> {
-        Data feedback_data;
-        if (result.is_ok()) {
-          feedback_data = result.take_value();
-        }
-        const std::map<std::string, std::string> annotations =
-            MakeDefaultAnnotations(feedback_data, process_name);
-        const std::map<std::string, fuchsia::mem::Buffer> attachments =
-            MakeAttachments(&feedback_data);
+  return GetFeedbackData().then([this, process = std::move(process),
+                                 thread = std::move(thread), process_name](
+                                    fit::result<Data>& result) mutable
+                                -> fit::result<void> {
+    Data feedback_data;
+    if (result.is_ok()) {
+      feedback_data = result.take_value();
+    }
+    const std::map<std::string, std::string> annotations =
+        MakeDefaultAnnotations(feedback_data, process_name);
+    const std::map<std::string, fuchsia::mem::Buffer> attachments =
+        MakeAttachments(&feedback_data);
 
-        // Set minidump and create local crash report.
-        //   * The annotations will be stored in the minidump of the report
-        //     and augmented with modules' annotations.
-        //   * The attachments will be stored in the report.
-        // We don't pass an upload_thread so we can do the upload ourselves
-        // synchronously.
-        crashpad::CrashReportExceptionHandler exception_handler(
-            database_.get(), /*upload_thread=*/nullptr, &annotations,
-            &attachments,
-            /*user_stream_data_sources=*/nullptr);
-        crashpad::UUID local_report_id;
-        if (!exception_handler.HandleException(process, thread,
-                                               &local_report_id)) {
-          database_->SkipReportUpload(
-              local_report_id,
-              crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-          FX_LOGS(ERROR)
-              << "error handling exception for local crash report, ID "
-              << local_report_id.ToString();
-          return fit::error();
-        }
+    // Set minidump and create local crash report.
+    //   * The annotations will be stored in the minidump of the report
+    //     and augmented with modules' annotations.
+    //   * The attachments will be stored in the report.
+    // We don't pass an upload_thread so we can do the upload ourselves
+    // synchronously.
+    crashpad::CrashReportExceptionHandler exception_handler(
+        database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
+        /*user_stream_data_sources=*/nullptr);
+    crashpad::UUID local_report_id;
+    if (!exception_handler.HandleException(process, thread, &local_report_id)) {
+      database_->SkipReportUpload(
+          local_report_id,
+          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+      FX_LOGS(ERROR) << "error handling exception for local crash report, ID "
+                     << local_report_id.ToString();
+      return fit::error();
+    }
 
-        // For userspace, we read back the annotations from the minidump
-        // instead of passing them as argument like for kernel crashes because
-        // the Crashpad handler augmented them with the modules' annotations.
-        if (UploadReport(local_report_id, /*annotations=*/nullptr,
-                         /*read_annotations_from_minidump=*/true) != ZX_OK) {
-          return fit::error();
-        }
-        return fit::ok();
-      });
+    // For userspace, we read back the annotations from the minidump
+    // instead of passing them as argument like for kernel crashes because
+    // the Crashpad handler augmented them with the modules' annotations.
+    if (UploadReport(local_report_id, /*annotations=*/nullptr,
+                     /*read_annotations_from_minidump=*/true) != ZX_OK) {
+      return fit::error();
+    }
+    return fit::ok();
+  });
 }
 
 fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
@@ -417,7 +415,7 @@ zx_status_t CrashpadAgent::UploadReport(
     FX_LOGS(INFO)
         << "upload to remote crash server disabled. Local crash report, ID "
         << local_report_id.ToString() << ", available under "
-        << config_.local_crashpad_database_path;
+        << config_.crashpad_database_path;
     database_->SkipReportUpload(
         local_report_id,
         crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
@@ -509,7 +507,7 @@ void CrashpadAgent::PruneDatabase() {
   // database and we want to reset that cumulated total size every time we
   // prune.
   crashpad::DatabaseSizePruneCondition pruning_condition(
-      config_.max_crashpad_database_size_in_kb);
+      config_.crashpad_database_max_size_in_kb);
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
 }
 

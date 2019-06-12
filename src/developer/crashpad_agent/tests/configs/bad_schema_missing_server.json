@@ -1,5 +1,5 @@
 {
-    "local_crashpad_database_path": "/foo/crashes",
-    "max_crashpad_database_size_in_kb": 1024,
+    "crashpad_database_path": "/foo/crashes",
+    "crashpad_database_max_size_in_kb": 1024,
     "enable_upload_to_crash_server": true
 }

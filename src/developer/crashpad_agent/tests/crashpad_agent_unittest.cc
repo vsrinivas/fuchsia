@@ -63,8 +63,8 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   void SetUp() override {
     // The underlying agent is initialized with a default config, but can
     // be reset via ResetAgent() if a different config is necessary.
-    ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                      /*max_crashpad_database_size_in_kb=*/
+    ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
+                      /*crashpad_database_max_size_in_kb=*/
                       kMaxTotalReportSizeInKb,
                       /*enable_upload_to_crash_server=*/true,
                       /*crash_server_url=*/
@@ -84,7 +84,7 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ =
-        files::JoinPath(config.local_crashpad_database_path, "attachments");
+        files::JoinPath(config.crashpad_database_path, "attachments");
     agent_ = CrashpadAgent::TryCreate(
         dispatcher(), service_directory_provider_.service_directory(),
         std::move(config), std::move(crash_server_));
@@ -355,8 +355,8 @@ TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will
   // get cleaned up before the end of the |agent_| call.
-  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                    /*max_crashpad_database_size_in_kb=*/0u,
+  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
+                    /*crashpad_database_max_size_in_kb=*/0u,
                     /*enable_upload_to_crash_server=*/false,
                     /*crash_server_url=*/nullptr,
                     /*feedback_data_collection_timeout_in_milliseconds=*/
@@ -384,8 +384,8 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
   const std::string large_string = GenerateString(crash_log_size_in_kb);
   ResetAgent(
-      Config{/*local_crashpad_database_path=*/database_path_.path(),
-             /*max_crashpad_database_size_in_kb=*/kMaxTotalReportSizeInKb +
+      Config{/*crashpad_database_path=*/database_path_.path(),
+             /*crashpad_database_max_size_in_kb=*/kMaxTotalReportSizeInKb +
                  crash_log_size_in_kb,
              /*enable_upload_to_crash_server=*/false,
              /*crash_server_url=*/nullptr,
@@ -419,8 +419,8 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
 
 TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                    /*max_crashpad_database_size_in_kb=*/
+  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
+                    /*crashpad_database_max_size_in_kb=*/
                     kMaxTotalReportSizeInKb,
                     /*enable_upload_to_crash_server=*/true,
                     /*crash_server_url=*/
@@ -434,8 +434,8 @@ TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                    /*max_crashpad_database_size_in_kb=*/
+  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
+                    /*crashpad_database_max_size_in_kb=*/
                     kMaxTotalReportSizeInKb,
                     /*enable_upload_to_crash_server=*/false,
                     /*crash_server_url=*/nullptr,
@@ -484,8 +484,8 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
       std::make_unique<StubFeedbackDataProviderNeverReturning>());
   // We use a timeout of 1ms for the feedback data collection as the test will
   // need to wait that long before skipping feedback data collection.
-  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
-                    /*max_crashpad_database_size_in_kb=*/
+  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
+                    /*crashpad_database_max_size_in_kb=*/
                     kMaxTotalReportSizeInKb,
                     /*enable_upload_to_crash_server=*/true,
                     /*crash_server_url=*/

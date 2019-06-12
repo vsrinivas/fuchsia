@@ -16,12 +16,12 @@ namespace crash {
 
 // Crash analysis configuration.
 struct Config {
-  // Directory path under which to store the local Crashpad database.
-  std::string local_crashpad_database_path;
+  // Directory path under which to store the Crashpad database.
+  std::string crashpad_database_path;
 
-  // Maximum size (in kilobytes) that the local Crashpad database should grow
+  // Maximum size (in kilobytes) that the Crashpad database should grow
   // to, excluding current reports being generated.
-  uint64_t max_crashpad_database_size_in_kb;
+  uint64_t crashpad_database_max_size_in_kb;
 
   // Whether to upload the crash report to a remote crash server or leave it
   // locally.

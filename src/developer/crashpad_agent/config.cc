@@ -20,10 +20,10 @@ namespace {
 const char kSchema[] = R"({
   "type": "object",
   "properties": {
-    "local_crashpad_database_path": {
+    "crashpad_database_path": {
       "type": "string"
     },
-    "max_crashpad_database_size_in_kb": {
+    "crashpad_database_max_size_in_kb": {
       "type": "integer"
     },
     "enable_upload_to_crash_server": {
@@ -37,16 +37,16 @@ const char kSchema[] = R"({
     }
   },
   "required": [
-    "local_crashpad_database_path",
-    "max_crashpad_database_size_in_kb",
+    "crashpad_database_path",
+    "crashpad_database_max_size_in_kb",
     "enable_upload_to_crash_server",
     "feedback_data_collection_timeout_in_milliseconds"
   ],
   "additionalProperties": false
 })";
 
-const char kLocalCrashpadDatabasePathKey[] = "local_crashpad_database_path";
-const char kMaxDatabaseSizeInKbKey[] = "max_crashpad_database_size_in_kb";
+const char kLocalCrashpadDatabasePathKey[] = "crashpad_database_path";
+const char kMaxDatabaseSizeInKbKey[] = "crashpad_database_max_size_in_kb";
 const char kEnableUploadToCrashServerKey[] = "enable_upload_to_crash_server";
 const char kCrashServerUrlKey[] = "crash_server_url";
 const char kFeedbackDataCollectionTimeoutInSecondsKey[] =
@@ -100,9 +100,9 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   Config local_config;
   // It is safe to directly access these fields for which the keys are marked as
   // required as we have checked the config against the schema.
-  local_config.local_crashpad_database_path =
+  local_config.crashpad_database_path =
       doc[kLocalCrashpadDatabasePathKey].GetString();
-  local_config.max_crashpad_database_size_in_kb =
+  local_config.crashpad_database_max_size_in_kb =
       doc[kMaxDatabaseSizeInKbKey].GetUint();
   local_config.enable_upload_to_crash_server =
       doc[kEnableUploadToCrashServerKey].GetBool();
