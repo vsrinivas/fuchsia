@@ -7,10 +7,10 @@
 #include <src/lib/fxl/strings/string_view.h>
 #include <src/lib/fxl/strings/split_string.h>
 
-#include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/printer.h"
-#include "src/developer/memory/metrics/summary.h"
-#include "src/developer/memory/metrics/tests/test_utils.h"
+#include "garnet/bin/memory_monitor/capture.h"
+#include "garnet/bin/memory_monitor/printer.h"
+#include "garnet/bin/memory_monitor/summary.h"
+#include "garnet/bin/memory_monitor/test/test_utils.h"
 
 namespace memory {
 namespace test {

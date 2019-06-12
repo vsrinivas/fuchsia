@@ -44,7 +44,6 @@ group("devtools") {
     "//garnet/packages/prod:tracing",
     "//garnet/packages/testing:all",
     "//garnet/packages/tools:all",
-    "//src/developer/memory/mem",
   ]
 }
 

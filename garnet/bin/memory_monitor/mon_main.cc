@@ -8,7 +8,7 @@
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 
-#include "src/developer/memory/monitor/monitor.h"
+#include "garnet/bin/memory_monitor/monitor.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

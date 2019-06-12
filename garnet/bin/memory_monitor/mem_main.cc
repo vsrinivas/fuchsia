@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
+#include <iostream> 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <zircon/status.h>
 
-#include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/summary.h"
-#include "src/developer/memory/metrics/printer.h"
+#include "garnet/bin/memory_monitor/capture.h"
+#include "garnet/bin/memory_monitor/summary.h"
+#include "garnet/bin/memory_monitor/printer.h"
 
 using namespace memory;
 

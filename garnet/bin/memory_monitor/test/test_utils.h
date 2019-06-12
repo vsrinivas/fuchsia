@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_MEMORY_METRICS_TEST_UTILS_H_
-#define SRC_DEVELOPER_MEMORY_METRICS_TEST_UTILS_H_
-
 #include <vector>
 
-#include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/summary.h"
+#include "garnet/bin/memory_monitor/capture.h"
+#include "garnet/bin/memory_monitor/summary.h"
 
 namespace memory {
 
@@ -29,5 +26,3 @@ class TestUtils {
 };
 
 }  // namespace memory
-
-#endif  // SRC_DEVELOPER_MEMORY_METRICS_TEST_UTILS_H_

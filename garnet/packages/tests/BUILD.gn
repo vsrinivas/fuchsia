@@ -389,7 +389,7 @@ group("all") {
     ":logger",
     ":magma",
     ":media",
-    ":memory_metrics",
+    ":memory_monitor",
     ":netcfg_tests",
     ":netemul",
     ":netfilter",
@@ -521,11 +521,10 @@ group("inspect_query_unittests") {
   ]
 }
 
-group("memory_metrics") {
+group("memory_monitor") {
   testonly = true
   public_deps = [
-    "//src/developer/memory/metrics/tests:memory_metrics_tests",
-    "//src/developer/memory/monitor/tests:memory_monitor_tests",
+    "//garnet/bin/memory_monitor/test:memory_monitor_tests",
   ]
 }
 

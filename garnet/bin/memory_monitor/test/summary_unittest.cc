@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/summary.h"
-#include "src/developer/memory/metrics/tests/test_utils.h"
+#include "garnet/bin/memory_monitor/capture.h"
+#include "garnet/bin/memory_monitor/summary.h"
+#include "garnet/bin/memory_monitor/test/test_utils.h"
 
 namespace memory {
 namespace test {

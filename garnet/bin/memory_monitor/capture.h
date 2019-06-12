@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
-#define SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
+#ifndef GARNET_BIN_MEMORY_MONITOR_CAPTURE_H_
+#define GARNET_BIN_MEMORY_MONITOR_CAPTURE_H_
 
 #include <src/lib/fxl/macros.h>
 #include <lib/zx/time.h>
@@ -41,7 +41,7 @@ class Capture {
     return koid_to_process_;
   }
 
-  const std::unordered_map<zx_koid_t, const zx_info_vmo_t>&
+  const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& 
       koid_to_vmo() const {
     return koid_to_vmo_;
   }
@@ -66,4 +66,4 @@ class Capture {
 
 }  // namespace memory
 
-#endif  // SRC_DEVELOPER_MEMORY_METRICS_CAPTURE_H_
+#endif  // GARNET_BIN_MEMORY_MONITOR_CAPTURE_H_

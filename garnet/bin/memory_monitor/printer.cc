@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/memory/metrics/printer.h"
+#include "garnet/bin/memory_monitor/printer.h"
 
 namespace memory {
 

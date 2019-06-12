@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_MEMORY_METRICS_SUMMARY_H_
-#define SRC_DEVELOPER_MEMORY_METRICS_SUMMARY_H_
+#ifndef GARNET_BIN_MEMORY_MONITOR_SUMMARY_H_
+#define GARNET_BIN_MEMORY_MONITOR_SUMMARY_H_
 
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <zircon/types.h>
 
-#include "src/developer/memory/metrics/capture.h"
+#include "garnet/bin/memory_monitor/capture.h"
 
 namespace memory {
 
@@ -70,4 +70,4 @@ class Summary {
 
 }  // namespace memory
 
-#endif  // SRC_DEVELOPER_MEMORY_METRICS_SUMMARY_H_
+#endif  // GARNET_BIN_MEMORY_MONITOR_MEMORY_SUMMARY_H_

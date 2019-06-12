@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/memory/monitor/monitor.h"
+#include "garnet/bin/memory_monitor/monitor.h"
 
 #include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
