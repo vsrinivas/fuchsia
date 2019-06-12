@@ -462,22 +462,25 @@ impl<'entries> Future for Controlled<'entries> {
     type Output = Void;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        match self.controllable.poll_unpin(cx) {
-            Poll::Pending => (),
-            Poll::Ready(x) => unreachable(x),
-        };
+        // NOTE See `Simple::poll` for discussion on why we need a loop here.
+        //
+        // It should be safe to exhaust the `controller` queue first and then run the child tree.
+        // `cx` should be set to trigger in case a new command is added to the queue.  So if
+        // anything in the child tree causes a new command to be queued, `cx` will be primed and
+        // the executor will run this method again.
 
-        loop {
-            if self.controller.is_terminated() {
-                break;
-            }
-
+        while !self.controller.is_terminated() {
             match self.controller.poll_next_unpin(cx) {
                 Poll::Pending => break,
                 Poll::Ready(None) => break,
                 Poll::Ready(Some(command)) => self.handle_command(command),
             }
         }
+
+        match self.controllable.poll_unpin(cx) {
+            Poll::Pending => (),
+            Poll::Ready(x) => unreachable(x),
+        };
 
         Poll::Pending
     }
@@ -610,7 +613,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |_root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -623,8 +626,10 @@ mod tests {
             .unwrap();
 
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            open_as_file_assert_content!(&proxy, flags, "ssh_config", "# Empty");
+            open_as_file_assert_content!(&proxy, flags, "ssh/sshd_config", "# Empty");
             assert_close!(proxy);
+
+            assert_close!(root);
         });
     }
 
@@ -640,7 +645,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |_root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let (proxy, server_end) =
                 create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -653,8 +658,10 @@ mod tests {
             .unwrap();
 
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            open_as_file_assert_content!(&proxy, flags, "ssh_config", "# Empty");
+            open_as_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
             assert_close!(proxy);
+
+            assert_close!(root);
         });
     }
 
@@ -670,7 +677,7 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |_root| {
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             let (proxy, server_end) =
                 create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
@@ -684,6 +691,8 @@ mod tests {
 
             assert_read!(&proxy, "# Empty");
             assert_close!(proxy);
+
+            assert_close!(root);
         });
     }
 

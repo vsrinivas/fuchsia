@@ -25,11 +25,9 @@ use {
     crate::directory::entry::DirectoryEntry,
     byteorder::{LittleEndian, WriteBytesExt},
     fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeMarker, MAX_FILENAME},
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_FILENAME},
     fuchsia_async::Executor,
-    futures::channel::mpsc,
-    futures::{future::join, select, stream::StreamExt, Future},
-    pin_utils::pin_mut,
+    futures::{channel::mpsc, future::join, select, Future, Poll, StreamExt},
     std::{io::Write, iter},
     void::unreachable,
 };
@@ -37,7 +35,9 @@ use {
 /// A helper to run a pseudo fs server and a client that needs to talk to this server.  This
 /// function will create a channel and will pass the client side to `get_client`, while the server
 /// side will be passed into an `open()` method on the server.  The server and the client will then
-/// be executed on the same single threaded executor until they both stall.
+/// be executed on the same single threaded executor until they both stall, then it is asserted
+/// that execution is complete and the future has returned. The server is wrapped in a wrapper that
+/// will return if `is_terminated` returns true.
 ///
 /// `flags` is passed into the `open()` call.
 ///
@@ -58,25 +58,70 @@ pub fn run_server_client<GetClientRes>(
 pub fn run_server_client_with_mode<GetClientRes>(
     flags: u32,
     mode: u32,
-    mut server: impl DirectoryEntry,
+    server: impl DirectoryEntry,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let mut exec = Executor::new().expect("Executor creation failed");
+    let exec = Executor::new().expect("Executor creation failed");
 
+    run_server_client_with_mode_and_executor(
+        flags,
+        mode,
+        exec,
+        server,
+        get_client,
+        |run_until_stalled_assert| run_until_stalled_assert(true),
+    )
+}
+
+/// Similar to [`run_server_client()`], except that it allows you to provide an executor and control
+/// the execution of the futures. A closure is taken, which is given a reference to
+/// run_until_stalled, and asserts that the future either completed or it didn't, depending on the
+/// provided boolean.
+pub fn run_server_client_with_executor<GetClientRes>(
+    flags: u32,
+    exec: Executor,
+    server: impl DirectoryEntry,
+    get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
+    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+) where
+    GetClientRes: Future<Output = ()>,
+{
+    run_server_client_with_mode_and_executor(flags, 0, exec, server, get_client, executor);
+}
+
+/// Similar to [`run_server_client()`], adding the additional functionality of
+/// [`run_server_client_with_mode()`] and [`run_server_client_with_executor()`].
+pub fn run_server_client_with_mode_and_executor<GetClientRes>(
+    flags: u32,
+    mode: u32,
+    mut exec: Executor,
+    mut server: impl DirectoryEntry,
+    get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
+    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+) where
+    GetClientRes: Future<Output = ()>,
+{
     let (client_proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-    server.open(
-        flags,
-        mode,
-        &mut iter::empty(),
-        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
-    );
+    server.open(flags, mode, &mut iter::empty(), server_end.into_channel().into());
 
     let client = get_client(client_proxy);
-    let future = join(server, client);
+
+    // This wrapper lets us poll the server while also completing the server future if it's
+    // is_terminated returns true, even though it's poll will never return Ready.
+    let server_wrapper = async move {
+        loop {
+            select! {
+                x = server => unreachable(x),
+                complete => break,
+            }
+        }
+    };
+
+    let mut future = Box::pin(join(server_wrapper, client));
 
     // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
     // I can not do this:
@@ -86,10 +131,21 @@ pub fn run_server_client_with_mode<GetClientRes>(
     //       timeout.after_now(),
     //       || panic!("Test did not finish in {}ms", timeout.millis()));
 
-    // As our clients are async generators, we need to pin this future explicitly.
-    // All async generators are !Unpin by default.
-    pin_mut!(future);
-    let _ = exec.run_until_stalled(&mut future);
+    executor(&mut |should_complete| {
+        if should_complete {
+            assert_eq!(
+                exec.run_until_stalled(&mut future),
+                Poll::Ready(((), ())),
+                "future did not complete"
+            );
+        } else {
+            assert_eq!(
+                exec.run_until_stalled(&mut future),
+                Poll::Pending,
+                "future was not expected to complete"
+            );
+        }
+    });
 }
 
 /// Holds arguments for a [`DirectoryEntry::open()`] call.
@@ -103,13 +159,45 @@ pub type OpenRequestArgs<'path> =
 /// the server.  When [`run_server_client()`] is used, the only way to gen a new connection to the
 /// server is to `clone()` the existing one, which might be undesirable for a particular test.
 pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
-    mut server: impl DirectoryEntry,
+    server: impl DirectoryEntry,
     get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs<'path>>) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let mut exec = Executor::new().expect("Executor creation failed");
+    let exec = Executor::new().expect("Executor creation failed");
 
+    run_server_client_with_open_requests_channel_and_executor(
+        exec,
+        server,
+        get_client,
+        |run_until_stalled_assert| {
+            run_until_stalled_assert(true);
+        },
+    );
+}
+
+/// Similar to [`run_server_client_with_open_requests_channel()`] but allows precise control of
+/// execution order.  This is necessary when the test needs to make sure that both the server and
+/// the client have reached a particular point.  In order to control the execution you would want
+/// to share a oneshot channel or a queue between your test code and the executor closures.  The
+/// executor closure get a `run_until_stalled_assert` as an argument.  It can use those channels
+/// and `run_until_stalled_assert` to control the execution process of the client and the server.
+/// `run_until_stalled_assert` asserts whether or not the future completed on that run according to
+/// the provided boolean argument.
+///
+/// For example, a client that wants to make sure that it receives a particular response from the
+/// server by certain point, in case the response is asynchronous.
+///
+/// The server is wrapped in an async block that returns if it's `is_terminated` method returns
+/// true.
+pub fn run_server_client_with_open_requests_channel_and_executor<'path, GetClientRes>(
+    mut exec: Executor,
+    mut server: impl DirectoryEntry,
+    get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs<'path>>) -> GetClientRes,
+    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+) where
+    GetClientRes: Future<Output = ()>,
+{
     let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs<'path>>(0);
 
     let server_wrapper = async move {
@@ -130,12 +218,23 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
     };
 
     let client = get_client(open_requests_tx);
-    let future = join(server_wrapper, client);
+    let mut future = Box::pin(join(server_wrapper, client));
 
-    // As our clients are async generators, we need to pin this future explicitly.
-    // All async generators are !Unpin by default.
-    pin_mut!(future);
-    let _ = exec.run_until_stalled(&mut future);
+    executor(&mut |should_complete| {
+        if should_complete {
+            assert_eq!(
+                exec.run_until_stalled(&mut future),
+                Poll::Ready(((), ())),
+                "future did not complete"
+            );
+        } else {
+            assert_eq!(
+                exec.run_until_stalled(&mut future),
+                Poll::Pending,
+                "future was not expected to complete"
+            );
+        }
+    });
 }
 
 /// A helper to build the "expected" output for a `ReadDirents` call from the Directory protocol in
@@ -189,11 +288,11 @@ macro_rules! assert_rewind {
 /// in `../test_utils.rs`.
 #[macro_export]
 macro_rules! open_as_file_assert_content {
-    ($proxy:expr, $flags:expr, $path:expr, $expected_content:expr) => {
+    ($proxy:expr, $flags:expr, $path:expr, $expected_content:expr) => {{
         let file = open_get_file_proxy_assert_ok!($proxy, $flags, $path);
         assert_read!(file, $expected_content);
         assert_close!(file);
-    };
+    }};
 }
 
 #[macro_export]

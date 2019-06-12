@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! common utilities for pseudo-file-related tests.
+//! Common utilities used by pseudo-file related tests.
+//!
+//! Most assertions are macros as they need to call async functions themselves.  As a typical test
+//! will have multiple assertions, it save a bit of typing to write `assert_something!(arg)`
+//! instead of `await!(assert_something(arg))`.
 
 use {
     crate::directory::entry::DirectoryEntry,
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{FileMarker, FileProxy},
-    fuchsia_async as fasync,
-    futures::{
-        channel::mpsc,
-        future::{join, LocalFutureObj},
-        select, Future, Poll, StreamExt,
-    },
-    pin_utils::pin_mut,
+    fuchsia_async::Executor,
+    futures::{channel::mpsc, future::join, select, Future, Poll, StreamExt},
     std::iter,
     void::unreachable,
 };
@@ -50,7 +49,7 @@ pub fn run_server_client_with_mode<GetClientRes>(
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let exec = fasync::Executor::new().expect("Executor creation failed");
+    let exec = Executor::new().expect("Executor creation failed");
 
     run_server_client_with_mode_and_executor(
         flags,
@@ -68,7 +67,7 @@ pub fn run_server_client_with_mode<GetClientRes>(
 /// provided boolean.
 pub fn run_server_client_with_executor<GetClientRes>(
     flags: u32,
-    exec: fasync::Executor,
+    exec: Executor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(FileProxy) -> GetClientRes,
     executor: impl FnOnce(&mut FnMut(bool) -> ()),
@@ -83,7 +82,7 @@ pub fn run_server_client_with_executor<GetClientRes>(
 pub fn run_server_client_with_mode_and_executor<GetClientRes>(
     flags: u32,
     mode: u32,
-    mut exec: fasync::Executor,
+    mut exec: Executor,
     mut server: impl DirectoryEntry,
     get_client: impl FnOnce(FileProxy) -> GetClientRes,
     executor: impl FnOnce(&mut FnMut(bool) -> ()),
@@ -93,13 +92,12 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
     let (client_proxy, server_end) =
         create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-    server.open(flags, mode, &mut iter::empty(), ServerEnd::new(server_end.into_channel()));
+    server.open(flags, mode, &mut iter::empty(), server_end.into_channel().into());
 
     let client = get_client(client_proxy);
 
-    // create a wrapper around a server using select!. this lets us poll the server while also
-    // completing the server future if it's is_terminated returns true, even though it's poll will
-    // never return Ready.
+    // This wrapper lets us poll the server while also completing the server future if it's
+    // is_terminated returns true, even though it's poll will never return Ready.
     let server_wrapper = async move {
         loop {
             select! {
@@ -109,7 +107,8 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
         }
     };
 
-    let future = join(server_wrapper, client);
+    let mut future = Box::pin(join(server_wrapper, client));
+
     // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
     // I can not do this:
     //
@@ -118,26 +117,25 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
     //       timeout.after_now(),
     //       || panic!("Test did not finish in {}ms", timeout.millis()));
 
-    // As our clients are async generators, we need to pin this future explicitly.
-    // All async generators are !Unpin by default.
-    pin_mut!(future);
-    let mut obj = LocalFutureObj::new(future);
     executor(&mut |should_complete| {
         if should_complete {
             assert_eq!(
-                exec.run_until_stalled(&mut obj),
+                exec.run_until_stalled(&mut future),
                 Poll::Ready(((), ())),
                 "future did not complete"
             );
         } else {
             assert_eq!(
-                exec.run_until_stalled(&mut obj),
+                exec.run_until_stalled(&mut future),
                 Poll::Pending,
                 "future was not expected to complete"
             );
         }
     });
 }
+
+/// Holds arguments for a [`DirectoryEntry::open()`] call, assuming empty path.
+pub type OpenRequestArgs = (u32, u32, ServerEnd<FileMarker>);
 
 /// Similar to [`run_server_client()`] but does not automatically connect the server and the client
 /// code.  Instead the client receives a sender end of an [`OpenRequestArgs`] queue, capable of
@@ -147,11 +145,11 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
 /// server is to `clone()` the existing one, which might be undesirable for a particular test.
 pub fn run_server_client_with_open_requests_channel<GetClientRes>(
     server: impl DirectoryEntry,
-    get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
+    get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs>) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let exec = fasync::Executor::new().expect("Executor creation failed");
+    let exec = Executor::new().expect("Executor creation failed");
 
     run_server_client_with_open_requests_channel_and_executor(
         exec,
@@ -179,15 +177,14 @@ pub fn run_server_client_with_open_requests_channel<GetClientRes>(
 ///
 /// See [`file::simple::mock_directory_with_one_file_and_two_connections`] for a usage example.
 pub fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
-    mut exec: fasync::Executor,
+    mut exec: Executor,
     mut server: impl DirectoryEntry,
-    get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
+    get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs>) -> GetClientRes,
     executor: impl FnOnce(&mut FnMut(bool) -> ()),
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let (open_requests_tx, open_requests_rx) =
-        mpsc::channel::<(u32, u32, ServerEnd<FileMarker>)>(0);
+    let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs>(0);
 
     let server_wrapper = async move {
         let mut open_requests_rx = open_requests_rx.fuse();
@@ -207,23 +204,18 @@ pub fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
     };
 
     let client = get_client(open_requests_tx);
+    let mut future = Box::pin(join(server_wrapper, client));
 
-    let future = join(server_wrapper, client);
-
-    // As our clients are async generators, we need to pin this future explicitly.
-    // All async generators are !Unpin by default.
-    pin_mut!(future);
-    let mut obj = LocalFutureObj::new(future);
     executor(&mut |should_complete| {
         if should_complete {
             assert_eq!(
-                exec.run_until_stalled(&mut obj),
+                exec.run_until_stalled(&mut future),
                 Poll::Ready(((), ())),
                 "future did not complete"
             );
         } else {
             assert_eq!(
-                exec.run_until_stalled(&mut obj),
+                exec.run_until_stalled(&mut future),
                 Poll::Pending,
                 "future was not expected to complete"
             );

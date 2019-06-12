@@ -434,6 +434,8 @@ where
     type Output = Void;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        // NOTE See `crate::directory::Simple::poll` for the discussion on why we need a loop here.
+
         loop {
             match self.connections.poll_next_unpin(cx) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {
@@ -454,9 +456,11 @@ where
                 }
                 // Even when we have no connections any more we still report Pending state, as we
                 // may get more connections open in the future.
-                Poll::Ready(None) | Poll::Pending => return Poll::Pending,
+                Poll::Ready(None) | Poll::Pending => break,
             }
         }
+
+        Poll::Pending
     }
 }
 
