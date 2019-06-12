@@ -46,6 +46,7 @@ __END_CDECLS
 #ifdef __cplusplus
 
 #include <memory>
+
 #include <lib/zx/channel.h>
 
 namespace trace {
@@ -111,7 +112,7 @@ public:
     explicit TracelinkProviderWithFdio(async_dispatcher_t* dispatcher,
                                        const char* name)
         : TracelinkProviderWithFdio(
-            tracelink_provider_create_with_name_fdio(dispatcher, name)) {}
+              tracelink_provider_create_with_name_fdio(dispatcher, name)) {}
 
 private:
     explicit TracelinkProviderWithFdio(tracelink_provider_t* provider)

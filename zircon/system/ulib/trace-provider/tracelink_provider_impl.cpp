@@ -278,7 +278,7 @@ tracelink_provider_t* tracelink_provider_create_synchronously_etc(
     if (out_manager_is_tracing_already)
         *out_manager_is_tracing_already = manager_is_tracing_already;
     return new trace::internal::TracelinkProviderImpl(dispatcher,
-                                                  std::move(provider_service));
+                                                      std::move(provider_service));
 }
 
 void tracelink_provider_destroy(tracelink_provider_t* provider) {

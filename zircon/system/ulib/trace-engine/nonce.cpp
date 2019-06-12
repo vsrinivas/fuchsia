@@ -4,7 +4,6 @@
 
 #include <trace-engine/instrumentation.h>
 
-
 #include <atomic>
 
 namespace {

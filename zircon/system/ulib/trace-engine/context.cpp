@@ -127,7 +127,7 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
                                               std::memory_order_relaxed);
         uint32_t wrapped_count = GetWrappedCount(offset_plus_counter);
         int buffer_number = GetBufferNumber(wrapped_count);
-        uint64_t buffer_offset  = GetBufferOffset(offset_plus_counter);
+        uint64_t buffer_offset = GetBufferOffset(offset_plus_counter);
         // Note: There's no worry of an overflow in the calcs here.
         if (likely(buffer_offset + num_bytes <= rolling_buffer_size_)) {
             uint8_t* ptr = rolling_buffer_start_[buffer_number] + buffer_offset;
@@ -458,7 +458,7 @@ size_t trace_context::RollingBytesAllocated() const {
         // Note: If we catch things at the point where the buffer has
         // filled, but before we swap buffers, then |buffer_offset| can point
         // beyond the end. This is ok, we don't promise anything better.
-        uint64_t buffer_offset  = GetBufferOffset(offset_plus_counter);
+        uint64_t buffer_offset = GetBufferOffset(offset_plus_counter);
         if (wrapped_count == 0)
             return buffer_offset;
         // We've wrapped at least once, so the other buffer's "full mark"
@@ -549,7 +549,7 @@ void trace_context::SwitchRollingBufferLocked(uint32_t prev_wrapped_count,
     // Do this last: After this tracing resumes in the new buffer.
     uint64_t new_offset_plus_counter = MakeOffsetPlusCounter(0, new_wrapped_count);
     rolling_buffer_current_.store(new_offset_plus_counter,
-                                     std::memory_order_relaxed);
+                                  std::memory_order_relaxed);
 }
 
 void trace_context::MarkTracingArtificiallyStopped() {

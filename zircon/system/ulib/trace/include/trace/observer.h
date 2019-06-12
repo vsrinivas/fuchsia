@@ -17,8 +17,8 @@
 
 #ifdef __cplusplus
 
-#include <lib/fit/function.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 
 namespace trace {

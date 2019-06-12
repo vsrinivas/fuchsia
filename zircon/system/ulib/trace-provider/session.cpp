@@ -11,8 +11,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <trace-provider/provider.h>
 #include <lib/zx/vmar.h>
+#include <trace-provider/provider.h>
 
 #include <utility>
 
@@ -201,7 +201,7 @@ bool Session::ReadFifoMessage() {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     if (packet.data16 != 0) {
         fprintf(stderr, "Session: data16 field non-zero from TraceManager: %u\n",
-               packet.data16);
+                packet.data16);
         return false;
     }
     switch (packet.request) {

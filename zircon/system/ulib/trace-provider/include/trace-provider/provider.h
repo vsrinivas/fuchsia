@@ -215,13 +215,13 @@ public:
     // Creates a trace provider.
     explicit TraceProviderWithFdio(async_dispatcher_t* dispatcher)
         : TraceProviderWithFdio(
-            trace_provider_create_with_fdio(dispatcher)) {}
+              trace_provider_create_with_fdio(dispatcher)) {}
 
     // Creates a trace provider.
     explicit TraceProviderWithFdio(async_dispatcher_t* dispatcher,
                                    const char* name)
         : TraceProviderWithFdio(
-            trace_provider_create_with_name_fdio(dispatcher, name)) {}
+              trace_provider_create_with_name_fdio(dispatcher, name)) {}
 
 private:
     explicit TraceProviderWithFdio(trace_provider_t* provider)
