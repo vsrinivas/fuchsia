@@ -61,7 +61,7 @@ template("spinel_target") {
   _spn_target_dir = get_path_info(invoker.spinel_target_config, "dir")
 
   _spn_target_includes_public = [ _spn_target_dir + "/spn_target.h" ]
-
+  _spn_target_gen_includes_dir = target_gen_dir
   _spn_target_gen_includes = [ "$target_gen_dir/spn_modules.inl" ]
 
   _spn_target_includes = [
@@ -204,6 +204,10 @@ template("spinel_target") {
     #
     # target is a source set
     #
+    _config_name = "${target_name}_public_config"
+    config(_config_name) {
+      include_dirs = [ _spn_target_gen_includes_dir ]
+    }
     source_set(target_name) {
       public = _spn_target_includes_public
       sources = _spn_target_sources
@@ -214,6 +218,7 @@ template("spinel_target") {
       public_deps = [
         ":gen_modules",
       ]
+      public_configs = [ ":${_config_name}" ]
       if (defined(invoker.public_deps)) {
         public_deps += invoker.public_deps
       }

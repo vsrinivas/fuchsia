@@ -13,24 +13,19 @@ import("${_hotsort_targets_dir}/hotsort_target.gni")
 
 hotsort_target("hotsort") {
   hotsort_target_name = "hs_amd_gcn3_u64"
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "2",
-    "-w", "64",
-    "-r", "8",
-    "-s", "32768",
-    "-S", "32768",
-    "-b", "16",
-    "-m", "1",
-    "-M", "1",
-    "-f", "1",
-    "-F", "1",
-    "-c", "1",
-    "-C", "1",
-    "-L", "1,0,1,0",
-    "-z",
-  ]
+  vendor = "amd"
+  type_dwords = 2
+  warp_lanes = 64
+  thread_regs = 8
+  smem_bs = 32768
+  smem_bc = 32768
+  warps_per_group = 16
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_lo = 1
+  merge_flip_hi = 1
+  merge_half_lo = 1
+  merge_half_hi = 1
+  glsl_bindings = "1,0,1,0"
+  autotune = true
 }

@@ -6,22 +6,6 @@ import("../../../../../gn/build_rules.gni")
 import("../../targets/hotsort_target.gni")
 
 #
-# Generate and build several HotSort targets.
-# See exact definitions below.
-#
-
-group("targets") {
-  public_deps = [
-    ":hs_amd_gcn3_u32",
-    ":hs_amd_gcn3_u64",
-    ":hs_intel_gen8_u32",
-    ":hs_intel_gen8_u64",
-    ":hs_nvidia_sm35_u32",
-    ":hs_nvidia_sm35_u64",
-  ]
-}
-
-#
 # hotsort_vk_bench: benchmark HotSort
 #
 
@@ -30,16 +14,18 @@ graphics_compute_vulkan_executable("hotsort_vk_bench") {
     "main.c",
     "sort.cpp",
   ]
-  include_dirs = [ "$target_gen_dir" ]
   deps = [
-    ":targets",
+    ":hs_amd_gcn3_u32",
+    ":hs_amd_gcn3_u64",
+    ":hs_intel_gen8_u32",
+    ":hs_intel_gen8_u64",
+    ":hs_nvidia_sm35_u32",
+    ":hs_nvidia_sm35_u64",
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
     "${graphics_compute_dir}/hotsort/platforms/vk",
   ]
 }
-
-_hotsort_targets_dir = "${graphics_compute_dir}/hotsort/platforms/vk/targets"
 
 #
 # configuration
@@ -48,26 +34,21 @@ _hotsort_targets_dir = "${graphics_compute_dir}/hotsort/platforms/vk/targets"
 #
 
 hotsort_target("hs_amd_gcn3_u32") {
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "1",
-    "-w", "64",
-    "-r", "16",
-    "-s", "32768",
-    "-S", "32768",
-    "-b", "16",
-    "-m", "1",
-    "-M", "1",
-    "-f", "1",
-    "-F", "1",
-    "-c", "1",
-    "-C", "1",
-    "-L", "0,1,0,0",
-    "-z",
-  ]
+  vendor = "amd"
+  type_dwords = 1
+  warp_lanes = 64
+  thread_regs = 16
+  smem_bs = 32768
+  smem_bc = 32768
+  warps_per_group = 16
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_lo = 1
+  merge_flip_hi = 1
+  merge_half_lo = 1
+  merge_half_hi = 1
+  glsl_bindings = "0,1,0,0"
+  autotune = true
 }
 
 #
@@ -77,26 +58,21 @@ hotsort_target("hs_amd_gcn3_u32") {
 #
 
 hotsort_target("hs_amd_gcn3_u64") {
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/amd/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "2",
-    "-w", "64",
-    "-r", "8",
-    "-s", "32768",
-    "-S", "32768",
-    "-b", "16",
-    "-m", "1",
-    "-M", "1",
-    "-f", "1",
-    "-F", "1",
-    "-c", "1",
-    "-C", "1",
-    "-L", "0,1,0,0",
-    "-z",
-  ]
+  vendor = "amd"
+  type_dwords = 2
+  warp_lanes = 64
+  thread_regs = 8
+  smem_bs = 32768
+  smem_bc = 32768
+  warps_per_group = 16
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_lo = 1
+  merge_flip_hi = 1
+  merge_half_lo = 1
+  merge_half_hi = 1
+  glsl_bindings = "0,1,0,0"
+  autotune = true
 }
 
 #
@@ -106,27 +82,22 @@ hotsort_target("hs_amd_gcn3_u64") {
 #
 
 hotsort_target("hs_intel_gen8_u32") {
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "1",
-    "-w", "16",
-    "-r", "8",
-    "-s", "21504",
-    "-S", "65536",
-    "-b", "16",
-    "-B", "48",
-    "-m", "1",
-    "-M", "1",
-    "-f", "0",
-    "-F", "0",
-    "-c", "0",
-    "-C", "0",
-    "-L", "0,1,0,0",
-    "-z",
-  ]
+  vendor = "intel"
+  type_dwords = 1
+  warp_lanes = 8
+  thread_regs = 8
+  smem_bs = 21504
+  smem_bc = 65536
+  warps_per_group = 16
+  warps_max = 48
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_lo = 0
+  merge_flip_hi = 0
+  merge_half_lo = 0
+  merge_half_hi = 0
+  glsl_bindings = "0,1,0,0"
+  autotune = true
 }
 
 #
@@ -136,27 +107,22 @@ hotsort_target("hs_intel_gen8_u32") {
 #
 
 hotsort_target("hs_intel_gen8_u64") {
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "2",
-    "-w", "8",
-    "-r", "16",
-    "-s", "21504",
-    "-S", "65536",
-    "-b", "16",
-    "-B", "48",
-    "-m", "1",
-    "-M", "1",
-    "-f", "1",
-    "-F", "1",
-    "-c", "1",
-    "-C", "1",
-    "-L", "0,1,0,0",
-    "-z",
-  ]
+  vendor = "intel"
+  type_dwords = 2
+  warp_lanes = 8
+  thread_regs = 16
+  smem_bs = 21504
+  smem_bc = 65536
+  warps_per_group = 16
+  warps_max = 48
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_lo = 1
+  merge_flip_hi = 1
+  merge_half_lo = 1
+  merge_half_hi = 1
+  glsl_bindings = "0,1,0,0"
+  autotune = true
 }
 
 #
@@ -167,28 +133,23 @@ hotsort_target("hs_intel_gen8_u64") {
 #
 
 hotsort_target("hs_nvidia_sm35_u32") {
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "1",
-    "-w", "32",
-    "-r", "16",
-    "-s", "32768",
-    "-S", "32768",
-    "-b", "16",
-    "-m", "1",
-    "-M", "1",
-    "-p", "1",
-    "-P", "1",
-    "-f", "0",
-    "-F", "0",
-    "-c", "0",
-    "-C", "0",
-    "-L", "0,1,0,0",
-    "-z",
-  ]
+  vendor = "nvidia"
+  type_dwords = 1
+  warp_lanes = 32
+  thread_regs = 16
+  smem_bs = 32768
+  smem_bc = 32768
+  warps_per_group = 16
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_warps = 1
+  merge_half_warps = 1
+  merge_flip_lo = 0
+  merge_flip_hi = 0
+  merge_half_lo = 0
+  merge_half_hi = 0
+  glsl_bindings = "0,1,0,0"
+  autotune = true
 }
 
 #
@@ -199,26 +160,21 @@ hotsort_target("hs_nvidia_sm35_u32") {
 #
 
 hotsort_target("hs_nvidia_sm35_u64") {
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/nvidia/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "2",
-    "-w", "32",
-    "-r", "8",
-    "-s", "32768",
-    "-S", "32768",
-    "-b", "16",
-    "-m", "1",
-    "-M", "1",
-    "-p", "1",
-    "-P", "1",
-    "-f", "0",
-    "-F", "0",
-    "-c", "0",
-    "-C", "0",
-    "-L", "0,1,0,0",
-    "-z",
-  ]
+  vendor = "nvidia"
+  type_dwords = 2
+  warp_lanes = 32
+  thread_regs = 8
+  smem_bs = 32768
+  smem_bc = 32768
+  warps_per_group = 16
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_warps = 1
+  merge_half_warps = 1
+  merge_flip_lo = 0
+  merge_flip_hi = 0
+  merge_half_lo = 0
+  merge_half_hi = 0
+  glsl_bindings = "0,1,0,0"
+  autotune = true
 }

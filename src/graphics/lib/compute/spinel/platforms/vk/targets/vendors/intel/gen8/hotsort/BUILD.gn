@@ -13,25 +13,20 @@ import("${_hotsort_targets_dir}/hotsort_target.gni")
 
 hotsort_target("hotsort") {
   hotsort_target_name = "hs_intel_gen8_u64"
-  hotsort_target_config_files =
-      [ "${_hotsort_targets_dir}/configs/intel/hs_glsl_macros_config.h" ]
-  hotsort_target_args = [
-    # "-v",
-    "-a", "glsl",
-    "-t", "2",
-    "-w", "8",
-    "-r", "16",
-    "-s", "21504",
-    "-S", "65536",
-    "-b", "16",
-    "-B", "48",
-    "-m", "1",
-    "-M", "1",
-    "-f", "1",
-    "-F", "1",
-    "-c", "1",
-    "-C", "1",
-    "-L", "1,0,1,0",
-    "-z",
-  ]
+  vendor = "intel"
+  type_dwords = 2
+  warp_lanes = 8
+  thread_regs = 16
+  smem_bs = 21504
+  smem_bc = 65536
+  warps_per_group = 16
+  warps_max = 48
+  warps_min = 1
+  warps_mod = 1
+  merge_flip_lo = 1
+  merge_flip_hi = 1
+  merge_half_lo = 1
+  merge_half_hi = 1
+  glsl_bindings = "1,0,1,0"
+  autotune = true
 }

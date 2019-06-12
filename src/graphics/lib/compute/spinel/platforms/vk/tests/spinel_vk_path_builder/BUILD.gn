@@ -14,24 +14,11 @@ graphics_compute_vulkan_executable("spinel_vk_path_builder") {
   include_dirs =
       [ "$root_gen_dir/src/graphics/lib/compute/spinel/platforms/vk" ]
   deps = [
-    ":targets",
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
-    "${graphics_compute_dir}/hotsort/platforms/vk",
     "${graphics_compute_dir}/spinel/platforms/vk",
-  ]
-}
-
-#
-# generate and build Spinel targets
-#
-group("targets") {
-  public_deps = [
     "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
-    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
     "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
     "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
   ]
 }
