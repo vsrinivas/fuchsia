@@ -301,8 +301,8 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
     // For userspace, we read back the annotations from the minidump
     // instead of passing them as argument like for kernel crashes because
     // the Crashpad handler augmented them with the modules' annotations.
-    if (UploadReport(local_report_id, /*annotations=*/nullptr,
-                     /*read_annotations_from_minidump=*/true) != ZX_OK) {
+    if (!UploadReport(local_report_id, /*annotations=*/nullptr,
+                      /*read_annotations_from_minidump=*/true)) {
       return fit::error();
     }
     return fit::ok();
@@ -350,8 +350,8 @@ fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
           return fit::error();
         }
 
-        if (UploadReport(local_report_id, &annotations,
-                         /*read_annotations_from_minidump=*/false) != ZX_OK) {
+        if (!UploadReport(local_report_id, &annotations,
+                          /*read_annotations_from_minidump=*/false)) {
           return fit::error();
         }
         return fit::ok();
@@ -397,15 +397,15 @@ fit::promise<void> CrashpadAgent::OnKernelPanicCrashLog(
           return fit::error();
         }
 
-        if (UploadReport(local_report_id, &annotations,
-                         /*read_annotations_from_minidump=*/false) != ZX_OK) {
+        if (!UploadReport(local_report_id, &annotations,
+                          /*read_annotations_from_minidump=*/false)) {
           return fit::error();
         }
         return fit::ok();
       });
 }
 
-zx_status_t CrashpadAgent::UploadReport(
+bool CrashpadAgent::UploadReport(
     const crashpad::UUID& local_report_id,
     const std::map<std::string, std::string>* annotations,
     bool read_annotations_from_minidump) {
@@ -419,7 +419,7 @@ zx_status_t CrashpadAgent::UploadReport(
     database_->SkipReportUpload(
         local_report_id,
         crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
-    return ZX_OK;
+    return true;
   }
 
   // Read local crash report as an "upload" report.
@@ -430,7 +430,7 @@ zx_status_t CrashpadAgent::UploadReport(
     FX_LOGS(ERROR) << "error loading local crash report, ID "
                    << local_report_id.ToString() << " (" << database_status
                    << ")";
-    return ZX_ERR_INTERNAL;
+    return false;
   }
 
   // Set annotations, either from argument or from minidump.
@@ -448,7 +448,7 @@ zx_status_t CrashpadAgent::UploadReport(
           crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
       FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
                      << local_report_id.ToString();
-      return ZX_ERR_INTERNAL;
+      return false;
     }
     minidump_annotations = crashpad::BreakpadHTTPFormParametersFromMinidump(
         &minidump_process_snapshot);
@@ -460,7 +460,7 @@ zx_status_t CrashpadAgent::UploadReport(
           crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
       FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
                      << local_report_id.ToString();
-      return ZX_ERR_INTERNAL;
+      return false;
     }
   }
 
@@ -491,14 +491,14 @@ zx_status_t CrashpadAgent::UploadReport(
         local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
     FX_LOGS(ERROR) << "error uploading local crash report, ID "
                    << local_report_id.ToString();
-    return ZX_ERR_INTERNAL;
+    return false;
   }
   database_->RecordUploadComplete(std::move(report), server_report_id);
   FX_LOGS(INFO) << "successfully uploaded crash report at "
                    "https://crash.corp.google.com/"
                 << server_report_id;
 
-  return ZX_OK;
+  return true;
 }
 
 void CrashpadAgent::PruneDatabase() {

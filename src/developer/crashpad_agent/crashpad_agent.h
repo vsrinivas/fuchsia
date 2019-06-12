@@ -16,7 +16,6 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <stdint.h>
-#include <zircon/status.h>
 
 #include <map>
 #include <string>
@@ -78,10 +77,9 @@ class CrashpadAgent : public Analyzer {
   //
   // Either |annotations| or |read_annotations_from_minidump| must be set, but
   // only one of them.
-  zx_status_t UploadReport(
-      const crashpad::UUID& local_report_id,
-      const std::map<std::string, std::string>* annotations,
-      bool read_annotations_from_minidump);
+  bool UploadReport(const crashpad::UUID& local_report_id,
+                    const std::map<std::string, std::string>* annotations,
+                    bool read_annotations_from_minidump);
 
   // Deletes oldest crash reports to keep |database_| under a maximum size read
   // from |config_|.
