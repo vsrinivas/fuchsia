@@ -401,10 +401,23 @@ func (ios *iostate) loopControl() error {
 			return err
 		}
 
+		// TODO(FIDL-524): For the 32 bits to 64 bits ordinal migration, we have
+		// to deal with a few moving pieces:
+		// - header.Ordinal is either uint32 or uint64. As a result, to be
+		//   source compatible, and soft transition third_party/go, we must have
+		//   explicit casting.
+		// - value wise, when header.Ordinal is a uint32 it contains the 32bits
+		//   ordinal; when header.Ordinal is a uint64 it contains the 32bits
+		//   ordinal in the high bits.
+		theCorrectOrdinal32 := uint32(header.Ordinal)
+		if theCorrectOrdinal32 == 0 {
+			theCorrectOrdinal32 = uint32(uint64(header.Ordinal) >> 32)
+		}
+
 		{
 			verbosity := syslog.DebugVerbosity
 			var method string
-			switch header.Ordinal {
+			switch theCorrectOrdinal32 {
 			case net.SocketControlBindOrdinal:
 				method = "Bind"
 			case net.SocketControlConnectOrdinal:
@@ -428,14 +441,14 @@ func (ios *iostate) loopControl() error {
 			case net.SocketControlIoctlOrdinal:
 				method = "Ioctl"
 			default:
-				panic(fmt.Sprintf("unknown ordinal %b", header.Ordinal))
+				panic(fmt.Sprintf("unknown ordinal %b", theCorrectOrdinal32))
 			}
 			if len(method) > 0 {
 				syslog.VLogTf(verbosity, method, "%p", ios)
 			}
 		}
 
-		p, err := stub.DispatchNew(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
+		p, err := stub.DispatchNew(theCorrectOrdinal32, msg[fidl.MessageHeaderSize:], nil)
 		if err != nil {
 			return err
 		}
