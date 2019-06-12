@@ -54,10 +54,12 @@ VK_TEST(DescriptorSetAllocatorTest, General) {
   EXPECT_EQ(fr3_2.first, fr1_2.first);
   EXPECT_TRUE(fr3_2.second);
 
-  // However, if the hash isn't requested for two consecutive frames, then
+  // However, if the hash isn't requested for four consecutive frames, then
   // requested again, then the resulting set's contents are invalid and must
   // be written.  In this case, there is no guarantee that the descriptor set
   // returned is the same one from 3 frames ago.
+  allocator.BeginFrame();
+  allocator.BeginFrame();
   allocator.BeginFrame();
   allocator.BeginFrame();
   std::pair<vk::DescriptorSet, bool> fr5_1 = allocator.Get(hash1);

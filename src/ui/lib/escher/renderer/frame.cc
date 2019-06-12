@@ -79,7 +79,6 @@ void Frame::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number",
                  frame_number_, "escher_frame_number", escher_frame_number_);
   FXL_DCHECK(state_ == State::kReadyToBegin);
-  static_cast<impl::FrameManager*>(owner())->IncrementNumOutstandingFrames();
   IssueCommandBuffer();
   AddTimestamp("start of frame");
 }
@@ -161,11 +160,6 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
             profiler->LogGpuQueryResults(escher_frame_number, timestamps);
           }
         }
-
-        // Notify the FrameManager that this frame is completely finished
-        // rendering.
-        static_cast<impl::FrameManager*>(this_frame->owner())
-            ->DecrementNumOutstandingFrames();
 
         // |this_frame| refs the frame until rendering is finished, and
         // therefore keeps alive everything in |keep_alive_|.

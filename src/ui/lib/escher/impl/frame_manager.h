@@ -26,18 +26,6 @@ class FrameManager : public ResourceManager {
                     bool enable_gpu_logging,
                     escher::CommandBuffer::Type requested_type);
 
-  // Return the number of outstanding frames: frames where BeginFrame() has been
-  // called, and either EndFrame() not yet called, or called but Vulkan has not
-  // yet finished rendering the frame.
-  //
-  // This value is not used internally within Escher; it is provided as a
-  // convenience to clients.
-  uint32_t num_outstanding_frames() const { return num_outstanding_frames_; }
-
-  // OK to be public, since FrameManager is not exposed by Escher.
-  void IncrementNumOutstandingFrames() { ++num_outstanding_frames_; }
-  void DecrementNumOutstandingFrames() { --num_outstanding_frames_; }
-
  private:
   // |Owner::OnReceiveOwnable()|
   void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
@@ -48,7 +36,6 @@ class FrameManager : public ResourceManager {
 
   std::queue<std::unique_ptr<BlockAllocator>> block_allocators_;
 
-  uint32_t num_outstanding_frames_ = 0;
   UniformBufferPool uniform_buffer_pool_;
 
   // The name of the default vthread for GPU trace events. This should be a

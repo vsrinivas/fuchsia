@@ -8,12 +8,12 @@
 #include <chrono>
 #include <thread>
 
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/util/stopwatch.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
-#include "src/lib/fxl/logging.h"
 
 static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
@@ -69,11 +69,21 @@ void Demo::ToggleTracing() {
 #endif
 }
 
-// Demo throttles the number of frames in flight, rather than relying on the
-// Vulkan swapchain to do it.
-static bool IsAtMaxOutstandingFrames(escher::Escher* escher) {
+void Demo::OnFrameCreated() {
+  FXL_DCHECK(!IsAtMaxOutstandingFrames());
+  ++outstanding_frames_;
+}
+
+void Demo::OnFrameDestroyed() {
+  FXL_DCHECK(outstanding_frames_ > 0);
+  --outstanding_frames_;
+  FXL_DCHECK(!IsAtMaxOutstandingFrames());
+}
+
+bool Demo::IsAtMaxOutstandingFrames() {
   constexpr uint32_t kMaxOutstandingFrames = 3;
-  return escher->GetNumOutstandingFrames() >= kMaxOutstandingFrames;
+  FXL_DCHECK(outstanding_frames_ <= kMaxOutstandingFrames);
+  return outstanding_frames_ >= kMaxOutstandingFrames;
 }
 
 bool Demo::MaybeDrawFrame() {
@@ -93,10 +103,10 @@ bool Demo::MaybeDrawFrame() {
     escher()->Cleanup();
   }
 
-  if (IsAtMaxOutstandingFrames(escher())) {
+  if (IsAtMaxOutstandingFrames()) {
     // Try clean up; maybe a frame is actually already finished.
     escher()->Cleanup();
-    if (IsAtMaxOutstandingFrames(escher())) {
+    if (IsAtMaxOutstandingFrames()) {
       // Still too many frames in flight.  Try again later.
       return false;
     }
@@ -106,12 +116,13 @@ bool Demo::MaybeDrawFrame() {
     TRACE_DURATION("gfx", "escher::Demo::MaybeDrawFrame (drawing)");
     auto frame =
         escher()->NewFrame(name(), ++frame_count_, enable_gpu_logging_);
+    OnFrameCreated();
 
     swapchain_helper_.DrawFrame(
         [&, this](const escher::ImagePtr& output_image,
                   const escher::SemaphorePtr& render_finished) {
           this->DrawFrame(frame, output_image);
-          frame->EndFrame(render_finished, nullptr);
+          frame->EndFrame(render_finished, [this]() { OnFrameDestroyed(); });
         });
   }
   escher()->Cleanup();
@@ -145,8 +156,9 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
       semaphores[i] = escher::Semaphore::New(vulkan_context_.device);
 
       auto frame = escher()->NewFrame(kTraceLiteral, ++frame_number);
+      OnFrameCreated();
       this->DrawFrame(frame, images[i]);
-      frame->EndFrame(semaphores[i], nullptr);
+      frame->EndFrame(semaphores[i], [this]() { OnFrameDestroyed(); });
     }
 
     // Prepare all semaphores to be waited-upon, and wait for the throwaway
@@ -160,7 +172,7 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
   stopwatch.Start();
 
   for (size_t current_frame = 0; current_frame < frame_count; ++current_frame) {
-    while (IsAtMaxOutstandingFrames(escher())) {
+    while (IsAtMaxOutstandingFrames()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       escher()->Cleanup();
     }
@@ -169,10 +181,11 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
 
     auto frame = escher()->NewFrame(kTraceLiteral, ++frame_number,
                                     current_frame == frame_count - 1);
+    OnFrameCreated();
     frame->command_buffer()->AddWaitSemaphore(
         semaphores[image_index], vk::PipelineStageFlagBits::eBottomOfPipe);
     this->DrawFrame(frame, images[image_index]);
-    frame->EndFrame(semaphores[image_index], nullptr);
+    frame->EndFrame(semaphores[image_index], [this]() { OnFrameDestroyed(); });
 
     escher()->Cleanup();
   }

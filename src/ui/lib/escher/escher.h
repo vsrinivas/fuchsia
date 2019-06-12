@@ -57,9 +57,6 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
                     bool enable_gpu_logging = false,
                     escher::CommandBuffer::Type requested_type =
                         escher::CommandBuffer::Type::kGraphics);
-  // Return the number of frames that have been returned by NewFrame() and which
-  // have not finished rendering (after having EndFrame() invoked upon them).
-  uint32_t GetNumOutstandingFrames() const;
 
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|

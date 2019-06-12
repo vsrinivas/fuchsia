@@ -295,10 +295,6 @@ uint64_t Escher::GetNumGpuBytesAllocated() {
   return gpu_allocator()->GetTotalBytesAllocated();
 }
 
-uint32_t Escher::GetNumOutstandingFrames() const {
-  return frame_manager_->num_outstanding_frames();
-}
-
 impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
     const impl::DescriptorSetLayout& layout,
     const SamplerPtr& immutable_sampler) {

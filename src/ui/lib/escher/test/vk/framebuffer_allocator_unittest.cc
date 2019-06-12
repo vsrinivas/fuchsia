@@ -150,8 +150,7 @@ VK_TEST(FramebufferAllocator, CacheReclamation) {
 
   // ... in fact, Framebuffers should not be evicted from the cache as long as
   // the number of frames since last use is < kFramesUntilEviction.
-  constexpr uint32_t kNotEnoughFramesForEviction =
-      impl::FramebufferAllocator::kFramesUntilEviction;
+  constexpr uint32_t kNotEnoughFramesForEviction = 4;
   for (uint32_t i = 0; i < kNotEnoughFramesForEviction; ++i) {
     allocator.BeginFrame();
   }

@@ -89,7 +89,10 @@ class DescriptorSetAllocator {
     SamplerPtr immutable_sampler_;
   };
 
-  HashCache<CacheItem, PoolPolicy, 2> cache_;
+  // If this template is changed to have a non-default FramesUntilEviction
+  // value, be sure to change all other HashCaches used by the Frame class
+  // (e.g., FramebufferAllocator).
+  HashCache<CacheItem, PoolPolicy> cache_;
 };
 
 }  // namespace impl

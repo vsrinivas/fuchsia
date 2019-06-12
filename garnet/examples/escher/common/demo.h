@@ -68,9 +68,14 @@ class Demo {
                              vk::Format framebuffer_format, size_t frame_count);
 
  private:
+  void OnFrameCreated();
+  void OnFrameDestroyed();
+  bool IsAtMaxOutstandingFrames();
+
   DemoHarness* const harness_;
   const char* name_;
   uint64_t frame_count_ = 0;
+  uint64_t outstanding_frames_ = 0;
   escher::VulkanContext vulkan_context_;
   escher::Escher escher_;
   escher::VulkanSwapchainHelper swapchain_helper_;
