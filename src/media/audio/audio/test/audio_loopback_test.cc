@@ -17,6 +17,23 @@ namespace media::audio::test {
 //
 // Base Class for testing simple playback and capture with loopback.
 class AudioLoopbackTest : public media::audio::test::AudioTestBase {
+ public:
+  static void SetAudioSync(fuchsia::media::AudioSyncPtr audio_sync) {
+    AudioLoopbackTest::audio_sync_ = std::move(audio_sync);
+  }
+
+  static void SetVirtualAudioControlSync(
+      fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync) {
+    AudioLoopbackTest::virtual_audio_control_sync_ =
+        std::move(virtual_audio_control_sync);
+  }
+
+  static void SetVirtualAudioOutputSync(
+      fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync) {
+    AudioLoopbackTest::virtual_audio_output_sync_ =
+        std::move(virtual_audio_output_sync);
+  }
+
  protected:
   static constexpr int32_t kSampleRate = 8000;
   static constexpr int kChannelCount = 1;
@@ -34,11 +51,8 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
   void CleanUpRenderer(unsigned int index);
 
   void SetUpCapturer(int16_t data);
-  void CleanUpCapturer();
 
   void TestLoopback(unsigned int num_renderers);
-
-  fuchsia::media::AudioPtr audio_;
 
   fuchsia::media::AudioRendererPtr audio_renderer_[kMaxNumRenderers];
   fzl::VmoMapper payload_buffer_[kMaxNumRenderers];
@@ -50,9 +64,20 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
   size_t capture_sample_size_;
   size_t capture_frames_;
   size_t capture_size_;
+
+  fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
+  uint64_t virtual_audio_output_token_;
+
+  static fuchsia::media::AudioSyncPtr audio_sync_;
+  static fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
+  static fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync_;
 };
 
-// std::unique_ptr<sys::ComponentContext> AudioLoopbackTest::startup_context_;
+fuchsia::media::AudioSyncPtr AudioLoopbackTest::audio_sync_;
+fuchsia::virtualaudio::ControlSyncPtr
+    AudioLoopbackTest::virtual_audio_control_sync_;
+fuchsia::virtualaudio::OutputSyncPtr
+    AudioLoopbackTest::virtual_audio_output_sync_;
 
 // The AudioLoopbackEnvironment class allows us to make configuration changes
 // before any test case begins, and after all test cases complete.
@@ -75,45 +100,23 @@ class AudioLoopbackEnvironment : public testing::Environment {
     // This is an unchanging input for the entire component; get it once here.
     auto startup_context = sys::ComponentContext::Create();
 
-    // We need at least one active audio output, for loopback capture to work.
-    // So use this Control to enable virtualaudio and add a virtual audio output
-    // that will exist for the entirety of this binary's test cases. We will
-    // remove it and disable virtual_audio immediately afterward.
-    startup_context->svc()->Connect(virtual_audio_control_sync_.NewRequest());
-    zx_status_t status = virtual_audio_control_sync_->Enable();
-    ASSERT_EQ(status, ZX_OK) << "Failed to enable virtualaudio";
+    // Only connect to services we can use synchronously once per suite.
+    fuchsia::media::AudioSyncPtr audio_sync;
+    startup_context->svc()->Connect(audio_sync.NewRequest());
+    ASSERT_TRUE(audio_sync.is_bound());
+    AudioLoopbackTest::SetAudioSync(std::move(audio_sync));
 
-    // Create an output device using default settings, save it while tests run.
-    startup_context->svc()->Connect(virtual_audio_output_sync_.NewRequest());
-    status = virtual_audio_output_sync_->Add();
-    ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
+    fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync;
+    startup_context->svc()->Connect(virtual_audio_control_sync.NewRequest());
+    ASSERT_TRUE(virtual_audio_control_sync.is_bound());
+    AudioLoopbackTest::SetVirtualAudioControlSync(
+        std::move(virtual_audio_control_sync));
 
-    // Ensure that the output is active before we proceed to running tests.
-    uint32_t num_inputs, num_outputs = 0, num_tries = 0;
-    do {
-      status =
-          virtual_audio_control_sync_->GetNumDevices(&num_inputs, &num_outputs);
-      ASSERT_EQ(status, ZX_OK) << "GetNumDevices failed";
-
-      ++num_tries;
-    } while (num_outputs == 0 && num_tries < 100);
-
-    ASSERT_GT(num_outputs, 0u)
-        << "Timed out trying to add virtual audio output";
-
-    // Synchronously calling a FIDL method with a callback guarantees that the
-    // service is loaded and running before the sync method itself returns.
-    //
-    // This is not the case for sync calls _without_ callback, nor async calls,
-    // because of pipelining inherent in FIDL's design.
-    startup_context->svc()->Connect(audio_dev_enum_sync_.NewRequest());
-
-    // Ensure that the audio_core binary is resident.
-    uint64_t default_output;
-    bool connected_to_svc = (audio_dev_enum_sync_->GetDefaultOutputDevice(
-                                 &default_output) == ZX_OK);
-
-    ASSERT_TRUE(connected_to_svc) << "Failed in GetDefaultOutputDevice";
+    fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync;
+    startup_context->svc()->Connect(virtual_audio_output_sync.NewRequest());
+    ASSERT_TRUE(virtual_audio_output_sync.is_bound());
+    AudioLoopbackTest::SetVirtualAudioOutputSync(
+        std::move(virtual_audio_output_sync));
 
     AudioTestBase::SetStartupContext(std::move(startup_context));
   }
@@ -121,45 +124,13 @@ class AudioLoopbackEnvironment : public testing::Environment {
   // Do any last cleanup, after all test suites in this binary have completed.
   // Note: if --gtest_repeat is used, this is called at end of EVERY repeat.
   //
-  // Ensure that our virtual device is gone when our test bin finishes a run.
-  void TearDown() override {
-    // Remove our virtual audio output device
-    zx_status_t status = virtual_audio_output_sync_->Remove();
-    ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
-
-    // And ensure that virtualaudio is disabled, by the time we leave.
-    status = virtual_audio_control_sync_->Disable();
-    ASSERT_EQ(status, ZX_OK) << "Failed to disable virtualaudio";
-
-    // Wait for GetNumDevices(output) to equal zero before proceeding.
-    uint32_t num_inputs = 1, num_outputs = 1, num_tries = 0;
-    do {
-      status =
-          virtual_audio_control_sync_->GetNumDevices(&num_inputs, &num_outputs);
-      ASSERT_EQ(status, ZX_OK) << "GetNumDevices failed";
-
-      ++num_tries;
-    } while ((num_outputs != 0 || num_inputs != 0) && num_tries < 100);
-
-    ASSERT_EQ(num_outputs, 0u) << "Timed out while disabling virtualaudio";
-    ASSERT_EQ(num_inputs, 0u) << "Timed out while disabling virtualaudio";
-
-    virtual_audio_output_sync_.Unbind();
-    virtual_audio_control_sync_.Unbind();
-    audio_dev_enum_sync_.Unbind();
-
-    testing::Environment::TearDown();
-  }
+  // void TearDown() override {}
 
   ///// If needed, this (overriding) function would also need to be public.
   //
   // Unlike TearDown, this is called once after all repetition has concluded.
   //
   //    ~AudioLoopbackEnvironment() override {}
-
-  fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
-  fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync_;
-  fuchsia::media::AudioDeviceEnumeratorSyncPtr audio_dev_enum_sync_;
 };
 
 // AudioLoopbackTest implementation
@@ -167,22 +138,117 @@ class AudioLoopbackEnvironment : public testing::Environment {
 void AudioLoopbackTest::SetUp() {
   AudioTestBase::SetUp();
 
-  startup_context_->svc()->Connect(audio_.NewRequest());
-  ASSERT_TRUE(audio_.is_bound());
+  std::string dev_uuid_read = "4a41494a4a41494a4a41494a4a41494a";
+  std::array<uint8_t, 16> dev_uuid{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41,
+                                   0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a,
+                                   0x4a, 0x41, 0x49, 0x4a};
 
-  audio_.set_error_handler(ErrorHandler());
-  audio_->SetSystemGain(0.0f);
-  audio_->SetSystemMute(false);
+  // Connect to audio device enumerator to handle device topology changes during
+  // test execution.
+  audio_dev_enum_.events().OnDeviceAdded =
+      [this, dev_uuid_read](fuchsia::media::AudioDeviceInfo dev) {
+        if (dev.unique_id == dev_uuid_read) {
+          virtual_audio_output_token_ = dev.token_id;
+        }
+      };
+
+  uint64_t default_dev = 0;
+  audio_dev_enum_.events().OnDefaultDeviceChanged =
+      [&default_dev](uint64_t old_default_token, uint64_t new_default_token) {
+        default_dev = new_default_token;
+      };
+
+  audio_dev_enum_.set_error_handler(ErrorHandler());
+
+  startup_context_->svc()->Connect(audio_dev_enum_.NewRequest());
+  ASSERT_TRUE(audio_dev_enum_.is_bound());
+  // We need at least one active audio output, for loopback capture to work.
+  // So use this Control to enable virtualaudio and add a virtual audio
+  // output that will exist for the entirety of this binary's test cases. We
+  // will remove it and disable virtual_audio immediately afterward.
+  zx_status_t status = virtual_audio_control_sync_->Enable();
+  ASSERT_EQ(status, ZX_OK) << "Failed to enable virtualaudio";
+
+  // Ensure that that our connection to the device enumerator has completed
+  // enumerating the audio devices if any exist before we add ours.  This serves
+  // as a synchronization point to make sure audio_core has our OnDeviceAdded
+  // and OnDefaultDeviceChanged callbacks registered before we trigger the
+  // device add.  Without this call, the add for the virtual output may be
+  // picked up and processed in the device_manager in audio_core before it's
+  // added our listener for events.
+  audio_dev_enum_->GetDevices(CompletionCallback(
+      [](std::vector<fuchsia::media::AudioDeviceInfo> devices) {}));
+  ExpectCallback();
+
+  // Create an output device using default settings, save it while tests run.
+  status = virtual_audio_output_sync_->SetUniqueId(dev_uuid);
+  ASSERT_EQ(status, ZX_OK) << "Failed to set virtual audio output uuid";
+
+  status = virtual_audio_output_sync_->Add();
+  ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
+
+  // Wait for OnDeviceAdded and OnDefaultDeviceChanged callback.  These will
+  // both need to have happened for the new device to be used for the test.
+  ExpectCondition([this, &default_dev]() {
+    return virtual_audio_output_token_ != 0 &&
+           default_dev == virtual_audio_output_token_;
+  });
+
+  ASSERT_EQ(virtual_audio_output_token_, default_dev)
+      << "Timed out waiting for audio_core to make the virtual audio output "
+         "the default.";
+
+  audio_dev_enum_.events().OnDeviceAdded =
+      CompletionCallback([](fuchsia::media::AudioDeviceInfo unused) {
+        ASSERT_TRUE(false) << "Audio device added while test was running";
+      });
+
+  audio_dev_enum_.events().OnDeviceRemoved =
+      CompletionCallback([this](uint64_t token) {
+        ASSERT_FALSE(token == virtual_audio_output_token_)
+            << "Audio device removed while test was running";
+      });
+
+  audio_dev_enum_.events().OnDefaultDeviceChanged = CompletionCallback(
+      [](uint64_t old_default_token, uint64_t new_default_token) {
+        ASSERT_TRUE(false) << "Default route changed while test was running.";
+      });
+
+  audio_sync_->SetSystemGain(0.0f);
+  audio_sync_->SetSystemMute(false);
 }
 
 void AudioLoopbackTest::TearDown() {
-  EXPECT_TRUE(audio_.is_bound());
+  bool removed = false;
+  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback(
+      [&removed, want_token = virtual_audio_output_token_](uint64_t token) {
+        if (token == want_token) {
+          removed = true;
+        }
+      });
+  audio_dev_enum_.events().OnDeviceAdded = nullptr;
+  audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
+
+  // Remove our virtual audio output device
+  if (virtual_audio_output_sync_.is_bound()) {
+    zx_status_t status = virtual_audio_output_sync_->Remove();
+    ASSERT_EQ(status, ZX_OK) << "Failed to remove virtual audio output";
+  }
+
+  ExpectCondition([&removed]() { return removed; });
+
+  // And ensure that virtualaudio is disabled, by the time we leave.
+  if (virtual_audio_control_sync_.is_bound()) {
+    zx_status_t status = virtual_audio_control_sync_->Disable();
+    ASSERT_EQ(status, ZX_OK) << "Failed to disable virtualaudio";
+  }
+
+  EXPECT_TRUE(audio_sync_.is_bound());
 
   audio_capturer_.Unbind();
   for (auto& renderer : audio_renderer_) {
     renderer.Unbind();
   }
-  audio_.Unbind();
 
   AudioTestBase::TearDown();
 }
@@ -199,7 +265,7 @@ void AudioLoopbackTest::SetUpRenderer(unsigned int index, int16_t data) {
   int16_t* buffer;
   zx::vmo payload_vmo;
 
-  audio_->CreateAudioRenderer(audio_renderer_[index].NewRequest());
+  audio_sync_->CreateAudioRenderer(audio_renderer_[index].NewRequest());
   ASSERT_TRUE(audio_renderer_[index].is_bound());
 
   audio_renderer_[index].set_error_handler(ErrorHandler());
@@ -250,7 +316,7 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
   int16_t* buffer;
   zx::vmo capture_vmo;
 
-  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), true);
+  audio_sync_->CreateAudioCapturer(audio_capturer_.NewRequest(), true);
   ASSERT_TRUE(audio_capturer_.is_bound());
 
   audio_capturer_.set_error_handler(ErrorHandler());
@@ -280,14 +346,6 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
   audio_capturer_->AddPayloadBuffer(0, std::move(capture_vmo));
 
   // All audio capturers, by default, are set to 0 dB unity gain (passthru).
-}
-
-// CleanUpCapturer
-//
-void AudioLoopbackTest::CleanUpCapturer() {
-  if (audio_capturer_.is_bound()) {
-    audio_capturer_->DiscardAllPacketsNoReply();
-  }
 }
 
 void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
@@ -380,7 +438,6 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   for (auto renderer_num = 0u; renderer_num < num_renderers; ++renderer_num) {
     CleanUpRenderer(renderer_num);
   }
-  CleanUpCapturer();
 }
 
 // Test Cases
