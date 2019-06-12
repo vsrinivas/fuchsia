@@ -9,6 +9,8 @@
 #ifndef ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_BUFFER_INTERNAL_H_
 #define ZIRCON_SYSTEM_ULIB_TRACE_ENGINE_BUFFER_INTERNAL_H_
 
+#include <zircon/compiler.h>
+
 #include <assert.h>
 #include <stdint.h>
 #include <trace-engine/context.h>
@@ -126,13 +128,13 @@ static_assert(sizeof(trace_buffer_header) == 128, "");
 } // namespace internal
 } // namespace trace
 
+__BEGIN_CDECLS
+
 // Update the buffer header and snapshot a copy of it.
 // This is only intended to be used for testing purposes.
 //
 // This function is not thread-safe relative to the collected data, and
 // assumes tracing is stopped or at least paused.
-
-__BEGIN_CDECLS
 
 void trace_context_snapshot_buffer_header_internal(
     trace_prolonged_context_t* context,
