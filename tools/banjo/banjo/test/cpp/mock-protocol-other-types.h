@@ -185,12 +185,12 @@ public:
 
     virtual void OtherTypesAsyncStruct(const this_is_astruct_t* s, other_types_async_struct_callback callback, void* cookie) {
         std::tuple<this_is_astruct_t> ret = mock_struct_.Call(*s);
-        callback(cookie, std::get<0>(ret));
+        callback(cookie, &std::get<0>(ret));
     }
 
     virtual void OtherTypesAsyncUnion(const this_is_aunion_t* u, other_types_async_union_callback callback, void* cookie) {
         std::tuple<this_is_aunion_t> ret = mock_union_.Call(*u);
-        callback(cookie, std::get<0>(ret));
+        callback(cookie, &std::get<0>(ret));
     }
 
     virtual void OtherTypesAsyncEnum(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie) {
@@ -375,12 +375,12 @@ public:
 
     virtual void OtherTypesAsyncReferenceStruct(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
         std::tuple<this_is_astruct_t> ret = mock_struct_.Call(*s);
-        callback(cookie, std::get<0>(ret));
+        callback(cookie, &std::get<0>(ret));
     }
 
     virtual void OtherTypesAsyncReferenceUnion(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
         std::tuple<this_is_aunion_t> ret = mock_union_.Call(*u);
-        callback(cookie, std::get<0>(ret));
+        callback(cookie, &std::get<0>(ret));
     }
 
     virtual void OtherTypesAsyncReferenceString(const char* s, other_types_async_reference_string_callback callback, void* cookie) {

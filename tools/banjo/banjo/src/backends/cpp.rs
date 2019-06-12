@@ -1063,17 +1063,33 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         Ok(accum)
     }
 
-    fn codegen_mock_protocol_async_out_args(&self, m: &ast::Method) -> Result<String, Error> {
+    fn codegen_mock_protocol_async_out_args(
+        &self,
+        m: &ast::Method,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
         let mut out_args = Vec::new();
         out_args.push("cookie".to_string());
 
         for i in 0..m.out_params.len() {
-            match m.out_params[i].1 {
+            match &m.out_params[i].1 {
                 ast::Ty::Handle { .. } => out_args.push(format!("std::move(std::get<{}>(ret))", i)),
                 ast::Ty::Str { .. } => out_args.push(format!("std::get<{}>(ret).c_str()", i)),
                 ast::Ty::Vector { .. } => {
                     out_args.push(format!("std::get<{}>(ret).data()", i));
                     out_args.push(format!("std::get<{}>(ret).size()", i));
+                }
+                ast::Ty::Identifier { id, .. } => {
+                    if id.is_base_type() {
+                        out_args.push(format!("std::get<{}>(ret)", i))
+                    } else {
+                        match ast.id_to_type(&id) {
+                            ast::Ty::Struct | ast::Ty::Union => {
+                                out_args.push(format!("&std::get<{}>(ret)", i))
+                            }
+                            _ => out_args.push(format!("std::get<{}>(ret)", i)),
+                        }
+                    }
                 }
                 _ => out_args.push(format!("std::get<{}>(ret)", i)),
             }
@@ -1160,7 +1176,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 );
 
                 if m.attributes.has_attribute("Async") {
-                    accum.push_str(self.codegen_mock_protocol_async_out_args(&m)?.as_str());
+                    accum.push_str(self.codegen_mock_protocol_async_out_args(&m, ast)?.as_str());
                 } else {
                     accum.push_str(self.codegen_mock_protocol_out_args(&m, ast)?.as_str());
                 }
