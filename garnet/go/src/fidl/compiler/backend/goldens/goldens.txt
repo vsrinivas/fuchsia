@@ -9,6 +9,17 @@ bits.test.test.fidl.json.overnet_internal.h.golden
 bits.test.test.fidl.json.rs.golden
 bits.test.test.fidl.json.syz.txt.golden
 bits.test.test.fidl.json_test_base.h.golden
+consts.test.fidl.json
+consts.test.fidl.json.cc.golden
+consts.test.fidl.json.go.golden
+consts.test.fidl.json.h.golden
+consts.test.fidl.json.llcpp.cc.golden
+consts.test.fidl.json.llcpp.h.golden
+consts.test.fidl.json.overnet_internal.cc.golden
+consts.test.fidl.json.overnet_internal.h.golden
+consts.test.fidl.json.rs.golden
+consts.test.fidl.json.syz.txt.golden
+consts.test.fidl.json_test_base.h.golden
 doc_comments.test.fidl.json
 doc_comments.test.fidl.json.cc.golden
 doc_comments.test.fidl.json.go.golden

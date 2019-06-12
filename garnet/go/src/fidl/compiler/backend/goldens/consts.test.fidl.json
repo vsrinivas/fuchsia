@@ -1,0 +1,216 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [
+    {
+      "name": "test.name/ENABLED_FLAG",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 3,
+        "column": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "bool"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "true",
+          "value": "true",
+          "expression": "true"
+        }
+      }
+    },
+    {
+      "name": "test.name/OFFSET",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 4,
+        "column": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int8"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "-33",
+          "expression": "-33"
+        }
+      }
+    },
+    {
+      "name": "test.name/ANSWER",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 5,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint16"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "42",
+          "expression": "42"
+        }
+      }
+    },
+    {
+      "name": "test.name/ANSWER_IN_BINARY",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 6,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint16"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "42",
+          "expression": "0b101010"
+        }
+      }
+    },
+    {
+      "name": "test.name/POPULATION_USA_2018",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 7,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "330000000",
+          "expression": "330000000"
+        }
+      }
+    },
+    {
+      "name": "test.name/DIAMOND",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 8,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "1746410393481133080",
+          "expression": "0x183c7effff7e3c18"
+        }
+      }
+    },
+    {
+      "name": "test.name/FUCHSIA",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 9,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "4054509061583223046",
+          "expression": "4054509061583223046"
+        }
+      }
+    },
+    {
+      "name": "test.name/MIN_TEMP",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 12,
+        "column": 15
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "-273.15",
+          "expression": "-273.15"
+        }
+      }
+    },
+    {
+      "name": "test.name/CONVERSION_FACTOR",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/consts.test.fidl",
+        "line": 13,
+        "column": 15
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float64"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "1.41421",
+          "expression": "1.41421358"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "test.name/POPULATION_USA_2018",
+    "test.name/OFFSET",
+    "test.name/MIN_TEMP",
+    "test.name/FUCHSIA",
+    "test.name/ENABLED_FLAG",
+    "test.name/DIAMOND",
+    "test.name/CONVERSION_FACTOR",
+    "test.name/ANSWER_IN_BINARY",
+    "test.name/ANSWER"
+  ],
+  "declarations": {
+    "test.name/ENABLED_FLAG": "const",
+    "test.name/OFFSET": "const",
+    "test.name/ANSWER": "const",
+    "test.name/ANSWER_IN_BINARY": "const",
+    "test.name/POPULATION_USA_2018": "const",
+    "test.name/DIAMOND": "const",
+    "test.name/FUCHSIA": "const",
+    "test.name/MIN_TEMP": "const",
+    "test.name/CONVERSION_FACTOR": "const"
+  }
+}
