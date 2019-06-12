@@ -266,47 +266,52 @@ fit::promise<void> CrashpadAgent::OnNativeException(zx::process process,
                 << process_name;
 
   // Prepare annotations and attachments.
-  return GetFeedbackData().then([this, process = std::move(process),
-                                 thread = std::move(thread), process_name](
-                                    fit::result<Data>& result) mutable
-                                -> fit::result<void> {
-    Data feedback_data;
-    if (result.is_ok()) {
-      feedback_data = result.take_value();
-    }
-    const std::map<std::string, std::string> annotations =
-        MakeDefaultAnnotations(feedback_data, process_name);
-    const std::map<std::string, fuchsia::mem::Buffer> attachments =
-        MakeAttachments(&feedback_data);
+  return GetFeedbackData().then(
+      [this, process = std::move(process), thread = std::move(thread),
+       process_name](fit::result<Data>& result) mutable -> fit::result<void> {
+        Data feedback_data;
+        if (result.is_ok()) {
+          feedback_data = result.take_value();
+        }
+        const std::map<std::string, std::string> annotations =
+            MakeDefaultAnnotations(feedback_data, process_name);
+        const std::map<std::string, fuchsia::mem::Buffer> attachments =
+            MakeAttachments(&feedback_data);
 
-    // Set minidump and create local crash report.
-    //   * The annotations will be stored in the minidump of the report
-    //     and augmented with modules' annotations.
-    //   * The attachments will be stored in the report.
-    // We don't pass an upload_thread so we can do the upload ourselves
-    // synchronously.
-    crashpad::CrashReportExceptionHandler exception_handler(
-        database_.get(), /*upload_thread=*/nullptr, &annotations, &attachments,
-        /*user_stream_data_sources=*/nullptr);
-    crashpad::UUID local_report_id;
-    if (!exception_handler.HandleException(process, thread, &local_report_id)) {
-      database_->SkipReportUpload(
-          local_report_id,
-          crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
-      FX_LOGS(ERROR) << "error handling exception for local crash report, ID "
-                     << local_report_id.ToString();
-      return fit::error();
-    }
+        // Set minidump and create local crash report.
+        //   * The annotations will be stored in the minidump of the report
+        //     and augmented with modules' annotations.
+        //   * The attachments will be stored in the report.
+        // We don't pass an upload_thread so we can do the upload ourselves
+        // synchronously.
+        crashpad::CrashReportExceptionHandler exception_handler(
+            database_.get(), /*upload_thread=*/nullptr, &annotations,
+            &attachments,
+            /*user_stream_data_sources=*/nullptr);
+        crashpad::UUID local_report_id;
+        if (!exception_handler.HandleException(process, thread,
+                                               &local_report_id)) {
+          // TODO(DX-1659): remove bogus call (no report has been created so
+          // attempting to skip its upload results in a failure) once we can
+          // test this code path.
+          database_->SkipReportUpload(
+              local_report_id,
+              crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
+          // TODO(DX-1654): attempt to generate a crash report without a
+          // minidump instead of just bailing.
+          FX_LOGS(ERROR) << "error writing local crash report";
+          return fit::error();
+        }
 
-    // For userspace, we read back the annotations from the minidump
-    // instead of passing them as argument like for kernel crashes because
-    // the Crashpad handler augmented them with the modules' annotations.
-    if (!UploadReport(local_report_id, /*annotations=*/nullptr,
-                      /*read_annotations_from_minidump=*/true)) {
-      return fit::error();
-    }
-    return fit::ok();
-  });
+        // For userspace, we read back the annotations from the minidump
+        // instead of passing them as argument like for kernel crashes because
+        // the Crashpad handler augmented them with the modules' annotations.
+        if (!UploadReport(local_report_id, /*annotations=*/nullptr,
+                          /*read_annotations_from_minidump=*/true)) {
+          return fit::error();
+        }
+        return fit::ok();
+      });
 }
 
 fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
