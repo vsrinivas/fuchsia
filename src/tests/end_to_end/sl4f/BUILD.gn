@@ -7,6 +7,7 @@ import("//build/testing/environments.gni")
 
 dart_test("sl4f_test") {
   sources = [
+    "dump_test.dart",
     "file_facade_test.dart",
   ]
 
@@ -14,7 +15,6 @@ dart_test("sl4f_test") {
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/test",
   ]
-
 
   environments = [
     {

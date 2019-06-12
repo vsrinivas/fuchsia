@@ -34,5 +34,8 @@ group("end_to_end_deps") {
 
     # Needed for file exist verification.
     "//third_party/sbase:ls",
+
+    # Needed to query inspect.
+    "//garnet/packages/prod:iquery",
   ]
 }

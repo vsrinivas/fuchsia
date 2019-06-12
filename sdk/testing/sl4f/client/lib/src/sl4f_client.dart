@@ -13,6 +13,7 @@ import 'dart:io' show Platform, Process, ProcessStartMode, SocketException;
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 
+import 'dump.dart';
 import 'exceptions.dart';
 import 'inspect.dart';
 
@@ -236,6 +237,30 @@ class Sl4f {
 
     // Try to restart SL4F
     return startServer();
+  }
+
+  /// Dumps files with useful device diagnostics.
+  Future<void> dumpDiagnostics(String dumpName, {Dump dump}) async {
+    final dumper = dump ?? Dump();
+    await _dumpStdout('top -n 1', '$dumpName-diagnostic-top', dumper);
+    await _dumpStdout(
+        'kstats -c -m -n 1', '$dumpName-diagnostic-kstats', dumper);
+    await _dumpStdout('iquery --report', '$dumpName-diagnostic-iquery', dumper);
+    await _dumpStdout('ps -T', '$dumpName-diagnostic-ps', dumper);
+  }
+
+  Future<void> _dumpStdout(String cmd, String dumpName, Dump dump) async {
+    final proc = await sshProcess(cmd);
+    if (await proc.exitCode != 0) {
+      _log.warning('when running $cmd:\n'
+          '${await proc.stdout.transform(utf8.decoder).join()}');
+      return null;
+    }
+    final sink = dump.openForWrite(dumpName, 'txt');
+    return Future.wait([
+      sink.addStream(proc.stdout).then((_) => sink.close()),
+      proc.stdin.close()
+    ]);
   }
 
   /// Sends an empty http request to the server to verify if it's listening on

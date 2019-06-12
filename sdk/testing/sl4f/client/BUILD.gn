@@ -36,6 +36,7 @@ dart_library("client") {
 
 dart_test("sl4f_client_tests") {
   sources = [
+    "dump_test.dart",
     "input_test.dart",
     "inspect_test.dart",
     "modular_test.dart",
@@ -46,6 +47,7 @@ dart_test("sl4f_client_tests") {
 
   deps = [
     ":client",
+    "//third_party/dart-pkg/pub/glob",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
