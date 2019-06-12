@@ -381,6 +381,12 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // would need to reroute the packet to the next destination without reassembling.
         // Once the packet gets to the last destination in the routing header, that node
         // will process the fragment extension header and handle reassembly.
+        //
+        // Note, the `process_fragment` function (which is called by the `process_fragment!`
+        // macro) could panic if the packet does not have fragment data. However, we are
+        // guaranteed that it will not panic for an IPv4 packet because the fragment data
+        // is in the fixed header so it is always present (even if the fragment data has
+        // values that implies that the packet is not fragmented).
         #[ipv4]
         process_fragment!(ctx, device, frame_dst, buffer, packet, Ipv4);
 
@@ -413,6 +419,15 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
                     "receive_ip_packet: handled IPv6 extension headers: handling fragmented packet"
                 );
 
+                // Note, the `process_fragment` function (which is called by the `process_fragment!`
+                // macro) could panic if the packet does not have fragment data. However, we are
+                // guaranteed that it will not panic for an IPv6 packet because the fragment data
+                // is in an (optional) fragment extension header which we attempt to handle by calling
+                // `ipv6::handle_extension_headers`. We will only end up here if its return value is
+                // `Ipv6PacketAction::ProcessFragment` which is only posisble when the packet has
+                // the fragment extension header (even if the fragment data has values that implies
+                // that the packet is not fragmented).
+                //
                 // TODO(ghanan): Handle extension headers again since there could be
                 //               some more in a reassembled packet (after the
                 //               fragment header).

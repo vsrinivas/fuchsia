@@ -23,8 +23,8 @@ use crate::wire::util::records::Records;
 
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,
-    Ipv6ExtensionHeader, Ipv6ExtensionHeaderImpl, Ipv6ExtensionHeaderParsingContext,
-    Ipv6ExtensionHeaderParsingError,
+    Ipv6ExtensionHeader, Ipv6ExtensionHeaderData, Ipv6ExtensionHeaderImpl,
+    Ipv6ExtensionHeaderParsingContext, Ipv6ExtensionHeaderParsingError,
 };
 
 pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
@@ -294,8 +294,20 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
 }
 
 impl<B: ByteSlice> FragmentablePacket for Ipv6Packet<B> {
-    fn fragment_data(&self) -> Option<(u32, u16, bool)> {
-        unimplemented!("Not implemented yet for Ipv6Packet");
+    fn fragment_data(&self) -> (u32, u16, bool) {
+        for ext_hdr in self.iter_extension_hdrs() {
+            if let Ipv6ExtensionHeaderData::Fragment { fragment_data } = ext_hdr.data() {
+                return (
+                    fragment_data.identification(),
+                    fragment_data.fragment_offset(),
+                    fragment_data.m_flag(),
+                );
+            }
+        }
+
+        unreachable!(
+            "Should never call this function if the packet does not have a fragment header"
+        );
     }
 }
 

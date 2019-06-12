@@ -129,11 +129,14 @@ pub(crate) fn handle_reassembly_timeout<D: EventDispatcher>(
 pub(crate) trait FragmentablePacket {
     /// Return fragment identifier data.
     ///
-    /// Returns `None` if no fragment identifier data exists. Otherwise,
-    /// returns the fragment identification, offset and more flag as
-    /// `Some((a, b, c))` where `a` is the fragment identification value,
+    /// Returns the fragment identification, offset and more flag as
+    /// `(a, b, c)` where `a` is the fragment identification value,
     /// `b` is the fragment offset and `c` is the more flag.
-    fn fragment_data(&self) -> Option<(u32, u16, bool)>;
+    ///
+    /// # Panics
+    ///
+    /// Panics if the packet has no fragment data.
+    fn fragment_data(&self) -> (u32, u16, bool);
 }
 
 /// Possible return values for [`IpLayerFragmentCache::process_fragment`].
@@ -307,6 +310,10 @@ impl<I: Ip> IpLayerFragmentCache<I> {
     }
 
     /// Attempts to process a packet fragment.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the packet has no fragment data.
     fn process_fragment<B: ByteSlice, D: EventDispatcher>(
         &mut self,
         dispatcher: &mut D,
@@ -316,12 +323,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
         <I as IpExt<B>>::Packet: FragmentablePacket,
     {
         // Get the fragment data.
-        let (id, offset, m_flag) = match packet.fragment_data() {
-            // If we have no fragment data (which implies that the packet is not
-            // fragmented), simply return the packet back without any modification.
-            None => return FragmentProcessingState::NotNeeded(packet),
-            Some(x) => x,
-        };
+        let (id, offset, m_flag) = packet.fragment_data();
 
         // Check if `packet` is actually fragmented. We know it is not fragmented if
         // the fragment offset is 0 (contains first fragment) and we have no more
@@ -763,12 +765,13 @@ mod tests {
 
     use packet::ParseBuffer;
 
-    use crate::ip::{IpProto, Ipv4};
+    use crate::ip::{IpProto, Ipv4, Ipv6};
     use crate::testutil::{
         run_for, trigger_next_timer, DummyEventDispatcher, DummyEventDispatcherBuilder,
-        DUMMY_CONFIG_V4,
+        DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
+    use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     macro_rules! assert_frag_proc_state_need_more {
         ($lhs:expr) => {{
@@ -813,6 +816,16 @@ mod tests {
         Ipv4PacketBuilder::new(
             DUMMY_CONFIG_V4.remote_ip,
             DUMMY_CONFIG_V4.local_ip,
+            10,
+            IpProto::Tcp,
+        )
+    }
+
+    /// Get an IPv6 packet builder.
+    fn get_ipv6_builder() -> Ipv6PacketBuilder {
+        Ipv6PacketBuilder::new(
+            DUMMY_CONFIG_V6.remote_ip,
+            DUMMY_CONFIG_V6.local_ip,
             10,
             IpProto::Tcp,
         )
@@ -892,7 +905,27 @@ mod tests {
             .serialize_outer()
             .unwrap();
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
-        match process_fragment::<&[u8], _, Ipv4>(&mut ctx, packet) {
+        process_fragment::<&[u8], _, Ipv4>(&mut ctx, packet);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_ipv6_reassembly_not_needed() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
+            .build::<DummyEventDispatcher>();
+
+        //
+        // Test that we panic if we call `fragment_data` on a packet
+        // that has no fragment data.
+        //
+
+        let builder = get_ipv6_builder();
+        let mut buffer = BufferSerializer::new_vec(Buf::new(vec![1, 2, 3, 4, 5], ..))
+            .encapsulate(builder)
+            .serialize_outer()
+            .unwrap();
+        let packet = buffer.parse::<Ipv6Packet<_>>().unwrap();
+        match process_fragment::<&[u8], _, Ipv6>(&mut ctx, packet) {
             FragmentProcessingState::NotNeeded(packet) => {
                 assert_eq!(packet.body(), [1, 2, 3, 4, 5]);
             }
