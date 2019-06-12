@@ -13,8 +13,6 @@
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
-using namespace fuchsia::camera;
-
 // This is a stand-in for some actual gralloc type service which would allocate
 // the right type of memory for the application and return it as a vmo.
 zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
@@ -81,7 +79,8 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   }
 
   if (use_camera_manager) {
-    VideoStream request = {.camera_id = 0, .format = client.formats_[0]};
+    fuchsia::camera::VideoStream request = {.camera_id = 0,
+                                            .format = client.formats_[0]};
 
     status = client.manager()->CreateStream(
         request, std::move(buffer_collection), stream.NewRequest(),
@@ -97,8 +96,9 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
     return status;
   }
 
-  stream.events().OnFrameAvailable = [&stream, &loop, &frame_counter](
-                                         FrameAvailableEvent frame) {
+  stream.events()
+      .OnFrameAvailable = [&stream, &loop, &frame_counter](
+                              fuchsia::camera::FrameAvailableEvent frame) {
     printf("Received FrameNotify Event %d at index: %u\n", frame_counter,
            frame.buffer_id);
 

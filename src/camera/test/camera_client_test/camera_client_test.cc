@@ -15,16 +15,14 @@
 
 namespace camera {
 
-using namespace fuchsia::camera;
-
 Client::Client() : Client(sys::ComponentContext::Create()) {}
 
 Client::Client(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}
 
-ControlSyncPtr &Client::camera() { return camera_control_; }
+fuchsia::camera::ControlSyncPtr &Client::camera() { return camera_control_; }
 
-ManagerSyncPtr &Client::manager() { return manager_; }
+fuchsia::camera::ManagerSyncPtr &Client::manager() { return manager_; }
 
 zx_status_t Client::LoadVideoFormats(
     std::function<zx_status_t(
@@ -34,7 +32,7 @@ zx_status_t Client::LoadVideoFormats(
   uint32_t total_format_count;
   uint32_t format_index = 0;
   do {
-    std::vector<VideoFormat> call_formats;
+    std::vector<fuchsia::camera::VideoFormat> call_formats;
 
     zx_status_t status =
         get_formats(format_index, &call_formats, &total_format_count);
@@ -59,7 +57,7 @@ zx_status_t Client::LoadVideoFormats(
   return ZX_OK;
 }
 
-static void dump_device_info(const DeviceInfo &device_info) {
+static void dump_device_info(const fuchsia::camera::DeviceInfo &device_info) {
   std::cout << "Device Info - camera_id: " << device_info.camera_id
             << ", vendor_id: " << device_info.vendor_id
             << ", vendor_name: " << device_info.vendor_name << "\n"
@@ -75,7 +73,7 @@ zx_status_t Client::StartManager(int device_id) {
   // Connect to Camera Manager:
   context_->svc()->Connect(manager().NewRequest());
 
-  std::vector<DeviceInfo> devices;
+  std::vector<fuchsia::camera::DeviceInfo> devices;
   zx_status_t status = manager()->GetDevices(&devices);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get devices. error: " << status;
@@ -104,7 +102,7 @@ zx_status_t Client::StartDriver(const char *device) {
     return status;
   }
 
-  DeviceInfo device_info;
+  fuchsia::camera::DeviceInfo device_info;
   status = camera()->GetDeviceInfo(&device_info);
 
   if (status != ZX_OK) {
