@@ -120,17 +120,17 @@ integers, floating point values, strings, and enumerations.
 The syntax is similar to C:
 
 ```fidl
-const bool enabled_flag = true;
-const int8 offset = -33;
-const uint16 answer = 42;
-const uint16 answer_in_binary = 0b101010;
-const uint32 population_2018 = 7700000000;
-const uint64 diamond = 0x183c7effff7e3c18;
-const uint64 fuchsia = 4054509061583223046;
-const string username = "squeenze";
-const float32 min_temp = -273.15;
-const float64 conversion_factor = 1.41421358;
-const Beverage my_drink = WATER;
+const bool ENABLED_FLAG = true;
+const int8 OFFSET = -33;
+const uint16 ANSWER = 42;
+const uint16 ANSWER_IN_BINARY = 0b101010;
+const uint32 POPULATION_USA_2018 = 330000000;
+const uint64 DIAMOND = 0x183c7effff7e3c18;
+const uint64 FUCHSIA = 4054509061583223046;
+const string USERNAME = "squeenze";
+const float32 MIN_TEMP = -273.15;
+const float64 CONVERSION_FACTOR = 1.41421358;
+const Beverage MY_DRINK = WATER;
 ```
 
 These declarations introduce a name within their scope.
