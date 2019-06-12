@@ -3,10 +3,10 @@
 use failure::{self, Fail};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
-use hex::{decode, encode};
+use hex::encode;
 use mundane::hash::{Digest, Hasher, Sha256};
 use std::{convert::*, fmt};
-use stream_processor_test::{FatalError, Output, OutputPacket, OutputValidator};
+use stream_processor_test::{ExpectedDigest, FatalError, Output, OutputPacket, OutputValidator};
 
 #[derive(Debug)]
 pub enum Error {
@@ -165,34 +165,6 @@ fn packet_display_data<'a>(src: &'a OutputPacket) -> Result<Box<Iterator<Item = 
         }
         _ => Err(Error::UnsupportedPixelFormat(format.pixel_format.type_))?,
     })
-}
-
-#[derive(Copy, Clone)]
-pub struct ExpectedDigest {
-    pub label: &'static str,
-    pub bytes: <<Sha256 as Hasher>::Digest as Digest>::Bytes,
-}
-
-impl ExpectedDigest {
-    pub fn new(label: &'static str, hex: impl AsRef<[u8]>) -> Self {
-        Self {
-            label,
-            bytes: decode(hex)
-                .expect("Decoding static compile-time test hash as valid hex")
-                .as_slice()
-                .try_into()
-                .expect("Taking 32 bytes from compile-time test hash"),
-        }
-    }
-}
-
-impl fmt::Display for ExpectedDigest {
-    fn fmt(&self, w: &mut fmt::Formatter) -> fmt::Result {
-        write!(w, "ExpectedDigest {{\n")?;
-        write!(w, "\tlabel: {}", self.label)?;
-        write!(w, "\tbytes: {}", encode(self.bytes))?;
-        write!(w, "}}")
-    }
 }
 
 pub struct VideoFrameHasher {

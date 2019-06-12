@@ -6,7 +6,9 @@ use crate::{buffer_set::*, FatalError};
 use failure::Error;
 use fidl_fuchsia_media::{FormatDetails, StreamOutputFormat};
 use fidl_table_validation::*;
-use std::rc::Rc;
+use hex::{decode, encode};
+use mundane::hash::{Digest, Hasher, Sha256};
+use std::{convert::TryInto, fmt, rc::Rc};
 
 #[derive(ValidFidlTable, Debug, PartialEq)]
 #[fidl_table_src(StreamOutputFormat)]
@@ -92,5 +94,33 @@ impl OutputValidator for TerminatesWithValidator {
             ))
             .into())
         }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct ExpectedDigest {
+    pub label: &'static str,
+    pub bytes: <<Sha256 as Hasher>::Digest as Digest>::Bytes,
+}
+
+impl ExpectedDigest {
+    pub fn new(label: &'static str, hex: impl AsRef<[u8]>) -> Self {
+        Self {
+            label,
+            bytes: decode(hex)
+                .expect("Decoding static compile-time test hash as valid hex")
+                .as_slice()
+                .try_into()
+                .expect("Taking 32 bytes from compile-time test hash"),
+        }
+    }
+}
+
+impl fmt::Display for ExpectedDigest {
+    fn fmt(&self, w: &mut fmt::Formatter) -> fmt::Result {
+        write!(w, "ExpectedDigest {{\n")?;
+        write!(w, "\tlabel: {}", self.label)?;
+        write!(w, "\tbytes: {}", encode(self.bytes))?;
+        write!(w, "}}")
     }
 }
