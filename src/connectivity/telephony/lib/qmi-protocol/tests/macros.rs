@@ -38,6 +38,8 @@ use std::result;
 pub type QmiResult<T> = result::Result<T, QmiError>;
 
 pub trait Encodable {
+    type DecodeResult;
+
     fn to_bytes(&self) -> (Bytes, u16);
 
     fn transaction_id_len(&self) -> u8;

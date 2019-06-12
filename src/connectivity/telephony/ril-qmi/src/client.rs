@@ -69,10 +69,13 @@ impl QmiClient {
 
     /// Send a QMI message and allocate the client IDs for the service
     /// if they have not yet been
-    pub async fn send_msg<'a, E: Encodable + 'a, D: Decodable + Debug>(
+    pub async fn send_msg<'a, E: Encodable + 'a>(
         &'a self,
         msg: E,
-    ) -> Result<QmiResult<D>, QmuxError> {
+    ) -> Result<QmiResult<E::DecodeResult>, QmuxError>
+    where
+        <E as Encodable>::DecodeResult: Decodable + Debug,
+    {
         let svc_id = SvcId(msg.svc_id());
         let mut need_id = false;
         {

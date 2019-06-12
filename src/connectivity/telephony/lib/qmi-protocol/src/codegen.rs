@@ -144,7 +144,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
             QmiType::Str => return Err(format_err!("Cannot have unsized types in subparams")),
             QmiType::Uint8 | QmiType::Int8 => {
                 writeln_indent!(self, "{} = buf.get_{}();", field.param, field.ty.to_rust_str());
-            },
+            }
             _ => {
                 writeln_indent!(self, "{} = buf.get_{}_le();", field.param, field.ty.to_rust_str());
             }
@@ -323,6 +323,8 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         // define the request struct
         writeln_indent!(self, "impl Encodable for {}Req {{", msg.name);
         indent!(self);
+        // corresponding decoded type
+        writeln_indent!(self, "type DecodeResult = {}Resp;", msg.name);
         // transaction_id_len fn
         writeln_indent!(self, "fn transaction_id_len(&self) -> u8 {{");
         indent!(self);
@@ -529,6 +531,8 @@ use std::result;
 pub type QmiResult<T> = result::Result<T, QmiError>;
 
 pub trait Encodable {{
+    type DecodeResult;
+
     fn to_bytes(&self) -> (Bytes, u16);
 
     fn transaction_id_len(&self) -> u8;

@@ -8,7 +8,7 @@ use {
     crate::client::QmiClient,
     crate::errors::QmuxError,
     crate::transport::QmiTransport,
-    failure::{Error, ResultExt},
+    failure::Error,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_telephony_ril::*,
     fuchsia_async as fasync,
@@ -142,8 +142,7 @@ impl FrilService {
     ) -> Result<(), fidl::Error> {
         match request {
             RadioInterfaceLayerRequest::GetSignalStrength { responder } => {
-                let resp: NAS::GetSignalStrengthResp =
-                    qmi_query!(responder, client, NAS::GetSignalStrengthReq::new());
+                let resp = qmi_query!(responder, client, NAS::GetSignalStrengthReq::new());
                 if resp.radio_interface != 0x08 {
                     responder.send(&mut Err(RilError::UnsupportedNetworkType))?
                 } else {
@@ -151,8 +150,7 @@ impl FrilService {
                 }
             }
             RadioInterfaceLayerRequest::GetNetworkSettings { responder } => {
-                let packet: WDS::GetCurrentSettingsResp =
-                    qmi_query!(responder, client, WDS::GetCurrentSettingsReq::new(58160));
+                let packet = qmi_query!(responder, client, WDS::GetCurrentSettingsReq::new(58160));
                 responder.send(&mut Ok(NetworkSettings {
                     ip_v4_addr: packet.ipv4_addr.unwrap(),
                     ip_v4_dns: packet.ipv4_dns.unwrap(),
@@ -162,7 +160,7 @@ impl FrilService {
                 }))?
             }
             RadioInterfaceLayerRequest::StartNetwork { apn, responder } => {
-                let packet: WDS::StartNetworkInterfaceResp = qmi_query!(
+                let packet = qmi_query!(
                     responder,
                     client,
                     WDS::StartNetworkInterfaceReq::new(Some(apn), Some(4))
@@ -177,13 +175,11 @@ impl FrilService {
                 responder.send(&mut Ok(client_end))?
             }
             RadioInterfaceLayerRequest::GetDeviceIdentity { responder } => {
-                let resp: DMS::GetDeviceSerialNumbersResp =
-                    qmi_query!(responder, client, DMS::GetDeviceSerialNumbersReq::new());
+                let resp = qmi_query!(responder, client, DMS::GetDeviceSerialNumbersReq::new());
                 responder.send(&mut Ok(resp.imei))?
             }
             RadioInterfaceLayerRequest::RadioPowerStatus { responder } => {
-                let resp: DMS::GetOperatingModeResp =
-                    qmi_query!(responder, client, DMS::GetOperatingModeReq::new());
+                let resp = qmi_query!(responder, client, DMS::GetOperatingModeReq::new());
                 if resp.operating_mode == 0x00 {
                     responder.send(&mut Ok(RadioPowerState::On))?
                 } else {
@@ -195,11 +191,10 @@ impl FrilService {
     }
 }
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["ril-qmi"]).expect("Can't init logger");
     fx_log_info!("Starting ril-qmi...");
-
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let modem = Arc::new(Mutex::new(QmiModem::new()));
     let modem_setup = modem.clone();
@@ -229,6 +224,5 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fs.collect::<()>());
-    Ok(())
+    Ok(await!(fs.collect::<()>()))
 }

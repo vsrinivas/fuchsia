@@ -17,6 +17,7 @@ pub mod TEST {
         pub int_blah: i16,
     }
     impl Encodable for TestReq {
+        type DecodeResult = TestResp;
         fn transaction_id_len(&self) -> u8 {
             2
         }

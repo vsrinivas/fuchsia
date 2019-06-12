@@ -17,6 +17,7 @@ pub mod TEST {
     pub struct TestResp {
     }
     impl Encodable for TestReq {
+        type DecodeResult = TestResp;
         fn transaction_id_len(&self) -> u8 {
             2
         }
