@@ -144,8 +144,8 @@ impl AccountManager {
             AccountManagerRequest::RegisterAccountListener { listener, options, responder } => {
                 responder.send(await!(self.register_account_listener(listener, options)))
             }
-            AccountManagerRequest::RemoveAccount { id, responder } => {
-                responder.send(await!(self.remove_account(id.into())))
+            AccountManagerRequest::RemoveAccount { id, force, responder } => {
+                responder.send(await!(self.remove_account(id.into(), force)))
             }
             AccountManagerRequest::ProvisionFromAuthProvider {
                 auth_context_provider,
@@ -261,14 +261,14 @@ impl AccountManager {
         }
     }
 
-    async fn remove_account(&self, id: LocalAccountId) -> Status {
+    async fn remove_account(&self, id: LocalAccountId, force: bool) -> Status {
         let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
         let account_handler =
             match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &id)) {
                 Ok(account_handler) => account_handler,
                 Err(err) => return err.status,
             };
-        match await!(account_handler.proxy().remove_account()) {
+        match await!(account_handler.proxy().remove_account(force)) {
             Ok(Status::Ok) => await!(account_handler.terminate()),
             Ok(status) => return status,
             Err(_) => return Status::IoError,
@@ -472,6 +472,8 @@ mod tests {
         static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {vec![]};
     }
 
+    const FORCE_REMOVE_ON: bool = true;
+
     fn request_stream_test<TestFn, Fut>(account_manager: AccountManager, test_fn: TestFn)
     where
         TestFn: FnOnce(AccountManagerProxy, Arc<AccountManager>) -> Fut,
@@ -569,7 +571,7 @@ mod tests {
         request_stream_test(read_accounts(data_dir.path()), async move |proxy, test_object| {
             // Try to delete a very different account from the one we added.
             assert_eq!(
-                await!(proxy.remove_account(LocalAccountId::new(42).as_mut()))?,
+                await!(proxy.remove_account(LocalAccountId::new(42).as_mut(), FORCE_REMOVE_ON))?,
                 Status::NotFound
             );
             assert_eq!(test_object.accounts_inspect.total.get().unwrap(), 1);

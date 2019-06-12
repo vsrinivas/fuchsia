@@ -142,13 +142,18 @@ protocol AccountManager {
     // method that requests unlocking for an unlocked account and potentially
     // a method to lock an account.
 
-    // Removes a provisioned Fuchsia account from the current device.
+    // Removes a provisioned Fuchsia account from the current device, revoking
+    // any credentials that are held for the account.
     //
     // |id| The account's identifier as returned by GetAccountIds()
+    // |force| If true, continues removing the account even if revocation of
+    //         credentials fails. If false, any revocation failure will result
+    //         in an error and the account will remain. In this case, a subset
+    //         of the credentials may have been deleted.
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    RemoveAccount(LocalAccountId id) -> (Status status);
+    RemoveAccount(LocalAccountId id, bool force) -> (Status status);
 
     // Adds a Fuchsia account to the current device based on authenticating
     // to a service provider (such as Google). If the service provider account

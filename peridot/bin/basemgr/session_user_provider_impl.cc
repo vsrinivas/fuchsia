@@ -246,6 +246,7 @@ void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
         // We only expect there to be one account at most.
         account_manager_->RemoveAccount(
             account_ids.at(0),
+            true, /* Force account removal */
             [callback = std::move(callback)](fuchsia::auth::account::Status) {
               callback();
             });

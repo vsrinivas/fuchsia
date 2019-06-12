@@ -243,7 +243,7 @@ async fn test_account_deletion() -> Result<(), Error> {
     assert_eq!(existing_accounts.len(), 2);
 
     // Delete an account and verify it is removed.
-    assert_eq!(await!(account_manager.remove_account(&mut account_1))?, Status::Ok);
+    assert_eq!(await!(account_manager.remove_account(&mut account_1, true))?, Status::Ok);
     assert_eq!(
         await!(account_manager.get_account_ids())?,
         vec![LocalAccountId { id: account_2.id }]
@@ -288,7 +288,7 @@ async fn test_lifecycle() -> Result<(), Error> {
     );
 
     // Delete an account and verify it is removed.
-    assert_eq!(await!(account_manager.remove_account(&mut account_2))?, Status::Ok);
+    assert_eq!(await!(account_manager.remove_account(&mut account_2, true))?, Status::Ok);
     assert_eq!(
         await!(account_manager.get_account_ids())?,
         vec![LocalAccountId { id: account_1.id }]
