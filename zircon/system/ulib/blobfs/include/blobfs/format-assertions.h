@@ -54,10 +54,11 @@ static_assert(PADDING_LENGTH(Superblock, vslice_count,           abm_slices) == 
 static_assert(PADDING_LENGTH(Superblock, abm_slices,             ino_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, ino_slices,             dat_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, dat_slices,             journal_slices) ==         0);
+static_assert(PADDING_LENGTH(Superblock, journal_slices,         reserved) ==               0);
 
 // Ensure that the padding at the end of structure doesn't change
 static_assert(sizeof(Superblock) ==
-              offsetof(Superblock, journal_slices) + sizeof(Superblock{}.journal_slices));
+              offsetof(Superblock, reserved) + sizeof(Superblock{}.reserved));
 
 // Ensure that the members don't change their offsets within the structure
 static_assert(offsetof(JournalInfo, magic) ==                0x0);

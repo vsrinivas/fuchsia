@@ -4,12 +4,8 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <blobfs/blobfs.h>
 #include <blobfs/compression/lz4.h>
@@ -30,8 +26,6 @@
 #include <fs/metrics.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/unsafe.h>
-#include <lib/fdio/vfs.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/vfs.h>
 #include <zircon/status.h>

@@ -45,26 +45,18 @@ using HostCompressor = ZSTDCompressor;
 const auto HostDecompressor = ZSTDDecompress;
 constexpr uint32_t kBlobFlagCompressed = kBlobFlagZSTDCompressed;
 
-zx_status_t readblk_offset(int fd, uint64_t bno, off_t offset, void* data) {
+zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
     off_t off = offset + bno * kBlobfsBlockSize;
-    if (lseek(fd, off, SEEK_SET) < 0) {
-        FS_TRACE_ERROR("blobfs: cannot seek to block %" PRIu64 "\n", bno);
-        return ZX_ERR_IO;
-    }
-    if (read(fd, data, kBlobfsBlockSize) != kBlobfsBlockSize) {
+    if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
         FS_TRACE_ERROR("blobfs: cannot read block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
     return ZX_OK;
 }
 
-zx_status_t writeblk_offset(int fd, uint64_t bno, off_t offset, const void* data) {
+zx_status_t WriteBlockOffset(int fd, uint64_t bno, off_t offset, const void* data) {
     off_t off = offset + bno * kBlobfsBlockSize;
-    if (lseek(fd, off, SEEK_SET) < 0) {
-        FS_TRACE_ERROR("blobfs: cannot seek to block %" PRIu64 "\n", bno);
-        return ZX_ERR_IO;
-    }
-    if (write(fd, data, kBlobfsBlockSize) != kBlobfsBlockSize) {
+    if (pwrite(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
         FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 "\n", bno);
         return ZX_ERR_IO;
     }
@@ -210,7 +202,7 @@ zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_i
 
     info_block_t info_block;
 
-    if (readblk_offset(fd.get(), 0, start, (void*)info_block.block) < 0) {
+    if (ReadBlockOffset(fd.get(), 0, start, (void*)info_block.block) < 0) {
         return ZX_ERR_IO;
     }
     uint64_t blocks;
@@ -248,6 +240,108 @@ zx_status_t get_superblock(const fbl::unique_fd& fd, off_t start, std::optional<
 }
 
 } // namespace
+
+zx_status_t ReadBlock(int fd, uint64_t bno, void* data) {
+    off_t off = bno * kBlobfsBlockSize;
+    if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
+        FS_TRACE_ERROR("blobfs: cannot read block %" PRIu64 "\n", bno);
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t WriteBlock(int fd, uint64_t bno, const void* data) {
+    off_t off = bno * kBlobfsBlockSize;
+    if (pwrite(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
+        FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 "\n", bno);
+        return ZX_ERR_IO;
+    }
+    return ZX_OK;
+}
+
+zx_status_t GetBlockCount(int fd, uint64_t* out) {
+    struct stat s;
+    if (fstat(fd, &s) < 0) {
+        return ZX_ERR_BAD_STATE;
+    }
+    *out = s.st_size / kBlobfsBlockSize;
+    return ZX_OK;
+}
+
+
+int Mkfs(int fd, uint64_t block_count) {
+    Superblock info;
+    InitializeSuperblock(block_count, &info);
+    zx_status_t status = CheckSuperblock(&info, block_count);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("Failed to initialize superblock: %d\n", status);
+        return -1;
+    }
+    uint64_t block_bitmap_blocks = BlockMapBlocks(info);
+    uint64_t node_map_blocks = NodeMapBlocks(info);
+
+    RawBitmap block_bitmap;
+    if (block_bitmap.Reset(block_bitmap_blocks * kBlobfsBlockBits)) {
+        FS_TRACE_ERROR("Couldn't allocate blobfs block map\n");
+        return -1;
+    } else if (block_bitmap.Shrink(info.data_block_count)) {
+        FS_TRACE_ERROR("Couldn't shrink blobfs block map\n");
+        return -1;
+    }
+
+    // Reserve first |kStartBlockMinimum| data blocks
+    block_bitmap.Set(0, kStartBlockMinimum);
+
+    // All in-memory structures have been created successfully. Dump everything to disk.
+    char block[kBlobfsBlockSize] = {};
+
+    // Write the journal to disk.
+    // 1) Write the Info block.
+    // 2) Write the rest of the journal as zeros.
+    JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(block);
+    journal_info->magic = kJournalMagic;
+    if ((status = WriteBlock(fd, JournalStartBlock(info), block)) != ZX_OK) {
+        FS_TRACE_ERROR("Failed to write journal block\n");
+        return -1;
+    }
+    for (uint64_t n = 1; n < JournalBlocks(info); n++) {
+        memset(block, 0, sizeof(block));
+        status = WriteBlock(fd, JournalStartBlock(info) + n, block);
+        if (status != ZX_OK) {
+            FS_TRACE_ERROR("Failed to write journal block\n");
+            return -1;
+        }
+    }
+
+    // Write the root block to disk.
+    memset(block, 0, sizeof(block));
+    memcpy(block, &info, sizeof(info));
+    if ((status = WriteBlock(fd, 0, block)) != ZX_OK) {
+        FS_TRACE_ERROR("Failed to write root block\n");
+        return -1;
+    }
+
+    // Write allocation bitmap to disk.
+    for (uint64_t n = 0; n < block_bitmap_blocks; n++) {
+        void* bmdata = GetRawBitmapData(block_bitmap, n);
+        if ((status = WriteBlock(fd, BlockMapStartBlock(info) + n, bmdata)) != ZX_OK) {
+            FS_TRACE_ERROR("Failed to write blockmap block %" PRIu64 "\n", n);
+            return -1;
+        }
+    }
+
+    // Write node map to disk.
+    for (uint64_t n = 0; n < node_map_blocks; n++) {
+        memset(block, 0, sizeof(block));
+        if (WriteBlock(fd, NodeMapStartBlock(info) + n, block)) {
+            FS_TRACE_ERROR("blobfs: failed writing inode map\n");
+            return -1;
+        }
+    }
+
+    FS_TRACE_DEBUG("BLOBFS: mkfs success\n");
+    return 0;
+}
 
 zx_status_t UsedDataSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start,
                          std::optional<off_t> end) {
@@ -381,7 +475,8 @@ zx_status_t blobfs_add_blob(Blobfs* bs, FileSizeRecorder* size_recorder, int dat
     return blobfs_add_mapped_blob_with_merkle(bs, size_recorder, mapping, info);
 }
 
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd, const MerkleInfo& info) {
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd,
+                                        const MerkleInfo& info) {
     FileMapping mapping;
     zx_status_t status = mapping.Map(data_fd);
     if (status != ZX_OK) {
@@ -534,10 +629,11 @@ zx_status_t Blobfs::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
 }
 
 zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
-    uint64_t bbm_start_block = start_block / kBlobfsBlockBits;
-    uint64_t bbm_end_block = fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
+    uint64_t block_bitmap_start_block = start_block / kBlobfsBlockBits;
+    uint64_t block_bitmap_end_block = fbl::round_up(start_block + nblocks, kBlobfsBlockBits) /
+            kBlobfsBlockBits;
     const void* bmstart = block_map_.StorageUnsafe()->GetData();
-    for (size_t n = bbm_start_block; n < bbm_end_block; n++) {
+    for (size_t n = block_bitmap_start_block; n < block_bitmap_end_block; n++) {
         const void* data = fs::GetBlock(kBlobfsBlockSize, bmstart, n);
         uint64_t bno = block_map_start_block_ + n;
         zx_status_t status;
@@ -604,7 +700,8 @@ zx_status_t Blobfs::ReadBlock(size_t bno) {
     }
 
     zx_status_t status;
-    if ((cache_.bno != bno) && ((status = readblk_offset(blockfd_.get(), bno, offset_, &cache_.blk)) != ZX_OK)) {
+    if ((cache_.bno != bno) &&
+        ((status = ReadBlockOffset(blockfd_.get(), bno, offset_, &cache_.blk)) != ZX_OK)) {
         return status;
     }
 
@@ -613,7 +710,7 @@ zx_status_t Blobfs::ReadBlock(size_t bno) {
 }
 
 zx_status_t Blobfs::WriteBlock(size_t bno, const void* data) {
-    return writeblk_offset(blockfd_.get(), bno, offset_, data);
+    return WriteBlockOffset(blockfd_.get(), bno, offset_, data);
 }
 
 zx_status_t Blobfs::ResetCache() {

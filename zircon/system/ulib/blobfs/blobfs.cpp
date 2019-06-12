@@ -2,16 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
-#include <fcntl.h>
 #include <inttypes.h>
 #include <limits>
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <blobfs/blobfs.h>
 #include <blobfs/compression/compressor.h>
@@ -28,8 +23,8 @@
 #include <fs/ticker.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fvm/client.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/fdio.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/event.h>
 #include <zircon/compiler.h>
@@ -41,13 +36,13 @@
 
 #include <utility>
 
-namespace blobfs {
-namespace {
-
 using block_client::RemoteBlockDevice;
 using digest::Digest;
 using digest::MerkleTree;
 using id_allocator::IdAllocator;
+
+namespace blobfs {
+namespace {
 
 // Time between each Cobalt flush.
 constexpr zx::duration kCobaltFlushTimer = zx::min(5);
@@ -55,12 +50,10 @@ constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 cobalt_client::CollectorOptions MakeCollectorOptions() {
     cobalt_client::CollectorOptions options =
         cobalt_client::CollectorOptions::GeneralAvailability();
-#ifdef __Fuchsia__
     // Filesystems project name as defined in cobalt-analytics projects.yaml.
     options.project_name = "local_storage";
     options.initial_response_deadline = zx::usec(0);
     options.response_deadline = zx::nsec(0);
-#endif // __Fuchsia__
     return options;
 }
 
@@ -358,8 +351,8 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
         return ZX_ERR_NO_SPACE;
     }
 
-    const size_t kBlocksPerSlice = info_.slice_size / kBlobfsBlockSize;
-    uint64_t offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
+    const size_t blocks_per_slice = info_.slice_size / kBlobfsBlockSize;
+    uint64_t offset = (kFVMNodeMapStart / blocks_per_slice) + info_.ino_slices;
     uint64_t length = 1;
     zx_status_t status = Device()->VolumeExtend(offset, length);
     if (status != ZX_OK) {
@@ -408,19 +401,19 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
         return ZX_ERR_NO_SPACE;
     }
 
-    const size_t kBlocksPerSlice = info_.slice_size / kBlobfsBlockSize;
+    const size_t blocks_per_slice = info_.slice_size / kBlobfsBlockSize;
     // Number of slices required to add nblocks
-    uint64_t offset = (kFVMDataStart / kBlocksPerSlice) + info_.dat_slices;
-    uint64_t length = (nblocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
+    uint64_t offset = (kFVMDataStart / blocks_per_slice) + info_.dat_slices;
+    uint64_t length = (nblocks + blocks_per_slice - 1) / blocks_per_slice;
 
-    uint64_t blocks64 = (info_.dat_slices + length) * kBlocksPerSlice;
+    uint64_t blocks64 = (info_.dat_slices + length) * blocks_per_slice;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     uint32_t abmblks = (blocks + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
     uint64_t abmblks_old = (info_.data_block_count + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
     ZX_DEBUG_ASSERT(abmblks_old <= abmblks);
 
-    if (abmblks > kBlocksPerSlice) {
+    if (abmblks > blocks_per_slice) {
         // TODO(planders): Allocate more slices for the block bitmap.
         FS_TRACE_ERROR("Blobfs::AddBlocks needs to increase block bitmap size\n");
         return ZX_ERR_NO_SPACE;
@@ -497,18 +490,50 @@ void Blobfs::ScheduleMetricFlush() {
         flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
 }
 
-zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, const MountOptions& options,
-                           const Superblock* info, std::unique_ptr<Blobfs>* out) {
+zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
+                           std::unique_ptr<Blobfs>* out) {
     TRACE_DURATION("blobfs", "Blobfs::Create");
-    zx_status_t status = CheckSuperblock(info, TotalBlocks(*info));
+    char block[kBlobfsBlockSize];
+    zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Check info failure\n");
+        FS_TRACE_ERROR("blobfs: could not read info block\n");
         return status;
     }
-    auto fs = std::unique_ptr<Blobfs>(new Blobfs(std::move(device), info));
-    fs->SetReadonly(options.writability != blobfs::Writability::Writable);
-    fs->Cache().SetCachePolicy(options.cache_policy);
-    if (options.metrics) {
+    const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
+
+    fuchsia_hardware_block_BlockInfo block_info;
+    status = device->BlockGetInfo(&block_info);
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: cannot acquire block info: %d\n", status);
+        return status;
+    }
+    uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
+    if (block_info.flags & BLOCK_FLAG_READONLY) {
+        FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
+        options->writability = blobfs::Writability::ReadOnlyDisk;
+    }
+    if (kBlobfsBlockSize % block_info.block_size != 0) {
+        FS_TRACE_ERROR("blobfs: Blobfs block size (%u) not divisible by device block size (%u)\n",
+                       kBlobfsBlockSize, block_info.block_size);
+        return ZX_ERR_IO;
+    }
+
+    if (blocks < TotalBlocks(*superblock)) {
+        FS_TRACE_ERROR("blobfs: Block size mismatch: (superblock: %zu) vs (actual: %zu)\n",
+                       TotalBlocks(*superblock), blocks);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    status = CheckSuperblock(superblock, TotalBlocks(*superblock));
+    if (status != ZX_OK) {
+        FS_TRACE_ERROR("blobfs: Check Superblock failure\n");
+        return status;
+    }
+    auto fs = std::unique_ptr<Blobfs>(new Blobfs(std::move(device), superblock));
+    fs->block_info_ = std::move(block_info);
+    fs->SetReadonly(options->writability != blobfs::Writability::Writable);
+    fs->Cache().SetCachePolicy(options->cache_policy);
+    if (options->metrics) {
         fs->LocalMetrics().Collect();
         fs->cobalt_metrics_.EnableMetrics(true);
         // TODO(gevalentino): Once we have async llcpp bindings, instead pass a dispatcher for
@@ -518,15 +543,6 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, const MountOptio
         async::PostDelayedTask(
             fs->flush_loop_.dispatcher(), [fsptr]() { fsptr->ScheduleMetricFlush(); },
             kCobaltFlushTimer);
-    }
-
-    status = fs->Device()->BlockGetInfo(&fs->block_info_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
-        return ZX_ERR_IO;
     }
 
     RawBitmap block_map;
@@ -667,90 +683,6 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
     }
 
     *out = std::move(vn);
-    return ZX_OK;
-}
-
-zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
-                       fbl::unique_ptr<Blobfs>* out) {
-    zx_status_t status;
-
-    char block[kBlobfsBlockSize];
-    if ((status = readblk(blockfd.get(), 0, (void*)block)) < 0) {
-        FS_TRACE_ERROR("blobfs: could not read info block\n");
-        return status;
-    }
-
-    Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
-
-    uint64_t blocks;
-    if ((status = GetBlockCount(blockfd.get(), &blocks)) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: cannot find end of underlying device\n");
-        return status;
-    }
-
-    if ((status = CheckSuperblock(info, blocks)) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Info check failed\n");
-        return status;
-    }
-
-    zx::channel block_connection;
-    status = fdio_get_service_handle(blockfd.release(), block_connection.reset_and_get_address());
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Could not acquire service handle of block device\n");
-        return status;
-    }
-
-    std::unique_ptr<RemoteBlockDevice> device;
-    status = RemoteBlockDevice::Create(std::move(block_connection), &device);
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Could not initialize block device\n");
-        return status;
-    }
-
-    if ((status = Blobfs::Create(std::move(device), options, info, out)) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: mount failed; could not create blobfs\n");
-        return status;
-    }
-    return ZX_OK;
-}
-
-zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
-                  const MountOptions& options, zx::channel root, fbl::Closure on_unmount) {
-    zx_status_t status;
-    fbl::unique_ptr<Blobfs> fs;
-
-    if ((status = Initialize(std::move(blockfd), options, &fs)) != ZX_OK) {
-        return status;
-    }
-
-    // Attempt to initialize writeback and journal.
-    // The journal must be replayed before the FVM check, in case changes to slice counts have
-    // been written to the journal but not persisted to the super block.
-    if ((status = fs->InitializeWriteback(options.writability, options.journal)) != ZX_OK) {
-        return status;
-    }
-
-    if ((status = CheckFvmConsistency(&fs->Info(), fs->Device())) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: FVM info check failed\n");
-        return status;
-    }
-
-    fs->SetDispatcher(dispatcher);
-    fs->SetUnmountCallback(std::move(on_unmount));
-
-    fbl::RefPtr<Directory> vn;
-    if ((status = fs->OpenRootNode(&vn)) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: mount failed; could not get root blob\n");
-        return status;
-    }
-
-    if ((status = fs->ServeDirectory(std::move(vn), std::move(root))) != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: mount failed; could not serve root directory\n");
-        return status;
-    }
-
-    // Shutdown is now responsible for deleting the Blobfs object.
-    __UNUSED auto r = fs.release();
     return ZX_OK;
 }
 

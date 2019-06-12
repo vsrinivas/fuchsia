@@ -34,7 +34,7 @@ BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
         exit(-1);
     }
 
-    if (blobfs::readblk(fd_.get(), 0, reinterpret_cast<void*>(blk_)) < 0) {
+    if (blobfs::ReadBlock(fd_.get(), 0, reinterpret_cast<void*>(blk_)) < 0) {
         fprintf(stderr, "blobfs: could not read info block\n");
         exit(-1);
     }
@@ -203,7 +203,7 @@ zx_status_t BlobfsFormat::FillBlock(size_t block_offset) {
     // If we are reading the super block, make sure it is the fvm version and not the original
     if (block_offset == 0) {
         memcpy(datablk, fvm_blk_, BlockSize());
-    } else if (blobfs::readblk(fd_.get(), block_offset, datablk) != ZX_OK) {
+    } else if (blobfs::ReadBlock(fd_.get(), block_offset, datablk) != ZX_OK) {
         fprintf(stderr, "blobfs: could not read block\n");
         return ZX_ERR_INTERNAL;
     }

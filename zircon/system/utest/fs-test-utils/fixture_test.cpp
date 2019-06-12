@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-#include <blobfs/common.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -496,7 +495,7 @@ bool FsckFails() {
     if (dev < 0) {
         LOG_ERROR(0, "failed to open device\n");
     }
-    ASSERT_EQ(blobfs::writeblk(dev, 1, data), ZX_OK);
+    ASSERT_EQ(sizeof(data), pwrite(dev, data, sizeof(data), sizeof(data)));
     int r3 = close(dev);
     if (r3 < 0) {
         LOG_ERROR(0, "failed to close\n");

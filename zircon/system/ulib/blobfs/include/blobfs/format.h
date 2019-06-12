@@ -40,6 +40,7 @@ constexpr uint32_t kBlobfsBlockMapStart  = 1;
 constexpr uint32_t kBlobfsInodeSize      = 64;
 constexpr uint32_t kBlobfsInodesPerBlock = (kBlobfsBlockSize / kBlobfsInodeSize);
 
+// Blobfs block offset of various filesystem structures, when using the FVM.
 constexpr size_t kFVMBlockMapStart  = 0x10000;
 constexpr size_t kFVMNodeMapStart   = 0x20000;
 constexpr size_t kFVMJournalStart   = 0x30000;
@@ -104,9 +105,10 @@ struct Superblock {
     uint32_t ino_slices;          // Slices allocated to node map.
     uint32_t dat_slices;          // Slices allocated to file data section.
     uint32_t journal_slices;      // Slices allocated to journal section.
+    uint8_t reserved[8080];
 };
 
-static_assert(sizeof(Superblock) <= kBlobfsBlockSize, "Invalid blobfs superblock size");
+static_assert(sizeof(Superblock) == kBlobfsBlockSize, "Invalid blobfs superblock size");
 
 // TODO(ZX-2729): Use counter instead of timestamp (for journal info block and entries).
 struct JournalInfo {

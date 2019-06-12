@@ -262,6 +262,7 @@ if (current_cpu != "") {
   group("host-tests") {
     testonly = true
     deps = [
+      "$zx/system/ulib/blobfs/test:blobfs-host",
       "$zx/system/ulib/fbl/test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/libzbi/test",

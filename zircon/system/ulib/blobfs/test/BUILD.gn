@@ -17,6 +17,7 @@ test("blobfs-unit") {
     "blob-cache-test.cpp",
     "compressor-test.cpp",
     "extent-reserver-test.cpp",
+    "format-test.cpp",
     "get-allocated-regions-test.cpp",
     "journal-test.cpp",
     "node-populator-test.cpp",
@@ -32,7 +33,18 @@ test("blobfs-unit") {
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("blobfs-host") {
+  sources = [
+    "host-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/blobfs",
     "$zx/system/ulib/zxtest",
   ]
 }

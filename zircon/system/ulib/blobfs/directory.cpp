@@ -4,8 +4,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <blobfs/blobfs.h>
 #include <blobfs/latency-event.h>
@@ -15,8 +13,6 @@
 #include <fbl/string_piece.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/fdio/unsafe.h>
-#include <lib/fdio/vfs.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <zircon/device/vfs.h>

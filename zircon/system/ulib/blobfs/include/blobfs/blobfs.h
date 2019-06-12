@@ -15,7 +15,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
-#include <block-client/cpp/client.h>
 #include <block-client/cpp/block-device.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -36,7 +35,6 @@
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fzl/fdio.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/channel.h>
@@ -162,8 +160,8 @@ public:
         return allocator_->ReserveNodes(num_nodes, out_node);
     }
 
-    static zx_status_t Create(std::unique_ptr<BlockDevice> device, const MountOptions& options,
-                              const Superblock* info, fbl::unique_ptr<Blobfs>* out);
+    static zx_status_t Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
+                              std::unique_ptr<Blobfs>* out);
 
     void CollectMetrics() {
         collecting_metrics_ = true;
@@ -303,9 +301,18 @@ private:
     async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
 };
 
-zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
-                       fbl::unique_ptr<Blobfs>* out);
-zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
-                  const MountOptions& options, zx::channel root, fbl::Closure on_unmount);
+// Begins serving requests to the filesystem using |dispatch|, by parsing
+// the on-disk format using |device|, using |root| as a filesystem server.
+//
+// This function does not block, and instead serves requests on the dispatcher
+// asynchronously.
+//
+// Invokes |on_unmount| when the filesystem has been instructed to terminate.
+// After |on_unmount| completes, |dispatcher| will no longer be accessed.
+zx_status_t Mount(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+                  MountOptions* options, zx::channel root, fbl::Closure on_unmount);
+
+// Formats the underlying device with an empty Blobfs partition.
+zx_status_t FormatFilesystem(BlockDevice* device);
 
 } // namespace blobfs

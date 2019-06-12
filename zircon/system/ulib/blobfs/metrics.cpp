@@ -4,8 +4,6 @@
 
 // This file contains information for gathering Blobfs metrics.
 
-#include <stdio.h>
-
 #include <blobfs/metrics.h>
 #include <fs/trace.h>
 #include <lib/fzl/time.h>

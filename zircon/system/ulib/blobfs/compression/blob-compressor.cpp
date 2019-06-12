@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <unistd.h>
-
 #include <blobfs/compression/blob-compressor.h>
 #include <blobfs/compression/lz4.h>
 #include <blobfs/compression/zstd.h>

@@ -72,8 +72,8 @@ zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
 
     if (transaction_manager->LocalMetrics().Collecting()) {
         uint64_t sum = 0;
-        for (const auto& blk_req : blk_reqs) {
-            sum += blk_req.length * transaction_manager->FsBlockSize();
+        for (const auto& operation : operations) {
+            sum += operation.op.length * transaction_manager->FsBlockSize();
         }
         transaction_manager->LocalMetrics().UpdateWriteback(sum, ticker.End());
     }

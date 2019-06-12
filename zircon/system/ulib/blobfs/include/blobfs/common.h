@@ -34,13 +34,8 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
 
-void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);
-void* GetBitBlock(const RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);
-
-zx_status_t readblk(int fd, uint64_t bno, void* data);
-zx_status_t writeblk(int fd, uint64_t bno, const void* data);
+// Validates the metadata of a blobfs superblock, given a disk with |max| blocks.
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max);
-zx_status_t GetBlockCount(int fd, uint64_t* out);
 
 // Returns number of blocks required for inode_count inodes
 uint32_t BlocksRequiredForInode(uint64_t inode_count);
@@ -53,7 +48,11 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count);
 // |available|: An additional number of blocks available which may be used by the journal.
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 
-int Mkfs(int fd, uint64_t block_count);
+// Creates a superblock, formatted for |block_count| disk blocks, on a non-FVM volume.
+// This method should also be invoked to create FVM-based superblocks, but it is the responsibility
+// of the caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all
+// FVM-specific fields.
+void InitializeSuperblock(uint64_t block_count, Superblock* info);
 
 uint32_t MerkleTreeBlocks(const Inode& blobNode);
 

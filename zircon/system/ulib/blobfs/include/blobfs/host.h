@@ -226,6 +226,21 @@ private:
     BlockCache cache_;
 };
 
+// Reads block |bno| into |data| from |fd|.
+zx_status_t ReadBlock(int fd, uint64_t bno, void* data);
+
+// Writes block |bno| from |data| into |fd|.
+zx_status_t WriteBlock(int fd, uint64_t bno, const void* data);
+
+// Returns the number of blobfs blocks that fit in |fd|.
+zx_status_t GetBlockCount(int fd, uint64_t* out);
+
+// Formats a blobfs filesystem, meant to contain |block_count| blobfs blocks, to
+// the device represteted by |fd|.
+//
+// Returns -1 on error, 0 on success.
+int Mkfs(int fd, uint64_t block_count);
+
 // Copies into |out_size| the number of bytes used by data in fs contained in a partition between
 // bytes |start| and |end|. If |start| and |end| are not passed, start is assumed to be zero and
 // no safety checks are made for size of partition.
