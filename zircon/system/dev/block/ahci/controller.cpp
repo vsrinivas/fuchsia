@@ -18,7 +18,6 @@
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/pci-lib.h>
-
 #include <fbl/alloc_checker.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
@@ -26,11 +25,25 @@
 #include <zircon/types.h>
 
 #include "controller.h"
+
+#include "pci-bus.h"
 #include "sata.h"
 
 namespace ahci {
 
 //clang-format on
+
+// TODO(sron): Check return values from bus_->RegRead() and RegWrite().
+// Handle properly for buses that may by unplugged at runtime.
+uint32_t Controller::RegRead(const volatile uint32_t* reg) {
+    uint32_t val = 0;
+    bus_->RegRead(reg, &val);
+    return val;
+}
+
+zx_status_t Controller::RegWrite(volatile uint32_t* reg, uint32_t val) {
+    return bus_->RegWrite(reg, val);
+}
 
 zx_status_t Controller::WaitForClear(const volatile uint32_t* reg, uint32_t mask,
                                      zx::duration timeout) {
@@ -109,10 +122,6 @@ void Controller::Queue(uint32_t portnr, sata_txn_t* txn) {
 Controller::~Controller() {
     // TODO: Join threads.
     // The current driver doesn't do this - it will be done in a following CL.
-
-    if (regs_ != nullptr) {
-        mmio_buffer_release(&mmio_);
-    }
 }
 
 void Controller::Release(void* ctx) {
@@ -159,9 +168,8 @@ int Controller::WatchdogLoop() {
 // irq handler:
 
 int Controller::IrqLoop() {
-    zx_status_t status;
     for (;;) {
-        status = zx_interrupt_wait(irq_handle_.get(), nullptr);
+        zx_status_t status = bus_->InterruptWait();
         if (status) {
             zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
             continue;
@@ -258,88 +266,29 @@ int Controller::InitScan() {
 
 zx_status_t Controller::Create(zx_device_t* parent, std::unique_ptr<Controller>* con_out) {
     fbl::AllocChecker ac;
+    std::unique_ptr<Bus> bus(new (&ac) PciBus());
+    if (!ac.check()) {
+        zxlogf(ERROR, "ahci: out of memory\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+    return CreateWithBus(parent, std::move(bus), con_out);
+}
+
+zx_status_t Controller::CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> bus,
+                                      std::unique_ptr<Controller>* con_out) {
+    fbl::AllocChecker ac;
     std::unique_ptr<Controller> controller(new (&ac) Controller());
     if (!ac.check()) {
         zxlogf(ERROR, "ahci: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
-
-    zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &controller->pci_);
+    zx_status_t status = bus->Configure(parent);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error getting config information\n");
+        zxlogf(ERROR, "ahci: failed to configure host bus\n");
         return status;
     }
-
-    // Map register window.
-    status = pci_map_bar_buffer(&controller->pci_, 5u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &controller->mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d mapping register window\n", status);
-        return status;
-    }
-    controller->regs_ = static_cast<ahci_hba_t*>(controller->mmio_.vaddr);
-
-    zx_pcie_device_info_t config;
-    status = pci_get_device_info(&controller->pci_, &config);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error getting config information\n");
-        return status;
-    }
-
-    // TODO: move this to SATA.
-    if (config.sub_class != 0x06 && config.base_class == 0x01) { // SATA
-        zxlogf(ERROR, "ahci: device class 0x%x unsupported\n", config.sub_class);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // FIXME intel devices need to set SATA port enable at config + 0x92
-    // ahci controller is bus master
-    status = pci_enable_bus_master(&controller->pci_, true);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d enabling bus master\n", status);
-        return status;
-    }
-
-    // Query and configure IRQ modes by trying MSI first and falling back to
-    // legacy if necessary.
-    uint32_t irq_cnt = 0;
-    zx_pci_irq_mode_t irq_mode = ZX_PCIE_IRQ_MODE_MSI;
-    status = pci_query_irq_mode(&controller->pci_, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
-    if (status == ZX_ERR_NOT_SUPPORTED) {
-        status = pci_query_irq_mode(&controller->pci_, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported\n");
-            return status;
-        }
-        irq_mode = ZX_PCIE_IRQ_MODE_LEGACY;
-    }
-
-    if (irq_cnt == 0) {
-        zxlogf(ERROR, "ahci: no interrupts available\n");
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    zxlogf(INFO, "ahci: using %s interrupt\n", (irq_mode == ZX_PCIE_IRQ_MODE_MSI) ? "MSI" : "legacy");
-    status = pci_set_irq_mode(&controller->pci_, irq_mode, 1);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d setting irq mode\n", status);
-        return status;
-    }
-
-    // Get bti handle.
-    status = pci_get_bti(&controller->pci_, 0, controller->bti_handle_.reset_and_get_address());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d getting bti handle\n", status);
-        return status;
-    }
-
-    // Get irq handle.
-    status = pci_map_interrupt(&controller->pci_, 0, controller->irq_handle_.reset_and_get_address());
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "ahci: error %d getting irq handle\n", status);
-        return status;
-    }
-
+    controller->regs_ = static_cast<ahci_hba_t*>(bus->mmio());
+    controller->bus_ = std::move(bus);
     *con_out = std::move(controller);
     return ZX_OK;
 }

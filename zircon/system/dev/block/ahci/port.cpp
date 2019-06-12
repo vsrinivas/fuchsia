@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #include <ddk/debug.h>
-#include <ddk/io-buffer.h>
 #include <ddk/phys-iter.h>
 
 #include "port.h"
@@ -88,15 +87,17 @@ zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs
     }
 
     // Allocate memory for the command list, FIS receive area, command table and PRDT.
-    zx_status_t status = io_buffer_init(&buffer_, con_->bti_handle(), sizeof(ahci_port_mem_t),
-                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    Bus* bus = con->bus();
+    zx_paddr_t phys_base;
+    void* virt_base;
+    zx_status_t status = bus->IoBufferInit(&buffer_, sizeof(ahci_port_mem_t),
+                                           IO_BUFFER_RW | IO_BUFFER_CONTIG, &phys_base, &virt_base);
     if (status != ZX_OK) {
         zxlogf(ERROR, "ahci.%u: error %d allocating dma memory\n", num_, status);
         mtx_unlock(&lock_);
         return status;
     }
-    zx_paddr_t phys_base = io_buffer_phys(&buffer_);
-    mem_ = static_cast<ahci_port_mem_t*>(io_buffer_virt(&buffer_));
+    mem_ = static_cast<ahci_port_mem_t*>(virt_base);
 
     // clear memory area
     // order is command list (1024-byte aligned)
@@ -352,25 +353,25 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
 
     uint64_t offset_vmo = txn->bop.rw.offset_vmo * devinfo_.block_size;
     uint64_t bytes = txn->bop.rw.length * devinfo_.block_size;
-    size_t pagecount = ((offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) /
-                       PAGE_SIZE;
+    size_t pagecount = ((offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) / PAGE_SIZE;
     zx_paddr_t pages[AHCI_MAX_PAGES];
     if (pagecount > AHCI_MAX_PAGES) {
         zxlogf(SPEW, "ahci.%u: txn %p too many pages (%zu)\n", num_, txn, pagecount);
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_handle_t vmo = txn->bop.rw.vmo;
+    zx::unowned_vmo vmo(txn->bop.rw.vmo);
     bool is_write = cmd_is_write(txn->cmd);
     uint32_t options = is_write ? ZX_BTI_PERM_READ : ZX_BTI_PERM_WRITE;
-    zx_handle_t pmt;
-    zx_status_t st = zx_bti_pin(con_->bti_handle(), options, vmo, offset_vmo & ~PAGE_MASK,
-                                pagecount * PAGE_SIZE, pages, pagecount, &pmt);
+    zx::pmt pmt;
+    Bus* bus = con_->bus();
+    zx_status_t st = bus->BtiPin(options, vmo, offset_vmo & ~PAGE_MASK, pagecount * PAGE_SIZE,
+                                 pages, pagecount, &pmt);
     if (st != ZX_OK) {
         zxlogf(SPEW, "ahci.%u: failed to pin pages, err = %d\n", num_, st);
         return st;
     }
-    txn->pmt = pmt;
+    txn->pmt = pmt.release();
 
     phys_iter_buffer_t physbuf = {};
     physbuf.phys = pages;

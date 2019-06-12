@@ -6,6 +6,9 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fake-bus.h"
+#include "../controller.h"
+
 namespace ahci {
 
 void string_fix(uint16_t* buf, size_t size);
@@ -68,5 +71,37 @@ TEST(SataTest, StringFixTest) {
         sout[i+1] = c;
     }
 }
+
+TEST(AhciTest, Create) {
+    zx_device_t* fake_parent = nullptr;
+    std::unique_ptr<FakeBus> bus(new FakeBus());
+
+    std::unique_ptr<Controller> con;
+    EXPECT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
+}
+
+TEST(AhciTest, CreateBusConfigFailure) {
+    zx_device_t* fake_parent = nullptr;
+    std::unique_ptr<FakeBus> bus(new FakeBus());
+    bus->DoFailConfigure();
+
+    std::unique_ptr<Controller> con;
+    EXPECT_NOT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
+}
+
+// This test causes the test environment to crash on cleanup because the AHCI controller does
+// not properly shut down threads. The fix is for a subsequent CL.
+
+#if 0
+TEST(AhciTest, LaunchThreads) {
+    zx_device_t* fake_parent = nullptr;
+    std::unique_ptr<FakeBus> bus(new FakeBus());
+
+    std::unique_ptr<Controller> con;
+    EXPECT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
+
+    EXPECT_OK(con->LaunchThreads());
+}
+#endif
 
 } // namespace ahci

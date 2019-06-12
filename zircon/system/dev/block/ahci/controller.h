@@ -5,13 +5,13 @@
 #pragma once
 
 #include <lib/sync/completion.h>
-#include <lib/zx/handle.h>
 #include <lib/zx/time.h>
 #include <fbl/unique_ptr.h>
 #include <hw/pci.h>
 #include <zircon/types.h>
 
 #include "ahci.h"
+#include "bus.h"
 #include "port.h"
 
 namespace ahci {
@@ -24,12 +24,16 @@ public:
     // Create a new AHCI Controller.
     static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Controller>* con_out);
 
+    // Test function: Create a new Controller with a caller-provided host bus interface.
+    static zx_status_t CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> bus,
+                                     std::unique_ptr<Controller>* con_out);
+
     // Release call for device protocol. Deletes this Controller.
     static void Release(void* ctx);
 
     // Read or write a 32-bit AHCI controller reg. Endinaness is corrected.
-    inline uint32_t RegRead(const volatile uint32_t* reg) { return pcie_read32(reg); }
-    inline void RegWrite(volatile uint32_t* reg, uint32_t val) { pcie_write32(reg, val); }
+    uint32_t RegRead(const volatile uint32_t* reg);
+    zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val);
 
     // Wait until all bits in |mask| are cleared in |reg| or timeout expires.
     zx_status_t WaitForClear(const volatile uint32_t* reg, uint32_t mask, zx::duration timeout);
@@ -70,7 +74,7 @@ public:
     // Returns maximum number of simultaneous commands on each port.
     uint32_t MaxCommands() { return static_cast<uint32_t>((cap_ >> 8) & 0x1f); }
 
-    zx_handle_t bti_handle() { return bti_handle_.get(); }
+    Bus* bus() { return bus_.get(); }
     zx_device_t** zxdev_ptr() { return &zxdev_; }
 
 private:
@@ -81,9 +85,6 @@ private:
 
     zx_device_t* zxdev_ = nullptr;
     ahci_hba_t* regs_ = nullptr;
-    mmio_buffer_t mmio_;
-    zx::handle bti_handle_;
-    zx::handle irq_handle_;
     uint32_t cap_ = 0;
 
     thrd_t irq_thread_;
@@ -93,7 +94,7 @@ private:
     sync_completion_t worker_completion_;
     sync_completion_t watchdog_completion_;
 
-    pci_protocol_t pci_;
+    std::unique_ptr<Bus> bus_;
     Port ports_[AHCI_MAX_PORTS]{};
 };
 

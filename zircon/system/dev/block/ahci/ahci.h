@@ -4,10 +4,6 @@
 
 #pragma once
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/pci.h>
-
 #define AHCI_MAX_PORTS    32
 #define AHCI_MAX_COMMANDS 32
 #define AHCI_MAX_PRDS     ((PAGE_SIZE / sizeof(zx_paddr_t)) + 1)
