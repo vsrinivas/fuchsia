@@ -5,6 +5,7 @@
 //! Parsing and serialization of IPv4 packets.
 
 use std::fmt::{self, Debug, Formatter};
+use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{
@@ -21,8 +22,25 @@ use crate::wire::util::records::options::Options;
 use self::options::Ipv4OptionsImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
+
+/// The minimum length of an IPv4 header.
 pub(crate) const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
+
+/// The maximum length of an IPv4 header.
 pub(crate) const IPV4_MAX_HDR_LEN: usize = 60;
+
+/// The range of bytes within an IPv4 header buffer that the
+/// total length field uses.
+pub(crate) const IPV4_TOTAL_LENGTH_BYTE_RANGE: Range<usize> = 2..4;
+
+/// The range of bytes within an IPv4 header buffer that the
+/// fragment data fields use.
+pub(crate) const IPV4_FRAGMENT_DATA_BYTE_RANGE: Range<usize> = 4..8;
+
+/// The range of bytes within an IPv4 header buffer that the
+/// checksum field uses.
+pub(crate) const IPV4_CHECKSUM_BYTE_RANGE: Range<usize> = 10..12;
+
 #[cfg(all(test, feature = "benchmark"))]
 pub(crate) const IPV4_TTL_OFFSET: usize = 8;
 #[cfg(all(test, feature = "benchmark"))]
@@ -141,8 +159,8 @@ impl<B: ByteSlice> Ipv4Packet<B> {
     fn compute_header_checksum(&self) -> u16 {
         let mut c = Checksum::new();
         // the header checksum is at bytes 10 and 11
-        c.add_bytes(&self.hdr_prefix.bytes()[..10]);
-        c.add_bytes(&self.hdr_prefix.bytes()[12..]);
+        c.add_bytes(&self.hdr_prefix.bytes()[..IPV4_CHECKSUM_BYTE_RANGE.start]);
+        c.add_bytes(&self.hdr_prefix.bytes()[IPV4_CHECKSUM_BYTE_RANGE.end..]);
         c.add_bytes(self.options.bytes());
         c.checksum()
     }
@@ -228,7 +246,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
         assert_eq!(bytes.len(), expected_bytes_len);
 
         // Zero out the fragment data.
-        bytes[4..8].copy_from_slice(&[0; 4][..]);
+        bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE].copy_from_slice(&[0; 4][..]);
 
         bytes
     }
@@ -735,7 +753,7 @@ mod tests {
         let mut buf = &bytes[..];
         let packet = buf.parse::<Ipv4Packet<_>>().unwrap();
         let copied_bytes = packet.copy_header_bytes_for_fragment();
-        bytes[4..8].copy_from_slice(&[0; 4][..]);
+        bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE].copy_from_slice(&[0; 4][..]);
         assert_eq!(&copied_bytes[..], &bytes[..]);
     }
 }

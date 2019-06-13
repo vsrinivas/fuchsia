@@ -7,6 +7,7 @@
 pub(crate) mod ext_hdrs;
 
 use std::fmt::{self, Debug, Formatter};
+use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use log::debug;
@@ -24,10 +25,15 @@ use crate::wire::util::records::Records;
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,
     Ipv6ExtensionHeader, Ipv6ExtensionHeaderData, Ipv6ExtensionHeaderImpl,
-    Ipv6ExtensionHeaderParsingContext, Ipv6ExtensionHeaderParsingError,
+    Ipv6ExtensionHeaderParsingContext, Ipv6ExtensionHeaderParsingError, IPV6_FRAGMENT_EXT_HDR_LEN,
 };
 
+/// Length of the IPv6 fixed header.
 pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
+
+/// The range of bytes within an IPv6 header buffer that the
+/// payload length field uses.
+pub(crate) const IPV6_PAYLOAD_LEN_BYTE_RANGE: Range<usize> = 4..6;
 
 // Offset to the Next Header field within the fixed IPv6 header
 const NEXT_HEADER_OFFSET: usize = 6;
@@ -373,9 +379,9 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     ///
     /// Panics if there is no fragment extension header in this packet.
     pub(crate) fn copy_header_bytes_for_fragment(&self) -> Vec<u8> {
-        // Since the final header will not include a fragment header,
-        // we don't need to allocate bytes for it (8 bytes).
-        let expected_bytes_len = self.header_len() - 8;
+        // Since the final header will not include a fragment header, we don't
+        // need to allocate bytes for it (`IPV6_FRAGMENT_EXT_HDR_LEN` bytes).
+        let expected_bytes_len = self.header_len() - IPV6_FRAGMENT_EXT_HDR_LEN;
         let mut bytes = Vec::with_capacity(expected_bytes_len);
 
         bytes.extend_from_slice(self.fixed_hdr.bytes());
@@ -399,7 +405,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
             bytes[6] = ext_hdr.next_header;
 
             // Copy extension headers that appear after the fragment header
-            bytes.extend_from_slice(&self.extension_hdrs.bytes()[8..]);
+            bytes.extend_from_slice(&self.extension_hdrs.bytes()[IPV6_FRAGMENT_EXT_HDR_LEN..]);
         } else {
             let mut ext_hdr = ext_hdr;
             let mut ext_hdr_start = 0;
@@ -424,8 +430,8 @@ impl<B: ByteSlice> Ipv6Packet<B> {
                     // into `bytes` and patch the next header value within the
                     // current extension header in `bytes`.
 
-                    // Size of the fragment header should be exactly 8.
-                    let fragment_hdr_end = ext_hdr_end + 8;
+                    // Size of the fragment header should be exactly `IPV6_FRAGMENT_EXT_HDR_LEN`.
+                    let fragment_hdr_end = ext_hdr_end + IPV6_FRAGMENT_EXT_HDR_LEN;
                     assert_eq!(fragment_hdr_end, iter.context().bytes_parsed);
 
                     let extension_hdr_bytes = self.extension_hdrs.bytes();

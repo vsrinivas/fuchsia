@@ -13,6 +13,9 @@ use packet::BufferView;
 use crate::ip::{IpProto, Ipv6ExtHdrType};
 use crate::wire::util::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout};
 
+/// The length of an IPv6 Fragment Extension Header.
+pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
+
 /// An IPv6 Extension Header.
 #[derive(Debug)]
 pub(crate) struct Ipv6ExtensionHeader<'a> {

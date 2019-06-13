@@ -161,7 +161,7 @@ fn handle_fragment_ext_hdr<'a, D: EventDispatcher, B: ByteSlice>(
     packet: &Ipv6Packet<B>,
     fragment_data: &FragmentData<'a>,
 ) -> Ipv6PacketAction {
-    panic!("Handling fragments is not implemented yet");
+    Ipv6PacketAction::ProcessFragment
 }
 
 /// Handles a destination extension header for a `packet`.

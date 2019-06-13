@@ -279,10 +279,26 @@ where
     Ok((src_mac, dst_mac, src_ip, dst_ip, message, code))
 }
 
+/// Get a DummyEventDispatcherConfig depending on the `IpAddress`
+/// `get_dummy_config` is specialied with.
+#[specialize_ip_address]
+pub(crate) fn get_dummy_config<A: IpAddress>() -> DummyEventDispatcherConfig<A> {
+    #[ipv4addr]
+    {
+        DUMMY_CONFIG_V4
+    }
+
+    #[ipv6addr]
+    {
+        DUMMY_CONFIG_V6
+    }
+}
+
 /// A configuration for a simple network.
 ///
 /// `DummyEventDispatcherConfig` describes a simple network with two IP hosts
 /// - one remote and one local - both on the same Ethernet network.
+#[derive(Clone)]
 pub(crate) struct DummyEventDispatcherConfig<A: IpAddress> {
     /// The subnet of the local Ethernet network.
     pub(crate) subnet: Subnet<A>,

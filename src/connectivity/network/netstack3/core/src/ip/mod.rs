@@ -1087,11 +1087,28 @@ mod tests {
     /// Create an IPv4 packet builder.
     fn get_ipv4_builder() -> Ipv4PacketBuilder {
         Ipv4PacketBuilder::new(
-            DUMMY_CONFIG_V4.remote_ip,
+            Ipv4Addr::new([192, 168, 0, 100]),
             DUMMY_CONFIG_V4.local_ip,
             10,
             IpProto::Tcp,
         )
+    }
+
+    /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
+    /// sepcialized with.
+    #[specialize_ip]
+    fn process_ip_fragment<I: Ip, D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device: DeviceId,
+        fragment_id: u16,
+        fragment_offset: u8,
+        fragment_count: u8,
+    ) {
+        #[ipv4]
+        process_ipv4_fragment(ctx, device, fragment_id, fragment_offset, fragment_count);
+
+        #[ipv6]
+        process_ipv6_fragment(ctx, device, fragment_id, fragment_offset, fragment_count);
     }
 
     /// Generate and 'receive' an IPv4 fragment packet.
@@ -1121,6 +1138,40 @@ mod tests {
             .serialize_outer()
             .unwrap();
         receive_ip_packet::<_, _, Ipv4>(ctx, device, FrameDestination::Unicast, buffer);
+    }
+
+    /// Generate and 'receive' an IPv6 fragment packet.
+    ///
+    /// `fragment_offset` is the fragment offset. `fragment_count` is the number
+    /// of fragments for a packet. The generated packet will have a body of size
+    /// 8 bytes.
+    fn process_ipv6_fragment<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device: DeviceId,
+        fragment_id: u16,
+        fragment_offset: u8,
+        fragment_count: u8,
+    ) {
+        assert!(fragment_offset < fragment_count);
+
+        let m_flag = fragment_offset < (fragment_count - 1);
+
+        let mut bytes = vec![0; 48];
+        bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
+        bytes[6] = Ipv6ExtHdrType::Fragment.into(); // Next Header
+        bytes[7] = 64;
+        bytes[8..24]
+            .copy_from_slice(&[16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]);
+        bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        bytes[40] = IpProto::Tcp.into();
+        bytes[42] = fragment_offset >> 5;
+        bytes[43] = ((fragment_offset & 0x1F) << 3) | if m_flag { 1 } else { 0 };
+        NetworkEndian::write_u32(&mut bytes[44..48], fragment_id as u32);
+        bytes.extend(fragment_offset * 8..fragment_offset * 8 + 8);
+        let payload_len = (bytes.len() - 40) as u16;
+        NetworkEndian::write_u16(&mut bytes[4..6], payload_len);
+        let mut buffer = Buf::new(bytes, ..);
+        receive_ip_packet::<_, _, Ipv6>(ctx, device, FrameDestination::Unicast, buffer);
     }
 
     #[test]
@@ -1331,9 +1382,8 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
     }
 
-    #[test]
-    fn test_ipv4_packet_reassembly_not_needed() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+    fn test_ip_packet_reassembly_not_needed<I: Ip>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
         let fragment_id = 5;
@@ -1344,15 +1394,24 @@ mod tests {
         // Test that a non fragmented packet gets dispatched right away.
         //
 
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 0, 1);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 1);
 
         // Make sure the packet got dispatched.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
     }
 
     #[test]
-    fn test_ipv4_packet_reassembly() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+    fn test_ipv4_packet_reassembly_not_needed() {
+        test_ip_packet_reassembly_not_needed::<Ipv4>();
+    }
+
+    #[test]
+    fn test_ipv6_packet_reassembly_not_needed() {
+        test_ip_packet_reassembly_not_needed::<Ipv6>();
+    }
+
+    fn test_ip_packet_reassembly<I: Ip>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
         let fragment_id = 5;
@@ -1363,16 +1422,16 @@ mod tests {
         //
 
         // Process fragment #0
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
 
         // Process fragment #1
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Make sure no packets got dispatched yet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
 
         // Process fragment #2
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
@@ -1380,8 +1439,17 @@ mod tests {
     }
 
     #[test]
-    fn test_ipv4_packet_reassembly_with_packets_arriving_out_of_rder() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+    fn test_ipv4_packet_reassembly() {
+        test_ip_packet_reassembly::<Ipv4>();
+    }
+
+    #[test]
+    fn test_ipv6_packet_reassembly() {
+        test_ip_packet_reassembly::<Ipv6>();
+    }
+
+    fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
         let fragment_id_0 = 5;
@@ -1395,38 +1463,38 @@ mod tests {
         //
 
         // Process packet #0, fragment #1
-        process_ipv4_fragment(&mut ctx, device, fragment_id_0, 1, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 1, 3);
 
         // Process packet #1, fragment #2
-        process_ipv4_fragment(&mut ctx, device, fragment_id_1, 2, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 2, 3);
 
         // Process packet #1, fragment #0
-        process_ipv4_fragment(&mut ctx, device, fragment_id_1, 0, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 0, 3);
 
         // Make sure no packets got dispatched yet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
 
         // Process a packet that does not require reassembly (packet #2, fragment #0).
-        process_ipv4_fragment(&mut ctx, device, fragment_id_2, 0, 1);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_2, 0, 1);
 
         // Make packet #1 got dispatched since it didn't need reassembly.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
 
         // Process packet #0, fragment #2
-        process_ipv4_fragment(&mut ctx, device, fragment_id_0, 2, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 2, 3);
 
         // Make sure no other packets got dispatched yet.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 1);
 
         // Process packet #0, fragment #0
-        process_ipv4_fragment(&mut ctx, device, fragment_id_0, 0, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_0, 0, 3);
 
         // Make sure that packet #0 finally got dispatched now that the final
         // fragment has been 'received'.
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 2);
 
         // Process packet #1, fragment #1
-        process_ipv4_fragment(&mut ctx, device, fragment_id_1, 1, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id_1, 1, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
@@ -1434,8 +1502,17 @@ mod tests {
     }
 
     #[test]
-    fn test_ipv4_packet_reassembly_timeout() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+    fn test_ipv4_packet_reassembly_with_packets_arriving_out_of_order() {
+        test_ip_packet_reassembly_with_packets_arriving_out_of_order::<Ipv4>();
+    }
+
+    #[test]
+    fn test_ipv6_packet_reassembly_with_packets_arriving_out_of_order() {
+        test_ip_packet_reassembly_with_packets_arriving_out_of_order::<Ipv6>();
+    }
+
+    fn test_ip_packet_reassembly_timeout<I: Ip>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
         let fragment_id = 5;
@@ -1446,13 +1523,13 @@ mod tests {
         //
 
         // Process fragment #0
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
 
         // Make sure a timer got added.
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Process fragment #1
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
 
         // Trigger the timer (simulate a timeout for the fragmented packet)
         assert!(trigger_next_timer(&mut ctx));
@@ -1461,7 +1538,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.timer_events().count(), 0);
 
         // Process fragment #2
-        process_ipv4_fragment(&mut ctx, device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
 
         // Make sure no packets got dispatched yet since even
         // though we technically received all the fragments, this fragment
@@ -1471,16 +1548,26 @@ mod tests {
     }
 
     #[test]
-    fn test_ipv4_reassembly_only_at_destination_host() {
+    fn test_ipv4_packet_reassembly_timeout() {
+        test_ip_packet_reassembly_timeout::<Ipv4>();
+    }
+
+    #[test]
+    fn test_ipv6_packet_reassembly_timeout() {
+        test_ip_packet_reassembly_timeout::<Ipv6>();
+    }
+
+    fn test_ip_reassembly_only_at_destination_host<I: Ip>() {
         // Create a new network with two parties (alice & bob) and
         // enable IP packet forwarding for alice.
         let a = "alice";
         let b = "bob";
+        let dummy_config = get_dummy_config::<I::Addr>();
         let mut state_builder = StackStateBuilder::default();
         state_builder.ip_builder().forward(true);
-        let alice = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+        let alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
             .build_with(state_builder, DummyEventDispatcher::default());
-        let bob = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4.swap()).build();
+        let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
         let mut net = DummyNetwork::new(contexts, move |net, device_id| {
             if *net == a {
@@ -1499,49 +1586,13 @@ mod tests {
         // the packets without attempting to process or reassemble the fragments.
         //
 
-        /// Get an IPv4 packet builder where the destination address is that of
-        /// bob and the source address is a random address.
-        fn get_ipv4_builder() -> Ipv4PacketBuilder {
-            Ipv4PacketBuilder::new(
-                Ipv4Addr::new([192, 168, 0, 100]),
-                DUMMY_CONFIG_V4.remote_ip,
-                10,
-                IpProto::Tcp,
-            )
-        }
-
-        /// Process and 'receive' an IPv4 fragment.
-        fn process_ipv4_fragment<D: EventDispatcher>(
-            ctx: &mut Context<D>,
-            device: DeviceId,
-            fragment_id: u16,
-            fragment_offset: u8,
-            fragment_count: u8,
-        ) {
-            assert!(fragment_offset < fragment_count);
-
-            let m_flag = fragment_offset < (fragment_count - 1);
-
-            let mut builder = get_ipv4_builder();
-            builder.id(fragment_id);
-            builder.fragment_offset(fragment_offset as u16);
-            builder.mf_flag(m_flag);
-            let mut body: Vec<u8> = Vec::new();
-            body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
-            let mut buffer = BufferSerializer::new_vec(Buf::new(body, ..))
-                .encapsulate(builder)
-                .serialize_outer()
-                .unwrap();
-            receive_ip_packet::<_, _, Ipv4>(ctx, device, FrameDestination::Unicast, buffer);
-        }
-
         // Process fragment #0
-        process_ipv4_fragment(&mut net.context("alice"), device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 0, 3);
         // Make sure the packet got sent from alice to bob
         assert!(!net.step().is_idle());
 
         // Process fragment #1
-        process_ipv4_fragment(&mut net.context("alice"), device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 1, 3);
         assert!(!net.step().is_idle());
 
         // Make sure no packets got dispatched yet.
@@ -1549,7 +1600,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut net.context("bob"), "dispatch_receive_ip_packet"), 0);
 
         // Process fragment #2
-        process_ipv4_fragment(&mut net.context("alice"), device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 2, 3);
         assert!(!net.step().is_idle());
 
         // Make sure the packet finally got dispatched now that the final
@@ -1559,5 +1610,15 @@ mod tests {
 
         // Make sure there are no more events.
         assert!(net.step().is_idle());
+    }
+
+    #[test]
+    fn test_ipv4_reassembly_only_at_destination_host() {
+        test_ip_reassembly_only_at_destination_host::<Ipv4>();
+    }
+
+    #[test]
+    fn test_ipv6_reassembly_only_at_destination_host() {
+        test_ip_reassembly_only_at_destination_host::<Ipv6>();
     }
 }
