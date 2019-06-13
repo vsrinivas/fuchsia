@@ -102,7 +102,6 @@ typedef uint64_t __be64;
 #define msleep(ms) zx_nanosleep(zx_deadline_after(ZX_MSEC(ms)))
 #define PAUSE zx_nanosleep(zx_deadline_after(ZX_MSEC(50)))
 
-#define min(a, b) (((a) < (b)) ? (a) : (b))
 #define min_t(t, a, b) (((t)(a) < (t)(b)) ? (t)(a) : (t)(b))
 
 #define roundup(n, m) (((n) % (m) == 0) ? (n) : (n) + ((m) - ((n) % (m))))

@@ -15,6 +15,7 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
+#include <algorithm>
 #include <atomic>
 #include <pthread.h>
 
@@ -617,7 +618,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
     this_transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
     uint32_t low_address_bits = this_transfer_address & (MAX_XFER_SIZE - 1);
     if (low_address_bits) {
-        this_transfer_size = min(packet_size, MAX_XFER_SIZE - low_address_bits);
+        this_transfer_size = std::min(packet_size, MAX_XFER_SIZE - low_address_bits);
     } else {
         this_transfer_size = packet_size;
     }

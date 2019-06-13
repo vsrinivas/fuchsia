@@ -16,9 +16,13 @@
 
 #include "sdio.h"
 
+#include <algorithm>
+#include <atomic>
+
 #if (CONFIG_BRCMFMAC_USB || CONFIG_BRCMFMAC_SDIO || CONFIG_BRCMFMAC_PCIE)
 #include <ddk/device.h>
 #endif
+
 #include <ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
@@ -27,7 +31,6 @@
 #define _ALL_SOURCE
 #endif
 #include <threads.h>
-#include <atomic>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -542,7 +545,7 @@ static int qcount[NUMPRIO];
 #define RETRYCHAN(chan) ((chan) == SDPCM_EVENT_CHANNEL)
 
 /* Limit on rounding up frames */
-static const uint max_roundup = 512;
+static const uint16_t max_roundup = 512;
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 #define ALIGNMENT 8
@@ -2427,7 +2430,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     /* Send queued frames (limit 1 if rx may still be pending) */
     if ((bus->clkstate == CLK_AVAIL) && !bus->fcstate.load() &&
             brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol) && txlimit && data_ok(bus)) {
-        framecnt = bus->rxpending ? min(txlimit, bus->txminmax) : txlimit;
+        framecnt = bus->rxpending ? std::min(txlimit, bus->txminmax) : txlimit;
         brcmf_sdio_sendfromq(bus, framecnt);
     }
 
@@ -2943,7 +2946,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
     //spin_lock_bh(&bus->rxctl_lock);
     pthread_mutex_lock(&irq_callback_lock);
     rxlen = bus->rxlen;
-    memcpy(msg, bus->rxctl, min(msglen, rxlen));
+    memcpy(msg, bus->rxctl, std::min(msglen, rxlen));
     bus->rxctl = NULL;
     buf = bus->rxctl_orig;
     bus->rxctl_orig = NULL;
@@ -3192,7 +3195,7 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
         /* otherwise, set txglomalign */
         value = sdiodev->settings->bus.sdio.sd_sgentry_align;
         /* SDIO ADMA requires at least 32 bit alignment */
-        value = max(value, ALIGNMENT);
+        value = std::max<uint32_t>(value, ALIGNMENT);
         err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
     }
 
@@ -4075,7 +4078,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
 
     /* Query the F2 block size, set roundup accordingly */
     sdio_get_block_size(&sdiodev->sdio_proto_fn2, &bus->blocksize);
-    bus->roundup = min(max_roundup, bus->blocksize);
+    bus->roundup = std::min(max_roundup, bus->blocksize);
 
     /* Allocate buffers */
     if (bus->sdiodev->bus_if->maxctl) {

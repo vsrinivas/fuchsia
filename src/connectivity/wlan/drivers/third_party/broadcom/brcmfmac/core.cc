@@ -16,6 +16,7 @@
 
 #include "core.h"
 
+#include <algorithm>
 #include <endian.h>
 #include <pthread.h>
 #include <threads.h>
@@ -278,7 +279,7 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
 
     /* Make sure there's enough writeable headroom */
     if (brcmf_netbuf_head_space(netbuf) < drvr->hdrlen) {
-        head_delta = max((int)(drvr->hdrlen - brcmf_netbuf_head_space(netbuf)), 0);
+        head_delta = std::max<int>(drvr->hdrlen - brcmf_netbuf_head_space(netbuf), 0);
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
         drvr->bus_if->stats.pktcowed.fetch_add(1);

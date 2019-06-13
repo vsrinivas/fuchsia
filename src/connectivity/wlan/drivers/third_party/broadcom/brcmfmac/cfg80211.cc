@@ -18,6 +18,7 @@
 
 #include "cfg80211.h"
 
+#include <algorithm>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
@@ -133,7 +134,7 @@ static uint16_t __wl_rates[] = {
 #define wl_g_rates (__wl_rates + 0)
 #define wl_g_rates_size countof(__wl_rates)
 #define wl_a_rates (__wl_rates + 4)
-#define wl_a_rates_size (wl_g_rates_size - 4)
+#define wl_a_rates_size ((size_t)(wl_g_rates_size - 4))
 
 /* Vendor specific ie. id = 221, oui and type defines exact ie */
 struct brcmf_vs_tlv {
@@ -1372,19 +1373,19 @@ static void brcmf_parse_ies(uint8_t* ie, size_t ie_len, wlanif_bss_description_t
         uint8_t length = ie[offset + 1];
         switch (type) {
         case WLAN_IE_TYPE_SSID: {
-            uint8_t ssid_len = min(length, sizeof(bss->ssid.data));
+            uint8_t ssid_len = std::min<uint8_t>(length, sizeof(bss->ssid.data));
             memcpy(bss->ssid.data, ie + offset + 2, ssid_len);
             bss->ssid.len = ssid_len;
             break;
         }
         case WLAN_IE_TYPE_SUPP_RATES: {
-            uint8_t num_supp_rates = min(length, WLAN_MAC_MAX_SUPP_RATES);
+            uint8_t num_supp_rates = std::min<uint8_t>(length, WLAN_MAC_MAX_SUPP_RATES);
             memcpy(bss->rates, ie + offset + 2, num_supp_rates);
             bss->num_rates = num_supp_rates;
             break;
         }
         case WLAN_IE_TYPE_EXT_SUPP_RATES: {
-            uint8_t num_ext_supp_rates = min(length, WLAN_MAC_MAX_EXT_RATES);
+            uint8_t num_ext_supp_rates = std::min<uint8_t>(length, WLAN_MAC_MAX_EXT_RATES);
             memcpy(bss->rates + bss->num_rates, ie + offset + 2, num_ext_supp_rates);
             bss->num_rates += num_ext_supp_rates;
             break;
@@ -1440,7 +1441,7 @@ static void brcmf_iedump(uint8_t* ies, size_t total_len) {
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
     struct net_device* ndev = ifp->ndev;
     THROTTLE(10, brcmf_dbg_hex_dump(BRCMF_BYTES_ON() && BRCMF_DATA_ON(), packet->data,
-                                    min(packet->len, 64),
+                                    std::min(packet->len, 64u),
                                     "Data received (%d bytes, max 64 shown):\n", packet->len););
     // IEEE Std. 802.3-2015, 3.1.1
     uint16_t eth_type = ((uint16_t*)(packet->data))[6];
@@ -1482,7 +1483,7 @@ static void brcmf_return_scan_result(struct wiphy* wiphy, uint16_t channel, cons
     result.bss.cap = capability;
     result.bss.chan.primary = (uint8_t)channel;
     result.bss.chan.cbw = CBW20; // TODO(cphoenix): Don't hard-code this.
-    result.bss.rssi_dbm = (uint8_t)(min(0, max(-255, rssi_dbm)));
+    result.bss.rssi_dbm = std::min<int16_t>(0, std::max<int16_t>(-255, rssi_dbm));
     result.bss.rcpi_dbmh = 0;
     result.bss.rsni_dbh = 0;
 
@@ -3397,13 +3398,15 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
         wlanif_band_capabilities_t* band = &info->bands[i - 1];
         if (bandlist[i] == WLC_BAND_2G) {
             band->band_id = WLAN_INFO_BAND_2GHZ;
-            band->num_basic_rates = min(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES, wl_g_rates_size);
+            band->num_basic_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES,
+                                                     wl_g_rates_size);
             memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
             band->base_frequency = 2407;
             band_2ghz = band;
         } else if (bandlist[i] == WLC_BAND_5G) {
             band->band_id = WLAN_INFO_BAND_5GHZ;
-            band->num_basic_rates = min(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES, wl_a_rates_size);
+            band->num_basic_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_BASIC_RATES,
+                                                     wl_a_rates_size);
             memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
             band->base_frequency = 5000;
             band_5ghz = band;

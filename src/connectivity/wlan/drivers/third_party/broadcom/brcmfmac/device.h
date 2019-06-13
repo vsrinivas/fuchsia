@@ -68,8 +68,6 @@
 
 #define BRCMF_ERR_FIRMWARE_UNSUPPORTED (-23)
 
-#define max(a, b) ((a)>(b)?(a):(b))
-
 extern async_dispatcher_t* default_dispatcher;
 
 // This is the function that timer users write to receive callbacks.
