@@ -2,1183 +2,1343 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/channel.h>
-#include <lib/zx/job.h>
-#include <lib/zx/process.h>
-#include <lib/zx/thread.h>
-#include <mini-process/mini-process.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <threads.h>
+#include <atomic>
+#include <cstdio>
+#include <cstdlib>
+#include <limits>
+#include <set>
+#include <vector>
+
 #include <unistd.h>
-#include <unittest/unittest.h>
-#include <zircon/assert.h>
+
+#include <fbl/auto_call.h>
+#include <lib/fit/function.h>
+// Needed to test API coverage of null params in GCC.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
+#include <lib/zx/channel.h>
+#pragma GCC diagnostic pop
+#include <lib/zx/event.h>
+#include <lib/zx/fifo.h>
+#include <lib/zx/object.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/rights.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/threads.h>
+#include <zircon/types.h>
 
-static zx_handle_t _channel[4];
+#include <zxtest/zxtest.h>
 
-/**
- * Channel tests with wait multiple.
- *
- * Tests signal state persistence and various combinations of states on multiple handles.
- *
- * Test sequence (may not be exact due to concurrency):
- *   1. Create 2 channels and start a reader thread.
- *   2. Reader blocks wait on both channels.
- *   3. Write to both channels and yield.
- *   4. Reader wake up with channel 1 and channel 2 readable.
- *   5. Reader reads from channel 1, and calls wait again.
- *   6. Reader should wake up immediately, with channel 1 not readable and channel 2 readable.
- *   7. Reader blocks on wait.
- *   8. Write to channel 1 and yield.
- *   9. Reader wake up with channel 1 readable and reads from channel 1.
- *  10. Reader blocks on wait.
- *  11. Write to channel 2 and close both channels, then yield.
- *  12. Reader wake up with channel 2 closed and readable.
- *  13. Read from channel 2 and wait.
- *  14. Reader wake up with channel 2 closed, closes both channels and exit.
- */
+#include "utils.h"
 
-static int reader_thread(void* arg) {
-    const unsigned int index = 2;
-    zx_handle_t* channel = &_channel[index];
-    __UNUSED zx_status_t status;
-    unsigned int packets[2] = {0, 0};
-    bool closed[2] = {false, false};
-    zx_wait_item_t items[2];
-    items[0].handle = channel[0];
-    items[1].handle = channel[1];
-    items[0].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    items[1].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    do {
-        status = zx_object_wait_many(items, 2, ZX_TIME_INFINITE);
-        ZX_ASSERT(status == ZX_OK);
-        uint32_t data;
-        uint32_t num_bytes = sizeof(uint32_t);
-        if (items[0].pending & ZX_CHANNEL_READABLE) {
-            status =
-                zx_channel_read(channel[0], 0u, &data, nullptr, num_bytes, 0, &num_bytes, nullptr);
-            ZX_ASSERT(status == ZX_OK);
-            packets[0] += 1;
-        } else if (items[1].pending & ZX_CHANNEL_READABLE) {
-            status =
-                zx_channel_read(channel[1], 0u, &data, nullptr, num_bytes, 0, &num_bytes, nullptr);
-            ZX_ASSERT(status == ZX_OK);
-            packets[1] += 1;
-        } else {
-            if (items[0].pending & ZX_CHANNEL_PEER_CLOSED)
-                closed[0] = true;
-            if (items[1].pending & ZX_CHANNEL_PEER_CLOSED)
-                closed[1] = true;
-        }
-    } while (!closed[0] || !closed[1]);
-    ZX_ASSERT(packets[0] == 3);
-    ZX_ASSERT(packets[1] == 2);
-    return 0;
+namespace channel {
+namespace {
+
+// Data used for writing into a channel.
+constexpr uint32_t kChannelData = 0xdeadbeef;
+
+TEST(ChannelTest, CreateIsOkAndEndpointsAreRelated) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    zx_info_handle_basic_t info[2];
+    ASSERT_OK(local.get_info(ZX_INFO_HANDLE_BASIC, &info[0], sizeof(zx_info_handle_basic_t),
+                             nullptr, nullptr));
+    ASSERT_OK(remote.get_info(ZX_INFO_HANDLE_BASIC, &info[1], sizeof(zx_info_handle_basic_t),
+                              nullptr, nullptr));
+    ASSERT_NE(info[0].koid, 0);
+    ASSERT_NE(info[1].koid, 0);
+
+    EXPECT_EQ(info[0].related_koid, info[1].koid);
+    EXPECT_EQ(info[1].related_koid, info[0].koid);
 }
 
-static zx_signals_t get_satisfied_signals(zx_handle_t handle) {
-    zx_signals_t pending = 0;
-    zx_status_t status = zx_object_wait_one(handle, 0u, 0u, &pending);
-    ZX_ASSERT(status == ZX_ERR_TIMED_OUT);
-    return pending;
+TEST(ChannelTest, IsWriteableByDefault) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    zx_signals_t local_pending = 0;
+    zx_signals_t remote_pending = 0;
+    ASSERT_OK(local.wait_one(ZX_CHANNEL_WRITABLE, zx::time::infinite_past(), &local_pending));
+    ASSERT_OK(remote.wait_one(ZX_CHANNEL_WRITABLE, zx::time::infinite_past(), &remote_pending));
+    EXPECT_EQ(ZX_CHANNEL_WRITABLE, local_pending);
+    EXPECT_EQ(ZX_CHANNEL_WRITABLE, remote_pending);
 }
 
-static bool channel_test(void) {
-    BEGIN_TEST;
+TEST(ChannelTest, WriteToEndpointCausesOtherToBecomeReadable) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-    zx_status_t status;
+    ASSERT_OK(local.write(0u, &kChannelData, sizeof(uint32_t), nullptr, 0u));
 
-    zx_handle_t h[2];
-    status = zx_channel_create(0, &h[0], &h[1]);
-    ASSERT_EQ(status, ZX_OK, "error in channel create");
+    zx_signals_t local_pending = 0;
+    zx_signals_t remote_pending = 0;
+    ASSERT_OK(local.wait_one(ZX_CHANNEL_WRITABLE, zx::time::infinite_past(), &local_pending));
+    ASSERT_OK(remote.wait_one(ZX_CHANNEL_WRITABLE | ZX_CHANNEL_READABLE, zx::time::infinite_past(),
+                              &remote_pending));
 
-    // Check that koids line up.
-    zx_info_handle_basic_t info[2] = {};
-    status =
-        zx_object_get_info(h[0], ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), nullptr, nullptr);
-    ASSERT_EQ(status, ZX_OK, "");
-    status =
-        zx_object_get_info(h[1], ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), nullptr, nullptr);
-    ASSERT_EQ(status, ZX_OK, "");
-    ASSERT_NE(info[0].koid, 0u, "zero koid!");
-    ASSERT_NE(info[0].related_koid, 0u, "zero peer koid!");
-    ASSERT_NE(info[1].koid, 0u, "zero koid!");
-    ASSERT_NE(info[1].related_koid, 0u, "zero peer koid!");
-    ASSERT_EQ(info[0].koid, info[1].related_koid, "mismatched koids!");
-    ASSERT_EQ(info[1].koid, info[0].related_koid, "mismatched koids!");
-
-    ASSERT_EQ(get_satisfied_signals(h[0]), ZX_CHANNEL_WRITABLE, "");
-    ASSERT_EQ(get_satisfied_signals(h[1]), ZX_CHANNEL_WRITABLE, "");
-
-    _channel[0] = h[0];
-    _channel[2] = h[1];
-
-    static const uint32_t write_data = 0xdeadbeef;
-    status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), nullptr, 0u);
-    ASSERT_EQ(status, ZX_OK, "error in message write");
-    ASSERT_EQ(get_satisfied_signals(_channel[0]), ZX_CHANNEL_WRITABLE, "");
-    ASSERT_EQ(get_satisfied_signals(_channel[2]), ZX_CHANNEL_READABLE | ZX_CHANNEL_WRITABLE, "");
-
-    status = zx_channel_create(0, &h[0], &h[1]);
-    ASSERT_EQ(status, ZX_OK, "error in channel create");
-
-    _channel[1] = h[0];
-    _channel[3] = h[1];
-
-    thrd_t thread;
-    ASSERT_EQ(thrd_create(&thread, reader_thread, nullptr), thrd_success, "error in thread create");
-
-    status = zx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), nullptr, 0u);
-    ASSERT_EQ(status, ZX_OK, "error in message write");
-
-    usleep(1);
-
-    status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), nullptr, 0u);
-    ASSERT_EQ(status, ZX_OK, "error in message write");
-
-    status = zx_channel_write(_channel[0], 0u, &write_data, sizeof(uint32_t), nullptr, 0u);
-    ASSERT_EQ(status, ZX_OK, "error in message write");
-
-    usleep(1);
-
-    status = zx_channel_write(_channel[1], 0u, &write_data, sizeof(uint32_t), nullptr, 0u);
-    ASSERT_EQ(status, ZX_OK, "error in message write");
-
-    zx_handle_close(_channel[1]);
-    // The reader thread is reading from _channel[3], so we may or may not have "readable".
-    ASSERT_TRUE((get_satisfied_signals(_channel[3]) & ZX_CHANNEL_PEER_CLOSED), "");
-
-    usleep(1);
-    zx_handle_close(_channel[0]);
-
-    EXPECT_EQ(thrd_join(thread, nullptr), thrd_success, "error in thread join");
-
-    // Since the the other side of _channel[3] is closed, and the read thread read everything
-    // from it, the only satisfied/satisfiable signals should be "peer closed".
-    ASSERT_EQ(get_satisfied_signals(_channel[3]), ZX_CHANNEL_PEER_CLOSED, "");
-
-    zx_handle_close(_channel[2]);
-    zx_handle_close(_channel[3]);
-
-    END_TEST;
+    EXPECT_EQ(ZX_CHANNEL_WRITABLE, local_pending);
+    EXPECT_EQ(ZX_CHANNEL_WRITABLE | ZX_CHANNEL_READABLE, remote_pending);
 }
 
-static bool channel_read_error_test(void) {
-    BEGIN_TEST;
-    zx_handle_t channel[2];
-    zx_status_t status = zx_channel_create(0, &channel[0], &channel[1]);
-    ASSERT_EQ(status, ZX_OK, "error in channel create");
+TEST(ChannelTest, WriteConsumesAllHandles) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-    // Read from an empty channel.
-    status = zx_channel_read(channel[0], 0u, nullptr, nullptr, 0, 0, nullptr, nullptr);
-    ASSERT_EQ(status, ZX_ERR_SHOULD_WAIT,
-              "read on empty non-closed channel produced incorrect error");
-
-    char data = 'x';
-    status = zx_channel_write(channel[1], 0u, &data, 1u, nullptr, 0u);
-    ASSERT_EQ(status, ZX_OK, "write failed");
-
-    zx_handle_close(channel[1]);
-
-    // Read a message with the peer closed, should yield the message.
-    char read_data = '\0';
-    uint32_t read_data_size = 1u;
-    status = zx_channel_read(channel[0], 0u, &read_data, nullptr, read_data_size, 0,
-                             &read_data_size, nullptr);
-    ASSERT_EQ(status, ZX_OK, "read failed with peer closed but message in the channel");
-    ASSERT_EQ(read_data_size, 1u, "read returned incorrect number of bytes");
-    ASSERT_EQ(read_data, 'x', "read returned incorrect data");
-
-    // Read from an empty channel with a closed peer, should yield a channel closed error.
-    status = zx_channel_read(channel[0], 0u, nullptr, nullptr, 0, 0, nullptr, nullptr);
-    ASSERT_EQ(status, ZX_ERR_PEER_CLOSED, "read on empty closed channel produced incorrect error");
-
-    END_TEST;
-}
-
-static bool channel_close_test(void) {
-    BEGIN_TEST;
-    zx_handle_t channel[2];
-
-    // Channels should gain PEER_CLOSED (and lose WRITABLE) if their peer is closed
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-    ASSERT_EQ(get_satisfied_signals(channel[0]), ZX_CHANNEL_PEER_CLOSED, "");
-    ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    zx_handle_t channel1[2];
-    ASSERT_EQ(zx_channel_create(0, &channel1[0], &channel1[1]), ZX_OK, "");
-    zx_handle_t channel2[2];
-    ASSERT_EQ(zx_channel_create(0, &channel2[0], &channel2[1]), ZX_OK, "");
-
-    // Write channel1[0] to channel[0] (to be received by channel[1])
-    // and channel2[0] to channel[1] (to be received by channel[0]).
-    ASSERT_EQ(zx_channel_write(channel[0], 0u, nullptr, 0u, &channel1[0], 1u), ZX_OK, "");
-    channel1[0] = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_channel_write(channel[1], 0u, nullptr, 0u, &channel2[0], 1u), ZX_OK, "");
-    channel2[0] = ZX_HANDLE_INVALID;
-
-    // Close channel[1]; the former channel1[0] should be closed, so channel1[1] should have
-    // peer closed.
-    ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-    channel[1] = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_object_wait_one(channel1[1], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, nullptr),
-              ZX_OK, "");
-    ASSERT_EQ(get_satisfied_signals(channel2[1]), ZX_CHANNEL_WRITABLE, "");
-
-    // Close channel[0]; the former channel2[0] should be closed, so channel2[1]
-    // should have peer closed.
-    ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-    channel[0] = ZX_HANDLE_INVALID;
-    ASSERT_EQ(get_satisfied_signals(channel1[1]), ZX_CHANNEL_PEER_CLOSED, "");
-    ASSERT_EQ(zx_object_wait_one(channel2[1], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, nullptr),
-              ZX_OK, "");
-
-    ASSERT_EQ(zx_handle_close(channel1[1]), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(channel2[1]), ZX_OK, "");
-
-    END_TEST;
-}
-
-static bool channel_peer_closed_test(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-    ASSERT_EQ(zx_object_signal_peer(channel[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
-    ASSERT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-
-    END_TEST;
-}
-
-static bool channel_non_transferable(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    zx_handle_t event;
-    ASSERT_EQ(zx_event_create(0u, &event), 0, "failed to create event");
-    zx_info_handle_basic_t event_handle_info;
-
-    zx_status_t status = zx_object_get_info(event, ZX_INFO_HANDLE_BASIC, &event_handle_info,
-                                            sizeof(event_handle_info), nullptr, nullptr);
-    ASSERT_EQ(status, ZX_OK, "failed to get event info");
-    zx_rights_t initial_event_rights = event_handle_info.rights;
-    zx_handle_t non_transferable_event;
-    zx_handle_duplicate(event, initial_event_rights & ~ZX_RIGHT_TRANSFER, &non_transferable_event);
-
-    zx_status_t write_result =
-        zx_channel_write(channel[0], 0u, nullptr, 0, &non_transferable_event, 1u);
-    EXPECT_EQ(write_result, ZX_ERR_ACCESS_DENIED, "message_write should fail with ACCESS_DENIED");
-
-    zx_status_t close_result = zx_handle_close(non_transferable_event);
-    EXPECT_EQ(close_result, ZX_ERR_BAD_HANDLE, "");
-
-    END_TEST;
-}
-
-static bool channel_duplicate_handles(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-
-    zx_handle_t event;
-    ASSERT_EQ(zx_event_create(0u, &event), 0, "failed to create event");
-
-    zx_handle_t dup_handles[2] = {event, event};
-    zx_status_t write_result = zx_channel_write(channel[0], 0u, nullptr, 0, dup_handles, 2u);
-    EXPECT_EQ(write_result, ZX_ERR_BAD_HANDLE,
-              "message_write should fail with ZX_ERR_INVALID_ARGS");
-
-    zx_status_t close_result = zx_handle_close(event);
-    EXPECT_EQ(close_result, ZX_ERR_BAD_HANDLE, "");
-    close_result = zx_handle_close(channel[0]);
-    EXPECT_EQ(close_result, ZX_OK, "");
-    close_result = zx_handle_close(channel[1]);
-    EXPECT_EQ(close_result, ZX_OK, "");
-
-    END_TEST;
-}
-
-static const uint32_t multithread_read_num_messages = 5000u;
-
-#define MSG_UNSET ((uint32_t)-1)
-#define MSG_READ_FAILED ((uint32_t)-2)
-#define MSG_WRONG_SIZE ((uint32_t)-3)
-#define MSG_BAD_DATA ((uint32_t)-4)
-
-static int multithread_reader(void* arg) {
-    for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
-        uint32_t msg = MSG_UNSET;
-        uint32_t msg_size = sizeof(msg);
-        zx_status_t status =
-            zx_channel_read(_channel[0], 0u, &msg, nullptr, msg_size, 0, &msg_size, nullptr);
-        if (status != ZX_OK) {
-            ((uint32_t*)arg)[i] = MSG_READ_FAILED;
-            break;
-        }
-        if (msg_size != sizeof(msg)) {
-            ((uint32_t*)arg)[i] = MSG_WRONG_SIZE;
-            break;
-        }
-        if (msg >= multithread_read_num_messages) {
-            ((uint32_t*)arg)[i] = MSG_BAD_DATA;
-            break;
-        }
-
-        ((uint32_t*)arg)[i] = msg;
-    }
-    return 0;
-}
-
-static bool channel_multithread_read(void) {
-    BEGIN_TEST;
-
-    // We'll write from channel[0] and read from channel[1].
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-
-    for (uint32_t i = 0; i < multithread_read_num_messages; i++)
-        ASSERT_EQ(zx_channel_write(channel[0], 0, &i, sizeof(i), nullptr, 0), ZX_OK, "");
-
-    _channel[0] = channel[1];
-
-    // Start two threads to read messages (each will read half). Each will store the received
-    // message data in the corresponding array.
-    uint32_t* received0 =
-        static_cast<uint32_t*>(malloc(multithread_read_num_messages / 2 * sizeof(uint32_t)));
-    ASSERT_TRUE(received0, "malloc failed");
-    uint32_t* received1 =
-        static_cast<uint32_t*>(malloc(multithread_read_num_messages / 2 * sizeof(uint32_t)));
-    ASSERT_TRUE(received1, "malloc failed");
-    thrd_t reader0;
-    ASSERT_EQ(thrd_create(&reader0, multithread_reader, received0), thrd_success,
-              "thrd_create failed");
-    thrd_t reader1;
-    ASSERT_EQ(thrd_create(&reader1, multithread_reader, received1), thrd_success,
-              "thrd_create failed");
-
-    // Wait for threads.
-    EXPECT_EQ(thrd_join(reader0, nullptr), thrd_success, "");
-    EXPECT_EQ(thrd_join(reader1, nullptr), thrd_success, "");
-
-    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-
-    // Check data.
-    bool* received_flags = static_cast<bool*>(calloc(multithread_read_num_messages, sizeof(bool)));
-
-    for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
-        uint32_t msg = received0[i];
-        ASSERT_NE(msg, MSG_READ_FAILED, "read failed");
-        ASSERT_NE(msg, MSG_WRONG_SIZE, "got wrong message size");
-        ASSERT_NE(msg, MSG_BAD_DATA, "got bad message data");
-        ASSERT_LT(msg, multithread_read_num_messages, "???");
-        ASSERT_FALSE(received_flags[msg], "got duplicate message");
-    }
-    for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
-        uint32_t msg = received1[i];
-        ASSERT_NE(msg, MSG_READ_FAILED, "read failed");
-        ASSERT_NE(msg, MSG_WRONG_SIZE, "got wrong message size");
-        ASSERT_NE(msg, MSG_BAD_DATA, "got bad message data");
-        ASSERT_LT(msg, multithread_read_num_messages, "???");
-        ASSERT_FALSE(received_flags[msg], "got duplicate message");
+    constexpr uint32_t kHandleCount = ZX_CHANNEL_MAX_MSG_HANDLES + 1;
+    std::vector<zx::event> safe_handles(kHandleCount);
+    for (uint32_t j = 0; j < kHandleCount; ++j) {
+        ASSERT_OK(zx::event::create(0, &safe_handles[j]));
     }
 
-    free(received0);
-    free(received1);
-    free(received_flags);
-
-    _channel[0] = ZX_HANDLE_INVALID;
-
-    END_TEST;
-}
-
-// |handle| must be valid (and duplicatable and transferable) if |num_handles > 0|.
-static void write_test_message(zx_handle_t channel, zx_handle_t handle, uint32_t size,
-                               uint32_t num_handles) {
-    static const char data[1000] = {};
-    zx_handle_t handles[10] = {};
-
-    ZX_ASSERT(size <= sizeof(data));
-    ZX_ASSERT(num_handles <= countof(handles));
-
-    for (uint32_t i = 0; i < num_handles; i++) {
-        zx_status_t status = zx_handle_duplicate(handle, ZX_RIGHT_TRANSFER, &handles[i]);
-        ZX_ASSERT(status == ZX_OK);
+    zx_handle_t handles[kHandleCount];
+    for (uint32_t j = 0; j < kHandleCount; ++j) {
+        handles[j] = safe_handles[j].release();
     }
 
-    zx_status_t status = zx_channel_write(channel, 0u, data, size, handles, num_handles);
-    ZX_ASSERT(status == ZX_OK);
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, local.write(0, nullptr, 0, handles, kHandleCount));
+
+    for (uint32_t j = 0; j < kHandleCount; ++j) {
+        EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handles[j]));
+    }
 }
 
-static bool channel_may_discard(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-
-    zx_handle_t event;
-    ASSERT_EQ(zx_event_create(0u, &event), 0, "failed to create event");
-
-    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, nullptr), ZX_ERR_TIMED_OUT,
-              "");
-
-    write_test_message(channel[0], event, 10u, 0u);
-    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, nullptr, nullptr, 0, 0,
-                              nullptr, nullptr),
-              ZX_ERR_BUFFER_TOO_SMALL, "");
-
-    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, nullptr), ZX_ERR_TIMED_OUT,
-              "");
-
-    char data[1000];
-    uint32_t size;
-
-    write_test_message(channel[0], event, 100u, 0u);
-    size = 10u;
-    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, data, nullptr, size, 0,
-                              &size, nullptr),
-              ZX_ERR_BUFFER_TOO_SMALL, "");
-    EXPECT_EQ(size, 100u, "wrong size");
-
-    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, nullptr), ZX_ERR_TIMED_OUT,
-              "");
-
-    zx_handle_t handles[10];
-    uint32_t num_handles;
-
-    write_test_message(channel[0], event, 0u, 5u);
-    size = 10u;
-    num_handles = 1u;
-    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, data, handles, size,
-                              num_handles, &size, &num_handles),
-              ZX_ERR_BUFFER_TOO_SMALL, "");
-    EXPECT_EQ(size, 0u, "wrong size");
-    EXPECT_EQ(num_handles, 5u, "wrong number of handles");
-
-    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, nullptr), ZX_ERR_TIMED_OUT,
-              "");
-
-    write_test_message(channel[0], event, 100u, 5u);
-    size = 10u;
-    num_handles = 1u;
-    EXPECT_EQ(zx_channel_read(channel[1], ZX_CHANNEL_READ_MAY_DISCARD, data, handles, size,
-                              num_handles, &size, &num_handles),
-              ZX_ERR_BUFFER_TOO_SMALL, "");
-    EXPECT_EQ(size, 100u, "wrong size");
-    EXPECT_EQ(num_handles, 5u, "wrong number of handles");
-
-    EXPECT_EQ(zx_object_wait_one(channel[1], ZX_CHANNEL_READABLE, 0u, nullptr), ZX_ERR_TIMED_OUT,
-              "");
-
-    zx_status_t close_result = zx_handle_close(event);
-    EXPECT_EQ(close_result, ZX_OK, "");
-    close_result = zx_handle_close(channel[0]);
-    EXPECT_EQ(close_result, ZX_OK, "");
-    close_result = zx_handle_close(channel[1]);
-    EXPECT_EQ(close_result, ZX_OK, "");
-
-    END_TEST;
-}
-
-#define MAX_DELAY 4
-
-enum {
-    OP_ECHO = 0,
-    OP_NOTXID,
-    OP_RUNT,
-    OP_TOOBIG,
-    OP_DELAY,
-    OP_IGNORE,
-    OP_HANDLE,
-    OP_SHUTDOWN,
-    OP_POSTSHUTDOWN
+enum class WorkerCompleteStatus : int {
+    kSuccess = 0,
+    kWaitError = 1,
+    kReadFrom1Error = 2,
+    kReadFrom2Error = 3,
+    kDataMismatchFrom1Error = 4,
+    kDataMismatchFrom2Error = 5,
 };
 
-typedef struct {
-    zx_txid_t txid;
-    uint32_t op;
-    unsigned data[8];
-} msg_t;
+void WaitOnChannels(zx::unowned_channel remote_1, zx::unowned_channel remote_2,
+                    zx::unowned_event event, std::atomic<uint32_t>* total_packets,
+                    std::atomic<uint32_t>* received_bytes_1,
+                    std::atomic<uint32_t>* received_bytes_2,
+                    std::atomic<WorkerCompleteStatus>* result) {
+    zx_wait_item_t items[2];
+    items[0].handle = remote_1->get();
+    items[0].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
-static int cc_server(void* ptr) {
-    zx_status_t status;
-    zx_handle_t h = (zx_handle_t)(uintptr_t)ptr;
+    items[1].handle = remote_2->get();
+    items[1].waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
 
-    uint32_t pending[MAX_DELAY];
-    size_t pending_count = 0;
-
-    for (;;) {
-        zx_object_wait_one(h, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE,
-                           nullptr);
-
-        msg_t msg;
-        zx_handle_t handle = ZX_HANDLE_INVALID;
-        uint32_t bc = 0, hc = 0;
-        status = zx_channel_read(h, 0, &msg, &handle, sizeof(msg), 1, &bc, &hc);
-        if (status != ZX_OK) {
-            fprintf(stderr, "call_server() read failed: %d\n", status);
-            return -1;
+    bool closed_1 = false;
+    bool closed_2 = false;
+    while (!closed_1 || !closed_2) {
+        uint32_t data = 0u;
+        uint32_t actual_bytes = 0u;
+        if (zx::channel::wait_many(items, 2, zx::deadline_after(zx::duration::infinite())) !=
+            ZX_OK) {
+            *result = WorkerCompleteStatus::kWaitError;
+            return;
         }
-
-        if (bc != sizeof(msg)) {
-            msg.op = OP_RUNT;
-        }
-
-        if ((hc > 0) && (msg.op != OP_HANDLE)) {
-            fprintf(stderr, "call_server() got unexpected handle on op %u\n", msg.op);
-            return -1;
-        }
-
-        switch (msg.op) {
-        case OP_RUNT:
-            memset(msg.data, 0xee, sizeof(msg.data));
-            break;
-        case OP_ECHO:
-        case OP_TOOBIG:
-        case OP_HANDLE:
-            break;
-        case OP_DELAY:
-            for (unsigned n = 0; n < pending_count; n++) {
-                if (pending[n] == msg.txid) {
-                    fprintf(stderr, "call_server() kernel re-used a txid!\n");
-                    return -1;
-                }
+        if (items[0].pending & ZX_CHANNEL_READABLE) {
+            event->signal(0, ZX_USER_SIGNAL_0);
+            if (remote_1->read(0u, &data, nullptr, sizeof(uint32_t), 0, &actual_bytes, nullptr) !=
+                ZX_OK) {
+                *result = WorkerCompleteStatus::kReadFrom1Error;
+                return;
             }
-            pending[pending_count++] = msg.txid;
-            if (pending_count < MAX_DELAY) {
+            if (data != kChannelData) {
+                *result = WorkerCompleteStatus::kDataMismatchFrom1Error;
+                return;
+            }
+            *received_bytes_1 += actual_bytes;
+            (*total_packets)++;
+        } else if (items[1].pending & ZX_CHANNEL_READABLE) {
+            event->signal(0, ZX_USER_SIGNAL_1);
+            if (remote_2->read(0u, &data, nullptr, sizeof(uint32_t), 0, &actual_bytes, nullptr) !=
+                ZX_OK) {
+                *result = WorkerCompleteStatus::kReadFrom2Error;
+                return;
+            }
+            if (data != kChannelData) {
+                *result = WorkerCompleteStatus::kDataMismatchFrom2Error;
+                return;
+            }
+            *received_bytes_2 += actual_bytes;
+            (*total_packets)++;
+        } else {
+            if (items[0].pending & ZX_CHANNEL_PEER_CLOSED) {
+                closed_1 = true;
+            }
+            if (items[1].pending & ZX_CHANNEL_PEER_CLOSED) {
+                closed_2 = true;
+            }
+        }
+    }
+
+    *result = WorkerCompleteStatus::kSuccess;
+    return;
+}
+
+TEST(ChannelTest, WaitManyIsSignaledOnAnyElementWrite) {
+    zx::channel local_1, local_2;
+    zx::channel remote_1, remote_2;
+
+    ASSERT_OK(zx::channel::create(0, &local_1, &remote_1));
+    ASSERT_OK(zx::channel::create(0, &local_2, &remote_2));
+    std::atomic<uint32_t> received_packets = 0;
+    std::atomic<uint32_t> received_bytes_1 = 0;
+    std::atomic<uint32_t> received_bytes_2 = 0;
+    std::atomic<WorkerCompleteStatus> result = WorkerCompleteStatus::kSuccess;
+    zx::event event;
+
+    ASSERT_OK(zx::event::create(0, &event));
+
+    {
+        AutoJoinThread worker(&WaitOnChannels, zx::unowned_channel(remote_1),
+                              zx::unowned_channel(remote_2), zx::unowned_event(event),
+                              &received_packets, &received_bytes_1, &received_bytes_2, &result);
+        // On exit close the local handles to unblock the service thread.
+        auto cleanup = fbl::MakeAutoCall([&local_1, &local_2]() {
+            local_1.reset();
+            local_2.reset();
+        });
+        ASSERT_OK(local_1.write(0, &kChannelData, sizeof(uint32_t), nullptr, 0));
+        // We should expect only to be signalled for reading from remote_1.
+        ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr));
+    }
+
+    zx_signals_t event_signal;
+    ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::time::infinite_past(),
+                             &event_signal));
+    zx_signals_t signal_1;
+    ASSERT_EQ(remote_1.wait_one(0, zx::time::infinite_past(), &signal_1), ZX_ERR_TIMED_OUT);
+    zx_signals_t signal_2;
+    ASSERT_EQ(remote_2.wait_one(0, zx::time::infinite_past(), &signal_2), ZX_ERR_TIMED_OUT);
+
+    ASSERT_EQ(result, WorkerCompleteStatus::kSuccess);
+    ASSERT_EQ(ZX_USER_SIGNAL_0, event_signal);
+    EXPECT_EQ(ZX_CHANNEL_PEER_CLOSED, signal_1);
+    EXPECT_EQ(ZX_CHANNEL_PEER_CLOSED, signal_2);
+    EXPECT_EQ(received_bytes_1.load(), 1 * sizeof(uint32_t));
+    EXPECT_EQ(received_bytes_2.load(), 0);
+    EXPECT_EQ(received_packets, 1u);
+}
+
+TEST(ChannelTest, WaitManyIsSignaledForBothWrites) {
+    zx::channel local_1, local_2;
+    zx::channel remote_1, remote_2;
+
+    ASSERT_OK(zx::channel::create(0, &local_1, &remote_1));
+    ASSERT_OK(zx::channel::create(0, &local_2, &remote_2));
+    std::atomic<uint32_t> received_packets = 0;
+    std::atomic<uint32_t> received_bytes_1 = 0;
+    std::atomic<uint32_t> received_bytes_2 = 0;
+    std::atomic<WorkerCompleteStatus> result = WorkerCompleteStatus::kSuccess;
+    zx::event event;
+
+    ASSERT_OK(zx::event::create(0, &event));
+
+    {
+        AutoJoinThread worker(&WaitOnChannels, zx::unowned_channel(remote_1),
+                              zx::unowned_channel(remote_2), zx::unowned_event(event),
+                              &received_packets, &received_bytes_1, &received_bytes_2, &result);
+        // On exit close the local handles to unblock the service thread.
+        auto cleanup = fbl::MakeAutoCall([&local_1, &local_2]() {
+            local_1.reset();
+            local_2.reset();
+        });
+        ASSERT_OK(local_2.write(0, &kChannelData, sizeof(uint32_t), nullptr, 0));
+        ASSERT_OK(local_1.write(0, &kChannelData, sizeof(uint32_t), nullptr, 0));
+        // We should expect only to be signalled for reading from remote_1.
+        ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr));
+        ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_1, zx::time::infinite(), nullptr));
+    }
+
+    zx_signals_t event_signal;
+    ASSERT_OK(event.wait_one(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, zx::time::infinite_past(),
+                             &event_signal));
+    zx_signals_t signal_1;
+    ASSERT_EQ(remote_1.wait_one(0, zx::time::infinite_past(), &signal_1), ZX_ERR_TIMED_OUT);
+    zx_signals_t signal_2;
+    ASSERT_EQ(remote_2.wait_one(0, zx::time::infinite_past(), &signal_2), ZX_ERR_TIMED_OUT);
+
+    ASSERT_EQ(result, WorkerCompleteStatus::kSuccess);
+    ASSERT_EQ(ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1, event_signal);
+    EXPECT_EQ(ZX_CHANNEL_PEER_CLOSED, signal_1);
+    EXPECT_EQ(ZX_CHANNEL_PEER_CLOSED, signal_2);
+    EXPECT_EQ(received_bytes_1.load(), 1 * sizeof(uint32_t));
+    EXPECT_EQ(received_bytes_2.load(), 1 * sizeof(uint32_t));
+    EXPECT_EQ(received_packets, 2u);
+}
+
+TEST(ChannelTest, ReadWhenEmptyReturnsShouldWait) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    ASSERT_EQ(remote.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr), ZX_ERR_SHOULD_WAIT);
+}
+
+TEST(ChannelTest, ReadWhenEmptyAndClosedReturnsPeerClosed) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    local.reset();
+    ASSERT_EQ(remote.read(0, nullptr, nullptr, 0, 0, nullptr, nullptr), ZX_ERR_PEER_CLOSED);
+}
+
+TEST(ChannelTest, ReadRemainingMessagesWhenPeerIsClosed) {
+    constexpr uint32_t kMessageCount = 4;
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    for (uint32_t i = 0; i < kMessageCount; ++i) {
+        ASSERT_OK(local.write(0, &kChannelData, sizeof(uint32_t), nullptr, 0));
+    }
+
+    local.reset();
+
+    zx_signals_t signal;
+    ASSERT_EQ(remote.wait_one(0, zx::time::infinite_past(), &signal), ZX_ERR_TIMED_OUT);
+    ASSERT_EQ(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, signal);
+
+    for (uint32_t i = 0; i < kMessageCount; ++i) {
+        uint32_t data;
+        uint32_t read_bytes;
+        ASSERT_OK(remote.read(0, &data, nullptr, sizeof(uint32_t), 0, &read_bytes, nullptr));
+        ASSERT_EQ(sizeof(uint32_t), read_bytes);
+        ASSERT_EQ(kChannelData, data);
+    }
+    // The channel should not be readable, since there are no remaining messages on it.
+    ASSERT_EQ(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr),
+              ZX_ERR_TIMED_OUT);
+}
+
+TEST(ChannelTest, CloseSignalsPeerClosed) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    local.reset();
+
+    zx_signals_t signal;
+    ASSERT_OK(remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signal));
+    EXPECT_TRUE(signal & ZX_CHANNEL_PEER_CLOSED);
+}
+
+TEST(ChannelTest, CloseClearsSignalsWriteable) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    zx_signals_t signal;
+    ASSERT_EQ(remote.wait_one(0, zx::time::infinite_past(), &signal), ZX_ERR_TIMED_OUT);
+    ASSERT_TRUE(signal & ZX_CHANNEL_WRITABLE);
+
+    local.reset();
+
+    ASSERT_OK(remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signal));
+    EXPECT_FALSE(signal & ZX_CHANNEL_WRITABLE);
+}
+
+TEST(ChannelTest, CloseSignalsPeerReturnsPeerClosed) {
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    local.reset();
+    ASSERT_EQ(remote.signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED);
+}
+
+TEST(ChannelTest, OnFlightHandlesSignalledWhenPeerIsClosed) {
+    zx::channel local;
+    zx::channel remote;
+    zx::channel on_flight_local[2];
+    zx::channel on_flight_remote[2];
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    ASSERT_OK(zx::channel::create(0, &on_flight_local[0], &on_flight_remote[0]));
+    ASSERT_OK(zx::channel::create(0, &on_flight_local[1], &on_flight_remote[1]));
+
+    // Write each handle to the respective channel peer.
+    zx_handle_t transferred = on_flight_remote[0].release();
+    ASSERT_OK(local.write(0, nullptr, 0, &transferred, 1));
+
+    transferred = on_flight_remote[1].release();
+    ASSERT_OK(remote.write(0, nullptr, 0, &transferred, 1));
+
+    // When the peer is closed, all unread handles should be closed.
+    local.reset();
+
+    // Now the local end of each transferred channel should be signalled.
+    ASSERT_OK(on_flight_local[1].wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
+    // Because |remote| is still not closed, then we can still read the remote end of the channel,
+    // this should still be writeable.
+    zx_signals_t signals;
+    ASSERT_EQ(on_flight_local[0].wait_one(0, zx::time::infinite_past(), &signals),
+              ZX_ERR_TIMED_OUT);
+    ASSERT_NE(signals & ZX_CHANNEL_WRITABLE, 0);
+
+    remote.reset();
+    ASSERT_OK(on_flight_local[0].wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
+    ASSERT_EQ(on_flight_local[1].wait_one(ZX_ERR_PEER_CLOSED, zx::time::infinite_past(), nullptr),
+              ZX_ERR_TIMED_OUT);
+}
+
+TEST(ChannelTest, WriteNonTransferableHandleReturnsAccessDeniedAndClosesHandle) {
+    zx::channel local;
+    zx::channel remote;
+    zx::event event;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    ASSERT_OK(zx::event::create(0, &event));
+
+    zx_info_handle_basic_t event_info;
+    ASSERT_OK(event.get_info(ZX_INFO_HANDLE_BASIC, &event_info, sizeof(zx_info_handle_basic_t),
+                             nullptr, nullptr));
+
+    // Remove the transfer right.
+    zx_rights_t rights = event_info.rights & ~ZX_RIGHT_TRANSFER;
+    zx::event non_transferable_event;
+    ASSERT_OK(event.duplicate(rights, &non_transferable_event));
+
+    zx_handle_t transferred = non_transferable_event.release();
+    ASSERT_EQ(local.write(0, nullptr, 0, &transferred, 1), ZX_ERR_ACCESS_DENIED);
+    ASSERT_EQ(zx_handle_close(transferred), ZX_ERR_BAD_HANDLE);
+}
+
+TEST(ChannelTest, WriteRepeatedHandlesReturnsBadHandlesAndClosesHandle) {
+    zx::channel local;
+    zx::channel remote;
+    zx::event event;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    ASSERT_OK(zx::event::create(0, &event));
+
+    zx_handle_t event_handle = event.release();
+    zx_handle_t handles[2] = {event_handle, event_handle};
+
+    ASSERT_EQ(local.write(0, nullptr, 0, handles, 2), ZX_ERR_BAD_HANDLE);
+    ASSERT_EQ(zx_handle_close(event_handle), ZX_ERR_BAD_HANDLE);
+}
+
+TEST(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
+    zx::channel local;
+    zx::channel remote;
+    // Used to force both threads to stall until both are ready to run.
+    zx::event event;
+
+    constexpr uint32_t kNumMessages = 5000;
+    enum class ReadMessageStatus {
+        kUnset,
+        kReadFailed,
+        kOk,
+    };
+
+    struct Message {
+        uint64_t data = 0;
+        uint32_t data_size = 0;
+        ReadMessageStatus status = ReadMessageStatus::kUnset;
+    };
+
+    std::vector<Message> read_messages;
+    read_messages.resize(kNumMessages);
+
+    auto reader_worker = [&read_messages, &event, &remote](uint32_t offset) {
+        zx_status_t wait_status = event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+        if (wait_status != ZX_OK) {
+            return;
+        }
+        for (uint32_t i = 0; i < kNumMessages / 2; ++i) {
+            uint64_t data = 0;
+            uint32_t read_bytes = 0;
+            zx_status_t read_status =
+                remote.read(0, &data, nullptr, sizeof(uint64_t), 0, &read_bytes, nullptr);
+            uint32_t index = offset + i;
+            auto& message = read_messages[index];
+            if (read_status != ZX_OK) {
+                message.status = ReadMessageStatus::kReadFailed;
                 continue;
             }
-            while (pending_count > 0) {
-                pending_count--;
-                msg.op = OP_DELAY;
-                msg.txid = pending[pending_count];
-                status = zx_channel_write(h, 0, &msg, sizeof(msg), nullptr, 0);
-                if (status != ZX_OK) {
-                    fprintf(stderr, "call_server() replay write failed: %d\n", status);
-                    return -1;
-                }
-            }
-            continue;
-        case OP_IGNORE:
-            continue;
-        case OP_SHUTDOWN:
-            zx_handle_close(h);
-            return 0;
+            message.status = ReadMessageStatus::kOk;
+            message.data = data;
+            message.data_size = read_bytes;
         }
-
-        status = zx_channel_write(h, 0, &msg, sizeof(msg), &handle, hc);
-        if (status != ZX_OK) {
-            fprintf(stderr, "call_server() write failed: %d\n", status);
-            return -1;
-        }
-    }
-    return 0;
-}
-
-static unsigned fillbyte = 1;
-
-static zx_status_t do_cc(zx_handle_t cli, uint32_t op) {
-    msg_t msg;
-    msg_t rsp;
-    zx_handle_t h = ZX_HANDLE_INVALID;
-
-    unsigned fill = (op == OP_RUNT) ? 0xee : fillbyte++;
-
-    msg.txid = 0x11223344;
-    msg.op = op;
-    memset(msg.data, fill, sizeof(msg.data));
-
-    zx_channel_call_args_t args = {
-        .wr_bytes = &msg,
-        .wr_handles = &h,
-        .rd_bytes = &rsp,
-        .rd_handles = &h,
-        .wr_num_bytes = sizeof(msg),
-        .wr_num_handles = 0,
-        .rd_num_bytes = sizeof(msg),
-        .rd_num_handles = 0,
+        return;
     };
 
-    switch (op) {
-    case OP_RUNT:
-        args.wr_num_bytes = sizeof(zx_txid_t);
-        break;
-    case OP_NOTXID:
-        args.wr_num_bytes = 1;
-        break;
-    case OP_TOOBIG:
-        args.rd_num_bytes = sizeof(zx_txid_t);
-        break;
-    case OP_HANDLE:
-        if (zx_event_create(0, &h) != ZX_OK) {
-            return -1005;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    ASSERT_OK(zx::event::create(0, &event));
+    constexpr uint32_t kReader1Offset = 0;
+    constexpr uint32_t kReader2Offset = kNumMessages / 2;
+    {
+        AutoJoinThread worker_1(reader_worker, kReader1Offset);
+        AutoJoinThread worker_2(reader_worker, kReader2Offset);
+        auto cleanup = fbl::MakeAutoCall([&local, &event]() {
+            // Unlock read.
+            local.reset();
+            // Notify cancelled.
+            event.reset();
+        });
+        for (uint64_t i = 1; i <= kNumMessages; ++i) {
+            ASSERT_OK(local.write(0, &i, sizeof(uint64_t), nullptr, 0));
         }
-        args.wr_num_handles = 1;
-        args.rd_num_handles = 1;
+
+        ASSERT_OK(event.signal(0, ZX_USER_SIGNAL_0));
+        // Join before cleanup.
+        worker_1.Join();
+        worker_2.Join();
     }
 
-    zx_status_t status;
-    uint32_t bytes = 0;
-    uint32_t handles = 0;
-
-    zx_time_t timeout = (op == OP_IGNORE) ? 0 : ZX_TIME_INFINITE;
-
-    status = zx_channel_call(cli, 0, timeout, &args, &bytes, &handles);
-    if (status != ZX_OK) {
-        if ((op == OP_IGNORE) && (status == ZX_ERR_TIMED_OUT)) {
-            return ZX_OK;
+    std::set<uint64_t> read_data;
+    // Check that data os within (0, kNumMessages] range and that is monotonically increasing per
+    // each reader.
+    auto ValidateMessages = [&read_data, &read_messages, kNumMessages](uint32_t offset) {
+        uint64_t prev = 0;
+        for (uint32_t i = offset; i < kNumMessages / 2 + offset; ++i) {
+            const auto& message = read_messages[i];
+            read_data.insert(message.data);
+            EXPECT_GT(message.data, 0);
+            EXPECT_LE(message.data, kNumMessages);
+            EXPECT_GT(message.data, prev);
+            prev = message.data;
+            EXPECT_EQ(message.data_size, sizeof(uint64_t));
+            EXPECT_EQ(message.status, ReadMessageStatus::kOk);
         }
-        if ((op == OP_NOTXID) && (status == ZX_ERR_INVALID_ARGS)) {
-            return ZX_OK;
-        }
-        if ((op == OP_SHUTDOWN) && (status == ZX_ERR_PEER_CLOSED)) {
-            return ZX_OK;
-        }
-        if ((op == OP_POSTSHUTDOWN) && (status == ZX_ERR_PEER_CLOSED)) {
-            return ZX_OK;
-        }
-        if ((op == OP_TOOBIG) && (status == ZX_ERR_BUFFER_TOO_SMALL)) {
-            return ZX_OK;
-        }
-        fprintf(stderr, "do_cc: channel_call() status=%d\n", status);
-        return -1000;
-    }
-
-    if (handles == 1) {
-        zx_handle_close(h);
-        if (op != OP_HANDLE) {
-            return -1004;
-        }
-    }
-
-    if ((bytes != sizeof(msg)) || ((op != OP_HANDLE) && (handles != 0))) {
-        return -1001;
-    }
-
-    if (msg.op != rsp.op) {
-        return -1002;
-    }
-
-    switch (op) {
-    case OP_HANDLE:
-    case OP_ECHO:
-    case OP_RUNT:
-        if (memcmp(msg.data, rsp.data, sizeof(msg.data))) {
-            return -1003;
-        }
-        break;
-    }
-
-    return ZX_OK;
-}
-
-static int cc_client(void* ptr) {
-    zx_handle_t cli = (zx_handle_t)(uintptr_t)ptr;
-    return do_cc(cli, OP_DELAY);
-}
-
-static bool channel_call(void) {
-    BEGIN_TEST;
-
-    zx_handle_t cli, srv;
-    ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
-
-    // start test server
-    thrd_t srvt;
-    ASSERT_EQ(thrd_create(&srvt, cc_server, (void*)(uintptr_t)srv), thrd_success, "");
-
-    ASSERT_EQ(do_cc(cli, OP_ECHO), ZX_OK, "");
-    ASSERT_EQ(do_cc(cli, OP_RUNT), ZX_OK, "");
-    ASSERT_EQ(do_cc(cli, OP_TOOBIG), ZX_OK, "");
-    ASSERT_EQ(do_cc(cli, OP_ECHO), ZX_OK, "");
-    ASSERT_EQ(do_cc(cli, OP_NOTXID), ZX_OK, "");
-    ASSERT_EQ(do_cc(cli, OP_IGNORE), ZX_OK, "");
-    ASSERT_EQ(do_cc(cli, OP_HANDLE), ZX_OK, "");
-
-    // do four OP_DELAYs on four different threads
-    thrd_t a, b, c, d;
-    ASSERT_EQ(thrd_create(&a, cc_client, (void*)(uintptr_t)cli), thrd_success, "");
-    ASSERT_EQ(thrd_create(&b, cc_client, (void*)(uintptr_t)cli), thrd_success, "");
-    ASSERT_EQ(thrd_create(&c, cc_client, (void*)(uintptr_t)cli), thrd_success, "");
-    ASSERT_EQ(thrd_create(&d, cc_client, (void*)(uintptr_t)cli), thrd_success, "");
-
-    // server will respond in opposite order once it has received all of them
-
-    // verify that they all finish
-    int r;
-    ASSERT_EQ(thrd_join(a, &r), thrd_success, "");
-    ASSERT_EQ(r, 0, "");
-    ASSERT_EQ(thrd_join(b, &r), thrd_success, "");
-    ASSERT_EQ(r, 0, "");
-    ASSERT_EQ(thrd_join(c, &r), thrd_success, "");
-    ASSERT_EQ(r, 0, "");
-    ASSERT_EQ(thrd_join(d, &r), thrd_success, "");
-    ASSERT_EQ(r, 0, "");
-
-    ASSERT_EQ(do_cc(cli, OP_SHUTDOWN), ZX_OK, "");
-
-    ASSERT_EQ(do_cc(cli, OP_POSTSHUTDOWN), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(cli), ZX_OK, "");
-
-    END_TEST;
-}
-
-static bool channel_call_consumes_handles(void) {
-    BEGIN_TEST;
-
-    zx_handle_t cli, srv;
-    ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(srv), ZX_OK, "");
-
-    zx_handle_t h;
-    ASSERT_EQ(zx_event_create(0, &h), ZX_OK, "");
-
-    uint8_t msg[64];
-    memset(msg, 0, sizeof(msg));
-
-    zx_channel_call_args_t args = {
-        .wr_bytes = &msg,
-        .wr_handles = &h,
-        .rd_bytes = &msg,
-        .rd_handles = nullptr,
-        .wr_num_bytes = sizeof(msg),
-        .wr_num_handles = 1,
-        .rd_num_bytes = sizeof(msg),
-        .rd_num_handles = 0,
     };
+    ValidateMessages(kReader1Offset);
+    ValidateMessages(kReader2Offset);
 
-    uint32_t act_bytes = 0xffffffff;
-    uint32_t act_handles = 0xffffffff;
-
-    zx_status_t r = zx_channel_call(cli, 42, ZX_TIME_INFINITE, &args, &act_bytes, &act_handles);
-
-    ASSERT_EQ(r, ZX_ERR_INVALID_ARGS, "");
-    ASSERT_EQ(zx_handle_close(h), ZX_ERR_BAD_HANDLE, "");
-
-    END_TEST;
+    // No repeated messages.
+    ASSERT_EQ(read_data.size(), kNumMessages,
+              "Read messages do not match the number of written messages.");
 }
 
-static bool create_and_nest(zx_handle_t out, zx_handle_t* end, size_t n) {
-    BEGIN_TEST;
+constexpr uint32_t kMaxDataSize = 1000;
+constexpr uint32_t kMaxHandleCount = 10;
+constexpr char kEmptyData[kMaxDataSize] = {};
 
-    zx_handle_t channel[2];
-    if (n == 1) {
-        ASSERT_EQ(zx_channel_create(0, &channel[0], end), ZX_OK, "");
-        ASSERT_EQ(zx_channel_write(out, 0u, nullptr, 0u, channel, 1u), ZX_OK, "");
+// Writes |msg_size| zeroed bytes to |channel| and |handle_count| duplicates of |event| to
+// |channel|.
+void WriteDataAndHandles(const zx::channel& channel, const zx::event& event, uint32_t msg_size,
+                         uint32_t handle_count) {
+    zx::event duplicates[kMaxHandleCount] = {};
+    zx_handle_t handles[kMaxHandleCount] = {};
+
+    ASSERT_LE(msg_size, kMaxDataSize);
+    ASSERT_LE(handle_count, kMaxHandleCount);
+
+    for (uint32_t i = 0; i < handle_count; ++i) {
+        ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicates[i]));
+    }
+
+    // This is separate, so all duplicate handles are close if any duplication fails.
+    for (uint32_t i = 0; i < handle_count; ++i) {
+        handles[i] = duplicates[i].release();
+    }
+
+    ASSERT_OK(channel.write(0, kEmptyData, msg_size, handles, handle_count));
+}
+
+template <typename T>
+void CheckHandleCount(const zx::object<T>& zx_object, uint32_t expected_count) {
+    // Only the handle to |event| remains.
+    zx_info_handle_count_t handle_info;
+    ASSERT_OK(zx_object.get_info(ZX_INFO_HANDLE_COUNT, &handle_info, sizeof(zx_info_handle_count_t),
+                                 nullptr, nullptr));
+    ASSERT_EQ(expected_count, handle_info.handle_count);
+}
+
+template <uint32_t ByteBufferSize, uint32_t HandleCount,
+          bool convert_zero_elements_to_nullptr = false>
+void PerformChannelCallWithSmallBuffer(const zx::channel& local, const zx::channel& remote,
+                                       uint32_t reply_byte_size, uint32_t reply_handle_count,
+                                       uint32_t* actual_bytes, uint32_t* actual_handles) {
+    // An extra element to prevent 0 sized arrays.
+    uint8_t buffer[ByteBufferSize + 1] = {};
+    zx_handle_t handles[HandleCount + 1] = {};
+
+    uint8_t* buffer_ptr = (convert_zero_elements_to_nullptr) ? nullptr : buffer;
+    zx_handle_t* handles_ptr = (convert_zero_elements_to_nullptr) ? nullptr : handles;
+
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    ASSERT_EQ(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr),
+              ZX_ERR_TIMED_OUT);
+    ASSERT_NO_FATAL_FAILURES(
+        WriteDataAndHandles(local, event, reply_byte_size, reply_handle_count));
+    ASSERT_EQ(remote.read(ZX_CHANNEL_READ_MAY_DISCARD, buffer_ptr, handles_ptr, ByteBufferSize,
+                          HandleCount, actual_bytes, actual_handles),
+              ZX_ERR_BUFFER_TOO_SMALL);
+    ASSERT_EQ(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr),
+              ZX_ERR_TIMED_OUT);
+    // At the end, only one handle should remain.
+    ASSERT_NO_FATAL_FAILURES(CheckHandleCount(event, 1));
+}
+
+TEST(ChannelTest, ReadMayDiscardWithNullBuffersReturnsBufferTooSmall) {
+    constexpr uint32_t kDataSize = 0;
+    constexpr uint32_t kHandleCount = 0;
+
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handle_count = 0;
+
+    ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+        local, remote, kDataSize + 1, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
+
+    EXPECT_EQ(kHandleCount + 1, actual_handle_count);
+    EXPECT_EQ(kDataSize + 1, actual_bytes);
+}
+
+TEST(ChannelTest, ReadMayDiscardWithNullBufferDiscardsDataReturnsBufferTooSmall) {
+    constexpr uint32_t kDataSize = 1;
+    constexpr uint32_t kHandleCount = 0;
+
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handle_count = 0;
+
+    ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+        local, remote, kDataSize + 1, kHandleCount, &actual_bytes, &actual_handle_count)));
+
+    EXPECT_EQ(kHandleCount, actual_handle_count);
+    EXPECT_EQ(kDataSize + 1, actual_bytes);
+}
+
+TEST(ChannelTest, ReadMayDiscardWithNullBufferDiscardHandlesReturnsBufferTooSmall) {
+    constexpr uint32_t kDataSize = 0;
+    constexpr uint32_t kHandleCount = 1;
+
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handle_count = 0;
+
+    ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+        local, remote, kDataSize, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
+
+    EXPECT_EQ(kHandleCount + 1, actual_handle_count);
+    EXPECT_EQ(kDataSize, actual_bytes);
+}
+
+TEST(ChannelTest, ReadMayDiscardWithZeroSizeBuffersDiscardHandlesAndDataReturnsBufferTooSmall) {
+    constexpr uint32_t kDataSize = 0;
+    constexpr uint32_t kHandleCount = 0;
+
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handle_count = 0;
+
+    ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount, true>(
+        local, remote, kDataSize + 1, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
+
+    EXPECT_EQ(kHandleCount + 1, actual_handle_count);
+    EXPECT_EQ(kDataSize + 1, actual_bytes);
+}
+
+TEST(ChannelTest, ReadMayDiscardWithSmallerBufferDiscardHandlesAndDateReturnsBufferTooSmall) {
+    constexpr uint32_t kDataSize = 10;
+    constexpr uint32_t kHandleCount = 1;
+
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handle_count = 0;
+
+    ASSERT_NO_FATAL_FAILURES((PerformChannelCallWithSmallBuffer<kDataSize, kHandleCount>(
+        local, remote, kDataSize + 1, kHandleCount + 1, &actual_bytes, &actual_handle_count)));
+
+    EXPECT_EQ(kHandleCount + 1, actual_handle_count);
+    EXPECT_EQ(kDataSize + 1, actual_bytes);
+}
+
+struct Message {
+    static constexpr uint32_t kDataSize = 64;
+    static constexpr uint32_t kHeaderSize = sizeof(zx_txid_t);
+    static constexpr uint32_t kMaxSize = kDataSize + kHeaderSize;
+    static constexpr uint32_t kHandleCount = 10;
+
+    zx_status_t Write(const zx::channel& channel) {
+        return channel.write(0, start(), byte_size(), handles, handle_count);
+    }
+
+    zx_status_t Read(const zx::channel& channel, uint32_t* actual_bytes = nullptr,
+                     uint32_t* actual_handles = nullptr) {
+        return channel.read(0, start(), handles, byte_size(), handle_count, actual_bytes,
+                            actual_handles);
+    }
+
+    Message(uint32_t data_size = 0, uint32_t handle_count = 0) {
+        this->data_size = data_size;
+        this->handle_count = handle_count;
+    }
+
+    const uint8_t* start() const { return reinterpret_cast<const uint8_t*>(&id); }
+
+    const uint8_t* end() const { return reinterpret_cast<const uint8_t*>(data) + data_size; }
+
+    uint8_t* start() { return reinterpret_cast<uint8_t*>(&id); }
+
+    uint8_t* end() { return reinterpret_cast<uint8_t*>(data) + data_size; }
+
+    bool IsEquivalent(const Message& rhs) const {
+        if (data_size != rhs.data_size) {
+            return false;
+        }
+
+        if (memcmp(data, rhs.data, data_size) != 0) {
+            return false;
+        }
+
+        if (handle_count != rhs.handle_count) {
+            return false;
+        }
+
         return true;
     }
 
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    ASSERT_TRUE(create_and_nest(channel[0], end, n - 1), "");
-    ASSERT_EQ(zx_channel_write(out, 0u, nullptr, 0u, channel, 2u), ZX_OK, "");
+    uint32_t byte_size() const { return static_cast<uint32_t>(end() - start()); }
 
-    END_TEST;
-}
+    void CloseHandles() {
+        for (uint32_t i = 0; i < handle_count; ++i) {
+            zx_handle_close(handles[i]);
+        }
+    }
 
-static int call_server2(void* ptr) {
-    zx_handle_t h = (zx_handle_t)(uintptr_t)ptr;
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(250)));
-    zx_handle_close(h);
-    return 0;
-}
+    zx_txid_t id = 0;
+    uint32_t data[kDataSize] = {0};
+    uint32_t data_size = kDataSize * sizeof(uint32_t);
+    zx_handle_t handles[kHandleCount];
+    uint32_t handle_count = 0;
+};
 
-static bool channel_call2(void) {
-    BEGIN_TEST;
+TEST(ChannelTest, CallWrittenBytesSmallerThanZxTxIdReturnsInvalidArgs) {
+    zx::channel local;
+    zx::channel remote;
 
-    zx_handle_t cli, srv;
-    ASSERT_EQ(zx_channel_create(0, &cli, &srv), ZX_OK, "");
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-    thrd_t t;
-    ASSERT_EQ(thrd_create(&t, call_server2, (void*)(uintptr_t)srv), thrd_success, "");
+    Message request;
 
-    char msg[8] = {
-        0,
-    };
-
+    Message reply;
     zx_channel_call_args_t args = {
-        .wr_bytes = &msg,
+        .wr_bytes = &request,
         .wr_handles = nullptr,
-        .rd_bytes = nullptr,
+        .rd_bytes = &reply,
         .rd_handles = nullptr,
-        .wr_num_bytes = sizeof(msg),
+        .wr_num_bytes = sizeof(zx_txid_t) - 1,
         .wr_num_handles = 0,
-        .rd_num_bytes = 0,
+        .rd_num_bytes = Message::kMaxSize,
         .rd_num_handles = 0,
     };
-
-    uint32_t act_bytes = 0xffffffff;
-    uint32_t act_handles = 0xffffffff;
-
-    zx_status_t r =
-        zx_channel_call(cli, 0, zx_deadline_after(ZX_MSEC(1000)), &args, &act_bytes, &act_handles);
-
-    zx_handle_close(cli);
-
-    EXPECT_EQ(r, ZX_ERR_PEER_CLOSED, "");
-
-    int retv = 0;
-    EXPECT_EQ(thrd_join(t, &retv), thrd_success, "");
-    EXPECT_EQ(retv, 0, "");
-
-    END_TEST;
-}
-
-// SYSCALL_zx_channel_call_finish is an internal system call used in the
-// vDSO's implementation of zx_channel_call.  It's not part of the ABI and
-// so it's not exported from the vDSO.  It's hard to test the kernel's
-// invariants without calling this directly.  So use some chicanery to
-// find its address in the vDSO despite it not being public.
-//
-// The vdso-code.h header file is generated from the vDSO binary.  It gives
-// the offsets of the internal functions.  So take a public vDSO function,
-// subtract its offset to discover the vDSO base (could do this other ways,
-// but this is the simplest), and then add the offset of the internal
-// SYSCALL_zx_channel_call_finish function we want to call.
-#include "vdso-code.h"
-static zx_status_t zx_channel_call_finish(zx_time_t deadline, const zx_channel_call_args_t* args,
-                                          uint32_t* actual_bytes, uint32_t* actual_handles) {
-    uintptr_t vdso_base = (uintptr_t)&zx_handle_close - VDSO_SYSCALL_zx_handle_close;
-    uintptr_t fnptr = vdso_base + VDSO_SYSCALL_zx_channel_call_finish;
-    return (*(__typeof(zx_channel_call_finish)*)fnptr)(deadline, args, actual_bytes,
-                                                       actual_handles);
-}
-
-static bool bad_channel_call_finish(void) {
-    BEGIN_TEST;
-
-    char msg[8] = {
-        0,
-    };
-
-    zx_channel_call_args_t args = {
-        .wr_bytes = &msg,
-        .wr_handles = nullptr,
-        .rd_bytes = nullptr,
-        .rd_handles = nullptr,
-        .wr_num_bytes = sizeof(msg),
-        .wr_num_handles = 0,
-        .rd_num_bytes = 0,
-        .rd_num_handles = 0,
-    };
-
-    uint32_t act_bytes = 0xffffffff;
-    uint32_t act_handles = 0xffffffff;
-
-    // Call channel_call_finish without having had a channel call interrupted
-    zx_status_t r =
-        zx_channel_call_finish(zx_deadline_after(ZX_MSEC(1000)), &args, &act_bytes, &act_handles);
-
-    EXPECT_EQ(r, ZX_ERR_BAD_STATE, "");
-
-    END_TEST;
-}
-
-static bool channel_nest(void) {
-    BEGIN_TEST;
-    zx_handle_t channel[2];
-
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-
-    zx_handle_t end;
-    // Nest 200 channels, each one in the payload of the previous one. Without
-    // the SafeDeleter in fbl_recycle() this blows the kernel stack when calling
-    // the destructors.
-    ASSERT_TRUE(create_and_nest(channel[0], &end, 200), "");
-    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-    EXPECT_EQ(zx_object_wait_one(channel[0], ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, nullptr),
-              ZX_OK, "");
-
-    EXPECT_EQ(zx_object_wait_one(end, ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, nullptr), ZX_OK,
-              "");
-    EXPECT_EQ(zx_handle_close(end), ZX_OK, "");
-
-    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-
-    END_TEST;
-}
-
-// Test the case of writing a channel handle to itself.  The kernel
-// currently disallows this, because otherwise it would create a reference
-// cycle and potentially allow channels to be leaked.
-static bool channel_disallow_write_to_self(void) {
-    BEGIN_TEST;
-
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    EXPECT_EQ(zx_channel_write(channel[0], 0, nullptr, 0, &channel[0], 1), ZX_ERR_NOT_SUPPORTED,
-              "");
-    // Clean up.
-    EXPECT_EQ(zx_handle_close(channel[0]), ZX_ERR_BAD_HANDLE, "");
-    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-
-    END_TEST;
-}
-
-static bool channel_read_etc(void) {
-    BEGIN_TEST;
-
-    zx_handle_t event;
-    ASSERT_EQ(zx_event_create(0u, &event), ZX_OK, "");
-    ASSERT_EQ(zx_handle_replace(event, ZX_RIGHT_SIGNAL | ZX_RIGHT_TRANSFER, &event), ZX_OK, "");
-
-    zx_handle_t fifo[2];
-    ASSERT_EQ(zx_fifo_create(32u, 8u, 0u, &fifo[0], &fifo[1]), ZX_OK, "");
-
-    zx_handle_t sent[] = {fifo[0], event, fifo[1]};
-
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-    EXPECT_EQ(zx_channel_write(channel[0], 0u, nullptr, 0, sent, 3u), ZX_OK, "");
-
-    zx_handle_info_t recv[] = {{}, {}, {}};
-    uint32_t actual_bytes;
-    uint32_t actual_handles;
-
-    EXPECT_EQ(
-        zx_channel_read_etc(channel[1], 0u, nullptr, recv, 0u, 3u, &actual_bytes, &actual_handles),
-        ZX_OK, "");
-
-    EXPECT_EQ(actual_bytes, 0u, "");
-    EXPECT_EQ(actual_handles, 3u, "");
-    EXPECT_EQ(recv[0].type, ZX_OBJ_TYPE_FIFO, "");
-    EXPECT_EQ(recv[0].rights, ZX_DEFAULT_FIFO_RIGHTS, "");
-
-    EXPECT_EQ(recv[1].type, ZX_OBJ_TYPE_EVENT, "");
-    EXPECT_EQ(recv[1].rights, ZX_RIGHT_SIGNAL | ZX_RIGHT_TRANSFER, "");
-
-    EXPECT_EQ(recv[2].type, ZX_OBJ_TYPE_FIFO, "");
-    EXPECT_EQ(recv[2].rights, ZX_DEFAULT_FIFO_RIGHTS, "");
-
-    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-    EXPECT_EQ(zx_handle_close(recv[0].handle), ZX_OK, "");
-    EXPECT_EQ(zx_handle_close(recv[1].handle), ZX_OK, "");
-    EXPECT_EQ(zx_handle_close(recv[2].handle), ZX_OK, "");
-
-    END_TEST;
-}
-
-// Write and read messages of different sizes.
-static bool channel_write_different_sizes(void) {
-    BEGIN_TEST;
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
-
-    char* data_to_send = static_cast<char*>(malloc(ZX_CHANNEL_MAX_MSG_BYTES));
-    ASSERT_NE(nullptr, data_to_send, "");
-    char* data_recv = static_cast<char*>(malloc(ZX_CHANNEL_MAX_MSG_BYTES));
-    ASSERT_NE(nullptr, data_recv, "");
 
     uint32_t actual_bytes = 0;
     uint32_t actual_handles = 0;
-
-    // Send a bunch of messages, each with a random number of bytes and handles.  num_msgs should be
-    // large enough to provide decent coverage and small enough so the test executes quickly.
-    const size_t num_msgs = 1000;
-    srand(0);
-    for (size_t i = 0; i < num_msgs; ++i) {
-        uint32_t num_bytes = rand() % ZX_CHANNEL_MAX_MSG_BYTES;
-        uint32_t num_handles = rand() % ZX_CHANNEL_MAX_MSG_HANDLES;
-
-        // Create some handle pairs.  Keep one of each pair in |handles|, put the other in
-        // |handles_to_send|.
-        zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {0};
-        zx_handle_t handles_to_send[ZX_CHANNEL_MAX_MSG_HANDLES] = {0};
-        zx_handle_t handles_recv[ZX_CHANNEL_MAX_MSG_HANDLES] = {0};
-        for (size_t i = 0; i < ZX_CHANNEL_MAX_MSG_HANDLES; ++i) {
-            if (i < num_handles) {
-                ASSERT_EQ(zx_channel_create(0u, &handles[i], &handles_to_send[i]), ZX_OK, "");
-            } else {
-                handles[i] = ZX_HANDLE_INVALID;
-                handles_to_send[i] = ZX_HANDLE_INVALID;
-            }
-            handles_recv[i] = ZX_HANDLE_INVALID;
-        }
-
-        memset(data_to_send, i % 256, i);
-        ASSERT_EQ(
-            zx_channel_write(channel[0], 0u, data_to_send, num_bytes, handles_to_send, num_handles),
-            ZX_OK, "");
-        memset(data_recv, 0, ZX_CHANNEL_MAX_MSG_BYTES);
-        ASSERT_EQ(zx_channel_read(channel[1], 0u, data_recv, handles_recv, ZX_CHANNEL_MAX_MSG_BYTES,
-                                  num_handles, &actual_bytes, &actual_handles),
-                  ZX_OK, "");
-        ASSERT_EQ(actual_bytes, num_bytes, "");
-        ASSERT_EQ(actual_handles, num_handles, "");
-        ASSERT_EQ(memcmp(data_to_send, data_recv, num_bytes), 0, "");
-
-        // Close them.
-        for (size_t i = 0; i < ZX_CHANNEL_MAX_MSG_HANDLES; ++i) {
-            if (i < num_handles) {
-                ASSERT_EQ(zx_handle_close(handles_recv[i]), ZX_OK, "");
-                ASSERT_EQ(zx_handle_close(handles[i]), ZX_OK, "");
-            } else {
-                ASSERT_EQ(handles_recv[i], ZX_HANDLE_INVALID, "");
-            }
-        }
-    }
-
-    free(data_recv);
-    free(data_to_send);
-    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
-    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
-    END_TEST;
+    ASSERT_EQ(local.call(0, zx::time::infinite(), &args, &actual_bytes, &actual_handles),
+              ZX_ERR_INVALID_ARGS);
 }
 
-static bool channel_write_takes_all_handles(void) {
-    BEGIN_TEST;
+template <auto ReplyFiller, uint32_t accumulated_messages = 0>
+void Reply(const Message& request, uint32_t message_count, zx::channel svc,
+           std::atomic<const char*>* error) {
+    std::set<zx_txid_t> live_ids;
+    std::vector<Message> live_requests;
+    auto cleanup = fbl::MakeAutoCall([&svc, &live_requests]() {
+        svc.reset();
+        for (auto req : live_requests) {
+            for (uint32_t i = 0; i < req.handle_count; ++i) {
+                zx_handle_close(req.handles[i]);
+            }
+        }
+    });
+    for (uint32_t i = 0; i < message_count; ++i) {
+        svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr);
+        Message read_request = Message(request.data_size, request.handle_count);
+        if (read_request.Read(svc) != ZX_OK) {
+            *error = "Failed to read request.";
+            return;
+        }
+        if (!request.IsEquivalent(read_request)) {
+            *error = "Failed to validate request.";
+            return;
+        }
+        read_request.CloseHandles();
 
-    zx_handle_t channel[2];
-    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+        if (i <= accumulated_messages) {
+            if (live_ids.find(read_request.id) != live_ids.end()) {
+                *error = "Repeated id used for live transaction.";
+                return;
+            }
+            live_ids.insert(read_request.id);
+            live_requests.push_back(read_request);
+            if (i + 1 < accumulated_messages) {
+                continue;
+            }
+        }
 
-#define TOO_MANY_HANDLES 2000
-    zx_handle_t handles[TOO_MANY_HANDLES];
-    for (size_t i = 0; i < TOO_MANY_HANDLES; ++i) {
-        ASSERT_EQ(zx_event_create(0, &handles[i]), ZX_OK, "");
+        // This is the last pending message, so we reply to all pending messages and then we reply.
+        for (auto req : live_requests) {
+            Message reply = Message(0, 0);
+            reply.id = req.id;
+            ReplyFiller(&reply);
+            if (reply.Write(svc) != ZX_OK) {
+                *error = "Failed to write reply.";
+                return;
+            }
+        }
     }
-
-    char bytes[1] = {5};
-    ASSERT_EQ(zx_channel_write(channel[0], 0, bytes, 1, handles, TOO_MANY_HANDLES),
-              ZX_ERR_OUT_OF_RANGE, "write didn't fail");
-
-    for (size_t i = 0; i < TOO_MANY_HANDLES; ++i) {
-        ASSERT_EQ(zx_handle_close(handles[i]), ZX_ERR_BAD_HANDLE, "handle not closed");
-    }
-
-    END_TEST;
 }
 
-// Test current behavior when transferring a channel with pending calls out of the current process.
-// TODO(ZX-4233): This test ensures that currently undefined behavior does not change
-// unexpectedly. Once the behavior is properly undefined, this test should be updated.
-static bool channel_call_transfer(void) {
-    BEGIN_TEST;
+zx_channel_call_args_t MakeArgs(const Message& request, Message* reply) {
+    zx_channel_call_args_t args;
+    args.wr_bytes = request.start();
+    args.wr_handles = request.handles;
+    args.wr_num_bytes = request.byte_size();
+    args.wr_num_handles = request.handle_count;
+    args.rd_bytes = reply->start();
+    args.rd_handles = reply->handles;
+    args.rd_num_bytes = reply->byte_size();
+    args.rd_num_handles = reply->handle_count;
+    return args;
+}
 
-    zx::channel cli, srv;
-    ASSERT_EQ(zx::channel::create(0, &cli, &srv), ZX_OK, "");
+template <int data_size, uint32_t handles>
+void ReplyFiller(Message* reply) {
+    reply->data_size = data_size;
 
-    static constexpr uint32_t kExpectedCall = 0xc0ffee;
-    static constexpr uint32_t kExpectedRes = 0xdeadbeef;
-    auto test_fn = [](void* arg) -> int {
-        auto cli = static_cast<zx::channel*>(arg);
-
-        msg_t msg_wr = {};
-        msg_t msg_rd = {};
-        msg_wr.op = kExpectedCall;
-
-        zx_channel_call_args_t args = {
-            .wr_bytes = &msg_wr,
-            .wr_handles = nullptr,
-            .rd_bytes = &msg_rd,
-            .rd_handles = nullptr,
-            .wr_num_bytes = sizeof(msg_t),
-            .wr_num_handles = 0,
-            .rd_num_bytes = sizeof(msg_t),
-            .rd_num_handles = 0,
-        };
-        uint32_t bytes, handles;
-        zx_status_t status = cli->call(0, zx::time::infinite(), &args, &bytes, &handles);
-        if (status != ZX_OK) {
-            return -1;
+    uint32_t i = 0;
+    auto cleanup = fbl::MakeAutoCall([&i, reply]() {
+        for (uint32_t j = 0; j < i; ++j) {
+            zx_handle_close(reply->handles[j]);
         }
+    });
 
-        if (bytes != sizeof(msg_t) || handles) {
-            return -2;
+    reply->handle_count = handles;
+    for (i = 0; i < handles; ++i) {
+        zx::event event;
+        if (zx::event::create(0, &event) != ZX_OK) {
+            return;
         }
+        reply->handles[i] = event.release();
+    }
+    cleanup.cancel();
+}
 
-        if (msg_rd.op != kExpectedRes) {
-            return -3;
+TEST(ChannelTest, CallResponseBiggerThanRdNumBytesReturnsBufferTooSmall) {
+    constexpr uint32_t kReplyDataSize = 2;
+    constexpr uint32_t kReplyHandleCount = 0;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    Message request = Message(5 * sizeof(uint32_t), 0);
+    request.id = 0x112233;
+    request.data[0] = 1;
+    request.data[1] = 2;
+    request.data[2] = 3;
+    request.data[3] = 4;
+    request.data[4] = 5;
+
+    Message reply = Message(kReplyDataSize - 1, kReplyHandleCount);
+    auto args = MakeArgs(request, &reply);
+
+    {
+        AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>,
+                                      request, 1, std::move(remote), &error);
+
+        uint32_t actual_bytes = 0;
+        uint32_t actual_handles = 0;
+        ASSERT_EQ(local.call(0, zx::time::infinite(), &args, &actual_bytes, &actual_handles),
+                  ZX_ERR_BUFFER_TOO_SMALL);
+    }
+
+    reply.CloseHandles();
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallResponseBiggerThanRdNumHandlesReturnsBufferTooSmall) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 2;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    Message request = Message(0, 1);
+    request.id = 0x112233;
+    request.handles[0] = event.release();
+
+    Message reply = Message(0, kReplyHandleCount - 1);
+    auto args = MakeArgs(request, &reply);
+
+    {
+        AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>,
+                                      request, 1, std::move(remote), &error);
+        uint32_t actual_bytes = 0;
+        uint32_t actual_handles = 0;
+        ASSERT_EQ(local.call(0, zx::time::infinite(), &args, &actual_bytes, &actual_handles),
+                  ZX_ERR_BUFFER_TOO_SMALL);
+    }
+    reply.CloseHandles();
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+template <uint32_t ReplyDataSize, uint32_t ReplyHandleCount>
+void SuccessfullChannelCall(zx::channel local, zx::channel remote, const Message& request) {
+    std::atomic<const char*> error = nullptr;
+    Message reply = Message(ReplyDataSize, ReplyHandleCount);
+
+    auto args = MakeArgs(request, &reply);
+    {
+        AutoJoinThread service_thread(Reply<ReplyFiller<ReplyDataSize, ReplyHandleCount>>, request,
+                                      1, std::move(remote), &error);
+        uint32_t hc, bc;
+        ASSERT_OK(local.call(0, zx::time::infinite(), &args, &bc, &hc));
+    }
+    reply.CloseHandles();
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallBytesFitIsOk) {
+    constexpr uint32_t kReplyDataSize = 5;
+    constexpr uint32_t kReplyHandleCount = 0;
+
+    Message request = Message(4, 0);
+
+    zx::channel local;
+    zx::channel remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    ASSERT_NO_FATAL_FAILURES((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
+        std::move(local), std::move(remote), request)));
+}
+
+TEST(ChannelTest, CallHandlesFitIsOk) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 2;
+
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    Message request = Message(0, 1);
+    request.handles[0] = event.release();
+    ASSERT_NO_FATAL_FAILURES((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
+        std::move(local), std::move(remote), request)));
+}
+
+TEST(ChannelTest, CallHandleAndBytesFitsIsOk) {
+    constexpr uint32_t kReplyDataSize = 2;
+    constexpr uint32_t kReplyHandleCount = 2;
+
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    Message request = Message(2, 1);
+    request.handles[0] = event.release();
+
+    ASSERT_NO_FATAL_FAILURES((SuccessfullChannelCall<kReplyDataSize, kReplyHandleCount>(
+        std::move(local), std::move(remote), request)));
+}
+
+TEST(ChannelTest, CallNullptrNumBytesIsInvalidArgs) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 0;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    Message request = Message(2, 0);
+    Message reply = Message(kReplyDataSize, kReplyHandleCount);
+    auto args = MakeArgs(request, &reply);
+    {
+        AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>,
+                                      request, 1, std::move(remote), &error);
+        uint32_t hc;
+        ASSERT_EQ(local.call(0, zx::time::infinite(), &args, nullptr, &hc), ZX_ERR_INVALID_ARGS);
+    }
+    reply.CloseHandles();
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallNullptrNumHandlesInvalidArgs) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 0;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    Message request = Message(2, 0);
+    Message reply = Message(kReplyDataSize, kReplyHandleCount);
+    auto args = MakeArgs(request, &reply);
+    {
+        AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>,
+                                      request, 1, std::move(remote), &error);
+        uint32_t bc;
+        ASSERT_EQ(local.call(0, zx::time::infinite(), &args, &bc, nullptr), ZX_ERR_INVALID_ARGS);
+    }
+    reply.CloseHandles();
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallPendingTransactionsUseDifferentIds) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 0;
+    // The service thread will wait until |kAcummulatedMessages| have been read from the channel
+    // before replying in the same order they came through.
+    constexpr uint32_t kAccumulatedMessages = 20;
+
+    std::atomic<const char*> error = nullptr;
+    std::vector<zx_status_t> call_result(kAccumulatedMessages, ZX_OK);
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    Message request = Message(2, 0);
+    {
+        AutoJoinThread service_thread(
+            Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>, kAccumulatedMessages>, request,
+            kAccumulatedMessages, std::move(remote), &error);
+
+        std::vector<AutoJoinThread> calling_threads;
+        calling_threads.reserve(kAccumulatedMessages);
+        for (uint32_t i = 0; i < kAccumulatedMessages; ++i) {
+            calling_threads.push_back(AutoJoinThread([i, &call_result, &local, &request]() {
+                Message reply = Message(kReplyDataSize, kReplyHandleCount);
+                auto args = MakeArgs(request, &reply);
+                uint32_t bc, hc;
+                call_result[i] = local.call(0, zx::time::infinite(), &args, &bc, &hc);
+                if (call_result[i] == ZX_OK) {
+                    reply.CloseHandles();
+                }
+            }));
         }
-        return 0;
+    }
+
+    for (auto call_status : call_result) {
+        EXPECT_OK(call_status, "channel::call failed in client thread.");
+    }
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallDeadlineExceededReturnsTimedOut) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 0;
+    constexpr uint32_t kAccumulatedMessages = 2;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    Message request = Message(2, 0);
+    Message reply = Message(kReplyDataSize, kReplyHandleCount);
+    auto args = MakeArgs(request, &reply);
+    {
+        AutoJoinThread service_thread(
+            Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>, kAccumulatedMessages>, request,
+            kAccumulatedMessages - 1, std::move(remote), &error);
+        uint32_t bc, hc;
+        ASSERT_EQ(local.call(0, zx::time::infinite_past(), &args, &bc, &hc), ZX_ERR_TIMED_OUT);
+    }
+    reply.CloseHandles();
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallConsumesHandlesOnSuccess) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 0;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    zx::event event_2;
+    ASSERT_OK(zx::event::create(0, &event_2));
+
+    Message request = Message(0, 2);
+    request.handles[0] = event.release();
+    request.handles[1] = event_2.release();
+
+    Message reply = Message(kReplyDataSize, kReplyHandleCount);
+
+    auto args = MakeArgs(request, &reply);
+    {
+        AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>,
+                                      request, 1, std::move(remote), &error);
+        uint32_t hc, bc;
+        ASSERT_OK(local.call(0, zx::time::infinite(), &args, &bc, &hc));
+    }
+
+    reply.CloseHandles();
+
+    for (uint32_t i = 0; i < request.handle_count; ++i) {
+        ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(request.handles[i]));
+    }
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallConsumesHandlesOnError) {
+    constexpr uint32_t kReplyDataSize = 0;
+    constexpr uint32_t kReplyHandleCount = 0;
+
+    std::atomic<const char*> error = nullptr;
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    remote.reset();
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    zx::event event_2;
+    ASSERT_OK(zx::event::create(0, &event_2));
+
+    Message request = Message(0, 2);
+    request.handles[0] = event.release();
+    request.handles[1] = event_2.release();
+
+    Message reply = Message(kReplyDataSize, kReplyHandleCount);
+
+    auto args = MakeArgs(request, &reply);
+    {
+        uint32_t hc, bc;
+        ASSERT_EQ(ZX_ERR_PEER_CLOSED, local.call(0, zx::time::infinite(), &args, &bc, &hc));
+    }
+
+    reply.CloseHandles();
+
+    EXPECT_EQ(2, request.handle_count);
+    for (uint32_t i = 0; i < request.handle_count; ++i) {
+        ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(request.handles[i]));
+    }
+
+    if (error != nullptr) {
+        FAIL("Service Thread reported error: %s\n", error.load());
+    }
+}
+
+TEST(ChannelTest, CallNotifiedOnPeerClosed) {
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    Message request = Message(0, 0);
+    Message reply = Message(0, 0);
+
+    auto args = MakeArgs(request, &reply);
+    {
+        AutoJoinThread service_thread(
+            [](zx::channel svc) {
+                // Wait until call message is received.
+                svc.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr);
+                svc.reset();
+            },
+            std::move(remote));
+
+        uint32_t bc, hc;
+        ASSERT_EQ(ZX_ERR_PEER_CLOSED, local.call(0, zx::time::infinite(), &args, &bc, &hc));
+    }
+}
+
+// Nest 200 channels, each one in the payload of the previous one. Without
+// the SafeDeleter in fbl_recycle() this blows the kernel stack when calling
+// the destructors.
+TEST(ChannelTest, NestingIsOk) {
+    constexpr uint32_t kNestedCount = 200;
+    std::vector<zx::channel> local(kNestedCount);
+    std::vector<zx::channel> remote(kNestedCount);
+
+    for (uint32_t i = 0; i < kNestedCount; ++i) {
+        ASSERT_OK(zx::channel::create(0, &local[i], &remote[i]));
+    }
+
+    for (uint32_t i = kNestedCount - 1; i > 0; --i) {
+        zx_handle_t handles[2] = {local[i].release(), remote[i].release()};
+        ASSERT_OK(local[i - 1].write(0, nullptr, 0, handles, 2));
+    }
+
+    // All handles except those at 0, have been transferred to a channel.
+    ASSERT_TRUE(local[0].is_valid());
+    ASSERT_TRUE(remote[0].is_valid());
+
+    // Close the handles and for detructions.
+    local[0].reset();
+    remote[0].reset();
+}
+
+TEST(ChannelTest, WriteSelfHandleReturnsNotSupported) {
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    zx::unowned_channel unowned_local(local.get());
+    zx_handle_t local_handle = local.release();
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, unowned_local->write(0, nullptr, 0, &local_handle, 1));
+
+    zx_signals_t signals;
+    ASSERT_EQ(ZX_OK, remote.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &signals));
+    ASSERT_EQ(ZX_CHANNEL_PEER_CLOSED, signals);
+}
+
+TEST(ChannelTest, ReadEtcHandleInfoValidation) {
+    zx::channel local;
+    zx::channel remote;
+
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    // Handles to send.
+    zx::event event;
+    ASSERT_OK(zx::event::create(0, &event));
+
+    zx::event event_with_less_rights;
+    ASSERT_OK(event.duplicate(ZX_RIGHTS_BASIC & ~ZX_RIGHT_WAIT, &event_with_less_rights));
+
+    zx::fifo fifo_local, fifo_remote;
+    ASSERT_OK(zx::fifo::create(32, 8, 0, &fifo_local, &fifo_remote));
+
+    zx_handle_t handles[4] = {
+        fifo_local.release(),
+        event.release(),
+        event_with_less_rights.release(),
+        fifo_remote.release(),
     };
 
-    // Create the test thread and wait for it to write to the channel.
-    thrd_t thrd;
-    ASSERT_EQ(thrd_create(&thrd, test_fn, &cli), thrd_success);
-    ASSERT_EQ(srv.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK);
+    ASSERT_OK(local.write(0, nullptr, 0, handles, 4));
 
-    // Read the message from the test thread.
-    msg_t msg;
-    uint32_t bc = 0, hc = 0;
-    ASSERT_EQ(srv.read(0, &msg, nullptr, sizeof(msg), 0, &bc, &hc), ZX_OK);
-    ASSERT_EQ(bc, sizeof(msg));
-    ASSERT_EQ(msg.op, kExpectedCall);
+    zx_handle_info_t read_handles[4] = {};
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handles = 0;
 
-    // Create another process and transfer the handle to that process.
-    zx::process proc;
-    zx::thread thread;
-    zx::vmar vmar;
+    ASSERT_OK(remote.read_etc(0, nullptr, read_handles, 0, 4, &actual_bytes, &actual_handles));
 
-    ASSERT_EQ(zx::process::create(*zx::job::default_job(), "mini-p", 3u, 0, &proc, &vmar), ZX_OK);
-    ASSERT_EQ(zx::thread::create(proc, "mini-p", 2u, 0u, &thread), ZX_OK);
+    ASSERT_EQ(4, actual_handles);
+    ASSERT_EQ(0, actual_bytes);
 
-    zx::channel cmd_channel;
-    EXPECT_EQ(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), cli.release(),
-                                     cmd_channel.reset_and_get_address()), ZX_OK);
+    EXPECT_EQ(read_handles[0].type, ZX_OBJ_TYPE_FIFO);
+    EXPECT_EQ(read_handles[0].rights, ZX_DEFAULT_FIFO_RIGHTS);
 
-    // Have the other process write to the channel we sent it and wait for the result,
-    // to ensure that the endpoint we sent it is actually transferred.
-    EXPECT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_CHANNEL_WRITE, nullptr), ZX_OK);
-    ASSERT_EQ(srv.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK);
+    EXPECT_EQ(read_handles[1].type, ZX_OBJ_TYPE_EVENT);
+    EXPECT_EQ(read_handles[1].rights, ZX_DEFAULT_EVENT_RIGHTS);
 
-    uint8_t mini_process_res = 1;
-    ASSERT_EQ(srv.read(0, &mini_process_res, nullptr, 1, 0, &bc, &hc), ZX_OK);
-    ASSERT_EQ(bc, 1);
-    ASSERT_EQ(mini_process_res, 0);
+    EXPECT_EQ(read_handles[2].type, ZX_OBJ_TYPE_EVENT);
+    EXPECT_EQ(read_handles[2].rights, ZX_RIGHTS_BASIC & ~ZX_RIGHT_WAIT);
 
-    // Make sure the original thread is still blocked.
-    zx_info_thread_t info;
-    uint64_t actual, actual2;
-    ASSERT_EQ(zx_object_get_info(thrd_get_zx_handle(thrd), ZX_INFO_THREAD,
-                                 &info, sizeof(info), &actual, &actual2), ZX_OK);
-    EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_CHANNEL);
-
-    // Write a response to the original call after we know the endpoint has been
-    // transferred out of this process.
-    msg.op = kExpectedRes;
-    ASSERT_EQ(srv.write(0, &msg, sizeof(msg), nullptr, 0), ZX_OK);
-
-    // Wait for the test thread to finish executing and check that it successfully completed
-    // the channel call even though the handle was transferred to another process.
-    int r;
-    ASSERT_EQ(thrd_join(thrd, &r), thrd_success);
-    ASSERT_EQ(r, 0);
-
-    EXPECT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_EXIT_NORMAL, nullptr),
-              ZX_ERR_PEER_CLOSED);
-
-    END_TEST;
+    EXPECT_EQ(read_handles[3].type, ZX_OBJ_TYPE_FIFO);
+    EXPECT_EQ(read_handles[3].rights, ZX_DEFAULT_FIFO_RIGHTS);
 }
 
+TEST(ChannelTest, ReadAndWriteWithMultipleSizes) {
+    zx::channel local;
+    zx::channel remote;
 
-BEGIN_TEST_CASE(channel_tests)
-RUN_TEST(channel_test)
-RUN_TEST(channel_read_error_test)
-RUN_TEST(channel_close_test)
-RUN_TEST(channel_peer_closed_test)
-RUN_TEST(channel_non_transferable)
-RUN_TEST(channel_duplicate_handles)
-RUN_TEST(channel_multithread_read)
-RUN_TEST(channel_may_discard)
-RUN_TEST(channel_call)
-RUN_TEST(channel_call_consumes_handles)
-RUN_TEST(channel_call2)
-RUN_TEST(bad_channel_call_finish)
-RUN_TEST(channel_nest)
-RUN_TEST(channel_disallow_write_to_self)
-RUN_TEST(channel_read_etc)
-RUN_TEST(channel_write_different_sizes)
-RUN_TEST(channel_write_takes_all_handles)
-RUN_TEST(channel_call_transfer)
-END_TEST_CASE(channel_tests)
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    constexpr uint32_t kNumMessages = 1000;
+    // Use the seed that was passed as cmd or generated by the library.
+    unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
+    for (uint32_t i = 0; i < kNumMessages; ++i) {
+        uint32_t num_bytes = rand_r(&seed) % ZX_CHANNEL_MAX_MSG_BYTES;
+        uint32_t num_handles = rand_r(&seed) % ZX_CHANNEL_MAX_MSG_HANDLES;
+
+        uint8_t data[num_bytes + 1];
+        zx_handle_t handles[num_handles + 1];
+        memset(data, 0, num_bytes + 1);
+
+        std::vector<zx::event> safe_handles(num_handles + 1);
+
+        for (uint32_t j = 0; j < num_handles; ++j) {
+            ASSERT_OK(zx::event::create(0, &safe_handles[j]));
+        }
+
+        data[0] = static_cast<uint8_t>(i % std::numeric_limits<uint8_t>::max());
+
+        // Transfer handles
+        for (uint32_t j = 0; j < num_handles; ++j) {
+            handles[j] = safe_handles[j].release();
+        }
+
+        ASSERT_OK(local.write(0, data, num_bytes, handles, num_handles));
+
+        uint8_t read_data[num_bytes + 1];
+        zx_handle_t read_handles[num_handles + 1];
+        uint32_t actual_bytes = 0;
+        uint32_t actual_handles = 0;
+
+        ASSERT_OK(remote.read(0, read_data, read_handles, num_bytes, num_handles, &actual_bytes,
+                              &actual_handles));
+        // Transfer handles to safe_handles so they are destroyed on destruction.
+        for (uint32_t j = 0; j < num_handles; ++j) {
+            safe_handles[j].reset(read_handles[j]);
+        }
+        ASSERT_EQ(num_bytes, actual_bytes);
+        ASSERT_EQ(num_handles, actual_handles);
+        if (num_bytes > 0) {
+            ASSERT_EQ(data[0], read_data[0]);
+        }
+    }
+}
+
+} // namespace
+} // namespace channel
