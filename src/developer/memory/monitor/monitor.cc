@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/memory_monitor/monitor.h"
+#include "src/developer/memory/monitor/monitor.h"
 
 #include <errno.h>
 #include <fcntl.h>

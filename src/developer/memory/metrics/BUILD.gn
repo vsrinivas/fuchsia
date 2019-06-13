@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+
+source_set("metrics") {
+  sources = [
+    "capture.cc",
+    "capture.h",
+    "printer.cc",
+    "printer.h",
+    "summary.cc",
+    "summary.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/task-utils",
+  ]
+}

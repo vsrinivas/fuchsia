@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEMORY_MONITOR_MONITOR_H_
-#define GARNET_BIN_MEMORY_MONITOR_MONITOR_H_
+#ifndef SRC_DEVELOPER_MEMORY_MONITOR_MONITOR_H_
+#define SRC_DEVELOPER_MEMORY_MONITOR_MONITOR_H_
 
 #include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -16,7 +16,7 @@
 #include <trace/observer.h>
 #include <zircon/types.h>
 
-#include "garnet/bin/memory_monitor/capture.h"
+#include "src/developer/memory/metrics/capture.h"
 
 namespace memory {
 
@@ -64,4 +64,4 @@ class Monitor : public fuchsia::memory::Monitor {
 
 }  // namespace memory
 
-#endif  // GARNET_BIN_MEMORY_MONITOR_MONITOR_H_
+#endif  // SRC_DEVELOPER_MEMORY_MONITOR_MONITOR_H_

@@ -63,11 +63,11 @@ group("tracing") {
     "//garnet/bin/cpuperf_provider",
     "//garnet/bin/cpuperf_provider:report_generators",
     "//garnet/bin/ktrace_provider",
-    "//garnet/bin/memory_monitor",
     "//garnet/bin/trace",
     "//garnet/bin/trace2json",
     "//garnet/bin/trace_manager",
     "//garnet/bin/traceutil",
+    "//src/developer/memory/monitor",
   ]
 }
 
@@ -303,6 +303,7 @@ group("all") {
     "//src/connectivity/telephony:drivers",
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
+    "//src/developer/memory/mem",
     "//src/ui/a11y:a11y",
   ]
 }
@@ -361,10 +362,8 @@ group("pm") {
 group("memory_monitor") {
   testonly = true
   public_deps = [
-    "//garnet/bin/memory_monitor",
-    "//garnet/bin/memory_monitor:config",
-    "//garnet/bin/memory_monitor:mem",
     "//garnet/packages/config:services",
+    "//src/developer/memory/monitor",
   ]
 }
 
