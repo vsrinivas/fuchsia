@@ -113,10 +113,11 @@ def RawResultsFromDir(filename):
     # more deterministic.
     if os.path.isfile(filename):
         # Read from tar file.
-        tar = tarfile.open(filename)
-        for member in sorted(tar.getmembers(), key=lambda member: member.name):
-            if IsResultsFilename(member.name):
-                yield json.load(tar.extractfile(member))
+        with tarfile.open(filename) as tar:
+            for member in sorted(tar.getmembers(),
+                                 key=lambda member: member.name):
+                if IsResultsFilename(member.name):
+                    yield json.load(tar.extractfile(member))
     else:
         # Read from directory.
         for name in sorted(os.listdir(filename)):

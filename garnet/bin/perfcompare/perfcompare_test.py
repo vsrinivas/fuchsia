@@ -158,10 +158,9 @@ class PerfCompareTest(TempDirTestCase):
         for write_mode in ('w', 'w:gz'):
             # Create a tar file containing the example results files.
             tar_filename = os.path.join(self.MakeTempDir(), 'out.tar')
-            tar = tarfile.open(tar_filename, write_mode)
-            for name in os.listdir(dir_path):
-                tar.add(os.path.join(dir_path, name), arcname=name)
-            tar.close()
+            with tarfile.open(tar_filename, write_mode) as tar:
+                for name in os.listdir(dir_path):
+                    tar.add(os.path.join(dir_path, name), arcname=name)
             results = perfcompare.ResultsFromDir(tar_filename)
             self.assertEquals(
                 results['ClockGetTimeExample'].FormatConfidenceInterval(),
