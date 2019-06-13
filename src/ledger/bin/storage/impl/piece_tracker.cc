@@ -4,7 +4,23 @@
 
 #include "src/ledger/bin/storage/impl/piece_tracker.h"
 
+#include <sstream>
+#include <string>
+
 namespace storage {
+namespace {
+
+// Converts a map of ObjectIdentifier counts to a string listing them.
+std::string TokenCountsToString(
+    const std::map<ObjectIdentifier, int>& token_counts) {
+  std::ostringstream stream;
+  for (const auto& token : token_counts) {
+    stream << "\n" << token.first << " " << token.second;
+  }
+  return stream.str();
+}
+
+}  // namespace
 
 PieceTracker::PieceTracker() = default;
 
@@ -14,10 +30,14 @@ PieceTracker::ObjectTokenImpl::ObjectTokenImpl(PieceTracker* tracker,
       map_entry_(
           tracker_->token_counts_.emplace(std::move(identifier), 0).first) {
   ++map_entry_->second;
+  FXL_VLOG(1) << "ObjectToken " << map_entry_->first << " "
+              << map_entry_->second;
 }
 
 PieceTracker::ObjectTokenImpl::~ObjectTokenImpl() {
   --map_entry_->second;
+  FXL_VLOG(1) << "ObjectToken " << map_entry_->first << " "
+              << map_entry_->second;
   if (map_entry_->second == 0) {
     tracker_->token_counts_.erase(map_entry_);
   }
@@ -27,7 +47,9 @@ const ObjectIdentifier& PieceTracker::ObjectTokenImpl::GetIdentifier() const {
   return map_entry_->first;
 }
 
-PieceTracker::~PieceTracker() { FXL_DCHECK(token_counts_.empty()); }
+PieceTracker::~PieceTracker() {
+  FXL_DCHECK(token_counts_.empty()) << TokenCountsToString(token_counts_);
+}
 
 std::unique_ptr<ObjectToken> PieceTracker::GetObjectToken(
     ObjectIdentifier identifier) {

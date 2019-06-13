@@ -182,7 +182,9 @@ Status VmoObject::Initialize() const {
 }
 
 DiscardableToken::DiscardableToken(ObjectIdentifier identifier)
-    : identifier_(std::move(identifier)) {}
+    : identifier_(std::move(identifier)) {
+  FXL_VLOG(1) << "DiscardableToken " << identifier_;
+}
 
 const ObjectIdentifier& DiscardableToken::GetIdentifier() const {
   return identifier_;
