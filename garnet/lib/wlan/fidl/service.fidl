@@ -32,9 +32,19 @@ struct IfaceListItem {
 };
 
 struct QueryIfaceResponse {
+    /// The role the iface is currently operating in, e.g., client role.
     fuchsia.wlan.device.MacRole role;
+    /// The iface's global ID.
     uint16 id;
+    /// Iface's PHY ID.
+    uint16 phy_id;
+    /// Local ID assigned by this iface's PHY.
+    uint16 phy_assigned_id;
+    /// The iface's device path.
+    /// Note: This field is deprecated.
+    /// Ifaces will soon have no device path.
     string dev_path;
+    /// The iface's MAC.
     array<uint8>:6 mac_addr;
 };
 

@@ -564,6 +564,7 @@ mod tests {
         let mlme_query = MlmeQueryProxy::new(proxy);
         let device_info = fake_device_info();
         let iface_device = IfaceDevice {
+            phy_ownership: device::DirectMlmeChannel::NotSupported,
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
             device: None,

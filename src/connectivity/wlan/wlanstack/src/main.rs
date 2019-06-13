@@ -46,7 +46,7 @@ static LOGGER: logger::Logger = logger::Logger;
 
 /// Configuration for wlanstack service.
 /// This configuration is a super set of individual component configurations such as SME.
-#[derive(StructOpt, Clone, Debug)]
+#[derive(StructOpt, Clone, Debug, Default)]
 pub struct ServiceCfg {
     /// |true| if WEP should be supported by the service instance.
     #[structopt(long = "wep_supported")]
@@ -92,7 +92,7 @@ async fn main() -> Result<(), Error> {
         cobalt_sender.clone(),
         inspect_tree.clone(),
     )
-        .map_ok(|x| match x {});
+    .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
     let serve_fidl_fut =
@@ -134,6 +134,7 @@ async fn serve_fidl(
         async move {
             match s {
                 IncomingServices::Device(stream) => await!(service::serve_device_requests(
+                    service::IfaceCounter::new(),
                     cfg,
                     phys,
                     ifaces,
@@ -150,13 +151,9 @@ async fn serve_fidl(
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::panic,
-    };
+    use {super::*, std::panic};
 
     #[test]
     fn parse_svc_cfg_wep() {
