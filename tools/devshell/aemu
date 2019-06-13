@@ -5,7 +5,7 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-e <directory>] [-w <size>] [--audio] [--headless]
+## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-e <directory>] [-w <size>] [--audio] [--headless] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
@@ -14,6 +14,7 @@
 ##   -w <size> window size, default is 1280x800
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
+##   --debugger pause on launch and wait for a debugger process to attach before resuming
 
 set -e
 
@@ -23,6 +24,7 @@ source "${FUCHSIA_DIR}/buildtools/vars.sh"
 
 ACCEL="auto"
 NET=0
+DEBUGGER=0
 IFNAME=""
 AUDIO=0
 AEMU="emulator"
@@ -64,6 +66,9 @@ while [[ $# -ge 1 ]]; do
     ;;
   --headless)
     AEMU="emulator-headless"
+    ;;
+  --debugger)
+    DEBUGGER=1
     ;;
   *)
     break
@@ -128,6 +133,9 @@ fi
 OPTIONS=()
 OPTIONS+=("-feature" "$FEATURES")
 OPTIONS+=("-window-size" "$WINDOW_SIZE")
+if (( $DEBUGGER )); then
+    OPTIONS+=("-wait-for-debugger")
+fi
 
 if (( $NET )); then
   if [[ "$(uname -s)" == "Darwin" ]]; then
