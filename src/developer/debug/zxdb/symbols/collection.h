@@ -9,7 +9,8 @@
 
 namespace zxdb {
 
-// Represents a C/C++ class, struct, or union.
+// Represents a C/C++ class, struct, or union, or a Rust enum (see the
+// variant_part() member).
 class Collection final : public Type {
  public:
   // Construct with fxl::MakeRefCounted().
@@ -22,6 +23,19 @@ class Collection final : public Type {
   void set_data_members(std::vector<LazySymbol> d) {
     data_members_ = std::move(d);
   }
+
+  // This will be a VariantPart class if there is one defined.
+  //
+  // Currently this is used only for Rust enums. In this case, the collection
+  // will contain one VariantPart (the Variants inside of it will encode the
+  // enumerated possibilities) and this collection will have no data_members()
+  // in its vector. See the VariantPart declaration for more details.
+  //
+  // Theoretically DWARF could encode more than one variant part child of a
+  // struct but none of our supported compilers or languages do this so we
+  // save as a single value.
+  const LazySymbol& variant_part() const { return variant_part_; }
+  void set_variant_part(const LazySymbol& vp) { variant_part_ = vp; }
 
   // Classes/structs this one inherits from. This should be a InheritedFrom
   // object.
@@ -53,6 +67,7 @@ class Collection final : public Type {
   std::string ComputeFullName() const override;
 
   std::vector<LazySymbol> data_members_;
+  LazySymbol variant_part_;
   std::vector<LazySymbol> inherited_from_;
 };
 

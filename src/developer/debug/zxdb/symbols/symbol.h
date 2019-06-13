@@ -31,6 +31,8 @@ class Namespace;
 class Type;
 class Value;
 class Variable;
+class Variant;
+class VariantPart;
 
 // Represents the type of a variable. This is a deserialized version of the
 // various DWARF DIEs ("Debug Information Entry" -- a record in the DWARF file)
@@ -137,6 +139,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const Type* AsType() const;
   virtual const Value* AsValue() const;
   virtual const Variable* AsVariable() const;
+  virtual const Variant* AsVariant() const;
+  virtual const VariantPart* AsVariantPart() const;
 
   // Non-const manual RTTI wrappers.
   ArrayType* AsArrayType() {
@@ -193,6 +197,13 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   }
   Variable* AsVariable() {
     return const_cast<Variable*>(const_cast<const Symbol*>(this)->AsVariable());
+  }
+  Variant* AsVariant() {
+    return const_cast<Variant*>(const_cast<const Symbol*>(this)->AsVariant());
+  }
+  VariantPart* AsVariantPart() {
+    return const_cast<VariantPart*>(
+        const_cast<const Symbol*>(this)->AsVariantPart());
   }
 
  protected:

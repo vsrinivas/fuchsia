@@ -69,6 +69,7 @@ enum class DwarfTag : int {
   // Indicates a C/C++ parameter of "...".
   kUnspecifiedParameters = 0x18,
 
+  // Member of a VariantPart, used by Rust for an enum value.
   kVariant = 0x19,
 
   // Common block and common inclusion are used by Fortran. Can ignore.
@@ -133,6 +134,8 @@ enum class DwarfTag : int {
   kTemplateValueParameter = 0x30,
   kThrownType = 0x31,
   kTryBlock = 0x32,
+
+  // Child of a structure that defines a Rust enum.
   kVariantPart = 0x33,
 
   // Local variable declaration. It will normally have a name, type,

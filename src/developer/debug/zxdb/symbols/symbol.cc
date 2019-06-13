@@ -43,6 +43,8 @@ const Namespace* Symbol::AsNamespace() const { return nullptr; }
 const Type* Symbol::AsType() const { return nullptr; }
 const Value* Symbol::AsValue() const { return nullptr; }
 const Variable* Symbol::AsVariable() const { return nullptr; }
+const Variant* Symbol::AsVariant() const { return nullptr; }
+const VariantPart* Symbol::AsVariantPart() const { return nullptr; }
 
 std::string Symbol::ComputeFullName() const {
   return GetIdentifier().GetFullName();
