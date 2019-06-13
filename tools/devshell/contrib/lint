@@ -206,17 +206,43 @@ declare JSON_LINT_CMD= # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
 declare RUST_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
 declare RUST_ENTRY_POINT_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
 
-# If there is a FIDL file to fix, and we don't have a copy of fidl-lint,
-# generate one.
-for file in ${FILES}; do
-  if [[ ${file} =~ .*\.fidl ]]; then
-    if [[ ! -x "${FIDL_LINT}" ]]; then
-       printf "fidl-lint not found: attempting to build it\n"
-       fx-command-run build system/fidl:tools
-       break
-     fi
+fidl_lint_is_outdated() {
+  local yes=0
+  local no=1
+  if [[ ! -x "${FIDL_LINT}" ]]; then
+    # "fx build zircon/tools" does not build the "${FIDL_LINT}" hard link
+    # if that is the only missing hard link to the architecture-specific
+    # executable. Touching these files in this order will ensure the
+    # executable is rebuilt and relinked.
+    touch "${FIDL_LINT}"
+    touch "${FUCHSIA_DIR}/zircon/system/host/fidl/linter/main.cpp"
+    return $yes
   fi
-done
+  local files_out_of_date=$(
+    find "${FUCHSIA_DIR}/zircon/system/host/fidl" -newer "${FIDL_LINT}" | wc -l
+  )
+  if (( ${files_out_of_date} > 0 )); then
+    return $yes
+  fi
+  return $no
+}
+
+if [[ -t 0 ]]; then  # only if interactive
+  # If there is a FIDL file to check, and we don't have an up-to-date
+  # copy of fidl-lint, generate one.
+  for file in ${FILES}; do
+    if [[ ${file} =~ .*\.fidl ]]; then
+      if fidl_lint_is_outdated; then
+        echo "fidl-lint is out of date or missing..."
+        read -p "OK to run 'fx build zircon/tools' to rebuild it? [Y/n] "
+        if [[ $REPLY == "" || $REPLY =~ Y|y ]]; then
+          fx-command-run build zircon/tools
+        fi
+      fi
+      break
+    fi
+  done
+fi
 
 [[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_LINT_CMD} "${RUST_ENTRY_POINT}"
 
