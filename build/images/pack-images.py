@@ -32,11 +32,6 @@ set -x
     cmd = ['exec', '"$dir/%s"' % bootserver]
     if board_name:
         cmd += ['--board_name', '"%s"' % board_name]
-        # TODO(raggi): the following can be removed shortly, once the argument
-        # is moved into the board paramters via additional_bootserver_arguments
-        # below.
-        if board_name == "astro":
-            cmd += ['-w', '10']
 
     if additional_bootserver_arguments:
         cmd += [additional_bootserver_arguments]
