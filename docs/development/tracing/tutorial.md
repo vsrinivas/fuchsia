@@ -25,8 +25,8 @@ topics:
 
 # Concepts
 
-In the Fuchsia tracing system, three types of components cooperate in a
-distributed manner:
+In the Fuchsia tracing system, three types of
+[components](../../glossary.md#Component) cooperate in a distributed manner:
 
 * Trace Manager &mdash; an administrator that manages the overall tracing system
 * Trace Provider &mdash; a program that generates trace data
@@ -667,6 +667,67 @@ When you're done, you end the flow with `TRACE_FLOW_END()`.
 
 A flow could be used, for example, between a client and server for tracking a
 request end-to-end from the client, through the server, and back to the client.
+
+# Provider registration
+
+Trace providers must register with Trace Manager in order for them to
+participate in tracing. This registration involves two pieces:
+
+- code to do the registration,
+- an entry in the component manifest to give the component access
+  to Trace Manager.
+
+## Registration
+
+The simple form of registration in C++ requires an async loop.
+
+Here's a simple example:
+
+```cpp
+#include <lib/async-loop/cpp/loop.h>
+#include <trace-provider/provider.h>
+// further includes
+
+int main(int argc, const char** argv) {
+  // process argv
+
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  trace::TracelinkProviderWithFdio trace_provider(
+      loop.dispatcher(), "my_trace_provider");
+
+  // further setup
+
+  loop.Run();
+  return 0;
+}
+```
+
+This example uses `fdio` to set up the FIDL channel with Trace Manager.
+
+## Component access
+
+Like all things in Fuchsia, access to capabilities must be spelled out,
+there is no ambient authority. Trace providers indicate their need to
+communicate with Trace Manager by saying so in their component manifest,
+which typically lives in a file with a `.cmx' suffix.
+
+Here's a simple example:
+
+```json
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
+```
+
+For further information on component manifests, see
+[Fuchsia Package Metadata](../../the-book/package_metadata.md).
 
 # Background
 
