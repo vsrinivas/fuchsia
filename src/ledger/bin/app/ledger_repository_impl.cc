@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/inspect/deprecated/expose.h>
 #include <lib/inspect/deprecated/object_dir.h>
 #include <trace/event.h>
@@ -13,6 +14,7 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
+#include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
@@ -48,6 +50,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
+  children_manager_retainer_ = ledgers_inspect_node_.SetChildrenManager(this);
 }
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
@@ -106,6 +109,45 @@ void LedgerRepositoryImpl::DeletePageStorage(
   FXL_DCHECK(ledger_manager);
   return ledger_manager->DeletePageStorage(page_id, std::move(callback));
 }
+
+// TODO(https://fuchsia.atlassian.net/browse/LE-792): The disk scan should be
+// made to happen either asynchronously or not on the main thread.
+void LedgerRepositoryImpl::GetNames(
+    fit::function<void(std::vector<std::string>)> callback) {
+  std::vector<std::string> child_names;
+  ledger::GetDirectoryEntries(
+      content_path_, [&child_names](fxl::StringView entry) {
+        std::string decoded;
+        if (base64url::Base64UrlDecode(entry, &decoded)) {
+          child_names.push_back(decoded);
+          return true;
+        } else {
+          // NOTE(nathaniel): The ChildrenManager API does not currently have a
+          // means to indicate errors; our response to an error here is to
+          // simply log and refrain from telling Inspect that the problematic
+          // child exists.
+          FXL_LOG(ERROR) << "Failed to decode encoded ledger name \"" << entry
+                         << "\"!";
+          return false;
+        }
+      });
+  callback(child_names);
+};
+
+void LedgerRepositoryImpl::Attach(std::string ledger_name,
+                                  fit::function<void(fit::closure)> callback) {
+  LedgerManager* ledger_manager;
+  // TODO(https://fuchsia.atlassian.net/browse/LE-793): This will create a new
+  // ledger on disk if no ledger with the given name is found - GetLedgerManager
+  // should be split into separate "GetOrCreateLedgerManager" and
+  // "GetButDoNotCreateLedgerManager" functions with the latter called here.
+  storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != storage::Status::OK) {
+    callback([]() {});
+    return;
+  }
+  callback(ledger_manager->CreateDetacher());
+};
 
 std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {

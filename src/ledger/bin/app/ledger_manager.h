@@ -87,6 +87,12 @@ class LedgerManager : public LedgerImpl::Delegate {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
+  // Registers "interest" in this LedgerManager for which this LedgerManager
+  // will remain non-empty and returns a closure that when called will
+  // deregister the "interest" in this LedgerManager (and potentially cause this
+  // LedgerManager's on_empty_callback_ to be called).
+  fit::closure CreateDetacher();
+
  private:
   using PageTracker = fit::function<bool()>;
 
@@ -103,6 +109,13 @@ class LedgerManager : public LedgerImpl::Delegate {
 
   Environment* const environment_;
   std::string ledger_name_;
+
+  // A nonnegative count of the number of "registered interests" for this
+  // |LedgerManager|. This field is incremented by calls to |CreateDetacher| and
+  // decremented by calls to the closures returned by calls to |CreateDetacher|.
+  // This |LedgerManager| is not considered empty while this number is positive.
+  int64_t outstanding_detachers_ = 0;
+
   std::unique_ptr<encryption::EncryptionService> encryption_service_;
   // |storage_| must outlive objects containing CommitWatchers, which includes
   // |ledger_sync_| and |active_page_manager_containers_|.

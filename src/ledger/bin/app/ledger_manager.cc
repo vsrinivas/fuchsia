@@ -54,6 +54,15 @@ LedgerManager::LedgerManager(
 
 LedgerManager::~LedgerManager() {}
 
+fit::closure LedgerManager::CreateDetacher() {
+  outstanding_detachers_++;
+  return [this]() {
+    outstanding_detachers_--;
+    FXL_DCHECK(outstanding_detachers_ >= 0);
+    CheckEmpty();
+  };
+}
+
 void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
   bindings_.emplace(&ledger_impl_, std::move(ledger_request));
 }
@@ -101,7 +110,8 @@ PageManager* LedgerManager::GetOrCreatePageManager(
 }
 
 void LedgerManager::CheckEmpty() {
-  if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty()) {
+  if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty() &&
+      outstanding_detachers_ == 0) {
     on_empty_callback_();
   }
 }

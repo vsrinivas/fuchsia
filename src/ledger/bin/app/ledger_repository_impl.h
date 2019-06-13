@@ -34,7 +34,8 @@ namespace ledger {
 
 class LedgerRepositoryImpl
     : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
-      public PageEvictionManager::Delegate {
+      public PageEvictionManager::Delegate,
+      public inspect::ChildrenManager {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
   // will outlive the given |disk_cleanup_manager|.
@@ -80,6 +81,12 @@ class LedgerRepositoryImpl
                            fit::function<void(Status)> callback) override;
   void DiskCleanUp(fit::function<void(Status)> callback) override;
 
+  // inspect::ChildrenManager:
+  void GetNames(
+      fit::function<void(std::vector<std::string>)> callback) override;
+  void Attach(std::string ledger_name,
+              fit::function<void(fit::closure)> callback) override;
+
  private:
   // Retrieves the existing, or creates a new LedgerManager object with the
   // given |ledger_name|.
@@ -112,6 +119,7 @@ class LedgerRepositoryImpl
   inspect::Node inspect_node_;
   inspect::UIntMetric requests_metric_;
   inspect::Node ledgers_inspect_node_;
+  fit::deferred_callback children_manager_retainer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

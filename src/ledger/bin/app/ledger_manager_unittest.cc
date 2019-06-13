@@ -342,6 +342,33 @@ TEST_F(LedgerManagerTest, OnEmptyCalled) {
   EXPECT_TRUE(on_empty_called);
 }
 
+TEST_F(LedgerManagerTest, OnEmptyCalledWhenLastDetacherCalled) {
+  bool on_empty_called;
+  ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  auto first_detacher = ledger_manager_->CreateDetacher();
+  auto second_detacher = ledger_manager_->CreateDetacher();
+
+  ledger_.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+
+  first_detacher();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+
+  auto third_detacher = ledger_manager_->CreateDetacher();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+
+  second_detacher();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+
+  third_detacher();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_called);
+}
+
 // Verifies that the LedgerManager does not call its callback while a page is
 // being deleted.
 TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
