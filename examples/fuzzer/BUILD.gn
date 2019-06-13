@@ -11,18 +11,25 @@ group("fuzzer") {
   ]
 }
 
-fuzz_package("example_fuzzers") {
+fuzzers_package("example_fuzzers") {
   targets = [ ":baz_fuzzer" ]
   fuzz_host = true
 }
 
-fuzz_target("baz_fuzzer") {
-  sources = [ "target.cc" ]
-  deps = [ ":baz" ]
+fuzzer("baz_fuzzer") {
+  sources = [
+    "target.cc",
+  ]
+  deps = [
+    ":baz",
+  ]
 }
 
 source_set("baz") {
-  sources = [ "baz.cc" ]
-  deps = [ "//src/lib/fxl" ]
+  sources = [
+    "baz.cc",
+  ]
+  deps = [
+    "//src/lib/fxl",
+  ]
 }
-
