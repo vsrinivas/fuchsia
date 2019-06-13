@@ -13,6 +13,32 @@ namespace storage {
 namespace fake {
 namespace {
 
+TEST(FakeObjectTest, FakePiece) {
+  const std::string content = "some content";
+  const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
+  const FakePiece piece(identifier, content);
+
+  EXPECT_EQ(piece.GetData(), content);
+  EXPECT_EQ(piece.GetIdentifier(), identifier);
+  ObjectReferencesAndPriority references;
+  EXPECT_EQ(piece.AppendReferences(&references), Status::OK);
+  EXPECT_TRUE(references.empty());
+}
+
+TEST(FakeObjectTest, FakeObject) {
+  const std::string content = "some content";
+  const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
+  const FakeObject object(std::make_unique<FakePiece>(identifier, content));
+
+  fxl::StringView data;
+  ASSERT_EQ(object.GetData(&data), Status::OK);
+  EXPECT_EQ(data, content);
+  EXPECT_EQ(object.GetIdentifier(), identifier);
+  ObjectReferencesAndPriority references;
+  EXPECT_EQ(object.AppendReferences(&references), Status::OK);
+  EXPECT_TRUE(references.empty());
+}
+
 TEST(FakeObjectTest, FakeObjectToken) {
   const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
   auto token = std::make_unique<FakeObjectToken>(identifier);
