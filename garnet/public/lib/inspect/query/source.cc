@@ -46,7 +46,7 @@ fit::promise<Source, std::string> Source::MakeFromFidl(
         }
         return inspect::ReadFromFidl(reader.take_value(), depth);
       })
-      .then([root_reader, location = std::move(location)](
+      .then([location = std::move(location)](
                 fit::result<inspect::ObjectHierarchy>& result)
                 -> fit::result<Source, std::string> {
         if (!result.is_ok()) {
