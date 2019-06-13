@@ -790,7 +790,8 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, wlanif_scan_req_t* req)
         return ZX_ERR_UNAVAILABLE;
     }
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
-        brcmf_err("Connecting: status (%lu)\n", vif->sme_state.load());
+        brcmf_err("Scan request suppressed: connect in progress (status: %lu)\n",
+                  vif->sme_state.load());
         return ZX_ERR_UNAVAILABLE;
     }
     /* If scan req comes for p2p0, send it over primary I/F */
