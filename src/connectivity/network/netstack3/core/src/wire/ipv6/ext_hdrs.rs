@@ -199,10 +199,10 @@ impl Ipv6ExtensionHeaderImpl {
         context.headers_parsed += 1;
         context.bytes_parsed += 2 + expected_len;
 
-        return Ok(Some(Some(Ipv6ExtensionHeader {
+        Ok(Some(Some(Ipv6ExtensionHeader {
             next_header,
             data: Ipv6ExtensionHeaderData::HopByHopOptions { options },
-        })));
+        })))
     }
 
     /// Parse Routing Extension Header.
@@ -242,16 +242,16 @@ impl Ipv6ExtensionHeaderImpl {
             context.headers_parsed += 1;
             context.bytes_parsed += expected_len;
 
-            return Ok(Some(None));
+            Ok(Some(None))
         } else {
             // As per RFC 8200, if we encounter a routing header with an unrecognized
             // routing type, and segments left is non-zero, we MUST discard the packet
             // and send and ICMP Parameter Problem response.
-            return Err(Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
+            Err(Ipv6ExtensionHeaderParsingError::ErroneousHeaderField {
                 pointer: (context.bytes_parsed as u32) + 2,
                 must_send_icmp: true,
                 header_len: context.bytes_parsed,
-            });
+            })
         }
     }
 
@@ -279,12 +279,12 @@ impl Ipv6ExtensionHeaderImpl {
         context.headers_parsed += 1;
         context.bytes_parsed += 8;
 
-        return Ok(Some(Some(Ipv6ExtensionHeader {
+        Ok(Some(Some(Ipv6ExtensionHeader {
             next_header,
             data: Ipv6ExtensionHeaderData::Fragment {
                 fragment_data: FragmentData { bytes: data.take_front(6).unwrap() },
             },
-        })));
+        })))
     }
 
     /// Parse Destination Options Extension Header.
@@ -327,10 +327,10 @@ impl Ipv6ExtensionHeaderImpl {
         context.headers_parsed += 1;
         context.bytes_parsed += 2 + expected_len;
 
-        return Ok(Some(Some(Ipv6ExtensionHeader {
+        Ok(Some(Some(Ipv6ExtensionHeader {
             next_header,
             data: Ipv6ExtensionHeaderData::DestinationOptions { options },
-        })));
+        })))
     }
 }
 
@@ -470,7 +470,7 @@ pub(crate) struct FragmentData<'a> {
 impl<'a> FragmentData<'a> {
     pub(crate) fn fragment_offset(&self) -> u16 {
         debug_assert!(self.bytes.len() == 6);
-        (((self.bytes[0] as u16) << 5) | ((self.bytes[1] as u16) >> 3))
+        ((u16::from(self.bytes[0]) << 5) | (u16::from(self.bytes[1]) >> 3))
     }
 
     pub(crate) fn m_flag(&self) -> bool {

@@ -79,8 +79,8 @@ pub(crate) enum FrameDestination {
 
 impl FrameDestination {
     /// Is this `FrameDestination::Broadcast`?
-    pub(crate) fn is_broadcast(&self) -> bool {
-        *self == FrameDestination::Broadcast
+    pub(crate) fn is_broadcast(self) -> bool {
+        self == FrameDestination::Broadcast
     }
 }
 

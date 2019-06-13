@@ -546,13 +546,11 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
     }
 
     fn get_remaining_tries(&mut self, net: P) -> Option<usize> {
-        let remaining_tries =
-            if let Some(ArpValue::Waiting { remaining_tries }) = self.table.get(&net) {
-                Some(*remaining_tries)
-            } else {
-                None
-            };
-        remaining_tries
+        if let Some(ArpValue::Waiting { remaining_tries }) = self.table.get(&net) {
+            Some(*remaining_tries)
+        } else {
+            None
+        }
     }
 
     fn set_waiting(&mut self, net: P, remaining_tries: usize) {

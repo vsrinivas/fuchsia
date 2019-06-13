@@ -202,7 +202,7 @@ pub(crate) fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
 ) {
     let state = get_inner_state::<_, I::Addr>(ctx.state());
     let Conn { local_addr, local_port, remote_addr, remote_port } =
-        state.conns.get_by_conn(conn).expect("transport::udp::send_udp_conn: no such conn").clone();
+        *state.conns.get_by_conn(conn).expect("transport::udp::send_udp_conn: no such conn");
 
     crate::ip::send_ip_packet_from(
         ctx,

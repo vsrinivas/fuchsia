@@ -217,12 +217,16 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
                     // rather than just `x`, which causes Clippy to complain.
                     // Also, some specializations may not use all the arguments
                     // so we allow unused variables.
-                    #[allow(clippy::needless_return, unused_variables)]
+                    //
+                    // TODO(joshlf): Some of these allows would be more precise
+                    // if they were added only to specific statements (probably
+                    // just to the IPv4- or IPv6-specific statements).
+                    #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
                     fn f #trait_decl #ipv4_block
                 }
 
                 impl Ext for crate::ip::#ipv6_type_ident {
-                    #[allow(clippy::needless_return, unused_variables)]
+                    #[allow(clippy::needless_return, clippy::let_and_return, unused_variables)]
                     fn f #trait_decl #ipv6_block
                 }
 

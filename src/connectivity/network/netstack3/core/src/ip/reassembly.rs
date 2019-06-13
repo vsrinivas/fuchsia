@@ -328,7 +328,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
         // the fragment offset is 0 (contains first fragment) and we have no more
         // fragments. This means the first fragment is the only fragment, implying
         // we have a full packet.
-        if offset == 0 && m_flag == false {
+        if offset == 0 && !m_flag {
             return FragmentProcessingState::NotNeeded(packet);
         }
 
@@ -336,7 +336,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
         // the packet is definitely fragmented (`offset` is not 0 or `m_flag` is `true`),
         // we simply let the caller know we need more fragments. This should never happen,
         // but just in case :).
-        if packet.body().len() == 0 {
+        if packet.body().is_empty() {
             return FragmentProcessingState::NeedMoreFragments;
         }
 
@@ -408,7 +408,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
                 //               this case and just drop the packet.
                 assert!(dispatcher
                     .cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(
-                        FragmentCacheKeyEither::from(key.clone()),
+                        FragmentCacheKeyEither::from(key),
                     ))
                     .is_some());
                 assert!(self.cache.remove(&key).is_some());
@@ -503,9 +503,9 @@ impl<I: Ip> IpLayerFragmentCache<I> {
         // ready to reassemble and give them a key and the final packet length
         // so they can allocate a sufficient buffer and call `reassemble_packet`.
         if fragment_data.missing_blocks.is_empty() {
-            return FragmentProcessingState::Ready { key, packet_len: fragment_data.total_size };
+            FragmentProcessingState::Ready { key, packet_len: fragment_data.total_size }
         } else {
-            return FragmentProcessingState::NeedMoreFragments;
+            FragmentProcessingState::NeedMoreFragments
         }
     }
 
@@ -549,7 +549,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
         // for reassembly and are attempting to do so.
         assert!(dispatcher
             .cancel_timeout(IpLayerTimerId::new_reassembly_timeout_timer_id(
-                FragmentCacheKeyEither::from(key.clone()),
+                FragmentCacheKeyEither::from(*key),
             ))
             .is_some());
 
@@ -589,9 +589,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
 
             dispatcher.schedule_timeout(
                 Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS),
-                IpLayerTimerId::new_reassembly_timeout_timer_id(FragmentCacheKeyEither::from(
-                    key.clone(),
-                )),
+                IpLayerTimerId::new_reassembly_timeout_timer_id(FragmentCacheKeyEither::from(*key)),
             );
 
             self.cache.get_mut(key).unwrap()
@@ -610,15 +608,14 @@ fn find_gap(
     fragment_blocks_range: (u16, u16),
 ) -> Option<(u16, u16)> {
     for potential_gap in missing_blocks.iter() {
-        if fragment_blocks_range.1 < potential_gap.0 {
-            // Our packet's ending offset is less than the start of `potential_gap` so
-            // move on to the next gap. That is, `fragment_blocks_range` ends before
-            // `potential_gap`.
-            continue;
-        } else if fragment_blocks_range.0 > potential_gap.1 {
-            // Our packet's starting offset is more than `potential_gap`'s ending offset so
-            // move on to the next gap. That is, `fragment_blocks_range` starts after
-            // `potential_gap`.
+        if fragment_blocks_range.1 < potential_gap.0 || fragment_blocks_range.0 > potential_gap.1 {
+            // Either:
+            // - Our packet's ending offset is less than the start of
+            //   `potential_gap` so move on to the next gap. That is,
+            //   `fragment_blocks_range` ends before `potential_gap`.
+            // - Our packet's starting offset is more than `potential_gap`'s
+            //   ending offset so move on to the next gap. That is,
+            //   `fragment_blocks_range` starts after `potential_gap`.
             continue;
         }
 
@@ -634,7 +631,7 @@ fn find_gap(
         }
 
         // Found a gap where `fragment_blocks_range` fits in!
-        return Some(potential_gap.clone());
+        return Some(*potential_gap);
     }
 
     // Unable to find a valid gap so return `None`.
@@ -737,7 +734,7 @@ impl PacketBodyFragment {
     fn new(offset: u16, data: Vec<u8>) -> Self {
         // We want a min heap but `BinaryHeap` is a max heap, so we
         // multiple `offset` with -1.
-        PacketBodyFragment(-1 * (offset as i32), data)
+        PacketBodyFragment(-(i32::from(offset)), data)
     }
 }
 

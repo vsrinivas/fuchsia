@@ -205,7 +205,7 @@ impl Icmpv6ParameterProblem {
         Icmpv6ParameterProblem { pointer: buf }
     }
 
-    pub(crate) fn pointer(&self) -> u32 {
+    pub(crate) fn pointer(self) -> u32 {
         NetworkEndian::read_u32(&self.pointer)
     }
 }

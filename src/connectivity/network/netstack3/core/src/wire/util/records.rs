@@ -153,7 +153,7 @@ where
         bytes: &mut BV,
         context: &mut Self::Context,
     ) -> Result<Option<Option<Self::Record>>, Self::Error> {
-        let limit_hit = *context <= 0;
+        let limit_hit = *context == 0;
 
         if bytes.is_empty() || limit_hit {
             return match O::EXACT_LIMIT_ERROR {

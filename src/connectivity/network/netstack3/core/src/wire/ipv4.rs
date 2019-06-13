@@ -261,7 +261,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
 
 impl<B: ByteSlice> FragmentablePacket for Ipv4Packet<B> {
     fn fragment_data(&self) -> (u32, u16, bool) {
-        (self.id() as u32, self.fragment_offset(), self.mf_flag())
+        (u32::from(self.id()), self.fragment_offset(), self.mf_flag())
     }
 }
 

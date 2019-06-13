@@ -628,7 +628,8 @@ fn handle_parse_error<D: EventDispatcher, I: Ip, B: BufferMut>(
                 }
             }
         }
-        // TODO(joshlf): Do something with ICMP here?
+        // TODO(joshlf): Do something with ICMP here? If not, then just turn
+        // this match into an if let.
         _ => {}
     }
 }
@@ -650,6 +651,7 @@ fn deliver<D: EventDispatcher, A: IpAddress>(
     //   is the easiest to implement for the time being, but we should actually
     //   put real thought into what our host model should be (NET-1011).
     #[ipv4addr]
+    #[allow(clippy::or_fun_call)] // for the .unwrap_or(dst_ip.is_global_broadcast())
     return crate::device::get_ip_addr_subnet(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .map(|(addr, subnet)| dst_ip == addr || dst_ip == subnet.broadcast())

@@ -242,7 +242,7 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     match result {
         Some(NeighborState {
             link_address: LinkAddressResolutionValue::Known { address }, ..
-        }) => Some(address.clone()),
+        }) => Some(*address),
         None => {
             // if we're not already waiting for a neighbor solicitation
             // response, mark it as waiting and send a neighbor solicitation,
@@ -305,12 +305,12 @@ struct NeighborTable<H> {
 
 impl<H> NeighborTable<H> {
     fn set_link_address(&mut self, neighbor: Ipv6Addr, address: H) {
-        self.table.entry(neighbor).or_insert_with(|| NeighborState::new()).link_address =
+        self.table.entry(neighbor).or_insert_with(NeighborState::new).link_address =
             LinkAddressResolutionValue::Known { address };
     }
 
     fn set_waiting_link_address(&mut self, neighbor: Ipv6Addr, transmit_counter: usize) {
-        self.table.entry(neighbor).or_insert_with(|| NeighborState::new()).link_address =
+        self.table.entry(neighbor).or_insert_with(NeighborState::new).link_address =
             LinkAddressResolutionValue::Waiting { transmit_counter };
     }
 
