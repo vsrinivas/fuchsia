@@ -8,7 +8,7 @@ use fidl_fuchsia_fonts::ProviderMarker;
 use fidl_fuchsia_ledger_cloud::CloudProviderMarker;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
-use fidl_fuchsia_tracelink::RegistryMarker;
+use fidl_fuchsia_tracing_provider::RegistryMarker;
 use fidl_fuchsia_ui_input::ImeServiceMarker;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
 use fidl_fuchsia_vulkan_loader::LoaderMarker;

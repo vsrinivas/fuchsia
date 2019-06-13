@@ -38,7 +38,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
-    "//zircon/public/fidl/fuchsia-tracelink:fuchsia-tracelink-rustc",
+    "//zircon/public/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
   with_unit_tests = true
 }
