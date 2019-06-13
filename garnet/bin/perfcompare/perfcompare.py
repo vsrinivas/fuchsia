@@ -111,9 +111,9 @@ def RawResultsFromDir(filename):
     # Note that sorting the filename listing (from os.listdir() or from
     # tarfile) is not essential, but it helps to make any later processing
     # more deterministic.
-    if os.path.isfile(filename) and filename.endswith('.tar'):
+    if os.path.isfile(filename):
         # Read from tar file.
-        tar = tarfile.TarFile(filename)
+        tar = tarfile.open(filename)
         for member in sorted(tar.getmembers(), key=lambda member: member.name):
             if IsResultsFilename(member.name):
                 yield json.load(tar.extractfile(member))
