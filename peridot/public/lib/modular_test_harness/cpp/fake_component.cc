@@ -66,7 +66,9 @@ void FakeComponent::Exit(int64_t exit_code,
   intercepted_component_ptr_->Exit(exit_code, reason);
 }
 
-void FakeComponent::Terminate() { Exit(0); }
+void FakeComponent::Terminate() {
+  Exit(0);
+}
 
 }  // namespace testing
 }  // namespace modular

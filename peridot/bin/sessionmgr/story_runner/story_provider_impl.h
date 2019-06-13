@@ -83,7 +83,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   void Teardown(fit::function<void()> callback);
 
   // Called by StoryControllerImpl.
-  Environment* user_environment() const { return user_environment_; }
+  const Environment* user_environment() const { return user_environment_; }
 
   // The device ID for this user/device.
   const std::string device_id() const { return device_id_; }
