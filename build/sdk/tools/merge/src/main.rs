@@ -8,12 +8,13 @@ use std::iter::{FromIterator, Iterator};
 
 use structopt::StructOpt;
 
-use sdk_metadata::{DartLibrary, ElementType, JsonObject, Manifest, Part};
+use sdk_metadata::{DartLibrary, ElementType, HostTool, JsonObject, Manifest, Part};
 
 mod app;
 mod file_provider;
 mod flags;
 mod merge_dart_library;
+mod merge_host_tool;
 mod tarball;
 #[cfg(test)]
 mod testing;
@@ -21,6 +22,7 @@ mod testing;
 use crate::app::{Error, Result};
 use crate::file_provider::FileProvider;
 use crate::merge_dart_library::merge_dart_library;
+use crate::merge_host_tool::merge_host_tool;
 use crate::tarball::{InputTarball, OutputTarball, ResultTarball, SourceTarball};
 
 const MANIFEST_PATH: &str = "meta/manifest.json";
@@ -108,6 +110,7 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
 fn is_kind_supported(kind: &ElementType) -> bool {
     match kind {
         ElementType::DartLibrary => true,
+        ElementType::HostTool => true,
         _ => false,
     }
 }
@@ -122,6 +125,7 @@ fn merge_common_part<F>(
     }
     match part.kind {
         ElementType::DartLibrary => merge_dart_library(&part.meta, base, complement, output),
+        ElementType::HostTool => merge_host_tool(&part.meta, base, complement, output),
         _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
     }
 }
@@ -134,10 +138,11 @@ fn copy_part_as_is<F>(
         return Ok(());
     }
     println!("Copying {}", part);
-    let provider: Box<dyn FileProvider> = Box::new(match part.kind {
-        ElementType::DartLibrary => source.get_metadata::<DartLibrary>(&part.meta)?,
+    let provider: Box<dyn FileProvider> = match part.kind {
+        ElementType::DartLibrary => Box::new(source.get_metadata::<DartLibrary>(&part.meta)?),
+        ElementType::HostTool => Box::new(source.get_metadata::<HostTool>(&part.meta)?),
         _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
-    });
+    };
     let mut paths = provider.get_all_files();
     paths.push(part.meta.clone());
     for path in &paths {

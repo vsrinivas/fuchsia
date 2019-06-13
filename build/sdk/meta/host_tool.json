@@ -21,6 +21,10 @@
             }
           ]
         },
+        "name": {
+          "description": "Name of the tool",
+          "type": "string"
+        },
         "root": {
           "description": "The root of the element in the SDK",
           "type": "string"
