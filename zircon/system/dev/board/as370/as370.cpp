@@ -21,14 +21,20 @@ zx_status_t As370::Create(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
+    pdev_board_info_t board_info;
+    zx_status_t status = pbus.GetBoardInfo(&board_info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to get board info: %d\n", __func__, status);
+        return status;
+    }
+
     fbl::AllocChecker ac;
-    auto board = fbl::make_unique_checked<As370>(&ac, parent, pbus);
+    auto board = fbl::make_unique_checked<As370>(&ac, parent, pbus, board_info);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = board->DdkAdd("as370", DEVICE_ADD_NON_BINDABLE);
-    if (status != ZX_OK) {
+    if ((status = board->DdkAdd("as370", DEVICE_ADD_NON_BINDABLE)) != ZX_OK) {
         zxlogf(ERROR, "%s: DdkAdd failed %s\n", __func__, zx_status_get_string(status));
         return status;
     }
@@ -76,9 +82,12 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(as370, driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(as370, driver_ops, "zircon", "0.1", 6)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
+    BI_GOTO_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS, 0),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
+    BI_LABEL(0),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VISALIA),
 ZIRCON_DRIVER_END(as370)
 //clang-format on

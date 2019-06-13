@@ -171,6 +171,9 @@ boot_shim("msm8x53-som") {
 boot_shim("mt8167s_ref") {
 }
 
+boot_shim("visalia") {
+}
+
 boot_shim("qemu") {
   image_metadata = {
     name = "qemu-kernel"

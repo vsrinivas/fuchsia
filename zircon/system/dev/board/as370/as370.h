@@ -19,8 +19,9 @@ enum {
 
 class As370 : public ddk::Device<As370> {
 public:
-    As370(zx_device_t* parent, const ddk::PBusProtocolClient pbus)
-        : ddk::Device<As370>(parent), pbus_(pbus) {}
+    As370(zx_device_t* parent, const ddk::PBusProtocolClient& pbus,
+          const pdev_board_info_t& board_info)
+        : ddk::Device<As370>(parent), pbus_(pbus), board_info_(board_info) {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -34,7 +35,8 @@ private:
     zx_status_t I2cInit();
     zx_status_t UsbInit();
 
-    ddk::PBusProtocolClient pbus_;
+    const ddk::PBusProtocolClient pbus_;
+    const pdev_board_info_t board_info_;
     thrd_t thread_;
 };
 

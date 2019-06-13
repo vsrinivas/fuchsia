@@ -30,6 +30,7 @@ enum class Board {
     kMt8167sRef,
     kMsm8x53Som,
     kAs370,
+    kVisalia,
     kUnknown,
 };
 
@@ -72,6 +73,8 @@ Board GetBoardType() {
         return Board::kMsm8x53Som;
     } else if (!strcmp(board_name, "as370")) {
         return Board::kAs370;
+    } else if (!strcmp(board_name, "visalia")) {
+        return Board::kVisalia;
     }
 
     return Board::kUnknown;
@@ -359,6 +362,23 @@ bool as370_enumeration_test() {
     END_TEST;
 }
 
+bool visalia_enumeration_test() {
+    BEGIN_TEST;
+    static const char* kDevicePaths[] = {
+        "sys/platform/as370",
+        "sys/platform/14:01:1",
+        "sys/platform/14:01:1/as370-gpio",
+        "sys/platform/00:00:9",
+        "sys/platform/00:00:9/dw-i2c",
+        "sys/platform/14:01:2/as370-usb-phy",
+        "dwc2-usb",
+    };
+
+    ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+
+    END_TEST;
+}
+
 #define MAKE_TEST_CASE(name)          \
     BEGIN_TEST_CASE(name)             \
     RUN_TEST(name##_enumeration_test) \
@@ -373,6 +393,7 @@ MAKE_TEST_CASE(sherlock);
 MAKE_TEST_CASE(mt8167s_ref);
 MAKE_TEST_CASE(msm8x53_som);
 MAKE_TEST_CASE(as370);
+MAKE_TEST_CASE(visalia);
 
 #undef MAKE_TEST_CASE
 
@@ -396,6 +417,8 @@ int main(int argc, char** argv) {
         return unittest_run_one_test(test_case_msm8x53_som, TEST_ALL) ? 0 : -1;
     case Board::kAs370:
         return unittest_run_one_test(test_case_as370, TEST_ALL) ? 0 : -1;
+    case Board::kVisalia:
+        return unittest_run_one_test(test_case_visalia, TEST_ALL) ? 0 : -1;
     case Board::kUnknown:
         return 0;
     }
