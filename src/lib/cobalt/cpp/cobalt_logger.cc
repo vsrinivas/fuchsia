@@ -20,7 +20,8 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(
     fuchsia::cobalt::ReleaseStage release_stage) {
   fsl::SizedVmo config_vmo;
   if (!fsl::VmoFromFilename(config_path, &config_vmo)) {
-    FX_LOGS(ERROR) << "Could not find config file at " << config_path;
+    FX_LOGST(ERROR, "cobalt_lib")
+        << "Could not find config file at " << config_path;
     return nullptr;
   }
 

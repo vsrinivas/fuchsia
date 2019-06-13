@@ -163,7 +163,7 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
               OnConnectionError();
             }
           } else {
-            FX_LOGS(ERROR) << "CreateLogger() failed.";
+            FX_LOGST(ERROR, "cobalt_lib") << "CreateLogger() failed.";
           }
         });
   } else {
@@ -179,7 +179,8 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
               OnConnectionError();
             }
           } else {
-            FX_LOGS(ERROR) << "CreateLoggerFromProjectName() failed";
+            FX_LOGST(ERROR, "cobalt_lib")
+                << "CreateLoggerFromProjectName() failed";
           }
         });
   }
