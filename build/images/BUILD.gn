@@ -419,6 +419,8 @@ if (!bootfs_only) {
     ]
   }
 
+  blob_image_path = "$target_out_dir/blob.blk"
+
   # Pack up all the blobs!
   zircon_tool_action("blob.blk") {
     visibility = [ ":*" ]
@@ -426,7 +428,6 @@ if (!bootfs_only) {
     deps = [
       ":blob.manifest",
     ]
-    blob_image_path = "$target_out_dir/$target_name"
     blob_size_list = "$root_build_dir/blob.sizes"
     outputs = [
       blob_image_path,
@@ -817,7 +818,11 @@ declare_args() {
   always_zedboot = false
 }
 
+record_filesystem_sizes_deps = []
+
 if (!bootfs_only) {
+  data_image_path = "$target_out_dir/data.blk"
+
   # data.blk creates minfs data partition containing the preinstall package
   # index. The partition is included in fvm.blk and fvm.sparse.blk.
   # To increase the size of the data partition, increase the total size of the
@@ -825,7 +830,6 @@ if (!bootfs_only) {
   zircon_tool_action("data.blk") {
     testonly = true
     tool = "minfs"
-    data_image_path = "$target_out_dir/$target_name"
     outputs = [
       data_image_path,
     ]
@@ -867,26 +871,6 @@ if (!bootfs_only) {
   # to check against.
   max_fvm_size_file = "$root_build_dir/max_fvm_size.txt"
   write_file(max_fvm_size_file, max_fvm_size)
-
-  # Record the maximum allowable /blob contents size in the build directory for
-  # later steps to check against.
-  max_blob_contents_size_file = "$root_build_dir/max_blob_contents_size.txt"
-  write_file(max_blob_contents_size_file, max_blob_contents_size)
-
-  # Record the maximum allowable /blob image size in the build directory for
-  # later steps to check against.
-  max_blob_image_size_file = "$root_build_dir/max_blob_image_size.txt"
-  write_file(max_blob_image_size_file, max_blob_image_size)
-
-  # Record the maximum allowable /data content size in the build directory for
-  # later steps to check against.
-  max_data_contents_size_file = "$root_build_dir/max_data_contents_size.txt"
-  write_file(max_data_contents_size_file, max_data_contents_size)
-
-  # Record the maximum allowable /data image size in the build directory for
-  # later steps to check against.
-  max_data_image_size_file = "$root_build_dir/max_data_image_size.txt"
-  write_file(max_data_image_size_file, max_data_image_size)
 
   # fvm.blk creates an FVM partition image containing the blob partition produced
   # by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
@@ -935,13 +919,15 @@ if (!bootfs_only) {
     },
   ]
 
+  fvm_sparse_blk_path = "$target_out_dir/fvm.sparse.blk"
+
   # fvm.sparse.blk creates a sparse FVM partition image containing the blob
   # partition produced by blob.blk and the data partition produced by data.blk.
   # fvm.sparse.blk is primarily invoked and used by the paver boot, via `fx
   # pave`.
   generate_fvm("fvm.sparse.blk") {
     testonly = true
-    output_name = "$target_out_dir/fvm.sparse.blk"
+    output_name = fvm_sparse_blk_path
     deps = [
       ":blob.blk",
       ":data.blk",
@@ -980,6 +966,52 @@ if (!bootfs_only) {
       ]
     },
   ]
+
+  action("filesystem_sizes.json") {
+    testonly = true
+    script = "format_filesystem_sizes.py"
+    deps = [
+      ":blob.blk",
+      ":data.blk",
+      ":fvm.sparse.blk",
+    ]
+    output_name = "$root_build_dir/filesystem_sizes.json"
+    outputs = [
+      output_name,
+    ]
+    inputs = [
+      blob_image_path,
+      data_image_path,
+      fvm_sparse_blk_path,
+    ]
+    args = [
+      "--fvm-blk",
+      rebase_path(fvm_sparse_blk_path),
+      "--blob-blk",
+      rebase_path(blob_image_path),
+      "--data-blk",
+      rebase_path(data_image_path),
+      "--fvm-tool",
+      rebase_path("$zircon_tools_dir/fvm"),
+      "--blobfs-tool",
+      rebase_path("$zircon_tools_dir/blobfs"),
+      "--minfs-tool",
+      rebase_path("$zircon_tools_dir/minfs"),
+      "--max-fvm-contents-size",
+      max_fvm_size,
+      "--max-blob-contents-size",
+      max_blob_contents_size,
+      "--max-blob-image-size",
+      max_blob_image_size,
+      "--max-data-contents-size",
+      max_data_contents_size,
+      "--max-data-image-size",
+      max_data_image_size,
+      "--output",
+      rebase_path(output_name),
+    ]
+  }
+  record_filesystem_sizes_deps += [ ":filesystem_sizes.json" ]
 
   # fvm.blob.sparse.blk creates a sprase FVM partition image containing the blob
   # partition produced by blob.blk.
@@ -1134,12 +1166,20 @@ if (target_cpu != "arm64" && !use_vboot) {
   ]
 }
 
+# Pseudo-target to record information about the sizes of filesystems assembled
+# during the build for later analysis.
+group("record_filesystem_sizes") {
+  testonly = true
+  deps = record_filesystem_sizes_deps
+}
+
 group("images") {
   testonly = true
   deps = [
     ":ids.txt",
     ":package_lists",
     ":paver-script",
+    ":record_filesystem_sizes",
     "zedboot",
   ]
 }
