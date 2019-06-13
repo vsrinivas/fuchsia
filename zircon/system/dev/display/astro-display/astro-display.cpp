@@ -610,7 +610,8 @@ zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
 int AstroDisplay::VSyncThread() {
     zx_status_t status;
     while (1) {
-        status = vsync_irq_.wait(nullptr);
+        zx::time timestamp;
+        status = vsync_irq_.wait(&timestamp);
         if (status != ZX_OK) {
             DISP_ERROR("VSync Interrupt Wait failed\n");
             break;
@@ -619,7 +620,7 @@ int AstroDisplay::VSyncThread() {
         uint64_t live[] = { current_image_ };
         bool current_image_valid = current_image_valid_;
         if (dc_intf_.is_valid()) {
-            dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(),
+            dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(),
                                     live, current_image_valid);
         }
     }
