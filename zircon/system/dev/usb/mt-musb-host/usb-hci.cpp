@@ -13,6 +13,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/pdev.h>
 #include <fbl/auto_call.h>
 #include <lib/zx/time.h>
 #include <soc/mt8167/mt8167-usb.h>
@@ -146,7 +147,40 @@ size_t UsbHci::UsbHciGetRequestSize() {
 zx_status_t UsbHci::Create(zx_device_t* parent) {
     zx_status_t status;
 
-    auto usb_hci = std::unique_ptr<UsbHci>(new UsbHci(parent));
+    ddk::PDev pdev(parent);
+    if (!pdev.is_valid()) {
+        zxlogf(ERROR, "could not create PDev\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    std::optional<ddk::MmioBuffer> usb_mmio;
+    status = pdev.MapMmio(0, &usb_mmio);
+    if (status != ZX_OK || !usb_mmio.has_value()) {
+        zxlogf(ERROR, "could not map usb_mmio: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    std::optional<ddk::MmioBuffer> phy_mmio;
+    status = pdev.MapMmio(1, &phy_mmio);
+    if (status != ZX_OK || !phy_mmio.has_value()) {
+        zxlogf(ERROR, "could not map phy_mmio: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    zx::interrupt irq;
+    status = pdev.GetInterrupt(0, &irq);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "could not get interrupt: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    auto usb_hci = std::make_unique<UsbHci>(parent,
+                                            *std::move(usb_mmio),
+                                            *std::move(phy_mmio),
+                                            irq.release());
+    if (status != ZX_OK) {
+        return status;
+    }
 
     status = usb_hci->Init();
     if (status != ZX_OK) {
@@ -175,26 +209,7 @@ void UsbHci::DdkRelease() {
 }
 
 zx_status_t UsbHci::Init() {
-    if (!pdev_.is_valid()) {
-        return ZX_ERR_INTERNAL;
-    }
-
-    auto status = pdev_.MapMmio(0, &usb_mmio_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = pdev_.MapMmio(1, &phy_mmio_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = pdev_.GetInterrupt(0, &irq_);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    status = InitPhy();
+    auto status = InitPhy();
     if (status != ZX_OK) {
         return status;
     }

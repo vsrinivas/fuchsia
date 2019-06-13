@@ -9,7 +9,6 @@
 
 #include <array>
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
 #include <ddktl/protocol/usb/hci.h>
 #include <ddktl/protocol/usb/bus.h>
 #include <lib/mmio/mmio.h>
@@ -34,9 +33,12 @@ using DeviceType = ddk::Device<UsbHci, ddk::Unbindable>;
 // UsbHci provides the USB-HCI implementation.
 class UsbHci : public DeviceType, public ddk::UsbHciProtocol<UsbHci, ddk::base_protocol> {
 public:
-    explicit UsbHci(zx_device_t* parent)
+    explicit UsbHci(zx_device_t* parent, ddk::MmioBuffer&& usb_mmio, ddk::MmioBuffer&& phy_mmio,
+                    zx_handle_t irq)
         : DeviceType(parent),
-          pdev_(parent) {}
+          usb_mmio_(std::move(usb_mmio)),
+          phy_mmio_(std::move(phy_mmio)),
+          irq_(irq) {}
 
     ~UsbHci() = default;
 
@@ -69,8 +71,8 @@ public:
     size_t UsbHciGetRequestSize();
 
 private:
-    ddk::MmioBuffer* usb_mmio() { return &usb_mmio_.value(); }
-    ddk::MmioBuffer* phy_mmio() { return &phy_mmio_.value(); }
+    ddk::MmioBuffer* usb_mmio() { return &usb_mmio_; }
+    ddk::MmioBuffer* phy_mmio() { return &phy_mmio_; }
     UsbRootHub* root_hub() { return static_cast<UsbRootHub*>(device_[kRootHubId].get()); }
 
     // Initialize the USB HCI.
@@ -91,14 +93,11 @@ private:
     void HandleEndpoint(uint8_t ep);
     int IrqThread();
 
-    // The zircon DDK platform device.
-    ddk::PDev pdev_;
-
     // The usb register mmio.
-    std::optional<ddk::MmioBuffer> usb_mmio_;
+    ddk::MmioBuffer usb_mmio_;
 
     // The usb phy register mmio.
-    std::optional<ddk::MmioBuffer> phy_mmio_;
+    ddk::MmioBuffer phy_mmio_;
 
     // The system USB-common interrupt.  See MUSBMHDRC section 13.2.
     zx::interrupt irq_;
