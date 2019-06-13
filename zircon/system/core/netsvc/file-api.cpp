@@ -133,10 +133,17 @@ tftp_status FileApi::Write(const void* data, size_t* length, off_t offset) {
     case NetfileType::kPaver:
         return paver_->Write(data, length, offset);
 
-    case NetfileType::kBoardName:
-        return CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length)
-                   ? TFTP_NO_ERROR
-                   : TFTP_ERR_BAD_STATE;
+    case NetfileType::kBoardName: {
+        tftp_status status = CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length)
+                                 ? TFTP_NO_ERROR
+                                 : TFTP_ERR_BAD_STATE;
+        if (status == TFTP_NO_ERROR) {
+            printf("netsvc: Board name validation passed\n");
+        } else {
+            printf("netsvc: Board name validation failed\n");
+        }
+        return status;
+    }
     case NetfileType::kNetCopy: {
         ssize_t write_result =
             netcp_->Write(reinterpret_cast<const char*>(data), offset, *length);
