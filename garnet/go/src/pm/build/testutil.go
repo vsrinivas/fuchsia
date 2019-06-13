@@ -11,12 +11,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-
-	"golang.org/x/crypto/ed25519"
 )
 
 // TestFiles is the list of files created by the default factories in this package.
-var TestFiles = []string{"a", "b", "dir/c", "meta/test/t", "pubkey"}
+var TestFiles = []string{"a", "b", "dir/c", "meta/test/t"}
 
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest
@@ -36,14 +34,6 @@ func TestPackage(cfg *Config) {
 		panic(err)
 	}
 	if err := ioutil.WriteFile(pkgJSON, b, os.ModePerm); err != nil {
-		panic(err)
-	}
-
-	pubkey, pkey, err := ed25519.GenerateKey(nil)
-	if err != nil {
-		panic(err)
-	}
-	if err := ioutil.WriteFile(cfg.KeyPath, []byte(pkey), os.ModePerm); err != nil {
 		panic(err)
 	}
 
@@ -69,11 +59,6 @@ func TestPackage(cfg *Config) {
 		if _, err := fmt.Fprintf(f, "%s\n", name); err != nil {
 			panic(err)
 		}
-		if name == "pubkey" {
-			if _, err := fmt.Fprintf(f, "%x\n", []byte(pubkey)); err != nil {
-				panic(err)
-			}
-		}
 		err = f.Close()
 		if err != nil {
 			panic(err)
@@ -92,9 +77,6 @@ func BuildTestPackage(cfg *Config) {
 	TestPackage(cfg)
 
 	if err := Update(cfg); err != nil {
-		panic(err)
-	}
-	if err := Sign(cfg); err != nil {
 		panic(err)
 	}
 	if _, err := Seal(cfg); err != nil {

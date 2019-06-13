@@ -7,6 +7,7 @@
 package install
 
 import (
+	"crypto/rand"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,6 +33,7 @@ import (
 func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
 	// Make the test package
 	cfg := build.TestConfig()
+	cfg.PkgName = randName(t.Name())
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
@@ -137,6 +139,7 @@ func TestSourceRecoverFromInterruptedInstall(t *testing.T) {
 func TestRepoRecoverFromInterruptedInstall(t *testing.T) {
 	// Make the test package
 	cfg := build.TestConfig()
+	cfg.PkgName = randName(t.Name())
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
@@ -341,4 +344,12 @@ func installBlob(t *testing.T, path string, merkle string, length int64) {
 	if _, err := io.Copy(dest, src); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func randName(prefix string) string {
+	b := make([]byte, 8)
+	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+		panic(err)
+	}
+	return prefix + fmt.Sprintf("%x", b)
 }

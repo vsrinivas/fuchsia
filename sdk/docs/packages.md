@@ -40,25 +40,20 @@ First, we need to initialize the package with:
 pm -o $PACKAGE_DIR -n $PACKAGE_NAME init
 ```
 
-In order to create the package, a signing key is required. You may provide your
-own key or generate one at `$SIGNING_KEY` with:
+The next step is to generate the package metadata archive:
 ```
-pm -k $SIGNING_KEY genkey
-```
-_TODO: add more details about signing keys, possibly in pm's help_
-
-The next step is to generate an archive with the package's metadata:
-```
-pm -o $PACKAGE_DIR -k $SIGNING_KEY -m $MANIFEST_FILE build
+pm -o $PACKAGE_DIR -m $MANIFEST_FILE build
 ```
 This will create the metadata archive at `$PACKAGE_DIR/meta.far`.
 
-Finally, we put it all together to generate the package itself:
+It is sometimes convenient to create a single archive with all package
+contents (although the package system does not generally use these archives):
 ```
-pm -o $PACKAGE_DIR -k $SIGNING_KEY -m $MANIFEST_FILE archive
+pm -o $PACKAGE_DIR -m $MANIFEST_FILE archive
 ```
 This will create the package archive at `$PACKAGE_DIR/$PACKAGE_NAME-0.far`.
 Note that this step needs to be re-run if the contents of the package change.
+_TODO: remove archived packages from the general docs docs, archives are bad
 
 ## Deploying a package
 

@@ -15,10 +15,6 @@ See [/garnet/go/src/pm#metadata]
 
 See [/garnet/go/src/pm#contents]
 
-## signature
-
-See [/garnet/go/src/pm#signature]
-
 ## Component manifest
 
 A component manifest (.cmx) is a JSON file with the file extension `.cmx`

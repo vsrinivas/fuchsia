@@ -5,22 +5,16 @@
 use crate::errors::BuildError;
 use crate::{CreationManifest, MetaContents, MetaPackage};
 use fuchsia_merkle::{Hash, MerkleTree};
-use mundane::public::{
-    ed25519::{Ed25519PrivKey, Ed25519Signature},
-    PrivateKey,
-};
 use std::collections::{btree_map, BTreeMap};
 use std::{fs, io};
 
 pub fn build(
     creation_manifest: &CreationManifest,
-    signing_key: &Ed25519PrivKey,
     meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
 ) -> Result<(), BuildError> {
     build_with_file_system(
         creation_manifest,
-        signing_key,
         meta_package,
         meta_far_writer,
         &ActualFileSystem {},
@@ -52,7 +46,6 @@ impl FileSystem<'_> for ActualFileSystem {
 
 fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
-    signing_key: &Ed25519PrivKey,
     meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
     file_system: &'a impl FileSystem<'a>,
@@ -68,9 +61,6 @@ fn build_with_file_system<'a>(
 
     let mut meta_package_bytes = Vec::new();
     meta_package.serialize(&mut meta_package_bytes)?;
-
-    let public_key = signing_key.public();
-    let public_key_bytes = public_key.bytes()[..].to_vec();
 
     let mut far_contents: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
     for (resource_path, source_path) in creation_manifest.far_contents() {
@@ -91,11 +81,6 @@ fn build_with_file_system<'a>(
         };
     insert_generated_file("meta/contents", meta_contents_bytes, &mut far_contents)?;
     insert_generated_file("meta/package", meta_package_bytes, &mut far_contents)?;
-    insert_generated_file("meta/pubkey", public_key_bytes, &mut far_contents)?;
-
-    let signature = sign_far_contents(&far_contents, signing_key)?;
-
-    insert_generated_file("meta/signature", signature.bytes()[..].to_vec(), &mut far_contents)?;
 
     let mut meta_entries: BTreeMap<&str, (u64, Box<dyn io::Read>)> = BTreeMap::new();
     for (resource_path, content) in &far_contents {
@@ -134,18 +119,6 @@ fn get_external_content_infos<'a, 'b>(
         .collect()
 }
 
-fn sign_far_contents<'a>(
-    far_contents: &BTreeMap<&str, Vec<u8>>,
-    signing_key: &Ed25519PrivKey,
-) -> Result<Ed25519Signature, BuildError> {
-    let mut bytes_to_sign = Vec::new();
-    far_contents.iter().for_each(|(path, _)| bytes_to_sign.extend_from_slice(path.as_bytes()));
-    far_contents
-        .iter()
-        .for_each(|(_, content)| bytes_to_sign.extend_from_slice(content.as_slice()));
-    Ok(Ed25519Signature::sign_ed25519(signing_key, &bytes_to_sign))
-}
-
 #[cfg(test)]
 mod test_build_with_file_system {
     use super::*;
@@ -158,8 +131,7 @@ mod test_build_with_file_system {
     use std::io;
     use std::iter::FromIterator;
 
-    const GENERATED_FAR_CONTENTS: [&str; 4] =
-        ["meta/contents", "meta/pubkey", "meta/signature", "meta/package"];
+    const GENERATED_FAR_CONTENTS: [&str; 2] = ["meta/contents", "meta/package"];
 
     struct FakeFileSystem {
         content_map: HashMap<String, Vec<u8>>,
@@ -208,7 +180,6 @@ mod test_build_with_file_system {
             },
         )
         .unwrap();
-        let signing_key = Ed25519PrivKey::from_private_key_bytes([0u8; 32]);
         let meta_package =
             MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
         let mut meta_far_writer = Vec::new();
@@ -222,7 +193,6 @@ mod test_build_with_file_system {
 
         build_with_file_system(
             &creation_manifest,
-            &signing_key,
             &meta_package,
             &mut meta_far_writer,
             &file_system,
@@ -242,20 +212,6 @@ mod test_build_with_file_system {
             b"lib/mylib.so=4a886105646222c10428e5793868b13f536752d4b87e6497cdf9caed37e67410\n";
         assert_eq!(actual_meta_contents_bytes.as_slice(), &expected_meta_contents_bytes[..]);
 
-        let public_key = signing_key.public();
-        let actual_meta_pubkey_bytes = reader.read_file("meta/pubkey").unwrap();
-        assert_eq!(actual_meta_pubkey_bytes.as_slice(), &public_key.bytes()[..]);
-
-        let actual_meta_signature_bytes = reader.read_file("meta/signature").unwrap();
-        let expected_meta_signature_bytes = [
-            0x84, 0x92, 0x38, 0xd5, 0x69, 0xb2, 0x7b, 0x25, 0x85, 0x3a, 0x0c, 0x12, 0xa3, 0x5a,
-            0xfc, 0x94, 0xdc, 0x44, 0xc0, 0x55, 0x0a, 0x4a, 0x38, 0xc1, 0x19, 0xcc, 0xfe, 0xdf,
-            0x41, 0xcd, 0xf8, 0x15, 0x6b, 0xd9, 0x1f, 0x79, 0xf3, 0xd0, 0x68, 0x3f, 0xb1, 0x53,
-            0x8a, 0x9d, 0xb9, 0xc8, 0x81, 0x23, 0x5f, 0x0d, 0x16, 0x80, 0x44, 0xcc, 0xe3, 0x5a,
-            0xa9, 0x48, 0x60, 0x21, 0xe3, 0x3f, 0x2e, 0x01,
-        ];
-        assert_eq!(actual_meta_signature_bytes.as_slice(), &expected_meta_signature_bytes[..]);
-
         let actual_meta_component_bytes = reader.read_file("meta/my_component.cmx").unwrap();
         assert_eq!(actual_meta_component_bytes.as_slice(), component_manifest_contents.as_bytes());
     }
@@ -270,7 +226,6 @@ mod test_build_with_file_system {
                 },
             )
             .unwrap();
-            let signing_key = Ed25519PrivKey::from_private_key_bytes([0u8; 32]);
             let meta_package =
                 MetaPackage::from_name_and_variant("my-package-name", "my-package-variant")
                     .unwrap();
@@ -283,7 +238,6 @@ mod test_build_with_file_system {
 
             let result = build_with_file_system(
                 &creation_manifest,
-                &signing_key,
                 &meta_package,
                 &mut meta_far_writer,
                 &file_system,
@@ -306,14 +260,12 @@ mod test_build_with_file_system {
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             prng.fill(&mut private_key_bytes);
-            let signing_key = Ed25519PrivKey::from_private_key_bytes(private_key_bytes);
             let mut meta_far_writer = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
 
             build_with_file_system(
                 &creation_manifest,
-                &signing_key,
                 &meta_package,
                 &mut meta_far_writer,
                 &file_system,
@@ -345,14 +297,12 @@ mod test_build_with_file_system {
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             prng.fill(&mut private_key_bytes);
-            let signing_key = Ed25519PrivKey::from_private_key_bytes(private_key_bytes);
             let mut meta_far_writer = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
 
             build_with_file_system(
                 &creation_manifest,
-                &signing_key,
                 &meta_package,
                 &mut meta_far_writer,
                 &file_system,
@@ -377,14 +327,12 @@ mod test_build_with_file_system {
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             prng.fill(&mut private_key_bytes);
-            let signing_key = Ed25519PrivKey::from_private_key_bytes(private_key_bytes);
             let mut meta_far_writer: Vec<u8> = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
 
             build_with_file_system(
                 &creation_manifest,
-                &signing_key,
                 &meta_package,
                 &mut meta_far_writer,
                 &file_system,
@@ -487,12 +435,10 @@ mod test_build {
             let (creation_manifest, _temp_dir) = populate_filesystem_from_creation_manifest(creation_manifest, &mut prng);
             let mut private_key_bytes = [0u8; 32];
             prng.fill(&mut private_key_bytes);
-            let signing_key = Ed25519PrivKey::from_private_key_bytes(private_key_bytes);
             let mut meta_far_writer = Vec::new();
 
             build(
                 &creation_manifest,
-                &signing_key,
                 &meta_package,
                 &mut meta_far_writer,
             )

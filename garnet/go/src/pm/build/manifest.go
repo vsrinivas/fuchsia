@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"encoding/json"
@@ -98,21 +97,6 @@ func (m *Manifest) Content() map[string]string {
 		}
 	}
 	return content
-}
-
-// SigningFiles returns a sorted list of files from Meta() except for meta/signature.
-func (m *Manifest) SigningFiles() []string {
-	metas := m.Meta()
-	signingFiles := make([]string, 0, len(metas))
-	for dest := range metas {
-		if dest == "meta/signature" {
-			continue
-		}
-		signingFiles = append(signingFiles, dest)
-	}
-
-	sort.Strings(signingFiles)
-	return signingFiles
 }
 
 func walk(root string) (map[string]string, error) {

@@ -17,12 +17,11 @@ import (
 
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
-	"fuchsia.googlesource.com/pm/cmd/pm/sign"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
 )
 
 const usage = `Usage: %s build
-perform update, sign and seal in order
+perform update and seal in order
 `
 
 func Run(cfg *build.Config, args []string) error {
@@ -44,10 +43,6 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	if err := update.Run(cfg, []string{}); err != nil {
-		return err
-	}
-
-	if err := sign.Run(cfg, []string{}); err != nil {
 		return err
 	}
 
@@ -118,9 +113,7 @@ func Run(cfg *build.Config, args []string) error {
 // computedOutputs are files that are produced by the `build` composite command
 // that must be excluded from the depfile
 var computedOutputs = map[string]struct{}{
-	"meta/contents":  struct{}{},
-	"meta/signature": struct{}{},
-	"meta/pubkey":    struct{}{},
+	"meta/contents": struct{}{},
 }
 
 // buildDepfile computes and returns the contents of a ninja compatible depfile

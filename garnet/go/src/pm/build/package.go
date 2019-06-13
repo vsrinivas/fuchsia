@@ -7,7 +7,6 @@ package build
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,8 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-
-	"golang.org/x/crypto/ed25519"
 
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/merkle"
@@ -61,7 +58,7 @@ func Init(cfg *Config) error {
 }
 
 // Update walks the contents of the package and updates the merkle root values
-// within the contents file. Update is typically executed before signing.
+// within the contents file.
 func Update(cfg *Config) error {
 	metadir := filepath.Join(cfg.OutputDir, "meta")
 	os.MkdirAll(metadir, os.ModePerm)
@@ -150,104 +147,6 @@ func Update(cfg *Config) error {
 		[]byte(contents.String()), os.ModePerm)
 }
 
-// Sign creates a pubkey and signature file in the meta directory of the given
-// package, using the given private key. The generated signature is computed
-// using EdDSA, and includes as a message all files from meta except for any
-// pre-existing signature. The resulting signature is written to
-// packageDir/meta/signature.
-func Sign(cfg *Config) error {
-	pubKeyPath := filepath.Join(cfg.OutputDir, "meta", "pubkey")
-
-	manifest, err := cfg.Manifest()
-	if err != nil {
-		return err
-	}
-
-	p, err := manifest.Package()
-	if err != nil {
-		return err
-	}
-	if err := p.Validate(); err != nil {
-		return err
-	}
-
-	pkey, err := cfg.PrivateKey()
-	if err != nil {
-		return err
-	}
-
-	if err := ioutil.WriteFile(pubKeyPath, pkey.Public().(ed25519.PublicKey), os.ModePerm); err != nil {
-		return err
-	}
-	manifest.Paths["meta/pubkey"] = pubKeyPath
-
-	msg, err := signingMessage(manifest)
-	if err != nil {
-		return err
-	}
-
-	sig := ed25519.Sign(pkey, msg)
-
-	sigPath := filepath.Join(cfg.OutputDir, "meta", "signature")
-
-	if err := ioutil.WriteFile(sigPath, sig, os.ModePerm); err != nil {
-		return err
-	}
-	manifest.Paths["meta/signature"] = sigPath
-	return nil
-}
-
-// ErrVerificationFailed indicates that a package failed to verify
-var ErrVerificationFailed = errors.New("package verification failed")
-
-// Verify ensures that packageDir/meta/signature is a valid EdDSA signature of
-// meta/* by the public key in meta/pubkey
-func Verify(cfg *Config) error {
-	manifest, err := cfg.Manifest()
-	if err != nil {
-		return err
-	}
-
-	pubkey, err := ioutil.ReadFile(manifest.Paths["meta/pubkey"])
-	if err != nil {
-		return err
-	}
-
-	sig, err := ioutil.ReadFile(manifest.Paths["meta/signature"])
-	if err != nil {
-		return err
-	}
-
-	msg, err := signingMessage(manifest)
-	if err != nil {
-		return err
-	}
-
-	if !ed25519.Verify(pubkey, msg, sig) {
-		return ErrVerificationFailed
-	}
-
-	return nil
-}
-
-// signingMessage generates the message that will be signed / verified.
-func signingMessage(manifest *Manifest) ([]byte, error) {
-	var msg []byte
-	signingFiles := manifest.SigningFiles()
-	for _, name := range signingFiles {
-		msg = append(msg, name...)
-	}
-	for _, name := range signingFiles {
-		buf, err := ioutil.ReadFile(manifest.Paths[name])
-		if err != nil {
-			return nil, err
-		}
-
-		msg = append(msg, buf...)
-	}
-	return msg, nil
-}
-
 // ErrRequiredFileMissing is returned by operations when the operation depends
 // on a file that was not found on disk.
 type ErrRequiredFileMissing struct {
@@ -259,9 +158,9 @@ func (e ErrRequiredFileMissing) Error() string {
 }
 
 // RequiredFiles is a list of files that are required before a package can be sealed.
-var RequiredFiles = []string{"meta/contents", "meta/signature", "meta/pubkey", "meta/package"}
+var RequiredFiles = []string{"meta/contents", "meta/package"}
 
-// Validate ensures that the package contains the required files and that it has a verified signature.
+// Validate ensures that the package contains the required files.
 func Validate(cfg *Config) error {
 	manifest, err := cfg.Manifest()
 	if err != nil {
@@ -275,7 +174,7 @@ func Validate(cfg *Config) error {
 		}
 	}
 
-	return Verify(cfg)
+	return nil
 }
 
 // Seal archives meta/ into a FAR archive named meta.far.

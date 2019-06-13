@@ -59,10 +59,6 @@ func tmain(m *testing.M) int {
 	if err != nil {
 		panic(err)
 	}
-	err = build.Sign(cfg)
-	if err != nil {
-		panic(err)
-	}
 	_, err = build.Seal(cfg)
 	if err != nil {
 		panic(err)
@@ -159,15 +155,14 @@ func TestMain(m *testing.M) {
 func TestAddPackage(t *testing.T) {
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgName = t.Name()
+
 	build.TestPackage(cfg)
 
 	var err error
 
 	err = build.Update(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = build.Sign(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +217,7 @@ func TestAddPackage(t *testing.T) {
 	}
 
 	// TODO(raggi): extract into constant in testutil
-	packageName := "testpackage"
+	packageName := cfg.PkgName
 	packageVersion := "0"
 
 	f, err = pkgfsOpen(filepath.Join("packages", packageName, packageVersion), zxio.OpenRightReadable, zxio.ModeTypeFile)

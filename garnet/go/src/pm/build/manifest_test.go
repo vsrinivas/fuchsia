@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -272,33 +271,6 @@ func TestManifestContent(t *testing.T) {
 	for k := range m.Content() {
 		if strings.HasPrefix(k, "meta/") {
 			t.Errorf("found meta file in contents: %q", k)
-		}
-	}
-}
-
-func TestManifestSigningfiles(t *testing.T) {
-	m := &Manifest{
-		Paths: map[string]string{
-			"meta/package":   "",
-			"meta/contents":  "",
-			"meta/signature": "",
-			"alpha":          "",
-			"beta":           "",
-		},
-	}
-	want := []string{"meta/package", "meta/contents"}
-	sort.Strings(want)
-
-	got := m.SigningFiles()
-
-	if len(got) != len(want) {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-
-	for i, w := range want {
-		g := got[i]
-		if g != w {
-			t.Errorf("got %q, want %q", g, w)
 		}
 	}
 }

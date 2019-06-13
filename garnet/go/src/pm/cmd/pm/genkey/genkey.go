@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package genkey is the `pm genkey` command, and generates Ed25519 package signing keys
+// Package genkey is deprecated
 package genkey
 
 import (
@@ -12,16 +12,13 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/keys"
 )
 
 const usage = `Usage: %s genkey
-generate a new private key
+deprecated without replacement
 `
 
-// Run generates a new keypair and writes it to `key` in binary format.
-// The generated keys are suitable for use with EdDSA, specifically for `pm
-// sign`
+// Run performs a null action due to deprecation
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("genkey", flag.ExitOnError)
 
@@ -35,13 +32,16 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
+	fmt.Fprintln(os.Stderr, "package signing is deprecated")
+
 	if cfg.KeyPath == "" {
 		return fmt.Errorf("error: signing key flag is required")
 	}
+
 	f, err := os.Create(cfg.KeyPath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return keys.Gen(f)
+	return nil
 }

@@ -22,7 +22,6 @@ rustc_library("fuchsia_pkg_testing") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
@@ -34,13 +33,6 @@ rustc_library("fuchsia_pkg_testing") {
 test_package("fuchsia_pkg_testing_tests") {
   deps = [
     ":fuchsia_pkg_testing_test",
-  ]
-
-  resources = [
-    {
-      path = rebase_path(system_package_key)
-      dest = "development_package.key"
-    },
   ]
 
   tests = [

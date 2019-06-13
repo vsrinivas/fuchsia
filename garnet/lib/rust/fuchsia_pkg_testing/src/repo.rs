@@ -171,11 +171,7 @@ pub struct PackageEntry {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::package::{PackageBuilder, DEVELOPMENT_SIGNING_KEY},
-        fuchsia_merkle::MerkleTree,
-    };
+    use {super::*, crate::package::PackageBuilder, fuchsia_merkle::MerkleTree};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_basic() -> Result<(), Error> {
@@ -188,7 +184,6 @@ mod tests {
                     r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes()
                 )?
                 .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
-                .signing_key(&DEVELOPMENT_SIGNING_KEY)
                 .build())?)
             .add_package(await!(PackageBuilder::new("fortune")
                 .add_resource_at(
@@ -201,7 +196,6 @@ mod tests {
                 )?
                 .add_resource_at("data/duplicate_b", same_contents.as_bytes())?
                 .add_resource_at("data/duplicate_c", same_contents.as_bytes())?
-                .signing_key(&DEVELOPMENT_SIGNING_KEY)
                 .build())?)
             .build())?;
 
@@ -230,7 +224,6 @@ mod tests {
         let repo = await!(RepositoryBuilder::new()
             .add_package(await!(PackageBuilder::new("tiny")
                 .add_resource_at("data/message", message)?
-                .signing_key(&DEVELOPMENT_SIGNING_KEY)
                 .build())?)
             .set_encryption_key(BlobEncryptionKey([
                 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,

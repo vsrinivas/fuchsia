@@ -15,11 +15,10 @@ import (
 )
 
 const usage = `Usage: %s seal
-seal package metadata into a signed meta.far
+seal package metadata into a meta.far
 `
 
-// Run first delegates to sign.Run to generate a fresh signature for the
-// package in packageDir, then archives the meta/ directory into meta.far.
+// Run archives the meta/ directory into meta.far.
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("seal", flag.ExitOnError)
 

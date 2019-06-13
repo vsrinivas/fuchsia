@@ -227,29 +227,6 @@ shell_commands("shell-commands") {
 ### package() targets enabled in the build.
 ###
 
-pm_binary_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
-pm_out_dir = get_label_info(pm_binary_label, "root_out_dir")
-pm_binary = "$pm_out_dir/pm"
-
-# This just runs `pm -k $system_package_key genkey` if the file doesn't exist.
-# Every package() target depends on this.
-action("system_package_key_check") {
-  visibility = [ "*" ]
-  deps = [
-    pm_binary_label,
-  ]
-  outputs = [
-    "$target_out_dir/system_package_key_check_ok.stamp",
-  ]
-  script = "//build/gn_run_binary.sh"
-  inputs = [
-    "system_package_key_check.py",
-    pm_binary,
-  ]
-  args =
-      [ clang_prefix ] + rebase_path(inputs + outputs + [ system_package_key ])
-}
-
 if (!bootfs_only) {
   monolith_meta_far_merkle_index =
       "$target_out_dir/monolith_meta_far_merkle_index"

@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/pkg"
-	"golang.org/x/crypto/ed25519"
 )
 
 // Config contains global build configuration for other build commands
@@ -67,19 +66,10 @@ func TestConfig() *Config {
 func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.OutputDir, "o", c.OutputDir, "archive output directory")
 	fs.StringVar(&c.ManifestPath, "m", c.ManifestPath, "build manifest (or package directory)")
-	fs.StringVar(&c.KeyPath, "k", c.KeyPath, "signing key")
+	fs.StringVar(&c.KeyPath, "k", c.KeyPath, "deprecated; do not use")
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
 	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
 	fs.StringVar(&c.PkgVersion, "version", c.PkgVersion, "version of the packages")
-}
-
-// PrivateKey loads the configured private key
-func (c *Config) PrivateKey() (ed25519.PrivateKey, error) {
-	buf, err := ioutil.ReadFile(c.KeyPath)
-	if err != nil {
-		return nil, err
-	}
-	return ed25519.PrivateKey(buf), nil
 }
 
 // Manifest initializes and returns the configured manifest. The manifest may be

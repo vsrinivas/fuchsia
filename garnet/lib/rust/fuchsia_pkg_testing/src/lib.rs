@@ -8,9 +8,7 @@
 #![deny(missing_docs)]
 
 mod package;
-pub use crate::package::{
-    Package, PackageBuilder, PackageDir, PackageSigningKey, TEST_SIGNING_KEY,
-};
+pub use crate::package::{Package, PackageBuilder, PackageDir};
 
 mod repo;
 pub use crate::repo::{BlobEncryptionKey, PackageEntry, Repository, RepositoryBuilder};

@@ -23,7 +23,6 @@ import (
 	"fuchsia.googlesource.com/pm/cmd/pm/publish"
 	"fuchsia.googlesource.com/pm/cmd/pm/seal"
 	"fuchsia.googlesource.com/pm/cmd/pm/serve"
-	"fuchsia.googlesource.com/pm/cmd/pm/sign"
 	"fuchsia.googlesource.com/pm/cmd/pm/snapshot"
 	"fuchsia.googlesource.com/pm/cmd/pm/update"
 	"fuchsia.googlesource.com/pm/cmd/pm/verify"
@@ -33,12 +32,10 @@ const usage = `Usage: %s [-k key] [-m manifest] [-o output dir] [-t tempdir] <co
 
 Package Commands:
     init     - initialize a package meta directory in the standard form
-    genkey   - generate a new private key
-    build    - perform update, sign and seal in order
+    build    - perform update and seal in order
     update   - update the merkle roots in meta/contents
-    sign     - sign a package with the given key
-    seal     - seal package metadata into a signed meta.far
-    verify   - verify metadata signature against the embedded public key
+    seal     - seal package metadata into a meta.far
+    verify   - verify metadata
     archive  - construct a single .far representation of the package
 
 Repository Commands:
@@ -112,7 +109,8 @@ func doMain() int {
 		err = seal.Run(cfg, flag.Args()[1:])
 
 	case "sign":
-		err = sign.Run(cfg, flag.Args()[1:])
+		fmt.Fprintf(os.Stderr, "sign is deprecated without replacement")
+		err = nil
 
 	case "serve":
 		err = serve.Run(cfg, flag.Args()[1:])

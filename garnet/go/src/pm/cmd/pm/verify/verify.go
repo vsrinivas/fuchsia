@@ -15,11 +15,10 @@ import (
 )
 
 const usage = `Usage: %s verify
-verify metadata signature against the embedded public key
+ensure that the package metadata appears valid
 `
 
-// Run ensures that packageDir/meta/signature is a valid EdDSA signature of
-// meta/* by the public key in meta/pubkey
+// Run ensures that the package metadata appears valid
 func Run(cfg *build.Config, args []string) error {
 	fs := flag.NewFlagSet("verify", flag.ExitOnError)
 
@@ -33,5 +32,5 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	return build.Verify(cfg)
+	return build.Validate(cfg)
 }

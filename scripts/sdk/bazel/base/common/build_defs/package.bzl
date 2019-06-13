@@ -124,27 +124,6 @@ def _fuchsia_package_impl(context):
         mnemonic = "PmInit",
     )
 
-    # TODO(pylaligand): figure out how to specify this key.
-    # Generate a signing key.
-    signing_key = context.actions.declare_file(base + "development.key")
-    context.actions.run(
-        executable = context.executable._pm,
-        arguments = [
-            "-o",
-            package_dir,
-            "-k",
-            signing_key.path,
-            "genkey",
-        ],
-        inputs = [
-            meta_package,
-        ],
-        outputs = [
-            signing_key,
-        ],
-        mnemonic = "PmGenkey",
-    )
-
     # Build the package metadata.
     meta_far = context.actions.declare_file(base + "meta.far")
     context.actions.run(
@@ -152,8 +131,6 @@ def _fuchsia_package_impl(context):
         arguments = [
             "-o",
             package_dir,
-            "-k",
-            signing_key.path,
             "-m",
             manifest_file.path,
             "build",
@@ -161,7 +138,6 @@ def _fuchsia_package_impl(context):
         inputs = package_contents + [
             manifest_file,
             meta_package,
-            signing_key,
         ],
         outputs = [
             meta_far,
@@ -176,15 +152,12 @@ def _fuchsia_package_impl(context):
         arguments = [
             "-o",
             package_dir,
-            "-k",
-            signing_key.path,
             "-m",
             manifest_file.path,
             "archive",
         ],
         inputs = [
             manifest_file,
-            signing_key,
             meta_far,
         ] + package_contents,
         outputs = [

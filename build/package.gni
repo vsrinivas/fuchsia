@@ -12,14 +12,6 @@ import("//build/json/validate_json.gni")
 import("//build/package/component.gni")
 import("//build/testing/test_spec.gni")
 
-declare_args() {
-  # The package key to use for signing Fuchsia packages made by the
-  # `package()` template (and the `system_image` package).  If this
-  # doesn't exist yet when it's needed, it will be generated.  New
-  # keys can be generated with the `pm -k FILE genkey` host command.
-  system_package_key = "//build/development.key"
-}
-
 # Generate a list of package metadata exported from all packages in the
 # transitive closure of declared dependencies, with an implied barrier at each
 # package (dependency chains cease processing at package targets).
@@ -128,7 +120,7 @@ template("component_index_metadata_list") {
   }
 }
 
-# Generate a signed, sealed package file from a manifest.
+# Generate a sealed package file from a manifest.
 #
 # Parameters
 #
@@ -179,13 +171,11 @@ template("pm_build_package") {
     assert(package_name != "", "A package name is required")
 
     deps += [
-      "//build/images:system_package_key_check",
       invoker.manifest,
     ]
 
     inputs = [
       pkg_manifest_file,
-      system_package_key,
     ]
 
     depfile = "$pkg_out_dir/meta.far.d"
@@ -197,10 +187,6 @@ template("pm_build_package") {
 
       # update
       "$pkg_out_dir/meta/contents",
-
-      # sign
-      "$pkg_out_dir/meta/pubkey",
-      "$pkg_out_dir/meta/signature",
 
       # seal
       "$pkg_out_dir/meta.far.merkle",
@@ -250,8 +236,6 @@ template("pm_build_package") {
     }
 
     args = [
-      "-k",
-      rebase_path(system_package_key, root_build_dir),
       "-o",
       rebase_path(pkg_out_dir, root_build_dir),
       "-m",
@@ -880,7 +864,7 @@ template("package") {
       not_needed([ "component_indices" ])
     } else {
       # Fuchsia package aggregates a manifest from it's arguments and builds a
-      # signed metadata archive.
+      # metadata archive.
 
       manifest = "${pkg_target_name}.manifest"
 
@@ -921,7 +905,7 @@ template("package") {
         }
       }
 
-      # Next generate a signed, sealed package file.
+      # Next generate a sealed package file.
       pm_build_package(pkg_target_name) {
         if (defined(pkg.visibility)) {
           visibility = pkg.visibility

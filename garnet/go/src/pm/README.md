@@ -17,7 +17,6 @@ PM is the package manager command line interface. It is responsible for:
     - Installing packages
     - Listing packages
     - Removing packages
-    - Signing packages
     - Validating packages
  * Summarizing the interface to Amber (?)
 
@@ -38,19 +37,17 @@ PMD only runs on Fuchsia.
 ## Structure of a Fuchsia Package
 
 A Fuchsia package is one or more collections of files that provide one or more
-programs, components or services for a Fuchsia system. A published package is
-signed by the original publisher. Additional concerns such as revocation,
-attestations and distribution concerns are handled by the distribution system
-separately from `pm`, see Amber for more details.
+programs, components or services for a Fuchsia system. Additional concerns
+such as revocation, attestations and distribution concerns are handled by the
+distribution system separately from `pm`, see Amber for more details.
 
 A package is defined by a set of metadata that are stored in a directory at the
 top level of a Fuchsia package, as so:
 
 ```
 meta/
-  metadata
+  package
   contents
-  signature
 ```
 
 Additional files may extend the specification in the future.
@@ -72,19 +69,6 @@ content using the merkle root strategy documented as below.
 
 [Merkle Root](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/merkleroot.md)
 
-
-### signature
-
-The signature file is calculated from a cryptographic hash of all files in the
-`meta/` directory except for `signature` itself. It must be signed using the
-same key that is identified in the `metadata` file.
-
-The signature algorithm is EdDSA. The message to be signed is constructed as follows:
-
-* Glob all files in meta/ except for signature.
-* Sort the names in byte order.
-* Write all file names to the message.
-* Write all file contents to the message.
 
 ## Conventions for Fuchsia Packages
 

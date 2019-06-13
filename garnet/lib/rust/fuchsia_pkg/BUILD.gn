@@ -15,7 +15,6 @@ rustc_library("fuchsia_pkg") {
   deps = [
     "//garnet/public/rust/fuchsia-archive",
     "//garnet/public/rust/fuchsia-merkle",
-    "//garnet/public/rust/mundane",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
