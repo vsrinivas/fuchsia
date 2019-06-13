@@ -9,7 +9,6 @@ driver_module("usb_video_driver") {
   output_name = "usb_video"
 
   sources = [
-    "binding.c",
     "camera_control_impl.cpp",
     "camera_control_impl.h",
     "usb-video-stream.cpp",

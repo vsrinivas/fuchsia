@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/usb.h>
 #include <fbl/vector.h>
 #include <stdlib.h>
@@ -70,8 +71,7 @@ video::usb::UsbDeviceInfo GetDeviceInfo(const usb_protocol_t& usb_proto) {
   return device_info;
 }
 
-zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device,
-                                        void** cookie) {
+zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
   usb_protocol_t usb;
   zx_status_t status = device_get_protocol(device, ZX_PROTOCOL_USB, &usb);
   if (status != ZX_OK) {
@@ -332,9 +332,20 @@ error_return:
   return status;
 }
 
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = usb_video_parse_descriptors;
+    return ops;
+}();
+
 }  // namespace
 
-extern "C" zx_status_t usb_video_bind(void* ctx, zx_device_t* device,
-                                      void** cookie) {
-  return usb_video_parse_descriptors(ctx, device, cookie);
-}
+// clang-format off
+ZIRCON_DRIVER_BEGIN(usb_video, driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_VIDEO),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
+ZIRCON_DRIVER_END(usb_video)
+// clang-format on
