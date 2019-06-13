@@ -168,6 +168,7 @@ group("drivers") {
     "//garnet/packages/prod:virtual_camera",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
+    "//src/camera/drivers",
     "//src/connectivity/telephony:drivers",
   ]
   if (target_cpu == "arm64") {

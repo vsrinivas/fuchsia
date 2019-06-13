@@ -328,6 +328,7 @@ group("all") {
     ":bluetooth",
     ":boringssl",
     ":camera_client",
+    ":camera_driver",
     ":carnelian",
     ":catapult_converter",
     ":chrealm",
@@ -843,6 +844,14 @@ group("camera_client") {
   public_deps = [
     "//garnet/lib/media/camera/simple_camera_lib:camera_tests",
     "//src/camera/test/camera_client_test",
+  ]
+}
+
+group("camera_driver") {
+  testonly = true
+  public_deps = [
+    "//src/camera:camera_full_on_device_test",
+    "//src/camera:camera_full_test",
   ]
 }
 

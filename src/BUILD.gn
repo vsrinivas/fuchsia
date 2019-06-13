@@ -6,6 +6,7 @@ group("src") {
   testonly = true
   deps = [
     ":tests",
+    "camera",
     "cobalt",
     "connectivity",
     "developer",
@@ -30,6 +31,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "camera:tests",
     "cobalt:tests",
     "connectivity:tests",
     "developer:tests",

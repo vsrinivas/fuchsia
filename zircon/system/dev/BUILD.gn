@@ -15,7 +15,6 @@ group("dev") {
     "bluetooth",
     "board",
     "bus",
-    "camera",
     "clk",
     "codec",
     "display",

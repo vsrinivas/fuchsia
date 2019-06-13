@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/mali_009_test"
+    }
+}

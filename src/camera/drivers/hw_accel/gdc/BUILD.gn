@@ -1,0 +1,70 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("gdc-driver") {
+  output_name = "gdc"
+  sources = [
+    "gdc.cpp",
+    "test/gdc-test.cpp",
+  ]
+  deps = [
+    ":gdc-task",
+    "//zircon/public/banjo/ddk.protocol.clock",
+    "//zircon/public/banjo/ddk.protocol.composite",
+    "//zircon/public/banjo/ddk.protocol.gdc",
+    "//zircon/public/banjo/ddk.protocol.platform.bus",
+    "//zircon/public/banjo/ddk.protocol.platform.device",
+    "//zircon/public/banjo/ddk.protocol.sysmem",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("gdc") {
+  deprecated_system_image = true
+
+  deps = [
+    ":gdc-driver",
+  ]
+
+  drivers = [
+    {
+      name = "gdc.so"
+    },
+  ]
+}
+
+source_set("gdc-task") {
+  visibility = [ "./*" ]
+  sources = [
+    "task.cpp",
+  ]
+  deps = [
+    "//zircon/public/banjo/ddk.protocol.gdc",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zx",
+  ]
+}

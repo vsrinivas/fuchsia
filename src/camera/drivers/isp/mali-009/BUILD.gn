@@ -1,0 +1,60 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("mali-009-driver") {
+  output_name = "mali-009"
+  sources = [
+    "arm-isp-test.cpp",
+    "arm-isp.cpp",
+    "init_sequences.cpp",
+  ]
+  deps = [
+    "//src/camera/drivers/isp/modules",
+    "//zircon/public/banjo/ddk.protocol.clock",
+    "//zircon/public/banjo/ddk.protocol.composite",
+    "//zircon/public/banjo/ddk.protocol.gpio",
+    "//zircon/public/banjo/ddk.protocol.i2c",
+    "//zircon/public/banjo/ddk.protocol.isp",
+    "//zircon/public/banjo/ddk.protocol.mipicsi",
+    "//zircon/public/banjo/ddk.protocol.platform.bus",
+    "//zircon/public/banjo/ddk.protocol.platform.device",
+    "//zircon/public/banjo/ddk.protocol.sysmem",
+    "//zircon/public/fidl/fuchsia-camera-test:fuchsia-camera-test_c",
+    "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+package("mali-009") {
+  deprecated_system_image = true
+
+  deps = [
+    ":mali-009-driver",
+  ]
+
+  drivers = [
+    {
+      name = "mali-009.so"
+    },
+  ]
+}

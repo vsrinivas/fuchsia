@@ -10,6 +10,7 @@ group("fidl") {
     "fuchsia-blobfs",
     "fuchsia-boot",
     "fuchsia-camera-common",
+    "fuchsia-camera-test",
     "fuchsia-cobalt",
     "fuchsia-crash",
     "fuchsia-debugdata",
