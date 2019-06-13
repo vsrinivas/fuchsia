@@ -197,7 +197,8 @@ apply in Rust.
 This example obtains and adds several data types and nested children to the
 root Inspect node.
 
-BUILD.gn:
+`BUILD.gn`:
+
 ```
 flutter_app("inspect_mod") {
 [...]
@@ -209,7 +210,9 @@ flutter_app("inspect_mod") {
 [...]
 
 ```
-root_intent_handler.dart:
+
+`root_intent_handler.dart`:
+
 ```dart {highlight="lines:6"}
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 [...]
@@ -221,7 +224,9 @@ class RootIntentHandler extends IntentHandler {
   }
 }
 ```
-inspect_example_app.dart:
+
+`inspect_example_app.dart`:
+
 ```dart {highlight="lines:4,7-10,16"}
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 
@@ -242,11 +247,13 @@ class InspectExampleApp extends StatelessWidget {
       [...]
   }
 ```
+
 You can call `delete()` on a Node or Property when you're done with it.
  Deleting a node deletes everything under it.
 
 `delete()` can also be triggered by a Future completing or broadcast Stream
 closing:
+
 ```dart
 var answerFuture = _answerFinder.getTheAnswer();
 var wait = _inspectNode.stringProperty('waiting')..setValue('for a hint');
@@ -257,14 +264,16 @@ stream.listen((_) {}, onDone: node.delete);
 // FIDL proxies contain a future that completes when the connection closes:
 final _proxy = my_fidl_import.MyServiceProxy();
 _proxy.ctrl.whenClosed.whenComplete(node.delete);
-
 ```
 
 # Viewing Inspect Data
 
-You can use the [`iquery`](iquery.md) tool to view the Inspect data you exported from your component by looking through the Hub.
+You can use the [`iquery`](iquery.md) tool to view the Inspect data you
+exported from your component by looking through the Hub.
 
-This section assumes you have SSH access to your running Fuchsia system and that you started running your component. We will use the name `my_component.cmx` as a placeholder for the name of your component.
+This section assumes you have SSH access to your running Fuchsia system and
+that you started running your component. We will use the name
+`my_component.cmx` as a placeholder for the name of your component.
 
 ## Find your Inspect endpoint
 
@@ -277,15 +286,19 @@ $ iquery --find /hub
 $ iquery --find /hub | grep my_component.cmx
 ```
 
-> Under the listed directories you will see some paths including "system\_objects." This Inspect data is placed there by the Component Runtime itself.
+> Under the listed directories you will see some paths including
+> "system\_objects." This Inspect data is placed there by the Component Runtime
+> itself.
 
 Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/objects/root.inspect`.
 
-> Note: If you followed [Dynamic Value Support](#dynamic-value-support) above, "root.inspect" will be missing.
+> Note: If you followed [Dynamic Value Support](#dynamic-value-support) above,
+> "root.inspect" will be missing.
 
 ## Read your Inspect data
 
 Navigate to the `out/objects` directory that was printed above, and run:
+
 ```
 $ iquery --recursive root.inspect
 
@@ -294,6 +307,7 @@ $ iquery --recursive .
 ```
 
 This will print out the following if you followed the suggested steps above:
+
 ```
 root:
   hello = world
