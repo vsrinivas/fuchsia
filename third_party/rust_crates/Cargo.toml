@@ -11,6 +11,7 @@ authors = ["cramertj <cramertj@google.com>"]
 # Keep this sorted alphabetically, please.
 bitfield = "0.13"
 clap = "2.33"
+criterion = { version = "0.2", default-features = false }
 failure = "0.1.1"
 heck = "0.3.1"
 json5 = "0.2.4"
@@ -23,6 +24,7 @@ png = "0.14" # saved for future use
 pretty_assertions = "0.5.1"
 proc-macro-hack = "0.5.7"
 regex = "1.0.6"
+rayon = "1.1"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
