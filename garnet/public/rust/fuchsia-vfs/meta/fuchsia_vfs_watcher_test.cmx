@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia_vfs_watcher_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

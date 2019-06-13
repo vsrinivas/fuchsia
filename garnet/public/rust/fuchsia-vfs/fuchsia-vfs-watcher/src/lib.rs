@@ -10,15 +10,19 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
-use fidl_fuchsia_io::{WATCH_MASK_ALL};
-use futures::{Poll, stream::{FusedStream, Stream}, task::Context};
+use fidl_fuchsia_io::WATCH_MASK_ALL;
+use futures::{
+    stream::{FusedStream, Stream},
+    task::Context,
+    Poll,
+};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
-use std::pin::Pin;
 use std::marker::Unpin;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
+use std::pin::Pin;
 
 /// Describes the type of event that occurred in the direcotry being watched.
 #[repr(C)]
@@ -72,14 +76,14 @@ impl Watcher {
         let mut directory = fidl::client::sync::Client::new(channel);
         let ordinal = 1522700084; // DirectoryWatch
         zx::Status::ok(
-            directory.send_query::<_, i32>(
-                &mut (WATCH_MASK_ALL, 0, h1), ordinal, zx::Time::INFINITE
-            ).map_err(|_io_status| zx::Status::IO)?
+            directory
+                .send_query::<_, i32>(&mut (WATCH_MASK_ALL, 0, h1), ordinal, zx::Time::INFINITE)
+                .map_err(|_io_status| zx::Status::IO)?,
         )?;
 
         let mut buf = zx::MessageBuf::new();
         buf.ensure_capacity_bytes(fidl_fuchsia_io::MAX_BUF as usize);
-        Ok(Watcher{ ch: fasync::Channel::from_channel(h0)?, buf: buf, idx: 0})
+        Ok(Watcher { ch: fasync::Channel::from_channel(h0)?, buf: buf, idx: 0 })
     }
 
     fn reset_buf(&mut self) {
@@ -118,7 +122,7 @@ impl Stream for Watcher {
         }
         if this.idx == 0 {
             match this.ch.recv_from(cx, &mut this.buf) {
-                Poll::Ready(Ok(())) => {},
+                Poll::Ready(Ok(())) => {}
                 Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
                 Poll::Pending => return Poll::Pending,
             }
@@ -148,7 +152,7 @@ impl<'a> VfsWatchMsg<'a> {
         // This is safe as long as the buffer is at least as large as a vfs_watch_msg_t, which we
         // just verified. Further, we verify that the buffer has enough bytes to hold the
         // "incomplete array field" member.
-        let m = unsafe { VfsWatchMsg{ inner: &*(buf.as_ptr() as *const vfs_watch_msg_t) } };
+        let m = unsafe { VfsWatchMsg { inner: &*(buf.as_ptr() as *const vfs_watch_msg_t) } };
         if buf.len() < ::std::mem::size_of::<vfs_watch_msg_t>() + m.namelen() {
             return None;
         }
@@ -184,17 +188,15 @@ mod tests {
     use pin_utils::pin_mut;
     use std::fmt::Debug;
     use std::path::Path;
-    use tempfile::TempDir;
+    use tempfile::tempdir;
 
     fn one_step<S, OK, ERR>(exec: &mut fasync::Executor, s: &mut S) -> OK
-        where S: Stream<Item = Result<OK, ERR>> + Unpin,
-              ERR: Debug
+    where
+        S: Stream<Item = Result<OK, ERR>> + Unpin,
+        ERR: Debug,
     {
         let f = s.next();
-        let f = f.on_timeout(
-            500.millis().after_now(),
-            || panic!("timeout waiting for watcher")
-        );
+        let f = f.on_timeout(500.millis().after_now(), || panic!("timeout waiting for watcher"));
 
         let next = exec.run_singlethreaded(f);
 
@@ -204,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_existing() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = tempdir().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
         let exec = &mut fasync::Executor::new().unwrap();
@@ -228,7 +230,7 @@ mod tests {
 
     #[test]
     fn test_add() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = tempdir().unwrap();
 
         let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
@@ -252,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_remove() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = tempdir().unwrap();
 
         let filename = "file1";
         let filepath = tmp_dir.path().join(filename);
@@ -281,7 +283,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_timeout() {
-        let tmp_dir = TempDir::new().unwrap();
+        let tmp_dir = tempdir().unwrap();
 
         let exec = &mut fasync::Executor::new().unwrap();
         let dir = File::open(tmp_dir.path()).unwrap();
