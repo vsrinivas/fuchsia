@@ -5,18 +5,9 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("a11y") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/a11y:a11y_tests",
-    "//garnet/bin/a11y/a11y_manager",
-  ]
-}
-
 group("all") {
   testonly = true
   public_deps = [
-    "//garnet/packages/experimental:a11y",
     "//garnet/packages/experimental:kms",
     "//garnet/packages/experimental:linux_guest",
     "//garnet/packages/experimental:linux_runner",

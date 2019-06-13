@@ -5,7 +5,6 @@
 group("bin") {
   testonly = true
   deps = [
-    "a11y",
     "appmgr",
     "catapult_converter",
     "chrealm",

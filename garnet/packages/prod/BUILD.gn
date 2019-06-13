@@ -303,6 +303,7 @@ group("all") {
     "//src/connectivity/telephony:drivers",
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
+    "//src/ui/a11y:a11y",
   ]
 }
 

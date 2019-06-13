@@ -317,6 +317,7 @@ group("go_far_tests") {
 group("all") {
   testonly = true
   public_deps = [
+    ":a11y",
     ":acts_tests",
     ":amber",
     ":archivist_tests",
@@ -1298,5 +1299,12 @@ group("whereiscl") {
   testonly = true
   public_deps = [
     "//tools/whereiscl:whereiscl_test($host_toolchain)",
+  ]
+}
+
+group("a11y") {
+  testonly = true
+  public_deps = [
+    "//src/ui/a11y/tests:tests",
   ]
 }

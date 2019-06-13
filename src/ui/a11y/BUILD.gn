@@ -2,17 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("ui") {
+group("a11y") {
   deps = [
-    "a11y",
-    "bin",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "bin:tests",
+    "bin/a11y_manager",
   ]
 }

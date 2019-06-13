@@ -1,0 +1,52 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":a11y_tests",
+  ]
+}
+
+test_package("a11y_tests") {
+  deps = [
+    "integration:tests",
+  ]
+  resources = [
+    # needed for semantics_manager_test
+    {
+      path = "integration/testdata/semantic_tree_single_node.json"
+      dest = "semantic_tree_single_node.json"
+    },
+    {
+      path = "integration/testdata/semantic_tree_even_nodes.json"
+      dest = "semantic_tree_even_nodes.json"
+    },
+    {
+      path = "integration/testdata/semantic_tree_odd_nodes.json"
+      dest = "semantic_tree_odd_nodes.json"
+    },
+    {
+      path = "integration/testdata/deleted_subtree_even_nodes.json"
+      dest = "deleted_subtree_even_nodes.json"
+    },
+    {
+      path = "integration/testdata/cyclic_semantic_tree.json"
+      dest = "cyclic_semantic_tree.json"
+    },
+    {
+      path = "integration/testdata/semantic_tree_not_parseable.json"
+      dest = "semantic_tree_not_parseable.json"
+    },
+  ]
+
+  tests = [
+    {
+      name = "a11y_manager_apptests"
+      environments = basic_envs
+    },
+  ]
+}
