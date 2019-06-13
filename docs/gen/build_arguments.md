@@ -6,7 +6,7 @@
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:47
+From //build/images/BUILD.gn:48
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -14,7 +14,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:53
+From //build/images/BUILD.gn:54
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -24,14 +24,14 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:59
+From //build/images/BUILD.gn:60
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:816
+From //build/images/BUILD.gn:817
 
 ### auto_login_to_guest
 Whether basemgr should automatically login as a persistent guest user.
@@ -160,7 +160,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:492
+From //build/images/BUILD.gn:493
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -383,7 +383,7 @@ module_suggester is not AOT compiled in debug builds
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#51)
+From [//topaz/runtime/dart/dart_component.gni:51](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#51)
 
 ### dart_component_kind
 Allow for deduping the VM between standalone, flutter_runner and dart_runner.
@@ -442,7 +442,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -450,7 +450,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -500,7 +500,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#41)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -561,7 +561,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:30
+From //build/images/BUILD.gn:31
 
 ### debian_guest_earlycon
 
@@ -582,7 +582,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:475
+From //build/images/BUILD.gn:476
 
 ### embedder_for_target
 By default, the dynamic library target exposing the embedder API is only
@@ -643,7 +643,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:35
+From //build/images/BUILD.gn:36
 
 ### engine_version
 
@@ -721,7 +721,7 @@ From //build/config/BUILDCONFIG.gn:405
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:49
+From //build/images/BUILD.gn:50
 
 ### flutter_aot_sharing_basis
 When AOT compiling, an app will reference objects in the sharing basis's
@@ -731,19 +731,19 @@ package and deduplicated by blobfs.
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#27)
+From [//topaz/runtime/dart/dart_component.gni:27](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#27)
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#32)
 
 ### flutter_runtime_mode
 The runtime mode ("debug", "profile", "release", "dynamic_profile", or "dynamic_release")
@@ -757,7 +757,7 @@ Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/dart/dart_component.gni#38)
+From [//topaz/runtime/dart/dart_component.gni:38](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/dart/dart_component.gni#38)
 
 ### flutter_use_fontconfig
 
@@ -769,7 +769,7 @@ From //third_party/flutter/third_party/txt/BUILD.gn:16
 
 **Current value (from the default):** `["collection", "flutter", "meta", "typed_data", "vector_math"]`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/flutter_runner/prebuilt_framework.gni#8)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:8](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/flutter_runner/prebuilt_framework.gni#8)
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -944,7 +944,7 @@ See also //zircon/docs/kernel_cmdline.md and
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:480
+From //build/images/BUILD.gn:481
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -954,7 +954,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:486
+From //build/images/BUILD.gn:487
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -1151,17 +1151,17 @@ From //garnet/lib/magma/gnbuild/magma.gni:17
 From //garnet/lib/magma/gnbuild/magma.gni:14
 
 ### max_blob_contents_size
-Maximum allowable content size in /blob in a release mode build
+Maximum allowable contents for the /blob in a release mode build.
 Zero means no limit.
 contents_size refers to contents stored within the filesystem (regardless
-of how they are stored)
+of how they are stored).
 
 **Current value (from the default):** `"0"`
 
 From //build/images/filesystem_limits.gni:10
 
 ### max_blob_image_size
-Maximum allowable size for the /blob image in a release mode build
+Maximum allowable image_size for /blob in a release mode build.
 Zero means no limit.
 image_size refers to the total image size, including both contents and
 metadata.
@@ -1171,17 +1171,17 @@ metadata.
 From //build/images/filesystem_limits.gni:16
 
 ### max_data_contents_size
-Maximum allowable content size in /data in a release mode build
+Maximum allowable contents_size for /data in a release mode build.
 Zero means no limit.
 contents_size refers to contents stored within the filesystem (regardless
-of how they are stored)
+of how they are stored).
 
 **Current value (from the default):** `"0"`
 
 From //build/images/filesystem_limits.gni:22
 
 ### max_data_image_size
-Maximum allowable size for the /data image in a release mode build
+Maximum allowable image_size for /data in a release mode build.
 Zero means no limit.
 image_size refers to the total image size, including both contents and
 metadata.
@@ -1215,7 +1215,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:38
+From //build/images/BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
@@ -1223,7 +1223,7 @@ From //products/core.gni:12
 
 **Overridden from the default:** `[]`
 
-From //build/images/BUILD.gn:38
+From //build/images/BUILD.gn:39
 
 ### minfs_maximum_bytes
 
@@ -1297,13 +1297,13 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/flutter_runner/prebuilt_framework.gni#7)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:7](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/flutter_runner/prebuilt_framework.gni#7)
 
 ### prebuilt_framework_path
 
 **Current value (from the default):** `""`
 
-From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/d3895cba731773471a2b350fc2492ffac64149e6/runtime/flutter_runner/prebuilt_framework.gni#6)
+From [//topaz/runtime/flutter_runner/prebuilt_framework.gni:6](https://fuchsia.googlesource.com/topaz/+/95a35aedf693c8eae50026fdc7510d542b98247d/runtime/flutter_runner/prebuilt_framework.gni#6)
 
 ### prebuilt_libvulkan_arm_path
 
@@ -1538,7 +1538,7 @@ From //third_party/flutter/shell/config.gni:6
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:48
+From //build/images/BUILD.gn:49
 
 ### skia_android_serial
 
@@ -2140,7 +2140,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:498
+From //build/images/BUILD.gn:499
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -2247,19 +2247,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:44
+From //build/images/BUILD.gn:45
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:45
+From //build/images/BUILD.gn:46
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:46
+From //build/images/BUILD.gn:47
 
 ### vk_loader_debug
 
@@ -2316,7 +2316,7 @@ arguments to fx flash script
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:41
+From //build/images/BUILD.gn:42
 
 ### zircon_args
 [Zircon GN build arguments](../../../zircon/docs/gen/build_arguments.md).
@@ -2344,17 +2344,16 @@ silently clobber the default value shown here.
 From //BUILD.gn:81
 
 ### zircon_asserts
-Whether to enable <zircon/assert.h> ZX_DEBUG_ASSERT assertions.
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/zircon.gni:9
+From //build/config/fuchsia/BUILD.gn:205
 
 ### zircon_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:42
+From //build/images/BUILD.gn:43
 
 ### zircon_build_root
 
@@ -2428,7 +2427,7 @@ From //BUILD.gn:49
 
 **Current value (from the default):** `""`
 
-From //build/images/BUILD.gn:43
+From //build/images/BUILD.gn:44
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
