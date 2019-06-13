@@ -7,23 +7,6 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("netemul_empty_binaries") {
-  write_file("$root_out_dir/netstack_no_network_test", "")
-}
-
-executable("netstack_no_network_test_client") {
-  testonly = true
-
-  sources = [
-    "netstack_no_network_test_client.cc",
-  ]
-
-  deps = [
-    "//garnet/lib/inet",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
 rustc_test("netstack_fidl_integration_test") {
   edition = "2018"
 
@@ -42,6 +25,19 @@ rustc_test("netstack_fidl_integration_test") {
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+  ]
+}
+
+test_package("netstack_integration_tests") {
+  deps = [
+    ":netstack_fidl_integration_test",
+  ]
+
+  tests = [
+    {
+      name = "netstack_fidl_integration_test"
+      environments = [ qemu_env ]
+    },
   ]
 }
 
@@ -76,38 +72,21 @@ test("netstack_fuchsia_c_api_test") {
   ]
 }
 
-test_package("netstack_integration_tests") {
-  deps = [
-    ":netstack_fidl_integration_test",
+test("netstack_no_network_test") {
+  sources = [
+    "no_network_test.cc",
   ]
 
-  tests = [
-    {
-      name = "netstack_fidl_integration_test"
-      environments = [ qemu_env ]
-    },
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
 test_package("netstack_c_api_tests") {
   deps = [
-    ":netemul_empty_binaries",
     ":netstack_bsdsocket_c_api_test",
     ":netstack_fuchsia_c_api_test",
-    ":netstack_no_network_test_client",
-  ]
-
-  binaries = [
-    {
-      name = "netstack_no_network_test_client"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/netstack_no_network_test_client.cmx")
-      dest = "netstack_no_network_test_client.cmx"
-    },
+    ":netstack_no_network_test",
   ]
 
   tests = [

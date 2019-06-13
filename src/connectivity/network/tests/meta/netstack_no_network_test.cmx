@@ -1,20 +1,17 @@
 {
     "facets": {
-        "fuchsia.netemul": {
-            "default_url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_no_network_test_client.cmx",
-            "environment": {
-                "name": "no_network",
-                "services": {
-                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
-                },
-                "test": [
-                    {}
-                ]
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
             }
         }
     },
     "program": {
-        "binary": "test/netstack_no_network_test"
+        "binary": "test/netstack_bsdsocket_c_api_test"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider"
+        ]
+    }
 }
