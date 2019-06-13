@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_FX_PROCESSOR_H_
-#define GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_FX_PROCESSOR_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_PROCESSOR_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_PROCESSOR_H_
 
 #include <zircon/types.h>
 
@@ -83,4 +83,4 @@ class FxProcessor {
 
 }  // namespace media::audio
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_SERVER_MIXER_FX_PROCESSOR_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_FX_PROCESSOR_H_

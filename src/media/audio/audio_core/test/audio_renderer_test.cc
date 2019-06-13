@@ -85,7 +85,9 @@ void AudioRendererTest::AssertConnectedAndDiscardAllPackets() {
 void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
   zx::vmo payload_buffer;
   constexpr uint32_t kVmoOptionsNone = 0;
-  ASSERT_EQ(zx::vmo::create(kDefaultPayloadBufferSize, kVmoOptionsNone, &payload_buffer), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(kDefaultPayloadBufferSize, kVmoOptionsNone,
+                            &payload_buffer),
+            ZX_OK);
   audio_renderer_->AddPayloadBuffer(id, std::move(payload_buffer));
 }
 
@@ -255,7 +257,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyBufferOverrunCausesDisconnect) {
 
   // Send Packet moves connection into the operational state.
   fuchsia::media::StreamPacket packet;
-  packet.payload_buffer_id= 0;
+  packet.payload_buffer_id = 0;
   // |payload_offset| + |payload_size| is beyond the end of the payload buffer.
   packet.payload_size = kValidPayloadSize * 2;
   packet.payload_offset = kDefaultPayloadBufferSize - kValidPayloadSize;
