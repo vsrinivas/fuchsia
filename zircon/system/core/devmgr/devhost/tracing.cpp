@@ -5,6 +5,7 @@
 #include "tracing.h"
 
 #include <lib/async-loop/loop.h>
+#include <trace-provider/fdio_connect.h>
 #include <trace-provider/provider.h>
 
 #include "../shared/log.h"
@@ -27,7 +28,13 @@ zx_status_t devhost_start_trace_provider() {
     }
 
     async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
-    trace_provider_t* trace_provider = trace_provider_create_with_fdio(dispatcher);
+    zx_handle_t to_service;
+    status = trace_provider_connect_with_fdio(&to_service);
+    if (status != ZX_OK) {
+        log(ERROR, "devhost: trace-provider connection failed: %d\n", status);
+        return status;
+    }
+    trace_provider_t* trace_provider = trace_provider_create(to_service, dispatcher);
     if (!trace_provider) {
         async_loop_destroy(loop);
         log(ERROR, "devhost: error registering provider\n");
