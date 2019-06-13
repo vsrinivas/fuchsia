@@ -65,14 +65,35 @@ executable("convert_unittest") {
   ]
 }
 
+executable("device_unittest") {
+  output_name = "wlanif_device_unittest"
+
+  testonly = true
+
+  sources = [
+    "device_unittest.cpp",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/wlanif:test_source",
+    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 unittest_package("wlanif_unittest") {
   deps = [
     ":convert_unittest",
+    ":device_unittest",
   ]
 
   tests = [
     {
       name = "wlanif_convert_unittest"
+      environments = basic_envs
+    },
+    {
+      name = "wlanif_device_unittest"
       environments = basic_envs
     },
   ]

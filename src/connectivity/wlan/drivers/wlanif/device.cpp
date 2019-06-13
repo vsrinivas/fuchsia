@@ -1057,6 +1057,13 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
         }
         status = ZX_OK;
         break;
+    case ETHMAC_SETPARAM_MULTICAST_PROMISC:
+        if (wlanif_impl_.ops->set_multicast_promisc != nullptr) {
+            return wlanif_impl_.ops->set_multicast_promisc(wlanif_impl_.ctx, !!value);
+        } else {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        break;
     }
 
     return status;

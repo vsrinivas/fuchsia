@@ -556,6 +556,9 @@ typedef struct wlanif_impl_protocol_ops {
                                  wlanif_start_capture_frames_resp_t* resp);
     void (*stop_capture_frames)(void* ctx);
 
+    // Configuration operations
+    zx_status_t (*set_multicast_promisc)(void* ctx, bool enable);
+
     // Data operations
     zx_status_t (*data_queue_tx)(void* ctx, uint32_t options, ethmac_netbuf_t* netbuf);
 

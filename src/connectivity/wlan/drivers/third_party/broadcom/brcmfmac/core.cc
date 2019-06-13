@@ -144,7 +144,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     ndev = ifp->ndev;
 
     /* Determine initial value of allmulti flag */
-    cmd_value = (ndev->flags & IFF_ALLMULTI) ? true : false;
+    cmd_value = ndev->multicast_promisc;
 
     /* Send down the multicast list first. */
     cnt = netdev_mc_count(ndev);
