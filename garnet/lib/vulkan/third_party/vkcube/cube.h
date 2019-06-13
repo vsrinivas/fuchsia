@@ -34,19 +34,8 @@
 #endif
 
 #if defined(CUBE_USE_IMAGE_PIPE)
-#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <garnet/lib/vulkan/src/imagepipe_view/imagepipe_view.h>  // nogncheck
 #include <lib/async-loop/cpp/loop.h>
-
-#include "garnet/lib/vulkan/tests/vkcube/vkcube_view.h"  // nogncheck
-#include "lib/component/cpp/connect.h"                   // nogncheck
-#include "lib/component/cpp/startup_context.h"           // nogncheck
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings.h"
-#include "src/lib/fxl/logging.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"  // nogncheck
-#include "lib/ui/scenic/cpp/commands.h"                    // nogncheck
-#include "lib/ui/scenic/cpp/resources.h"                   // nogncheck
-#include "lib/ui/scenic/cpp/session.h"                     // nogncheck
 #endif  // defined(CUBE_USE_IMAGE_PIPE)
 
 #include "linmath.h"
@@ -83,9 +72,10 @@ typedef struct {
 #if defined(VK_USE_PLATFORM_FUCHSIA) && defined(CUBE_USE_IMAGE_PIPE)
 struct FuchsiaState {
   async::Loop loop;
+  std::unique_ptr<sys::ComponentContext> context;
+  std::unique_ptr<ImagePipeViewProviderService> view_provider_service;
+  std::unique_ptr<ImagePipeView> view;
   uint32_t image_pipe_handle = 0;
-  fuchsia::images::ImagePipePtr pipe;
-  std::unique_ptr<scenic::ViewProviderComponent> component;
   uint32_t num_frames = 60;
   uint32_t elapsed_frames = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> t0{};

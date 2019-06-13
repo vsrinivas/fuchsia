@@ -10,8 +10,6 @@ executable("vkcube_on_scenic") {
     "//garnet/lib/vulkan/third_party/vkcube/cube.h",
     "main.cc",
     "test_vk_cube.h",
-    "vkcube_view.cc",
-    "vkcube_view.h",
   ]
   defines = [
     "VK_USE_PLATFORM_FUCHSIA",
@@ -22,14 +20,9 @@ executable("vkcube_on_scenic") {
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ui/scenic",
-    "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/lib/vulkan/src/imagepipe_view",
     "//garnet/public/lib/vulkan",
-    "//src/lib/fxl",
+    "//zircon/public/lib/syslog",
   ]
   public_deps = [
     "//zircon/public/lib/fit",
@@ -49,7 +42,7 @@ executable("vkcube_on_fb") {
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/trace-provider-with-fdio",
     "//garnet/public/lib/vulkan",
-    "//src/lib/fxl",
+    "//zircon/public/lib/syslog",
   ]
   public_deps = [
     "//zircon/public/lib/fit",
@@ -72,7 +65,7 @@ executable("vkcube_skip_present") {
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/trace-provider",
     "//garnet/public/lib/vulkan",
-    "//src/lib/fxl",
+    "//zircon/public/lib/syslog",
   ]
   public_deps = [
     "//zircon/public/lib/fit",
