@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    clock,
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
@@ -10,7 +11,6 @@ use crate::{
 };
 use futures::future::BoxFuture;
 use futures::prelude::*;
-use std::time::SystemTime;
 
 /// A stub policy implementation that allows everything immediately.
 pub struct StubPolicy;
@@ -63,7 +63,7 @@ impl PolicyEngine for StubPolicyEngine {
         protocol_state: &ProtocolState,
     ) -> BoxFuture<UpdateCheckSchedule> {
         let schedule = StubPolicy::compute_next_update_time(
-            &PolicyData { current_time: SystemTime::now() },
+            &PolicyData { current_time: clock::now() },
             apps,
             scheduling,
             protocol_state,
@@ -79,7 +79,7 @@ impl PolicyEngine for StubPolicyEngine {
         check_options: &CheckOptions,
     ) -> BoxFuture<CheckDecision> {
         let decision = StubPolicy::update_check_allowed(
-            &PolicyData { current_time: SystemTime::now() },
+            &PolicyData { current_time: clock::now() },
             apps,
             scheduling,
             protocol_state,
@@ -90,7 +90,7 @@ impl PolicyEngine for StubPolicyEngine {
 
     fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<UpdateDecision> {
         let decision = StubPolicy::update_can_start(
-            &PolicyData { current_time: SystemTime::now() },
+            &PolicyData { current_time: clock::now() },
             proposed_install_plan,
         );
         future::ready(decision).boxed()
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_compute_next_update_time() {
-        let now = SystemTime::now();
+        let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let result = StubPolicy::compute_next_update_time(
             &policy_data,
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_update_check_allowed_on_demand() {
-        let policy_data = PolicyData { current_time: SystemTime::now() };
+        let policy_data = PolicyData { current_time: clock::now() };
         let check_options = CheckOptions { source: InstallSource::OnDemand };
         let result = StubPolicy::update_check_allowed(
             &policy_data,
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_update_check_allowed_scheduled_task() {
-        let policy_data = PolicyData { current_time: SystemTime::now() };
+        let policy_data = PolicyData { current_time: clock::now() };
         let check_options = CheckOptions { source: InstallSource::ScheduledTask };
         let result = StubPolicy::update_check_allowed(
             &policy_data,
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_update_can_start() {
-        let policy_data = PolicyData { current_time: SystemTime::now() };
+        let policy_data = PolicyData { current_time: clock::now() };
         let result = StubPolicy::update_can_start(&policy_data, &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
     }

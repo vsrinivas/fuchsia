@@ -5,12 +5,13 @@
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use omaha_client::{
+    clock,
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
     request_builder::RequestParams,
 };
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 // We do periodic update check roughly every 5 hours.
 const PERIODIC_INTERVAL: u64 = 5 * 60 * 60;
@@ -77,7 +78,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         protocol_state: &ProtocolState,
     ) -> BoxFuture<UpdateCheckSchedule> {
         let schedule = FuchsiaPolicy::compute_next_update_time(
-            &PolicyData { current_time: SystemTime::now() },
+            &PolicyData { current_time: clock::now() },
             apps,
             scheduling,
             protocol_state,
@@ -93,7 +94,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         check_options: &CheckOptions,
     ) -> BoxFuture<CheckDecision> {
         let decision = FuchsiaPolicy::update_check_allowed(
-            &PolicyData { current_time: SystemTime::now() },
+            &PolicyData { current_time: clock::now() },
             apps,
             scheduling,
             protocol_state,
@@ -104,7 +105,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
 
     fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<UpdateDecision> {
         let decision = FuchsiaPolicy::update_can_start(
-            &PolicyData { current_time: SystemTime::now() },
+            &PolicyData { current_time: clock::now() },
             proposed_install_plan,
         );
         future::ready(decision).boxed()
@@ -115,10 +116,11 @@ impl PolicyEngine for FuchsiaPolicyEngine {
 pub mod tests {
     use super::*;
     use omaha_client::installer::stub::StubPlan;
+    use std::time::SystemTime;
 
     #[test]
     fn test_compute_next_update_time() {
-        let now = SystemTime::now();
+        let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(1234);
         let next_update_time = last_update_time + Duration::from_secs(PERIODIC_INTERVAL);
@@ -143,7 +145,7 @@ pub mod tests {
 
     #[test]
     fn test_server_dictated_poll_interval() {
-        let now = SystemTime::now();
+        let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(1234);
         let interval = Duration::from_secs(5678);
@@ -169,7 +171,7 @@ pub mod tests {
 
     #[test]
     fn test_update_check_allowed_ok() {
-        let now = SystemTime::now();
+        let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(PERIODIC_INTERVAL + 1);
         let next_update_time = last_update_time + Duration::from_secs(PERIODIC_INTERVAL);
@@ -195,7 +197,7 @@ pub mod tests {
 
     #[test]
     fn test_update_check_allowed_too_soon() {
-        let now = SystemTime::now();
+        let now = clock::now();
         let policy_data = PolicyData { current_time: now };
         let last_update_time = now - Duration::from_secs(PERIODIC_INTERVAL - 1);
         let next_update_time = last_update_time + Duration::from_secs(PERIODIC_INTERVAL);
@@ -216,7 +218,7 @@ pub mod tests {
 
     #[test]
     fn test_update_can_start() {
-        let policy_data = PolicyData { current_time: SystemTime::now() };
+        let policy_data = PolicyData { current_time: clock::now() };
         let result = FuchsiaPolicy::update_can_start(&policy_data, &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
     }

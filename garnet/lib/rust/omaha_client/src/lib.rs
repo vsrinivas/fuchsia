@@ -7,6 +7,7 @@
 #![feature(async_await, await_macro)]
 #![recursion_limit = "128"]
 
+pub mod clock;
 pub mod common;
 pub mod configuration;
 pub mod http_request;

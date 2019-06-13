@@ -42,15 +42,7 @@ mod mock {
     impl Timer for MockTimer {
         fn wait(&mut self, delay: Duration) -> BoxFuture<()> {
             if let Some(duration) = self.expected_durations.pop_front() {
-                // Allow 100ms deviation because multiple subsequent calls to SystemTime::now()
-                // don't return the exact same time.
-                let deviation = Duration::from_millis(100);
-                assert!(
-                    delay > duration - deviation && delay < duration + deviation,
-                    "expected: {:?}, actual: {:?}",
-                    duration,
-                    delay
-                );
+                assert_eq!(duration, delay);
                 future::ready(()).boxed()
             } else {
                 // No more expected durations left, blocking the Timer forever.

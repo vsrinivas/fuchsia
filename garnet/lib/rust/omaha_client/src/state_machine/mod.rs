@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    clock,
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     configuration::Config,
     http_request::HttpRequest,
@@ -144,8 +145,8 @@ where
         update_check::Context {
             schedule: UpdateCheckSchedule {
                 last_update_time: SystemTime::UNIX_EPOCH,
-                next_update_time: SystemTime::now(),
-                next_update_window_start: SystemTime::now(),
+                next_update_time: clock::now(),
+                next_update_window_start: clock::now(),
             },
             state: ProtocolState::default(),
         }
@@ -163,9 +164,7 @@ where
                 &context.state,
             ));
             // Wait if |next_update_time| is in the future.
-            if let Ok(duration) =
-                context.schedule.next_update_time.duration_since(SystemTime::now())
-            {
+            if let Ok(duration) = context.schedule.next_update_time.duration_since(clock::now()) {
                 let date_time = DateTime::<Utc>::from(context.schedule.next_update_time);
                 info!("Waiting until {} for the next update check...", date_time.to_rfc3339());
 
@@ -177,7 +176,7 @@ where
                 Ok(result) => {
                     info!("Update check result: {:?}", result);
                     // Update check succeeded, update |last_update_time|.
-                    context.schedule.last_update_time = SystemTime::now();
+                    context.schedule.last_update_time = clock::now();
 
                     context.state.server_dictated_poll_interval =
                         result.server_dictated_poll_interval.map(Duration::from_secs);
@@ -217,7 +216,7 @@ where
                     match error {
                         UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
                             // We talked to Omaha, update |last_update_time|.
-                            context.schedule.last_update_time = SystemTime::now();
+                            context.schedule.last_update_time = clock::now();
                         }
                         _ => {}
                     }
@@ -588,9 +587,9 @@ pub mod tests {
 
         let context = update_check::Context {
             schedule: UpdateCheckSchedule {
-                last_update_time: SystemTime::now() - std::time::Duration::new(500, 0),
-                next_update_time: SystemTime::now(),
-                next_update_window_start: SystemTime::now(),
+                last_update_time: clock::now() - std::time::Duration::new(500, 0),
+                next_update_time: clock::now(),
+                next_update_window_start: clock::now(),
             },
             state: ProtocolState::default(),
         };
@@ -908,7 +907,7 @@ pub mod tests {
         http.add_response(hyper::Response::new("".into()));
         let mut timer = timer::MockTimer::new();
         timer.expect(Duration::from_secs(111));
-        let next_update_time = SystemTime::now() + Duration::from_secs(111);
+        let next_update_time = clock::now() + Duration::from_secs(111);
         let policy_engine = MockPolicyEngine {
             check_schedule: UpdateCheckSchedule {
                 last_update_time: SystemTime::UNIX_EPOCH,
@@ -953,7 +952,7 @@ pub mod tests {
         // Run the update check twice and then block.
         timer.expect(Duration::from_secs(111));
         timer.expect(Duration::from_secs(111));
-        let next_update_time = SystemTime::now() + Duration::from_secs(111);
+        let next_update_time = clock::now() + Duration::from_secs(111);
         let policy_engine = MockPolicyEngine {
             check_schedule: UpdateCheckSchedule {
                 last_update_time: SystemTime::UNIX_EPOCH,
