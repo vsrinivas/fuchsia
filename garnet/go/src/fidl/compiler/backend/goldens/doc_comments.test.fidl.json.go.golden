@@ -98,14 +98,10 @@ func (u *Table) ClearField() {
 	u.FieldPresent = false
 }
 const (
-	InterfaceMethodOrdinal uint32 = 1061382220
-	InterfaceMethodGenOrdinal uint32 = 1061382220
-	InterfaceMethodOrdinal64 uint64 = 1061382220 << 32
-	InterfaceMethodGenOrdinal64 uint64 = 1061382220 << 32
-	InterfaceOnEventOrdinal uint32 = 325918733
-	InterfaceOnEventGenOrdinal uint32 = 325918733
-	InterfaceOnEventOrdinal64 uint64 = 325918733 << 32
-	InterfaceOnEventGenOrdinal64 uint64 = 325918733 << 32
+	InterfaceMethodOrdinal uint64 = 1061382220 << 32
+	InterfaceMethodGenOrdinal uint64 = 1061382220 << 32
+	InterfaceOnEventOrdinal uint64 = 325918733 << 32
+	InterfaceOnEventGenOrdinal uint64 = 325918733 << 32
 )
 
 type InterfaceInterface _bindings.ChannelProxy
@@ -116,7 +112,7 @@ type InterfaceInterface _bindings.ChannelProxy
 // method comment #3
 func (p *InterfaceInterface) Method() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal64, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal, req_)
 	return err
 }
 
@@ -125,7 +121,7 @@ func (p *InterfaceInterface) Method() error {
 // event comment #3
 func (p *InterfaceInterface) ExpectOnEvent() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal64, resp_)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_)
 	return err
 }
 
@@ -157,13 +153,9 @@ type InterfaceStub struct {
 	Impl Interface
 }
 
-func (s_ *InterfaceStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	return s_.Dispatch(uint64(ord) << 32, b_, h_)
-}
-
 func (s_ *InterfaceStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
 	switch ordinal_ {
-	case InterfaceMethodOrdinal64:
+	case InterfaceMethodOrdinal:
 		err_ := s_.Impl.Method()
 		return nil, err_
 	}
@@ -186,7 +178,7 @@ type InterfaceEventProxy _bindings.ChannelProxy
 
 func (p *InterfaceEventProxy) OnEvent() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventOrdinal64, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(InterfaceOnEventOrdinal, event_)
 }
 
 

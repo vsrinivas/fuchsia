@@ -628,13 +628,11 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinal:          types.Ordinal(1),
-				OrdinalName32:    "TestFirstOrdinal",
-				OrdinalName64:    "TestFirstOrdinal64",
-				GenOrdinal:       types.Ordinal(1789789),
-				GenOrdinalName32: "TestFirstGenOrdinal",
-				GenOrdinalName64: "TestFirstGenOrdinal64",
-				Name:             "First",
+				Ordinal:        types.Ordinal(1),
+				OrdinalName:    "TestFirstOrdinal",
+				GenOrdinal:     types.Ordinal(1789789),
+				GenOrdinalName: "TestFirstGenOrdinal",
+				Name:           "First",
 				Request: &Struct{
 					Name: "testFirstRequest",
 					Members: []StructMember{
@@ -650,13 +648,11 @@ func TestCompileInterface(t *testing.T) {
 				IsEvent:         false,
 			},
 			{
-				Ordinal:          types.Ordinal(2),
-				OrdinalName32:    "TestSecondOrdinal",
-				OrdinalName64:    "TestSecondOrdinal64",
-				GenOrdinal:       types.Ordinal(2789789),
-				GenOrdinalName32: "TestSecondGenOrdinal",
-				GenOrdinalName64: "TestSecondGenOrdinal64",
-				Name:             "Second",
+				Ordinal:        types.Ordinal(2),
+				OrdinalName:    "TestSecondOrdinal",
+				GenOrdinal:     types.Ordinal(2789789),
+				GenOrdinalName: "TestSecondGenOrdinal",
+				Name:           "Second",
 				Request: &Struct{
 					Name: "testSecondRequest",
 					Members: []StructMember{
@@ -725,13 +721,11 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinal:          types.Ordinal(1),
-				OrdinalName32:    "TestFirstOrdinal",
-				OrdinalName64:    "TestFirstOrdinal64",
-				GenOrdinal:       types.Ordinal(9),
-				GenOrdinalName32: "TestFirstGenOrdinal",
-				GenOrdinalName64: "TestFirstGenOrdinal64",
-				Name:             "First",
+				Ordinal:        types.Ordinal(1),
+				OrdinalName:    "TestFirstOrdinal",
+				GenOrdinal:     types.Ordinal(9),
+				GenOrdinalName: "TestFirstGenOrdinal",
+				Name:           "First",
 				Response: &Struct{
 					Name: "testFirstResponse",
 					Members: []StructMember{

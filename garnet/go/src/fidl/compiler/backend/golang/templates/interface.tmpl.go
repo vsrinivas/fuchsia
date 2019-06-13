@@ -9,10 +9,8 @@ const Interface = `
 
 const (
 {{- range .Methods }}
-	{{ .OrdinalName32 }} uint32 = {{ .Ordinal }}
-	{{ .GenOrdinalName32 }} uint32 = {{ .GenOrdinal }}
-	{{ .OrdinalName64 }} uint64 = {{ .Ordinal }} << 32
-	{{ .GenOrdinalName64 }} uint64 = {{ .GenOrdinal }} << 32
+	{{ .OrdinalName }} uint64 = {{ .Ordinal }} << 32
+	{{ .GenOrdinalName }} uint64 = {{ .GenOrdinal }} << 32
 {{- end }}
 )
 
@@ -74,13 +72,13 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName64 }}, req_, resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, req_, resp_)
 		{{- else }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName64 }}, req_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName64 }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName64 }}{{ end }})
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -173,19 +171,15 @@ type {{ .StubName }} struct {
 	Impl {{ .Name }}
 }
 
-func (s_ *{{ .StubName }}) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
-	return s_.Dispatch(uint64(ord) << 32, b_, h_)
-}
-
 func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
 	switch ordinal_ {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
 	{{- if ne .Ordinal .GenOrdinal }}
-	case {{ .GenOrdinalName64 }}:
+	case {{ .GenOrdinalName }}:
 		fallthrough
 	{{ end }}
-	case {{ .OrdinalName64 }}:
+	case {{ .OrdinalName }}:
 		{{- if .Request }}
 		{{- if len .Request.Members }}
 		in_ := {{ .Request.Name }}{}
@@ -260,7 +254,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 	var event_ _bindings.Message
 	{{- end }}
 	{{- end }}
-	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName64 }}, event_)
+	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, event_)
 }
 {{- end }}
 {{- end }}
