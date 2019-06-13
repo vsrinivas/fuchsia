@@ -149,10 +149,6 @@ pub enum IfaceCmd {
     #[structopt(name = "del")]
     /// destroys an iface device
     Delete {
-        #[structopt(short = "p", long = "phy", raw(required = "true"))]
-        /// id of the phy that hosts the iface
-        phy_id: u16,
-
         #[structopt(raw(required = "true"))]
         /// iface id to destroy
         iface_id: u16,

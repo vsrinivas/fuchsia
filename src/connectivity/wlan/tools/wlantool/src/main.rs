@@ -85,14 +85,14 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
         opts::IfaceCmd::New { phy_id, role } => {
-            let mut req = wlan_service::CreateIfaceRequest { phy_id: phy_id, role: role.into() };
+            let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into() };
 
             let response =
                 await!(wlan_svc.create_iface(&mut req)).context("error getting response")?;
             println!("response: {:?}", response);
         }
-        opts::IfaceCmd::Delete { phy_id, iface_id } => {
-            let mut req = wlan_service::DestroyIfaceRequest { phy_id: phy_id, iface_id: iface_id };
+        opts::IfaceCmd::Delete { iface_id } => {
+            let mut req = wlan_service::DestroyIfaceRequest { iface_id };
 
             let response =
                 await!(wlan_svc.destroy_iface(&mut req)).context("error destroying iface")?;
@@ -616,7 +616,12 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        fidl::endpoints::create_proxy,
+        futures::task::Poll,
+        pin_utils::pin_mut,
+    };
 
     #[test]
     fn format_bssid() {
@@ -663,5 +668,32 @@ mod tests {
 
         make_credential(Some("hi".to_string()), Some(psk.to_string()))
             .expect_err("credential is invalid");
+    }
+
+    #[test]
+    fn destroy_iface() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlansvc_local, wlansvc_remote) =
+            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
+        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let del_fut = do_iface(IfaceCmd::Delete { iface_id: 5 }, wlansvc_local);
+        pin_mut!(del_fut);
+
+        match exec.run_until_stalled(&mut del_fut) {
+            Poll::Pending => (),
+            _ => panic!("expected pending iface destruction"),
+        };
+
+        let responder = match exec.run_until_stalled(&mut wlansvc_stream.next()) {
+            Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::DestroyIface {
+                req,
+                responder,
+            }))) => {
+                assert_eq!(req.iface_id, 5);
+                responder
+            }
+            _ => panic!("wlansvc_stream returned unexpected result"),
+        };
+        responder.send(zx::Status::OK.into_raw()).expect("failed to send response");
     }
 }

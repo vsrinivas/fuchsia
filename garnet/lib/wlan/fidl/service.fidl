@@ -62,7 +62,6 @@ struct CreateIfaceResponse {
 };
 
 struct DestroyIfaceRequest {
-    uint16 phy_id;
     uint16 iface_id;
 };
 

@@ -28,6 +28,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:structopt",
   ]
 }
