@@ -1150,6 +1150,46 @@ From //garnet/lib/magma/gnbuild/magma.gni:17
 
 From //garnet/lib/magma/gnbuild/magma.gni:14
 
+### max_blob_contents_size
+Maximum allowable content size in /blob in a release mode build
+Zero means no limit.
+contents_size refers to contents stored within the filesystem (regardless
+of how they are stored)
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:10
+
+### max_blob_image_size
+Maximum allowable size for the /blob image in a release mode build
+Zero means no limit.
+image_size refers to the total image size, including both contents and
+metadata.
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:16
+
+### max_data_contents_size
+Maximum allowable content size in /data in a release mode build
+Zero means no limit.
+contents_size refers to contents stored within the filesystem (regardless
+of how they are stored)
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:22
+
+### max_data_image_size
+Maximum allowable size for the /data image in a release mode build
+Zero means no limit.
+image_size refers to the total image size, including both contents and
+metadata.
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:28
+
 ### max_fvm_size
 Maximum allowable size for the FVM in a release mode build
 Zero means no limit

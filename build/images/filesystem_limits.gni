@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Maximum allowable contents for the /blob in a release mode build.
+  # Zero means no limit.
+  # contents_size refers to contents stored within the filesystem (regardless
+  # of how they are stored).
+  max_blob_contents_size = "0"
+
+  # Maximum allowable image_size for /blob in a release mode build.
+  # Zero means no limit.
+  # image_size refers to the total image size, including both contents and
+  # metadata.
+  max_blob_image_size = "0"
+
+  # Maximum allowable contents_size for /data in a release mode build.
+  # Zero means no limit.
+  # contents_size refers to contents stored within the filesystem (regardless
+  # of how they are stored).
+  max_data_contents_size = "0"
+
+  # Maximum allowable image_size for /data in a release mode build.
+  # Zero means no limit.
+  # image_size refers to the total image size, including both contents and
+  # metadata.
+  max_data_image_size = "0"
+}

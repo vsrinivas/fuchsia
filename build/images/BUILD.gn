@@ -11,6 +11,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/images/boot.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/filesystem_limits.gni")
 import("//build/images/fvm.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
@@ -866,6 +867,26 @@ if (!bootfs_only) {
   # to check against.
   max_fvm_size_file = "$root_build_dir/max_fvm_size.txt"
   write_file(max_fvm_size_file, max_fvm_size)
+
+  # Record the maximum allowable /blob contents size in the build directory for
+  # later steps to check against.
+  max_blob_contents_size_file = "$root_build_dir/max_blob_contents_size.txt"
+  write_file(max_blob_contents_size_file, max_blob_contents_size)
+
+  # Record the maximum allowable /blob image size in the build directory for
+  # later steps to check against.
+  max_blob_image_size_file = "$root_build_dir/max_blob_image_size.txt"
+  write_file(max_blob_image_size_file, max_blob_image_size)
+
+  # Record the maximum allowable /data content size in the build directory for
+  # later steps to check against.
+  max_data_contents_size_file = "$root_build_dir/max_data_contents_size.txt"
+  write_file(max_data_contents_size_file, max_data_contents_size)
+
+  # Record the maximum allowable /data image size in the build directory for
+  # later steps to check against.
+  max_data_image_size_file = "$root_build_dir/max_data_image_size.txt"
+  write_file(max_data_image_size_file, max_data_image_size)
 
   # fvm.blk creates an FVM partition image containing the blob partition produced
   # by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
