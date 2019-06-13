@@ -29,15 +29,11 @@
 #include "src/lib/fxl/time/time_delta.h"
 
 namespace ledger {
-// Manages a ledger page.
+// Manages an "active" ledger page.
 //
-// ActivePageManager owns all page-level objects related to a single page: page
-// storage, and a set of FIDL PageImpls backed by the page storage. It is safe
-// to delete it at any point - this closes all channels, deletes PageImpls and
-// tears down the storage.
-//
-// When the set of PageImpls becomes empty, client is notified through
-// |on_empty_callback|.
+// ActivePageManager is responsible for page logic during the portion of the
+// page's lifecycle during which FIDL connections to the page are open and a
+// storage::PageStorage is instantiated for the page.
 class ActivePageManager {
  public:
   // Whether the page storage needs to sync with the cloud provider before

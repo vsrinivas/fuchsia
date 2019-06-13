@@ -20,6 +20,7 @@
 #include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_connection_notifier.h"
+#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -48,8 +49,7 @@ LedgerManager::LedgerManager(
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
-  active_page_manager_containers_.set_on_empty([this] { CheckEmpty(); });
-  page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
+  page_managers_.set_on_empty([this] { CheckEmpty(); });
 }
 
 LedgerManager::~LedgerManager() {}
@@ -60,275 +60,48 @@ void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
 
 void LedgerManager::PageIsClosedAndSynced(
     storage::PageIdView page_id,
-    fit::function<void(Status, PagePredicateResult)> callback) {
-  auto is_synced = [](ActivePageManager* active_page_manager,
-                      fit::function<void(Status, bool)> on_done) {
-    active_page_manager->IsSynced(std::move(on_done));
-  };
-  PageIsClosedAndSatisfiesPredicate(page_id, std::move(is_synced),
-                                    std::move(callback));
+    fit::function<void(storage::Status, PagePredicateResult)> callback) {
+  GetOrCreatePageManager(page_id)->PageIsClosedAndSynced(std::move(callback));
 }
 
 void LedgerManager::PageIsClosedOfflineAndEmpty(
     storage::PageIdView page_id,
-    fit::function<void(Status, PagePredicateResult)> callback) {
-  auto is_offline_and_empty = [](ActivePageManager* active_page_manager,
-                                 fit::function<void(Status, bool)> on_done) {
-    active_page_manager->IsOfflineAndEmpty(std::move(on_done));
-  };
-  PageIsClosedAndSatisfiesPredicate(page_id, std::move(is_offline_and_empty),
-                                    std::move(callback));
+    fit::function<void(storage::Status, PagePredicateResult)> callback) {
+  GetOrCreatePageManager(page_id)->PageIsClosedOfflineAndEmpty(
+      std::move(callback));
 }
 
-void LedgerManager::DeletePageStorage(convert::ExtendedStringView page_id,
-                                      fit::function<void(Status)> callback) {
-  auto it = active_page_manager_containers_.find(page_id);
-  if (it != active_page_manager_containers_.end()) {
-    callback(Status::ILLEGAL_STATE);
-    return;
-  }
-
-  // Block all page requests until deletion is complete.
-  page_availability_manager_.MarkPageBusy(page_id);
-  storage_->DeletePageStorage(
-      page_id, callback::MakeScoped(
-                   weak_factory_.GetWeakPtr(),
-                   [this, page_id = page_id.ToString(),
-                    callback = std::move(callback)](Status status) {
-                     // This may destruct the |LedgerManager|.
-                     page_availability_manager_.MarkPageAvailable(page_id);
-                     callback(status);
-                   }));
+void LedgerManager::DeletePageStorage(
+    convert::ExtendedStringView page_id,
+    fit::function<void(storage::Status)> callback) {
+  GetOrCreatePageManager(page_id)->DeletePageStorage(std::move(callback));
 }
 
 void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                             fidl::InterfaceRequest<Page> page_request,
-                            fit::function<void(Status)> callback) {
-  MaybeMarkPageOpened(page_id);
+                            fit::function<void(storage::Status)> callback) {
+  GetOrCreatePageManager(page_id)->GetPage(page_state, std::move(page_request),
+                                           std::move(callback));
+}
 
-  // If we have the page manager ready, just bind the request and return.
-  auto it = active_page_manager_containers_.find(page_id);
-  if (it != active_page_manager_containers_.end()) {
-    it->second.BindPage(std::move(page_request), std::move(callback));
-    return;
+PageManager* LedgerManager::GetOrCreatePageManager(
+    convert::ExtendedStringView page_id) {
+  auto it = page_managers_.find(page_id);
+  if (it != page_managers_.end()) {
+    return &it->second;
   }
 
-  ActivePageManagerContainer* container = AddPageManagerContainer(page_id);
-  // TODO(LE-631): We will need to remove empty pages that are unknown to the
-  // user or the page usage database.
-  container->BindPage(std::move(page_request), std::move(callback));
-
-  InitPageManagerContainer(container, page_id,
-                           [this, container, page_id = page_id.ToString(),
-                            page_state](Status status) mutable {
-                             // Create the page if it wasn't found.
-                             if (status == Status::PAGE_NOT_FOUND) {
-                               CreatePageStorage(std::move(page_id), page_state,
-                                                 container);
-                             }
-                           });
-}
-
-void LedgerManager::InitPageManagerContainer(
-    ActivePageManagerContainer* container, convert::ExtendedStringView page_id,
-    fit::function<void(Status)> callback) {
-  page_availability_manager_.OnPageAvailable(
-      page_id, [this, container, page_id = page_id.ToString(),
-                callback = std::move(callback)]() mutable {
-        storage_->GetPageStorage(
-            std::move(page_id),
-            [this, container, callback = std::move(callback)](
-                Status status,
-                std::unique_ptr<storage::PageStorage> page_storage) mutable {
-              if (status != Status::OK && status != Status::PAGE_NOT_FOUND) {
-                container->SetActivePageManager(status, nullptr);
-                callback(status);
-                return;
-              }
-
-              // If the page was found locally, just use it and return.
-              if (status == Status::OK) {
-                FXL_DCHECK(page_storage);
-                container->SetActivePageManager(
-                    Status::OK,
-                    NewPageManager(
-                        std::move(page_storage),
-                        ActivePageManager::PageStorageState::AVAILABLE));
-              }
-              callback(status);
-            });
-      });
-}
-
-void LedgerManager::CreatePageStorage(storage::PageId page_id,
-                                      PageState page_state,
-                                      ActivePageManagerContainer* container) {
-  page_availability_manager_.OnPageAvailable(
-      page_id,
-      [this, page_id = std::move(page_id), page_state, container]() mutable {
-        storage_->CreatePageStorage(
-            std::move(page_id),
-            [this, page_state, container](
-                Status status,
-                std::unique_ptr<storage::PageStorage> page_storage) {
-              if (status != Status::OK) {
-                container->SetActivePageManager(status, nullptr);
-                return;
-              }
-              container->SetActivePageManager(
-                  Status::OK,
-                  NewPageManager(
-                      std::move(page_storage),
-                      page_state == PageState::NEW
-                          ? ActivePageManager::PageStorageState::AVAILABLE
-                          : ActivePageManager::PageStorageState::NEEDS_SYNC));
-            });
-      });
-}
-
-ActivePageManagerContainer* LedgerManager::AddPageManagerContainer(
-    storage::PageIdView page_id) {
-  auto ret = active_page_manager_containers_.emplace(
+  auto ret = page_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(page_id.ToString()),
-      std::forward_as_tuple(ledger_name_, page_id.ToString(),
-                            page_usage_listener_));
+      std::forward_as_tuple(environment_, ledger_name_, page_id.ToString(),
+                            page_usage_listener_, storage_.get(),
+                            ledger_sync_.get(), &merge_manager_));
   FXL_DCHECK(ret.second);
   return &ret.first->second;
 }
 
-std::unique_ptr<ActivePageManager> LedgerManager::NewPageManager(
-    std::unique_ptr<storage::PageStorage> page_storage,
-    ActivePageManager::PageStorageState state) {
-  std::unique_ptr<sync_coordinator::PageSync> page_sync;
-  if (ledger_sync_) {
-    page_sync =
-        ledger_sync_->CreatePageSync(page_storage.get(), page_storage.get());
-  }
-  return std::make_unique<ActivePageManager>(
-      environment_, std::move(page_storage), std::move(page_sync),
-      merge_manager_.GetMergeResolver(page_storage.get()), state);
-}
-
-void LedgerManager::PageIsClosedAndSatisfiesPredicate(
-    storage::PageIdView page_id,
-    fit::function<void(ActivePageManager*, fit::function<void(Status, bool)>)>
-        predicate,
-    fit::function<void(Status, PagePredicateResult)> callback) {
-  // Start logging whether the page has been opened during the execution of
-  // this method.
-  auto tracker = NewPageTracker(page_id);
-
-  ActivePageManagerContainer* container;
-
-  auto it = active_page_manager_containers_.find(page_id);
-  if (it != active_page_manager_containers_.end()) {
-    // The page manager is open, check if there are any open connections.
-    container = &it->second;
-    if (container->PageConnectionIsOpen()) {
-      callback(Status::OK, PagePredicateResult::PAGE_OPENED);
-      return;
-    }
-  } else {
-    // Create a new container and get the PageStorage.
-    container = AddPageManagerContainer(page_id);
-    InitPageManagerContainer(container, page_id, [container](Status status) {
-      if (status == Status::PAGE_NOT_FOUND) {
-        container->SetActivePageManager(status, nullptr);
-      }
-    });
-  }
-
-  container->NewInternalRequest(
-      [this, page_id = page_id.ToString(), tracker = std::move(tracker),
-       predicate = std::move(predicate), callback = std::move(callback)](
-          Status status, ExpiringToken token,
-          ActivePageManager* active_page_manager) mutable {
-        if (status != Status::OK) {
-          callback(status, PagePredicateResult::PAGE_OPENED);
-          return;
-        }
-        FXL_DCHECK(active_page_manager);
-        predicate(
-            active_page_manager,
-            callback::MakeScoped(
-                weak_factory_.GetWeakPtr(),
-                [this, page_id = std::move(page_id),
-                 tracker = std::move(tracker), callback = std::move(callback),
-                 token = std::move(token)](Status status,
-                                           bool condition) mutable {
-                  if (status != Status::OK) {
-                    callback(status, PagePredicateResult::PAGE_OPENED);
-                  }
-                  // |token| is expected to go out of scope. The LedgerManager
-                  // is kept non-empty by |tracker|.
-                  async::PostTask(
-                      environment_->dispatcher(),
-                      callback::MakeScoped(
-                          weak_factory_.GetWeakPtr(),
-                          [condition, page_id = std::move(page_id),
-                           callback = std::move(callback),
-                           tracker = std::move(tracker)]() mutable {
-                            if (!tracker()) {
-                              // If |RemoveTrackedPage| returns false, this
-                              // means that the page was opened during this
-                              // operation and |PAGE_OPENED| must be returned.
-                              callback(Status::OK,
-                                       PagePredicateResult::PAGE_OPENED);
-                              return;
-                            }
-                            callback(Status::OK, condition
-                                                     ? PagePredicateResult::YES
-                                                     : PagePredicateResult::NO);
-                          }));
-                }));
-      });
-}
-
-fit::function<bool()> LedgerManager::NewPageTracker(
-    storage::PageIdView page_id) {
-  tracked_pages_++;
-  uint64_t operation_id = page_was_opened_id_++;
-  page_was_opened_map_[page_id.ToString()].push_back(operation_id);
-
-  fxl::WeakPtr<LedgerManager> weak_this = weak_factory_.GetWeakPtr();
-
-  auto stop_tracking = [this, weak_this, page_id = page_id.ToString(),
-                        operation_id] {
-    if (!weak_this) {
-      return false;
-    }
-    tracked_pages_--;
-    auto check_empty_on_return = fit::defer([this] { CheckEmpty(); });
-
-    auto it = page_was_opened_map_.find(page_id);
-    if (it == page_was_opened_map_.end()) {
-      return false;
-    }
-    if (it->second.size() == 1) {
-      // This is the last operation for this page: delete the page's entry.
-      page_was_opened_map_.erase(it);
-      return true;
-    }
-    // Erase the operation_id, if found, from the found vector (it->second).
-    auto operation_it =
-        std::find(it->second.begin(), it->second.end(), operation_id);
-    if (operation_it != it->second.end()) {
-      it->second.erase(operation_it);
-      return true;
-    }
-    return false;
-  };
-  return callback::EnsureCalled(std::move(stop_tracking));
-}
-
-void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {
-  page_was_opened_map_.erase(page_id.ToString());
-}
-
 void LedgerManager::CheckEmpty() {
-  if (on_empty_callback_ && bindings_.size() == 0 &&
-      active_page_manager_containers_.empty() && tracked_pages_ == 0 &&
-      page_availability_manager_.IsEmpty()) {
+  if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty()) {
     on_empty_callback_();
   }
 }

@@ -17,11 +17,10 @@
 #include <type_traits>
 
 #include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/app/active_page_manager.h"
-#include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
+#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
@@ -91,48 +90,14 @@ class LedgerManager : public LedgerImpl::Delegate {
  private:
   using PageTracker = fit::function<bool()>;
 
-  // Requests a PageStorage object for the given |container|. If the page is not
-  // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
-  void InitPageManagerContainer(ActivePageManagerContainer* container,
-                                convert::ExtendedStringView page_id,
-                                fit::function<void(Status)> callback);
-
-  // Creates a page storage for the given |page_id| and completes the
-  // ActivePageManagerContainer.
-  void CreatePageStorage(storage::PageId page_id, PageState page_state,
-                         ActivePageManagerContainer* container);
-
-  // Adds a new ActivePageManagerContainer for |page_id| and configures it so
-  // that it is automatically deleted from |active_page_manager_containers_|
-  // when the last local client disconnects from the page. Returns the
-  // container.
-  ActivePageManagerContainer* AddPageManagerContainer(
-      storage::PageIdView page_id);
-
-  // Creates a new page manager for the given storage.
-  std::unique_ptr<ActivePageManager> NewPageManager(
-      std::unique_ptr<storage::PageStorage> page_storage,
-      ActivePageManager::PageStorageState state);
-
-  // Checks whether the given page is closed and staisfies the given
-  // |predicate|. The result returned in the callback will be |PAGE_OPENED| if
-  // the page is opened after calling this method and before the callback is
-  // called. Otherwise it will be |YES| or |NO| depending on whether the
-  // predicate is satisfied.
-  void PageIsClosedAndSatisfiesPredicate(
-      storage::PageIdView page_id,
-      fit::function<void(ActivePageManager*, fit::function<void(Status, bool)>)>
-          predicate,
-      fit::function<void(Status, PagePredicateResult)> callback);
-
-  // Returns a tracking Callable object for the given page. When called, returns
-  // |true| if the page has not been opened until now, and stops tracking the
-  // page.
-  PageTracker NewPageTracker(storage::PageIdView page_id);
-
-  // If the page is among the ones whose usage is being tracked, marks this page
-  // as opened. See also |page_was_opened_map_|.
-  void MaybeMarkPageOpened(storage::PageIdView page_id);
+  // Retrieves (if present in |page_managers_| when called) or creates and
+  // places in |page_managers_| (if not present in |page_managers_| when called)
+  // the |PageManager| for the given |page_id|.
+  // TODO(https://fuchsia.atlassian.net/browse/LE-789): This method's return
+  // value should be an interest-indication "retainer" object that when deleted
+  // indicates to the got-or-created |PageManager| that it should check its
+  // emptiness and possibly call its on_empty_callback.
+  PageManager* GetOrCreatePageManager(convert::ExtendedStringView page_id);
 
   void CheckEmpty();
 
@@ -152,28 +117,11 @@ class LedgerManager : public LedgerImpl::Delegate {
       bindings_;
 
   // Mapping from each page id to the manager of that page.
-  callback::AutoCleanableMap<storage::PageId, ActivePageManagerContainer,
+  callback::AutoCleanableMap<storage::PageId, PageManager,
                              convert::StringViewComparator>
-      active_page_manager_containers_;
+      page_managers_;
   PageUsageListener* page_usage_listener_;
   fit::closure on_empty_callback_;
-
-  PageAvailabilityManager page_availability_manager_;
-
-  // |page_was_opened_map_| is used to track whether certain pages were opened
-  // during a given operation. When |PageIsClosedAndSatisfiesPredicate()| is
-  // called, an entry is added in this map, with the given page_id as key, while
-  // a unique operation id is added in the corresponding value. That entry will
-  // be deleted either when that operation is done, or when the page is opened
-  // because of an external request. This guarantees that if before calling the
-  // callback of |PageIsClosedAndSatisfiesPredicate|, the entry is still present
-  // in the map, the page was not opened during that operation. Otherwise, it
-  // was, and |PAGE_OPENED| should be returned.
-  std::map<storage::PageId, std::vector<uint64_t>> page_was_opened_map_;
-  uint64_t page_was_opened_id_ = 0;
-  // |tracked_pages_| counts the number of active page-tracking operations. The
-  // manager is not empty until all operations have completed.
-  uint64_t tracked_pages_ = 0;
 
   // The static Inspect object maintaining in Inspect a representation of this
   // LedgerManager.
