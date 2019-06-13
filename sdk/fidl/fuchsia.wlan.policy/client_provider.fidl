@@ -132,7 +132,7 @@ table Bss {
     4: zx.time timestamp_nanos;
 };
 
-/// Iterator used by callers to retrieve saved netowrk information.
+/// Iterator used by callers to retrieve saved network information.
 protocol NetworkConfigIterator {
 
     /// Method allowing the next block of saved networks to be handled.

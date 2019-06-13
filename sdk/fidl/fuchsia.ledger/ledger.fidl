@@ -165,7 +165,7 @@ protocol Page {
     /// calling |StartTransaction()| when a transaction is already in progress
     /// returns an error. However, a client is free to connect to the same page
     /// multiple times, and run parallel transactions on the same page using
-    /// separate connections. In this case, commiting each transaction creates
+    /// separate connections. In this case, committing each transaction creates
     /// divergent commits, which are later subject to conflict resolution.
     ///
     /// When a transaction is in progress, the page content visible *on this page

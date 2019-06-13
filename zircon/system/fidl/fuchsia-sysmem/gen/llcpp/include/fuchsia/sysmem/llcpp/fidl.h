@@ -774,7 +774,7 @@ class Heap final {
     // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
-    // it's size must match the size of the parent VMO created by
+    // its size must match the size of the parent VMO created by
     // AllocateVmo().  For heaps that permit CPU access, the passed-in
     // VMO must not have a copy-on-write relationship with the parent
     // VMO, but rather a pass-through relationship. Successful return
@@ -796,7 +796,7 @@ class Heap final {
     // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
-    // it's size must match the size of the parent VMO created by
+    // its size must match the size of the parent VMO created by
     // AllocateVmo().  For heaps that permit CPU access, the passed-in
     // VMO must not have a copy-on-write relationship with the parent
     // VMO, but rather a pass-through relationship. Successful return
@@ -820,7 +820,7 @@ class Heap final {
     // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
-    // it's size must match the size of the parent VMO created by
+    // its size must match the size of the parent VMO created by
     // AllocateVmo().  For heaps that permit CPU access, the passed-in
     // VMO must not have a copy-on-write relationship with the parent
     // VMO, but rather a pass-through relationship. Successful return
@@ -914,7 +914,7 @@ class Heap final {
     // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
-    // it's size must match the size of the parent VMO created by
+    // its size must match the size of the parent VMO created by
     // AllocateVmo().  For heaps that permit CPU access, the passed-in
     // VMO must not have a copy-on-write relationship with the parent
     // VMO, but rather a pass-through relationship. Successful return
@@ -936,7 +936,7 @@ class Heap final {
     // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
-    // it's size must match the size of the parent VMO created by
+    // its size must match the size of the parent VMO created by
     // AllocateVmo().  For heaps that permit CPU access, the passed-in
     // VMO must not have a copy-on-write relationship with the parent
     // VMO, but rather a pass-through relationship. Successful return
@@ -960,7 +960,7 @@ class Heap final {
     // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
-    // it's size must match the size of the parent VMO created by
+    // its size must match the size of the parent VMO created by
     // AllocateVmo().  For heaps that permit CPU access, the passed-in
     // VMO must not have a copy-on-write relationship with the parent
     // VMO, but rather a pass-through relationship. Successful return

@@ -166,7 +166,7 @@ protocol PublicationResponder {
 /// second are not permitted and will result in the `PublicationResponder`
 /// channel being closed.
 struct Publication {
-    /// The port at which the the service instance is addressable.
+    /// The port at which the service instance is addressable.
     uint16 port;
 
     /// Text strings describing the instance.
