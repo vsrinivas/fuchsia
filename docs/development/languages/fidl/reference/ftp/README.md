@@ -24,7 +24,11 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-030](ftp-030.md) | 2019-01-30 | 2019-01-30 | FIDL is little endian
 [FTP-027](ftp-027.md) | 2019-01-19 | 2019-02-04 | You only pay for what you use
 [FTP-032](ftp-032.md) | 2019-02-06 | 2019-02-21 | Efficient Envelopes: Turning Envelopes into Postcards
+[FTP-029](ftp-029.md) | 2019-02-14 | 2019-02-28 | Increasing Method Ordinals
+[FTP-033](ftp-033.md) | 2019-02-07 | 2019-03-07 | Handling of Unknown Fields &amp; Strictness
+[FTP-004](ftp-004.md) | 2018-07-19 | 2019-03-14 | Safer Structs for C++
 [FTP-024](ftp-024.md) | 2019-04-02 | 2019-04-11 | Mandatory Source Compatibility
+[FTP-041](ftp-041.md) | 2019-04-08 | 2019-04-23 | Support for Unifying Services and Devices
 
 ## Rejected Proposals
 
@@ -34,4 +38,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-010](ftp-010.md) | 2018-07-31 | 2018-10-04 | `[OrdinalRange]`, where the deer and the antelope roam
 [FTP-016](ftp-016.md) | 2018-09-27 | 2018-10-25 | No Optional Strings or Vectors
 [FTP-026](ftp-026.md) | 2019-01-19 | 2019-02-04 | Envelopes Everywhere
+[FTP-035](ftp-035.md) | 2019-02-28 | *withdrawn*| Automatic Flow Tracing
 [FTP-036](ftp-036.md) | 2019-03-07 | 2019-03-14 | Update to Struct Declarations
+[FTP-042](ftp-042.md) | 2019-04-01 | 2019-04-01 | Non Nullable Types &mdash; Poisson d'Avril
+[FTP-040](ftp-040.md) | 2019-04-07 | 2019-04-18 | Identifier Uniqueness &mdash; SnowFlake vs SNOW_FLAKE
