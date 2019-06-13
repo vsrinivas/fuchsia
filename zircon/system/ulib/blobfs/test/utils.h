@@ -7,6 +7,7 @@
 #include <blobfs/allocator.h>
 #include <blobfs/writeback-queue.h>
 #include <blobfs/writeback-work.h>
+#include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
@@ -25,6 +26,8 @@ constexpr uint32_t kDiskBlockRatio = kBlockSize / kDeviceBlockSize;
 // on the provided |vmo|.
 using TransactionCallback = fbl::Function<zx_status_t(const block_fifo_request_t& request,
                                                       const zx::vmo& vmo)>;
+
+using block_client::BlockDevice;
 
 // A simplified TransactionManager to be used when unit testing structures which require one (e.g.
 // WritebackQueue, Journal). Allows vmos to be attached/detached and a customized callback to be
@@ -149,5 +152,13 @@ void CopyExtents(const fbl::Vector<ReservedExtent>& in, fbl::Vector<Extent>* out
 
 // Save the nodes within |in| in a non-reserved vector |out|.
 void CopyNodes(const fbl::Vector<ReservedNode>& in, fbl::Vector<uint32_t>* out);
+
+// Reads |size| bytes from the |device| at byte offset |dev_offset| into |buf|.
+// Expects |size| and |dev_offset| to be multiple of |device| block size.
+void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_offset);
+
+// Writes |size| bytes from the |buf| to the |device| at offset |dev_offset|.
+// Expects |size| and |dev_offset| to be multiple of |device| block size.
+void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_t dev_offset);
 
 } // namespace blobfs

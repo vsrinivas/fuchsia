@@ -4,11 +4,49 @@
 
 #include "utils.h"
 
+#include <fbl/auto_call.h>
+#include <safemath/checked_math.h>
 #include <zxtest/zxtest.h>
 
 using id_allocator::IdAllocator;
 
 namespace blobfs {
+
+namespace {
+
+void DetachVmo(BlockDevice* device, vmoid_t id) {
+    block_fifo_request_t request;
+    request.opcode = BLOCKIO_CLOSE_VMO;
+    request.vmoid = id;
+    request.length = 0;
+    request.vmo_offset = 0;
+    request.dev_offset = 0;
+
+    ASSERT_OK(device->FifoTransaction(&request, 1));
+}
+
+void AttachVmo(BlockDevice* device, zx::vmo* vmo, vmoid_t* out_id) {
+    fuchsia_hardware_block_VmoID vmoid;
+    zx::vmo dup;
+
+    ASSERT_OK(vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+    ASSERT_OK(device->BlockAttachVmo(std::move(dup), &vmoid));
+
+    *out_id = vmoid.id;
+}
+
+// Verify that the |size| and |offset| are |device| block size aligned.
+// Returns block_size in |out_block_size|.
+void VerifySizeBlockAligned(BlockDevice* device, size_t size, uint64_t offset,
+                            uint32_t* out_block_size) {
+    fuchsia_hardware_block_BlockInfo info = {};
+    ASSERT_OK(device->BlockGetInfo(&info));
+    ASSERT_EQ(size % info.block_size, 0);
+    ASSERT_EQ(offset % info.block_size, 0);
+    *out_block_size = info.block_size;
+}
+
+} // namespace
 
 zx_status_t MockTransactionManager::Transaction(block_fifo_request_t* requests, size_t count) {
     fbl::AutoLock lock(&lock_);
@@ -112,6 +150,49 @@ void CopyNodes(const fbl::Vector<ReservedNode>& in, fbl::Vector<uint32_t>* out) 
     for (size_t i = 0; i < in.size(); i++) {
         out->push_back(in[i].index());
     }
+}
+
+void DeviceBlockRead(BlockDevice* device, void* buf, size_t size, uint64_t dev_offset) {
+    uint32_t block_size;
+    VerifySizeBlockAligned(device, size, dev_offset, &block_size);
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(size, 0, &vmo));
+
+    vmoid_t vmoid;
+    AttachVmo(device, &vmo, &vmoid);
+
+    auto cleanup = fbl::MakeAutoCall([device, vmoid]() { DetachVmo(device, vmoid); });
+
+    block_fifo_request_t request;
+    request.opcode = BLOCKIO_READ;
+    request.vmoid = vmoid;
+    request.length = safemath::checked_cast<uint32_t>(size / block_size);
+    request.vmo_offset = 0;
+    request.dev_offset = safemath::checked_cast<uint32_t>(dev_offset / block_size);
+    ASSERT_OK(device->FifoTransaction(&request, 1));
+    ASSERT_OK(vmo.read(buf, 0, size));
+}
+
+void DeviceBlockWrite(BlockDevice* device, const void* buf, size_t size, uint64_t dev_offset) {
+    uint32_t block_size;
+    VerifySizeBlockAligned(device, size, dev_offset, &block_size);
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(size, 0, &vmo));
+    ASSERT_OK(vmo.write(buf, 0, size));
+
+    vmoid_t vmoid;
+    AttachVmo(device, &vmo, &vmoid);
+    auto cleanup = fbl::MakeAutoCall([device, vmoid]() { DetachVmo(device, vmoid); });
+
+    block_fifo_request_t request;
+    request.opcode = BLOCKIO_WRITE;
+    request.vmoid = vmoid;
+    request.length = safemath::checked_cast<uint32_t>(size / block_size);
+    request.vmo_offset = 0;
+    request.dev_offset = safemath::checked_cast<uint32_t>(dev_offset / block_size);
+    ASSERT_OK(device->FifoTransaction(&request, 1));
 }
 
 } // namespace blobfs

@@ -16,6 +16,7 @@ test("blobfs-unit") {
     "allocator-test.cpp",
     "blob-cache-test.cpp",
     "compressor-test.cpp",
+    "create-tests.cpp",
     "extent-reserver-test.cpp",
     "format-test.cpp",
     "get-allocated-regions-test.cpp",
@@ -36,6 +37,7 @@ test("blobfs-unit") {
     "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/safemath",
   ]
 }
 

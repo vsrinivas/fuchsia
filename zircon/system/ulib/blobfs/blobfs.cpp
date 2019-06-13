@@ -584,7 +584,7 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
     } else if ((status = fs->CreateFsId()) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to create fs_id: %d\n", status);
         return status;
-    } else if ((status = fs->InitializeVnodes() != ZX_OK)) {
+    } else if ((status = fs->InitializeVnodes()) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
         return status;
     }
@@ -601,6 +601,7 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
 
 zx_status_t Blobfs::InitializeVnodes() {
     Cache().Reset();
+    uint32_t total_allocated = 0;
 
     for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
         const Inode* inode = GetNode(node_index);
@@ -608,6 +609,7 @@ zx_status_t Blobfs::InitializeVnodes() {
         if (!inode->header.IsAllocated()) {
             continue;
         }
+        total_allocated++;
 
         allocator_->MarkNodeAllocated(node_index);
 
@@ -634,6 +636,13 @@ zx_status_t Blobfs::InitializeVnodes() {
             return status;
         }
         LocalMetrics().UpdateLookup(vnode->SizeData());
+    }
+
+    if (total_allocated != info_.alloc_inode_count) {
+        FS_TRACE_ERROR(
+            "blobfs: CORRUPTED FILESYSTEM: Allocated nodes mismatch. Expected:%lu. Found: %u\n",
+            info_.alloc_inode_count, total_allocated);
+        return ZX_ERR_IO_OVERRUN;
     }
 
     return ZX_OK;
@@ -666,7 +675,7 @@ zx_status_t Blobfs::Reload() {
     }
 
     // Load the vnodes from disk.
-    if ((status = InitializeVnodes() != ZX_OK)) {
+    if ((status = InitializeVnodes()) != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
         return status;
     }

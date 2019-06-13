@@ -40,6 +40,9 @@ constexpr uint32_t kBlobfsBlockMapStart  = 1;
 constexpr uint32_t kBlobfsInodeSize      = 64;
 constexpr uint32_t kBlobfsInodesPerBlock = (kBlobfsBlockSize / kBlobfsInodeSize);
 
+// Known Blobfs metadata locations. Unit of the location is blobfs block.
+constexpr size_t kSuperblockOffset  = 0;
+
 // Blobfs block offset of various filesystem structures, when using the FVM.
 constexpr size_t kFVMBlockMapStart  = 0x10000;
 constexpr size_t kFVMNodeMapStart   = 0x20000;
