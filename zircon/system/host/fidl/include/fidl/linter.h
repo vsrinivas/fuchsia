@@ -29,6 +29,13 @@ public:
     // |CheckCallbacks|).
     Linter();
 
+    // If a user specifies the command line flag --include-check=<check-id>
+    // (one or more times) without any --exclude_check flags, the default
+    // state is to exclude all checks EXCEPT those specifically indicated.
+    void set_exclude_by_default(bool exclude_by_default) {
+        exclude_by_default_ = exclude_by_default;
+    }
+
     void ExcludeCheckId(std::string check_id) {
         excluded_check_ids_.insert(check_id);
     }
@@ -253,6 +260,7 @@ private:
     CaseType upper_camel_{utils::is_upper_camel_case,
                           utils::to_upper_camel_case};
 
+    bool exclude_by_default_ = false;
     std::set<std::string> included_check_ids_;
     std::set<std::string> excluded_check_ids_;
 

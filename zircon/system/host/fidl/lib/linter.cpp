@@ -118,7 +118,8 @@ Finding* Linter::AddFinding(SourceLocation source_location,
                             std::string check_id,
                             std::string message) {
     bool is_included = included_check_ids_.find(check_id) != included_check_ids_.end();
-    bool is_excluded = excluded_check_ids_.find(check_id) != excluded_check_ids_.end();
+    bool is_excluded = exclude_by_default_ ||
+                       excluded_check_ids_.find(check_id) != excluded_check_ids_.end();
     if (is_excluded && !is_included)
         return nullptr;
 

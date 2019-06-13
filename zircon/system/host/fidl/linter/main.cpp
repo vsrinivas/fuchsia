@@ -70,13 +70,21 @@ bool Lint(const fidl::linter::CommandLineOptions& options,
     // addressed.
     linter.ExcludeCheckId("no-trailing-comment");
 
+    bool added_excludes = false;
     for (auto check_id : options.excluded_checks) {
+        added_excludes = true;
         linter.ExcludeCheckId(check_id);
     }
 
     // Includes will override excludes
+    bool added_includes = false;
     for (auto check_id : options.included_checks) {
+        added_includes = true;
         linter.IncludeCheckId(check_id);
+    }
+
+    if (added_includes && !added_excludes) {
+        linter.set_exclude_by_default(true);
     }
 
     if (linter.Lint(ast, &findings)) {
