@@ -390,4 +390,18 @@ mod syzkaller {
     use super::*;
 
     codegen_test!(empty, SyzkallerBackend, ["banjo/empty.test.banjo"], "syzkaller/empty.txt");
+
+    codegen_test!(
+        syzkaller_protocol_basic,
+        SyzkallerBackend,
+        ["banjo/syzkaller-protocol-basic.test.banjo"],
+        "syzkaller/syzkaller-protocol-basic.txt"
+    );
+
+    codegen_test!(
+        syzkaller_protocol_zx,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-protocol-zx.test.banjo"],
+        "syzkaller/syzkaller-protocol-zx.txt"
+    );
 }
