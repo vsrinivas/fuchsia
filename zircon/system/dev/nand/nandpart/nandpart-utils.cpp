@@ -1,18 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "nandpart-utils.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef TEST
-#include <unittest/unittest.h>
-#define zxlogf(flags, ...) unittest_printf(__VA_ARGS__)
-#else
 #include <ddk/debug.h>
-#endif
-
 #include <fbl/algorithm.h>
 #include <zircon/assert.h>
 

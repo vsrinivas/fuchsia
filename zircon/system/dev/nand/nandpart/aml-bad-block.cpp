@@ -6,20 +6,14 @@
 
 #include <stdlib.h>
 
-#ifdef TEST
-#include <unittest/unittest.h>
-#define zxlogf(flags, ...) unittest_printf(__VA_ARGS__)
-#else
-#include <ddk/debug.h>
-#endif
-#include <ddk/protocol/nand.h>
+#include <utility>
 
+#include <ddk/debug.h>
+#include <ddk/protocol/nand.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <lib/sync/completion.h>
-
-#include <utility>
 
 namespace nand {
 

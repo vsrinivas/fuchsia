@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "aml-bad-block.h"
-#include "bad-block.h"
+
+#include <utility>
 
 #include <ddk/protocol/nand.h>
-
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/intrusive_hash_table.h>
@@ -14,10 +14,10 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/vmar.h>
-#include <unittest/unittest.h>
 #include <zircon/types.h>
+#include <zxtest/zxtest.h>
 
-#include <utility>
+#include "bad-block.h"
 
 namespace nand {
 namespace {
@@ -95,7 +95,7 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
         if (op->erase.first_block >= kNumBlocks ||
             op->erase.first_block + op->erase.num_blocks >= kNumBlocks) {
 
-            unittest_printf("Trying to write to a page that is out of range!\n");
+            fprintf(stderr, "Trying to write to a page that is out of range!\n");
             completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, op);
             return;
         }
@@ -179,7 +179,7 @@ void MockQueue(void* ctx, nand_operation_t* op, nand_queue_callback completion_c
             auto node = std::make_unique<TableNode>(op->rw.offset_nand + i, std::move(bad_blocks),
                                                     true, oob->generation);
             if (!context->table_entries.insert_or_find(std::move(node))) {
-                unittest_printf("Trying to write to a page that isn't erased!\n");
+                fprintf(stderr, "Trying to write to a page that isn't erased!\n");
                 status = ZX_ERR_INTERNAL;
                 break;
             }
@@ -214,8 +214,7 @@ BadBlock::Config MakeBadBlockConfig(Context* ctx) {
     };
 }
 
-bool GetBadBlockListTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, GetBadBlockListTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     table_entries.insert_or_replace(std::make_unique<TableNode>(0));
@@ -232,12 +231,9 @@ bool GetBadBlockListTest() {
     status = bad_block->GetBadBlockList(4, 10, &bad_blocks);
     ASSERT_EQ(status, ZX_OK);
     EXPECT_EQ(bad_blocks.size(), 0);
-
-    END_TEST;
 }
 
-bool GetBadBlockListWithEntriesTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, GetBadBlockListWithEntriesTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     table_entries.insert_or_replace(std::make_unique<TableNode>(0));
@@ -253,7 +249,6 @@ bool GetBadBlockListWithEntriesTest() {
 
     auto check_expected = [&bad_block](uint32_t start_block, uint32_t end_block,
                                        fbl::Vector<uint32_t> expected) {
-        BEGIN_HELPER;
         fbl::Array<uint32_t> bad_blocks;
         zx_status_t status = bad_block->GetBadBlockList(start_block, end_block, &bad_blocks);
         ASSERT_EQ(status, ZX_OK);
@@ -261,18 +256,14 @@ bool GetBadBlockListWithEntriesTest() {
         EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(bad_blocks.get()),
                         reinterpret_cast<uint8_t*>(expected.get()),
                         expected.size() * sizeof(uint32_t), "");
-        END_HELPER;
     };
-    EXPECT_TRUE(check_expected(4, 10, {4, 8}));
-    EXPECT_TRUE(check_expected(5, 10, {8}));
-    EXPECT_TRUE(check_expected(4, 7, {4}));
-    EXPECT_TRUE(check_expected(9, 11, {}));
-
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(check_expected(4, 10, {4, 8}));
+    ASSERT_NO_FATAL_FAILURES(check_expected(5, 10, {8}));
+    ASSERT_NO_FATAL_FAILURES(check_expected(4, 7, {4}));
+    ASSERT_NO_FATAL_FAILURES(check_expected(9, 11, {}));
 }
 
-bool FindBadBlockSecondBlockTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, FindBadBlockSecondBlockTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     fbl::Vector<uint32_t> bad_blocks_1 = {4, 6};
@@ -295,12 +286,9 @@ bool FindBadBlockSecondBlockTest() {
     status = bad_block->GetBadBlockList(4, 10, &bad_blocks);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(bad_blocks.size(), 4);
-
-    END_TEST;
 }
 
-bool FindBadBlockLastBlockTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, FindBadBlockLastBlockTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     fbl::Vector<uint32_t> bad_blocks_1 = {4, 6};
@@ -324,12 +312,9 @@ bool FindBadBlockLastBlockTest() {
     status = bad_block->GetBadBlockList(4, 10, &bad_blocks);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(bad_blocks.size(), 4);
-
-    END_TEST;
 }
 
-bool MarkBlockBadTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, MarkBlockBadTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     table_entries.insert_or_replace(std::make_unique<TableNode>(0));
@@ -354,12 +339,9 @@ bool MarkBlockBadTest() {
         return node.generation_ == 2 && node.bad_blocks_.size() == 1;
     });
     ASSERT_TRUE(it != table_entries.end());
-
-    END_TEST;
 }
 
-bool FindBadBlockLastPageInvalidTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, FindBadBlockLastPageInvalidTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     fbl::Vector<uint32_t> bad_blocks_1 = {4, 6};
@@ -389,12 +371,9 @@ bool FindBadBlockLastPageInvalidTest() {
         return node.generation_ == 2 && node.valid_ == true;
     });
     ASSERT_TRUE(it != table_entries.end());
-
-    END_TEST;
 }
 
-bool FindBadBlockNoValidTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, FindBadBlockNoValidTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     for (uint32_t block = 0; block < 4; block++) {
@@ -414,12 +393,9 @@ bool FindBadBlockNoValidTest() {
 
     status = bad_block->MarkBlockBad(4);
     ASSERT_NE(status, ZX_OK);
-
-    END_TEST;
 }
 
-bool FindBadBlockBigHoleTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, FindBadBlockBigHoleTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock * 3));
@@ -441,12 +417,9 @@ bool FindBadBlockBigHoleTest() {
     status = bad_block->GetBadBlockList(4, 10, &bad_blocks);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(bad_blocks.size(), 1);
-
-    END_TEST;
 }
 
-bool MarkBlockBadFullBlockTest() {
-    BEGIN_TEST;
+TEST(AmlBadBlockTest, MarkBlockBadFullBlockTest) {
     TableNode::ResetCount();
     TableEntries table_entries;
     for (uint32_t i = 0; i < kPagesPerBlock; i++) {
@@ -474,21 +447,7 @@ bool MarkBlockBadFullBlockTest() {
                node.bad_blocks_.size() == 1;
     });
     ASSERT_TRUE(it != table_entries.end());
-
-    END_TEST;
 }
 
 } // namespace
 } // namespace nand
-
-BEGIN_TEST_CASE(AmlBadBlockTests)
-RUN_TEST(nand::GetBadBlockListTest)
-RUN_TEST(nand::GetBadBlockListWithEntriesTest)
-RUN_TEST(nand::FindBadBlockSecondBlockTest)
-RUN_TEST(nand::FindBadBlockLastBlockTest)
-RUN_TEST(nand::MarkBlockBadTest)
-RUN_TEST(nand::FindBadBlockLastPageInvalidTest)
-RUN_TEST(nand::FindBadBlockNoValidTest)
-RUN_TEST(nand::FindBadBlockBigHoleTest)
-RUN_TEST(nand::MarkBlockBadFullBlockTest)
-END_TEST_CASE(AmlBadBlockTests)

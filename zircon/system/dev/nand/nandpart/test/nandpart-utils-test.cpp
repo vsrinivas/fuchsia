@@ -5,8 +5,8 @@
 #include "nandpart-utils.h"
 
 #include <fbl/unique_ptr.h>
-#include <unittest/unittest.h>
 #include <zircon/types.h>
+#include <zxtest/zxtest.h>
 
 namespace nand {
 namespace {
@@ -46,35 +46,28 @@ zbi_partition_t MakePartition(uint32_t first_block, uint32_t last_block) {
     };
 }
 
-bool ValidatePartition(zbi_partition_map_t* pmap, size_t partition_number, uint32_t first_block,
+void ValidatePartition(zbi_partition_map_t* pmap, size_t partition_number, uint32_t first_block,
                        uint32_t last_block) {
-    BEGIN_HELPER;
     EXPECT_EQ(pmap->partitions[partition_number].first_block, first_block);
     EXPECT_EQ(pmap->partitions[partition_number].last_block, last_block);
-    END_HELPER;
 }
 
-bool SanitizeEmptyPartitionMapTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizeEmptyPartitionMapTest) {
     auto pmap = MakePartitionMap(0);
     ASSERT_NE(SanitizePartitionMap(&pmap, kNandInfo), ZX_OK);
-    END_TEST;
 }
 
-bool SanitizeSinglePartitionMapTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizeSinglePartitionMapTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
     *pmap = MakePartitionMap(1);
     pmap->partitions[0] = MakePartition(0, 9);
     ASSERT_EQ(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    ASSERT_TRUE(ValidatePartition(pmap, 0, 0, 4));
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 4));
 }
 
-bool SanitizeMultiplePartitionMapTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        3 * sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
@@ -84,14 +77,12 @@ bool SanitizeMultiplePartitionMapTest() {
     pmap->partitions[2] = MakePartition(8, 9);
 
     ASSERT_EQ(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    ASSERT_TRUE(ValidatePartition(pmap, 0, 0, 1));
-    ASSERT_TRUE(ValidatePartition(pmap, 1, 2, 3));
-    ASSERT_TRUE(ValidatePartition(pmap, 2, 4, 4));
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
+    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 3));
+    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 2, 4, 4));
 }
 
-bool SanitizeMultiplePartitionMapOutOfOrderTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOutOfOrderTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        2 * sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
@@ -100,13 +91,11 @@ bool SanitizeMultiplePartitionMapOutOfOrderTest() {
     pmap->partitions[1] = MakePartition(0, 3);
 
     ASSERT_EQ(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    ASSERT_TRUE(ValidatePartition(pmap, 0, 0, 1));
-    ASSERT_TRUE(ValidatePartition(pmap, 1, 2, 4));
-    END_TEST;
+    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 0, 0, 1));
+    ASSERT_NO_FATAL_FAILURES(ValidatePartition(pmap, 1, 2, 4));
 }
 
-bool SanitizeMultiplePartitionMapOverlappingTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizeMultiplePartitionMapOverlappingTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        3 * sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
@@ -116,11 +105,9 @@ bool SanitizeMultiplePartitionMapOverlappingTest() {
     pmap->partitions[2] = MakePartition(4, 8);
 
     ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    END_TEST;
 }
 
-bool SanitizePartitionMapBadRangeTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizePartitionMapBadRangeTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        2 * sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
@@ -129,11 +116,9 @@ bool SanitizePartitionMapBadRangeTest() {
     pmap->partitions[1] = MakePartition(1, 9);
 
     ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    END_TEST;
 }
 
-bool SanitizePartitionMapUnalignedTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizePartitionMapUnalignedTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        2 * sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
@@ -142,11 +127,9 @@ bool SanitizePartitionMapUnalignedTest() {
     pmap->partitions[1] = MakePartition(5, 8);
 
     ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    END_TEST;
 }
 
-bool SanitizePartitionMapOutofBoundsTest() {
-    BEGIN_TEST;
+TEST(NandPartUtilsTest, SanitizePartitionMapOutofBoundsTest) {
     fbl::unique_ptr<uint8_t[]> pmap_buffer(new uint8_t[sizeof(zbi_partition_map_t) +
                                                        2 * sizeof(zbi_partition_t)]);
     auto* pmap = reinterpret_cast<zbi_partition_map_t*>(pmap_buffer.get());
@@ -155,19 +138,7 @@ bool SanitizePartitionMapOutofBoundsTest() {
     pmap->partitions[1] = MakePartition(4, 11);
 
     ASSERT_NE(SanitizePartitionMap(pmap, kNandInfo), ZX_OK);
-    END_TEST;
 }
 
 } // namespace
 } // namespace nand
-
-BEGIN_TEST_CASE(NandpartUtilsTests)
-RUN_TEST(nand::SanitizeEmptyPartitionMapTest)
-RUN_TEST(nand::SanitizeSinglePartitionMapTest)
-RUN_TEST(nand::SanitizeMultiplePartitionMapTest)
-RUN_TEST(nand::SanitizeMultiplePartitionMapOutOfOrderTest)
-RUN_TEST(nand::SanitizeMultiplePartitionMapOverlappingTest)
-RUN_TEST(nand::SanitizePartitionMapBadRangeTest)
-RUN_TEST(nand::SanitizePartitionMapUnalignedTest)
-RUN_TEST(nand::SanitizePartitionMapOutofBoundsTest)
-END_TEST_CASE(NandpartUtilsTests)
