@@ -30,7 +30,8 @@ such as all tools or all tests. An overview of bundles is provided in
 
 Build targets are defined in `BUILD.gn` files scattered all over the source
 tree. These files use a Python-like syntax to declare buildable objects:
-``` py
+
+```py
 import("//build/some/template.gni")
 
 my_template("foo") {
@@ -42,13 +43,14 @@ my_template("foo") {
   ]
 }
 ```
+
 Available commands (invoked using gn cli tool) and constructs (built-in target
 declaration types) are defined in the [GN reference][gn-reference]. There are
 also a handful of custom templates in `.gni` files in the
 [`//build` project][build-project].
 
 These custom templates mostly define custom target declaration types, such as
-the [package declaration type][packages-source].
+the package declaration type.
 
 > TODO(pylaligand): list available templates
 
@@ -62,14 +64,16 @@ what `fx` does under the hood.
 
 First configure the primary build artifacts by choosing the board and product
 to build:
-```
+
+```bash
 $ buildtools/gn gen out/default --args='import("//boards/x64.gni") import("//products/core.gni")'
 ```
 
 This will create an `out/default` directory containing Ninja files.
 
 The equivalent fx set command is:
-```
+
+```bash
 $ scripts/fx set core.x64
 ```
 
@@ -79,7 +83,8 @@ For documentation on the `select_variant` argument, see [Variants](variants.md).
 ### Build step
 
 The next step is to run the actual build with Ninja:
-```
+
+```bash
 $ buildtools/ninja -C out/default.zircon
 $ buildtools/ninja -C out/default
 ```
@@ -115,11 +120,14 @@ Various host tools (some used in the build itself) need to be built along with
 the final image.
 
 To reference a build target for the host toolchain from a module file:
+
 ```
 //path/to/target(//build/toolchain:host_x64)
 ```
+
 To reference a build target for the host toolchain from within a `BUILD.gn`
 file:
+
 ```
 //path/to/target($host_toolchain)
 ```
@@ -128,9 +136,11 @@ file:
 
 If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
+
 ```bash
 $ buildtools/ninja -C out/default -j64 foo/bar/blah:dash
 ```
+
 Note that this only works for targets in the default toolchain.
 
 *Note*: Building package targets does not result in an updated package
@@ -142,15 +152,18 @@ serve`, users must build the `updates` group.
 
 GN extensively documents which Ninja targets it generates. The documentation is
 accessible with:
+
 ```bash
 $ buildtools/gn help ninja_rules
 ```
 
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
+
 ```bash
 $ buildtools/ninja -C out/default -t browse
 ```
+
 Note that the presence of a Ninja target does not mean it will be built - for
 that it needs to depend on the “default” target.
 
@@ -196,4 +209,3 @@ You likely forgot to run both commands of **Build step**.
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
 [build-project]: /build/
 [zircon-getting-started]: /zircon/docs/getting_started.md
-[zircon-gn-options]: /zircon/docs/gn/zircon_gn.md
