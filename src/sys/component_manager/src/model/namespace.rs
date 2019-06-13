@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::directory_broker,
     crate::constants::PKG_PATH,
+    crate::directory_broker,
     crate::model::*,
     cm_rust::{self, ComponentDecl, UseDirectoryDecl, UseServiceDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},

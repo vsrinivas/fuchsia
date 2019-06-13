@@ -6,6 +6,67 @@ import("//build/package/component.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
+rustc_binary("hub_integration_test_bin") {
+  name = "hub_integration_test"
+  edition = "2018"
+  source_root = "hub_integration_test.rs"
+  deps = [
+    "//garnet/lib/rust/cm_fidl_translator",
+    "//garnet/lib/rust/cm_rust",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/component_manager:lib",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:url",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+test_package("hub_integration_test") {
+  deps = [
+    ":hub_integration_test_bin",
+    ":mock_pkg_resolver_bin",
+    "//examples/components/basic:echo_args_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mock_pkg_resolver_for_hub_integration_test.cmx")
+      dest = "mock_pkg_resolver.cmx"
+    },
+    {
+      path = rebase_path("//examples/components/basic/meta/echo_args.cml")
+      dest = "echo_args.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "mock_pkg_resolver"
+    },
+    {
+      name = "echo_args"
+    },
+  ]
+
+  tests = [
+    {
+      name = "hub_integration_test"
+    },
+  ]
+}
+
 rustc_binary("routing_integration_test_bin") {
   name = "routing_integration_test"
   edition = "2018"

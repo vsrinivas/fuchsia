@@ -161,6 +161,7 @@ pub struct Execution {
     pub resolved_url: String,
     pub namespace: IncomingNamespace,
     pub outgoing_dir: DirectoryProxy,
+    pub runtime_dir: DirectoryProxy,
 }
 
 impl Execution {
@@ -168,11 +169,12 @@ impl Execution {
         resolved_url: Option<String>,
         namespace: IncomingNamespace,
         outgoing_dir: DirectoryProxy,
+        runtime_dir: DirectoryProxy,
     ) -> Result<Self, ModelError> {
         if resolved_url.is_none() {
             return Err(ModelError::ComponentInvalid);
         }
         let url = resolved_url.unwrap();
-        Ok(Execution { resolved_url: url, namespace, outgoing_dir })
+        Ok(Execution { resolved_url: url, namespace, outgoing_dir, runtime_dir })
     }
 }

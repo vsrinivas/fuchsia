@@ -509,7 +509,8 @@ impl OutDir {
         _flags: u32,
         _mode: u32,
         _relative_path: String,
-        server_end: ServerEnd<NodeMarker>) {
+        server_end: ServerEnd<NodeMarker>,
+    ) {
         fasync::spawn(async move {
             let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
             let mut stream: EchoRequestStream = server_end.into_stream().unwrap();

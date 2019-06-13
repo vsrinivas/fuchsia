@@ -171,6 +171,8 @@ impl Model {
         if decl.program.is_some() {
             let (outgoing_dir_client, outgoing_dir_server) =
                 zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+            let (runtime_dir_client, runtime_dir_server) =
+                zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
             let mut namespace = IncomingNamespace::new(component.package)?;
             let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
             let execution = Execution::start_from(
@@ -179,6 +181,9 @@ impl Model {
                 DirectoryProxy::from_channel(
                     fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
                 ),
+                DirectoryProxy::from_channel(
+                    fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+                ),
             )?;
 
             let start_info = fsys::ComponentStartInfo {
@@ -186,6 +191,7 @@ impl Model {
                 program: data::clone_option_dictionary(&decl.program),
                 ns: Some(ns),
                 outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
+                runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
             };
             await!(realm.default_runner.start(start_info))?;
             state.execution = Some(execution);

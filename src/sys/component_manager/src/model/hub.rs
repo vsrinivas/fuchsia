@@ -29,12 +29,6 @@ struct Instance {
 /// The execution state for a component that has started running.
 struct Execution {
     pub resolved_url: String,
-    pub runtime: Runtime,
-    pub directory: directory::controlled::Controller<'static>,
-}
-
-/// The runner state for a component instance that has started running.
-struct Runtime {
     pub directory: directory::controlled::Controller<'static>,
 }
 
@@ -164,18 +158,10 @@ impl Hub {
             let (controller, mut controlled) =
                 directory::controlled::controlled(directory::simple::empty());
 
-            // Add the runtime subdirectory.
-            let (runtime_controller, runtime_controlled) =
-                directory::controlled::controlled(directory::simple::empty());
-            controlled
-                .add_entry("runtime", runtime_controlled)
-                .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "runtime"))?;
-
             if let Some(execution) = realm_state.execution.as_ref() {
                 let exec = Execution {
                     resolved_url: execution.resolved_url.clone(),
                     directory: controller,
-                    runtime: Runtime { directory: runtime_controller },
                 };
                 instance.execution = Some(exec);
 
@@ -221,6 +207,28 @@ impl Hub {
                         .add_entry("out", directory_broker::DirectoryBroker::new(route_open_fn))
                         .map_err(|_| {
                             HubError::add_directory_entry_error(abs_moniker.clone(), "out")
+                        })?;
+                }
+
+                // Mount the runtime directory if we can successfully clone it.
+                if let Ok(runtime_dir) = io_util::clone_directory(&execution.runtime_dir) {
+                    let route_open_fn = Box::new(
+                        move |flags: u32,
+                              mode: u32,
+                              relative_path: String,
+                              server_end: ServerEnd<NodeMarker>| {
+                            if !relative_path.is_empty() {
+                                let _ = runtime_dir.open(flags, mode, &relative_path, server_end);
+                            } else {
+                                let _ = runtime_dir
+                                    .clone(OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE, server_end);
+                            }
+                        },
+                    );
+                    controlled
+                        .add_entry("runtime", directory_broker::DirectoryBroker::new(route_open_fn))
+                        .map_err(|_| {
+                            HubError::add_directory_entry_error(abs_moniker.clone(), "runtime")
                         })?;
                 }
 
@@ -334,23 +342,45 @@ mod tests {
         })
     }
 
-    async fn read_hub_file<'a>(hub_proxy: &'a DirectoryProxy, path: &'a str) -> String {
+    async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
         let file_proxy =
-            io_util::open_file(&hub_proxy, &PathBuf::from(path)).expect("Failed to open file.");
+            io_util::open_file(&root_proxy, &PathBuf::from(path)).expect("Failed to open file.");
         let res = await!(io_util::read_file(&file_proxy));
         res.expect("Unable to read file.")
     }
 
     async fn dir_contains<'a>(
-        hub_proxy: &'a DirectoryProxy,
+        root_proxy: &'a DirectoryProxy,
         path: &'a str,
         entry_name: &'a str,
     ) -> bool {
-        let dir = io_util::open_directory(&hub_proxy, &PathBuf::from(path))
+        let dir = io_util::open_directory(&root_proxy, &PathBuf::from(path))
             .expect("Failed to open directory");
         let entries = await!(files_async::readdir(&dir)).expect("readdir failed");
         let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
         listing.contains(&String::from(entry_name))
+    }
+
+    /// Hosts a runtime directory with a 'bleep' file.
+    fn bleep_runtime_dir_fn() -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
+        Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
+            let mut pseudo_dir = directory::simple::empty();
+            // Add a 'bleep' file.
+            pseudo_dir
+                .add_entry("bleep", { read_only(move || Ok(b"blah".to_vec())) })
+                .map_err(|(s, _)| s)
+                .expect("Failed to add 'bleep' entry");
+
+            pseudo_dir.open(
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                &mut iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+            fasync::spawn(async move {
+                let _ = await!(pseudo_dir);
+            });
+        })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -402,12 +432,12 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
 
-        assert_eq!(root_component_url, await!(read_hub_file(&hub_proxy, "self/url")));
+        assert_eq!(root_component_url, await!(read_file(&hub_proxy, "self/url")));
         assert_eq!(
             format!("{}_resolved", root_component_url),
-            await!(read_hub_file(&hub_proxy, "self/exec/resolved_url"))
+            await!(read_file(&hub_proxy, "self/exec/resolved_url"))
         );
-        assert_eq!("test:///a", await!(read_hub_file(&hub_proxy, "self/children/a/url")));
+        assert_eq!("test:///a", await!(read_file(&hub_proxy, "self/children/a/url")));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -453,7 +483,48 @@ mod tests {
         assert!(await!(dir_contains(&hub_proxy, "self/exec", "out")));
         assert!(await!(dir_contains(&hub_proxy, "self/exec/out", "foo")));
         assert!(await!(dir_contains(&hub_proxy, "self/exec/out/test", "aaa")));
-        assert_eq!("bar", await!(read_hub_file(&hub_proxy, "self/exec/out/foo")));
-        assert_eq!("bbb", await!(read_hub_file(&hub_proxy, "self/exec/out/test/aaa")));
+        assert_eq!("bar", await!(read_file(&hub_proxy, "self/exec/out/foo")));
+        assert_eq!("bbb", await!(read_file(&hub_proxy, "self/exec/out/test/aaa")));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_hub_runtime_directory() {
+        let mut resolver = model::ResolverRegistry::new();
+        let mut runner = mocks::MockRunner::new();
+        let root_component_url = "test:///root".to_string();
+        let resolved_root_component_url = format!("{}_resolved", root_component_url);
+        runner.runtime_host_fns.insert(resolved_root_component_url, bleep_runtime_dir_fn());
+        let mut mock_resolver = mocks::MockResolver::new();
+        mock_resolver.add_component("root", default_component_decl());
+        resolver.register("test".to_string(), Box::new(mock_resolver));
+        let mut hooks: model::Hooks = Vec::new();
+        let mut root_directory = directory::simple::empty();
+
+        let (client_chan, server_chan) = zx::Channel::create().unwrap();
+        root_directory.open(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            0,
+            &mut iter::empty(),
+            ServerEnd::<NodeMarker>::new(server_chan.into()),
+        );
+
+        let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
+        hooks.push(hub);
+        let model = model::Model::new(model::ModelParams {
+            ambient: Box::new(mocks::MockAmbientEnvironment::new()),
+            root_component_url: root_component_url.clone(),
+            root_resolver_registry: resolver,
+            root_default_runner: Box::new(runner),
+            hooks,
+        });
+
+        let res = await!(model.look_up_and_bind_instance(model::AbsoluteMoniker::root()));
+        let expected_res: Result<(), model::ModelError> = Ok(());
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+
+        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
+            .into_proxy()
+            .expect("failed to create directory proxy");
+        assert_eq!("blah", await!(read_file(&hub_proxy, "self/exec/runtime/bleep")));
     }
 }

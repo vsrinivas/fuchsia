@@ -56,6 +56,7 @@ pub struct MockRunner {
     pub urls_run: Arc<Mutex<Vec<String>>>,
     pub namespaces: Namespaces,
     pub host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
+    pub runtime_host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
 }
 
 pub type Namespaces = Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>;
@@ -66,6 +67,7 @@ impl MockRunner {
             urls_run: Arc::new(Mutex::new(vec![])),
             namespaces: Arc::new(Mutex::new(HashMap::new())),
             host_fns: HashMap::new(),
+            runtime_host_fns: HashMap::new(),
         }
     }
 
@@ -79,6 +81,11 @@ impl MockRunner {
         let host_fn = self.host_fns.get(&resolved_url);
         if let Some(host_fn) = host_fn {
             host_fn(start_info.outgoing_dir.unwrap());
+        }
+
+        let runtime_host_fn = self.runtime_host_fns.get(&resolved_url);
+        if let Some(runtime_host_fn) = runtime_host_fn {
+            runtime_host_fn(start_info.runtime_dir.unwrap());
         }
         Ok(())
     }
