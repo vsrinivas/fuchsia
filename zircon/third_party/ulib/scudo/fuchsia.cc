@@ -102,7 +102,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   }
 
   uintptr_t P;
-  zx_vm_option_t MapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS;
+  zx_vm_option_t MapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   const uint64_t Offset =
       Addr ? reinterpret_cast<uintptr_t>(Addr) - Info->VmarBase : 0;
   if (Offset)

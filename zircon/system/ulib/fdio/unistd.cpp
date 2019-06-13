@@ -958,7 +958,6 @@ zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int
     }
 
     uintptr_t ptr = 0;
-    zx_options |= ZX_VM_ALLOW_FAULTS;
     r = zx_vmar_map(zx_vmar_root_self(), zx_options, offset, vmo, fd_off, len, &ptr);
     zx_handle_close(vmo);
     // TODO: map this as shared if we ever implement forking

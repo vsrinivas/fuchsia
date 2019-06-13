@@ -2184,25 +2184,6 @@ bool partial_unmap_with_vmar_offset() {
     END_TEST;
 }
 
-bool allow_faults_test() {
-    BEGIN_TEST;
-
-    // No-op test that checks the current default behavior.
-    // TODO(stevensd): Add meaningful tests once the flag is actually implemented.
-    zx_handle_t vmo;
-    ASSERT_EQ(zx_vmo_create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
-    uintptr_t mapping_addr;
-    ASSERT_EQ(zx_vmar_map(zx_vmar_root_self(),
-                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS,
-                          0, vmo, 0, ZX_PAGE_SIZE, &mapping_addr),
-              ZX_OK);
-    EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
-
-    EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, PAGE_SIZE), ZX_OK);
-
-    END_TEST;
-}
-
 } // namespace
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -2235,5 +2216,4 @@ RUN_TEST(unmap_large_uncommitted_test);
 RUN_TEST(partial_unmap_and_read);
 RUN_TEST(partial_unmap_and_write);
 RUN_TEST(partial_unmap_with_vmar_offset);
-RUN_TEST(allow_faults_test);
 END_TEST_CASE(vmar_tests)

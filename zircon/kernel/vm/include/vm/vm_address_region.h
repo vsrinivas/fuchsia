@@ -44,8 +44,6 @@
 #define VMAR_FLAG_CAN_MAP_EXECUTE (1 << 6)
 // Require that VMO backing the mapping is non-resizable.
 #define VMAR_FLAG_REQUIRE_NON_RESIZABLE (1 << 7)
-// Allow VMO backings that could result in faults.
-#define VMAR_FLAG_ALLOW_FAULTS (1 << 8)
 
 #define VMAR_CAN_RWX_FLAGS (VMAR_FLAG_CAN_MAP_READ |  \
                             VMAR_FLAG_CAN_MAP_WRITE | \
