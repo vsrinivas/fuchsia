@@ -7,57 +7,32 @@ import("../../../hotsort_gen/hotsort_gen.gni")
 
 _hotsort_dir = "${graphics_compute_dir}/hotsort"
 
+# List of supported GPU architectures, i.e. valid values for the "gpu_arch"
+# variable when calling the hotsort_target() rule below.
 #
-# Generates a "HotSort target", which contains a compiled compute kernel to
-# perform sorting of 32-bit or 64-bit integers, highly optimized for a given
-# GPU architecture.
+# NOTE: Each one of them should have a corresponding
+# hotsort_target_gpu_arch_<name> GN template defined below after
+# hotsort_target_internal.
 #
-# To use a hotsort target in your code, do the following:
+_hotsort_gpu_archs = [
+  "amd_gcn3",
+  "intel_gen8",
+  "nvidia_sm35",
+]
+
+# This template is used indirectly from hotsort_target(), it should be called
+# from one of the hotsort_target_gpu_arch_<name> templates and expects the
+# following set of variables:
 #
-#   1) Declare a hotsort_target(<target_name>) target in your BUILD.gn
-#      that sets the appropriate configuration parameters (see below).
+#   - All variables expected by hotsort_target(), except gpu_arch.
+#   - All variables expected by hotsort_gen_target() as well.
 #
-#   2) Add <target_name> to your source file's GN target deps variable.
+# In addition to this:
 #
-#   3) In your source file, #include "<target_name>/hs_target.h", a
-#      special auto-generated header that defines a single variable
-#      declared as:
+#   vendor_config: A vendor-specific name used to grab the corresponding
+#     hs_glsl_macros_config.h file.
 #
-#       extern struct hotsort_vk_target const * const <target_name>;
-#
-#      NOTE: This GN template ensures that anything that depends on this
-#            GN target will have the right include_dirs set to do so.
-#
-#   4) Pass the <target_name> address to hotsort_vk_create().
-#
-#
-# Variables:
-#
-#  vendor: vendor name. Used to pick the default configuration file from
-#    hotsort/platforms/vk/targets/configs/${vendor}/
-#
-# All other variables expected by hotsort_gen_target() as well, plus:
-#
-#  hotsort_target_name:
-#    A name that conveys the configuration of the generated HotSort
-#    algorithm. If not provided, defaults to the short name of
-#    ${target_name}.
-#
-#  hotsort_target_config_files:
-#    An optional list of additional configuration files, which will be added
-#    to the vendor-specific configuration file determined from the "vendor"
-#    variable (see below).
-#
-#  hotsort_target_dump:
-#    Boolean, if true the generated GN target is a group that references a
-#    target binary produced by the host toolchain.  Otherwise, a source set is
-#    produced on the current toolchain.
-#
-#  hotsort_target_args:
-#    Extra arguments passed to the 'hotsort_gen' HotSort algorithm code
-#    generator.
-#
-template("hotsort_target") {
+template("hotsort_target_internal") {
   # NOTE: If $hotsort_target_name is provided, the generated HotSort target
   # and its artifacts are output to the root of $target_gen_dir. Otherwise,
   # the outputs are found in $target_gen_dir/$target_name.
@@ -119,7 +94,7 @@ template("hotsort_target") {
   # copy any configuration files to the target directory
   #
   _gen_config_dir =
-      "${_hotsort_dir}/platforms/vk/targets/configs/${invoker.vendor}"
+      "${_hotsort_dir}/platforms/vk/targets/configs/${invoker.vendor_config}"
   _gen_config_files = [ "${_gen_config_dir}/hs_glsl_macros_config.h" ]
   if (defined(invoker.hotsort_target_config_files)) {
     _gen_config_files += invoker.hotsort_target_config_files
@@ -237,5 +212,194 @@ template("hotsort_target") {
         ":${_gen_spv_target_name}",
       ]
     }
+  }
+}
+
+# The following templates are used by hotsort_target() to group GPU
+# architecture settings (corresponding to the 'gpu_arch' variable).
+#
+# They all expect the variables listed in _hotsort_target_forward_variables
+#
+_hotsort_target_forward_variables = [
+  "glsl_bindings",
+  "hotsort_target",
+  "hotsort_target_args",
+  "hotsort_target_config_files",
+  "hotsort_target_dump",
+  "hotsort_target_name",
+  "type_dwords",
+]
+
+# AMD GCN3
+#
+# Configurations (32-bit + 64-bit):
+#
+# $HS_GEN -v -a "glsl" -D HS_AMD_GCN3 -t 1 -w 64 -r 16 -s 32768 -S 32768 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+# $HS_GEN -v -a "glsl" -D HS_AMD_GCN3 -t 2 -w 64 -r 8 -s 32768 -S 32768 -b 16 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+template("hotsort_target_gpu_arch_amd_gcn3") {
+  hotsort_target_internal(target_name) {
+    forward_variables_from(invoker, _hotsort_target_forward_variables)
+    vendor_config = "amd"
+    if (type_dwords == 2) {
+      thread_regs = 8
+    } else {
+      thread_regs = 16
+    }
+    warp_lanes = 64
+    smem_bs = 32768
+    smem_bc = 32768
+    warps_per_group = 16
+    warps_min = 1
+    warps_mod = 1
+    merge_flip_lo = 1
+    merge_flip_hi = 1
+    merge_half_lo = 1
+    merge_half_hi = 1
+    autotune = true
+  }
+}
+
+# Intel GEN8
+#
+# Configurations (32-bit + 64-bit):
+#
+# $HS_GEN -v -a "glsl" -D HS_INTEL_GEN8 -t 1 -w 16 -r 8 -s 21504 -S 65536 -b 16 -B 48 -m 1 -M 1 -f 0 -F 0 -c 0 -C 0 -z
+# $HS_GEN -v -a "glsl" -D HS_INTEL_GEN8 -t 2 -w 8 -r 16 -s 21504 -S 65536 -b 16 -B 48 -m 1 -M 1 -f 1 -F 1 -c 1 -C 1 -z
+#
+#
+#
+template("hotsort_target_gpu_arch_intel_gen8") {
+  hotsort_target_internal(target_name) {
+    forward_variables_from(invoker, _hotsort_target_forward_variables)
+    vendor_config = "intel"
+    if (type_dwords == 2) {
+      thread_regs = 8
+    } else {
+      thread_regs = 16
+    }
+    warp_lanes = 8
+    thread_regs = 16
+    smem_bs = 21504
+    smem_bc = 65536
+    warps_per_group = 16
+    warps_max = 48
+    warps_min = 1
+    warps_mod = 1
+    merge_flip_lo = 1
+    merge_flip_hi = 1
+    merge_half_lo = 1
+    merge_half_hi = 1
+    autotune = true
+  }
+}
+
+# Nvidia SM35 and over.
+#
+# Configurations (32-bit + 64-bit):
+#
+# $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 1 -w 32 -r 16 -s 32768 -S 32768 -b 16 -m 1 -M 1 -p 1 -P 1 -f 0 -F 0 -c 0 -C 0 -z
+# $HS_GEN -v -a "glsl" -D HS_NVIDIA_SM35 -t 2 -w 32 -r 8 -s 32768 -S 32768 -b 16 -m 1 -M 1 -p 1 -P 1 -f 0 -F 0 -c 0 -C 0 -z
+#
+template("hotsort_target_gpu_arch_nvidia_sm35") {
+  hotsort_target_internal(target_name) {
+    forward_variables_from(invoker, _hotsort_target_forward_variables)
+    vendor_config = "nvidia"
+    if (type_dwords == 2) {
+      thread_regs = 8
+    } else {
+      thread_regs = 16
+    }
+    warp_lanes = 32
+    smem_bs = 32768
+    smem_bc = 32768
+    warps_per_group = 16
+    warps_min = 1
+    warps_mod = 1
+    merge_flip_warps = 1
+    merge_half_warps = 1
+    merge_flip_lo = 0
+    merge_flip_hi = 0
+    merge_half_lo = 0
+    merge_half_hi = 0
+    autotune = true
+  }
+}
+
+#
+# Generates a "HotSort target", which contains a compiled compute kernel to
+# perform sorting of 32-bit or 64-bit integers, highly optimized for a given
+# GPU architecture.
+#
+# To use a hotsort target in your code, do the following:
+#
+#   1) Declare a hotsort_target(<target_name>) target in your BUILD.gn
+#      that sets the appropriate configuration parameters (see below).
+#
+#   2) Add <target_name> to your source file's GN target deps variable.
+#
+#   3) In your source file, #include "<target_name>/hs_target.h", a
+#      special auto-generated header that defines a single variable
+#      declared as:
+#
+#       extern struct hotsort_vk_target const * const <target_name>;
+#
+#      NOTE: This GN template ensures that anything that depends on this
+#            GN target will have the right include_dirs set to do so.
+#
+#   4) Pass the <target_name> address to hotsort_vk_create().
+#
+#
+# Variables:
+#
+#    gpu_arch: Name of a GPU architecture supported by Spinel.
+#      NOTE: An assert message will list available ones if you are not sure.
+#
+#    type_dwords: number of 32-bit words per sort entry. Must be 1 or 2.
+#
+#    glsl_bindings: A string containing four comma-separated unsigned integers,
+#      related to GLSL, they represent the descriptor sets and bindings of
+#      the input and output arrays.
+#
+# The following variables are still supported for legacy reasons.
+#
+#  hotsort_target_name:
+#    A name that conveys the configuration of the generated HotSort
+#    algorithm. If not provided, defaults to the short name of
+#    ${target_name}.
+#
+#  hotsort_target_config_files:
+#    An optional list of additional configuration files, which will be added
+#    to the specific configuration file determined from the "gpu_arch"
+#    variable.
+#
+#  hotsort_target_dump:
+#    Boolean, if true the generated GN target is a group that references a
+#    target binary produced by the host toolchain.  Otherwise, a source set is
+#    produced on the current toolchain.
+#
+#  hotsort_target_args:
+#    Extra arguments passed to the 'hotsort_gen' HotSort algorithm code
+#    generator.
+#
+template("hotsort_target") {
+  # Sanity checking the "gpu_arch" variable now to avoid a cryptic GN error
+  # message if it is not supported.
+  assert(defined(invoker.gpu_arch),
+         "gpu_arch must be defined to one of ${_hotsort_gpu_archs}")
+  _found_gpu_arch = false
+  foreach(arch, _hotsort_gpu_archs) {
+    if (arch == invoker.gpu_arch) {
+      _found_gpu_arch = true
+    }
+  }
+  assert(
+      _found_gpu_arch,
+      "Unsupported gpu_arch value '${invoker.gpu_arch}', try one of ${_hotsort_gpu_archs}")
+
+  # Now invoke the gpu_arch-specific GN template, that should be defined above.
+  _target_type = "hotsort_target_gpu_arch_${invoker.gpu_arch}"
+  target(_target_type, target_name) {
+    forward_variables_from(invoker, "*", [ "gpu_arch" ])
   }
 }
