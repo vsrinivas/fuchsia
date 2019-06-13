@@ -50,6 +50,41 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(
     const std::string& derived_name,
     std::initializer_list<NameAndType> derived_members);
 
+// Makes a Rust variant that can be put into a VariantPart. Rust Variants
+// have a single data member that is a struct containing the members passed in
+// which could be empty). So it's got 2 structs.
+//
+// The variant's single generated data member will be at offset 0 in the
+// containing struct. Normally the disciminant in the VariantPart and the data
+// members of each Variant start at offset 0 so they overlap! The passed-in
+// members then go inside this struct, and should be arranged so they don't
+// overlap the data taken by the disciminant.
+fxl::RefPtr<Variant> MakeRustVariant(
+    const std::string& name, std::optional<uint64_t> discriminant,
+    const std::vector<fxl::RefPtr<DataMember>>& members);
+
+// A rust enum is a collection containing a variant part. The variant part
+// includes a discriminant and the variants that it selects from. The caller
+// should ensure the data members in the variants and the discriminant don't
+// overlap.
+//
+// The result will be sized to the largest variant.
+fxl::RefPtr<Collection> MakeRustEnum(
+    const std::string& name, fxl::RefPtr<DataMember> discriminant,
+    const std::vector<fxl::RefPtr<Variant>>& variants);
+
+// Makes a standard rust enum representing the definition:
+//
+//   enum RustEnum {
+//     None,                   // Default
+//     Scalar(u32),            // Discriminant = 0
+//     Point{x:u32, y:u32},    // Discriminant = 1
+//   }
+//
+// The layout is 12 bytes, the 4 byte discriminant, then the 0-to-8 bytes of
+// values depending on the discriminant value (should be padded to 12 total);
+fxl::RefPtr<Collection> MakeTestRustEnum();
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_TYPE_TEST_SUPPORT_H_

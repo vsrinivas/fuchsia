@@ -36,6 +36,9 @@ class DwarfSymbolFactory : public SymbolFactory {
   // Internal version that creates a symbol from a Die.
   fxl::RefPtr<Symbol> DecodeSymbol(const llvm::DWARFDie& die);
 
+  // As with SymbolFactory::CreateSymbol, these should never return null
+  // but rather an empty Symbol implementation on error.
+  //
   // is_specification will be set when this function recursively calls itself
   // to parse the specification of a function implementation.
   //
@@ -61,6 +64,8 @@ class DwarfSymbolFactory : public SymbolFactory {
   fxl::RefPtr<Symbol> DecodeUnspecifiedType(const llvm::DWARFDie& die);
   fxl::RefPtr<Symbol> DecodeVariable(const llvm::DWARFDie& die,
                                      bool is_specification = false);
+  fxl::RefPtr<Symbol> DecodeVariant(const llvm::DWARFDie& die);
+  fxl::RefPtr<Symbol> DecodeVariantPart(const llvm::DWARFDie& die);
 
   // This can be null if the module is unloaded but there are still some
   // dangling type references to it.

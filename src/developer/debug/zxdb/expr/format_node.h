@@ -95,6 +95,7 @@ class FormatNode {
     kNone,
     kBaseType,    // Integers, characters, bools, etc.
     kCollection,  // Structs, classes.
+    kRustEnum,    // Rust-style enum (can have values associated with enums).
     kPointer,
   };
 

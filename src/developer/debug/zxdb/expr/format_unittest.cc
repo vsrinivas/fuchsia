@@ -14,6 +14,8 @@
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
+#include "src/developer/debug/zxdb/symbols/variant.h"
+#include "src/developer/debug/zxdb/symbols/variant_part.h"
 
 namespace zxdb {
 
@@ -432,6 +434,38 @@ TEST_F(FormatTest, Pointer) {
       " = Err: The value of type 'int32_t*' is the incorrect size (expecting "
       "8, got 7). Please file a bug.\n",
       SyncTreeTypeDesc(bad_value, opts));
+}
+
+TEST_F(FormatTest, RustEnum) {
+  auto rust_enum = MakeTestRustEnum();
+
+  // Since "none" is the default, random disciminant values (here, the 32-bit
+  // "100" value) will match it.
+  ExprValue none_value(rust_enum, {100, 0, 0, 0,              // Discriminant
+                                   0, 0, 0, 0, 0, 0, 0, 0});  // Unused
+  FormatExprValueOptions opts;
+  EXPECT_EQ(" = RustEnum, None\n", SyncTreeTypeDesc(none_value, opts));
+
+  // Scalar value.
+  ExprValue scalar_value(rust_enum, {0, 0, 0, 0,    // Discriminant
+                                     51, 0, 0, 0,   // Scalar value.
+                                     0, 0, 0, 0});  // Unused
+  EXPECT_EQ(
+      " = RustEnum, Scalar\n"
+      "  Scalar = Scalar, \n"
+      "    __0 = int32_t, 51\n",
+      SyncTreeTypeDesc(scalar_value, opts));
+
+  // Point value.
+  ExprValue point_value(rust_enum, {1, 0, 0, 0,    // Discriminant
+                                    1, 0, 0, 0,    // x
+                                    2, 0, 0, 0});  // y
+  EXPECT_EQ(
+      " = RustEnum, Point\n"
+      "  Point = Point, \n"
+      "    x = int32_t, 1\n"
+      "    y = int32_t, 2\n",
+      SyncTreeTypeDesc(point_value, opts));
 }
 
 }  // namespace zxdb

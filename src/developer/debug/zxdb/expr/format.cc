@@ -11,11 +11,14 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/expr/resolve_variant.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/variant.h"
+#include "src/developer/debug/zxdb/symbols/variant_part.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -35,6 +38,12 @@ bool IsNumericBaseType(int base_type) {
          base_type == BaseType::kBaseTypeSignedChar ||
          base_type == BaseType::kBaseTypeUnsignedChar ||
          base_type == BaseType::kBaseTypeUTF;
+}
+
+bool IsRustEnum(const Collection* coll) {
+  // Currently Rust enums (which have a variant part according to the enum
+  // value and no data members) are the only use of the variants we have.
+  return !!coll->variant_part() && coll->data_members().empty();
 }
 
 // Appends the given byte to the destination, escaping as per C rules.
@@ -164,6 +173,76 @@ void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
   }
 }
 
+// Rust enums are formatted with the enum name in the description.
+//
+// The active variant will have a set of data members of which only one will be
+// used. It will refer to a collection which will have the set of members.
+// This structure will vary according to the type of enum:
+//   EnumWithNoValue
+//       The struct will have no members.
+//   OneValue(u32)
+//       The struct will have one member named __0
+//   Tuple(u32, u32, etc.)
+//       The struct will have two values, __0 and __1, etc.
+//   Struct{x:u32, y:u32}
+//       The struct will have "x" and "y" members.
+void FormatRustEnum(FormatNode* node, const Collection* coll,
+                    const FormatExprValueOptions& options,
+                    fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(FormatNode::kRustEnum);
+
+  const VariantPart* variant_part = coll->variant_part().Get()->AsVariantPart();
+  if (!variant_part) {
+    node->set_err(Err("Missing variant part for Rust enum."));
+    return;
+  }
+
+  fxl::RefPtr<Variant> variant;
+  Err err = ResolveVariant(eval_context, node->value(), variant_part, &variant);
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  // Add each variant data member as a child of this node. In Rust we expect
+  // exactly one but it can't hurt to be general.
+  std::string enum_name;
+  for (const auto& lazy_member : variant->data_members()) {
+    const DataMember* member = lazy_member.Get()->AsDataMember();
+    if (!member)
+      continue;
+
+    // Save the first member's name to be the name of the whole enum, even if
+    // there are no data members. Normally there will be exactly one.
+    if (enum_name.empty())
+      enum_name = member->GetAssignedName();
+
+    // TODO(brettw) this will append a child unconditionally.
+    ExprValue member_value;
+    err = ResolveMember(eval_context, node->value(), member, &member_value);
+    if (err.has_error()) {
+      // In the error case, still append a child so that the child can have
+      // the error associated with it.
+      node->children().push_back(
+          std::make_unique<FormatNode>(member->GetAssignedName(), err));
+    } else {
+      // Only append as a child if the variant has "stuff". The case here is
+      // to skip adding children for enums with no data like
+      // "Optional<Foo>::None" which will have a struct called "None" with no
+      // members.
+      auto member_type = member_value.GetConcreteType(eval_context.get());
+      const Collection* member_coll_type = member_type->AsCollection();
+      if (!member_coll_type || !member_coll_type->data_members().empty()) {
+        node->children().push_back(std::make_unique<FormatNode>(
+            member->GetAssignedName(), std::move(member_value)));
+      }
+    }
+  }
+
+  // Name for the whole node.
+  node->set_description(enum_name);
+}
+
 void FormatCollection(FormatNode* node, const Collection* coll,
                       const FormatExprValueOptions& options,
                       fxl::RefPtr<EvalContext> eval_context) {
@@ -171,6 +250,12 @@ void FormatCollection(FormatNode* node, const Collection* coll,
     // Sometimes a value will have a type that's a forward declaration and we
     // couldn't resolve its concrete type. Print an error instead of "{}".
     node->set_err(Err("No definition."));
+    return;
+  }
+
+  // Special-case Rust enums which are encoded as a type of collection.
+  if (IsRustEnum(coll)) {
+    FormatRustEnum(node, coll, options, std::move(eval_context));
     return;
   }
 

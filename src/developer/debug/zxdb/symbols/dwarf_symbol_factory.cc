@@ -29,6 +29,8 @@
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/developer/debug/zxdb/symbols/variant.h"
+#include "src/developer/debug/zxdb/symbols/variant_part.h"
 
 namespace zxdb {
 
@@ -224,6 +226,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
     case DwarfTag::kClassType:
     case DwarfTag::kUnionType:
       symbol = DecodeCollection(die);
+      break;
+    case DwarfTag::kVariantPart:
+      symbol = DecodeVariantPart(die);
+      break;
+    case DwarfTag::kVariant:
+      symbol = DecodeVariant(die);
       break;
     case DwarfTag::kUnspecifiedType:
       symbol = DecodeUnspecifiedType(die);
@@ -514,6 +522,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
   // Handle sub-DIEs: data members and inheritance.
   std::vector<LazySymbol> data;
   std::vector<LazySymbol> inheritance;
+  LazySymbol variant_part;
   for (const llvm::DWARFDie& child : die) {
     switch (child.getTag()) {
       case llvm::dwarf::DW_TAG_inheritance:
@@ -522,12 +531,18 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
       case llvm::dwarf::DW_TAG_member:
         data.push_back(MakeLazy(child));
         break;
+      case llvm::dwarf::DW_TAG_variant_part:
+        // Currently we only support one variant_part per struct. This could be
+        // expanded to a vector if a compiler generates such a structure.
+        variant_part = MakeLazy(child);
+        break;
       default:
         break;  // Skip everything else.
     }
   }
   result->set_data_members(std::move(data));
   result->set_inherited_from(std::move(inheritance));
+  result->set_variant_part(variant_part);
   if (is_declaration)
     result->set_is_declaration(*is_declaration);
 
@@ -941,6 +956,58 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
       variable->set_parent(MakeLazy(parent));
   }
   return variable;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariant(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  // Assume unsigned discriminant values since this is always true for our
+  // current uses. See Variant::discr_value() comment for more.
+  llvm::Optional<uint64_t> discr_value;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_discr_value, &discr_value);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Collect the data members.
+  std::vector<LazySymbol> members;
+  for (const llvm::DWARFDie& child : die) {
+    if (child.getTag() == llvm::dwarf::DW_TAG_member)
+      members.push_back(MakeLazy(child));
+  }
+
+  // Convert from LLVM-style to C++-style optional.
+  std::optional<uint64_t> discr;
+  if (discr_value)
+    discr = *discr_value;
+
+  return fxl::MakeRefCounted<Variant>(discr, std::move(members));
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariantPart(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  // The discriminant is the DataMember in the variant whose value indicates
+  // which variant currently applies.
+  llvm::DWARFDie discriminant;
+  decoder.AddReference(llvm::dwarf::DW_AT_discr, &discriminant);
+
+  if (!decoder.Decode(die) || !discriminant)
+    return fxl::MakeRefCounted<Symbol>();
+
+  // Look for variants in this variant_part. It will also have a data member
+  // for the disciminant but we will have already found that above via
+  // reference.
+  std::vector<LazySymbol> variants;
+  for (const llvm::DWARFDie& child : die) {
+    if (child.getTag() == llvm::dwarf::DW_TAG_variant)
+      variants.push_back(MakeLazy(child));
+  }
+
+  return fxl::MakeRefCounted<VariantPart>(MakeLazy(discriminant),
+                                          std::move(variants));
 }
 
 }  // namespace zxdb

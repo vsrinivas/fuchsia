@@ -843,4 +843,27 @@ TEST_F(FormatValueTest, ForwardDecl) {
             SyncFormatValue(decl_value, FormatExprValueOptions()));
 }
 
+TEST_F(FormatValueTest, RustEnum) {
+  auto rust_enum = MakeTestRustEnum();
+
+  // Since "none" is the default, random disciminant values (here, the 32-bit
+  // "100" value) will match it.
+  ExprValue none_value(rust_enum, {100, 0, 0, 0,              // Discriminant
+                                   0, 0, 0, 0, 0, 0, 0, 0});  // Unused
+  FormatExprValueOptions opts;
+  EXPECT_EQ("None", SyncFormatValue(none_value, opts));
+
+  // Scalar, it would be nice if this was just "Scalar(51)".
+  ExprValue scalar_value(rust_enum, {0, 0, 0, 0,    // Discriminant
+                                     51, 0, 0, 0,   // Scalar value.
+                                     0, 0, 0, 0});  // Unused
+  EXPECT_EQ("Scalar{__0 = 51}", SyncFormatValue(scalar_value, opts));
+
+  // Struct with named values.
+  ExprValue point_value(rust_enum, {1, 0, 0, 0,    // Discriminant
+                                    1, 0, 0, 0,    // x
+                                    2, 0, 0, 0});  // y
+  EXPECT_EQ("Point{x = 1, y = 2}", SyncFormatValue(point_value, opts));
+}
+
 }  // namespace zxdb

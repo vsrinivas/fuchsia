@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VARIANT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_VARIANT_H_
 
+#include <optional>
 #include <vector>
 
 #include "src/developer/debug/zxdb/symbols/symbol.h"
@@ -26,11 +27,22 @@ class Variant final : public Symbol {
 
   // The disciminant value associated with this variant. See VariantPart.
   //
+  // The discriminant value may be unset which indicates that this variant is
+  // the default one.
+  //
   // DWARF discriminant values can be either signed or unsigned, according to
   // the type associated with the discriminant data member in the VariantPart.
-  // To simplify comparisons, we store as an unsigned value and sign-extend to
-  // 64-bits with it's signed.
-  uint64_t discr_value() const { return discr_value_; }
+  // This makes it complicated do handle because the full type of the
+  // VariantPart needs to be understood just to properly parse the Variant out
+  // of the file.
+  //
+  // Since our only current use of these is Rust which always uses unsigned
+  // disciminants, we also assume unsigned here.
+  //
+  // If in the future we need to support signed disciminants, we could
+  // sign-extend the values during decode so that internally we always deal
+  // with unsigned types.
+  const std::optional<uint64_t>& discr_value() const { return discr_value_; }
 
   // Data members. These should be DataMember objects. The offsets of the data
   // members will be from the structure containing the VariantPart.
@@ -53,10 +65,11 @@ class Variant final : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(Variant);
   FRIEND_MAKE_REF_COUNTED(Variant);
 
-  Variant(uint64_t discr_value, std::vector<LazySymbol> data_members);
+  Variant(std::optional<uint64_t> discr_value,
+          std::vector<LazySymbol> data_members);
   virtual ~Variant();
 
-  uint64_t discr_value_;
+  std::optional<uint64_t> discr_value_;
   std::vector<LazySymbol> data_members_;
 };
 

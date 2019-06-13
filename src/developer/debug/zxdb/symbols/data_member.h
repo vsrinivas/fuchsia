@@ -29,6 +29,8 @@ class DataMember final : public Value {
   FRIEND_MAKE_REF_COUNTED(DataMember);
 
   DataMember();
+  DataMember(const std::string& assigned_name, LazySymbol type,
+             uint32_t member_loc);
   ~DataMember();
 
   uint32_t member_location_ = 0;

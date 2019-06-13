@@ -51,6 +51,8 @@ static_library("expr") {
     "resolve_collection.h",
     "resolve_ptr_ref.cc",
     "resolve_ptr_ref.h",
+    "resolve_variant.cc",
+    "resolve_variant.h",
     "template_type_extractor.cc",
     "template_type_extractor.h",
   ]
@@ -99,6 +101,7 @@ source_set("tests") {
     "resolve_array_unittest.cc",
     "resolve_collection_unittest.cc",
     "resolve_ptr_ref_unittest.cc",
+    "resolve_variant_unittest.cc",
     "template_type_extractor_unittest.cc",
   ]
 

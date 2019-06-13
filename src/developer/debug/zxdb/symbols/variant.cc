@@ -6,7 +6,8 @@
 
 namespace zxdb {
 
-Variant::Variant(uint64_t discr_value, std::vector<LazySymbol> data_members)
+Variant::Variant(std::optional<uint64_t> discr_value,
+                 std::vector<LazySymbol> data_members)
     : Symbol(DwarfTag::kVariant),
       discr_value_(discr_value),
       data_members_(std::move(data_members)) {}

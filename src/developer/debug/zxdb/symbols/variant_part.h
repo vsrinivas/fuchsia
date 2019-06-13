@@ -38,17 +38,15 @@ class VariantPart final : public Symbol {
   // will want only GetVariant(). The offsets of the data member will be from
   // the structure containing this VariantPart.
   const LazySymbol& discriminant() const { return discriminant_; }
-  void set_disciminant(const LazySymbol& d) { discriminant_ = d; }
 
   // All variants described. Most callers will want only GetVariant().
   const std::vector<LazySymbol>& variants() const { return variants_; }
-  void set_variants(std::vector<LazySymbol> v) { variants_ = std::move(v); }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(VariantPart);
   FRIEND_MAKE_REF_COUNTED(VariantPart);
 
-  VariantPart();
+  VariantPart(const LazySymbol& discriminant, std::vector<LazySymbol> variants);
   virtual ~VariantPart();
 
   LazySymbol discriminant_;

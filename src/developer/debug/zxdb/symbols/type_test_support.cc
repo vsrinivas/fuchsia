@@ -8,6 +8,8 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/variant.h"
+#include "src/developer/debug/zxdb/symbols/variant_part.h"
 
 namespace zxdb {
 
@@ -77,6 +79,105 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(
   derived->set_inherited_from(
       {LazySymbol(fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0))});
   return derived;
+}
+
+fxl::RefPtr<Variant> MakeRustVariant(
+    const std::string& name, std::optional<uint64_t> discriminant,
+    const std::vector<fxl::RefPtr<DataMember>>& members) {
+  // Pick the byte size to be the size after the last member.
+  uint32_t byte_size = 0;
+  if (members.size() > 0) {
+    byte_size = members.back()->member_location() +
+                members.back()->type().Get()->AsType()->byte_size();
+  }
+
+  // The single member of the variant has a type name of the variant name.
+  // This type holds all the members passed in.
+  auto variant_member_type =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
+  variant_member_type->set_byte_size(byte_size);
+
+  std::vector<LazySymbol> lazy_members;
+  for (const auto& member : members)
+    lazy_members.emplace_back(member);
+  variant_member_type->set_data_members(std::move(lazy_members));
+
+  // This data member in the variant contains the structure above. We assume it
+  // starts at offset 0 in the containing struct.
+  auto variant_data =
+      fxl::MakeRefCounted<DataMember>(name, LazySymbol(variant_member_type), 0);
+
+  return fxl::MakeRefCounted<Variant>(
+      discriminant, std::vector<LazySymbol>{LazySymbol(variant_data)});
+}
+
+fxl::RefPtr<Collection> MakeRustEnum(
+    const std::string& name, fxl::RefPtr<DataMember> discriminant,
+    const std::vector<fxl::RefPtr<Variant>>& variants) {
+  uint32_t byte_size = 0;
+
+  std::vector<LazySymbol> lazy_variants;
+  for (const auto& var : variants) {
+    // Pick the size based on the largest variant
+    if (!var->data_members().empty()) {
+      const DataMember* last_member =
+          var->data_members().back().Get()->AsDataMember();
+      FXL_DCHECK(last_member);  // ASsume test code has set up properly.
+      uint32_t var_byte_size = last_member->member_location() +
+                               last_member->type().Get()->AsType()->byte_size();
+      if (var_byte_size > byte_size)
+        byte_size = var_byte_size;
+    }
+
+    lazy_variants.emplace_back(var);
+  }
+
+  auto variant_part = fxl::MakeRefCounted<VariantPart>(
+      LazySymbol(discriminant), std::move(lazy_variants));
+
+  auto collection =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
+  collection->set_variant_part(LazySymbol(variant_part));
+  collection->set_byte_size(byte_size);
+
+  return collection;
+}
+
+fxl::RefPtr<Collection> MakeTestRustEnum() {
+  // Say "None is the default variant so has no discriminant (anything other
+  // than these values will match "none".
+  const uint64_t kScalarDiscriminant = 0;
+  const uint64_t kPointDiscriminant = 1;
+
+  // This 4-byte value encodes the discriminant value which indicates which
+  // variant is valid. It's at offset 0 in the struct,
+  auto uint32_type = MakeInt32Type();
+  auto discriminant = fxl::MakeRefCounted<DataMember>(
+      std::string(), LazySymbol(uint32_type), 0);
+
+  // None variant.
+  auto none_variant = MakeRustVariant("None", std::nullopt, {});
+
+  // Scalar variant. The member is named with "__0" like Rust does. All the
+  // members must start after the discriminant above (4 bytes).
+  auto scalar_data =
+      fxl::MakeRefCounted<DataMember>("__0", LazySymbol(uint32_type), 4);
+  auto scalar_variant =
+      MakeRustVariant("Scalar", kScalarDiscriminant,
+                      std::vector<fxl::RefPtr<DataMember>>{scalar_data});
+
+  // Point variant. The two members start after the disciminant (4 bytes).
+  auto x_data =
+      fxl::MakeRefCounted<DataMember>("x", LazySymbol(uint32_type), 4);
+  auto y_data =
+      fxl::MakeRefCounted<DataMember>("y", LazySymbol(uint32_type), 8);
+  auto point_variant =
+      MakeRustVariant("Point", kPointDiscriminant,
+                      std::vector<fxl::RefPtr<DataMember>>{x_data, y_data});
+
+  // Structure that contains the variants. It has a variant_part and no data.
+  return MakeRustEnum("RustEnum", discriminant,
+                      {none_variant, scalar_variant, point_variant});
 }
 
 }  // namespace zxdb

@@ -10,6 +10,8 @@
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/format.h"
+#include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
@@ -81,6 +83,12 @@ bool IsNumericBaseType(int base_type) {
          base_type == BaseType::kBaseTypeSignedChar ||
          base_type == BaseType::kBaseTypeUnsignedChar ||
          base_type == BaseType::kBaseTypeUTF;
+}
+
+bool IsRustEnum(const Collection* coll) {
+  // Currently Rust enums (which have a variant part according to the enum
+  // value and no data members) are the only use of the variants we have.
+  return !!coll->variant_part() && coll->data_members().empty();
 }
 
 // Returns true if the given symbol points to a character type that would
@@ -356,6 +364,11 @@ void FormatValue::FormatCollection(fxl::RefPtr<EvalContext> eval_context,
     // couldn't resolve its concrete type. Print an error instead of "{}".
     OutputKeyComplete(output_key,
                       OutputBuffer(Syntax::kComment, "<No definition>"));
+    return;
+  }
+
+  if (IsRustEnum(coll)) {
+    FormatRustEnum(eval_context, coll, value, options, output_key);
     return;
   }
 
@@ -898,6 +911,34 @@ void FormatValue::FormatZxStatusT(const ExprValue& value,
   out.Append(Syntax::kComment,
              fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
   OutputKeyComplete(output_key, std::move(out));
+}
+
+void FormatValue::FormatRustEnum(fxl::RefPtr<EvalContext> eval_context,
+                                 const Collection* coll, const ExprValue& value,
+                                 const FormatExprValueOptions& options,
+                                 OutputKey output_key) {
+  // This shims to the new formatting system which supports Rust enums and
+  // converts to a nice string.
+  auto node = std::make_unique<FormatNode>(std::string(), value);
+  FillFormatNodeDescription(node.get(), options, eval_context);
+
+  if (node->err().has_error()) {
+    OutputKeyComplete(output_key, ErrToOutput(node->err()));
+    return;
+  }
+
+  // The enum name is in the description.
+  AppendToOutputKey(output_key, node->description());
+
+  // If there is a child, append it after the description with no space
+  // which will end up formatting the structure like "Point{x = 1, y = 2}"
+  if (!node->children().empty()) {
+    // This assumes there is only one child which is the case for Rust enums.
+    FormatExprValue(eval_context, node->children()[0]->value(), options, true,
+                    output_key);
+  } else {
+    OutputKeyComplete(output_key);
+  }
 }
 
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {
