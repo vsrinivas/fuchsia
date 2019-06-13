@@ -34,7 +34,9 @@
 #define BRCMF_HEXDUMP_WIDTH 16
 
 // Debug level configuration. See debug.h for bits (BRCMF_*_VAL)
-uint32_t brcmf_msg_filter;
+// Include WLANIF messages in log output (at level INFO) to aid in recognizing important events.
+// (WLAN-1176: Remove WLANIF once things have stabilized)
+uint32_t brcmf_msg_filter = BRCMF_WLANIF_VAL;
 
 static zx_handle_t root_folder;
 

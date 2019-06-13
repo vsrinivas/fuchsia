@@ -44,6 +44,7 @@
 #define BRCMF_PCIE_VAL    0x00080000
 #define BRCMF_FWCON_VAL   0x00100000
 #define BRCMF_SIM_VAL     0x00200000
+#define BRCMF_WLANIF_VAL  0x00400000
 #define BRCMF_ALL_VAL     0xffffffff
 
 // clang-format on
