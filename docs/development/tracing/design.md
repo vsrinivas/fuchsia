@@ -75,7 +75,7 @@ together with userspace trace data.
 The `trace` program offers command-line access to tracing functionality
 for developers.  It also supports converting Fuchsia trace archives into
 other formats, such as Catapult JSON records which can be visualized
-using Catapult (aka. chrome:://tracing).
+using Catapult (aka. Chrome Trace-Viewer, available at chrome://tracing).
 
 Trace information can also be collected programmatically by using the
 `Controller` FIDL protocol directly.

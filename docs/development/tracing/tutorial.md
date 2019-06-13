@@ -359,7 +359,7 @@ typedef struct {
 } my_statistics_t;
 ```
 
-The `rx_count` and `tx_count` fields are used only with tracing, so if `NDEBUG`
+The `rx_count` and `tx_count` fields are used only with tracing, so if `NTRACE`
 is asserted (meaning tracing is completely disabled), they don't take up any
 room in your `my_statistics_t` structure.
 
