@@ -14,6 +14,9 @@ group("test") {
 test_modules = [
   "basic",
   "many-args",
+  "float",
+  "tuple",
+  "struct",
 ]
 
 foreach(name, test_modules) {

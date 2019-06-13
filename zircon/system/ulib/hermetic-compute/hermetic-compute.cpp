@@ -193,19 +193,26 @@ zx_status_t HermeticComputeProcess::Wait(int64_t* result, zx::time deadline) {
     return status;
 }
 
-void HermeticComputeProcess::Launcher::LoadModule(const zx::vmo& vmo,
-                                                  zx::unowned_vmo vdso,
-                                                  size_t nargs, ...) {
+void HermeticComputeProcess::Launcher::LoadModule(zx::unowned_vmo vmo,
+                                                  zx::unowned_vmo vdso) {
     // First load up the module and vDSO.  This reports back how much
     // stack the module requested via PT_GNU_STACK.p_memsz.
-    uintptr_t vdso_base = 0;
     uintptr_t base;
-    size_t stack_size;
-    status_ = engine_.LoadElf(vmo, &base, &entry_, &stack_size);
+    status_ = engine_.LoadElf(*vmo, &base, &entry_, &stack_size_);
     if (status_ == ZX_OK && *vdso) {
-        status_ = engine_.LoadElf(*vdso, &vdso_base, nullptr, nullptr);
+        status_ = engine_.LoadElf(*vdso, &vdso_base_, nullptr, nullptr);
     }
+}
+
+void HermeticComputeProcess::Launcher::LoadStack(size_t nargs, ...) {
+    // Bail out early if parameter packing reporting errors.
     if (status_ != ZX_OK) {
+        return;
+    }
+
+    // Called before LoadModule?
+    if (entry_ == 0) {
+        status_ = ZX_ERR_BAD_STATE;
         return;
     }
 
@@ -232,7 +239,7 @@ void HermeticComputeProcess::Launcher::LoadModule(const zx::vmo& vmo,
     // The TCB points to the unsafe stack, which needs no other setup.
     {
         uintptr_t unsafe_sp = 0;
-        allocate(stack_size, nullptr, &unsafe_sp, nullptr);
+        allocate(stack_size_, nullptr, &unsafe_sp, nullptr);
         uintptr_t stack_guard = 0;
         zx_cprng_draw(&stack_guard, sizeof(stack_guard));
         zx::vmo tcb_vmo = allocate(sizeof(hermetic::Tcb), &tcb_,
@@ -274,7 +281,7 @@ void HermeticComputeProcess::Launcher::LoadModule(const zx::vmo& vmo,
 
     uintptr_t stack_top = 0;
     size_t stack_top_offset = 0;
-    zx::vmo stack_vmo = allocate(std::max(stack_size, arg_space),
+    zx::vmo stack_vmo = allocate(std::max(stack_size_, arg_space),
                                  nullptr, &stack_top, &stack_top_offset);
 
     sp_ = stack_top - arg_space;
@@ -307,14 +314,14 @@ void HermeticComputeProcess::Launcher::LoadModule(const zx::vmo& vmo,
         // signature of the C entry point.
         uintptr_t sc_sp = 0;
         // TODO(mcgrathr): configurability for ssc size?
-        if (stack_size > 0) {
+        if (stack_size_ > 0) {
             allocate(PAGE_SIZE, nullptr, &sc_sp, nullptr);
         }
         add_argument(sc_sp);
     }
 
     // The vDSO address is always the first argument to the C entry point.
-    add_argument(vdso_base);
+    add_argument(vdso_base_);
 
     // Remaining arguments (if any) are passed through.  For any up to
     // kRegisterArgs not filled out here, engine-start.S will pop zeros
