@@ -1,0 +1,262 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("../../gn/build_rules.gni")
+
+_hotsort_dir = "${graphics_compute_dir}/hotsort"
+
+# The list of variables supported by hotsort_gen_target() below that
+# only depend on the target GPU architecture.
+hotsort_gen_target_gpu_variables = [
+  "autotune",
+  "merge_flip_hi",
+  "merge_flip_lo",
+  "merge_flip_warps",
+  "merge_half_hi",
+  "merge_half_lo",
+  "merge_half_warps",
+  "smem_bc",
+  "smem_bs",
+  "smem_min",
+  "smem_quantum",
+  "thread_regs",
+  "thread_xtra",
+  "type_dwords",
+  "warp_lanes",
+  "warps_per_group",
+  "warps_max",
+  "warps_min",
+  "warps_mod",
+]
+
+# The list of variables supported by hotsort_gen_target() below that
+# are GLSL-specific.
+hotsort_gen_target_glsl_variables = [ "glsl_bindings" ]
+
+# Generate Hotsort compute shaders through the `hotsort_gen` program.
+#
+# Variables:
+#
+#    output_dir: Output directory. Note that shaders will be placed
+#       under "${output_dir}/comp/" for now!
+#
+# The following variable names are optional and used to select various
+# configuration parameters sent to hotsort_gen. Their description comes from
+# comments in the 'hotsort_gen' sources, but should be clarified in the future.
+#
+#    shader_lang: Target shader language, i.e. 'glsl', 'cuda' or 'opencl'.
+#    type_dwords: number of 32-bit words per sort entry. Must be 1 or 2.
+#    warp_lanes: Number of independent ALU cores (CUDA lanes) per
+#       processing element (CUDA warp).
+#    thread_regs: Number of registers to use per thread (lane?).
+#    smem_min: Minimum amount of memory that can be allocated (??)
+#    smem_quantum: smem quantum amount (??)
+#    smem_bs: ??
+#    smem_bc: ??
+#    warps_per_group: Max warps in a workgroup/cta/thread block (??)
+#    warps_max: Max warps that can fit in a multiprocessor (??)
+#    warps_min: blocks using smem barriers must have at least this many warps.
+#    warps_mod: the number of warps necessary to load balance horizontal
+#      merging.
+#    thread_xtra: ??
+#    merge_flip_lo: ??
+#    merge_flip_hi: ??
+#    merge_half_lo: ??
+#    merge_half_hi: ??
+#    merge_flip_warps: ??
+#    merge_half_warps: ??
+#    glsl_bindings: A string containing four comma-separated unsigned integers,
+#      related to GLSL in/out bindings (??). Only used for 'glsl' shaders.
+#    autotune: Set to true to enable auto-tuning of some parameters (??).
+#
+template("hotsort_gen_target") {
+  _output_dir = invoker.output_dir
+  _hs_target_name = invoker.hotsort_target_name
+
+  _hs_target_gen_includes = [
+    "${_output_dir}/hs_config.h",
+    "${_output_dir}/hs_target.h",
+  ]
+
+  _hs_target_gen_sources = [ "${_output_dir}/${_hs_target_name}.c" ]
+
+  # Generate the hotsort_gen command line arguments from our GN variables.
+
+  _gen_args = []
+
+  # NOTE: Start with the parameters that are also sent to
+  # `hotsort_gen_list_shaders.py`.
+  if (defined(invoker.shader_lang)) {
+    _gen_args += [
+      "-a",
+      invoker.shader_lang,
+    ]
+  }
+
+  if (defined(invoker.type_dwords)) {
+    assert(invoker.type_dwords == 1 || invoker.type_dwords == 2,
+           "type_dwords should only be 1 or 2!")
+    _gen_args += [
+      "-t",
+      "${invoker.type_dwords}",
+    ]
+  }
+  if (defined(invoker.merge_flip_lo)) {
+    _gen_args += [
+      "-f",
+      "${invoker.merge_flip_lo}",
+    ]
+  }
+  if (defined(invoker.merge_flip_hi)) {
+    _gen_args += [
+      "-F",
+      "${invoker.merge_flip_hi}",
+    ]
+  }
+  if (defined(invoker.merge_half_lo)) {
+    _gen_args += [
+      "-c",
+      "${invoker.merge_half_lo}",
+    ]
+  }
+  if (defined(invoker.merge_half_hi)) {
+    _gen_args += [
+      "-C",
+      "${invoker.merge_half_hi}",
+    ]
+  }
+  if (defined(invoker.warps_per_group)) {
+    _gen_args += [
+      "-b",
+      "${invoker.warps_per_group}",
+    ]
+  }
+  _gen_list_shaders_args = _gen_args
+
+  # Do the other parameters now,
+  if (defined(invoker.warp_lanes)) {
+    _gen_args += [
+      "-w",
+      "${invoker.warp_lanes}",
+    ]
+  }
+  if (defined(invoker.thread_regs)) {
+    _gen_args += [
+      "-r",
+      "${invoker.thread_regs}",
+    ]
+  }
+  if (defined(invoker.smem_min)) {
+    _gen_args += [
+      "-g",
+      "${invoker.smem_min}",
+    ]
+  }
+  if (defined(invoker.smem_quantum)) {
+    _gen_args += [
+      "-G",
+      "${invoker.smem_quantum}",
+    ]
+  }
+  if (defined(invoker.smem_bs)) {
+    _gen_args += [
+      "-s",
+      "${invoker.smem_bs}",
+    ]
+  }
+  if (defined(invoker.smem_bc)) {
+    _gen_args += [
+      "-S",
+      "${invoker.smem_bc}",
+    ]
+  }
+  if (defined(invoker.warps_max)) {
+    _gen_args += [
+      "-B",
+      "${invoker.warps_max}",
+    ]
+  }
+  if (defined(invoker.warps_min)) {
+    _gen_args += [
+      "-m",
+      "${invoker.warps_min}",
+    ]
+  }
+  if (defined(invoker.warps_mod)) {
+    _gen_args += [
+      "-M",
+      "${invoker.warps_mod}",
+    ]
+  }
+  if (defined(invoker.thread_xtra)) {
+    _gen_args += [
+      "-x",
+      "${invoker.thread_xtra}",
+    ]
+  }
+  if (defined(invoker.merge_flip_warps)) {
+    _gen_args += [
+      "-p",
+      "${invoker.merge_flip_warps}",
+    ]
+  }
+  if (defined(invoker.merge_half_warps)) {
+    _gen_args += [
+      "-P",
+      "${invoker.merge_half_warps}",
+    ]
+  }
+  if (defined(invoker.glsl_bindings)) {
+    assert(invoker.shader_lang == "glsl",
+           "glsl_bindings should only be defined for glsl shaders")
+
+    # NOTE: Parameter is a string
+    _gen_args += [
+      "-L",
+      invoker.glsl_bindings,
+    ]
+  }
+  if (defined(invoker.autotune) && invoker.autotune) {
+    # NOTE: Parameter is a boolean
+    _gen_args += [ "-z" ]
+  }
+
+  _hs_target_gen_args = _gen_args
+
+  #
+  # Get the list of generated shaders. Unfortunately, GN really
+  # wants this to be done by running a Python script before anything
+  # else can be built, which means we cannot use `hotsort_gen`
+  # itself to tell us its outputs.
+  #
+  _hs_comp_names =
+      exec_script("${_hotsort_dir}/hotsort_gen/hotsort_gen_list_shaders.py",
+                  _gen_list_shaders_args,
+                  "list lines")
+
+  _hs_comp_sources =
+      process_file_template(_hs_comp_names,
+                            "${invoker.output_dir}/comp/{{source_file_part}}")
+
+  #
+  # Generate the .comp shaders.
+  #
+  # Note that hs_modules.txt should match names returned by script
+  #
+  compiled_action(target_name) {
+    tool = "${_hotsort_dir}/hotsort_gen:hotsort_gen"
+    outputs =
+        _hs_comp_sources + _hs_target_gen_sources + _hs_target_gen_includes
+    args = [
+      "-D",
+      _hs_target_name,
+
+      # hotsort_gen output directory.
+      "-o",
+      rebase_path(invoker.output_dir, root_build_dir),
+    ]
+    args += _hs_target_gen_args
+  }
+}
