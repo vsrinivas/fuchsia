@@ -127,6 +127,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/smbios:smbios-test",
       "$zx/system/ulib/storage-metrics/test",
       "$zx/system/ulib/syslog/test",
+      "$zx/system/ulib/test-exceptions/test",
       "$zx/system/ulib/tftp:tftp-test",
       "$zx/system/ulib/trace-reader:tests",
       "$zx/system/ulib/trace-vthread:tests",

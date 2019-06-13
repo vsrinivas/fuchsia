@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":test-exceptions",
+  ]
+}
+
+test("test-exceptions") {
+  sources = [
+    "exception-catcher-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/test-exceptions",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
