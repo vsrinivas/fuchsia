@@ -196,6 +196,47 @@ def ComparePerf(args, out_fh):
     FormatTable(rows, out_fh)
 
 
+def IntervalsIntersect(interval1, interval2):
+    return not (interval2[0] >= interval1[1] or
+                interval2[1] <= interval1[0])
+
+
+# Calculate the rate at which two intervals drawn (without replacement)
+# from the given set of intervals will be non-intersecting.
+def MismatchRate(intervals):
+    mismatch_count = sum(int(not IntervalsIntersect(intervals[i], intervals[j]))
+                         for i in xrange(len(intervals))
+                         for j in xrange(i))
+    comparisons_count = len(intervals) * (len(intervals) - 1) / 2
+    return float(mismatch_count) / comparisons_count
+
+
+def ValidatePerfCompare(args, out_fh):
+    results_maps = [ResultsFromDir(filename) for filename in args.results_dirs]
+
+    # Group by test name (label).
+    by_test = {}
+    for results_map in results_maps:
+        for label, stats in results_map.iteritems():
+            by_test.setdefault(label, []).append(stats)
+
+    out_fh.write('Rate of mismatches (non-intersections) '
+                 'of confidence intervals for each test:\n')
+    mismatch_rates = []
+    for label, stats_list in sorted(by_test.iteritems()):
+        mismatch_rate = MismatchRate([stats.interval for stats in stats_list])
+        out_fh.write('%f %s\n' % (mismatch_rate, label))
+        mismatch_rates.append(mismatch_rate)
+
+    out_fh.write('\n')
+    mean_val = Mean(mismatch_rates)
+    out_fh.write('Mean mismatch rate: %f\n' % mean_val)
+    out_fh.write('Number of test cases: %d\n' % len(mismatch_rates))
+    out_fh.write('Number of result sets: %d\n' % len(results_maps))
+    out_fh.write('Expected number of test cases with mismatches: %f\n'
+                 % (mean_val * len(mismatch_rates)))
+
+
 def TotalSize(snapshot_file):
     with open(snapshot_file) as fh:
         data = json.load(fh)
@@ -223,6 +264,17 @@ def Main(argv, out_fh):
     parser_compare_perf.add_argument('results_dir_after')
     parser_compare_perf.set_defaults(
         func=lambda args: ComparePerf(args, out_fh))
+
+    parser_validate_perfcompare = subparsers.add_parser(
+        'validate_perfcompare',
+        help='Outputs statistics given multiple sets of perf test results'
+        ' that come from the same build.  This is for validating the'
+        ' statistics used by the perfcompare tool.  It can be used to check'
+        ' the rate at which the tool will falsely indicate that performance'
+        ' of a test case has regressed or improved.')
+    parser_validate_perfcompare.add_argument('results_dirs', nargs='+')
+    parser_validate_perfcompare.set_defaults(
+        func=lambda args: ValidatePerfCompare(args, out_fh))
 
     parser_compare_sizes = subparsers.add_parser(
         'compare_sizes',

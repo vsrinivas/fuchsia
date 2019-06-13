@@ -40,3 +40,14 @@ Test case            Improve/regress?  Factor change  Mean before  Mean after
 -------------------  ----------------  -------------  -----------  ----------
 ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
 SecondExample        removed           -              1975 +/- 78  -
+
+
+### validate_perfcompare
+Rate of mismatches (non-intersections) of confidence intervals for each test:
+0.526316 ClockGetTimeExample
+0.000000 SecondExample
+
+Mean mismatch rate: 0.263158
+Number of test cases: 2
+Number of result sets: 20
+Expected number of test cases with mismatches: 0.526316

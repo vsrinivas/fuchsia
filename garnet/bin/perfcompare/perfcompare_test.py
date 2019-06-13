@@ -234,6 +234,21 @@ class PerfCompareTest(TempDirTestCase):
         output = self.ComparePerf(before_dir, after_dir)
         GOLDEN.AssertCaseEq('removing_test', output)
 
+    def test_mismatch_rate(self):
+        self.assertEquals(perfcompare.MismatchRate([(0,1), (2,3)]), 1)
+        self.assertEquals(perfcompare.MismatchRate([(0,2), (1,3)]), 0)
+        self.assertEquals(perfcompare.MismatchRate([(0,2), (1,3), (4,5)]), 2./3)
+
+    def test_validate_perfcompare(self):
+        # This is an example input dataset that gives a high mismatch rate,
+        # because the data is drawn from two very different distributions.
+        results_dirs = ([self.ExampleDataDir(mean=100, stddev=10)] * 10 +
+                        [self.ExampleDataDir(mean=200, stddev=10)] * 10)
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['validate_perfcompare'] + results_dirs, stdout)
+        output = stdout.getvalue()
+        GOLDEN.AssertCaseEq('validate_perfcompare', output)
+
 
 if __name__ == '__main__':
     TestMain()
