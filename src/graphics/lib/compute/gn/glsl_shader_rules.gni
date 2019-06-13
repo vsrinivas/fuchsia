@@ -75,6 +75,10 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
     foreach(include_dir, _include_dirs) {
       args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
     }
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ _host_glslang_target ]
   }
 }
 
