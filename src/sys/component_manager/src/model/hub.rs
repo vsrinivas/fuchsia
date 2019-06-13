@@ -127,15 +127,11 @@ impl Hub {
         Ok(Some(controlled))
     }
 
-    pub async fn on_bind_instance_async<'a>(
-        &'a self,
-        realm: Arc<model::Realm>,
-        realm_state: &'a model::RealmState,
-    ) -> Result<(), ModelError> {
-        let component_url = realm.component_url.clone();
-        let abs_moniker = realm.abs_moniker.clone();
-        let mut instances_map = await!(self.instances.lock());
-
+    async fn add_instance_to_parent_if_necessary<'a>(
+        abs_moniker: &'a model::AbsoluteMoniker,
+        component_url: String,
+        mut instances_map: &'a mut HashMap<model::AbsoluteMoniker, Instance>,
+    ) -> Result<(), HubError> {
         if let Some(controlled) =
             Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
@@ -148,6 +144,23 @@ impl Hub {
                 })?;
             }
         }
+        Ok(())
+    }
+
+    pub async fn on_bind_instance_async<'a>(
+        &'a self,
+        realm: Arc<model::Realm>,
+        realm_state: &'a model::RealmState,
+    ) -> Result<(), ModelError> {
+        let component_url = realm.component_url.clone();
+        let abs_moniker = realm.abs_moniker.clone();
+        let mut instances_map = await!(self.instances.lock());
+
+        await!(Self::add_instance_to_parent_if_necessary(
+            &abs_moniker,
+            component_url,
+            &mut instances_map
+        ))?;
 
         let instance = instances_map
             .get_mut(&abs_moniker)
@@ -237,34 +250,16 @@ impl Hub {
                 })?;
             }
         }
-        Ok(())
-    }
-
-    pub async fn on_resolve_realm_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
-        let abs_moniker = &realm.abs_moniker;
-        let component_url = realm.component_url.clone();
-        let mut instances_map = await!(self.instances.lock());
-
-        if let Some(controlled) =
-            Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
+        for child_realm in
+            realm_state.child_realms.as_ref().expect("Unable to access child realms.").values()
         {
-            if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
-                await!(instances_map[&parent_moniker]
-                    .children_directory
-                    .add_entry_res(name.clone(), controlled))
-                .map_err(|_| {
-                    HubError::add_directory_entry_error(abs_moniker.clone(), &name.clone())
-                })?;
-            }
+            await!(Self::add_instance_to_parent_if_necessary(
+                &child_realm.abs_moniker,
+                child_realm.component_url.clone(),
+                &mut instances_map
+            ))?;
         }
-        Ok(())
-    }
 
-    pub async fn on_add_dynamic_child_async(
-        &self,
-        _realm: Arc<model::Realm>,
-    ) -> Result<(), ModelError> {
-        // TODO: Update the hub with the new child
         Ok(())
     }
 }
@@ -278,15 +273,9 @@ impl model::Hook for Hub {
         Box::pin(self.on_bind_instance_async(realm, realm_state))
     }
 
-    fn on_resolve_realm<'a>(
-        &'a self,
-        realm: Arc<model::Realm>,
-    ) -> BoxFuture<'a, Result<(), ModelError>> {
-        Box::pin(self.on_resolve_realm_async(realm))
-    }
-
-    fn on_add_dynamic_child(&self, realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_add_dynamic_child_async(realm))
+    fn on_add_dynamic_child(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub with the new child
+        Box::pin(async { Ok(()) })
     }
 }
 

@@ -99,6 +99,20 @@ impl TestHook {
         block_on(root_instance.print())
     }
 
+    pub async fn on_bind_instance_async<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        realm_state: &'a RealmState,
+    ) -> Result<(), ModelError> {
+        await!(self.create_instance_if_necessary(realm.abs_moniker.clone()))?;
+        for child_realm in
+            realm_state.child_realms.as_ref().expect("Unable to access child realms.").values()
+        {
+            await!(self.create_instance_if_necessary(child_realm.abs_moniker.clone()))?;
+        }
+        Ok(())
+    }
+
     pub async fn create_instance_if_necessary(
         &self,
         abs_moniker: AbsoluteMoniker,
@@ -135,13 +149,9 @@ impl Hook for TestHook {
     fn on_bind_instance<'a>(
         &'a self,
         realm: Arc<Realm>,
-        _realm_state: &'a RealmState,
+        realm_state: &'a RealmState,
     ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
-    }
-
-    fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
+        Box::pin(self.on_bind_instance_async(realm, &realm_state))
     }
 
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {

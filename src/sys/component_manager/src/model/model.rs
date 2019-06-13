@@ -31,9 +31,6 @@ pub trait Hook {
         realm_state: &'a RealmState,
     ) -> BoxFuture<Result<(), ModelError>>;
 
-    // Called when a new `realm`'s declaration has been resolved.
-    fn on_resolve_realm(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-
     // Called when a dynamic instance is added with `realm`.
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
 }
@@ -197,34 +194,11 @@ impl Model {
             state.execution = Some(execution);
         }
 
-        let mut child_realms: Vec<Arc<Realm>> = Vec::new();
+        // Return children that need eager starting.
+        let mut eager_children: Vec<Arc<Realm>> = Vec::new();
         for child_realm in
             state.child_realms.as_ref().expect("Unable to access child realms.").values()
         {
-            child_realms.push(child_realm.clone());
-        }
-        Ok(child_realms)
-    }
-
-    /// Binds to the component instance in the given realm, starting it if it's not
-    /// already running. Returns the list of child realms whose instances need to be eagerly started
-    /// after this function returns. The caller is responsible for calling
-    /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
-    async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
-        let mut child_realms;
-        let mut eager_children = vec![];
-        // Create a new scope for the RealmState lock. To avoid deadlock, we cannot be holding
-        // that lock while calling out to hooks so release the lock first.
-        {
-            let mut state = await!(realm.state.lock());
-            child_realms = await!(self.populate_realm_state(&mut *state, realm.clone()))?;
-            for hook in self.hooks.iter() {
-                await!(hook.on_bind_instance(realm.clone(), &*state))?;
-            }
-        }
-
-        // Return children that need eager starting.
-        for child_realm in child_realms.iter() {
             match child_realm.startup {
                 fsys::StartupMode::Eager => {
                     eager_children.push(child_realm.clone());
@@ -233,10 +207,18 @@ impl Model {
             }
         }
 
-        for child_realm in child_realms.iter() {
-            for hook in self.hooks.iter() {
-                await!(hook.on_resolve_realm(child_realm.clone()))?;
-            }
+        Ok(eager_children)
+    }
+
+    /// Binds to the component instance in the given realm, starting it if it's not
+    /// already running. Returns the list of child realms whose instances need to be eagerly started
+    /// after this function returns. The caller is responsible for calling
+    /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
+    async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
+        let mut state = await!(realm.state.lock());
+        let eager_children = await!(self.populate_realm_state(&mut *state, realm.clone()))?;
+        for hook in self.hooks.iter() {
+            await!(hook.on_bind_instance(realm.clone(), &*state))?;
         }
 
         Ok(eager_children)
