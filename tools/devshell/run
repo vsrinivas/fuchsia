@@ -56,4 +56,4 @@ if [ -n "$IMAGE_FVM_RAW" ]; then
   ARGS+=("-device" "ich9-ahci,id=ahci" "-device" "ide-drive,drive=mydisk,bus=ahci.0")
 fi
 
-exec "${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "$@"
+"${FUCHSIA_DIR}/zircon/scripts/run-zircon" "${args[@]}" "$@"
