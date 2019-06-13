@@ -11,6 +11,7 @@ group("sw") {
     ":codec_adapter_sw",
     ":codec_runner_sw",
     "ffmpeg",
+    "low_layer",
     "sbc",
   ]
 }
