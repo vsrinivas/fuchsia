@@ -48,3 +48,18 @@ source_set("lib") {
 
   configs += [ "//src/ledger:ledger_config" ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "fake_object_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//src/ledger/bin/testing:lib",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

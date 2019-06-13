@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/storage/fake/fake_object.h"
 
+#include <utility>
+
 namespace storage {
 namespace fake {
 
@@ -39,6 +41,22 @@ Status FakeObject::AppendReferences(
     ObjectReferencesAndPriority* references) const {
   return Status::OK;
 }
+
+FakeObjectToken::FakeObjectToken(ObjectIdentifier identifier)
+    : identifier_(std::move(identifier)), weak_factory_(this) {}
+
+FakeTokenChecker FakeObjectToken::GetChecker() {
+  return FakeTokenChecker(weak_factory_.GetWeakPtr());
+}
+
+const ObjectIdentifier& FakeObjectToken::GetIdentifier() const {
+  return identifier_;
+}
+
+FakeTokenChecker::FakeTokenChecker(const fxl::WeakPtr<FakeObjectToken>& token)
+    : token_(token) {}
+
+FakeTokenChecker::operator bool() const { return static_cast<bool>(token_); }
 
 }  // namespace fake
 }  // namespace storage

@@ -7,6 +7,7 @@
 
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -38,6 +39,35 @@ class FakeObject : public Object {
 
  private:
   std::unique_ptr<const Piece> piece_;
+};
+
+class FakeTokenChecker;
+
+class FakeObjectToken : public ObjectToken {
+ public:
+  explicit FakeObjectToken(ObjectIdentifier identifier);
+
+  // Returns a token checker associated with this token.
+  FakeTokenChecker GetChecker();
+
+  // ObjectToken:
+  const ObjectIdentifier& GetIdentifier() const override;
+
+ private:
+  ObjectIdentifier identifier_;
+  fxl::WeakPtrFactory<FakeObjectToken> weak_factory_;
+};
+
+// This class allows to decide if a particular FakeObjectToken is still alive.
+class FakeTokenChecker {
+ public:
+  explicit FakeTokenChecker(const fxl::WeakPtr<FakeObjectToken>& token);
+
+  // The token checker converts to true iff the ObjectToken is still alive.
+  explicit operator bool() const;
+
+ private:
+  fxl::WeakPtr<FakeObjectToken> token_;
 };
 
 }  // namespace fake
