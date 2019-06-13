@@ -63,5 +63,39 @@ source_set("vk") {
     "${graphics_compute_dir}/spinel",
     graphics_compute_vulkan_loader_target,
   ]
+
   public_configs = [ ":spinel_vk_public_config" ]
+}
+
+# A library used to load Spinel and Hotsort targets corresponding to a given
+# Vulkan (vendor_id,device_id) tuple. For now, this statically links everything
+# into the library. An alternative implementation may load the files from the
+# filesystem, or customize the link to only include the targets required to
+# run on the final device that will run the client application.
+#
+config("spinel_vk_ext_public_config") {
+  include_dirs = [ "ext" ]
+}
+
+source_set("vk_find_target") {
+  public = [
+    "ext/spinel_vk_find_target.h",
+  ]
+  sources = [
+    "ext/spinel_vk_find_target.c",
+    "ext/spinel_vk_find_target.h",
+  ]
+
+  include_dirs = [
+    "$root_gen_dir/src/graphics/lib/compute/spinel/platforms/vk",
+    ".",  # Necessary for the spn_target.h includes in the source file.
+  ]
+
+  # Spinel targets.
+  deps = [
+    "targets/vendors/amd/gcn3:generate",
+    "targets/vendors/intel/gen8:generate",
+    "targets/vendors/nvidia/sm50:generate",
+  ]
+  public_configs = [ ":spinel_vk_ext_public_config" ]
 }

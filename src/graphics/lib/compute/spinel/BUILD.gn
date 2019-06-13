@@ -50,6 +50,19 @@ source_set("spinel") {
   public_configs = [ ":spinel_public_config" ]
 }
 
+# This group provides a target that tests can link against.
+# It provides the Vulkan-based Spinel API, and the vk_find_targets
+# loader library that simply links all target files into the library
+# itself for easier deployments.
+
+group("spinel_vk_for_tests") {
+  public_deps = [
+    ":spinel",
+    "platforms/vk:vk",
+    "platforms/vk:vk_find_target",
+  ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [

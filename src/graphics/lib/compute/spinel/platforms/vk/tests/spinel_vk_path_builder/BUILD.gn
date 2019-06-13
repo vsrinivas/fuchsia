@@ -16,9 +16,6 @@ graphics_compute_vulkan_executable("spinel_vk_path_builder") {
   deps = [
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
-    "${graphics_compute_dir}/spinel/platforms/vk",
-    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
-    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
+    "${graphics_compute_dir}/spinel:spinel_vk_for_tests",
   ]
 }
