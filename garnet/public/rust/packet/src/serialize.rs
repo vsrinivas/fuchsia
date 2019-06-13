@@ -236,7 +236,7 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> ParseBufferMut for Buf<B> {
         &'a mut self,
         args: ParseArgs,
     ) -> Result<P, P::Error> {
-        P::parse(self.buffer_view_mut(), args)
+        P::parse_mut(self.buffer_view_mut(), args)
     }
     fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
         Buf::new(self.buf.as_mut(), self.range.clone())

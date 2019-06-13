@@ -567,6 +567,9 @@ pub trait ParseBufferMut: ParseBuffer + AsMut<[u8]> {
     /// mutable references to the buffer. This can be useful if you want to
     /// modify parsed packets in-place.
     ///
+    /// Depending on the implementation of [`P::parse_mut`], the contents
+    /// of the buffer may be modified during parsing.
+    ///
     /// See the [`BufferViewMut`] and [`ParsablePacket`] documentation for more
     /// details.
     ///
@@ -1306,7 +1309,7 @@ impl<'a> ParseBufferMut for &'a mut [u8] {
         &'b mut self,
         args: ParseArgs,
     ) -> Result<P, P::Error> {
-        P::parse(self, args)
+        P::parse_mut(self, args)
     }
     fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
         Buf::new(self, ..)
@@ -1715,7 +1718,9 @@ mod tests {
         // This ParsablePacket implementation takes the contents it expects as a
         // parse argument and validates the BufferView[Mut] against it. It consumes
         // one byte from the front and one byte from the back to ensure that that
-        // functionality works as well.
+        // functionality works as well. For a mutable buffer, the implementation also
+        // modifies the bytes that were consumed so tests can make sure that the
+        // `parse_mut` function was actually called and that the bytes are mutable.
         impl<B: ByteSlice> ParsablePacket<B, &[u8]> for () {
             type Error = ();
             fn parse<BV: BufferView<B>>(mut buffer: BV, args: &[u8]) -> Result<(), ()> {
@@ -1730,8 +1735,8 @@ mod tests {
                 B: ByteSliceMut,
             {
                 assert_eq!(buffer.as_ref(), args);
-                buffer.take_front(1);
-                buffer.take_back(1);
+                buffer.take_front(1).unwrap().as_mut()[0] += 1;
+                buffer.take_back(1).unwrap().as_mut()[0] += 2;
                 Ok(())
             }
 
@@ -1757,13 +1762,15 @@ mod tests {
 
         // mutable byte slices
 
-        let mut buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7];
+        let mut buf = &mut bytes[..];
         buf.parse_with::<_, ()>(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
         // test that, after parsing, the bytes consumed are consumed permanently
         buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
         // test that this also works with parse_with_mut
         buf.parse_with_mut::<_, ()>(&[2, 3, 4, 5]).unwrap();
         buf.parse_with_mut::<_, ()>(&[3, 4]).unwrap();
+        assert_eq!(bytes, [0, 1, 3, 4, 6, 7, 6, 7]);
 
         // test that different temporary values do not affect one another and
         // also that slicing works properly (in that the elements outside of the
@@ -1773,7 +1780,8 @@ mod tests {
         (&buf[1..7]).parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
         (&buf[1..7]).parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
         (&mut buf[1..7]).parse_with_mut::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
-        (&mut buf[1..7]).parse_with_mut::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
+        (&mut buf[1..7]).parse_with_mut::<_, ()>(&[2, 2, 3, 4, 5, 8]).unwrap();
+        assert_eq!(buf, &[0, 3, 2, 3, 4, 5, 10, 7][..]);
 
         // Buf with immutable byte slice
 
@@ -1790,7 +1798,8 @@ mod tests {
 
         // Buf with mutable byte slice
 
-        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7];
+        let buf = &mut bytes[..];
         let mut buf = Buf::new(&mut buf[..], ..);
         buf.parse_with::<_, ()>(&[0, 1, 2, 3, 4, 5, 6, 7]).unwrap();
         // test that, after parsing, the bytes consumed are consumed permanently
@@ -1798,18 +1807,22 @@ mod tests {
         // test that this also works with parse_with_mut
         buf.parse_with_mut::<_, ()>(&[2, 3, 4, 5]).unwrap();
         buf.parse_with_mut::<_, ()>(&[3, 4]).unwrap();
-
+        assert_eq!(bytes, [0, 1, 3, 4, 6, 7, 6, 7]);
         // the same test again, but this time with Buf's range set
-        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7];
+        let buf = &mut bytes[..];
         let mut buf = Buf::new(&mut buf[..], 1..7);
         buf.parse_with::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
         // test that, after parsing, the bytes consumed are consumed permanently
         buf.parse_with::<_, ()>(&[2, 3, 4, 5]).unwrap();
+        assert_eq!(bytes, [0, 1, 2, 3, 4, 5, 6, 7]);
         // test that this also works with parse_with_mut
-        let buf = &mut [0, 1, 2, 3, 4, 5, 6, 7][..];
+        let mut bytes = [0, 1, 2, 3, 4, 5, 6, 7];
+        let buf = &mut bytes[..];
         let mut buf = Buf::new(&mut buf[..], 1..7);
         buf.parse_with_mut::<_, ()>(&[1, 2, 3, 4, 5, 6]).unwrap();
         buf.parse_with_mut::<_, ()>(&[2, 3, 4, 5]).unwrap();
+        assert_eq!(bytes, [0, 2, 3, 3, 4, 7, 8, 7]);
     }
 
     #[test]
