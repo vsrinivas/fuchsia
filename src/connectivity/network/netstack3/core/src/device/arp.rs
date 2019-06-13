@@ -1161,7 +1161,7 @@ mod tests {
 
         // this test simply tests whether an entry gets expired after certain amount of time.
 
-        let start = ctx.dispatcher().current_time();
+        let start = ctx.dispatcher().now();
         let (stack_state, dispatcher) = ctx.state_and_dispatcher();
 
         insert_dynamic::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
@@ -1193,7 +1193,7 @@ mod tests {
         )
         .is_none());
         // this exact amount of time should have elapsed
-        assert_eq!(ctx.dispatcher().current_time() - start, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD);
+        assert_eq!(ctx.dispatcher().now() - start, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD);
     }
 
     #[test]
@@ -1215,7 +1215,7 @@ mod tests {
             TEST_REMOTE_IPV4,
             TEST_REMOTE_MAC,
         );
-        let start = ctx.dispatcher().current_time();
+        let start = ctx.dispatcher().now();
         // the following two timers are used to record the events
         // the first one is used as a marker so that when gratuitous
         // arp is received, the entry should not be invalidated after
@@ -1230,7 +1230,7 @@ mod tests {
         ctx.dispatcher().schedule_timeout(five_seconds, five_seconds_from_now);
 
         testutil::trigger_timers_until(&mut ctx, |id| id == &five_seconds_from_now);
-        assert_eq!(ctx.dispatcher().current_time() - start, five_seconds);
+        assert_eq!(ctx.dispatcher().now() - start, five_seconds);
         // the entry should be here
         assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
             .table
@@ -1249,7 +1249,7 @@ mod tests {
         );
 
         testutil::trigger_timers_until(&mut ctx, |id| id == &expiration_period_from_now);
-        assert_eq!(ctx.dispatcher().current_time() - start, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD);
+        assert_eq!(ctx.dispatcher().now() - start, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD);
         // the entry should still be there.
         assert!(EthernetArpDevice::get_arp_state(ctx.state_mut(), dev_id)
             .table
@@ -1265,7 +1265,7 @@ mod tests {
             .lookup(TEST_REMOTE_IPV4)
             .is_none());
         assert_eq!(
-            ctx.dispatcher().current_time() - start,
+            ctx.dispatcher().now() - start,
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + five_seconds
         );
     }
@@ -1275,7 +1275,7 @@ mod tests {
         set_logger_for_test();
         let (mut ctx, dev_id) = set_up_simple_test_environment();
 
-        let start = ctx.dispatcher().current_time();
+        let start = ctx.dispatcher().now();
         let related_timer = ArpTimerId::new_entry_expiration_timer_id(dev_id, TEST_REMOTE_IPV4);
 
         insert_static::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(

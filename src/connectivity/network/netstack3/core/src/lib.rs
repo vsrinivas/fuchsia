@@ -45,6 +45,8 @@ pub use crate::ip::{
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
+use std::time;
+
 use crate::device::{DeviceLayerState, DeviceLayerTimerId};
 use crate::ip::{IpLayerState, IpLayerTimerId};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
@@ -215,6 +217,44 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
     }
 }
 
+/// A type representing an instant in time.
+///
+/// `Instant` can be implemented by any type which represents an instant in
+/// time. This can include any sort of real-world clock time (e.g.,
+/// [`std::time::Instant`]) or fake time such as in testing.
+pub trait Instant: Sized {
+    /// Returns the amount of time elapsed from another instant to this one.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `earlier` is later than `self`.
+    fn duration_since(&self, earlier: Self) -> time::Duration;
+
+    /// Returns `Some(t)` where `t` is the time `self + duration` if `t` can be
+    /// represented as `Instant` (which means it's inside the bounds of the
+    /// underlying data structure), `None` otherwise.
+    fn checked_add(&self, duration: time::Duration) -> Option<Self>;
+
+    /// Returns `Some(t)` where `t` is the time `self - duration` if `t` can be
+    /// represented as `Instant` (which means it's inside the bounds of the
+    /// underlying data structure), `None` otherwise.
+    fn checked_sub(&self, duration: time::Duration) -> Option<Self>;
+}
+
+impl Instant for time::Instant {
+    fn duration_since(&self, earlier: time::Instant) -> time::Duration {
+        time::Instant::duration_since(self, earlier)
+    }
+
+    fn checked_add(&self, duration: time::Duration) -> Option<Self> {
+        time::Instant::checked_add(self, duration)
+    }
+
+    fn checked_sub(&self, duration: time::Duration) -> Option<Self> {
+        time::Instant::checked_sub(self, duration)
+    }
+}
+
 /// An object which can dispatch events to a real system.
 ///
 /// An `EventDispatcher` provides access to a real system. It provides the
@@ -223,6 +263,16 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispatcher {
+    /// The type of an instant in time.
+    ///
+    /// All time is measured using `Instant`s, including scheduling timeouts.
+    /// This type may represent some sort of real-world time (e.g.,
+    /// [`std::time::Instant`]), or may be mocked in testing using a fake clock.
+    type Instant: Instant;
+
+    /// Returns the current instant.
+    fn now(&self) -> Self::Instant;
+
     /// Schedule a callback to be invoked after a timeout.
     ///
     /// `schedule_timeout` schedules `f` to be invoked after `duration` has elapsed, overwriting any
@@ -230,11 +280,7 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
     ///
     /// If there was previously a timer with that ID, return the time at which is was scheduled to
     /// fire.
-    fn schedule_timeout(
-        &mut self,
-        duration: std::time::Duration,
-        id: TimerId,
-    ) -> Option<std::time::Instant>;
+    fn schedule_timeout(&mut self, duration: time::Duration, id: TimerId) -> Option<Self::Instant>;
 
     /// Schedule a callback to be invoked at a specific time.
     ///
@@ -245,15 +291,15 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
     /// fire.
     fn schedule_timeout_instant(
         &mut self,
-        time: std::time::Instant,
+        time: Self::Instant,
         id: TimerId,
-    ) -> Option<std::time::Instant>;
+    ) -> Option<Self::Instant>;
 
     /// Cancel a timeout.
     ///
     /// Returns true if the timeout was cancelled, false if there was no timeout
     /// for the given ID.
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<std::time::Instant>;
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<Self::Instant>;
 }
 
 /// Set the IP address and subnet for a device.

@@ -643,13 +643,19 @@ impl EventLoopInner {
 }
 
 impl EventDispatcher for EventLoopInner {
+    type Instant = Instant;
+
+    fn now(&self) -> Instant {
+        Instant::now()
+    }
+
     fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Instant> {
         // We need to separately keep track of the time at which the future completes (a Zircon
         // Time object) and the time at which the user expects it to complete. You cannot convert
         // between Zircon Time objects and std::time::Instant objects (since std::time::Instance is
         // opaque), so we generate two different time objects to keep track of.
         let zircon_time = zx::Time::after(zx::Duration::from(duration));
-        let rust_time = Instant::now() + duration;
+        let rust_time = self.now() + duration;
 
         let old_timer = self.cancel_timeout(id);
 

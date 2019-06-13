@@ -5,9 +5,11 @@
 //! Testing-related utilities.
 
 use std::collections::{BinaryHeap, HashMap};
+use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
+use std::ops;
 use std::sync::Once;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use byteorder::{ByteOrder, NativeEndian};
 use log::debug;
@@ -26,7 +28,7 @@ use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
-use crate::{handle_timeout, Context, EventDispatcher, StackStateBuilder, TimerId};
+use crate::{handle_timeout, Context, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
 use specialize_ip_macro::specialize_ip_address;
 
@@ -498,14 +500,65 @@ impl DummyEventDispatcherBuilder {
     }
 }
 
-/// Represents arbitrary data of type `D` attached to an `Instant`.
+/// A dummy implementation of `Instant` for use in testing.
+#[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub(crate) struct DummyInstant {
+    // A DummyInstant is just an offset from some arbitrary epoch.
+    offset: Duration,
+}
+
+impl Instant for DummyInstant {
+    fn duration_since(&self, earlier: DummyInstant) -> Duration {
+        self.offset.checked_sub(earlier.offset).unwrap()
+    }
+
+    fn checked_add(&self, duration: Duration) -> Option<DummyInstant> {
+        self.offset.checked_add(duration).map(|offset| DummyInstant { offset })
+    }
+
+    fn checked_sub(&self, duration: Duration) -> Option<DummyInstant> {
+        self.offset.checked_sub(duration).map(|offset| DummyInstant { offset })
+    }
+}
+
+impl ops::Add<Duration> for DummyInstant {
+    type Output = DummyInstant;
+
+    fn add(self, other: Duration) -> DummyInstant {
+        DummyInstant { offset: self.offset + other }
+    }
+}
+
+impl ops::Sub<DummyInstant> for DummyInstant {
+    type Output = Duration;
+
+    fn sub(self, other: DummyInstant) -> Duration {
+        self.offset - other.offset
+    }
+}
+
+impl ops::Sub<Duration> for DummyInstant {
+    type Output = DummyInstant;
+
+    fn sub(self, other: Duration) -> DummyInstant {
+        DummyInstant { offset: self.offset - other }
+    }
+}
+
+impl Debug for DummyInstant {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.offset)
+    }
+}
+
+/// Represents arbitrary data of type `D` attached to a `DummyInstant`.
 ///
-/// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap`
-/// and ordered by `Instant`.
-struct InstantAndData<D>(Instant, D);
+/// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap` and
+/// ordered by `DummyInstant`.
+struct InstantAndData<D>(DummyInstant, D);
 
 impl<D> InstantAndData<D> {
-    fn new(time: Instant, data: D) -> Self {
+    fn new(time: DummyInstant, data: D) -> Self {
         Self(time, data)
     }
 }
@@ -537,10 +590,11 @@ type PendingTimer = InstantAndData<TimerId>;
 /// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
 /// testing purposes. It provides facilities to inspect the history of what
 /// events have been emitted to the system.
+#[derive(Default)]
 pub(crate) struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
     timer_events: BinaryHeap<PendingTimer>,
-    current_time: Instant,
+    current_time: DummyInstant,
 }
 
 impl DummyEventDispatcher {
@@ -549,13 +603,8 @@ impl DummyEventDispatcher {
     }
 
     /// Get an ordered list of all scheduled timer events
-    pub(crate) fn timer_events(&self) -> impl Iterator<Item = (&'_ Instant, &'_ TimerId)> {
+    pub(crate) fn timer_events(&self) -> impl Iterator<Item = (&'_ DummyInstant, &'_ TimerId)> {
         self.timer_events.iter().map(|t| (&t.0, &t.1))
-    }
-
-    /// Get the current time
-    pub(crate) fn current_time(&self) -> Instant {
-        self.current_time
     }
 
     /// Forwards all the frames kept in the `self` to another context.
@@ -576,16 +625,6 @@ impl DummyEventDispatcher {
     }
 }
 
-impl Default for DummyEventDispatcher {
-    fn default() -> DummyEventDispatcher {
-        DummyEventDispatcher {
-            frames_sent: vec![],
-            timer_events: BinaryHeap::new(),
-            current_time: Instant::now(),
-        }
-    }
-}
-
 impl UdpEventDispatcher for DummyEventDispatcher {
     type UdpConn = ();
     type UdpListener = ();
@@ -600,18 +639,28 @@ impl DeviceLayerEventDispatcher for DummyEventDispatcher {
 }
 
 impl EventDispatcher for DummyEventDispatcher {
-    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Instant> {
+    type Instant = DummyInstant;
+
+    fn now(&self) -> DummyInstant {
+        self.current_time
+    }
+
+    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<DummyInstant> {
         self.schedule_timeout_instant(self.current_time + duration, id)
     }
 
-    fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Instant> {
+    fn schedule_timeout_instant(
+        &mut self,
+        time: DummyInstant,
+        id: TimerId,
+    ) -> Option<DummyInstant> {
         let ret = self.cancel_timeout(id);
         self.timer_events.push(PendingTimer::new(time, id));
         ret
     }
 
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
-        let mut r: Option<Instant> = None;
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<DummyInstant> {
+        let mut r: Option<DummyInstant> = None;
         // NOTE(brunodalbo): cancelling timeouts can be made a faster than this
         //  if we kept two data structures and TimerId was Hashable.
         self.timer_events = self
@@ -653,7 +702,7 @@ pub(crate) struct DummyNetwork<
 > {
     contexts: HashMap<N, Context<DummyEventDispatcher>>,
     mapper: F,
-    current_time: Instant,
+    current_time: DummyInstant,
     pending_frames: BinaryHeap<PendingFrame<N>>,
 }
 
@@ -709,9 +758,9 @@ where
     /// Creates a new `DummyNetwork`.
     ///
     /// Creates a new `DummyNetwork` with the collection of `Context`s in
-    /// `contexts`. `Context`s are named by type parameter `N`. `mapper`
-    /// is used to route frames from one pair of (named `Context`, `DeviceId`)
-    /// to another.
+    /// `contexts`. `Context`s are named by type parameter `N`. `mapper` is used
+    /// to route frames from one pair of (named `Context`, `DeviceId`) to
+    /// another.
     ///
     /// # Panics
     ///
@@ -729,7 +778,7 @@ where
         let mut ret = Self {
             contexts: contexts.collect(),
             mapper,
-            current_time: Instant::now(),
+            current_time: DummyInstant::default(),
             pending_frames: BinaryHeap::new(),
         };
 
@@ -822,8 +871,8 @@ where
         // dispatch all pending timers.
         for (n, ctx) in self.contexts.iter_mut() {
             // We have to collect the timers before dispatching them, to avoid
-            // an infinite loop in case handle_timeout schedules another timer for
-            // the same or older Instant.
+            // an infinite loop in case handle_timeout schedules another timer
+            // for the same or older DummyInstant.
             let mut timers = Vec::<TimerId>::new();
             while let Some(InstantAndData(t, id)) = ctx.dispatcher.timer_events.peek() {
                 // TODO(brunodalbo): remove this break once let_chains is stable
@@ -874,12 +923,12 @@ where
         }
     }
 
-    /// Calculates the next `Instant` when events are available.
+    /// Calculates the next `DummyInstant` when events are available.
     ///
-    /// Returns the smallest `Instant` greater than or equal to `current_time`
-    /// for which an event is available. If no events are available, returns
-    /// `None`.
-    fn next_step(&self) -> Option<Instant> {
+    /// Returns the smallest `DummyInstant` greater than or equal to
+    /// `current_time` for which an event is available. If no events are
+    /// available, returns `None`.
+    fn next_step(&self) -> Option<DummyInstant> {
         // get earliest timer in all contexts:
         let next_timer = self
             .contexts
@@ -1196,9 +1245,9 @@ mod tests {
         // verify implementation of InstantAndData to be used as a complex type
         // in a BinaryHeap:
         let mut heap = BinaryHeap::<InstantAndData<usize>>::new();
-        let now = Instant::now();
+        let now = DummyInstant::default();
 
-        fn new_data(time: Instant, id: usize) -> InstantAndData<usize> {
+        fn new_data(time: DummyInstant, id: usize) -> InstantAndData<usize> {
             InstantAndData::new(time, id)
         }
 
