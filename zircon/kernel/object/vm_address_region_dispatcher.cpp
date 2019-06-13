@@ -84,6 +84,10 @@ zx_status_t split_syscall_flags(
         vmar |= VMAR_FLAG_REQUIRE_NON_RESIZABLE;
         flags &= ~ZX_VM_REQUIRE_NON_RESIZABLE;
     }
+    if (flags & ZX_VM_ALLOW_FAULTS) {
+        vmar |= VMAR_FLAG_ALLOW_FAULTS;
+        flags &= ~ZX_VM_ALLOW_FAULTS;
+    }
 
     if (flags & ((1u << ZX_VM_ALIGN_BASE) - 1u)) {
         return ZX_ERR_INVALID_ARGS;
@@ -198,6 +202,11 @@ zx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObj
         vmar_flags &= ~VMAR_FLAG_REQUIRE_NON_RESIZABLE;
         if (vmo->is_resizable())
             return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (vmar_flags & VMAR_FLAG_ALLOW_FAULTS) {
+        vmar_flags &= ~VMAR_FLAG_ALLOW_FAULTS;
+    } else {
+        // TODO(stevensd): Add checks once all clients start using the flag.
     }
 
     fbl::RefPtr<VmMapping> result(nullptr);

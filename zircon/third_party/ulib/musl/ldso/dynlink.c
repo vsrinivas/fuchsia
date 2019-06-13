@@ -992,7 +992,7 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = (ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
         size_t off_start = ph->p_offset & -PAGE_SIZE;
-        zx_vm_option_t zx_options = ZX_VM_SPECIFIC;
+        zx_vm_option_t zx_options = ZX_VM_SPECIFIC | ZX_VM_ALLOW_FAULTS;
         zx_options |= (ph->p_flags & PF_R) ? ZX_VM_PERM_READ : 0;
         zx_options |= (ph->p_flags & PF_W) ? ZX_VM_PERM_WRITE : 0;
         zx_options |= (ph->p_flags & PF_X) ? ZX_VM_PERM_EXECUTE : 0;
