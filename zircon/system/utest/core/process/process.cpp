@@ -11,6 +11,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/process.h>
 #include <mini-process/mini-process.h>
 
 #include <unittest/unittest.h>
@@ -205,8 +207,9 @@ bool kill_process_via_vmar_destroy() {
               ZX_OK);
 
     // Destroying the root VMAR should cause the process to terminate.
-    REGISTER_CRASH(proc);
+    test_exceptions::ExceptionCatcher catcher(*zx::unowned_process(proc));
     EXPECT_EQ(zx_vmar_destroy(vmar), ZX_OK);
+    EXPECT_EQ(catcher.ExpectException(), ZX_OK);
 
     zx_signals_t signals;
     EXPECT_EQ(zx_object_wait_one(
@@ -814,7 +817,7 @@ RUN_TEST(process_start_no_handle);
 RUN_TEST(process_not_killed_via_thread_close);
 RUN_TEST(process_not_killed_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
-RUN_TEST_ENABLE_CRASH_HANDLER(kill_process_via_vmar_destroy);
+RUN_TEST(kill_process_via_vmar_destroy);
 RUN_TEST(kill_channel_handle_cycle);
 RUN_TEST(info_reflects_process_state);
 RUN_TEST(suspend);
