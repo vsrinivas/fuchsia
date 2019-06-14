@@ -36,8 +36,9 @@ enum Lifecycle {
 pub struct AccountHandler {
     // An optional `Account` that we are handling.
     //
-    // This will be None until a particular Account is established over the control channel. Once
-    // set, the account will never be cleared or modified.
+    // This will be Uninitialized until a particular Account is established over the control
+    // channel. Then it will be initialized. When the AccountHandler is terminated, or its Account
+    // is removed, it reaches its final state, Finished.
     account: RwLock<Lifecycle>,
 
     /// Root directory containing persistent resources for an AccountHandler instance.
