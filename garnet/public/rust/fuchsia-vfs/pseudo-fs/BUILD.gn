@@ -25,5 +25,6 @@ rustc_library("pseudo-fs") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

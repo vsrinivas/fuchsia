@@ -14,9 +14,10 @@ use {
         NodeMarker, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_mem,
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
-        Status,
+        Status, Vmo,
     },
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
@@ -309,9 +310,10 @@ impl FileConnection {
                 // explicitly encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetBuffer { flags: _, responder } => {
-                // There is no backing VMO.
-                responder.send(ZX_OK, None)?;
+            FileRequest::GetBuffer { flags, responder } => {
+                self.handle_get_buffer(flags, |status, mut buffer| {
+                    responder.send(status.into_raw(), buffer.as_mut().map(OutOfLine))
+                })?;
             }
         }
         Ok(())
@@ -368,6 +370,32 @@ impl FileConnection {
         let mut content = self.buffer[from..to].iter().cloned();
         responder(Status::OK, &mut content)?;
         Ok(count)
+    }
+
+    /// Copy the contents of the buffer associated with the connection into a VMO and return it. If
+    /// an error occurs, an error code is sent to the responder with no VMO, and this function
+    /// returns `Ok(())`. If the responder returns an error when used (including in the successful
+    /// case), this function returns that error directly.
+    fn handle_get_buffer<R>(&mut self, flags: u32, responder: R) -> Result<(), fidl::Error>
+    where
+        R: FnOnce(Status, Option<fidl_fuchsia_mem::Buffer>) -> Result<(), fidl::Error>,
+    {
+        if self.flags & OPEN_RIGHT_READABLE == 0 || flags & OPEN_RIGHT_READABLE == 0 {
+            return responder(Status::ACCESS_DENIED, None);
+        }
+        // Getting a writable or executable VMO is currently unsupported
+        if self.flags & OPEN_RIGHT_WRITABLE != 0 || flags & OPEN_RIGHT_WRITABLE != 0 {
+            return responder(Status::NOT_SUPPORTED, None);
+        }
+
+        assert_eq_size!(usize, u64);
+
+        let size = self.buffer.len() as u64;
+
+        let vmo = Vmo::create(size).expect("VMO creation failed");
+        vmo.write(&self.buffer[..], 0).expect("VMO writing failed");
+
+        responder(Status::OK, Some(fidl_fuchsia_mem::Buffer { size, vmo }))
     }
 
     /// Write `content` at the current seek position in the buffer associated with the connection.

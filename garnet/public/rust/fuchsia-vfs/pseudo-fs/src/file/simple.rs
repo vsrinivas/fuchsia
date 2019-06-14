@@ -501,6 +501,18 @@ mod tests {
     }
 
     #[test]
+    fn get_buffer() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            read_only(|| Ok(b"Get buffer test".to_vec())),
+            async move |proxy| {
+                assert_get_buffer!(proxy, "Get buffer test");
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
     fn read_only_ignore_posix_flag() {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,

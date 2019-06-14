@@ -124,6 +124,25 @@ macro_rules! assert_read_fidl_err {
 
 // See comment at the top of the file for why this is a macro.
 #[macro_export]
+macro_rules! assert_get_buffer {
+    ($proxy:expr, $expected:expr) => {{
+        use $crate::test_utils::reexport::*;
+
+        let (status, buffer) =
+            await!($proxy.get_buffer(OPEN_RIGHT_READABLE)).expect("get buffer failed");
+
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert!(buffer.is_some());
+        let buffer = buffer.unwrap();
+
+        let mut buf = vec![0; buffer.size as usize];
+        buffer.vmo.read(&mut buf, 0).expect("VMO read failed");
+        assert_eq!(buf.as_slice(), $expected.as_bytes());
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
 macro_rules! assert_read_at {
     ($proxy:expr, $offset:expr, $expected:expr) => {{
         use $crate::test_utils::reexport::*;
