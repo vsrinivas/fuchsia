@@ -35,6 +35,7 @@ library("memfs-cpp") {
 # Used to create local temporary filesystems.
 library("memfs") {
   sdk = "shared"
+  sdk_publishable = true
   sdk_headers = [ "lib/memfs/memfs.h" ]
   shared = true
   sources = [

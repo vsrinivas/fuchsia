@@ -4,6 +4,7 @@
 
 library("ddk") {
   sdk = "static"
+  sdk_publishable = true
   sdk_headers = [
     "ddk/metadata/bad-block.h",
     "ddk/metadata/buttons.h",

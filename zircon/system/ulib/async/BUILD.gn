@@ -6,6 +6,7 @@ assert(is_fuchsia)
 
 library("async") {
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/async/dispatcher.h",
     "lib/async/exception.h",
@@ -31,6 +32,7 @@ library("async") {
 
 library("async-cpp") {
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/async/cpp/exception.h",
     "lib/async/cpp/receiver.h",
@@ -63,6 +65,7 @@ library("async-cpp") {
 
 library("async-default") {
   sdk = "shared"
+  sdk_publishable = true
   sdk_headers = [ "lib/async/default.h" ]
   shared = true
   sources = [

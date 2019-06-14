@@ -43,6 +43,7 @@ library("trace-engine") {
   configs += [ "$zx/public/gn/config:static-libc++" ]
 
   sdk = "shared"
+  sdk_publishable = true
   sdk_headers = []
 }
 

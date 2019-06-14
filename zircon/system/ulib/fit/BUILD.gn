@@ -4,6 +4,7 @@
 
 library("fit") {
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/fit/bridge.h",
     "lib/fit/bridge_internal.h",

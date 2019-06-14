@@ -1,0 +1,13 @@
+{
+  "pkg/fdio/include/lib/fdio/directory.h": "f9827021d3830bc8c4b0b1af534876a4",
+  "pkg/fdio/include/lib/fdio/fd.h": "f5ea3105b3d7d00dac9cef5b34ac5283",
+  "pkg/fdio/include/lib/fdio/fdio.h": "5b681e52ef4ea80d54a495b139f953bc",
+  "pkg/fdio/include/lib/fdio/io.h": "75bae2a432035a07d5dee828220658f4",
+  "pkg/fdio/include/lib/fdio/limits.h": "54200515f953e603209fc34f57369c93",
+  "pkg/fdio/include/lib/fdio/namespace.h": "c1ad74b29275c957f609660fc1c2d8bb",
+  "pkg/fdio/include/lib/fdio/private.h": "3f43307d5e467063c5fdfee187d3d53d",
+  "pkg/fdio/include/lib/fdio/spawn.h": "ca22a28abdc91514d7cb9b37d5e33c77",
+  "pkg/fdio/include/lib/fdio/unsafe.h": "2465d3633276374a4883b11f25f0cf37",
+  "pkg/fdio/include/lib/fdio/vfs.h": "2b31f751424ba1d6ddf086fa78af3525",
+  "pkg/fdio/include/lib/fdio/watcher.h": "fe6468db8c4f0d0c00872ece959cce66"
+}

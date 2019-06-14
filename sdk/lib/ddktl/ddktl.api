@@ -1,0 +1,7 @@
+{
+  "pkg/ddktl/include/ddktl/device-internal.h": "1788f24df4579d5ebfe95784215802d5",
+  "pkg/ddktl/include/ddktl/device.h": "a6c396af88404089b459d8a8dfcbb45b",
+  "pkg/ddktl/include/ddktl/fidl.h": "300c35a4bc1ac36cf3a389e5d8f8cda0",
+  "pkg/ddktl/include/ddktl/i2c-channel.h": "4411d44ad0b44b01f4df79c19f1c72dd",
+  "pkg/ddktl/include/ddktl/protocol/empty-protocol.h": "410fa4baf5e145dbdc2db1b272ada45f"
+}

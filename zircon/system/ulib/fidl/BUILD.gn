@@ -5,6 +5,7 @@
 # Base library used by both Fuchsia and host
 library("fidl_base") {
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/fidl/coding.h",
     "lib/fidl/cpp/builder.h",
@@ -41,6 +42,7 @@ library("fidl_base") {
 
 library("fidl") {
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/fidl/epitaph.h",
     "lib/fidl/transport.h",

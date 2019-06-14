@@ -4,6 +4,7 @@
 
 library("syslog") {
   sdk = "shared"
+  sdk_publishable = true
   sdk_headers = [
     "lib/syslog/global.h",
     "lib/syslog/logger.h",

@@ -301,6 +301,12 @@ template("shared_library") {
 #     $sdk_headers is required.
 #     Type: "static" or "shared" or "source"
 #
+#   sdk_publishable
+#     Optional: Indicates that this library can be added to SDKs in the legacy
+#     Fuchsia build.
+#     Type: bool
+#     Default: false
+#
 #   sdk_headers
 #     Optional: Required if $sdk is set.  This must list all the header files
 #     in the `include/` directory; names should be relative to `include/`.
@@ -349,6 +355,8 @@ template("library") {
     # meant to be very clean, just to do what works in the legacy build.
     sdk = invoker.sdk
     sdk_headers = invoker.sdk_headers
+    sdk_publishable =
+        defined(invoker.sdk_publishable) && invoker.sdk_publishable
     if (sdk != false) {
       assert(static || shared,
              "Public library(\"$_library_name\") must be static or shared")
@@ -369,12 +377,14 @@ template("library") {
   } else {
     sdk = false
     sdk_headers = []
+    sdk_publishable = false
   }
   _library_params = [
     "kernel",
     "host",
     "sdk",
     "sdk_headers",
+    "sdk_publishable",
     "shared",
     "static",
   ]
@@ -461,6 +471,7 @@ template("library") {
           dir = "//zircon/" + rebase_path("include", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
           headers = sdk_headers
+          publishable = sdk_publishable
           if (sdk == "source") {
             source_dir = "//zircon/" + rebase_path(".", "$zx/")
             sources = []

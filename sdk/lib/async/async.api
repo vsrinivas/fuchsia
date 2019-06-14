@@ -1,0 +1,9 @@
+{
+  "pkg/async/include/lib/async/dispatcher.h": "1c6cd00d423189b28c1796bde26e7138",
+  "pkg/async/include/lib/async/exception.h": "acf1a77ec8b99de27039621b4361ab9c",
+  "pkg/async/include/lib/async/receiver.h": "720df7272aa76cad9571b2740a3676b3",
+  "pkg/async/include/lib/async/task.h": "09de0813606612add87dba337d589e0e",
+  "pkg/async/include/lib/async/time.h": "723bb92cac91253e408b2ff0f68dd964",
+  "pkg/async/include/lib/async/trap.h": "d2439e552cfbf742db08428a6480a654",
+  "pkg/async/include/lib/async/wait.h": "da6d0787ee6f627b218460a66f351cec"
+}

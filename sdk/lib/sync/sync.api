@@ -1,0 +1,7 @@
+{
+  "pkg/sync/include/lib/sync/completion.h": "9f070c1b253dc8994c0e50c4cba1521e",
+  "pkg/sync/include/lib/sync/condition.h": "5d3d6f9c0ff2b5d030ad7ca2dcc1ddf5",
+  "pkg/sync/include/lib/sync/internal/condition-template.h": "86b53e05b3ae2f9ce76f8db488cde7b9",
+  "pkg/sync/include/lib/sync/internal/mutex-internal.h": "c594c0e7c666cb390d80607285e45fe3",
+  "pkg/sync/include/lib/sync/mutex.h": "9ce79f9327c2e0e19589e7ec9f065342"
+}

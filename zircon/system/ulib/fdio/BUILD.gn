@@ -4,6 +4,7 @@
 
 library("fdio") {
   sdk = "shared"
+  sdk_publishable = true
   sdk_headers = [
     "lib/fdio/directory.h",
     "lib/fdio/fd.h",

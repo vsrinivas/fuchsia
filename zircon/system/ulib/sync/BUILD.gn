@@ -4,6 +4,7 @@
 
 library("sync") {
   sdk = "static"
+  sdk_publishable = true
   sdk_headers = [
     "lib/sync/internal/condition-template.h",
     "lib/sync/internal/mutex-internal.h",

@@ -1,0 +1,8 @@
+{
+  "pkg/async-cpp/include/lib/async/cpp/exception.h": "75c5c32493b8c5db19359bf685d89e41",
+  "pkg/async-cpp/include/lib/async/cpp/receiver.h": "d43514d25699be9f43e374565b0330b1",
+  "pkg/async-cpp/include/lib/async/cpp/task.h": "f5ed37c3ecdde6f585d706299f7bf316",
+  "pkg/async-cpp/include/lib/async/cpp/time.h": "afe10811ad2dde09d53d4e364d387752",
+  "pkg/async-cpp/include/lib/async/cpp/trap.h": "51bcf98f15fa8b54e28029e2591d2540",
+  "pkg/async-cpp/include/lib/async/cpp/wait.h": "212fde25d04958a7028ed773973f3487"
+}
