@@ -89,6 +89,8 @@ private:
                                         uint32_t* id) TA_REQ(lock_);
     void OpenColorBufferLocked(uint32_t id) TA_REQ(lock_);
     void CloseColorBufferLocked(uint32_t id) TA_REQ(lock_);
+    zx_status_t SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode,
+                                               uint32_t* result) TA_REQ(lock_);
     zx_status_t UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr,
                                         uint32_t width, uint32_t height,
                                         size_t size, uint32_t* result)

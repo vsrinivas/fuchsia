@@ -75,6 +75,15 @@ struct CloseColorBufferCmd {
 constexpr uint32_t kOP_rcCloseColorBuffer = 10014;
 constexpr uint32_t kSize_rcCloseColorBuffer = 12;
 
+struct SetColorBufferVulkanModeCmd {
+    uint32_t op;
+    uint32_t size;
+    uint32_t id;
+    uint32_t mode;
+};
+constexpr uint32_t kOP_rcSetColorBufferVulkanMode = 10045;
+constexpr uint32_t kSize_rcSetColorBufferVulkanMode = 16;
+
 struct UpdateColorBufferCmd {
     uint32_t op;
     uint32_t size;
@@ -397,6 +406,20 @@ void Display::DisplayControllerImplApplyConfiguration(
                 zxlogf(ERROR, "%s: failed to get color buffer: %d\n", kTag,
                        status);
             }
+
+            // Color buffers are in vulkan-only mode by default as that avoids
+            // unnecessary copies on the host in some cases. The color buffer
+            // needs to be moved out of vulkan-only mode before being used for
+            // presentation.
+            if (color_buffer->id) {
+                uint32_t result = 0;
+                status = SetColorBufferVulkanModeLocked(color_buffer->id, 0,
+                                                        &result);
+                if (status != ZX_OK || result) {
+                    zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d\n",
+                           kTag, status, result);
+                }
+            }
         }
     }
 
@@ -611,6 +634,20 @@ void Display::CloseColorBufferLocked(uint32_t id) {
     WriteLocked(kSize_rcCloseColorBuffer);
 }
 
+zx_status_t Display::SetColorBufferVulkanModeLocked(uint32_t id, uint32_t mode,
+                                                    uint32_t* result) {
+    TRACE_DURATION("gfx", "Display::SetColorBufferVulkanMode", "id", id, "mode",
+                   mode);
+
+    auto cmd = static_cast<SetColorBufferVulkanModeCmd*>(io_buffer_.virt());
+    cmd->op = kOP_rcSetColorBufferVulkanMode;
+    cmd->size = kSize_rcSetColorBufferVulkanMode;
+    cmd->id = id;
+    cmd->mode = mode;
+
+    return ExecuteCommandLocked(kSize_rcSetColorBufferVulkanMode, result);
+}
+
 zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr,
                                              uint32_t width, uint32_t height,
                                              size_t size, uint32_t* result) {
@@ -679,9 +716,8 @@ int Display::FlushHandler() {
             if (displayed_fb->paddr) {
                 uint32_t result;
                 zx_status_t status = UpdateColorBufferLocked(
-                    displayed_fb->id, displayed_fb->paddr,
-                    displayed_fb->width, displayed_fb->height,
-                    displayed_fb->size, &result);
+                    displayed_fb->id, displayed_fb->paddr, displayed_fb->width,
+                    displayed_fb->height, displayed_fb->size, &result);
                 if (status != ZX_OK || result) {
                     zxlogf(ERROR, "%s: color buffer update failed\n", kTag);
                     continue;
@@ -709,7 +745,8 @@ int Display::FlushHandler() {
 
 } // namespace goldfish
 
-static constexpr zx_driver_ops_t goldfish_display_driver_ops = []() -> zx_driver_ops_t {
+static constexpr zx_driver_ops_t goldfish_display_driver_ops =
+    []() -> zx_driver_ops_t {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = goldfish::Display::Create;
