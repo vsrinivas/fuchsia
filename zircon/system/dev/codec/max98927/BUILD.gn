@@ -9,6 +9,7 @@ driver("max98927") {
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/dev/lib/device-protocol-i2c",
     "$zx/system/fidl/fuchsia-hardware-audiocodec:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

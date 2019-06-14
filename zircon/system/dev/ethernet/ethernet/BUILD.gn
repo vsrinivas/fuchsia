@@ -15,6 +15,7 @@ driver("ethernet") {
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
   ]
 }
@@ -34,6 +35,7 @@ test("ethernet-unittest") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]

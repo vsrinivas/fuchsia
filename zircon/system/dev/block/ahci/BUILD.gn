@@ -29,6 +29,7 @@ test("ahci-unittest") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
 }

@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
+#include <lib/sync/completion.h>
 #include <ddktl/protocol/i2c.h>
 #include <zircon/types.h>
 

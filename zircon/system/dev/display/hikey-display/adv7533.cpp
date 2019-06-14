@@ -7,7 +7,7 @@
 #include "edid.h"
 #include "hidisplay-regs.h"
 #include "hidisplay.h"
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <lib/edid/edid.h>
 
 namespace hi_display {

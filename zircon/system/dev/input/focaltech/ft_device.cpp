@@ -7,7 +7,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

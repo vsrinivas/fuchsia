@@ -9,7 +9,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <ddk/protocol/composite.h>
 
 #include <hid/descriptor.h>

@@ -1,10 +1,8 @@
-
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDK_PROTOCOL_I2C_LIB_H_
-#define DDK_PROTOCOL_I2C_LIB_H_
+#pragma once
 
 #include <string.h>
 
@@ -92,5 +90,3 @@ static inline zx_status_t i2c_read_sync(const i2c_protocol_t* i2c, void* read_bu
 }
 
 __END_CDECLS
-
-#endif  // DDK_PROTOCOL_I2C_LIB_H_

@@ -9,7 +9,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <endian.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

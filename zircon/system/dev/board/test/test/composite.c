@@ -15,7 +15,7 @@
 #include <ddk/protocol/codec.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/power.h>

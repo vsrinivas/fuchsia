@@ -6,7 +6,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>

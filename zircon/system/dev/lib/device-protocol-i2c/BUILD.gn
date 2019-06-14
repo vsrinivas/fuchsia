@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("device-protocol-i2c") {
+  sdk = "source"
+  sdk_headers = [ "lib/device-protocol/i2c.h" ]
+  sources = []
+  public_deps = [
+    # <lib/device-protocol-i2c/i2c.h> has #include <ddk/protocol/i2c.h>
+    "$zx/system/banjo/ddk.protocol.i2c",
+
+    # <lib/device-protocol-i2c/i2c.h> has #include <lib/sync/completion.h>
+    "$zx/system/ulib/sync:headers",
+
+    # <lib/device-protocol-i2c/i2c.h> has #include <zircon/types.h>
+    "$zx/system/ulib/zx:headers",
+  ]
+}

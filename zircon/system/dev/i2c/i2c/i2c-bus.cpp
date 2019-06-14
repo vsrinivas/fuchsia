@@ -9,7 +9,7 @@
 #include <threads.h>
 
 #include <ddk/debug.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>

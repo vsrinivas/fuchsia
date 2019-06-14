@@ -8,7 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 #include <endian.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

@@ -12,7 +12,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/i2c-lib.h>
+#include <lib/device-protocol/i2c.h>
 
 static void i2c_complete(void* cookie, zx_status_t status, const i2c_op_t* ops, size_t cnt) {
     if (status != ZX_OK) {

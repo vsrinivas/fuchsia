@@ -10,6 +10,9 @@ library("device-protocol-i2c-channel") {
     # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <ddktl/protocol/i2c.h>
     "$zx/system/banjo/ddk.protocol.i2c",
 
+    # <lib/device-protocol-i2c-channel/i2c-channel.h> include <lib/device-protocol/i2c.h>
+    "$zx/system/dev/lib/device-protocol-i2c",
+
     # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <zircon/types.h>
     "$zx/system/ulib/zx",
   ]

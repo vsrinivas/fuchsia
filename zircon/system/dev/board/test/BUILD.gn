@@ -143,6 +143,7 @@ foreach(driver, simple_drivers) {
       "$zx/system/banjo/ddk.protocol.gpio",
       "$zx/system/banjo/ddk.protocol.platform.device",
       "$zx/system/banjo/ddk.protocol.power",
+      "$zx/system/dev/lib/device-protocol-i2c",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",

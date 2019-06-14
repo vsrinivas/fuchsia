@@ -55,6 +55,7 @@ source_set("core") {
   deps = [
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
   ]
 }
 
