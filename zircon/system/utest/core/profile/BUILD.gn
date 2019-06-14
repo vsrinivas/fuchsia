@@ -5,11 +5,12 @@
 source_set("profile") {
   testonly = true
   sources = [
-    "profile.c",
+    "profile.cpp",
   ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }
