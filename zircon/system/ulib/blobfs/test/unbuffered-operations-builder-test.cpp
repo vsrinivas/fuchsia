@@ -506,5 +506,79 @@ TEST(UnbufferedOperationsBuilderTest, TwoRequestsSameVmoSubsumeRequestReverse) {
     EXPECT_EQ(requests[0].op.length, operations[0].op.length);
 }
 
+TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRequests) {
+    UnbufferedOperationsBuilder builder;
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+    UnbufferedOperation operations[3];
+    operations[0].vmo = zx::unowned_vmo(vmo.get());
+    operations[0].op.type = OperationType::kWrite;
+    operations[0].op.vmo_offset = 0;
+    operations[0].op.dev_offset = 0;
+    operations[0].op.length = 3;
+
+    operations[1].vmo = zx::unowned_vmo(vmo.get());
+    operations[1].op.type = OperationType::kWrite;
+    operations[1].op.vmo_offset = 5;
+    operations[1].op.dev_offset = 5;
+    operations[1].op.length = 3;
+
+    // operation two has range that overlaps with operation[0] and operation[1].
+    operations[2].vmo = zx::unowned_vmo(vmo.get());
+    operations[2].op.type = OperationType::kWrite;
+    operations[2].op.vmo_offset = 2;
+    operations[2].op.dev_offset = 2;
+    operations[2].op.length = 4;
+
+    builder.Add(operations[0]);
+    EXPECT_EQ(3, builder.BlockCount());
+    builder.Add(operations[1]);
+    EXPECT_EQ(6, builder.BlockCount());
+    builder.Add(operations[2]);
+    EXPECT_EQ(9, builder.BlockCount());
+
+    // operation[2] two can be coalesced with either operation[0] or with operation[1].
+    // First added operation is preferred.
+    auto requests = builder.TakeOperations();
+    ASSERT_EQ(2, requests.size());
+
+    // operations[0] was Added first. So operation[2] should have been coalesced with operation[0].
+    EXPECT_EQ(requests[0].vmo->get(), vmo.get());
+    EXPECT_EQ(requests[0].op.vmo_offset, operations[0].op.vmo_offset);
+    EXPECT_EQ(requests[0].op.dev_offset, operations[0].op.dev_offset);
+    EXPECT_EQ(requests[0].op.length, operations[0].op.length + operations[2].op.length - 1);
+
+    EXPECT_EQ(requests[1].vmo->get(), vmo.get());
+    EXPECT_EQ(requests[1].op.vmo_offset, operations[1].op.vmo_offset);
+    EXPECT_EQ(requests[1].op.dev_offset, operations[1].op.dev_offset);
+    EXPECT_EQ(requests[1].op.length, operations[1].op.length);
+
+    // Flip the order of Add. Now operation[2] should be coalesced with operation[1]
+    builder.Add(operations[1]);
+    EXPECT_EQ(3, builder.BlockCount());
+    builder.Add(operations[0]);
+    EXPECT_EQ(6, builder.BlockCount());
+    builder.Add(operations[2]);
+    EXPECT_EQ(9, builder.BlockCount());
+
+    // operation[2] two can be coalesced with either operation[0] or with operation[1].
+    // First added operation is preferred.
+    requests = builder.TakeOperations();
+    ASSERT_EQ(2, requests.size());
+
+    // operations[1] was Added first. So operation[2] should have been coalesced with operation[1].
+    EXPECT_EQ(requests[0].vmo->get(), vmo.get());
+    EXPECT_EQ(requests[0].op.vmo_offset, operations[2].op.vmo_offset);
+    EXPECT_EQ(requests[0].op.dev_offset, operations[2].op.dev_offset);
+    EXPECT_EQ(requests[0].op.length, operations[1].op.length + operations[2].op.length - 1);
+
+    EXPECT_EQ(requests[1].vmo->get(), vmo.get());
+    EXPECT_EQ(requests[1].op.vmo_offset, operations[0].op.vmo_offset);
+    EXPECT_EQ(requests[1].op.dev_offset, operations[0].op.dev_offset);
+    EXPECT_EQ(requests[1].op.length, operations[0].op.length);
+}
+
 } // namespace
 } // namespace blobfs

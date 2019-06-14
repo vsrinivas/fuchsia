@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <cstdint>
+
 #include <blobfs/unbuffered-operations-builder.h>
+#include <range/range.h>
 
 namespace blobfs {
+using range::Range;
 namespace {
 
 // Skew between the vmo offset and the device offset implies that
@@ -36,43 +41,18 @@ void UnbufferedOperationsBuilder::Add(const UnbufferedOperation& new_operation) 
             continue;
         }
 
-        uint64_t old_start = operation.op.vmo_offset;
-        uint64_t old_end = operation.op.vmo_offset + operation.op.length;
+        // TODO(ZX-4238): Merge/coalesce is more involved than this. One enqueue can encompass from
+        //                one to all existing requests - leading to popping out operations.
+        auto old_range =
+            Range<uint64_t>(operation.op.vmo_offset, operation.op.vmo_offset + operation.op.length);
 
-        uint64_t new_start = vmo_offset;
-        uint64_t new_end = vmo_offset + length;
-
-        if ((old_start <= new_start) && (new_end <= old_end)) {
-            // The old operation is larger (on both sides) than the new operation.
-            //
-            // It's already as large as it needs to be; exit.
-            return;
-        } else if ((new_start <= old_start) && (old_end <= new_end)) {
-            // The new operation is larger (on both sides) than the old operation.
-            //
-            // Make the old operation as large as the new operation.
-            operation.op.vmo_offset = vmo_offset;
-            operation.op.dev_offset = dev_offset;
-            block_count_ += (length - operation.op.length);
-            operation.op.length = length;
-            return;
-        } else if ((new_start <= old_end) && (old_start <= new_start)) {
-            // The new op either partially or totally follows the old operation.
-            //
-            // Post-Extend the old operation.
-            size_t extension = new_end - old_end;
-            operation.op.length += extension;
-            block_count_ += extension;
-            return;
-        } else if ((old_start <= new_end) && (new_start <= old_start)) {
-            // The new op either partially or totally precedes the old operation.
-            //
-            // Pre-Extend the old operation.
-            size_t extension = old_start - new_start;
-            operation.op.vmo_offset = vmo_offset;
-            operation.op.dev_offset = dev_offset;
-            operation.op.length += extension;
-            block_count_ += extension;
+        auto new_range = Range<uint64_t>(vmo_offset, vmo_offset + length);
+        if (Mergable(old_range, new_range)) {
+            auto merged_op = Merge(old_range, new_range).value();
+            operation.op.vmo_offset = merged_op.start();
+            operation.op.length = merged_op.length();
+            operation.op.dev_offset = std::min(dev_offset, operation.op.dev_offset);
+            block_count_ += (merged_op.length() - old_range.length());
             return;
         }
     }
