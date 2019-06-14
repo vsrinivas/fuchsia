@@ -2863,7 +2863,9 @@ void demo_init_vk_swapchain(struct demo* demo) {
   GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
   GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
   GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
+#if USE_YUV_TEXTURE
   GET_DEVICE_PROC_ADDR(demo->device, CreateSamplerYcbcrConversionKHR);
+#endif
   GET_DEVICE_PROC_ADDR(demo->device, GetDeviceQueue2);
   if (demo->protected_output) {
     VkDeviceQueueInfo2 queue_info2 = {
