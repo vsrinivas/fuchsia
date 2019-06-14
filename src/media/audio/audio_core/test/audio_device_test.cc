@@ -5,15 +5,13 @@
 #include "src/media/audio/audio_core/test/audio_device_test.h"
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include <cmath>
 #include <cstring>
 #include <utility>
 
-#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
-#include "src/media/audio/audio_core/test/audio_tests_shared.h"
+#include "src/media/audio/lib/test/audio_test_base.h"
 
 namespace media::audio::test {
 
@@ -21,7 +19,6 @@ namespace media::audio::test {
 // AudioDeviceTest static variables
 //
 std::unique_ptr<sys::ComponentContext> AudioDeviceTest::startup_context_;
-fuchsia::virtualaudio::ControlSyncPtr AudioDeviceTest::control_sync_;
 
 uint16_t AudioDeviceTest::initial_input_device_count_ = kInvalidDeviceCount;
 uint16_t AudioDeviceTest::initial_output_device_count_ = kInvalidDeviceCount;
@@ -42,105 +39,58 @@ void AudioDeviceTest::SetStartupContext(
   startup_context_ = std::move(startup_context);
 }
 
-// static
-void AudioDeviceTest::SetControl(
-    fuchsia::virtualaudio::ControlSyncPtr control_sync) {
-  AudioDeviceTest::control_sync_ = std::move(control_sync);
-}
-
-// static
-void AudioDeviceTest::ResetVirtualDevices() {
-  DisableVirtualDevices();
-  zx_status_t status = control_sync_->Enable();
-  ASSERT_EQ(status, ZX_OK);
-}
-
-// static
-void AudioDeviceTest::DisableVirtualDevices() {
-  zx_status_t status = control_sync_->Disable();
-  ASSERT_EQ(status, ZX_OK);
-
-  uint32_t num_inputs = -1, num_outputs = -1, num_tries = 0;
-  do {
-    status = control_sync_->GetNumDevices(&num_inputs, &num_outputs);
-    ASSERT_EQ(status, ZX_OK);
-
-    ++num_tries;
-  } while ((num_inputs != 0 || num_outputs != 0) && num_tries < 100);
-  ASSERT_EQ(num_inputs, 0u);
-  ASSERT_EQ(num_outputs, 0u);
-}
-
-// static
-void AudioDeviceTest::TearDownTestSuite() { DisableVirtualDevices(); }
-
 void AudioDeviceTest::SetUp() {
-  gtest::RealLoopFixture::SetUp();
-
-  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
+  AudioTestBase::SetUp();
 
   startup_context_->svc()->Connect(audio_dev_enum_.NewRequest());
-  audio_dev_enum_.set_error_handler(err_handler);
+  audio_dev_enum_.set_error_handler(ErrorHandler());
 }
 
 void AudioDeviceTest::TearDown() {
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   audio_dev_enum_.Unbind();
 
-  gtest::RealLoopFixture::TearDown();
+  AudioTestBase::TearDown();
 }
 
 void AudioDeviceTest::ExpectCallback() {
-  received_callback_ = false;
   received_device_ = kInvalidDeviceInfo;
   received_removed_token_ = kInvalidDeviceToken;
   received_default_token_ = received_old_token_ = kInvalidDeviceToken;
   received_gain_token_ = kInvalidDeviceToken;
   received_gain_info_ = kInvalidGainInfo;
 
-  bool timed_out = !RunLoopWithTimeoutOrUntil(
-      [this]() { return error_occurred_ || received_callback_; },
-      kDurationResponseExpected, kDurationGranularity);
+  AudioTestBase::ExpectCallback();
 
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
   EXPECT_TRUE(audio_dev_enum_.is_bound());
-
-  EXPECT_FALSE(timed_out) << kTimeoutErr;
-  EXPECT_TRUE(received_callback_);
 }
 
 void AudioDeviceTest::SetOnDeviceAddedEvent() {
   audio_dev_enum_.events().OnDeviceAdded =
-      [this](fuchsia::media::AudioDeviceInfo dev) {
-        received_callback_ = true;
+      CompletionCallback([this](fuchsia::media::AudioDeviceInfo dev) {
         received_device_ = std::move(dev);
-      };
+      });
 }
 
 void AudioDeviceTest::SetOnDeviceRemovedEvent() {
-  audio_dev_enum_.events().OnDeviceRemoved = [this](uint64_t token_id) {
-    received_callback_ = true;
-    received_removed_token_ = token_id;
-  };
+  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback(
+      [this](uint64_t token_id) { received_removed_token_ = token_id; });
 }
 
 void AudioDeviceTest::SetOnDeviceGainChangedEvent() {
-  audio_dev_enum_.events().OnDeviceGainChanged =
+  audio_dev_enum_.events().OnDeviceGainChanged = CompletionCallback(
       [this](uint64_t dev_token, fuchsia::media::AudioGainInfo dev_gain_info) {
-        received_callback_ = true;
         received_gain_token_ = dev_token;
         received_gain_info_ = dev_gain_info;
-      };
+      });
 }
 
 void AudioDeviceTest::SetOnDefaultDeviceChangedEvent() {
-  audio_dev_enum_.events().OnDefaultDeviceChanged =
+  audio_dev_enum_.events().OnDefaultDeviceChanged = CompletionCallback(
       [this](uint64_t old_default_token, uint64_t new_default_token) {
-        received_callback_ = true;
         received_default_token_ = new_default_token;
         received_old_token_ = old_default_token;
-      };
+      });
 }
 
 uint32_t AudioDeviceTest::GainFlagsFromBools(bool can_mute, bool cur_mute,
@@ -160,33 +110,29 @@ uint32_t AudioDeviceTest::SetFlagsFromBools(bool set_gain, bool set_mute,
 }
 
 void AudioDeviceTest::RetrieveDefaultDevInfoUsingGetDevices(bool get_input) {
-  audio_dev_enum_->GetDevices(
+  audio_dev_enum_->GetDevices(CompletionCallback(
       [this,
        get_input](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
-
         for (auto& dev : devices) {
           if (dev.is_default && (dev.is_input == get_input)) {
             received_device_ = dev;
           }
         }
-      });
+      }));
 
   ExpectCallback();
 }
 
 void AudioDeviceTest::RetrieveGainInfoUsingGetDevices(uint64_t token) {
-  audio_dev_enum_->GetDevices(
+  audio_dev_enum_->GetDevices(CompletionCallback(
       [this,
        token](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
-
         for (auto& dev : devices) {
           if (dev.token_id == token) {
             received_gain_info_ = dev.gain_info;
           }
         }
-      });
+      }));
 
   ExpectCallback();
 }
@@ -195,21 +141,20 @@ void AudioDeviceTest::RetrieveGainInfoUsingGetDeviceGain(uint64_t token,
                                                          bool valid_token) {
   audio_dev_enum_->GetDeviceGain(
       token,
-      [this](uint64_t dev_token, fuchsia::media::AudioGainInfo dev_gain_info) {
-        received_callback_ = true;
+      CompletionCallback([this](uint64_t dev_token,
+                                fuchsia::media::AudioGainInfo dev_gain_info) {
         received_gain_token_ = dev_token;
         received_gain_info_ = dev_gain_info;
-      });
+      }));
 
   ExpectCallback();
   EXPECT_EQ(received_gain_token_, (valid_token ? token : ZX_KOID_INVALID));
 }
 
 void AudioDeviceTest::RetrieveTokenUsingGetDefault(bool is_input) {
-  auto get_default_handler = [this](uint64_t device_token) {
-    received_callback_ = true;
+  auto get_default_handler = CompletionCallback([this](uint64_t device_token) {
     received_default_token_ = device_token;
-  };
+  });
 
   if (is_input) {
     audio_dev_enum_->GetDefaultInputDevice(get_default_handler);
@@ -229,12 +174,11 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
   // Wait for any completion (not disconnect) callbacks to drain, then go on.
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(error_occurred_) << kConnectionErr;
+  EXPECT_FALSE(error_occurred_) << kDisconnectErr;
   EXPECT_TRUE(audio_dev_enum_.is_bound());
 
-  audio_dev_enum_->GetDevices(
-      [this](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
+  audio_dev_enum_->GetDevices(CompletionCallback(
+      [](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         AudioDeviceTest::initial_input_device_count_ = 0;
         AudioDeviceTest::initial_output_device_count_ = 0;
 
@@ -255,7 +199,7 @@ void AudioDeviceTest::RetrievePreExistingDevices() {
             }
           }
         }
-      });
+      }));
 
   ExpectCallback();
 }
@@ -278,10 +222,8 @@ bool AudioDeviceTest::HasPreExistingDevices() {
 // Later tests use RetrievePreExistingDevices which further validates
 // GetDevices().
 TEST_F(AudioDeviceTest, ReceivesGetDevicesCallback) {
-  audio_dev_enum_->GetDevices(
-      [this](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
-      });
+  audio_dev_enum_->GetDevices(CompletionCallback(
+      [](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {}));
 
   ExpectCallback();
 }
@@ -293,12 +235,10 @@ TEST_F(AudioDeviceTest, GetDevicesHandlesLackOfDevices) {
   }
 
   uint16_t num_devs = kInvalidDeviceCount;
-  audio_dev_enum_->GetDevices(
-      [this,
-       &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
+  audio_dev_enum_->GetDevices(CompletionCallback(
+      [&num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         num_devs = devices.size();
-      });
+      }));
 
   ExpectCallback();
   EXPECT_EQ(num_devs, 0u);

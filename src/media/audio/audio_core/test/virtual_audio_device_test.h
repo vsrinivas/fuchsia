@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_VIRTUAL_AUDIO_DEVICE_TEST_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_VIRTUAL_AUDIO_DEVICE_TEST_H_
 
+#include <fuchsia/virtualaudio/cpp/fidl.h>
+
 #include "src/media/audio/audio_core/test/audio_device_test.h"
 
 namespace media::audio::test {
@@ -33,12 +35,18 @@ class AtomicDeviceId {
 //
 // This set of tests verifies asynchronous usage of AudioDeviceEnumerator.
 class VirtualAudioDeviceTest : public AudioDeviceTest {
- protected:
-  // "Regional" per-test-suite set-up. Called before first test in this suite.
-  // static void SetUpTestSuite() {}
-
+ public:
   // Per-test-suite tear-down. Called after last test in this suite.
-  // static void TearDownTestSuite() {}
+  static void TearDownTestSuite() {
+    VirtualAudioDeviceTest::DisableVirtualDevices();
+  }
+
+  // Set up once when binary loaded; this is used at start/end of each suite.
+  static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);
+  static void DisableVirtualDevices();
+
+ protected:
+  static void ResetVirtualDevices();
 
   static void PopulateUniqueIdArr(bool is_input, uint8_t* unique_id_arr);
 
@@ -74,6 +82,7 @@ class VirtualAudioDeviceTest : public AudioDeviceTest {
 
   void TestOnDeviceGainChanged(bool is_input);
 
+  static fuchsia::virtualaudio::ControlSyncPtr control_sync_;
   static AtomicDeviceId sequential_devices_;
 
   fuchsia::virtualaudio::InputPtr input_;

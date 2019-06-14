@@ -9,7 +9,6 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/test/test_settings.h"
-#include "src/media/audio/audio_core/test/audio_device_test.h"
 #include "src/media/audio/audio_core/test/virtual_audio_device_test.h"
 
 namespace media::audio::test {
@@ -40,8 +39,8 @@ class AudioDeviceEnvironment : public testing::Environment {
     // As test binary starts, disable any lingering virtual audio devices.
     // Because this is a synchronous call, by the time it returns, DdkRemove has
     // been called on each virtual audio device.
-    AudioDeviceTest::SetControl(std::move(control));
-    AudioDeviceTest::DisableVirtualDevices();
+    VirtualAudioDeviceTest::SetControl(std::move(control));
+    VirtualAudioDeviceTest::DisableVirtualDevices();
 
     // Unlike environment_services, each test case creates fresh FIDL instances.
     // In this one-time setup code we use a temp local var instance: it merely

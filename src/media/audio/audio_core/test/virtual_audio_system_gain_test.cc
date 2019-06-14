@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <cmath>
 #include <cstring>
 
-#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/test/virtual_audio_device_test.h"
 
@@ -20,6 +18,11 @@ namespace media::audio::test {
 //
 // These tests verifies async usage of AudioDeviceEnumerator w/SystemGain.
 class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
+ public:
+  static void TearDownTestSuite() {
+    VirtualAudioDeviceTest::DisableVirtualDevices();
+  }
+
  protected:
   void SetUp() override;
   void TearDown() override;
@@ -50,16 +53,13 @@ void VirtualAudioSystemGainTest::SetUp() {
   VirtualAudioDeviceTest::SetUp();
 
   startup_context_->svc()->Connect(audio_core_.NewRequest());
-  audio_core_.set_error_handler(
-      [this](zx_status_t error) { error_occurred_ = true; });
+  audio_core_.set_error_handler(ErrorHandler());
 
-  audio_core_.events().SystemGainMuteChanged = [this](float gain_db,
-                                                      bool muted) {
-    received_callback_ = true;
-
-    received_system_gain_db_ = gain_db;
-    received_system_mute_ = muted;
-  };
+  audio_core_.events().SystemGainMuteChanged =
+      CompletionCallback([this](float gain_db, bool muted) {
+        received_system_gain_db_ = gain_db;
+        received_system_mute_ = muted;
+      });
   ExpectCallback();
 
   if (received_system_gain_db_ != kInitialSystemGainDb) {
@@ -75,6 +75,7 @@ void VirtualAudioSystemGainTest::SetUp() {
 }
 
 void VirtualAudioSystemGainTest::TearDown() {
+  audio_core_.events().SystemGainMuteChanged = nullptr;
   audio_core_->SetSystemGain(kInitialSystemGainDb);
   audio_core_->SetSystemMute(false);
 
@@ -233,16 +234,13 @@ void VirtualAudioSystemGainTest::
 
   while (need_device_event || need_system_event) {
     ExpectCallback();
-    if (!received_callback_) {
-      break;
-    }
-    if (received_gain_token_ != kInvalidDeviceToken) {
+    if (need_device_event && (received_gain_token_ != kInvalidDeviceToken)) {
       EXPECT_EQ(received_gain_token_, added_token);
       gain_info = received_gain_info_;
 
       need_device_event = false;
     }
-    if (!isnan(received_system_gain_db_)) {
+    if (need_system_event && !isnan(received_system_gain_db_)) {
       system_gain_db = received_system_gain_db_;
       system_mute = received_system_mute_;
 

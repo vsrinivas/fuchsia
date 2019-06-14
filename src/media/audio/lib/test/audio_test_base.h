@@ -22,9 +22,9 @@ class AudioTestBase : public TestFixture {
     startup_context_ = std::move(startup_context);
   }
 
- protected:
   static void SetUpTestSuite();
 
+ protected:
   static std::unique_ptr<sys::ComponentContext> startup_context_;
 };
 

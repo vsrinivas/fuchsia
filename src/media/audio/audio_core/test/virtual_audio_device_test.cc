@@ -5,13 +5,10 @@
 #include "src/media/audio/audio_core/test/virtual_audio_device_test.h"
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include <cmath>
 #include <cstring>
 
-#include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio::test {
@@ -19,10 +16,47 @@ namespace media::audio::test {
 //
 // VirtualAudioDeviceTest static members
 //
+fuchsia::virtualaudio::ControlSyncPtr VirtualAudioDeviceTest::control_sync_;
 AtomicDeviceId VirtualAudioDeviceTest::sequential_devices_;
 
-// static
+// VirtualAudioDeviceTest static methods
 //
+// static
+void VirtualAudioDeviceTest::SetControl(
+    fuchsia::virtualaudio::ControlSyncPtr control_sync) {
+  VirtualAudioDeviceTest::control_sync_ = std::move(control_sync);
+}
+
+// static
+void VirtualAudioDeviceTest::ResetVirtualDevices() {
+  uint32_t num_inputs = 1, num_outputs = 1;
+  auto status = control_sync_->GetNumDevices(&num_inputs, &num_outputs);
+  ASSERT_EQ(status, ZX_OK);
+
+  if (num_inputs > 0 || num_outputs > 0) {
+    VirtualAudioDeviceTest::DisableVirtualDevices();
+  }
+
+  status = control_sync_->Enable();
+  ASSERT_EQ(status, ZX_OK);
+}
+
+// static
+void VirtualAudioDeviceTest::DisableVirtualDevices() {
+  zx_status_t status = control_sync_->Disable();
+  ASSERT_EQ(status, ZX_OK);
+
+  uint32_t num_inputs = -1, num_outputs = -1, num_tries = 0;
+  do {
+    status = control_sync_->GetNumDevices(&num_inputs, &num_outputs);
+    ASSERT_EQ(status, ZX_OK);
+
+    ++num_tries;
+  } while ((num_inputs != 0 || num_outputs != 0) && num_tries < 100);
+  ASSERT_EQ(num_inputs, 0u);
+  ASSERT_EQ(num_outputs, 0u);
+}
+
 // Generate a unique id array for each virtual device created during the
 // lifetime of this binary. In the MSB (byte [0]), place F0 for output device or
 // F1 for input device. In bytes [8] thru [15], place a monotonically
@@ -49,21 +83,19 @@ void VirtualAudioDeviceTest::PopulateUniqueIdArr(bool is_input,
 //
 // TODO(mpuryear): delete preexisting device-settings files, in SetUp?
 void VirtualAudioDeviceTest::SetUp() {
-  ResetVirtualDevices();
+  VirtualAudioDeviceTest::ResetVirtualDevices();
 
   AudioDeviceTest::SetUp();
 
-  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
-
   startup_context_->svc()->Connect(input_.NewRequest());
+  input_.set_error_handler(ErrorHandler());
   startup_context_->svc()->Connect(input_2_.NewRequest());
-  input_.set_error_handler(err_handler);
-  input_2_.set_error_handler(err_handler);
+  input_2_.set_error_handler(ErrorHandler());
 
   startup_context_->svc()->Connect(output_.NewRequest());
+  output_.set_error_handler(ErrorHandler());
   startup_context_->svc()->Connect(output_2_.NewRequest());
-  output_.set_error_handler(err_handler);
-  output_2_.set_error_handler(err_handler);
+  output_2_.set_error_handler(ErrorHandler());
 
   RetrievePreExistingDevices();
 }
@@ -134,10 +166,9 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
   uint64_t added_token = received_device_.token_id;
 
   uint16_t num_devs = kInvalidDeviceCount;
-  audio_dev_enum_->GetDevices(
+  audio_dev_enum_->GetDevices(CompletionCallback(
       [this, added_token,
        &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
         num_devs = devices.size();
 
         for (auto& dev : devices) {
@@ -146,7 +177,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
             return;
           }
         }
-      });
+      }));
 
   ExpectCallback();
 
@@ -280,10 +311,9 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterRemove(bool is_input,
   }
 
   uint16_t num_devs = kInvalidDeviceCount;
-  audio_dev_enum_->GetDevices(
+  audio_dev_enum_->GetDevices(CompletionCallback(
       [this, to_remove_token,
        &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
         num_devs = devices.size();
 
         for (auto& dev : devices) {
@@ -297,7 +327,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterRemove(bool is_input,
             return;
           }
         }
-      });
+      }));
 
   // We should receive  GetDevices callback, but the device we just removed
   // should not be in the list.
@@ -344,10 +374,9 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
   // At this point, we've added two devices, then unplugged one.
 
   uint16_t num_devs = kInvalidDeviceCount;
-  audio_dev_enum_->GetDevices(
+  audio_dev_enum_->GetDevices(CompletionCallback(
       [this, to_unplug_token,
        &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
-        received_callback_ = true;
         num_devs = devices.size();
 
         for (auto& dev : devices) {
@@ -359,7 +388,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
             received_device_ = dev;
           }
         }
-      });
+      }));
 
   // We should receive callback, but device should not be default.
   ExpectCallback();

@@ -12,8 +12,6 @@ std::unique_ptr<sys::ComponentContext> AudioTestBase::startup_context_;
 // AudioTestBase implementation
 //
 void AudioTestBase::SetUpTestSuite() {
-  TestFixture::SetUpTestSuite();
-
   if (!startup_context_) {
     startup_context_ = sys::ComponentContext::Create();
   }

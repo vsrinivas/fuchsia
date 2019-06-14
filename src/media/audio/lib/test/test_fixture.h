@@ -83,11 +83,11 @@ class TestFixture : public ::gtest::RealLoopFixture {
   virtual void ExpectCallback();
 
   // Wait for a more nuanced condition (not just callback_received_).
-  virtual void ExpectCondition(fit::function<bool()> condition);
+  void ExpectCondition(fit::function<bool()> condition);
 
   // Wait for CompletionCallback or ErrorHandler, expecting the specified error.
-  void ExpectError(zx_status_t expect_error);
   virtual void ExpectDisconnect() { ExpectError(ZX_ERR_PEER_CLOSED); }
+  void ExpectError(zx_status_t expect_error);
 
   // Set expectations for negative test cases. Called by ExpectError/Disconnect.
   virtual void SetNegativeExpectations() { error_expected_ = true; }

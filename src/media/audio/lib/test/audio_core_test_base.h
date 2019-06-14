@@ -25,7 +25,6 @@ class AudioCoreTestBase : public AudioTestBase {
   void SetUp() override;
   void TearDown() override;
 
-  void ExpectCondition(fit::function<bool()> condition) override;
   void ExpectCallback() override;
   void ExpectDisconnect() override;
 

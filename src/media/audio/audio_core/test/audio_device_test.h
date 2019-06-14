@@ -7,12 +7,10 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include <cmath>
 
-#include "gtest/gtest.h"
+#include "src/media/audio/lib/test/audio_test_base.h"
 
 namespace media::audio::test {
 
@@ -37,26 +35,15 @@ const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
     .gain_info = kInvalidGainInfo,
     .is_default = true};
 
-class AudioDeviceTest : public gtest::RealLoopFixture {
+class AudioDeviceTest : public AudioTestBase {
  public:
   static void SetStartupContext(
       std::unique_ptr<sys::ComponentContext> startup_context);
 
-  // Set up once when binary loaded; this is used at start/end of each suite.
-  static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);
-  static void ResetVirtualDevices();
-  static void DisableVirtualDevices();
-
  protected:
-  // "Regional" per-test-suite set-up. Called before first test in this suite.
-  // static void SetUpTestSuite();
-
-  // Per-test-suite tear-down. Called after last test in this suite.
-  static void TearDownTestSuite();
-
   void SetUp() override;
   void TearDown() override;
-  virtual void ExpectCallback();
+  void ExpectCallback() override;
 
   void SetOnDeviceAddedEvent();
   void SetOnDeviceRemovedEvent();
@@ -86,18 +73,12 @@ class AudioDeviceTest : public gtest::RealLoopFixture {
   static uint32_t initial_output_gain_flags_;
 
   static std::unique_ptr<sys::ComponentContext> startup_context_;
-  static fuchsia::virtualaudio::ControlSyncPtr control_sync_;
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
-  // Set by any FIDL error handler (upon disconnect); never reset.
-  bool error_occurred_ = false;
-
-  // The following are all reset by ExpectCallback.
+  // The six "what we received" state variables listed below are reset to these
+  // default values, upon each call to ExpectCallback().
   //
-  // Set when any callback is received.
-  bool received_callback_ = false;
-
   // Set by GetDevices and OnDeviceAdded.
   fuchsia::media::AudioDeviceInfo received_device_ = kInvalidDeviceInfo;
 

@@ -23,12 +23,6 @@ void AudioCoreTestBase::TearDown() {
   AudioTestBase::TearDown();
 }
 
-void AudioCoreTestBase::ExpectCondition(fit::function<bool()> condition) {
-  AudioTestBase::ExpectCondition(std::move(condition));
-
-  EXPECT_TRUE(audio_core_.is_bound());
-}
-
 void AudioCoreTestBase::ExpectCallback() {
   AudioTestBase::ExpectCallback();
 
