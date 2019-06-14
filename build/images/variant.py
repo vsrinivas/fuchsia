@@ -33,7 +33,7 @@ class variant(
         if self.libprefix and info.interp:
             return info.interp.startswith(self.libprefix)
         if self.runtime:
-            return self.runtime in info.needed
+            return self.runtime in info.needed or info.soname == self.runtime
         return assume
 
 
