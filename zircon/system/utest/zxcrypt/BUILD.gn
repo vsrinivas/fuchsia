@@ -27,6 +27,7 @@ test("zxcrypt") {
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/kms-stateless",
     "$zx/system/ulib/pretty",

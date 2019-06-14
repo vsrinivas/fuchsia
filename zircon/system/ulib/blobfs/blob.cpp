@@ -23,7 +23,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fs/metrics.h>
+#include <fs/metrics/cobalt-metrics.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/sync/completion.h>

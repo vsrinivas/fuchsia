@@ -7,15 +7,14 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
-#include <fbl/unique_ptr.h>
-#include <fs/metrics.h>
+#include <fs/metrics/cobalt-metrics.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
-namespace fs {
+namespace fs_metrics {
 namespace {
 
 // Observed latency.
@@ -48,63 +47,57 @@ cobalt_client::MetricOptions MakeCounterOptions() {
     return options;
 }
 
-bool TestLogWhileEnabled() {
-    BEGIN_TEST;
-    fs::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+TEST(CobaltMetricsTest, LogWhileEnabled) {
+    fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
     metrics.EnableMetrics(/*should_collect*/ true);
 
-    fs::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
-    ASSERT_NE(vnodes, nullptr);
+    fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+    ASSERT_NOT_NULL(vnodes);
     if (metrics.IsEnabled()) {
         vnodes->close.Add(kLatencyNs);
     }
     // We should have observed 15 hundred usecs.
-    ASSERT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 1);
-    END_TEST;
+    EXPECT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 1);
 }
 
-bool TestLogWhileNotEnabled() {
-    BEGIN_TEST;
-    fs::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+TEST(CobaltMetricsTest, LogWhileNotEnabled) {
+    fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
     metrics.EnableMetrics(/*should_collect*/ false);
 
-    fs::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
-    ASSERT_NE(vnodes, nullptr);
+    fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+    ASSERT_NOT_NULL(vnodes);
     if (metrics.IsEnabled()) {
         vnodes->close.Add(kLatencyNs);
     }
-    ASSERT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 0);
-    END_TEST;
+    EXPECT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 0);
 }
 
-bool TestEnableMetricsEnabled() {
-    BEGIN_TEST;
-    fs::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
-    fs::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
-    ASSERT_NE(vnodes, nullptr);
+TEST(CobaltMetricsTest, EnableMetricsEnabled) {
+    fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+    fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+    ASSERT_NOT_NULL(vnodes);
     ASSERT_EQ(vnodes->metrics_enabled, metrics.IsEnabled());
     metrics.EnableMetrics(/*should_collect*/ true);
-    ASSERT_TRUE(metrics.IsEnabled());
-    ASSERT_TRUE(vnodes->metrics_enabled);
-    END_TEST;
+
+    EXPECT_TRUE(metrics.IsEnabled());
+    EXPECT_TRUE(vnodes->metrics_enabled);
 }
 
-bool TestEnableMetricsDisabled() {
-    BEGIN_TEST;
-    fs::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+TEST(CobaltMetricsTest, EnableMetricsDisabled) {
+    fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
     metrics.EnableMetrics(/*should_collect*/ true);
-    fs::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
-    ASSERT_NE(vnodes, nullptr);
+    fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
+
+    ASSERT_NOT_NULL(vnodes);
     ASSERT_EQ(vnodes->metrics_enabled, metrics.IsEnabled());
     metrics.EnableMetrics(/*should_collect*/ false);
-    ASSERT_FALSE(metrics.IsEnabled());
-    ASSERT_FALSE(vnodes->metrics_enabled);
-    END_TEST;
+
+    EXPECT_FALSE(metrics.IsEnabled());
+    EXPECT_FALSE(vnodes->metrics_enabled);
 }
 
-bool TestAddCustomMetric() {
-    BEGIN_TEST;
-    fs::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+TEST(CobaltMetrics, AddCustomMetric) {
+    fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
     metrics.EnableMetrics(/*should_collect*/ false);
 
     cobalt_client::Histogram<kBuckets> hist =
@@ -120,16 +113,6 @@ bool TestAddCustomMetric() {
 
     // Sanity check.
     metrics.mutable_collector()->Flush();
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(MetricsTest)
-RUN_TEST(TestLogWhileEnabled)
-RUN_TEST(TestLogWhileNotEnabled)
-RUN_TEST(TestEnableMetricsEnabled)
-RUN_TEST(TestEnableMetricsDisabled)
-RUN_TEST(TestAddCustomMetric)
-END_TEST_CASE(MetricsTest)
-
 } // namespace
-} // namespace fs
+} // namespace fs_metrics

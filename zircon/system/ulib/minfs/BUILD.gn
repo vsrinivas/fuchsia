@@ -50,6 +50,7 @@ library("minfs") {
       "$zx/system/fidl/fuchsia-hardware-block:c",
       "$zx/system/fidl/fuchsia-hardware-block-volume:c",
       "$zx/system/ulib/block-client",
+      "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
     ]
     configs += [ "$zx/public/gn/config:visibility_hidden" ]

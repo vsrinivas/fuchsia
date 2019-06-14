@@ -12,7 +12,6 @@ library("fs") {
     "fs/lazy-dir.h",
     "fs/locking.h",
     "fs/managed-vfs.h",
-    "fs/metrics.h",
     "fs/pseudo-dir.h",
     "fs/pseudo-file.h",
     "fs/queue.h",
@@ -57,7 +56,6 @@ library("fs") {
       "handler.cpp",
       "lazy-dir.cpp",
       "managed-vfs.cpp",
-      "metrics.cpp",
       "mount.cpp",
       "pseudo-dir.cpp",
       "pseudo-file.cpp",
@@ -76,9 +74,6 @@ library("fs") {
       # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
       "$zx/system/fidl/fuchsia-io:c.headers",
 
-      # <fs/metrics.h> has #include <cobalt-client/cpp/collector.h>.
-      "$zx/system/ulib/cobalt-client:headers",
-
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
 
@@ -92,7 +87,6 @@ library("fs") {
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/cobalt-client",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
@@ -120,7 +114,6 @@ if (is_fuchsia) {
       "handler.cpp",
       "lazy-dir.cpp",
       "managed-vfs.cpp",
-      "metrics.cpp",
       "mount.cpp",
       "pseudo-dir.cpp",
       "pseudo-file.cpp",
@@ -142,13 +135,11 @@ if (is_fuchsia) {
       "$zx/system/ulib/async:headers",
       "$zx/system/ulib/fbl:headers",
       "$zx/system/ulib/fdio:headers",
+      "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
 
       # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
       "$zx/system/fidl/fuchsia-io:c.headers",
-
-      # <fs/metrics.h> has #include <cobalt-client/cpp/collector.h>.
-      "$zx/system/ulib/cobalt-client:headers",
 
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
@@ -161,7 +152,6 @@ if (is_fuchsia) {
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/cobalt-client",
-      "$zx/system/ulib/fbl",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",

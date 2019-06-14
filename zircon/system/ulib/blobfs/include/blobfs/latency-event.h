@@ -9,7 +9,7 @@
 #endif
 
 #include <cobalt-client/cpp/timer.h>
-#include <fs/metrics.h>
+#include <fs/metrics/cobalt-metrics.h>
 #include <fs/vnode.h>
 
 #include <utility>
@@ -19,7 +19,7 @@ namespace blobfs {
 // RAII interface for registering latency events.
 class LatencyEvent {
 public:
-    LatencyEvent(cobalt_client::Histogram<fs::VnodeMetrics::kHistogramBuckets>* histogram,
+    LatencyEvent(cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* histogram,
                  bool collect)
         : timer_(collect), histogram_(histogram) {}
     LatencyEvent(LatencyEvent&& rhs)
@@ -34,7 +34,7 @@ public:
 
 private:
     cobalt_client::Timer timer_;
-    cobalt_client::Histogram<fs::VnodeMetrics::kHistogramBuckets>* histogram_;
+    cobalt_client::Histogram<fs_metrics::VnodeMetrics::kHistogramBuckets>* histogram_;
 };
 
 } // namespace blobfs

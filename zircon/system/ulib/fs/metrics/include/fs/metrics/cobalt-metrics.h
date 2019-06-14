@@ -4,12 +4,13 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/histogram.h>
+#include <fbl/string.h>
 
-namespace fs {
+namespace fs_metrics {
 // Vnode related histograms.
 struct VnodeMetrics {
     // Number of buckets used for the vnode metrics.
@@ -77,4 +78,4 @@ protected:
     bool is_enabled_ = false;
 };
 
-} // namespace fs
+} // namespace fs_metrics

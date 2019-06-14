@@ -24,13 +24,13 @@ constexpr uint64_t kHistogramBuckets = 10;
 
 // Attributes we are currently tracking.
 
-// An attribute which indicates the number of blocks that were affected by a given operation.
+// An attribute which indicates the number of blocks that were affected by a given event.
 //
-// Inheriting from this attribute within an operation indicates that such operation is affected by
+// Inheriting from this attribute within an event indicates that such event is affected by
 // the number of blocks.
 struct BlockCount : NumericAttribute<BlockCount, int64_t> {
     static constexpr int64_t kBuckets[] = {
-        // Bucket 0: [0, 5) for really small operations.
+        // Bucket 0: [0, 5) for really small events.
         5,
         // Bucket 1: [5, 32)
         32,
@@ -39,10 +39,10 @@ struct BlockCount : NumericAttribute<BlockCount, int64_t> {
     static constexpr int64_t EventOptions::*kAttributeValue = &EventOptions::block_count;
 };
 
-// An attribute which indicates whether the operation may be cached in memory or not.
+// An attribute which indicates whether the event may be cached in memory or not.
 //
-// Inheriting from this attribute within an operation indicates that such operation may have
-// variable modes of operations, where it either acts on in-memory structures or sends requests to
+// Inheriting from this attribute within an event indicates that such event may have
+// variable modes of events, where it either acts on in-memory structures or sends requests to
 // the underlying storage.
 struct Bufferable : public BinaryAttribute {
     static constexpr bool EventOptions::*kAttributeValue = &EventOptions::buffered;
@@ -50,10 +50,10 @@ struct Bufferable : public BinaryAttribute {
     static std::string ToString(size_t index) { return index == 0 ? "unbuffered" : "buffered"; }
 };
 
-// An attribute which indicates whether the operation successful completion should be treated
+// An attribute which indicates whether the event successful completion should be treated
 // differently than when it completes with failure.
 //
-// Inheriting from this attribute within an operation indicates that such operation may fail
+// Inheriting from this attribute within an event indicates that such event may fail
 // at any point, and that the recorded data should be splitted.
 struct Success : public BinaryAttribute {
     static constexpr bool EventOptions::*kAttributeValue = &EventOptions::success;
@@ -63,8 +63,8 @@ struct Success : public BinaryAttribute {
 
 // An attribute which indicates the number of childs a given node in the file system has.
 //
-// Inheriting from this attribute within an operation indicates that such operation is affected
-// by the number of children the node has. An example is a lookup operation.
+// Inheriting from this attribute within an event indicates that such event is affected
+// by the number of children the node has. An example is a lookup event.
 struct NodeDegree : NumericAttribute<NodeDegree, int64_t> {
     static constexpr int64_t kBuckets[] = {
         // Bucket 0: [0, 10)
@@ -103,23 +103,23 @@ void CreateMicrosecHistogramId(const char* name, inspect::vmo::Object* root,
 // Note: New attributes need to be added to |MakeOptionsSet| in HistogramsTest.
 using HistogramOffsets = ObjectOffsets<NodeDegree, BlockCount, Bufferable, Success>;
 
-// In order to add a new operations a couple of things needs to be added:
+// In order to add a new events a couple of things needs to be added:
 //
-// 1. Add the operation to |OperationType| Enum.
-// 2. Add a specialization to the |OperationInfo| template for the added operation.
+// 1. Add the event to |Event| Enum.
+// 2. Add a specialization to the |EventInfo| template for the added event.
 // 3. Update switch tables in |Histograms::GetHistogramCount| and
-//    |Histograms::GetHistgramCount(OperationType).
-// 4. Add a call to |AddOpHistogram<OperationType>| in the constructor.
-// 5. Add the new operation to the operation list in histograms-test.
+//    |Histograms::GetHistgramCount(Event).
+// 4. Add a call to |AddOpHistogram<Event>| in the constructor.
+// 5. Add the new event to the event list in histograms-test.
 
-// Base template specialization for Operations.
-template <OperationType operation>
-struct OperationInfo {};
+// Base template specialization for Events.
+template <Event event>
+struct EventInfo {};
 
-// Each operation or metric we want to track needs to provide its own specialization with the
+// Each event or metric we want to track needs to provide its own specialization with the
 // relavant data and the attributes that it wishes to track.
 template <>
-struct OperationInfo<OperationType::kRead> : public BlockCount, Bufferable, Success {
+struct EventInfo<Event::kRead> : public BlockCount, Bufferable, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "read";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -127,114 +127,105 @@ struct OperationInfo<OperationType::kRead> : public BlockCount, Bufferable, Succ
 };
 
 template <>
-struct OperationInfo<OperationType::kWrite> : public BlockCount, Bufferable, Success {
+struct EventInfo<Event::kWrite> : public BlockCount, Bufferable, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "write";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart = HistogramOffsets::End<OperationInfo<OperationType::kRead>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kRead>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kAppend> : public BlockCount, Bufferable, Success {
+struct EventInfo<Event::kAppend> : public BlockCount, Bufferable, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "append";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kWrite>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kWrite>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kTruncate> : public BlockCount, Success {
+struct EventInfo<Event::kTruncate> : public BlockCount, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "truncate";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kAppend>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kAppend>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kSetAttr> : public Success {
+struct EventInfo<Event::kSetAttr> : public Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "setattr";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kTruncate>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kTruncate>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kGetAttr> : public Success {
+struct EventInfo<Event::kGetAttr> : public Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "getattr";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kSetAttr>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kSetAttr>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kReadDir> : public NodeDegree, Success {
+struct EventInfo<Event::kReadDir> : public NodeDegree, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "readdir";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kGetAttr>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kGetAttr>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kSync> : public BlockCount, Success {
+struct EventInfo<Event::kSync> : public BlockCount, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "sync";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kReadDir>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kReadDir>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kLookUp> : public NodeDegree, Success {
+struct EventInfo<Event::kLookUp> : public NodeDegree, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "lookup";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart = HistogramOffsets::End<OperationInfo<OperationType::kSync>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kSync>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kCreate> : public NodeDegree, Success {
+struct EventInfo<Event::kCreate> : public NodeDegree, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "create";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kLookUp>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kLookUp>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kClose> : public Success {
+struct EventInfo<Event::kClose> : public Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "close";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kCreate>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kCreate>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kLink> : public NodeDegree, Success {
+struct EventInfo<Event::kLink> : public NodeDegree, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "link";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart =
-        HistogramOffsets::End<OperationInfo<OperationType::kClose>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kClose>>();
 };
 
 template <>
-struct OperationInfo<OperationType::kUnlink> : public NodeDegree, Success {
+struct EventInfo<Event::kUnlink> : public NodeDegree, Success {
     using AttributeData = EventOptions;
     static constexpr char kPrefix[] = "unlink";
     static constexpr auto CreateTracker = CreateMicrosecHistogramId;
-    static constexpr uint64_t kStart = HistogramOffsets::End<OperationInfo<OperationType::kLink>>();
+    static constexpr uint64_t kStart = HistogramOffsets::End<EventInfo<Event::kLink>>();
 };
 
-template <OperationType operation>
+template <Event event>
 void AddOpHistograms(inspect::vmo::Object* root,
                      std::vector<inspect::vmo::ExponentialUintHistogram>* histograms) {
-    HistogramOffsets::AddObjects<OperationInfo<operation>>(root, histograms);
+    HistogramOffsets::AddObjects<EventInfo<event>>(root, histograms);
 }
 
 } // namespace
@@ -243,142 +234,141 @@ Histograms::Histograms(inspect::vmo::Object* root) {
     nodes_.push_back(root->CreateChild(kHistComponent));
     auto& hist_node = nodes_[nodes_.size() - 1];
 
-    // Histogram names are defined based on operation_name(_DimensionValue){0,5}, where
+    // Histogram names are defined based on event_name(_DimensionValue){0,5}, where
     // dimension value is determined at runtime based on the EventOptions.
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kRead>::kStart);
-    AddOpHistograms<OperationType::kRead>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kRead>::kStart);
+    AddOpHistograms<Event::kRead>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kWrite>::kStart);
-    AddOpHistograms<OperationType::kWrite>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kWrite>::kStart);
+    AddOpHistograms<Event::kWrite>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kAppend>::kStart);
-    AddOpHistograms<OperationType::kAppend>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kAppend>::kStart);
+    AddOpHistograms<Event::kAppend>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kTruncate>::kStart);
-    AddOpHistograms<OperationType::kTruncate>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kTruncate>::kStart);
+    AddOpHistograms<Event::kTruncate>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kSetAttr>::kStart);
-    AddOpHistograms<OperationType::kSetAttr>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kSetAttr>::kStart);
+    AddOpHistograms<Event::kSetAttr>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kGetAttr>::kStart);
-    AddOpHistograms<OperationType::kGetAttr>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kGetAttr>::kStart);
+    AddOpHistograms<Event::kGetAttr>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kReadDir>::kStart);
-    AddOpHistograms<OperationType::kReadDir>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kReadDir>::kStart);
+    AddOpHistograms<Event::kReadDir>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kSync>::kStart);
-    AddOpHistograms<OperationType::kSync>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kSync>::kStart);
+    AddOpHistograms<Event::kSync>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kLookUp>::kStart);
-    AddOpHistograms<OperationType::kLookUp>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kLookUp>::kStart);
+    AddOpHistograms<Event::kLookUp>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kCreate>::kStart);
-    AddOpHistograms<OperationType::kCreate>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kCreate>::kStart);
+    AddOpHistograms<Event::kCreate>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kClose>::kStart);
-    AddOpHistograms<OperationType::kClose>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kClose>::kStart);
+    AddOpHistograms<Event::kClose>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kLink>::kStart);
-    AddOpHistograms<OperationType::kLink>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kLink>::kStart);
+    AddOpHistograms<Event::kLink>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() == OperationInfo<OperationType::kUnlink>::kStart);
-    AddOpHistograms<OperationType::kUnlink>(&hist_node, &histograms_);
+    ZX_DEBUG_ASSERT(histograms_.size() == EventInfo<Event::kUnlink>::kStart);
+    AddOpHistograms<Event::kUnlink>(&hist_node, &histograms_);
 
-    ZX_DEBUG_ASSERT(histograms_.size() ==
-                    HistogramOffsets::End<OperationInfo<OperationType::kUnlink>>());
+    ZX_DEBUG_ASSERT(histograms_.size() == HistogramOffsets::End<EventInfo<Event::kUnlink>>());
 }
 
-LatencyEvent Histograms::NewLatencyEvent(OperationType operation) {
-    return LatencyEvent(this, operation);
+LatencyEvent Histograms::NewLatencyEvent(Event event) {
+    return LatencyEvent(this, event);
 }
 
-uint64_t Histograms::GetHistogramId(OperationType operation, const EventOptions& options) const {
+uint64_t Histograms::GetHistogramId(Event event, const EventOptions& options) const {
 
-    switch (operation) {
-    case OperationType::kClose:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kClose>>(options);
+    switch (event) {
+    case Event::kClose:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kClose>>(options);
 
-    case OperationType::kRead:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kRead>>(options);
+    case Event::kRead:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kRead>>(options);
 
-    case OperationType::kWrite:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kWrite>>(options);
+    case Event::kWrite:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kWrite>>(options);
 
-    case OperationType::kAppend:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kAppend>>(options);
+    case Event::kAppend:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kAppend>>(options);
 
-    case OperationType::kTruncate:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kTruncate>>(options);
+    case Event::kTruncate:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kTruncate>>(options);
 
-    case OperationType::kSetAttr:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kSetAttr>>(options);
+    case Event::kSetAttr:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kSetAttr>>(options);
 
-    case OperationType::kGetAttr:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kGetAttr>>(options);
+    case Event::kGetAttr:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kGetAttr>>(options);
 
-    case OperationType::kReadDir:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kReadDir>>(options);
+    case Event::kReadDir:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kReadDir>>(options);
 
-    case OperationType::kSync:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kSync>>(options);
+    case Event::kSync:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kSync>>(options);
 
-    case OperationType::kLookUp:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kLookUp>>(options);
+    case Event::kLookUp:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kLookUp>>(options);
 
-    case OperationType::kCreate:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kCreate>>(options);
+    case Event::kCreate:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kCreate>>(options);
 
-    case OperationType::kLink:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kLink>>(options);
+    case Event::kLink:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kLink>>(options);
 
-    case OperationType::kUnlink:
-        return HistogramOffsets::AbsoluteOffset<OperationInfo<OperationType::kUnlink>>(options);
+    case Event::kUnlink:
+        return HistogramOffsets::AbsoluteOffset<EventInfo<Event::kUnlink>>(options);
 
     default:
         return GetHistogramCount();
     };
 }
 
-uint64_t Histograms::GetHistogramCount(OperationType operation) {
-    switch (operation) {
-    case OperationType::kClose:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kClose>>();
+uint64_t Histograms::GetHistogramCount(Event event) {
+    switch (event) {
+    case Event::kClose:
+        return HistogramOffsets::Count<EventInfo<Event::kClose>>();
 
-    case OperationType::kRead:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kRead>>();
+    case Event::kRead:
+        return HistogramOffsets::Count<EventInfo<Event::kRead>>();
 
-    case OperationType::kWrite:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kWrite>>();
+    case Event::kWrite:
+        return HistogramOffsets::Count<EventInfo<Event::kWrite>>();
 
-    case OperationType::kAppend:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kAppend>>();
+    case Event::kAppend:
+        return HistogramOffsets::Count<EventInfo<Event::kAppend>>();
 
-    case OperationType::kTruncate:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kTruncate>>();
+    case Event::kTruncate:
+        return HistogramOffsets::Count<EventInfo<Event::kTruncate>>();
 
-    case OperationType::kSetAttr:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kSetAttr>>();
+    case Event::kSetAttr:
+        return HistogramOffsets::Count<EventInfo<Event::kSetAttr>>();
 
-    case OperationType::kGetAttr:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kGetAttr>>();
+    case Event::kGetAttr:
+        return HistogramOffsets::Count<EventInfo<Event::kGetAttr>>();
 
-    case OperationType::kReadDir:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kReadDir>>();
+    case Event::kReadDir:
+        return HistogramOffsets::Count<EventInfo<Event::kReadDir>>();
 
-    case OperationType::kSync:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kSync>>();
+    case Event::kSync:
+        return HistogramOffsets::Count<EventInfo<Event::kSync>>();
 
-    case OperationType::kLookUp:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kLookUp>>();
+    case Event::kLookUp:
+        return HistogramOffsets::Count<EventInfo<Event::kLookUp>>();
 
-    case OperationType::kCreate:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kCreate>>();
+    case Event::kCreate:
+        return HistogramOffsets::Count<EventInfo<Event::kCreate>>();
 
-    case OperationType::kLink:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kLink>>();
+    case Event::kLink:
+        return HistogramOffsets::Count<EventInfo<Event::kLink>>();
 
-    case OperationType::kUnlink:
-        return HistogramOffsets::Count<OperationInfo<OperationType::kUnlink>>();
+    case Event::kUnlink:
+        return HistogramOffsets::Count<EventInfo<Event::kUnlink>>();
 
     default:
         return 0;

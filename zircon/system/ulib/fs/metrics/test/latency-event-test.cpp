@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <lib/fzl/time.h>
 #include <lib/zx/time.h>
@@ -32,9 +33,7 @@ class FakeHistograms {
 public:
     FakeHistograms() : histogram_id_(-1) {}
 
-    uint64_t GetHistogramId(OperationType operation, const EventOptions& options) {
-        return histogram_id_;
-    }
+    uint64_t GetHistogramId(Event operation, const EventOptions& options) { return histogram_id_; }
 
     void Record(uint64_t histogram_id, zx::duration duration) {
         collected_data_.push_back({histogram_id, duration});
@@ -51,7 +50,7 @@ private:
 
 using FakeLatencyEvent = internal::LatencyEventInternal<FakeHistograms, FakeClock>;
 
-constexpr OperationType kOperation = OperationType::kRead;
+constexpr Event kEvent = Event::kRead;
 constexpr zx::ticks kStartTime = zx::ticks(5);
 constexpr zx::ticks kEventTicks = zx::ticks(45);
 
@@ -68,7 +67,7 @@ public:
 TEST_F(LatencyEventTest, RecordZero) {
     FakeHistograms histograms;
     FakeClock::set_now(zx::ticks(0));
-    FakeLatencyEvent event(&histograms, kOperation);
+    FakeLatencyEvent event(&histograms, kEvent);
 
     event.Record();
 
@@ -78,7 +77,7 @@ TEST_F(LatencyEventTest, RecordZero) {
 TEST_F(LatencyEventTest, RecordNonZeroDelta) {
     FakeHistograms histograms;
     EventOptions options;
-    FakeLatencyEvent event(&histograms, kOperation);
+    FakeLatencyEvent event(&histograms, kEvent);
     *event.mutable_options() = options;
 
     FakeClock::set_now(kEventTicks + kStartTime);
@@ -87,13 +86,13 @@ TEST_F(LatencyEventTest, RecordNonZeroDelta) {
     ASSERT_EQ(histograms.collected_data().size(), 1);
     HistogramEntry entry = histograms.collected_data()[0];
 
-    ASSERT_EQ(entry.histogram_id, histograms.GetHistogramId(kOperation, options));
+    ASSERT_EQ(entry.histogram_id, histograms.GetHistogramId(kEvent, options));
     ASSERT_EQ(entry.duration, kEventDuration);
 }
 
 TEST_F(LatencyEventTest, RecordCancelledEventIsIgnored) {
     FakeHistograms histograms;
-    FakeLatencyEvent event(&histograms, kOperation);
+    FakeLatencyEvent event(&histograms, kEvent);
 
     event.Cancel();
     FakeClock::set_now(kEventTicks + kStartTime);
@@ -106,7 +105,7 @@ TEST_F(LatencyEventTest, RecordZeroOnDestruction) {
     FakeHistograms histograms;
     FakeClock::set_now(zx::ticks(0));
 
-    { FakeLatencyEvent event(&histograms, kOperation); }
+    { FakeLatencyEvent event(&histograms, kEvent); }
 
     ASSERT_TRUE(histograms.collected_data().empty());
 }
@@ -116,7 +115,7 @@ TEST_F(LatencyEventTest, RecordNonZeroDeltaOnDestruction) {
     EventOptions options;
 
     {
-        FakeLatencyEvent event(&histograms, kOperation);
+        FakeLatencyEvent event(&histograms, kEvent);
         *event.mutable_options() = options;
 
         FakeClock::set_now(kEventTicks + kStartTime);
@@ -126,7 +125,7 @@ TEST_F(LatencyEventTest, RecordNonZeroDeltaOnDestruction) {
     ASSERT_EQ(histograms.collected_data().size(), 1);
     auto entry = histograms.collected_data()[0];
 
-    ASSERT_EQ(entry.histogram_id, histograms.GetHistogramId(kOperation, options));
+    ASSERT_EQ(entry.histogram_id, histograms.GetHistogramId(kEvent, options));
     ASSERT_EQ(entry.duration.get(), kEventDuration.get());
 }
 
@@ -134,7 +133,7 @@ TEST_F(LatencyEventTest, RecordCancelledEventIsIgnoredonDestruction) {
     FakeHistograms histograms;
 
     {
-        FakeLatencyEvent event(&histograms, kOperation);
+        FakeLatencyEvent event(&histograms, kEvent);
 
         FakeClock::set_now(kEventTicks + kStartTime);
         event.Cancel();
@@ -142,6 +141,28 @@ TEST_F(LatencyEventTest, RecordCancelledEventIsIgnoredonDestruction) {
     }
 
     ASSERT_TRUE(histograms.collected_data().empty());
+}
+
+TEST_F(LatencyEventTest, MovedObjectDoesNotLogData) {
+    FakeHistograms histograms;
+    EventOptions options;
+
+    {
+        // This event will not log data because it was moved from.
+        FakeLatencyEvent event(&histograms, kEvent);
+        {
+            FakeLatencyEvent move_to_event = std::move(event);
+            *move_to_event.mutable_options() = options;
+            FakeClock::set_now(kEventTicks + kStartTime);
+        }
+    }
+
+    // Only |move_to_event| should log data, since |event| was moved from.
+    ASSERT_EQ(histograms.collected_data().size(), 1);
+    auto entry = histograms.collected_data()[0];
+
+    ASSERT_EQ(entry.histogram_id, histograms.GetHistogramId(kEvent, options));
+    ASSERT_EQ(entry.duration.get(), kEventDuration.get());
 }
 
 } // namespace

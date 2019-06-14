@@ -11,11 +11,14 @@
 #error Fuchsia-only Header
 #endif
 
-#include <string.h>
+#include <atomic>
+#include <cstring>
+#include <utility>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <block-client/cpp/block-device.h>
+#include <block-client/cpp/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
@@ -26,7 +29,7 @@
 #include <fbl/vector.h>
 #include <fs/block-txn.h>
 #include <fs/managed-vfs.h>
-#include <fs/metrics.h>
+#include <fs/metrics/cobalt-metrics.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
@@ -56,9 +59,6 @@
 #include <blobfs/node-reserver.h>
 #include <blobfs/writeback.h>
 
-#include <atomic>
-#include <utility>
-
 namespace blobfs {
 
 using block_client::BlockDevice;
@@ -82,9 +82,7 @@ struct MountOptions {
     CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
-class Blobfs : public fs::ManagedVfs,
-               public fbl::RefCounted<Blobfs>,
-               public TransactionManager {
+class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public TransactionManager {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -130,9 +128,7 @@ public:
     // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
     // underlying storage (optionally through the journal).
 
-    BlobfsMetrics& LocalMetrics() final {
-        return metrics_;
-    }
+    BlobfsMetrics& LocalMetrics() final { return metrics_; }
     size_t WritebackCapacity() const final;
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
     zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
@@ -194,15 +190,11 @@ public:
     // Acts as a special-case to bootstrap filesystem mounting.
     zx_status_t OpenRootNode(fbl::RefPtr<Directory>* out);
 
-    BlobCache& Cache() {
-        return blob_cache_;
-    }
+    BlobCache& Cache() { return blob_cache_; }
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
-    BlockDevice* Device() const {
-        return block_device_.get();
-    }
+    BlockDevice* Device() const { return block_device_.get(); }
 
     // Returns an unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
@@ -229,12 +221,15 @@ public:
     // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
     void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
 
-    fs::VnodeMetrics* GetMutableVnodeMetrics() { return cobalt_metrics_.mutable_vnode_metrics(); }
+    fs_metrics::VnodeMetrics* GetMutableVnodeMetrics() {
+        return cobalt_metrics_.mutable_vnode_metrics();
+    }
 
     // Record the location and size of all non-free block regions.
     fbl::Vector<BlockRegion> GetAllocatedRegions() const {
         return allocator_->GetAllocatedRegions();
     }
+
 private:
     friend class BlobfsChecker;
 
@@ -297,7 +292,7 @@ private:
     fbl::Closure on_unmount_ = {};
 
     // TODO(gevalentino): clean up old metrics and update this to inspect API.
-    fs::Metrics cobalt_metrics_;
+    fs_metrics::Metrics cobalt_metrics_;
     async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
 };
 

@@ -2,10 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Wrapper library for logging fs related metrics.
-library("metrics") {
+# Metrics which depend on cobalt only.
+library("metrics-cobalt") {
   sources = [
-    "histograms.cpp"
+    "cobalt-metrics.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/ulib/cobalt-client:headers",
+    "$zx/system/ulib/fbl:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fbl",
+  ]
+}
+
+# Metrics which are logged by inspect vmo only.
+library("metrics-inspect") {
+  sources = [
+    "histograms.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
@@ -18,5 +34,34 @@ library("metrics") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/inspect-vmo",
     "$zx/system/ulib/zx",
+  ]
+}
+
+# Helper library that uses both cobalt and inspect to record metrics.
+# TODO(ZX-3150): Remove once inspect broker service is complete.
+library("metrics-composite-latency-event") {
+  sources = [
+    "composite-latency-event.cpp",
+  ]
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  public_deps = [
+    "$zx/system/ulib/cobalt-client:headers",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",
+    "$zx/system/ulib/fs/metrics:metrics-inspect.headers",
+  ]
+  deps = [
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/fs/metrics:metrics-inspect",
+  ]
+}
+
+# Group of all metric targets.
+group("metrics") {
+  deps = [
+    ":metrics-cobalt",
+    ":metrics-composite-latency-event",
+    ":metrics-inspect",
   ]
 }

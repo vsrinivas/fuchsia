@@ -67,6 +67,7 @@ group("ulib") {
     "fs",
     "fs-management",
     "fs-test-utils",
+    "fs/metrics",
     "ftl",
     "fvm",
     "fzl",

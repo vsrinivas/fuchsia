@@ -7,7 +7,6 @@ test("fs") {
   sources = [
     "filesystems.cpp",
     "main.cpp",
-    "metrics_test.cpp",
     "misc.c",
     "test-access.cpp",
     "test-append.cpp",

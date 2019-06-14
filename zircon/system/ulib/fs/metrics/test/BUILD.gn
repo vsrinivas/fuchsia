@@ -2,20 +2,59 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("metrics") {
+# Separated into own target, so it is easier to cleanup later.
+test("metrics-composite-latency-event") {
+  test_group = "fs"
+  sources = [
+    "composite-latency-event-test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/fs/metrics:metrics-composite-latency-event",
+    "$zx/system/ulib/fs/metrics:metrics-inspect",
+    "$zx/system/ulib/inspect-vmo",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("metrics-inspect") {
   test_group = "fs"
   sources = [
     "histograms-test.cpp",
     "latency-event-test.cpp",
-    "offsets-test.cpp"
+    "offsets-test.cpp",
   ]
-
 
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fs/metrics",
+    "$zx/system/ulib/fs/metrics:metrics-inspect",
     "$zx/system/ulib/inspect-vmo",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("metrics-cobalt") {
+  test_group = "fs"
+  sources = [
+    "cobalt-metrics-test.cpp",
+  ]
+
+  deps = [
+    "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("metrics") {
+  testonly = true
+  deps = [
+    ":metrics-cobalt",
+    ":metrics-composite-latency-event",
+    ":metrics-inspect",
   ]
 }

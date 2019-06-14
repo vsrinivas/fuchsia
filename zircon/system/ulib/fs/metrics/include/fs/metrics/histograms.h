@@ -7,6 +7,7 @@
 #include <limits>
 #include <vector>
 
+#include <fs/metrics/events.h>
 #include <lib/fzl/time.h>
 #include <lib/inspect-vmo/state.h>
 #include <lib/inspect-vmo/types.h>
@@ -16,37 +17,17 @@ namespace fs_metrics {
 
 // Properties of logged events, which are used internally to find the correct histogram.
 struct EventOptions {
-    // Matches the block range of an operation.
+    // Matches the block range of an event.
     int64_t block_count = 0;
-    // Used match the depth range of an operation.
+    // Used match the depth range of an event.
     int64_t node_depth = 0;
-    // Used to match the node degree range of an operation.
+    // Used to match the node degree range of an event.
     int64_t node_degree = 0;
-    // Used to mark an operation as buffered or cache-hit depending on the context.
+    // Used to mark an event as buffered or cache-hit depending on the context.
     bool buffered = false;
-    // Used to mark an operation as successfully completed.
+    // Used to mark an event as successfully completed.
     bool success = false;
 };
-
-// List of operations being recorded. Increase |kOperationCount| accordingly when editing this enum.
-enum class OperationType {
-    kClose,
-    kRead,
-    kWrite,
-    kAppend,
-    kTruncate,
-    kSetAttr,
-    kGetAttr,
-    kReadDir,
-    kSync,
-    kLookUp,
-    kCreate,
-    kLink,
-    kUnlink,
-};
-
-// Number of different operation types recorded in this histogram.
-constexpr uint64_t kOperationCount = 13;
 
 namespace internal {
 // RAII wrapper for keeping track of duration, by calling RecordFn. It's templated on the Clock
@@ -58,13 +39,19 @@ public:
     using Clock = V;
 
     LatencyEventInternal() = delete;
-    explicit LatencyEventInternal(HistogramCollection* histograms, OperationType operation)
-        : operation_(operation), histograms_(histograms) {
+    explicit LatencyEventInternal(HistogramCollection* histograms, Event event)
+        : event_(event), histograms_(histograms) {
         Reset();
     }
 
     LatencyEventInternal(const LatencyEventInternal&) = delete;
-    LatencyEventInternal(LatencyEventInternal&&) = default;
+    LatencyEventInternal(LatencyEventInternal&& other) {
+        options_ = other.options_;
+        event_ = other.event_;
+        histograms_ = other.histograms_;
+        start_ = other.start_;
+        other.Cancel();
+    }
     LatencyEventInternal& operator=(const LatencyEventInternal&) = delete;
     LatencyEventInternal& operator=(LatencyEventInternal&&) = delete;
     ~LatencyEventInternal() { Record(); }
@@ -75,7 +62,7 @@ public:
         if (start_.get() == 0) {
             return;
         }
-        histograms_->Record(histograms_->GetHistogramId(operation_, options_),
+        histograms_->Record(histograms_->GetHistogramId(event_, options_),
                             fzl::TicksToNs(Clock::now() - start_));
         Cancel();
     }
@@ -90,11 +77,17 @@ public:
     // Updating the options may change which histogram records this observation.
     EventOptions* mutable_options() { return &options_; }
 
+    // Returns the point at which the event started recording latency.
+    zx::ticks start() const { return start_; }
+
+    // Returns the event type to be recorded using this |LatencyEvent|.
+    Event event() const { return event_; }
+
 private:
     EventOptions options_ = {};
     // Records an observation in histograms when LatencyEvent is destroyed or explictly
     // requested to record.
-    OperationType operation_;
+    Event event_;
     HistogramCollection* histograms_ = nullptr;
     zx::ticks start_ = zx::ticks(0);
 };
@@ -119,17 +112,17 @@ public:
     Histograms& operator=(Histograms&&) = delete;
     ~Histograms() = default;
 
-    // Returns a LatencyEvent that will record a latency event for |operation| on destruction unless
+    // Returns a LatencyEvent that will record a latency event for |event| on destruction unless
     // it is cancelled. |LatencyEvent::mutable_options| allows adjusting the event options.
-    LatencyEvent NewLatencyEvent(OperationType operation);
+    LatencyEvent NewLatencyEvent(Event event);
 
-    // Returns a unique Id for a given operation and option set. Depending on the operation,
+    // Returns a unique Id for a given event and option set. Depending on the event,
     // multiple option configurations may be mapped to the same Id. The histogram ids are in the
     // range [0, HistogramCount).
-    uint64_t GetHistogramId(OperationType operation, const EventOptions& options) const;
+    uint64_t GetHistogramId(Event event, const EventOptions& options) const;
 
-    // Returns the number of different histograms tracking this operation.
-    uint64_t GetHistogramCount(OperationType operation);
+    // Returns the number of different histograms tracking this event.
+    uint64_t GetHistogramCount(Event event);
 
     // Returns the number of histograms in this collection.
     uint64_t GetHistogramCount() const { return histograms_.size(); }

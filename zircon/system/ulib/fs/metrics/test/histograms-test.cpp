@@ -64,21 +64,12 @@ const std::vector<EventOptions>& GetOptionsSets() {
     return option_set;
 }
 
-constexpr OperationType kOperations[] = {
-    OperationType::kClose,   OperationType::kRead,     OperationType::kWrite,
-    OperationType::kAppend,  OperationType::kTruncate, OperationType::kSetAttr,
-    OperationType::kGetAttr, OperationType::kReadDir,  OperationType::kSync,
-    OperationType::kLookUp,  OperationType::kCreate,   OperationType::kLink,
-    OperationType::kUnlink,
-};
-static_assert(fbl::count_of(kOperations) == kOperationCount, "Untested operation.");
-
 TEST_F(HistogramsTest, AllOptionsAreValid) {
 
     Histograms histograms = Histograms(&root_);
     std::set<uint64_t> histogram_ids;
 
-    for (auto operation : kOperations) {
+    for (auto operation : kVnodeEvents) {
         uint64_t prev_size = histogram_ids.size();
         for (auto option_set : GetOptionsSets()) {
             uint64_t histogram_id = histograms.GetHistogramId(operation, option_set);
@@ -101,16 +92,15 @@ TEST_F(HistogramsTest, DefaultLatencyEventSmokeTest) {
 
     // This is will log an event with default options for every operation, which would crash with
     // unitialized memory.
-    for (auto operation : kOperations) {
+    for (auto operation : kVnodeEvents) {
         histograms.NewLatencyEvent(operation);
     }
 }
 
 TEST_F(HistogramsTest, InvalidOptionsReturnsHistogramCount) {
     Histograms histograms = Histograms(&root_);
-    ASSERT_EQ(
-        histograms.GetHistogramId(static_cast<OperationType>(kOperationCount), EventOptions()),
-        histograms.GetHistogramCount());
+    ASSERT_EQ(histograms.GetHistogramId(static_cast<Event>(kEventCount), EventOptions()),
+              histograms.GetHistogramCount());
 }
 
 } // namespace fs_metrics

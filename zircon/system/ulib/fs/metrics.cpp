@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs/metrics.h>
+#include <fs/metrics/registry.h>
 
 #include <utility>
 
@@ -13,22 +14,7 @@ namespace {
 // Mirrors ids defined in cobalt metric definitions for Filesystems.
 struct VnodeCobalt {
     // Maps a vnode operation to a metric_id in filesystem cobalt configuration.
-    enum class MetricId : uint32_t {
-        kUnknown = 0,
-        kLink = 1,
-        kClose = 2,
-        kRead = 3,
-        kWrite = 4,
-        kAppend = 5,
-        kTruncate = 6,
-        kSetAttr = 7,
-        kGetAttr = 8,
-        kSync = 9,
-        kReadDir = 10,
-        kLookUp = 11,
-        kCreate = 12,
-        kUnlink = 13,
-    };
+    using MetricId = fs_metrics::Event;
 
     // Enum of Vnode related event codes.
     enum class EventCode : uint32_t {
