@@ -49,7 +49,7 @@ bool ImagePipeView::Init(sys::ComponentContext* context,
   zx_status_t status =
       zx::channel::create(0, &image_pipe_endpoint_, &remote_endpoint);
   if (status != ZX_OK) {
-    fprintf(stderr, "ImagePipeView::Init: failed to create channel (%d)\n",
+    FX_LOGF(ERROR, "ImagePipeView", "Init: failed to create channel (%d)",
             status);
     return false;
   }
@@ -71,7 +71,12 @@ bool ImagePipeView::Init(sys::ComponentContext* context,
   PushCommand(&cmds, scenic::NewAddChildCmd(kRootNodeId, kShapeNodeId));
 
   session_->Enqueue(std::move(cmds));
-  session_->Present(0, {}, {}, [](fuchsia::images::PresentationInfo info) {});
+  session_->Present(
+      0,                                             // presentation time
+      {},                                            // acquire fences
+      {},                                            // release fences
+      [](fuchsia::images::PresentationInfo info) {}  // presentation callback
+  );
   return true;
 }
 
@@ -120,8 +125,12 @@ void ImagePipeView::OnViewPropertiesChanged(
                          (float[]){center_x, center_y, -kBackgroundElevation}));
 
   session_->Enqueue(std::move(cmds));
-  session_->Present(0, {}, {}, [](fuchsia::images::PresentationInfo info) {});
-
+  session_->Present(
+      0,                                             // presentation time
+      {},                                            // acquire fences
+      {},                                            // release fences
+      [](fuchsia::images::PresentationInfo info) {}  // presentation callback
+  );
   resize_callback_(view_width_, view_height_);
 }
 
