@@ -177,35 +177,6 @@ struct Equality<InterfaceHandle<T>> {
   }
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-template <typename T>
-bool operator==(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return fidl::Equality<InterfaceHandle<T>>::Equals(lhs, rhs);
-}
-template <typename T>
-bool operator!=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return !fidl::Equality<InterfaceHandle<T>>::Equals(lhs, rhs);
-}
-
-
-// Comparisons.
-template <typename T>
-bool operator<(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return lhs.channel() < rhs.channel();
-}
-template <typename T>
-bool operator>(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return lhs.channel() > rhs.channel();
-}
-template <typename T>
-bool operator<=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return !(lhs > rhs);
-}
-template <typename T>
-bool operator>=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return !(lhs < rhs);
-}
-#endif
 
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>

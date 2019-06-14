@@ -18,28 +18,28 @@ TEST(MathTest, Vec2Distance2) {
 }
 
 TEST(MathTest, Vec2Sub) {
-  EXPECT_EQ(vec2({86, 75}) - vec2({30, -9}), vec2({56, 84}));
+  EXPECT_TRUE(fidl::Equals(vec2({86, 75}) - vec2({30, -9}), vec2({56, 84})));
 }
 
 TEST(MathTest, Vec2AddAssign) {
   vec2 v{4, 2};
   // For assignment operators, also make sure the return is a self-ref.
   (v += {-5, 4}).x += .1f;
-  EXPECT_EQ(v, vec2({-.9f, 6}));
+  EXPECT_TRUE(fidl::Equals(v, vec2({-.9f, 6})));
 }
 
 TEST(MathTest, Vec2ScalarMul) {
-  EXPECT_EQ(vec2({-3, .5f}) * 3, vec2({-9, 1.5f}));
+  EXPECT_TRUE(fidl::Equals(vec2({-3, .5f}) * 3, vec2({-9, 1.5f})));
 }
 
 TEST(MathTest, Vec2ScalarDivAssign) {
   vec2 v{5, -1};
   (v /= 2).x += .1f;
-  EXPECT_EQ(v, vec2({2.6f, -.5f}));
+  EXPECT_TRUE(fidl::Equals(v, vec2({2.6f, -.5f})));
 }
 
 TEST(MathTest, Vec2ScalarDiv) {
-  EXPECT_EQ(vec2({-3, .5f}) / 2, vec2({-1.5f, .25f}));
+  EXPECT_TRUE(fidl::Equals(vec2({-3, .5f}) / 2, vec2({-1.5f, .25f})));
 }
 
 }  // namespace

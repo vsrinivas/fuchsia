@@ -144,44 +144,6 @@ struct Equality<VectorPtr<T>> {
   }
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-template <class T>
-inline bool operator==(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  return Equality<VectorPtr<T>>::Equals(lhs, rhs);
-}
-
-template <class T>
-inline bool operator!=(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  return !Equality<VectorPtr<T>>::Equals(lhs, rhs);
-}
-
-template <class T>
-inline bool operator<(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  if (lhs.is_null() || rhs.is_null()) {
-    return !rhs.is_null();
-  }
-  return *lhs < *rhs;
-}
-
-template <class T>
-inline bool operator>(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  if (lhs.is_null() || rhs.is_null()) {
-    return !lhs.is_null();
-  }
-  return *lhs > *rhs;
-}
-
-template <class T>
-inline bool operator<=(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  return !(lhs > rhs);
-}
-
-template <class T>
-inline bool operator>=(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  return !(lhs < rhs);
-}
-#endif
-
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_VECTOR_H_

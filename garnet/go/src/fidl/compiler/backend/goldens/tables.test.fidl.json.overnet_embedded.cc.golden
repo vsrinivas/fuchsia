@@ -161,32 +161,6 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   }
   return ZX_OK;
 }
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs) {
-  if (_lhs.has_x()) {
-    if (!_rhs.has_x()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-      return false;
-    }
-  } else if (_rhs.has_x()) {
-    return false;
-  }
-  if (_lhs.has_y()) {
-    if (!_rhs.has_y()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
-      return false;
-    }
-  } else if (_rhs.has_y()) {
-    return false;
-  }
-  return true;
-}
-#endif
 extern "C" const fidl_type_t test_name_OlderSimpleTableTable;
 const fidl_type_t* OlderSimpleTable::FidlType = &test_name_OlderSimpleTableTable;
 
@@ -286,22 +260,6 @@ zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   }
   return ZX_OK;
 }
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs) {
-  if (_lhs.has_x()) {
-    if (!_rhs.has_x()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-      return false;
-    }
-  } else if (_rhs.has_x()) {
-    return false;
-  }
-  return true;
-}
-#endif
 extern "C" const fidl_type_t test_name_NewerSimpleTableTable;
 const fidl_type_t* NewerSimpleTable::FidlType = &test_name_NewerSimpleTableTable;
 
@@ -511,42 +469,6 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   }
   return ZX_OK;
 }
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
-  if (_lhs.has_x()) {
-    if (!_rhs.has_x()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-      return false;
-    }
-  } else if (_rhs.has_x()) {
-    return false;
-  }
-  if (_lhs.has_y()) {
-    if (!_rhs.has_y()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
-      return false;
-    }
-  } else if (_rhs.has_y()) {
-    return false;
-  }
-  if (_lhs.has_z()) {
-    if (!_rhs.has_z()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
-      return false;
-    }
-  } else if (_rhs.has_z()) {
-    return false;
-  }
-  return true;
-}
-#endif
 extern "C" const fidl_type_t test_name_EmptyTableTable;
 const fidl_type_t* EmptyTable::FidlType = &test_name_EmptyTableTable;
 
@@ -590,12 +512,6 @@ clear_all:
 zx_status_t EmptyTable::Clone(EmptyTable* result) const {
   return ZX_OK;
 }
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const EmptyTable& _lhs, const EmptyTable& _rhs) {
-  return true;
-}
-#endif
 
 }  // namespace embedded
 }  // namespace name

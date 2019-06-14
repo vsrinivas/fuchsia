@@ -74,20 +74,10 @@ class Union {
   }
 
  private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const Union& _lhs, const Union& _rhs);
-#endif
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
   Variant value_;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Union& _lhs, const Union& _rhs);
-inline bool operator!=(const Union& _lhs, const Union& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
@@ -174,13 +164,6 @@ class Table  {
   ValueUnion_Field Field_value_;
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Table& _lhs, const Table& _rhs);
-inline bool operator!=(const Table& _lhs, const Table& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
-
 using TablePtr = ::std::unique_ptr<Table>;
 
 // struct comment #1
@@ -201,13 +184,6 @@ class Struct  {
   static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
   zx_status_t Clone(Struct* result) const;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Struct& _lhs, const Struct& _rhs);
-inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::Struct& _value,
                          ::test::name::Struct* _result) {

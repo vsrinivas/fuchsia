@@ -65,7 +65,7 @@ void BasicOvernetEmbedded::RegisterService(
 void BasicOvernetEmbedded::ConnectToService(
     fuchsia::overnet::protocol::embedded::NodeId node, std::string service_name,
     ClosedPtr<ZxChannel> channel) {
-  if (node == fidl::ToEmbedded(endpoint_.node_id().as_fidl())) {
+  if (fidl::Equals(node, fidl::ToEmbedded(endpoint_.node_id().as_fidl()))) {
     auto it = services_.find(service_name);
     if (it != services_.end()) {
       it->second->ConnectToService(std::move(channel));

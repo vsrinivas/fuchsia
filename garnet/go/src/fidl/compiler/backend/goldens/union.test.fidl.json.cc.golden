@@ -106,26 +106,6 @@ zx_status_t Union::Clone(Union* _result) const {
   return _status;
 }
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Union& _lhs, const Union& _rhs) {
-  if (_lhs.Which() != _rhs.Which()) {
-    return false;
-  }
-  switch (_lhs.Which()) {
-    case Union::Tag::kPrimitive:
-      return ::fidl::Equals(_lhs.Primitive(), _rhs.Primitive());
-    case Union::Tag::kStringNeedsConstructor:
-      return ::fidl::Equals(_lhs.StringNeedsConstructor(), _rhs.StringNeedsConstructor());
-    case Union::Tag::kVectorStringAlsoNeedsConstructor:
-      return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor(), _rhs.VectorStringAlsoNeedsConstructor());
-    case Union::Tag::Invalid:
-      return true;
-    default:
-      return false;
-  }
-}
-#endif
-
 void Union::set_Primitive(int32_t value) {
   value_.emplace<static_cast<size_t>(Tag::kPrimitive) + 1>(std::move(value));
 }

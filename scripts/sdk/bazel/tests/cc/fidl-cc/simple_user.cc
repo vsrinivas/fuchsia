@@ -8,5 +8,5 @@ int main(int argc, const char** argv) {
   bazel::examples::simple::Hello object;
   object.world = 314;
   bazel::examples::simple::Hello other_object;
-  return object == other_object ? 0 : 1;
+  return fidl::Equals(object, other_object) ? 0 : 1;
 }

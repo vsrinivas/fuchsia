@@ -58,9 +58,6 @@ class OlderSimpleUnion {
   friend ::fidl::Equality<::test::name::OlderSimpleUnion>;
 
  private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs);
-#endif
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
@@ -70,13 +67,6 @@ class OlderSimpleUnion {
     float f_;
   };
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs);
-inline bool operator!=(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
-  return !(lhs == rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::OlderSimpleUnion& value,
                          ::test::name::OlderSimpleUnion* result) {
@@ -143,9 +133,6 @@ class NewerSimpleUnion {
   friend ::fidl::Equality<::test::name::NewerSimpleUnion>;
 
  private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs);
-#endif
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
@@ -156,13 +143,6 @@ class NewerSimpleUnion {
     ::std::vector<::std::string> v_;
   };
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs);
-inline bool operator!=(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
-  return !(lhs == rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
                          ::test::name::NewerSimpleUnion* result) {

@@ -20,12 +20,12 @@ TEST_F(GestureTest, SinglePointerDrag) {
   gesture_.AddPointer(0, {0, 0});
 
   auto delta = gesture_.UpdatePointer(0, {1, 0});
-  EXPECT_EQ(delta.translation, vec2({1, 0}));
+  EXPECT_TRUE(fidl::Equals(delta.translation, vec2({1, 0})));
   EXPECT_EQ(delta.rotation, 0);
   EXPECT_EQ(delta.scale, 1);
 
   delta = gesture_.UpdatePointer(0, {1, -1});
-  EXPECT_EQ(delta.translation, vec2({0, -1}));
+  EXPECT_TRUE(fidl::Equals(delta.translation, vec2({0, -1})));
   EXPECT_EQ(delta.rotation, 0);
   EXPECT_EQ(delta.scale, 1);
 }
@@ -40,7 +40,7 @@ TEST_F(GestureTest, MultiPointerDelta) {
 
   gesture_.AddPointer(1, {10, 1});
   auto delta = gesture_.UpdatePointer(1, {10, 2});
-  EXPECT_EQ(delta.translation, vec2({0, .5}));
+  EXPECT_TRUE(fidl::Equals(delta.translation, vec2({0, .5})));
 }
 
 // Basic 2-pointer scale.

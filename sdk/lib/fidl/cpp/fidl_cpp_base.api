@@ -8,5 +8,5 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "cd4cbb458a137a65e5e0674080a37125",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "b2daaf85e7075f8146585617a8735446",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "b612628078cecd4bf45e3e6a77d696c6",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "bceb19351083095de8f67cdd6f0ac78f"
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "3eece825a178a0ceae9d5c3cce0f840b"
 }

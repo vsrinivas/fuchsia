@@ -57,9 +57,6 @@ class {{ .Name }} {
   friend ::fidl::Equality<{{ .Namespace }}::embedded::{{ .Name }}>;
 
   private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
-#endif
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
@@ -70,13 +67,6 @@ class {{ .Name }} {
   {{- end }}
   };
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
-inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  return !(lhs == rhs);
-}
-#endif
 
 inline zx_status_t Clone(const {{ .Namespace }}::embedded::{{ .Name }}& value,
                          {{ .Namespace }}::embedded::{{ .Name }}* result) {
@@ -212,27 +202,6 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
       return ZX_OK;
   }
 }
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  if (lhs.tag_ != rhs.tag_) {
-    return false;
-  }
-
-  {{ with $xunion := . -}}
-  switch (lhs.tag_) {
-    {{- range .Members }}
-    case {{ $xunion.Name }}::Tag::{{ .TagName }}:
-      return ::fidl::Equals(lhs.{{ .StorageName }}, rhs.{{ .StorageName }});
-    {{- end }}
-    case {{ $xunion.Name }}::Tag::Empty:
-      return true;
-    default:
-      return false;
-  }
-  {{end -}}
-}
-#endif
 
 {{- range $member := .Members }}
 

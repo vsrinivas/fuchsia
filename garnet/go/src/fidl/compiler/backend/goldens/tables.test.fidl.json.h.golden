@@ -122,13 +122,6 @@ class SimpleTable  {
   ValueUnion_y y_value_;
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs);
-inline bool operator!=(const SimpleTable& _lhs, const SimpleTable& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
-
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 
 class OlderSimpleTable  {
@@ -199,13 +192,6 @@ class OlderSimpleTable  {
   };
   ValueUnion_x x_value_;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs);
-inline bool operator!=(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 
@@ -358,13 +344,6 @@ class NewerSimpleTable  {
   ValueUnion_z z_value_;
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs);
-inline bool operator!=(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
-
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 
 class EmptyTable  {
@@ -395,13 +374,6 @@ class EmptyTable  {
     p->~T();
   }
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const EmptyTable& _lhs, const EmptyTable& _rhs);
-inline bool operator!=(const EmptyTable& _lhs, const EmptyTable& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
 }  // namespace name

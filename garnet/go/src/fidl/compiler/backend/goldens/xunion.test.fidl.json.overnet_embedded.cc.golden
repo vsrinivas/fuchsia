@@ -119,25 +119,6 @@ zx_status_t OlderSimpleUnion::Clone(OlderSimpleUnion* result) const {
   }
 }
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
-  if (lhs.tag_ != rhs.tag_) {
-    return false;
-  }
-
-  switch (lhs.tag_) {
-    case OlderSimpleUnion::Tag::kI:
-      return ::fidl::Equals(lhs.i_, rhs.i_);
-    case OlderSimpleUnion::Tag::kF:
-      return ::fidl::Equals(lhs.f_, rhs.f_);
-    case OlderSimpleUnion::Tag::Empty:
-      return true;
-    default:
-      return false;
-  }
-  }
-#endif
-
 void OlderSimpleUnion::set_i(int64_t value) {
   EnsureStorageInitialized(Tag::kI);
   i_ = std::move(value);
@@ -305,27 +286,6 @@ zx_status_t NewerSimpleUnion::Clone(NewerSimpleUnion* result) const {
       return ZX_OK;
   }
 }
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
-  if (lhs.tag_ != rhs.tag_) {
-    return false;
-  }
-
-  switch (lhs.tag_) {
-    case NewerSimpleUnion::Tag::kI:
-      return ::fidl::Equals(lhs.i_, rhs.i_);
-    case NewerSimpleUnion::Tag::kS:
-      return ::fidl::Equals(lhs.s_, rhs.s_);
-    case NewerSimpleUnion::Tag::kV:
-      return ::fidl::Equals(lhs.v_, rhs.v_);
-    case NewerSimpleUnion::Tag::Empty:
-      return true;
-    default:
-      return false;
-  }
-  }
-#endif
 
 void NewerSimpleUnion::set_i(int64_t value) {
   EnsureStorageInitialized(Tag::kI);

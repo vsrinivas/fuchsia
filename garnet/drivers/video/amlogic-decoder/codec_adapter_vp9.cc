@@ -852,7 +852,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     if (item.is_format_details()) {
       // TODO(dustingreen): Be more strict about what the input format actually
       // is, and less strict about it matching the initial format.
-      ZX_ASSERT(item.format_details() == initial_input_format_details_);
+      ZX_ASSERT(fidl::Equals(item.format_details(), initial_input_format_details_));
       continue;
     }
 

@@ -39,13 +39,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Response  {
   zx_status_t Clone(WithErrorSyntax_ErrorAsPrimitive_Response* result) const;
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs);
-inline bool operator!=(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
-
 inline zx_status_t Clone(const ::test::name::embedded::WithErrorSyntax_ErrorAsPrimitive_Response& _value,
                          ::test::name::embedded::WithErrorSyntax_ErrorAsPrimitive_Response* _result) {
   return _value.Clone(_result);
@@ -109,20 +102,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   }
 
  private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs);
-#endif
-
   using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ErrorAsPrimitive_Response, uint32_t>;
   Variant value_;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs);
-inline bool operator!=(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::embedded::WithErrorSyntax_ErrorAsPrimitive_Result& value,
                          ::test::name::embedded::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
@@ -143,13 +125,6 @@ class WithErrorSyntax_ErrorAsEnum_Response  {
   static void Decode(::overnet::internal::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Response* value, size_t _offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Response* result) const;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs);
-inline bool operator!=(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::embedded::WithErrorSyntax_ErrorAsEnum_Response& _value,
                          ::test::name::embedded::WithErrorSyntax_ErrorAsEnum_Response* _result) {
@@ -214,20 +189,9 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   }
 
  private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs);
-#endif
-
   using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ErrorAsEnum_Response, ErrorEnun>;
   Variant value_;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs);
-inline bool operator!=(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::embedded::WithErrorSyntax_ErrorAsEnum_Result& value,
                          ::test::name::embedded::WithErrorSyntax_ErrorAsEnum_Result* result) {

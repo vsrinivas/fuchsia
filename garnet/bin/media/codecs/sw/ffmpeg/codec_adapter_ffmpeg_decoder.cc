@@ -129,7 +129,7 @@ int CodecAdapterFfmpegDecoder::GetBuffer(
     std::lock_guard<std::mutex> lock(lock_);
     need_new_buffers = !decoded_output_info_;
     if (!decoded_output_info_ ||
-        (*decoded_output_info_).format != decoded_output_info.format) {
+        !fidl::Equals((*decoded_output_info_).format, decoded_output_info.format)) {
       output_increased_in_size =
           decoded_output_info_.has_value() &&
           decoded_output_info.buffer_bytes_needed >

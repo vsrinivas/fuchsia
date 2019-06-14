@@ -94,12 +94,6 @@ class {{ .Name }}  {
   {{- end }}
 };
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
-inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
@@ -227,23 +221,6 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   return ZX_OK;
 }
 
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
-  {{- range .Members }}
-  if (_lhs.{{ .MethodHasName }}()) {
-    if (!_rhs.{{ .MethodHasName }}()) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.{{ .Name }}(), _rhs.{{ .Name }}())) {
-      return false;
-    }
-  } else if (_rhs.{{ .MethodHasName }}()) {
-    return false;
-  }
-  {{- end }}
-  return true;
-}
-#endif
 {{- end }}
 
 {{- define "TableTraits" }}

@@ -16,8 +16,8 @@ Gesture::Delta& Gesture::Delta::operator+=(const Delta& other) {
 }
 
 bool Gesture::Delta::operator==(const Delta& other) const {
-  return translation == other.translation && rotation == other.rotation &&
-         scale == other.scale;
+  return fidl::Equals(translation, other.translation) &&
+         rotation == other.rotation && scale == other.scale;
 }
 
 void Gesture::AddPointer(PointerId pointer_id,

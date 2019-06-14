@@ -81,20 +81,9 @@ class Union {
   }
 
  private:
-#ifdef FIDL_OPERATOR_EQUALS
-  friend bool operator==(const Union& _lhs, const Union& _rhs);
-#endif
-
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t, ::std::string, ::std::vector<::std::string>>;
   Variant value_;
 };
-
-#ifdef FIDL_OPERATOR_EQUALS
-bool operator==(const Union& _lhs, const Union& _rhs);
-inline bool operator!=(const Union& _lhs, const Union& _rhs) {
-  return !(_lhs == _rhs);
-}
-#endif
 
 inline zx_status_t Clone(const ::test::name::embedded::Union& value,
                          ::test::name::embedded::Union* result) {
