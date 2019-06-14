@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fdio/io.h>
 

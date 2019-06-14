@@ -5,6 +5,7 @@
 group("test") {
   testonly = true
   deps = [
+    ":blobfs-integration",
     ":blobfs-unit",
   ]
 }
@@ -47,6 +48,29 @@ test("blobfs-host") {
   ]
   deps = [
     "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("blobfs-integration") {
+  test_group = "fs"
+  sources = [
+    "integration/blobfs_integration_test.cpp",
+    "integration/blobfs_test.cpp",
+    "integration/environment.cpp",
+    "integration/integration_main.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/blobfs",
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fs-test-utils",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/memfs",
     "$zx/system/ulib/zxtest",
   ]
 }
