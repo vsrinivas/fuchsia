@@ -30,6 +30,15 @@ macro_rules! spinel_errors {
                     ),*
                 }
             }
+
+            pub fn success(&self) {
+                match self {
+                    SpnResult::$success => (),
+                    e => panic!("Unexpected error: {:?}\n\
+                                 \n\
+                                 This is a bug. Please file an issue in SPN.", e)
+                }
+            }
         }
     };
 
