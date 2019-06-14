@@ -47,6 +47,7 @@ group("fidl_tools") {
 group("all") {
   testonly = true
   public_deps = [
+    "//garnet/bin/pkg_ctl",
     "//garnet/packages/tools:audio",
     "//garnet/packages/tools:banjo_toolchain",
     "//garnet/packages/tools:bluetooth",
