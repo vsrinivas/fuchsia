@@ -50,7 +50,9 @@ zx_status_t Sherlock::AudioInit() {
     // We treat EVT and higher the same (having 3 TAS5720s).
     metadata::Codec out_codec = metadata::Codec::Tas5720x3;
     if (board_info.board_revision < BOARD_REV_EVT1) {
-        return ZX_ERR_NOT_SUPPORTED; // For audio we don't support boards revision lower than EVT.
+        // For audio we don't support boards revision lower than EVT.
+        zxlogf(WARN, "%s: Board revision unsupported, skipping audio initialization.\n", __FILE__);
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     pbus_metadata_t out_metadata[] = {

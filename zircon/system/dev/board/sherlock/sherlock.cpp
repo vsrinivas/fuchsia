@@ -148,7 +148,6 @@ int Sherlock::Thread() {
 
     if (AudioInit() != ZX_OK) {
         zxlogf(ERROR, "AudioInit() failed\n");
-        return -1;
     }
 
     if (TouchInit() != ZX_OK) {
