@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDK_PROTOCOL_BT_GATT_SVC_LIB_H_
-#define DDK_PROTOCOL_BT_GATT_SVC_LIB_H_
+#pragma once
 
 #include <string.h>
 
@@ -52,5 +51,3 @@ static inline int bt_gatt_compare_uuid(const bt_gatt_uuid_t* u1,
 }
 
 __END_CDECLS
-
-#endif  // DDK_PROTOCOL_BT_GATT_SVC_LIB_H_

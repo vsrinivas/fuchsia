@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/protocol/bt-gatt-svc-lib.h>
+#include <lib/device-protocol/bt-gatt-svc.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 

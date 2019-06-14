@@ -11,8 +11,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/bt/gattsvc.h>
 #include <ddk/protocol/hidbus.h>
+#include <lib/device-protocol/bt-gatt-svc.h>
 
 #include <threads.h>
 

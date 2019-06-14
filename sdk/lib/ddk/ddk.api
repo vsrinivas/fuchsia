@@ -15,7 +15,6 @@
   "pkg/ddk/include/ddk/physiter.h": "2226a43dfaeb7229463ace48538c30e7",
   "pkg/ddk/include/ddk/platform-defs.h": "501b15fb35bf0c3defbf6c378c3982ff",
   "pkg/ddk/include/ddk/protocol/auxdata.h": "c0215a4b08d7fb2e85cf21fe3306c2e0",
-  "pkg/ddk/include/ddk/protocol/bt-gatt-svc-lib.h": "b0a9646242842bd5ab693c02031583a1",
   "pkg/ddk/include/ddk/protocol/platform-device-lib.h": "0142a06ae18cb63688f4e3d7a7010aac",
   "pkg/ddk/include/ddk/protodefs.h": "9314ce89a62ebc03c92a88e8ea347aa8",
   "pkg/ddk/include/ddk/trace/event.h": "6e91c912ed79ded7625fcb42ddeeb3a3",
