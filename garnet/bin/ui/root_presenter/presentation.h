@@ -9,6 +9,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/ui/input/device_state.h>
@@ -58,6 +59,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
                    presentation_request,
+               fuchsia::ui::shortcut::Manager* shortcut_manager,
                RendererParams renderer_params,
                int32_t display_startup_rotation_adjustment,
                YieldCallback yield_callback);
@@ -70,6 +72,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // Used internally by Presenter. Allows overriding of renderer params.
   void OverrideRendererParams(RendererParams renderer_params,
                               bool present_changes = true);
+
+  // Used internally by Presenter. Reset shortcut manager in case of error.
+  void ResetShortcutManager();
 
   const scenic::Layer& layer() const { return layer_; }
   const scenic::ViewHolder& view_holder() const { return view_holder_; }
@@ -150,6 +155,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
   scenic::ResourceId compositor_id_;
+  // Today, a DeviceState is owned by each Presentation, and we need to
+  // connect the output of DeviceState to shortcut_manager_.
+  fuchsia::ui::shortcut::Manager* shortcut_manager_;
 
   scenic::Layer layer_;
   scenic::Renderer renderer_;

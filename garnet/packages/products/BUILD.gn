@@ -8,6 +8,7 @@
 group("interactive_minimal") {
   testonly = true
   public_deps = [
+    "//garnet/packages/config:shortcut",
     "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:fonts",

@@ -12,7 +12,8 @@
         "services": [
             "fuchsia.recovery.FactoryReset",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.shortcut.Manager"
         ]
     }
 }

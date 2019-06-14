@@ -9,6 +9,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/ui/input/input_device_impl.h>
@@ -81,6 +82,8 @@ class App : public fuchsia::ui::policy::Presenter,
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;
+
+  fuchsia::ui::shortcut::ManagerPtr shortcut_manager_;
 
   // Today, we have a global, singleton compositor, and it is managed solely by
   // a root presenter. Hence, a single resource ID is sufficient to identify it.

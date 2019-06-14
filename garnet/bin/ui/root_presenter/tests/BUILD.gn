@@ -18,11 +18,13 @@ executable("root_presenter_tests") {
   sources = [
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
+    "input_util_unittest.cc",
   ]
 
   deps = [
     "//garnet/bin/ui/root_presenter:displays",
     "//garnet/bin/ui/root_presenter:factory_reset_manager",
+    "//garnet/bin/ui/root_presenter:key_util",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.recovery",
@@ -33,5 +35,6 @@ executable("root_presenter_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-inspect",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/hid",
   ]
 }

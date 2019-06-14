@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
+#include "garnet/bin/ui/root_presenter/key_util.h"
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
@@ -65,11 +66,13 @@ Presentation::Presentation(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
         presentation_request,
+    fuchsia::ui::shortcut::Manager* shortcut_manager,
     RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
     YieldCallback yield_callback)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
+      shortcut_manager_(shortcut_manager),
       layer_(session_),
       renderer_(session_),
       scene_(session_),
@@ -142,6 +145,10 @@ Presentation::Presentation(
           weak->PresentScene();
         }
       });
+}
+
+void Presentation::ResetShortcutManager() {
+  shortcut_manager_ = nullptr;
 }
 
 void Presentation::OverrideRendererParams(RendererParams renderer_params,
@@ -710,24 +717,53 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
     } else if (event.is_keyboard()) {
       const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
 
-      for (size_t i = 0; i < captured_keybindings_.size(); i++) {
-        const auto& event = captured_keybindings_[i].event;
-        if (event.modifiers == kbd.modifiers && event.phase == kbd.phase) {
-          if ((event.code_point > 0 && event.code_point == kbd.code_point) ||
-              // match on hid_usage when there's no codepoint:
-              event.hid_usage == kbd.hid_usage) {
-            fuchsia::ui::input::KeyboardEvent clone;
-            fidl::Clone(kbd, &clone);
-            captured_keybindings_[i].listener->OnEvent(std::move(clone));
-            dispatch_event = false;
-          }
-        }
-      }
+      // Keyboard uses alternate dispatch path.
+      dispatch_event = false;
 
-      fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
-      keyboard_cmd.keyboard_event = std::move(kbd);
-      keyboard_cmd.compositor_id = compositor_id_;
-      input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
+      auto handled_callback =
+        [this, kbd, input_cmd = std::move(input_cmd), trace_id](bool was_handled) mutable {
+
+          // Unconditionally perform legacy shortcuts.
+          // TODO(SCN-1465): deprecate legacy shortcuts.
+          for (size_t i = 0; i < captured_keybindings_.size(); i++) {
+            const auto& event = captured_keybindings_[i].event;
+            if (event.modifiers == kbd.modifiers &&
+                event.phase == kbd.phase) {
+              if ((event.code_point > 0 &&
+                   event.code_point == kbd.code_point) ||
+                  // match on hid_usage when there's no codepoint:
+                  event.hid_usage == kbd.hid_usage) {
+                fuchsia::ui::input::KeyboardEvent clone;
+                fidl::Clone(kbd, &clone);
+                captured_keybindings_[i].listener->OnEvent(std::move(clone));
+                was_handled = true;
+              }
+            }
+          }
+
+          if (!was_handled) {
+            if (trace_id) {
+              TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
+            }
+            fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
+            keyboard_cmd.keyboard_event = std::move(kbd);
+            keyboard_cmd.compositor_id = compositor_id_;
+            input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
+
+            // TODO(SCN-1455): Remove Scenic from keyboard dispatch path.
+            session_->Enqueue(std::move(input_cmd));
+          }
+
+        };
+
+      auto key_event = into_key_event(kbd);
+      if (shortcut_manager_ && key_event) {
+        // Send keyboard event to Shortcut manager for shortcut detection.
+        shortcut_manager_->HandleKeyEvent(std::move(*key_event), std::move(handled_callback));
+      } else {
+        handled_callback(false);
+      }
+      return;
     }
   }
 

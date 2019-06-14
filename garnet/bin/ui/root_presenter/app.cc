@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <string>
+#include <zircon/status.h>
 
 #include "src/lib/files/file.h"
 
@@ -53,11 +54,14 @@ void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
     }
   }
 
+  fuchsia::ui::shortcut::Manager* shortcut_manager =
+      shortcut_manager_ ? shortcut_manager_.get() : nullptr;
+
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(),
       std::move(view_holder_token), std::move(presentation_request),
-      renderer_params_, display_startup_rotation_adjustment,
-      [this](bool yield_to_next) {
+      shortcut_manager, renderer_params_,
+      display_startup_rotation_adjustment, [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
         } else {
@@ -246,6 +250,18 @@ void App::InitializeServices() {
     scenic_->GetDisplayOwnershipEvent([this](zx::event event) {
       input_reader_.SetOwnershipEvent(std::move(event));
     });
+
+    shortcut_manager_ =
+        startup_context_
+            ->ConnectToEnvironmentService<fuchsia::ui::shortcut::Manager>();
+    shortcut_manager_.set_error_handler([this](zx_status_t error) {
+      FXL_LOG(ERROR) << "Shortcut manager unavailable: "
+                     << zx_status_get_string(error);
+      shortcut_manager_ = nullptr;
+      for (const auto& presentation : presentations_) {
+        presentation->ResetShortcutManager();
+      }
+    });
   }
 }
 
@@ -255,6 +271,7 @@ void App::Reset() {
   layer_stack_ = nullptr;
   compositor_ = nullptr;
   session_ = nullptr;
+  shortcut_manager_ = nullptr;
   scenic_.Unbind();
 }
 

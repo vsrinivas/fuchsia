@@ -110,6 +110,12 @@ group("mediasession") {
   ]
 }
 
+group("shortcut") {
+  public_deps = [
+    "//src/ui/bin/shortcut:configs",
+  ]
+}
+
 group("virtual_audio") {
   testonly = true
   public_deps = [

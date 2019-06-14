@@ -25,6 +25,7 @@ executable("root_presenter") {
   deps = [
     ":displays",
     ":factory_reset_manager",
+    ":key_util",
     ":renderer_params",
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
@@ -35,6 +36,7 @@ executable("root_presenter") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -49,6 +51,18 @@ executable("root_presenter") {
   ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}
+
+source_set("key_util") {
+  sources = [
+    "key_util.cc",
+    "key_util.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.input",
+    "//zircon/public/lib/hid",
+  ]
 }
 
 source_set("displays") {
