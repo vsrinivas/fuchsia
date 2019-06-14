@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/composite.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <lib/zx/vmar.h>
 #include <limits>
 #include <string.h>

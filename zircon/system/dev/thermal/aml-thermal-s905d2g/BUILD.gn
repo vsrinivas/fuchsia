@@ -19,6 +19,7 @@ driver("aml-thermal-s905d2g") {
     "$zx/system/banjo/ddk.protocol.scpi",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",

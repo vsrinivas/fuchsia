@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDK_PROTOCOL_PLATFORM_DEVICE_LIB_H_
-#define DDK_PROTOCOL_PLATFORM_DEVICE_LIB_H_
+#pragma once
 
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
@@ -27,5 +26,3 @@ static inline zx_status_t pdev_map_mmio_buffer(const pdev_protocol_t* pdev,
 }
 
 __END_CDECLS
-
-#endif  // DDK_PROTOCOL_PLATFORM_DEVICE_LIB_H_

@@ -16,7 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <zircon/pixelformat.h>
 
 #include "aml-canvas.h"

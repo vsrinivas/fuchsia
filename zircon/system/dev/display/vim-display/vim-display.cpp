@@ -15,7 +15,7 @@
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

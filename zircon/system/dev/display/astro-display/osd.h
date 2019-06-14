@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddktl/protocol/display/controller.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>

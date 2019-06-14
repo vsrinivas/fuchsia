@@ -11,6 +11,7 @@ driver("hisi-ufs") {
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

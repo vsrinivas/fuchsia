@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>

@@ -10,7 +10,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/ethernet/mac.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>

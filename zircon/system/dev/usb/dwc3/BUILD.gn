@@ -17,6 +17,7 @@ driver("dwc3") {
     "$zx/system/banjo/ddk.protocol.usb.dci",
     "$zx/system/banjo/ddk.protocol.usb.modeswitch",
     "$zx/system/banjo/ddk.protocol.usb.request",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/usb",
     "$zx/system/ulib/ddk",

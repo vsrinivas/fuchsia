@@ -10,7 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <hw/reg.h>
 
 #include "ufs.h"

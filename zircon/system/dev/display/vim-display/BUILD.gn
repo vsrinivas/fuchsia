@@ -24,6 +24,7 @@ driver("vim-display") {
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/audio-driver-proto",

@@ -13,6 +13,7 @@ driver("amlogic-pcie") {
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/pci/designware",
     "$zx/system/ulib/ddk",

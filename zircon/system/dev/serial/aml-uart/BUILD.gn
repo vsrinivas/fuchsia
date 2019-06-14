@@ -12,6 +12,7 @@ driver("aml-uart") {
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

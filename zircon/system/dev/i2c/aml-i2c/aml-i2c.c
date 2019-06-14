@@ -14,7 +14,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <hw/reg.h>
 
 #include <zircon/assert.h>

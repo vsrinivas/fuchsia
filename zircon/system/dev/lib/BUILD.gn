@@ -15,6 +15,7 @@ group("lib") {
     "device-protocol-i2c-channel",
     "device-protocol-pci",
     "device-protocol-pdev",
+    "device-protocol-platform-device",
     "fake-bti",
     "fake_ddk",
     "focaltech",

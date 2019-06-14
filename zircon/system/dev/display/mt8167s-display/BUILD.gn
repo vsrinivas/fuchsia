@@ -34,6 +34,7 @@ source_set("common") {
     "$zx/system/banjo/ddk.protocol.power",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

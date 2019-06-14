@@ -12,7 +12,6 @@ library("ddk") {
     "ddk/metadata/gpt.h",
     "ddk/metadata/nand.h",
     "ddk/protocol/auxdata.h",
-    "ddk/protocol/platform-device-lib.h",
     "ddk/trace/event.h",
     "ddk/binding.h",
     "ddk/debug.h",

@@ -12,6 +12,7 @@ driver("hi3660-gpio") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/gpio/pl061",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/hi3660",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",

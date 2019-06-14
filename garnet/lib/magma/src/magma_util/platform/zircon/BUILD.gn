@@ -107,6 +107,7 @@ source_set("device") {
     "//zircon/public/banjo/ddk.protocol.pci",
     "//zircon/public/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/device-protocol-pci",
+    "//zircon/public/lib/device-protocol-platform-device",
   ]
 }
 

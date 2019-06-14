@@ -6,7 +6,7 @@
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb/modeswitch.h>

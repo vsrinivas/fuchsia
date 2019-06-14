@@ -18,7 +18,7 @@
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/power.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <fbl/auto_lock.h>

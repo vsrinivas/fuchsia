@@ -14,6 +14,7 @@ driver("dsi-mt") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/bitmap",

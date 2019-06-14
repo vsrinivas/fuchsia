@@ -5,7 +5,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <fbl/algorithm.h>
 #include <lib/zx/vmar.h>
 #include <limits>

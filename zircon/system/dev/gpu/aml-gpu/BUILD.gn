@@ -14,6 +14,7 @@ driver("aml-gpu") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.scpi",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/fidl/fuchsia-hardware-gpu-clock:c",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",

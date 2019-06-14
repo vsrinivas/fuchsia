@@ -113,6 +113,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/banjo/ddk.protocol.sysmem",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/device-protocol-platform-device",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
       "//zircon/public/lib/driver",

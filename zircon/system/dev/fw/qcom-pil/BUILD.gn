@@ -13,6 +13,7 @@ driver("qcom-pil") {
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/qcom",
     "$zx/system/ulib/ddk",

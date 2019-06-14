@@ -5,7 +5,7 @@
 #include <threads.h>
 
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/platform-device-lib.h>
+#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/serialimpl.h>
 #include <ddk/protocol/serial.h>
 #include <ddktl/device.h>
