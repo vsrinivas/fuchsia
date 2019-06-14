@@ -6,6 +6,7 @@ executable("netdump") {
   sources = [
     "filter.cpp",
     "netdump.cpp",
+    "tokens.cpp",
   ]
   deps = [
     ":common",
@@ -30,6 +31,8 @@ test("netdump-test") {
   sources = [
     "filter.cpp",
     "test/filter_test.cpp",
+    "test/tokens_test.cpp",
+    "tokens.cpp",
   ]
   include_dirs = [ "." ]
   deps = [
