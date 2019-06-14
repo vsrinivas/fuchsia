@@ -234,6 +234,8 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
     ++processed_needs_render_count_;
   }
 
+  TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
+
   // Flush work to the gpu.
   command_context_->Flush();
   command_context_.reset();
@@ -312,8 +314,6 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
     FXL_DCHECK(hlas.size() == 1);
     return false;
   }
-
-  TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 
   CleanupEscher();
   return true;
@@ -396,7 +396,11 @@ void Engine::CleanupEscher() {
 
   if (!escher_->Cleanup()) {
     // Wait long enough to give GPU work a chance to finish.
+    //
+    // NOTE: If this value changes, you should also change the corresponding
+    // kCleanupDelay inside timestamp_profiler.h.
     const zx::duration kCleanupDelay = zx::msec(1);
+
     escher_cleanup_scheduled_ = true;
     async::PostDelayedTask(
         async_get_default_dispatcher(),

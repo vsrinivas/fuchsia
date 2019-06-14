@@ -41,8 +41,8 @@ class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
   };
 
   struct TraceEvent {
-    uint64_t start_ticks;            // tick that the event(s) started
-    uint64_t end_ticks;              // tick that the event(s) ended
+    uint64_t start_elapsed_ticks;    // ticks elapsed from the first timestamp to start
+    uint64_t end_elapsed_ticks;      // ticks elapsed from the first timestamp to end
     std::vector<const char*> names;  // all trace event names for the time range
   };
 
