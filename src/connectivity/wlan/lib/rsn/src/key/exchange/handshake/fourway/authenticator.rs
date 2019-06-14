@@ -10,7 +10,8 @@ use crate::key::ptk::Ptk;
 use crate::key_data::kde;
 use crate::keywrap::keywrap_algorithm;
 use crate::rsna::{
-    derive_key_descriptor_version, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
+    derive_key_descriptor_version, Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate,
+    UnverifiedKeyData, UpdateSink,
 };
 use crate::Error;
 use failure::{self, bail, ensure};
@@ -65,7 +66,7 @@ impl State {
             }
             State::AwaitingMsg2 { pmk, cfg, anonce, last_krc } => {
                 // Safe since the frame is only used for deriving the message number.
-                match fourway::message_number(frame.get().unsafe_get_raw()) {
+                match frame.message_number() {
                     fourway::MessageNumber::Message2 => {
                         match process_message_2(
                             update_sink,
@@ -207,17 +208,24 @@ pub fn handle_message_2<B: ByteSlice>(
     krc: u64,
     frame: FourwayHandshakeFrame<B>,
 ) -> Result<Ptk, failure::Error> {
-    // Safe since the frame's nonce must be accessed in order to compute the PTK which allows MIC
-    // verification.
-    let snonce = &frame.get().unsafe_get_raw().key_frame_fields.key_nonce[..];
+    // Safe: The nonce must be accessed to compute the PTK. The frame will still be fully verified
+    // before accessing any of its fields.
+    let snonce = &frame.unsafe_get_raw().key_frame_fields.key_nonce[..];
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
     let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, anonce, snonce, &rsne.akm, rsne.pairwise)?;
 
     // PTK was computed, verify the frame's MIC.
-    let frame = match &frame.get() {
-        KeyFrameState::UnverifiedMic(unverified) => unverified.verify_mic(ptk.kck(), &rsne.akm)?,
-        KeyFrameState::NoMic(_) => bail!("msg2 of 4-Way Handshake must carry a MIC"),
+    let frame = match frame.get() {
+        Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
+            match unverified_mic.verify_mic(ptk.kck(), &rsne.akm)? {
+                UnverifiedKeyData::Encrypted(_) => {
+                    bail!("msg2 of 4-Way Handshake must not be encrypted")
+                }
+                UnverifiedKeyData::NotEncrypted(frame) => frame,
+            }
+        }
+        Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg2 of 4-Way Handshake must carry a MIC"),
     };
     ensure!(
         frame.key_frame_fields.key_replay_counter.to_native() == krc,
@@ -294,9 +302,16 @@ pub fn handle_message_4<B: ByteSlice>(
     frame: FourwayHandshakeFrame<B>,
 ) -> Result<(), failure::Error> {
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
-    let frame = match &frame.get() {
-        KeyFrameState::UnverifiedMic(unverified) => unverified.verify_mic(kck, &rsne.akm)?,
-        KeyFrameState::NoMic(_) => bail!("msg4 of 4-Way Handshake must carry a MIC"),
+    let frame = match frame.get() {
+        Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
+            match unverified_mic.verify_mic(kck, &rsne.akm)? {
+                UnverifiedKeyData::Encrypted(_) => {
+                    bail!("msg4 of 4-Way Handshake must not be encrypted")
+                }
+                UnverifiedKeyData::NotEncrypted(frame) => frame,
+            }
+        }
+        Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg4 of 4-Way Handshake must carry a MIC"),
     };
     ensure!(
         frame.key_frame_fields.key_replay_counter.to_native() == krc,

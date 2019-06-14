@@ -656,7 +656,7 @@ fn process_eapol_ind(
     };
 
     let mut update_sink = rsna::UpdateSink::default();
-    match rsna.supplicant.on_eapol_frame(&mut update_sink, &eapol_frame) {
+    match rsna.supplicant.on_eapol_frame(&mut update_sink, eapol_frame) {
         Err(e) => {
             error!("error processing EAPOL key frame: {}", e);
             inspect_log!(context.inspect.rsn_events.lock(), {

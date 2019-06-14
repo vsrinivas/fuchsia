@@ -34,7 +34,7 @@ impl Authenticator for MockAuthenticator {
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
-        _frame: &eapol::Frame<&[u8]>,
+        _frame: eapol::Frame<&[u8]>,
     ) -> Result<(), failure::Error> {
         update_sink.extend(self.on_eapol_frame.lock().unwrap().drain(..));
         Ok(())

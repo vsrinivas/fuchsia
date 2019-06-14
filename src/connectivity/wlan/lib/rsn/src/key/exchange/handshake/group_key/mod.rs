@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
-use crate::rsna::{KeyFrameKeyDataState, KeyFrameState, Role, UpdateSink, VerifiedKeyFrame};
+use crate::rsna::{Dot11VerifiedKeyFrame, Role, UpdateSink};
 use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
@@ -19,24 +19,24 @@ enum RoleHandler {
 
 // Struct which carries EAPOL key frames which comply with IEEE Std 802.11-2016, 12.7.2 and
 // IEEE Std 802.11-2016, 12.7.7.
-pub struct GroupKeyHandshakeFrame<'a, B: ByteSlice> {
-    frame: &'a eapol::KeyFrameRx<B>,
+pub struct GroupKeyHandshakeFrame<B: ByteSlice> {
+    frame: Dot11VerifiedKeyFrame<B>,
 }
 
-impl<'a, B: ByteSlice> GroupKeyHandshakeFrame<'a, B> {
+impl<B: ByteSlice> GroupKeyHandshakeFrame<B> {
     pub fn from_verified(
-        valid_frame: VerifiedKeyFrame<'a, B>,
+        frame: Dot11VerifiedKeyFrame<B>,
         role: Role,
     ) -> Result<Self, failure::Error> {
-        // Safe since the frame will be wrapped again in a `KeyFrameState` when being accessed.
-        let frame = valid_frame.get().unsafe_get_raw();
+        // Safe since the frame will be wrapped again in a `Dot11VerifiedKeyFrame` when being accessed.
+        let raw_frame = frame.unsafe_get_raw();
 
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
         };
 
-        let key_info = frame.key_frame_fields.key_info();
+        let key_info = raw_frame.key_frame_fields.key_info();
 
         // IEEE Std 802.11-2016, 12.7.7.2 & IEEE Std 802.11-2016, 12.7.7.3
         ensure!(
@@ -90,11 +90,11 @@ impl<'a, B: ByteSlice> GroupKeyHandshakeFrame<'a, B> {
                     "encrypted data bit must not be set in 2nd message of Group Key Handshake"
                 );
                 ensure!(
-                    is_zero(&frame.key_frame_fields.key_iv[..]),
+                    is_zero(&raw_frame.key_frame_fields.key_iv[..]),
                     "IV must be zero in 2nd message of Group Key Handshake"
                 );
                 ensure!(
-                    frame.key_frame_fields.key_rsc.to_native() == 0,
+                    raw_frame.key_frame_fields.key_rsc.to_native() == 0,
                     "RSC must be zero in 2nd message of Group Key Handshake"
                 );
             }
@@ -103,12 +103,8 @@ impl<'a, B: ByteSlice> GroupKeyHandshakeFrame<'a, B> {
         Ok(GroupKeyHandshakeFrame { frame })
     }
 
-    pub fn get(&self) -> KeyFrameState<'a, B> {
-        KeyFrameState::from_frame(self.frame)
-    }
-
-    pub fn get_key_data(&self) -> KeyFrameKeyDataState<'a> {
-        KeyFrameKeyDataState::from_frame(self.frame)
+    pub fn get(self) -> Dot11VerifiedKeyFrame<B> {
+        self.frame
     }
 }
 
@@ -146,7 +142,7 @@ impl GroupKey {
         &mut self,
         update_sink: &mut UpdateSink,
         _key_replay_counter: u64,
-        frame: VerifiedKeyFrame<B>,
+        frame: Dot11VerifiedKeyFrame<B>,
     ) -> Result<(), failure::Error> {
         match &mut self.0 {
             RoleHandler::Supplicant(s) => {
@@ -170,7 +166,7 @@ mod tests {
         let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
         let parsed_frame = eapol::KeyFrameRx::parse(test_util::mic_len(), &key_frame[..])
             .expect("failed to parse group key frame");
-        let frame = VerifiedKeyFrame::from_key_frame(&parsed_frame, &role, &rsne, 0)
+        let frame = Dot11VerifiedKeyFrame::from_frame(parsed_frame, &role, &rsne, 0)
             .expect("couldn't verify frame");
         GroupKeyHandshakeFrame::from_verified(frame, role).expect("error verifying group_frame");
     }

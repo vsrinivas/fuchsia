@@ -102,7 +102,7 @@ impl Supplicant {
     pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame<B>,
+        frame: eapol::Frame<B>,
     ) -> Result<(), failure::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
@@ -175,7 +175,7 @@ impl Authenticator {
     pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame<B>,
+        frame: eapol::Frame<B>,
     ) -> Result<(), failure::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
@@ -269,6 +269,8 @@ pub enum Error {
     InvalidKeyAckBitSupplicant,
     #[fail(display = "invalid encrypted_key_data bit value")]
     InvalidEncryptedKeyDataBitValue(MessageNumber),
+    #[fail(display = "encrypted_key_data bit requires MIC bit to be set")]
+    InvalidMicBitForEncryptedKeyData,
     #[fail(display = "invalid key length {:?}; expected {:?}", _0, _1)]
     InvalidKeyLength(u16, u16),
     #[fail(display = "unsupported cipher suite")]

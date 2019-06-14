@@ -9,7 +9,7 @@ use crate::key::exchange::{
 };
 use crate::key::gtk::Gtk;
 use crate::key_data;
-use crate::rsna::{KeyFrameKeyDataState, KeyFrameState, SecAssocUpdate, UpdateSink};
+use crate::rsna::{Dot11VerifiedKeyFrame, SecAssocUpdate, UnverifiedKeyData, UpdateSink};
 use crate::Error;
 use bytes::Bytes;
 use eapol;
@@ -32,24 +32,24 @@ impl Supplicant {
         update_sink: &mut UpdateSink,
         msg1: GroupKeyHandshakeFrame<B>,
     ) -> Result<(), failure::Error> {
-        let frame = match &msg1.get() {
-            KeyFrameState::UnverifiedMic(unverified) => {
-                let frame = unverified.verify_mic(&self.kck[..], &self.cfg.akm)?;
-                frame
+        let (frame, key_data) = match msg1.get() {
+            Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
+                match unverified_mic.verify_mic(&self.kck[..], &self.cfg.akm)? {
+                    UnverifiedKeyData::Encrypted(encrypted) => {
+                        encrypted.decrypt(&self.kek[..], &self.cfg.akm)?
+                    }
+                    UnverifiedKeyData::NotEncrypted(_) => {
+                        bail!("msg1 of Group-Key Handshake must carry encrypted key data")
+                    }
+                }
             }
-            KeyFrameState::NoMic(_) => bail!("msg1 of Group-Key Handshake must carry a MIC"),
+            Dot11VerifiedKeyFrame::WithoutMic(_) => {
+                bail!("msg1 of Group-Key Handshake must carry a MIC")
+            }
         };
 
         // Extract GTK from data.
         let mut gtk: Option<key_data::kde::Gtk> = None;
-        let key_data = match &msg1.get_key_data() {
-            KeyFrameKeyDataState::Unencrypted(_) => {
-                bail!("msg1 of Group-Key Handshake must carry encrypted key data")
-            }
-            KeyFrameKeyDataState::Encrypted(encrypted) => {
-                encrypted.decrypt(&self.kek[..], &self.cfg.akm)?
-            }
-        };
         let elements = key_data::extract_elements(&key_data[..])?;
         for ele in elements {
             match ele {
@@ -60,14 +60,13 @@ impl Supplicant {
         let gtk = match gtk {
             None => bail!("GTK KDE not present in key data of Group-Key Handshakes's 1st message"),
             Some(gtk) => {
-                let rsc = msg1.frame.key_frame_fields.key_rsc.to_native();
+                let rsc = frame.key_frame_fields.key_rsc.to_native();
                 Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), self.cfg.cipher.clone(), rsc)?
             }
         };
 
         // Construct second message of handshake.
-        let msg2 = self.create_message_2(frame)?;
-
+        let msg2 = self.create_message_2(&frame)?;
         update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
         update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
 
@@ -93,8 +92,8 @@ impl Supplicant {
                 0,
                 msg1.key_frame_fields.key_replay_counter.to_native(),
                 [0u8; 32], // nonce
-                [0u8; 16], // iv
-                0,         // rsc
+                [0u8; 16], // IV
+                0,         // RSC
             ),
             vec![],
             self.cfg.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)? as usize,
@@ -115,7 +114,7 @@ mod tests {
     use super::*;
     use crate::key::exchange::handshake::group_key::GroupKey;
     use crate::key_data::kde;
-    use crate::rsna::{test_util, NegotiatedRsne, Role, VerifiedKeyFrame};
+    use crate::rsna::{test_util, Dot11VerifiedKeyFrame, NegotiatedRsne, Role};
     use wlan_common::big_endian::BigEndianU64;
     use wlan_common::ie::rsn::akm::{Akm, PSK};
     use wlan_common::ie::rsn::cipher::{Cipher, CCMP_128};
@@ -127,11 +126,11 @@ mod tests {
     const GTK_KEY_ID: u8 = 2;
 
     fn make_verified<B: ByteSlice>(
-        key_frame: &eapol::KeyFrameRx<B>,
+        key_frame: eapol::KeyFrameRx<B>,
         role: Role,
-    ) -> Result<VerifiedKeyFrame<B>, failure::Error> {
+    ) -> Result<Dot11VerifiedKeyFrame<B>, failure::Error> {
         let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne()).expect("error getting RNSE");
-        VerifiedKeyFrame::from_key_frame(&key_frame, &role, &rsne, 0)
+        Dot11VerifiedKeyFrame::from_frame(key_frame, &role, &rsne, 0)
     }
 
     fn fake_msg1() -> eapol::KeyFrameBuf {
@@ -178,7 +177,7 @@ mod tests {
         let msg1 = fake_msg1();
         let keyframe = msg1.keyframe();
         let msg1_verified =
-            make_verified(&keyframe, Role::Supplicant).expect("error verifying group frame");
+            make_verified(keyframe, Role::Supplicant).expect("error verifying group frame");
         handshake
             .on_eapol_key_frame(&mut update_sink, 0, msg1_verified)
             .expect("error processing msg1 of Group Key Handshake");

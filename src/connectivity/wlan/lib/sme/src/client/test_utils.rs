@@ -149,7 +149,7 @@ impl Supplicant for MockSupplicant {
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
-        _frame: &eapol::Frame<&[u8]>,
+        _frame: eapol::Frame<&[u8]>,
     ) -> Result<(), failure::Error> {
         if let Some(cb) = self.on_eapol_frame_cb.lock().unwrap().as_mut() {
             cb();

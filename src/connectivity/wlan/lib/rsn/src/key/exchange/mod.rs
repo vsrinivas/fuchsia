@@ -11,7 +11,7 @@ use self::handshake::{
 use crate::integrity::integrity_algorithm;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
-use crate::rsna::{UpdateSink, VerifiedKeyFrame};
+use crate::rsna::{Dot11VerifiedKeyFrame, UpdateSink};
 use crate::Error;
 use failure;
 use wlan_common::ie::rsn::akm::Akm;
@@ -55,7 +55,7 @@ impl Method {
         &mut self,
         update_sink: &mut UpdateSink,
         key_replay_counter: u64,
-        frame: VerifiedKeyFrame<B>,
+        frame: Dot11VerifiedKeyFrame<B>,
     ) -> Result<(), failure::Error> {
         match self {
             Method::FourWayHandshake(hs) => {

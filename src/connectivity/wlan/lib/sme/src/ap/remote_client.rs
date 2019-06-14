@@ -71,7 +71,7 @@ impl RemoteClient {
             Ok(key_frame) => {
                 let frame = eapol::Frame::Key(key_frame);
                 let mut update_sink = UpdateSink::default();
-                match authenticator.on_eapol_frame(&mut update_sink, &frame) {
+                match authenticator.on_eapol_frame(&mut update_sink, frame) {
                     Ok(()) => self.process_authenticator_updates(update_sink, ctx),
                     Err(e) => bail!("failed processing EAPoL key frame: {}", e),
                 }

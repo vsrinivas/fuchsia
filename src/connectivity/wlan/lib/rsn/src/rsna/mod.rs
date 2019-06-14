@@ -64,97 +64,79 @@ impl NegotiatedRsne {
     }
 }
 
-pub struct EncryptedKeyData<'a> {
-    key_data: &'a [u8],
-}
+/// Wraps an EAPOL key frame to enforces successful decryption before the frame can be used.
+#[derive(Debug)]
+pub struct EncryptedKeyData<B: ByteSlice>(eapol::KeyFrameRx<B>);
 
-impl<'a> EncryptedKeyData<'a> {
-    pub fn decrypt(&self, kek: &[u8], akm: &Akm) -> Result<Vec<u8>, failure::Error> {
-        Ok(keywrap_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.unwrap(kek, self.key_data)?)
+impl<B: ByteSlice> EncryptedKeyData<B> {
+    /// Yields a tuple of the captured EAPOL Key frame and its decrypted key data if encryption
+    /// was successful. Otherwise, an Error is returned.
+    pub fn decrypt(
+        self,
+        kek: &[u8],
+        akm: &Akm,
+    ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), failure::Error> {
+        let key_data = keywrap_algorithm(akm)
+            .ok_or(Error::UnsupportedAkmSuite)?
+            .unwrap(kek, &self.0.key_data[..])?;
+        Ok((self.0, key_data))
     }
 }
 
-pub struct UnverifiedMic<'a, B: ByteSlice> {
-    frame: &'a eapol::KeyFrameRx<B>,
-}
+/// Wraps an EAPOL key frame to enforce successful MIC verification before the frame can be used.
+#[derive(Debug)]
+pub struct WithUnverifiedMic<B: ByteSlice>(eapol::KeyFrameRx<B>);
 
-impl<'a, B: ByteSlice> UnverifiedMic<'a, B> {
-    pub fn verify_mic(
-        &self,
-        kck: &[u8],
-        akm: &Akm,
-    ) -> Result<&'a eapol::KeyFrameRx<B>, failure::Error> {
+impl<B: ByteSlice> WithUnverifiedMic<B> {
+    /// Yields the captured EAPOL Key frame if the MIC was successfully verified.
+    /// The Key frame is wrapped to enforce decryption of potentially encrypted key data.
+    /// Returns an Error if the MIC is invalid.
+    pub fn verify_mic(self, kck: &[u8], akm: &Akm) -> Result<UnverifiedKeyData<B>, failure::Error> {
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
         let mic_bytes = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
-        ensure!(self.frame.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
+        ensure!(self.0.key_mic.len() == mic_bytes as usize, Error::InvalidMicSize);
 
         // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
         let mut buf = vec![];
-        self.frame.write_into(true, &mut buf)?;
+        self.0.write_into(true, &mut buf)?;
         let valid_mic = integrity_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.verify(
             kck,
             &buf[..],
-            &self.frame.key_mic[..],
+            &self.0.key_mic[..],
         );
         ensure!(valid_mic, Error::InvalidMic);
 
-        Ok(self.frame)
-    }
-}
-
-pub enum KeyFrameKeyDataState<'a> {
-    Encrypted(EncryptedKeyData<'a>),
-    Unencrypted(&'a [u8]),
-}
-
-impl<'a> KeyFrameKeyDataState<'a> {
-    pub fn from_frame<B: ByteSlice>(frame: &'a eapol::KeyFrameRx<B>) -> KeyFrameKeyDataState<'a> {
-        if frame.key_frame_fields.key_info().encrypted_key_data() {
-            KeyFrameKeyDataState::Encrypted(EncryptedKeyData { key_data: &frame.key_data[..] })
+        if self.0.key_frame_fields.key_info().encrypted_key_data() {
+            Ok(UnverifiedKeyData::Encrypted(EncryptedKeyData(self.0)))
         } else {
-            KeyFrameKeyDataState::Unencrypted(&frame.key_data[..])
+            Ok(UnverifiedKeyData::NotEncrypted(self.0))
         }
     }
 }
 
-pub enum KeyFrameState<'a, B: ByteSlice> {
-    UnverifiedMic(UnverifiedMic<'a, B>),
-    NoMic(&'a eapol::KeyFrameRx<B>),
+/// Carries an EAPOL Key frame and requires MIC verification if the MIC bit of the frame's info
+/// field is set.
+pub enum UnverifiedKeyData<B: ByteSlice> {
+    Encrypted(EncryptedKeyData<B>),
+    NotEncrypted(eapol::KeyFrameRx<B>),
 }
 
-impl<'a, B: ByteSlice> KeyFrameState<'a, B> {
-    pub fn from_frame(frame: &'a eapol::KeyFrameRx<B>) -> Self {
-        if frame.key_frame_fields.key_info().key_mic() {
-            KeyFrameState::UnverifiedMic(UnverifiedMic { frame })
-        } else {
-            KeyFrameState::NoMic(frame)
-        }
-    }
-
-    /// CAUTION: Returns the underlying frame without verifying its MIC if one is present.
-    /// Only use this if you know what you are doing.
-    pub fn unsafe_get_raw(&self) -> &'a eapol::KeyFrameRx<B> {
-        match self {
-            KeyFrameState::UnverifiedMic(UnverifiedMic { frame }) => frame,
-            KeyFrameState::NoMic(frame) => frame,
-        }
-    }
-}
-
-// EAPOL Key frames carried in this struct comply with IEEE Std 802.11-2016, 12.7.2.
+/// EAPOL Key frames carried in this struct comply with IEEE Std 802.11-2016, 12.7.2.
+/// Neither the Key Frame's MIC nor its key data were verified at this point.
 #[derive(Debug)]
-pub struct VerifiedKeyFrame<'a, B: ByteSlice> {
-    frame: &'a eapol::KeyFrameRx<B>,
+pub enum Dot11VerifiedKeyFrame<B: ByteSlice> {
+    WithUnverifiedMic(WithUnverifiedMic<B>),
+    WithoutMic(eapol::KeyFrameRx<B>),
 }
 
-impl<'a, B: ByteSlice> VerifiedKeyFrame<'a, B> {
-    pub fn from_key_frame(
-        frame: &'a eapol::KeyFrameRx<B>,
+impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
+    pub fn from_frame(
+        frame: eapol::KeyFrameRx<B>,
         role: &Role,
         rsne: &NegotiatedRsne,
         key_replay_counter: u64,
-    ) -> Result<VerifiedKeyFrame<'a, B>, failure::Error> {
+    ) -> Result<Dot11VerifiedKeyFrame<B>, failure::Error> {
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
@@ -293,6 +275,15 @@ impl<'a, B: ByteSlice> VerifiedKeyFrame<'a, B> {
             }
         }
 
+        // IEEE Std 802.11-2016, 12.7.2
+        // Encrypted Key Data bit requires MIC bit to be set for all 802.11 handshakes.
+        if frame.key_frame_fields.key_info().encrypted_key_data() {
+            ensure!(
+                frame.key_frame_fields.key_info().key_mic(),
+                Error::InvalidMicBitForEncryptedKeyData
+            );
+        }
+
         // IEEE Std 802.11-2016, 12.7.2, e)
         // Validation is specific for the selected key exchange method.
 
@@ -311,20 +302,26 @@ impl<'a, B: ByteSlice> VerifiedKeyFrame<'a, B> {
         // IEEE Std 802.11-2016, 12.7.2 b.10)
         // Validation is enforced by KeyFrame parser.
 
-        Ok(VerifiedKeyFrame { frame })
+        if frame.key_frame_fields.key_info().key_mic() {
+            Ok(Dot11VerifiedKeyFrame::WithUnverifiedMic(WithUnverifiedMic(frame)))
+        } else {
+            Ok(Dot11VerifiedKeyFrame::WithoutMic(frame))
+        }
     }
 
-    pub fn get(&self) -> KeyFrameState<'a, B> {
-        KeyFrameState::from_frame(self.frame)
-    }
-
-    pub fn get_key_data(&self) -> KeyFrameKeyDataState<'a> {
-        KeyFrameKeyDataState::from_frame(self.frame)
+    /// CAUTION: Returns the underlying frame without verifying its MIC or encrypted key data if
+    /// either one is present.
+    /// Only use this if you know what you are doing.
+    pub fn unsafe_get_raw(&self) -> &eapol::KeyFrameRx<B> {
+        match self {
+            Dot11VerifiedKeyFrame::WithUnverifiedMic(WithUnverifiedMic(frame)) => frame,
+            Dot11VerifiedKeyFrame::WithoutMic(frame) => frame,
+        }
     }
 }
 
-// IEEE Std 802.11-2016, 12.7.2 b.1)
-// Key Descriptor Version is based on the negotiated AKM, Pairwise- and Group Cipher suite.
+/// IEEE Std 802.11-2016, 12.7.2 b.1)
+/// Key Descriptor Version is based on the negotiated AKM, Pairwise- and Group Cipher suite.
 pub fn derive_key_descriptor_version(
     key_descriptor_type: eapol::KeyDescriptor,
     rsne: &NegotiatedRsne,
@@ -411,19 +408,23 @@ mod tests {
 
         // Use arbitrarily chosen key_replay_counter.
         let msg1 = env.initiate(12);
-        let (msg2, ptk) = env.send_msg1_to_supplicant(msg1.keyframe(), 12);
+        let (msg2_base, ptk) = env.send_msg1_to_supplicant(msg1.keyframe(), 12);
+
+        // IEEE 802.11 compliant key length.
         let mut buf = vec![];
-        let mut msg2 = msg2.copy_keyframe_mut(&mut buf);
-
-        // Use CCMP-128 key length.
-        msg2.key_frame_fields.key_len.set_from_native(16);
-        test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
-        let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
-        assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
-
+        let mut msg2 = msg2_base.copy_keyframe_mut(&mut buf);
         msg2.key_frame_fields.key_len.set_from_native(0);
         test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
-        let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
+        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &rsne, 12);
+        assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
+
+        // Use CCMP-128 key length. Not officially IEEE 802.11 compliant but relaxed for
+        // interoperability.
+        let mut buf = vec![];
+        let mut msg2 = msg2_base.copy_keyframe_mut(&mut buf);
+        msg2.key_frame_fields.key_len.set_from_native(16);
+        test_util::finalize_key_frame(&mut msg2, Some(ptk.kck()));
+        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &rsne, 12);
         assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
     }
 
@@ -444,7 +445,7 @@ mod tests {
 
         let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
             .expect("could not derive negotiated RSNE");
-        let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
+        let result = Dot11VerifiedKeyFrame::from_frame(msg2, &Role::Authenticator, &rsne, 12);
         assert!(result.is_err(), "successfully verified illegal message");
     }
 

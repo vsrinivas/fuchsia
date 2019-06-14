@@ -4,7 +4,7 @@
 
 pub mod psk;
 
-use crate::rsna::{UpdateSink, VerifiedKeyFrame};
+use crate::rsna::{Dot11VerifiedKeyFrame, UpdateSink};
 use failure;
 use zerocopy::ByteSlice;
 
@@ -24,7 +24,7 @@ impl Method {
     pub fn on_eapol_key_frame<B: ByteSlice>(
         &self,
         _update_sink: &mut UpdateSink,
-        _frame: VerifiedKeyFrame<B>,
+        _frame: Dot11VerifiedKeyFrame<B>,
     ) -> Result<(), failure::Error> {
         Ok(())
     }

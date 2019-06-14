@@ -13,7 +13,7 @@ use crate::key::{
 use crate::key_data::kde;
 use crate::keywrap::keywrap_algorithm;
 use crate::psk;
-use crate::rsna::{NegotiatedRsne, SecAssocUpdate, VerifiedKeyFrame};
+use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate};
 use crate::{Authenticator, Supplicant};
 use bytes::Bytes;
 use eapol::KeyFrameTx;
@@ -247,14 +247,14 @@ pub fn finalize_key_frame(frame: &mut eapol::KeyFrameRx<&mut [u8]>, kck: Option<
 }
 
 fn make_verified<B: ByteSlice + std::fmt::Debug>(
-    frame: &eapol::KeyFrameRx<B>,
+    frame: eapol::KeyFrameRx<B>,
     role: Role,
     key_replay_counter: u64,
-) -> VerifiedKeyFrame<B> {
+) -> Dot11VerifiedKeyFrame<B> {
     let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
         .expect("could not derive negotiated RSNE");
 
-    let result = VerifiedKeyFrame::from_key_frame(&frame, &role, &rsne, key_replay_counter);
+    let result = Dot11VerifiedKeyFrame::from_frame(frame, &role, &rsne, key_replay_counter);
     assert!(result.is_ok(), "failed verifying message sent to {:?}: {}", role, result.unwrap_err());
     result.unwrap()
 }
@@ -348,7 +348,8 @@ impl FourwayTestEnv {
         msg1: eapol::KeyFrameRx<B>,
         krc: u64,
     ) -> (eapol::KeyFrameBuf, Ptk) {
-        let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
+        let anonce = msg1.key_frame_fields.key_nonce;
+        let verified_msg1 = make_verified(msg1, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut s_update_sink = vec![];
@@ -356,8 +357,7 @@ impl FourwayTestEnv {
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         let msg2 = expect_eapol_resp(&s_update_sink[..]);
         let keyframe = msg2.keyframe();
-        let ptk =
-            get_ptk(&msg1.key_frame_fields.key_nonce[..], &keyframe.key_frame_fields.key_nonce[..]);
+        let ptk = get_ptk(&anonce[..], &keyframe.key_frame_fields.key_nonce[..]);
 
         (msg2, ptk)
     }
@@ -367,7 +367,7 @@ impl FourwayTestEnv {
         msg1: eapol::KeyFrameRx<B>,
         krc: u64,
     ) {
-        let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
+        let verified_msg1 = make_verified(msg1, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut s_update_sink = vec![];
@@ -381,7 +381,7 @@ impl FourwayTestEnv {
         expected_krc: u64,
         next_krc: u64,
     ) -> eapol::KeyFrameBuf {
-        let verified_msg2 = make_verified(&msg2, Role::Authenticator, expected_krc);
+        let verified_msg2 = make_verified(msg2, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut a_update_sink = vec![];
@@ -396,7 +396,7 @@ impl FourwayTestEnv {
         msg3: eapol::KeyFrameRx<B>,
         krc: u64,
     ) -> (eapol::KeyFrameBuf, Ptk, Gtk) {
-        let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
+        let verified_msg3 = make_verified(msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut s_update_sink = vec![];
@@ -415,7 +415,7 @@ impl FourwayTestEnv {
         krc: u64,
         mut update_sink: &mut UpdateSink,
     ) {
-        let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
+        let verified_msg3 = make_verified(msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
         let result = self.supplicant.on_eapol_key_frame(&mut update_sink, 0, verified_msg3);
@@ -427,7 +427,7 @@ impl FourwayTestEnv {
         msg3: eapol::KeyFrameRx<B>,
         krc: u64,
     ) {
-        let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
+        let verified_msg3 = make_verified(msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut s_update_sink = vec![];
@@ -440,7 +440,7 @@ impl FourwayTestEnv {
         msg4: eapol::KeyFrameRx<B>,
         expected_krc: u64,
     ) -> (Ptk, Gtk) {
-        let verified_msg4 = make_verified(&msg4, Role::Authenticator, expected_krc);
+        let verified_msg4 = make_verified(msg4, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut a_update_sink = vec![];

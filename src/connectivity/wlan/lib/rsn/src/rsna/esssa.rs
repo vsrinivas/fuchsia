@@ -10,7 +10,7 @@ use crate::key::exchange::{
 };
 use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
-    NegotiatedRsne, Role, SecAssocStatus, SecAssocUpdate, UpdateSink, VerifiedKeyFrame,
+    Dot11VerifiedKeyFrame, NegotiatedRsne, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
 use crate::state_machine::StateMachine;
 use crate::Error;
@@ -303,13 +303,13 @@ impl EssSa {
     pub fn on_eapol_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::Frame<B>,
+        frame: eapol::Frame<B>,
     ) -> Result<(), failure::Error> {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let updates = match frame {
             eapol::Frame::Key(key_frame) => {
                 let mut updates = UpdateSink::default();
-                self.on_eapol_key_frame(&mut updates, &key_frame)?;
+                self.on_eapol_key_frame(&mut updates, key_frame)?;
 
                 // Authenticator updates its key replay counter with every outbound EAPOL frame.
                 if let Role::Authenticator = self.role {
@@ -362,10 +362,10 @@ impl EssSa {
     fn on_eapol_key_frame<B: ByteSlice>(
         &mut self,
         update_sink: &mut UpdateSink,
-        frame: &eapol::KeyFrameRx<B>,
+        frame: eapol::KeyFrameRx<B>,
     ) -> Result<(), failure::Error> {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
-        let result = VerifiedKeyFrame::from_key_frame(
+        let result = Dot11VerifiedKeyFrame::from_frame(
             frame,
             &self.role,
             &self.negotiated_rsne,
@@ -382,14 +382,16 @@ impl EssSa {
             },
             other => other,
         }?;
+        // Safe: frame was just verified.
+        let raw_frame = verified_frame.unsafe_get_raw();
 
         // IEEE Std 802.11-2016, 12.7.2, d)
         // Update key replay counter if MIC was set and is valid. Only applicable for Supplicant.
         // TODO(hahnr): We should verify the MIC here and only increase the counter if the MIC
         // is valid.
-        if frame.key_frame_fields.key_info().key_mic() {
+        if raw_frame.key_frame_fields.key_info().key_mic() {
             if let Role::Supplicant = self.role {
-                self.key_replay_counter = frame.key_frame_fields.key_replay_counter.to_native();
+                self.key_replay_counter = raw_frame.key_frame_fields.key_replay_counter.to_native();
             }
         }
 
@@ -404,14 +406,14 @@ impl EssSa {
 
         // Once PMKSA was established PTKSA and GTKSA can process frames.
         // IEEE Std 802.11-2016, 12.7.2 b.2)
-        if frame.key_frame_fields.key_info().key_type() == eapol::KeyType::PAIRWISE {
+        if raw_frame.key_frame_fields.key_info().key_type() == eapol::KeyType::PAIRWISE {
             match self.ptksa.mut_state() {
                 Ptksa::Uninitialized { .. } => Ok(()),
                 Ptksa::Initialized { method } | Ptksa::Established { method, .. } => {
                     method.on_eapol_key_frame(update_sink, self.key_replay_counter, verified_frame)
                 }
             }
-        } else if frame.key_frame_fields.key_info().key_type() == eapol::KeyType::GROUP_SMK {
+        } else if raw_frame.key_frame_fields.key_info().key_type() == eapol::KeyType::GROUP_SMK {
             match self.gtksa.mut_state() {
                 Gtksa::Uninitialized { .. } => Ok(()),
                 Gtksa::Initialized { method } | Gtksa::Established { method, .. } => match method {
@@ -429,7 +431,7 @@ impl EssSa {
         } else {
             error!(
                 "unsupported EAPOL Key frame key type: {:?}",
-                frame.key_frame_fields.key_info().key_type()
+                raw_frame.key_frame_fields.key_info().key_type()
             );
             Ok(())
         }
@@ -464,7 +466,7 @@ mod tests {
 
         // Send msg #1 to Supplicant and wait for response.
         let mut s_updates = vec![];
-        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg1.keyframe()));
+        let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg1.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #1: {}", result.unwrap_err());
         assert_eq!(s_updates.len(), 1);
         let msg2 = test_util::expect_eapol_resp(&s_updates[..]);
@@ -472,14 +474,14 @@ mod tests {
         // Send msg #2 to Authenticator and wait for response.
         let mut a_updates = vec![];
         let result =
-            authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg2.keyframe()));
+            authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg2.keyframe()));
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 1);
         let msg3 = test_util::expect_eapol_resp(&a_updates[..]);
 
         // Send msg #3 to Supplicant and wait for response.
         let mut s_updates = vec![];
-        let result = supplicant.on_eapol_frame(&mut s_updates, &eapol::Frame::Key(msg3.keyframe()));
+        let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg3.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
         assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
         let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
@@ -490,7 +492,7 @@ mod tests {
         // Send msg #4 to Authenticator.
         let mut a_updates = vec![];
         let result =
-            authenticator.on_eapol_frame(&mut a_updates, &eapol::Frame::Key(msg4.keyframe()));
+            authenticator.on_eapol_frame(&mut a_updates, eapol::Frame::Key(msg4.keyframe()));
         assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
         assert_eq!(a_updates.len(), 3);
         let a_ptk = test_util::expect_reported_ptk(&a_updates[..]);
@@ -873,8 +875,7 @@ mod tests {
     {
         let msg = test_util::get_4whs_msg1(&ANONCE[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
-        let result =
-            supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg.keyframe()));
+        let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
     }
 
@@ -888,8 +889,7 @@ mod tests {
     {
         let msg = test_util::get_4whs_msg3(ptk, &ANONCE[..], &GTK[..], msg_modifier);
         let mut update_sink = UpdateSink::default();
-        let result =
-            supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg.keyframe()));
+        let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
     }
 
@@ -902,8 +902,7 @@ mod tests {
     ) -> (Result<(), failure::Error>, UpdateSink) {
         let msg = test_util::get_group_key_hs_msg1(ptk, &gtk[..], key_id, key_replay_counter);
         let mut update_sink = UpdateSink::default();
-        let result =
-            supplicant.on_eapol_frame(&mut update_sink, &eapol::Frame::Key(msg.keyframe()));
+        let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));
         (result, update_sink)
     }
 }

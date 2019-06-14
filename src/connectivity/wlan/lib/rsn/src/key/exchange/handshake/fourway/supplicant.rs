@@ -10,7 +10,7 @@ use crate::key::ptk::Ptk;
 use crate::key_data;
 use crate::key_data::kde;
 use crate::rsna::{
-    KeyFrameKeyDataState, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
+    Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate, UnverifiedKeyData, UpdateSink,
 };
 use crate::Error;
 use crypto::util::fixed_time_eq;
@@ -30,15 +30,17 @@ fn handle_message_1<B: ByteSlice>(
 ) -> Result<(KeyFrameBuf, Ptk, Nonce), failure::Error> {
     let frame = match msg1.get() {
         // Note: This is only true if PTK re-keying is not supported.
-        KeyFrameState::UnverifiedMic(_) => bail!("msg1 of 4-Way Handshake cannot carry a MIC"),
-        KeyFrameState::NoMic(frame) => frame,
+        Dot11VerifiedKeyFrame::WithUnverifiedMic(_) => {
+            bail!("msg1 of 4-Way Handshake cannot carry a MIC")
+        }
+        Dot11VerifiedKeyFrame::WithoutMic(frame) => frame,
     };
     let anonce = frame.key_frame_fields.key_nonce;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
     let pairwise = rsne.pairwise.clone();
     let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, &anonce[..], snonce, &rsne.akm, pairwise)?;
-    let msg2 = create_message_2(cfg, ptk.kck(), &rsne, frame, &snonce[..])?;
+    let msg2 = create_message_2(cfg, ptk.kck(), &rsne, &frame, &snonce[..])?;
 
     Ok((msg2, ptk, anonce))
 }
@@ -51,10 +53,10 @@ fn create_message_2<B: ByteSlice>(
     msg1: &eapol::KeyFrameRx<B>,
     snonce: &[u8],
 ) -> Result<KeyFrameBuf, failure::Error> {
-    let mut key_info = eapol::KeyInformation(0);
-    key_info.set_key_descriptor_version(msg1.key_frame_fields.key_info().key_descriptor_version());
-    key_info.set_key_type(msg1.key_frame_fields.key_info().key_type());
-    key_info.set_key_mic(true);
+    let key_info = eapol::KeyInformation(0)
+        .with_key_descriptor_version(msg1.key_frame_fields.key_info().key_descriptor_version())
+        .with_key_type(msg1.key_frame_fields.key_info().key_type())
+        .with_key_mic(true);
 
     let mut w = kde::Writer::new(vec![]);
     w.write_rsne(&cfg.s_rsne)?;
@@ -68,8 +70,8 @@ fn create_message_2<B: ByteSlice>(
             0,
             msg1.key_frame_fields.key_replay_counter.to_native(),
             eapol::to_array(snonce),
-            [0u8; 16], // iv
-            0,         // rsc
+            [0u8; 16], // IV
+            0,         // RSC
         ),
         key_data,
         msg1.key_mic.len(),
@@ -89,20 +91,18 @@ fn handle_message_3<B: ByteSlice>(
     msg3: FourwayHandshakeFrame<B>,
 ) -> Result<(KeyFrameBuf, Gtk), failure::Error> {
     let negotiated_rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
-    let frame = match &msg3.get() {
-        KeyFrameState::UnverifiedMic(unverified) => {
-            unverified.verify_mic(kck, &negotiated_rsne.akm)?
+    let (frame, key_data) = match msg3.get() {
+        Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
+            match unverified_mic.verify_mic(kck, &negotiated_rsne.akm)? {
+                UnverifiedKeyData::Encrypted(encrypted) => {
+                    encrypted.decrypt(kek, &negotiated_rsne.akm)?
+                }
+                UnverifiedKeyData::NotEncrypted(_) => {
+                    bail!("msg3 of 4-Way Handshake must carry encrypted key data")
+                }
+            }
         }
-        KeyFrameState::NoMic(_) => bail!("msg3 of 4-Way Handshake must carry a MIC"),
-    };
-
-    let key_data = match &msg3.get_key_data() {
-        KeyFrameKeyDataState::Unencrypted(_) => {
-            bail!("msg3 of 4-Way Handshake must carry encrypted key data")
-        }
-        KeyFrameKeyDataState::Encrypted(encrypted) => {
-            encrypted.decrypt(kek, &negotiated_rsne.akm)?
-        }
+        Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg3 of 4-Way Handshake must carry a MIC"),
     };
 
     let mut gtk: Option<key_data::kde::Gtk> = None;
@@ -122,8 +122,8 @@ fn handle_message_3<B: ByteSlice>(
     match (gtk, rsne) {
         (Some(gtk), Some(rsne)) => {
             ensure!(&rsne == &cfg.a_rsne, Error::InvalidKeyDataRsne);
-            let msg4 = create_message_4(&negotiated_rsne, kck, frame)?;
-            let rsc = msg3.frame.key_frame_fields.key_rsc.to_native();
+            let msg4 = create_message_4(&negotiated_rsne, kck, &frame)?;
+            let rsc = frame.key_frame_fields.key_rsc.to_native();
             Ok((msg4, Gtk::from_gtk(gtk.gtk, gtk.info.key_id(), negotiated_rsne.group_data, rsc)?))
         }
         _ => bail!(Error::InvalidKeyDataContent),
@@ -181,37 +181,33 @@ impl State {
         frame: FourwayHandshakeFrame<B>,
     ) -> Self {
         match self {
-            State::AwaitingMsg1 { pmk, cfg } => {
-                // Safe since the frame is only used for deriving the message number.
-                match fourway::message_number(frame.get().unsafe_get_raw()) {
-                    fourway::MessageNumber::Message1 => {
-                        let snonce = match cfg.nonce_rdr.next() {
-                            Ok(nonce) => nonce,
-                            Err(e) => {
-                                error!("error: {}", e);
-                                return State::AwaitingMsg1 { pmk, cfg };
-                            }
-                        };
-                        match handle_message_1(&cfg, &pmk[..], &snonce[..], frame) {
-                            Err(e) => {
-                                error!("error: {}", e);
-                                return State::AwaitingMsg1 { pmk, cfg };
-                            }
-                            Ok((msg2, ptk, anonce)) => {
-                                update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
-                                State::AwaitingMsg3 { pmk, ptk, cfg, anonce }
-                            }
+            State::AwaitingMsg1 { pmk, cfg } => match frame.message_number() {
+                fourway::MessageNumber::Message1 => {
+                    let snonce = match cfg.nonce_rdr.next() {
+                        Ok(nonce) => nonce,
+                        Err(e) => {
+                            error!("error: {}", e);
+                            return State::AwaitingMsg1 { pmk, cfg };
+                        }
+                    };
+                    match handle_message_1(&cfg, &pmk[..], &snonce[..], frame) {
+                        Err(e) => {
+                            error!("error: {}", e);
+                            return State::AwaitingMsg1 { pmk, cfg };
+                        }
+                        Ok((msg2, ptk, anonce)) => {
+                            update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
+                            State::AwaitingMsg3 { pmk, ptk, cfg, anonce }
                         }
                     }
-                    unexpected_msg => {
-                        error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
-                        State::AwaitingMsg1 { pmk, cfg }
-                    }
                 }
-            }
+                unexpected_msg => {
+                    error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                    State::AwaitingMsg1 { pmk, cfg }
+                }
+            },
             State::AwaitingMsg3 { pmk, ptk, cfg, .. } => {
-                // Safe since the frame is only used for deriving the message number.
-                match fourway::message_number(frame.get().unsafe_get_raw()) {
+                match frame.message_number() {
                     // Restart handshake if first message was received.
                     fourway::MessageNumber::Message1 => {
                         State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
@@ -239,8 +235,7 @@ impl State {
                 }
             }
             State::KeysInstalled { ref ptk, gtk: ref expected_gtk, ref cfg, .. } => {
-                // Safe since the frame is only used for deriving the message number.
-                match fourway::message_number(frame.get().unsafe_get_raw()) {
+                match frame.message_number() {
                     // Allow message 3 replays for robustness but never reinstall PTK or GTK.
                     // Reinstalling keys could create an attack surface for vulnerabilities such as
                     // KRACK.
