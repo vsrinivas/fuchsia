@@ -227,7 +227,6 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
-  auto page2_state_watcher = WatchPageSyncState(&page2);
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value(2 * 65536 + 1);
@@ -240,8 +239,6 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
       callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_TRUE(result.is_response());
-  page1->PutReference(key, std::move(result.response().reference),
-                      Priority::LAZY);
 
   loop_waiter = NewWaiter();
   PageSnapshotPtr snapshot;
@@ -249,6 +246,11 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   TestPageWatcher watcher(watcher_ptr.NewRequest(), loop_waiter->GetCallback());
   page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      std::move(watcher_ptr));
+  auto sync_waiter = NewWaiter();
+  page2->Sync(sync_waiter->GetCallback());
+  ASSERT_TRUE(sync_waiter->RunUntilCalled());
+  page1->PutReference(std::move(key), std::move(result.response().reference),
+                      Priority::LAZY);
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   EXPECT_EQ(1u, watcher.GetChangesSeen());
