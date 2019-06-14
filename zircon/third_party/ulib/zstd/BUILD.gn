@@ -10,6 +10,17 @@ config("zstd-config") {
     "lib/common",
     "lib/dictBuilder",
   ]
+
+  configs = [ "$zx/public/gn/config:visibility_hidden" ]
+  defines = [
+    "ZDICTLIB_VISIBILITY=",
+    "ZSTDERRORLIB_VISIBILITY=",
+    "ZSTDLIB_VISIBILITY=",
+  ]
+
+  if (is_host) {
+    defines += [ "ZSTD_MULTITHREAD" ]
+  }
 }
 
 library("zstd") {
@@ -42,11 +53,6 @@ library("zstd") {
     "lib/dictBuilder/fastcover.c",
     "lib/dictBuilder/zdict.c",
   ]
-
-  if (is_host) {
-    defines = [ "ZSTD_MULTITHREAD" ]
-  }
-
   configs += [ ":zstd-config" ]
 }
 

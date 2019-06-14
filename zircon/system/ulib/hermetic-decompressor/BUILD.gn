@@ -1,0 +1,60 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/system/ulib/hermetic-compute/hermetic_module.gni")
+
+library("hermetic-decompressor") {
+  sources = [
+    "get-engine.cpp",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-ldsvc:c",
+    "$zx/system/ulib/hermetic-compute",
+  ]
+  data_deps = [
+    ":decompress-lz4f",
+    ":decompress-zstd",
+  ]
+}
+
+template("engine_module") {
+  hermetic_module(target_name) {
+    visibility = [ ":*" ]
+    ldflags = [ "-Wl,-z,stack-size=4096" ]
+    forward_variables_from(invoker, "*")
+    deps += [
+      ":engine-libc",
+      "$zx/system/ulib/hermetic-compute:hermetic-engine",
+    ]
+  }
+}
+
+static_library("engine-libc") {
+  visibility = [ ":*" ]
+  sources = [
+    "abort.cpp",
+    "allocator.cpp",
+  ]
+  deps = [
+    "$zx/third_party/ulib/musl/src/string:stdmem",
+  ]
+}
+
+engine_module("decompress-lz4f") {
+  sources = [
+    "lz4f.cpp",
+  ]
+  deps = [
+    "$zx/third_party/ulib/lz4",
+  ]
+}
+
+engine_module("decompress-zstd") {
+  sources = [
+    "zstd.cpp",
+  ]
+  deps = [
+    "$zx/third_party/ulib/zstd",
+  ]
+}

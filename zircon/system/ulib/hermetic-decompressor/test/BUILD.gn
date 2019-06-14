@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":hermetic-decompressor",
+  ]
+}
+
+test("hermetic-decompressor") {
+  sources = [
+    "test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/hermetic-decompressor",
+    "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/lz4",
+    "$zx/third_party/ulib/zstd",
+  ]
+}
