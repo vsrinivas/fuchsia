@@ -17,6 +17,8 @@
 #include <runtime/thread.h>
 #include <unittest/unittest.h>
 
+#include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/process.h>
 #include <lib/zx/vmo.h>
 
 #include "register-set.h"
@@ -327,8 +329,9 @@ static bool TestThreadStartWithZeroInstructionPointer() {
                                0, &thread),
               ZX_OK);
 
-    REGISTER_CRASH(process);
+    test_exceptions::ExceptionCatcher catcher(*zx::unowned_process(process));
     ASSERT_EQ(zx_process_start(process, thread, 0, 0, thread, 0), ZX_OK);
+    EXPECT_EQ(catcher.ExpectException(), ZX_OK);
 
     zx_signals_t signals;
     EXPECT_EQ(zx_object_wait_one(
@@ -1671,7 +1674,7 @@ RUN_TEST(TestInvalidRights)
 RUN_TEST(TestDetach)
 RUN_TEST(TestLongNameSucceeds)
 RUN_TEST(TestThreadStartOnInitialThread)
-RUN_TEST_ENABLE_CRASH_HANDLER(TestThreadStartWithZeroInstructionPointer)
+RUN_TEST(TestThreadStartWithZeroInstructionPointer)
 RUN_TEST(TestKillBusyThread)
 RUN_TEST(TestKillSleepThread)
 RUN_TEST(TestKillWaitThread)
