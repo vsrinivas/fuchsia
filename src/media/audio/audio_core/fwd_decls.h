@@ -5,8 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_FWD_DECLS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_FWD_DECLS_H_
 
-#include <fbl/intrusive_wavl_tree.h>
-
 namespace media::audio {
 
 class AudioDeviceManager;

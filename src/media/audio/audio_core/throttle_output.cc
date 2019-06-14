@@ -4,7 +4,6 @@
 
 #include "src/media/audio/audio_core/throttle_output.h"
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/time/time_delta.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 

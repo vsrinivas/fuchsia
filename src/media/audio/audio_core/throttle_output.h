@@ -5,6 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_THROTTLE_OUTPUT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THROTTLE_OUTPUT_H_
 
+#include <fbl/ref_ptr.h>
+#include <fuchsia/media/cpp/fidl.h>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/time/time_point.h"
+#include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/audio_core/standard_output_base.h"
 
 namespace media::audio {

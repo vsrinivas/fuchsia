@@ -10,12 +10,14 @@
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/media/cpp/timeline_function.h>
+#include <lib/media/cpp/timeline_rate.h>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/media/cpp/timeline_function.h"
-#include "lib/media/cpp/timeline_rate.h"
+#include <memory>
+
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_object.h"

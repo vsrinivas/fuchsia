@@ -5,14 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_OUTPUT_H_
 
-#include <deque>
-#include <memory>
-#include <set>
-#include <thread>
-
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_device.h"
-#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 
 namespace media::audio {

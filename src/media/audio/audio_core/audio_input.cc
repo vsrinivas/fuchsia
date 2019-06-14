@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/audio_input.h"
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 
 namespace media::audio {
 

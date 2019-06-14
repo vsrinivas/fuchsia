@@ -6,10 +6,11 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_FORMAT_INFO_H_
 
 #include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/media/cpp/timeline_rate.h>
 #include <stdint.h>
 
-#include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/macros.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 

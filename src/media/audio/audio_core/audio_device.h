@@ -11,19 +11,14 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/media/cpp/timeline_function.h>
 #include <zircon/device/audio.h>
 
-#include <deque>
 #include <memory>
-#include <set>
-#include <thread>
 
-#include "lib/media/cpp/timeline_function.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "src/media/audio/audio_core/audio_device_settings.h"
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 
 namespace media::audio {

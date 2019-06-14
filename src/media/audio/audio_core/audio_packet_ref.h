@@ -8,7 +8,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <stdint.h>
 

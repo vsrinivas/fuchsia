@@ -8,11 +8,9 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 
-#include "lib/media/cpp/timeline_function.h"
-#include "lib/media/cpp/timeline_rate.h"
+#include <memory>
+
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
 namespace media::audio {

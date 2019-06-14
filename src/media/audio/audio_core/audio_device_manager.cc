@@ -4,8 +4,6 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 
-#include <fbl/algorithm.h>
-
 #include <string>
 
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
@@ -13,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
+#include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/mixer/fx_loader.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/throttle_output.h"
