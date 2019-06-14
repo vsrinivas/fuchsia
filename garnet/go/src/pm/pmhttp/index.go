@@ -33,7 +33,7 @@ async function main() {
 		row.appendChild(merklecol);
 		let a = $c("a");
 		a.href = "fuchsia-pkg://" + window.location.host + pkg;
-		a.innerText = pkg.slice(1);
+		a.innerText = pkg;
 		pkgcol.appendChild(a);
 		merklecol.innerText = targets[pkg].custom.merkle;
 		table.appendChild(row);
