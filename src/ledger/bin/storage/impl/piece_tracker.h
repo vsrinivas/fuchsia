@@ -14,7 +14,7 @@
 
 namespace storage {
 
-// A class to create and track object tokens.
+// A class to create and track piece tokens.
 class PieceTracker {
  public:
   PieceTracker();
@@ -25,9 +25,9 @@ class PieceTracker {
   PieceTracker(const PieceTracker&) = delete;
   PieceTracker& operator=(const PieceTracker&) = delete;
 
-  // Returns an ObjectToken, which must be destroyed before the |PieceTracker|
+  // Returns an PieceToken, which must be destroyed before the |PieceTracker|
   // instance that created it.
-  std::unique_ptr<ObjectToken> GetObjectToken(ObjectIdentifier identifier);
+  std::unique_ptr<PieceToken> GetPieceToken(ObjectIdentifier identifier);
 
   // Returns the number of live tokens issued for |identifier|.
   int count(const ObjectIdentifier& identifier) const;
@@ -36,13 +36,12 @@ class PieceTracker {
   int size() const;
 
  private:
-  // ObjectToken implementation that increments and decrements the associated
+  // PieceToken implementation that increments and decrements the associated
   // counter in |token_counts_| during construction and destruction.
-  class ObjectTokenImpl : public ObjectToken {
+  class PieceTokenImpl : public PieceToken {
    public:
-    explicit ObjectTokenImpl(PieceTracker* tracker,
-                             ObjectIdentifier identifier);
-    ~ObjectTokenImpl() override;
+    explicit PieceTokenImpl(PieceTracker* tracker, ObjectIdentifier identifier);
+    ~PieceTokenImpl() override;
 
     const ObjectIdentifier& GetIdentifier() const override;
 

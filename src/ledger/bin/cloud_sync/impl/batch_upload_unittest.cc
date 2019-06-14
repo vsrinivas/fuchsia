@@ -27,8 +27,8 @@
 namespace cloud_sync {
 namespace {
 using ::storage::fake::FakeObject;
-using ::storage::fake::FakeObjectToken;
 using ::storage::fake::FakePiece;
+using ::storage::fake::FakePieceToken;
 using ::storage::fake::FakeTokenChecker;
 
 // Fake implementation of storage::Commit.
@@ -98,7 +98,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void GetPiece(
       storage::ObjectIdentifier object_identifier,
       fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>,
-                         std::unique_ptr<const storage::ObjectToken>)>
+                         std::unique_ptr<const storage::PieceToken>)>
           callback) override {
     // If there was already a token for this identifier, check that it expired
     // and delete it.
@@ -108,7 +108,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       tokens.erase(it);
     }
     // Create a fresh token for the piece.
-    auto token = std::make_unique<FakeObjectToken>(object_identifier);
+    auto token = std::make_unique<FakePieceToken>(object_identifier);
     tokens.emplace(object_identifier, token->GetChecker());
     callback(
         ledger::Status::OK,

@@ -39,9 +39,9 @@ TEST(FakeObjectTest, FakeObject) {
   EXPECT_TRUE(references.empty());
 }
 
-TEST(FakeObjectTest, FakeObjectToken) {
+TEST(FakeObjectTest, FakePieceToken) {
   const ObjectIdentifier identifier(1u, 2u, ObjectDigest("some digest"));
-  auto token = std::make_unique<FakeObjectToken>(identifier);
+  auto token = std::make_unique<FakePieceToken>(identifier);
   EXPECT_EQ(token->GetIdentifier(), identifier);
 
   FakeTokenChecker checker = token->GetChecker();

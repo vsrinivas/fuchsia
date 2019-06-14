@@ -205,7 +205,7 @@ TEST_F(PageDbTest, ObjectStorage) {
         RandomObjectIdentifier(environment_.random());
     const std::string content = RandomString(environment_.random(), 32 * 1024);
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     PageDbObjectStatus object_status;
 
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,

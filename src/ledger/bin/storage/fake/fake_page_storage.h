@@ -68,7 +68,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
                 fit::function<void(Status, std::unique_ptr<const Piece>,
-                                   std::unique_ptr<const ObjectToken> token)>
+                                   std::unique_ptr<const PieceToken> token)>
                     callback) override;
   void GetCommitContents(const Commit& commit, std::string min_key,
                          fit::function<bool(Entry)> on_next,

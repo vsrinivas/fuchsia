@@ -42,18 +42,18 @@ Status FakeObject::AppendReferences(
   return Status::OK;
 }
 
-FakeObjectToken::FakeObjectToken(ObjectIdentifier identifier)
+FakePieceToken::FakePieceToken(ObjectIdentifier identifier)
     : identifier_(std::move(identifier)), weak_factory_(this) {}
 
-FakeTokenChecker FakeObjectToken::GetChecker() {
+FakeTokenChecker FakePieceToken::GetChecker() {
   return FakeTokenChecker(weak_factory_.GetWeakPtr());
 }
 
-const ObjectIdentifier& FakeObjectToken::GetIdentifier() const {
+const ObjectIdentifier& FakePieceToken::GetIdentifier() const {
   return identifier_;
 }
 
-FakeTokenChecker::FakeTokenChecker(const fxl::WeakPtr<FakeObjectToken>& token)
+FakeTokenChecker::FakeTokenChecker(const fxl::WeakPtr<FakePieceToken>& token)
     : token_(token) {}
 
 FakeTokenChecker::operator bool() const { return static_cast<bool>(token_); }

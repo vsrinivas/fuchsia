@@ -67,13 +67,13 @@ class Piece {
 
 // An token that ensures that the associated object remains available as long as
 // the token object is alive.
-class ObjectToken {
+class PieceToken {
  public:
-  ObjectToken() {}
-  virtual ~ObjectToken() {}
+  PieceToken() {}
+  virtual ~PieceToken() {}
   // Tokens must not be copied to ensure correct tracking.
-  ObjectToken(const ObjectToken&) = delete;
-  ObjectToken& operator=(const ObjectToken&) = delete;
+  PieceToken(const PieceToken&) = delete;
+  PieceToken& operator=(const PieceToken&) = delete;
 
   virtual const ObjectIdentifier& GetIdentifier() const = 0;
 };

@@ -470,7 +470,7 @@ void PageStorageImpl::GetObjectPart(
       [this, location, object_identifier = std::move(object_identifier), offset,
        max_size, callback = std::move(callback)](
           Status status, std::unique_ptr<const Piece> piece,
-          std::unique_ptr<const ObjectToken> token,
+          std::unique_ptr<const PieceToken> token,
           WritePieceCallback write_callback) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
@@ -514,7 +514,7 @@ void PageStorageImpl::GetObject(
       [this, location, object_identifier = std::move(object_identifier),
        callback = std::move(traced_callback)](
           Status status, std::unique_ptr<const Piece> piece,
-          std::unique_ptr<const ObjectToken> token,
+          std::unique_ptr<const PieceToken> token,
           WritePieceCallback write_callback) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
@@ -560,7 +560,7 @@ void PageStorageImpl::GetObject(
 void PageStorageImpl::GetPiece(
     ObjectIdentifier object_identifier,
     fit::function<void(Status, std::unique_ptr<const Piece>,
-                       std::unique_ptr<const ObjectToken>)>
+                       std::unique_ptr<const PieceToken>)>
         callback) {
   ObjectDigestInfo digest_info =
       GetObjectDigestInfo(object_identifier.object_digest());
@@ -577,10 +577,10 @@ void PageStorageImpl::GetPiece(
       [this, object_identifier = std::move(object_identifier)](
           CoroutineHandler* handler,
           fit::function<void(Status, std::unique_ptr<const Piece>,
-                             std::unique_ptr<const ObjectToken>)>
+                             std::unique_ptr<const PieceToken>)>
               callback) mutable {
         std::unique_ptr<const Piece> piece;
-        std::unique_ptr<const ObjectToken> token;
+        std::unique_ptr<const PieceToken> token;
         Status status = db_->ReadObject(handler, std::move(object_identifier),
                                         &piece, &token);
         callback(status, std::move(piece), std::move(token));
@@ -701,7 +701,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(
     if (GetObjectDigestInfo(object_identifier.object_digest()).piece_type ==
         PieceType::INDEX) {
       std::unique_ptr<const Piece> piece;
-      std::unique_ptr<const ObjectToken> token;
+      std::unique_ptr<const PieceToken> token;
       status = db_->ReadObject(handler, object_identifier, &piece, &token);
       if (status != Status::OK) {
         return status;
@@ -889,7 +889,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
   // includes writing the current piece to disk if necessary.
   int64_t sub_offset = 0;
   auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<Status, std::unique_ptr<const ObjectToken>>>(Status::OK);
+      callback::Waiter<Status, std::unique_ptr<const PieceToken>>>(Status::OK);
   for (const auto* child : *file_index->children()) {
     if (sub_offset + child->size() > file_index->size()) {
       callback(Status::DATA_INTEGRITY_ERROR);
@@ -927,7 +927,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
          global_size, child_position, child_size = child->size(), location,
          child_callback = waiter->NewCallback()](
             Status status, std::unique_ptr<const Piece> child_piece,
-            std::unique_ptr<const ObjectToken> token,
+            std::unique_ptr<const PieceToken> token,
             WritePieceCallback write_callback) mutable {
           if (status != Status::OK) {
             child_callback(status, nullptr);
@@ -953,7 +953,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
   // Collected tokens are kept alive until the final callback has completed.
   waiter->Finalize(
       [callback = std::move(callback)](
-          Status status, std::vector<std::unique_ptr<const ObjectToken>>) {
+          Status status, std::vector<std::unique_ptr<const PieceToken>>) {
         callback(status);
       });
 }
@@ -961,14 +961,14 @@ void PageStorageImpl::FillBufferWithObjectContent(
 void PageStorageImpl::GetOrDownloadPiece(
     ObjectIdentifier object_identifier, Location location,
     fit::function<void(Status, std::unique_ptr<const Piece>,
-                       std::unique_ptr<const ObjectToken>, WritePieceCallback)>
+                       std::unique_ptr<const PieceToken>, WritePieceCallback)>
         callback) {
   GetPiece(object_identifier, [this, callback = std::move(callback), location,
                                object_identifier =
                                    std::move(object_identifier)](
                                   Status status,
                                   std::unique_ptr<const Piece> piece,
-                                  std::unique_ptr<const ObjectToken>
+                                  std::unique_ptr<const PieceToken>
                                       token) mutable {
     // Object was found.
     if (status == Status::OK) {
@@ -993,7 +993,7 @@ void PageStorageImpl::GetOrDownloadPiece(
         [this, object_identifier = std::move(object_identifier)](
             CoroutineHandler* handler,
             fit::function<void(Status, std::unique_ptr<const Piece>,
-                               std::unique_ptr<const ObjectToken>,
+                               std::unique_ptr<const PieceToken>,
                                WritePieceCallback)>
                 callback) mutable {
           Status status;

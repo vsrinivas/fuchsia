@@ -117,7 +117,7 @@ class VmoObject : public BaseObject {
 
 // Token that does not hold a reference, when it is safe to discard the piece
 // but a token needs to be returned.
-class DiscardableToken : public ObjectToken {
+class DiscardableToken : public PieceToken {
  public:
   DiscardableToken(ObjectIdentifier identifier);
   const ObjectIdentifier& GetIdentifier() const override;

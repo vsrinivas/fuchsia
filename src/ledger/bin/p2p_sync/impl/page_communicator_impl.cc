@@ -601,7 +601,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(
               [callback = response_waiter->NewCallback(), &response](
                   ledger::Status status,
                   std::unique_ptr<const storage::Piece> piece,
-                  std::unique_ptr<const storage::ObjectToken> token) mutable {
+                  std::unique_ptr<const storage::PieceToken> token) mutable {
                 if (status == ledger::Status::INTERNAL_NOT_FOUND) {
                   // Not finding an object is okay in this context: we'll just
                   // reply we don't have it. There is not need to abort

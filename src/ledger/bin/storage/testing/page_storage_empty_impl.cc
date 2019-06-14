@@ -154,7 +154,7 @@ void PageStorageEmptyImpl::GetObject(
 void PageStorageEmptyImpl::GetPiece(
     ObjectIdentifier /*object_identifier*/,
     fit::function<void(Status, std::unique_ptr<const Piece>,
-                       std::unique_ptr<const ObjectToken>)>
+                       std::unique_ptr<const PieceToken>)>
         callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr, nullptr);
 }

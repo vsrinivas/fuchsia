@@ -249,7 +249,7 @@ void FakePageStorage::GetObject(
   GetPiece(
       object_identifier, [callback = std::move(callback)](
                              Status status, std::unique_ptr<const Piece> piece,
-                             std::unique_ptr<const ObjectToken> token) {
+                             std::unique_ptr<const PieceToken> token) {
         return callback(status, piece == nullptr ? nullptr
                                                  : std::make_unique<FakeObject>(
                                                        std::move(piece)));
@@ -262,7 +262,7 @@ void FakePageStorage::GetObjectPart(
   GetPiece(object_identifier,
            [offset, max_size, callback = std::move(callback)](
                Status status, std::unique_ptr<const Piece> piece,
-               std::unique_ptr<const ObjectToken> token) {
+               std::unique_ptr<const PieceToken> token) {
              if (status != Status::OK) {
                callback(status, nullptr);
                return;
@@ -281,7 +281,7 @@ void FakePageStorage::GetObjectPart(
 void FakePageStorage::GetPiece(
     ObjectIdentifier object_identifier,
     fit::function<void(Status, std::unique_ptr<const Piece>,
-                       std::unique_ptr<const ObjectToken>)>
+                       std::unique_ptr<const PieceToken>)>
         callback) {
   object_requests_.emplace_back(
       [this, object_identifier = std::move(object_identifier),
@@ -294,7 +294,7 @@ void FakePageStorage::GetPiece(
 
         callback(Status::OK,
                  std::make_unique<FakePiece>(object_identifier, it->second),
-                 std::make_unique<FakeObjectToken>(object_identifier));
+                 std::make_unique<FakePieceToken>(object_identifier));
       });
   async::PostDelayedTask(
       environment_->dispatcher(), [this] { SendNextObject(); },

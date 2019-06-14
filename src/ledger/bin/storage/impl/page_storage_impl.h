@@ -110,7 +110,7 @@ class PageStorageImpl : public PageStorage {
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
                 fit::function<void(Status, std::unique_ptr<const Piece>,
-                                   std::unique_ptr<const ObjectToken>)>
+                                   std::unique_ptr<const PieceToken>)>
                     callback) override;
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(Status)> callback) override;
@@ -148,7 +148,7 @@ class PageStorageImpl : public PageStorage {
       fit::function<void(Status, std::unique_ptr<const Object>)>)>;
 
   // Marks all pieces needed for the given objects as local.
-  // The caller is responsible for keeping an ObjectToken to objects in
+  // The caller is responsible for keeping an PieceToken to objects in
   // |object_identifiers|; this method will not attempt to keep them alive.
   FXL_WARN_UNUSED_RESULT Status
   MarkAllPiecesLocal(coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
@@ -169,9 +169,9 @@ class PageStorageImpl : public PageStorage {
   // LOCAL and NETWORK, and defines whether the piece should be looked up
   // remotely if not available locally.
   // When the piece has been retrieved remotely, attempts to add it to storage
-  // before returning it with an ObjectToken. If this is not possible, ie. when
+  // before returning it with an PieceToken. If this is not possible, ie. when
   // the piece is an index tree-node that requires the full object to compute
-  // its references, also returns a WritePieceCallback, and a null ObjectToken.
+  // its references, also returns a WritePieceCallback, and a null PieceToken.
   // It is the callers responsability to invoke this callback to add the piece
   // to storage once they have gathered the full object.
   // The WritePieceCallback is safe to call as long as this class is valid. It
@@ -182,8 +182,7 @@ class PageStorageImpl : public PageStorage {
   void GetOrDownloadPiece(
       ObjectIdentifier object_identifier, Location location,
       fit::function<void(Status, std::unique_ptr<const Piece>,
-                         std::unique_ptr<const ObjectToken>,
-                         WritePieceCallback)>
+                         std::unique_ptr<const PieceToken>, WritePieceCallback)>
           callback);
 
   // Reads the content of a piece into a provided VMO. Takes into account the

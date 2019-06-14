@@ -43,31 +43,31 @@ class FakeObject : public Object {
 
 class FakeTokenChecker;
 
-class FakeObjectToken : public ObjectToken {
+class FakePieceToken : public PieceToken {
  public:
-  explicit FakeObjectToken(ObjectIdentifier identifier);
+  explicit FakePieceToken(ObjectIdentifier identifier);
 
   // Returns a token checker associated with this token.
   FakeTokenChecker GetChecker();
 
-  // ObjectToken:
+  // PieceToken:
   const ObjectIdentifier& GetIdentifier() const override;
 
  private:
   ObjectIdentifier identifier_;
-  fxl::WeakPtrFactory<FakeObjectToken> weak_factory_;
+  fxl::WeakPtrFactory<FakePieceToken> weak_factory_;
 };
 
-// This class allows to decide if a particular FakeObjectToken is still alive.
+// This class allows to decide if a particular FakePieceToken is still alive.
 class FakeTokenChecker {
  public:
-  explicit FakeTokenChecker(const fxl::WeakPtr<FakeObjectToken>& token);
+  explicit FakeTokenChecker(const fxl::WeakPtr<FakePieceToken>& token);
 
-  // The token checker converts to true iff the ObjectToken is still alive.
+  // The token checker converts to true iff the PieceToken is still alive.
   explicit operator bool() const;
 
  private:
-  fxl::WeakPtr<FakeObjectToken> token_;
+  fxl::WeakPtr<FakePieceToken> token_;
 };
 
 }  // namespace fake

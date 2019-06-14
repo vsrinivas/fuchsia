@@ -186,7 +186,7 @@ class PageStorage : public PageSyncClient {
   // and only if the returned piece is nullptr.
   virtual void GetPiece(ObjectIdentifier object_identifier,
                         fit::function<void(Status, std::unique_ptr<const Piece>,
-                                           std::unique_ptr<const ObjectToken>)>
+                                           std::unique_ptr<const PieceToken>)>
                             callback) = 0;
 
   // Sets the opaque sync metadata associated with this page associated with the

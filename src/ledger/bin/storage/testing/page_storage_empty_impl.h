@@ -98,7 +98,7 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void GetPiece(ObjectIdentifier object_identifier,
                 fit::function<void(Status, std::unique_ptr<const Piece>,
-                                   std::unique_ptr<const ObjectToken>)>
+                                   std::unique_ptr<const PieceToken>)>
                     callback) override;
 
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,

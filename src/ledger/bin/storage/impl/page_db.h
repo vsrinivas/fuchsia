@@ -165,7 +165,7 @@ class PageDb : public PageDbMutator {
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
       std::unique_ptr<const Piece>* piece,
-      std::unique_ptr<const ObjectToken>* token) = 0;
+      std::unique_ptr<const PieceToken>* token) = 0;
 
   // Checks whether the object with the given |object_digest| is stored in the
   // database. Returns |OK| if the objet was found, or |INTERNAL_NOT_FOUND| if

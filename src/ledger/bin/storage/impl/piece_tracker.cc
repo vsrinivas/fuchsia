@@ -24,26 +24,26 @@ std::string TokenCountsToString(
 
 PieceTracker::PieceTracker() = default;
 
-PieceTracker::ObjectTokenImpl::ObjectTokenImpl(PieceTracker* tracker,
-                                               ObjectIdentifier identifier)
+PieceTracker::PieceTokenImpl::PieceTokenImpl(PieceTracker* tracker,
+                                             ObjectIdentifier identifier)
     : tracker_(tracker),
       map_entry_(
           tracker_->token_counts_.emplace(std::move(identifier), 0).first) {
   ++map_entry_->second;
-  FXL_VLOG(1) << "ObjectToken " << map_entry_->first << " "
+  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " "
               << map_entry_->second;
 }
 
-PieceTracker::ObjectTokenImpl::~ObjectTokenImpl() {
+PieceTracker::PieceTokenImpl::~PieceTokenImpl() {
   --map_entry_->second;
-  FXL_VLOG(1) << "ObjectToken " << map_entry_->first << " "
+  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " "
               << map_entry_->second;
   if (map_entry_->second == 0) {
     tracker_->token_counts_.erase(map_entry_);
   }
 }
 
-const ObjectIdentifier& PieceTracker::ObjectTokenImpl::GetIdentifier() const {
+const ObjectIdentifier& PieceTracker::PieceTokenImpl::GetIdentifier() const {
   return map_entry_->first;
 }
 
@@ -51,11 +51,11 @@ PieceTracker::~PieceTracker() {
   FXL_DCHECK(token_counts_.empty()) << TokenCountsToString(token_counts_);
 }
 
-std::unique_ptr<ObjectToken> PieceTracker::GetObjectToken(
+std::unique_ptr<PieceToken> PieceTracker::GetPieceToken(
     ObjectIdentifier identifier) {
   // Using `new` to access a non-public constructor.
-  return std::unique_ptr<ObjectToken>(
-      new ObjectTokenImpl(this, std::move(identifier)));
+  return std::unique_ptr<PieceToken>(
+      new PieceTokenImpl(this, std::move(identifier)));
 }
 
 int PieceTracker::count(const ObjectIdentifier& identifier) const {

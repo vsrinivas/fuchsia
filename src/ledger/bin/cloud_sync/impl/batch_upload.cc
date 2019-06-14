@@ -125,7 +125,7 @@ void BatchUpload::GetObjectContentAndUpload(
           [this, object_identifier, object_name = std::move(object_name)](
               ledger::Status storage_status,
               std::unique_ptr<const storage::Piece> piece,
-              std::unique_ptr<const storage::ObjectToken> token) mutable {
+              std::unique_ptr<const storage::PieceToken> token) mutable {
             FXL_DCHECK(storage_status == ledger::Status::OK);
             UploadObject(std::move(object_identifier), std::move(object_name),
                          std::move(piece), std::move(token));
@@ -135,7 +135,7 @@ void BatchUpload::GetObjectContentAndUpload(
 void BatchUpload::UploadObject(
     storage::ObjectIdentifier object_identifier, std::string object_name,
     std::unique_ptr<const storage::Piece> piece,
-    std::unique_ptr<const storage::ObjectToken> token) {
+    std::unique_ptr<const storage::PieceToken> token) {
   encryption_service_->EncryptObject(
       object_identifier, piece->GetData(),
       callback::MakeScoped(
@@ -156,7 +156,7 @@ void BatchUpload::UploadObject(
 
 void BatchUpload::UploadEncryptedObject(
     storage::ObjectIdentifier object_identifier, std::string object_name,
-    std::string content, std::unique_ptr<const storage::ObjectToken> token) {
+    std::string content, std::unique_ptr<const storage::PieceToken> token) {
   fsl::SizedVmo data;
   if (!fsl::VmoFromString(content, &data)) {
     EnqueueForRetryAndSignalError(std::move(object_identifier));

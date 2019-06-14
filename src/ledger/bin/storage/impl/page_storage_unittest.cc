@@ -467,7 +467,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
     bool called;
     Status status;
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     storage_->GetPiece(object_identifier,
                        callback::Capture(callback::SetWhenCalled(&called),
                                          &status, &piece, &token));
@@ -518,7 +518,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   Status ReadObject(CoroutineHandler* handler,
                     ObjectIdentifier object_identifier,
                     std::unique_ptr<const Piece>* piece,
-                    std::unique_ptr<const ObjectToken>* token) {
+                    std::unique_ptr<const PieceToken>* token) {
     return PageStorageImplAccessorForTest::GetDb(storage_).ReadObject(
         handler, object_identifier, piece, token);
   }
@@ -1147,7 +1147,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
                 std::move(identifier),
                 [callback = std::move(callback)](
                     Status status, std::unique_ptr<const Piece> piece,
-                    std::unique_ptr<const ObjectToken> token) {
+                    std::unique_ptr<const PieceToken> token) {
                   if (status != Status::OK) {
                     callback(status, "");
                     return;
@@ -1197,7 +1197,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     EXPECT_EQ(data.object_identifier, object_identifier);
 
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     ASSERT_EQ(Status::OK,
               ReadObject(handler, object_identifier, &piece, &token));
     EXPECT_EQ(data.value, piece->GetData());
@@ -1225,7 +1225,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
               ExtractObjectDigestData(object_identifier.object_digest()));
 
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
               ReadObject(handler, object_identifier, &piece, &token));
     // Inline objects do not need to ever be tracked.
@@ -1276,7 +1276,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     ASSERT_EQ(Status::OK,
               ReadObject(handler, data.object_identifier, &piece, &token));
     EXPECT_EQ(data.value, piece->GetData());
@@ -1306,7 +1306,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     ASSERT_EQ(Status::OK,
               ReadObject(handler, data.object_identifier, &piece, &token));
     EXPECT_EQ(data.value, piece->GetData());
@@ -1333,7 +1333,7 @@ TEST_F(PageStorageTest, AddP2PPiece) {
     EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<const Piece> piece;
-    std::unique_ptr<const ObjectToken> token;
+    std::unique_ptr<const PieceToken> token;
     ASSERT_EQ(Status::OK,
               ReadObject(handler, data.object_identifier, &piece, &token));
     EXPECT_EQ(data.value, piece->GetData());

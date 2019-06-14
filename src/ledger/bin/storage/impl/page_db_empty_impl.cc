@@ -32,7 +32,7 @@ Status PageDbEmptyImpl::ReadObject(
     CoroutineHandler* /*handler*/,
     const ObjectIdentifier& /*object_identifier*/,
     std::unique_ptr<const Piece>* /*piece*/,
-    std::unique_ptr<const ObjectToken>* /*token*/) {
+    std::unique_ptr<const PieceToken>* /*token*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::HasObject(

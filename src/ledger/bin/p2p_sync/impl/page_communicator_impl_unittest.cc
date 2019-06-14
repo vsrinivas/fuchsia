@@ -112,7 +112,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   void GetPiece(
       storage::ObjectIdentifier object_identifier,
       fit::function<void(ledger::Status, std::unique_ptr<const storage::Piece>,
-                         std::unique_ptr<const storage::ObjectToken>)>
+                         std::unique_ptr<const storage::PieceToken>)>
           callback) override {
     async::PostTask(dispatcher_, [this, object_identifier,
                                   callback = std::move(callback)]() {
@@ -125,7 +125,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
           ledger::Status::OK,
           std::make_unique<storage::fake::FakePiece>(object_identifier,
                                                      it->second),
-          std::make_unique<storage::fake::FakeObjectToken>(object_identifier));
+          std::make_unique<storage::fake::FakePieceToken>(object_identifier));
     });
   }
 
