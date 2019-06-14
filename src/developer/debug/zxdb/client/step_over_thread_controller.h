@@ -73,6 +73,10 @@ class StepOverThreadController : public ThreadController {
 
   // When construction_mode_ == kSourceLine, this represents the line
   // information of the line we're stepping over.
+  //
+  // IMPORTANT: This class should not perform logic or comparisons on this
+  // value. Reasoning about the file/line in the current stack frame should be
+  // delegated to the StepThreadController.
   FileLine file_line_;
 
   // The fingerprint of the frame we're stepping in. Anything newer than this

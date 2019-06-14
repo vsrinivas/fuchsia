@@ -17,8 +17,13 @@
 namespace zxdb {
 
 StepThreadController::StepThreadController(StepMode mode) : step_mode_(mode) {}
+
+StepThreadController::StepThreadController(const FileLine& line)
+    : step_mode_(StepMode::kSourceLine), file_line_(line) {}
+
 StepThreadController::StepThreadController(AddressRanges ranges)
     : step_mode_(StepMode::kAddressRange), current_ranges_(ranges) {}
+
 StepThreadController::~StepThreadController() = default;
 
 void StepThreadController::InitWithThread(Thread* thread,
@@ -34,25 +39,27 @@ void StepThreadController::InitWithThread(Thread* thread,
   uint64_t ip = top_frame->GetAddress();
 
   if (step_mode_ == StepMode::kSourceLine) {
-    // Always take the file/line from the stack rather than the line table.
-    // The stack will have been fixed up and may reference the calling line
-    // for an inline routine, while the line table will reference the inlined
-    // source that generated the instructions.
-    file_line_ = top_frame->GetLocation().file_line();
+    if (!file_line_) {
+      // Always take the file/line from the stack rather than the line table.
+      // The stack will have been fixed up and may reference the calling line
+      // for an inline routine, while the line table will reference the inlined
+      // source that generated the instructions.
+      file_line_ = top_frame->GetLocation().file_line();
+    }
 
     LineDetails line_details =
         thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
-    if (line_details.file_line() == file_line_) {
+    if (line_details.file_line() == *file_line_) {
       // When the stack and the line details match up, the range from the line
       // table is usable.
       current_ranges_ = AddressRanges(line_details.GetExtent());
-      Log("Stepping in %s:%d %s", file_line_.file().c_str(), file_line_.line(),
-          current_ranges_.ToString().c_str());
+      Log("Stepping in %s:%d %s", file_line_->file().c_str(),
+          file_line_->line(), current_ranges_.ToString().c_str());
     } else {
-      // Otherwise keep the current range empty to cause a
-      // step into inline routine or potentially a single step.
+      // Otherwise keep the current range empty to cause a step into inline
+      // routine or potentially a single step.
       current_ranges_ = AddressRanges();
-      Log("Stepping in empty range, likely to step into an inline routine.");
+      Log("Stepping in empty range.");
     }
 
     original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
@@ -184,7 +191,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // from the line table.
     const Location& top_location = top_frame->GetLocation();
     if (top_location.file_line().line() == 0 ||
-        top_location.file_line() == file_line_) {
+        top_location.file_line() == *file_line_) {
       // Still on the same line.
       if (top_location.file_line() == line_details.file_line()) {
         // Can use the range from the line table.

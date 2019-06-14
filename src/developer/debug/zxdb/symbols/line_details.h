@@ -16,8 +16,6 @@
 namespace zxdb {
 
 // Detailed source information for a given location.
-//
-// TODO(brettw) this will need inline subroutine information as well.
 class LineDetails {
  public:
   struct LineEntry {

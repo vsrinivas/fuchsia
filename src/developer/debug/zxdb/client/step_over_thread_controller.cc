@@ -92,11 +92,12 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   FrameFingerprint current_fingerprint =
       thread()->GetStack().GetFrameFingerprint(0);
   if (step_mode_ == StepMode::kSourceLine &&
-      current_fingerprint == frame_fingerprint_ &&
-      file_line_ == stack[0]->GetLocation().file_line()) {
-    // Same stack frame and same line number, do "step into" again.
-    Log("Same line, doing a new StepController to keep going.");
-    step_into_ = std::make_unique<StepThreadController>(StepMode::kSourceLine);
+      current_fingerprint == frame_fingerprint_) {
+    // Same stack frame, do "step into" for the line again. This doesn't check
+    // the current line itself since there is some special handling for things
+    // like "line 0" which we keep encapsulated in the StepThreadController.
+    Log("Doing a new StepController to keep going.");
+    step_into_ = std::make_unique<StepThreadController>(file_line_);
     step_into_->InitWithThread(thread(), [](const Err&) {});
     // Pass no exception type or breakpoints because we just want the step
     // controller to evaluate the current position regardless of how we got
