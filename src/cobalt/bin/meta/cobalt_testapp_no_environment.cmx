@@ -13,11 +13,7 @@
         }
     },
     "program": {
-        "args": [
-            "--skip_environment_test",
-            "--verbose=10"
-        ],
-        "binary": "test/cobalt_testapp_no_environment"
+        "binary": "test/disabled/cobalt_testapp_no_environment"
     },
     "sandbox": {
         "services": [
