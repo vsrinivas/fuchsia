@@ -6,6 +6,7 @@
 .checkstyle
 .classpath
 .config
+.envrc
 .fx-build-dir
 .fx-metrics-config
 .cproject
@@ -22,6 +23,7 @@
 *.iml
 *.orig
 *.pyc
+*.code-workspace
 *.sublime-project
 *.sublime-workspace
 Cargo.lock
