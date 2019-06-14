@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/hermetic-compute/hermetic-compute.h>
+#include <lib/hermetic-compute/vmo-span.h>
 
 #include <cerrno>
 #include <cstring>
@@ -11,6 +12,7 @@
 #include <filesystem>
 #include <lib/fdio/io.h>
 #include <lib/zx/job.h>
+#include <numeric>
 #include <string>
 #include <unistd.h>
 #include <zxtest/zxtest.h>
@@ -205,4 +207,83 @@ TEST(HermeticComputeTests, HermeticExportAgentAbortTest) {
     int64_t result;
     EXPECT_EQ(ZX_ERR_UNAVAILABLE,
               hcp.Call(module_elf_vmo, {}, &result, FailToExport{}));
+}
+
+TEST(HermeticComputeTests, VmoSpanTest) {
+    constexpr const char kTestModuleFile[]
+        = "lib/hermetic/test-module-vmo.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-vmo-test"));
+
+    // Make a VMO and put some data in it.
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    const uint8_t data[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+    ASSERT_OK(vmo.write(data, 0, sizeof(data)));
+
+    int64_t result;
+    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+                       VmoSpan{vmo, 0, PAGE_SIZE}));
+
+    EXPECT_EQ(std::accumulate(std::begin(data), std::end(data), 0), result);
+}
+
+TEST(HermeticComputeTests, WritableVmoSpanTest) {
+    constexpr const char kTestModuleFile[]
+        = "lib/hermetic/test-module-vmo-out.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-vmo-out-test"));
+
+    constexpr size_t kSize = 456;
+    constexpr uint8_t kValue = 42;
+
+    // Make a VMO where the engine will deliver data.
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    static_assert(kSize <= PAGE_SIZE);
+
+    int64_t result;
+    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+                       WritableVmoSpan{vmo, 0, PAGE_SIZE}));
+
+    // Read back the data.
+    uint8_t data[kSize];
+    ASSERT_OK(vmo.read(data, 0, kSize));
+
+    // Check that every byte holds the answer.
+    EXPECT_TRUE(std::all_of(std::begin(data), std::end(data),
+                            [](uint8_t x) { return x == kValue; }));
+}
+
+TEST(HermeticComputeTests, LeakyVmoSpanTest) {
+    constexpr const char kTestModuleFile[]
+        = "lib/hermetic/test-module-vmo.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-vmo-leaky-test"));
+
+    // Make a VMO and put some data in it.
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    const uint8_t data[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+    constexpr uint64_t kOffset = 128;
+    static_assert(kOffset % PAGE_SIZE != 0);
+    ASSERT_OK(vmo.write(data, kOffset, sizeof(data)));
+
+    int64_t result;
+    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+                       LeakyVmoSpan{vmo, kOffset, sizeof(data)}));
+
+    EXPECT_EQ(std::accumulate(std::begin(data), std::end(data), 0), result);
 }

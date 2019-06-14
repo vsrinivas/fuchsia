@@ -17,6 +17,8 @@ test_modules = [
   "float",
   "tuple",
   "struct",
+  "vmo",
+  "vmo-out",
 ]
 
 foreach(name, test_modules) {
@@ -29,6 +31,7 @@ foreach(name, test_modules) {
     ldflags = [ "-Wl,-z,stack-size=128" ]
     deps = [
       "$zx/system/ulib/hermetic-compute:hermetic-engine",
+      "$zx/third_party/ulib/musl/src/string:stdmem",
     ]
   }
 }

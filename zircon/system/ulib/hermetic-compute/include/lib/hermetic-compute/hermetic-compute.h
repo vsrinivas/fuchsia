@@ -84,6 +84,11 @@ public:
     zx_status_t Wait(int64_t* result = nullptr,
                      zx::time deadline = zx::time::infinite());
 
+    // Map a VMO into the process.  The location is always randomized and kept
+    // far away from any other mappings.
+    zx_status_t Map(const zx::vmo& vmo, uint64_t vmo_offset, size_t size,
+                    bool writable, uintptr_t* ptr);
+
     //
     // High-level interface: loading and launching.
     //
@@ -166,6 +171,18 @@ public:
         Launcher& Abort(zx_status_t status) {
             ZX_ASSERT(status != ZX_OK);
             status_ = status;
+            return *this;
+        }
+
+        // Map a VMO into the engine process.  This can be called by a
+        // HermeticExportAgent.
+        Launcher& Map(const zx::vmo& vmo, uint64_t vmo_offset, size_t size,
+                      bool writable, uintptr_t* ptr) {
+            if (status_ == ZX_OK) {
+                status_ = engine_.Map(vmo, vmo_offset, size, writable, ptr);
+            } else {
+                *ptr = 0;
+            }
             return *this;
         }
 

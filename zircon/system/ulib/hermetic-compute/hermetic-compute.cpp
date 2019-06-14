@@ -31,8 +31,8 @@ static_assert(kGuardSize % PAGE_SIZE == 0);
 constexpr size_t kMaxModuleSize = kGuardSize;
 
 zx_status_t MapWithGuards(const zx::vmar& vmar, const zx::vmo& vmo,
-                          size_t size, zx_vm_option_t perm,
-                          uintptr_t* out_address) {
+                          uint64_t vmo_offset, size_t size,
+                          zx_vm_option_t perm, uintptr_t* out_address) {
     // Create a VMAR to contain the mapping and the guard pages around it.
     // Once the VMAR handle goes out of scope, these mappings cannot change
     // (except by unmapping the whole region).
@@ -46,7 +46,7 @@ zx_status_t MapWithGuards(const zx::vmar& vmar, const zx::vmo& vmo,
         ZX_VM_CAN_MAP_SPECIFIC,
         &child_vmar, &base);
     if (status == ZX_OK) {
-        status = child_vmar.map(kGuardSize, vmo, 0, size,
+        status = child_vmar.map(kGuardSize, vmo, vmo_offset, size,
                                 perm | ZX_VM_SPECIFIC, out_address);
     }
     return status;
@@ -152,7 +152,7 @@ zx_status_t HermeticComputeProcess::LoadStack(size_t* size,
     *size = PageRound(*size);
     zx_status_t status = zx::vmo::create(*size, 0, out_vmo);
     if (status == ZX_OK) {
-        status = MapWithGuards(vmar_, *out_vmo, *size,
+        status = MapWithGuards(vmar_, *out_vmo, 0, *size,
                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                                out_stack_base);
     }
@@ -334,4 +334,12 @@ void HermeticComputeProcess::Launcher::LoadStack(size_t nargs, ...) {
     va_end(args);
 
     ZX_DEBUG_ASSERT(registers_used + stack_args_used == kImplicitArgs + nargs);
+}
+
+zx_status_t HermeticComputeProcess::Map(const zx::vmo& vmo,
+                                        uint64_t vmo_offset, size_t size,
+                                        bool writable, uintptr_t* ptr) {
+    return MapWithGuards(
+        vmar(), vmo, vmo_offset, size,
+        ZX_VM_PERM_READ | (writable ? ZX_VM_PERM_WRITE : 0), ptr);
 }

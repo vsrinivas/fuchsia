@@ -5,13 +5,19 @@
 #pragma once
 
 #include <array>
+#include <cassert>
 #include <cstdarg>
 #include <cstdint>
 #include <elf.h>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <zircon/syscalls.h>
+
+#if __cplusplus > 201703L
+#include <span>
+#endif
 
 // Forward declaration.
 template <typename T>
@@ -234,3 +240,40 @@ private:
                              std::make_index_sequence<kElementSpan>()))...};
     }
 };
+
+// Specialization for std::basic_string_view (aka std::string_view),
+// imported as pointer and byte size (regardless of element type).
+//
+// This packing protocol is used by e.g. VmoSpan.  Note that there is no
+// export agent for std::string_view and the like.
+template <typename T>
+class HermeticImportAgent<std::basic_string_view<T>> {
+public:
+    using type = std::basic_string_view<T>;
+
+    static constexpr size_t kArgumentCount = 2;
+
+    type operator()(const std::array<uintptr_t, 2> args) {
+        assert(args[0] % alignof(T) == 0);
+        assert(args[1] % sizeof(T) == 0);
+        return type(reinterpret_cast<const T*>(args[0]), args[1] / sizeof(T));
+    }
+};
+
+#if __cplusplus > 201703L
+// Specialization for std::span, imported as pointer and byte size
+// (regardless of element type).
+template <typename T>
+class HermeticImportAgent<std::span<T>> {
+public:
+    using type = std::span<T>;
+
+    static constexpr size_t kArgumentCount = 2;
+
+    type operator()(const std::array<uintptr_t, 2> args) {
+        assert(args[0] % alignof(T) == 0);
+        assert(args[1] % sizeof(T) == 0);
+        return type(reinterpret_cast<T*>(args[0]), args[1] / sizeof(T));
+    }
+};
+#endif
