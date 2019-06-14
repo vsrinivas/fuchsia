@@ -78,7 +78,7 @@ using Ordinal64Scope = Scope<uint64_t>;
 struct MethodScope {
     Ordinal64Scope ordinals;
     Scope<std::string_view> names;
-    Scope<const Interface*> interfaces;
+    Scope<const Protocol*> protocols;
 };
 
 // A helper class to track when a Decl is compiling and compiled.
@@ -682,14 +682,14 @@ public:
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
         if (arg_type->kind != Type::Kind::kIdentifier)
-            return Fail(maybe_location, "must be an interface");
-        auto interface_type = static_cast<const IdentifierType*>(arg_type);
-        if (interface_type->type_decl->kind != Decl::Kind::kInterface)
-            return Fail(maybe_location, "must be an interface");
+            return Fail(maybe_location, "must be a protocol");
+        auto protocol_type = static_cast<const IdentifierType*>(arg_type);
+        if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
+            return Fail(maybe_location, "must be a protocol");
         if (maybe_size != nullptr)
             return CannotHaveSize(maybe_location);
 
-        *out_type = std::make_unique<RequestHandleType>(interface_type, nullability);
+        *out_type = std::make_unique<RequestHandleType>(protocol_type, nullability);
         return true;
     }
 
@@ -714,7 +714,7 @@ public:
                 std::unique_ptr<Type>* out_type) const {
         assert(!no_handle_subtype.has_value());
 
-        if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kInterface) {
+        if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
             if (type_decl_->compiling) {
                 type_decl_->recursive = true;
             } else {
@@ -725,7 +725,7 @@ public:
         }
         auto typeshape = type_decl_->typeshape;
         switch (type_decl_->kind) {
-        case Decl::Kind::kInterface:
+        case Decl::Kind::kProtocol:
             typeshape = HandleType::Shape();
             break;
 
@@ -1149,7 +1149,7 @@ bool TransportConstraint(ErrorReporter* error_reporter,
 Libraries::Libraries() {
     // clang-format off
     AddAttributeSchema("Discoverable", AttributeSchema({
-        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kProtocolDecl,
     }, {
         "",
     }));
@@ -1159,18 +1159,18 @@ Libraries::Libraries() {
         /* any value */
     }));
     AddAttributeSchema("FragileBase", AttributeSchema({
-        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kProtocolDecl,
     }, {
         "",
     }));
     AddAttributeSchema("Layout", AttributeSchema({
-        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kProtocolDecl,
     }, {
         "Simple",
     },
     SimpleLayoutConstraint));
     AddAttributeSchema("MaxBytes", AttributeSchema({
-        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kProtocolDecl,
         AttributeSchema::Placement::kMethod,
         AttributeSchema::Placement::kStructDecl,
         AttributeSchema::Placement::kTableDecl,
@@ -1181,7 +1181,7 @@ Libraries::Libraries() {
     },
     MaxBytesConstraint));
     AddAttributeSchema("MaxHandles", AttributeSchema({
-        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kProtocolDecl,
         AttributeSchema::Placement::kMethod,
         AttributeSchema::Placement::kStructDecl,
         AttributeSchema::Placement::kTableDecl,
@@ -1204,7 +1204,7 @@ Libraries::Libraries() {
         /* any value */
     }));
     AddAttributeSchema("Transport", AttributeSchema({
-        AttributeSchema::Placement::kInterfaceDecl,
+        AttributeSchema::Placement::kProtocolDecl,
     }, {
         /* any value */
     }, TransportConstraint));
@@ -1382,7 +1382,7 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library,
 // Consuming the AST is primarily concerned with walking the tree and
 // flattening the representation. The AST's declaration nodes are
 // converted into the Library's foo_declaration structures. This means pulling
-// a struct declaration inside an interface out to the top level and
+// a struct declaration inside a protocol out to the top level and
 // so on.
 
 std::string LibraryName(const Library* library, std::string_view separator) {
@@ -1504,8 +1504,8 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kEnum:
         StoreDecl(decl_ptr, &enum_declarations_);
         break;
-    case Decl::Kind::kInterface:
-        StoreDecl(decl_ptr, &interface_declarations_);
+    case Decl::Kind::kProtocol:
+        StoreDecl(decl_ptr, &protocol_declarations_);
         break;
     case Decl::Kind::kStruct:
         StoreDecl(decl_ptr, &struct_declarations_);
@@ -1536,7 +1536,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kTable:
     case Decl::Kind::kUnion:
     case Decl::Kind::kXUnion:
-    case Decl::Kind::kInterface: {
+    case Decl::Kind::kProtocol: {
         auto type_decl = static_cast<TypeDecl*>(decl_ptr);
         auto type_template = std::make_unique<TypeDeclTypeTemplate>(
             Name(name->library(), std::string(name->name_part())),
@@ -1733,8 +1733,8 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
         std::move(type_ctor), std::move(members)));
 }
 
-bool Library::CreateMethodResult(const Name& interface_name,
-                                 raw::InterfaceMethod* method,
+bool Library::CreateMethodResult(const Name& protocol_name,
+                                 raw::ProtocolMethod* method,
                                  Struct* in_response,
                                  Struct** out_response) {
     // Compile the error type.
@@ -1754,7 +1754,7 @@ bool Library::CreateMethodResult(const Name& interface_name,
         GeneratedSimpleName("err"),
         nullptr};
     SourceLocation method_name = method->identifier->location();
-    Name result_name = DerivedName({interface_name.name_part(), method_name.data(), "Result"});
+    Name result_name = DerivedName({protocol_name.name_part(), method_name.data(), "Result"});
     std::vector<Union::Member> result_members;
     result_members.push_back(std::move(response_member));
     result_members.push_back(std::move(error_member));
@@ -1783,25 +1783,25 @@ bool Library::CreateMethodResult(const Name& interface_name,
     return true;
 }
 
-bool Library::ConsumeInterfaceDeclaration(
-    std::unique_ptr<raw::InterfaceDeclaration> interface_declaration) {
-    auto attributes = std::move(interface_declaration->attributes);
-    auto name = Name(this, interface_declaration->identifier->location());
+bool Library::ConsumeProtocolDeclaration(
+    std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
+    auto attributes = std::move(protocol_declaration->attributes);
+    auto name = Name(this, protocol_declaration->identifier->location());
 
-    std::set<Name> superinterfaces;
-    for (auto& superinterface : interface_declaration->superinterfaces) {
-        auto& protocol_name = superinterface->protocol_name;
+    std::set<Name> composed_protocols;
+    for (auto& composed_protocol : protocol_declaration->composed_protocols) {
+        auto& protocol_name = composed_protocol->protocol_name;
         auto location = protocol_name->components[0]->location();
-        Name superinterface_name;
-        if (!CompileCompoundIdentifier(protocol_name.get(), location, &superinterface_name)) {
+        Name composed_protocol_name;
+        if (!CompileCompoundIdentifier(protocol_name.get(), location, &composed_protocol_name)) {
             return false;
         }
-        if (!superinterfaces.insert(std::move(superinterface_name)).second)
-            return Fail(superinterface_name, "protocol composed multiple times");
+        if (!composed_protocols.insert(std::move(composed_protocol_name)).second)
+            return Fail(composed_protocol_name, "protocol composed multiple times");
     }
 
-    std::vector<Interface::Method> methods;
-    for (auto& method : interface_declaration->methods) {
+    std::vector<Protocol::Method> methods;
+    for (auto& method : protocol_declaration->methods) {
         auto generated_ordinal32 = std::make_unique<raw::Ordinal32>(
             fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *method));
         auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
@@ -1839,8 +1839,8 @@ bool Library::ConsumeInterfaceDeclaration(
                              std::move(maybe_response));
     }
 
-    return RegisterDecl(std::make_unique<Interface>(
-        std::move(attributes), std::move(name), std::move(superinterfaces), std::move(methods)));
+    return RegisterDecl(std::make_unique<Protocol>(
+        std::move(attributes), std::move(name), std::move(composed_protocols), std::move(methods)));
 }
 
 std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl, types::Nullability nullability) {
@@ -2034,9 +2034,9 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
         }
     }
 
-    auto interface_declaration_list = std::move(file->interface_declaration_list);
-    for (auto& interface_declaration : interface_declaration_list) {
-        if (!ConsumeInterfaceDeclaration(std::move(interface_declaration))) {
+    auto protocol_declaration_list = std::move(file->protocol_declaration_list);
+    for (auto& protocol_declaration : protocol_declaration_list) {
+        if (!ConsumeProtocolDeclaration(std::move(protocol_declaration))) {
             return false;
         }
     }
@@ -2463,7 +2463,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
                 }
                 return;
             } else {
-                if (auto decl = LookupDeclByName(name); decl && decl->kind != Decl::Kind::kInterface) {
+                if (auto decl = LookupDeclByName(name); decl && decl->kind != Decl::Kind::kProtocol) {
                     edges.insert(decl);
                 }
                 return;
@@ -2513,13 +2513,13 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         }
         break;
     }
-    case Decl::Kind::kInterface: {
-        auto interface_decl = static_cast<const Interface*>(decl);
-        for (const auto& superinterface : interface_decl->superinterfaces) {
-            if (auto type_decl = LookupDeclByName(superinterface); type_decl)
+    case Decl::Kind::kProtocol: {
+        auto protocol_decl = static_cast<const Protocol*>(decl);
+        for (const auto& composed_protocol : protocol_decl->composed_protocols) {
+            if (auto type_decl = LookupDeclByName(composed_protocol); type_decl)
                 edges.insert(type_decl);
         }
-        for (const auto& method : interface_decl->methods) {
+        for (const auto& method : protocol_decl->methods) {
             if (method.maybe_request != nullptr) {
                 edges.insert(method.maybe_request);
             }
@@ -2659,9 +2659,9 @@ bool Library::CompileDecl(Decl* decl) {
             return false;
         break;
     }
-    case Decl::Kind::kInterface: {
-        auto interface_decl = static_cast<Interface*>(decl);
-        if (!CompileInterface(interface_decl))
+    case Decl::Kind::kProtocol: {
+        auto protocol_decl = static_cast<Protocol*>(decl);
+        if (!CompileProtocol(protocol_decl))
             return false;
         break;
     }
@@ -2742,24 +2742,24 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
         }
         break;
     }
-    case Decl::Kind::kInterface: {
-        auto interface_declaration = static_cast<Interface*>(decl);
+    case Decl::Kind::kProtocol: {
+        auto protocol_declaration = static_cast<Protocol*>(decl);
         // Attributes: check placement.
         ValidateAttributesPlacement(
-            AttributeSchema::Placement::kInterfaceDecl,
-            interface_declaration->attributes.get());
-        for (const auto method : interface_declaration->all_methods) {
+            AttributeSchema::Placement::kProtocolDecl,
+            protocol_declaration->attributes.get());
+        for (const auto method : protocol_declaration->all_methods) {
             ValidateAttributesPlacement(
                 AttributeSchema::Placement::kMethod,
                 method->attributes.get());
         }
         if (placement_ok.NoNewErrors()) {
             // Attributes: check constraints.
-            for (const auto method : interface_declaration->all_methods) {
+            for (const auto method : protocol_declaration->all_methods) {
                 if (method->maybe_request) {
                     ValidateAttributesConstraints(
                         method->maybe_request,
-                        interface_declaration->attributes.get());
+                        protocol_declaration->attributes.get());
                     ValidateAttributesConstraints(
                         method->maybe_request,
                         method->attributes.get());
@@ -2767,7 +2767,7 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
                 if (method->maybe_response) {
                     ValidateAttributesConstraints(
                         method->maybe_response,
-                        interface_declaration->attributes.get());
+                        protocol_declaration->attributes.get());
                     ValidateAttributesConstraints(
                         method->maybe_response,
                         method->attributes.get());
@@ -2990,10 +2990,10 @@ bool HasSimpleLayout(const Decl* decl) {
     return decl->GetAttribute("Layout") == "Simple";
 }
 
-bool Library::CompileInterface(Interface* interface_declaration) {
+bool Library::CompileProtocol(Protocol* protocol_declaration) {
     MethodScope method_scope;
-    auto CheckScopes = [this, &interface_declaration, &method_scope](const Interface* interface, auto Visitor) -> bool {
-        for (const auto& name : interface->superinterfaces) {
+    auto CheckScopes = [this, &protocol_declaration, &method_scope](const Protocol* protocol, auto Visitor) -> bool {
+        for (const auto& name : protocol->composed_protocols) {
             auto decl = LookupDeclByName(name);
             // TODO(FIDL-603): Special handling here should not be required, we
             // should first rely on creating the types representing composed
@@ -3003,32 +3003,32 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                 message.append(name.name_part());
                 return Fail(name, message);
             }
-            if (decl->kind != Decl::Kind::kInterface)
-                return Fail(name, "This superinterface declaration is not an interface");
+            if (decl->kind != Decl::Kind::kProtocol)
+                return Fail(name, "This declaration is not a protocol");
             if (!decl->HasAttribute("FragileBase")) {
-                std::string message = "interface ";
+                std::string message = "protocol ";
                 message += NameFlatName(name);
-                message += " is not marked by [FragileBase] attribute, disallowing interface ";
-                message += NameFlatName(interface_declaration->name);
-                message += " from inheriting from it";
+                message += " is not marked by [FragileBase] attribute, disallowing protocol ";
+                message += NameFlatName(protocol_declaration->name);
+                message += " from composing it";
                 return Fail(name, message);
             }
-            auto superinterface = static_cast<const Interface*>(decl);
-            auto maybe_location = superinterface->name.maybe_location();
+            auto composed_protocol = static_cast<const Protocol*>(decl);
+            auto maybe_location = composed_protocol->name.maybe_location();
             assert(maybe_location);
-            if (method_scope.interfaces.Insert(superinterface, *maybe_location).ok()) {
-                if (!Visitor(superinterface, Visitor))
+            if (method_scope.protocols.Insert(composed_protocol, *maybe_location).ok()) {
+                if (!Visitor(composed_protocol, Visitor))
                     return false;
             } else {
-                // Otherwise we have already seen this interface in
+                // Otherwise we have already seen this protocol in
                 // the inheritance graph.
             }
         }
-        for (const auto& method : interface->methods) {
+        for (const auto& method : protocol->methods) {
             auto name_result = method_scope.names.Insert(method.name.data(), method.name);
             if (!name_result.ok())
                 return Fail(method.name,
-                            "Multiple methods with the same name in an interface; last occurrence was at " +
+                            "Multiple methods with the same name in a protocol; last occurrence was at " +
                                 name_result.previous_occurrence().position_str());
             auto ordinal_result = method_scope.ordinals.Insert(method.generated_ordinal32->value, method.name);
             if (method.generated_ordinal32->value == 0)
@@ -3038,24 +3038,24 @@ bool Library::CompileInterface(Interface* interface_declaration) {
                     fidl::ordinals::GetSelector(method.attributes.get(), method.name));
                 replacement_method.push_back('_');
                 return Fail(method.generated_ordinal32->location(),
-                            "Multiple methods with the same ordinal in an interface; previous was at " +
+                            "Multiple methods with the same ordinal in a protocol; previous was at " +
                                 ordinal_result.previous_occurrence().position_str() +
                                 ". Consider using attribute " +
                                 "[Selector=\"" + replacement_method + "\"] to change the " +
                                 "name used to calculate the ordinal.");
             }
 
-            // Add a pointer to this method to the interface_declarations list.
-            interface_declaration->all_methods.push_back(&method);
+            // Add a pointer to this method to the protocol_declarations list.
+            protocol_declaration->all_methods.push_back(&method);
         }
         return true;
     };
-    if (!CheckScopes(interface_declaration, CheckScopes))
+    if (!CheckScopes(protocol_declaration, CheckScopes))
         return false;
 
-    interface_declaration->typeshape = HandleType::Shape();
+    protocol_declaration->typeshape = HandleType::Shape();
 
-    for (auto& method : interface_declaration->methods) {
+    for (auto& method : protocol_declaration->methods) {
         auto CreateMessage = [&](Struct* message) -> bool {
             Scope<std::string_view> scope;
             for (auto& param : message->members) {
@@ -3266,8 +3266,8 @@ bool Library::Compile() {
     // backends figure this out, or better yet, describe the header directly.
     //
     // For now though, we fixup the representation after the fact.
-    for (auto& interface_decl : interface_declarations_) {
-        for (auto& method : interface_decl->all_methods) {
+    for (auto& protocol_decl : protocol_declarations_) {
+        for (auto& method : protocol_decl->all_methods) {
             auto FixupMessage = [&](Struct* message) {
                 auto header_field_shape = FieldShape(TypeShape(16u, 4u));
                 std::vector<FieldShape*> message_struct;

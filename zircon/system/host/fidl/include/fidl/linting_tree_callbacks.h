@@ -95,16 +95,16 @@ public:
     void OnExitEnumDeclaration(fit::function<void(const raw::EnumDeclaration&)> callback) {
         exit_enum_declaration_callbacks_.push_back(std::move(callback));
     }
-    void OnInterfaceDeclaration(fit::function<void(const raw::InterfaceDeclaration&)> callback) {
-        interface_declaration_callbacks_.push_back(std::move(callback));
+    void OnProtocolDeclaration(fit::function<void(const raw::ProtocolDeclaration&)> callback) {
+        protocol_declaration_callbacks_.push_back(std::move(callback));
     }
-    void OnExitInterfaceDeclaration(fit::function<void(const raw::InterfaceDeclaration&)> callback) {
-        exit_interface_declaration_callbacks_.push_back(std::move(callback));
+    void OnExitProtocolDeclaration(fit::function<void(const raw::ProtocolDeclaration&)> callback) {
+        exit_protocol_declaration_callbacks_.push_back(std::move(callback));
     }
-    void OnMethod(fit::function<void(const raw::InterfaceMethod&)> callback) {
+    void OnMethod(fit::function<void(const raw::ProtocolMethod&)> callback) {
         method_callbacks_.push_back(std::move(callback));
     }
-    void OnEvent(fit::function<void(const raw::InterfaceMethod&)> callback) {
+    void OnEvent(fit::function<void(const raw::ProtocolMethod&)> callback) {
         event_callbacks_.push_back(std::move(callback));
     }
     void OnParameter(fit::function<void(const raw::Parameter&)> callback) {
@@ -178,10 +178,10 @@ private:
     std::vector<fit::function<void(const raw::EnumDeclaration&)>> enum_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumDeclaration&)>> exit_enum_declaration_callbacks_;
     std::vector<fit::function<void(const raw::EnumMember&)>> enum_member_callbacks_;
-    std::vector<fit::function<void(const raw::InterfaceDeclaration&)>> interface_declaration_callbacks_;
-    std::vector<fit::function<void(const raw::InterfaceDeclaration&)>> exit_interface_declaration_callbacks_;
-    std::vector<fit::function<void(const raw::InterfaceMethod&)>> method_callbacks_;
-    std::vector<fit::function<void(const raw::InterfaceMethod&)>> event_callbacks_;
+    std::vector<fit::function<void(const raw::ProtocolDeclaration&)>> protocol_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::ProtocolDeclaration&)>> exit_protocol_declaration_callbacks_;
+    std::vector<fit::function<void(const raw::ProtocolMethod&)>> method_callbacks_;
+    std::vector<fit::function<void(const raw::ProtocolMethod&)>> event_callbacks_;
     std::vector<fit::function<void(const raw::Parameter&)>> parameter_callbacks_;
     std::vector<fit::function<void(const raw::StructMember&)>> struct_member_callbacks_;
     std::vector<fit::function<void(const raw::StructDeclaration&)>> struct_declaration_callbacks_;

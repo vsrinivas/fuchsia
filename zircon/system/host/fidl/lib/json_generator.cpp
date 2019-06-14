@@ -203,7 +203,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
         }
         case flat::Type::Kind::kRequestHandle: {
             auto type = static_cast<const flat::RequestHandleType*>(value);
-            GenerateObjectMember("subtype", type->interface_type->name);
+            GenerateObjectMember("subtype", type->protocol_type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
@@ -308,7 +308,7 @@ void JSONGenerator::Generate(const flat::Enum::Member& value) {
     });
 }
 
-void JSONGenerator::Generate(const flat::Interface& value) {
+void JSONGenerator::Generate(const flat::Protocol& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
         GenerateObjectMember("location", NameLocation(value.name));
@@ -318,7 +318,7 @@ void JSONGenerator::Generate(const flat::Interface& value) {
     });
 }
 
-void JSONGenerator::Generate(const flat::Interface::Method* method) {
+void JSONGenerator::Generate(const flat::Protocol::Method* method) {
     assert(method != nullptr);
     const auto& value = *method;
     GenerateObject([&]() {
@@ -509,7 +509,7 @@ void JSONGenerator::GenerateDeclarationsMember(
         for (const auto& decl : library->enum_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "enum");
 
-        for (const auto& decl : library->interface_declarations_)
+        for (const auto& decl : library->protocol_declarations_)
             GenerateDeclarationsEntry(count++, decl->name, "interface");
 
         for (const auto& decl : library->struct_declarations_) {
@@ -549,9 +549,9 @@ TransitiveDependencies(const flat::Library* library) {
     }
     // Discover additional dependencies that are required to support
     // cross-library protocol composition.
-    for (const auto& interface : library->interface_declarations_) {
-        for (const auto method : interface->all_methods) {
-            dependencies.insert(method->owning_interface->name.library());
+    for (const auto& protocol : library->protocol_declarations_) {
+        for (const auto method : protocol->all_methods) {
+            dependencies.insert(method->owning_protocol->name.library());
         }
     }
     dependencies.erase(library);
@@ -574,7 +574,7 @@ std::ostringstream JSONGenerator::Produce() {
         GenerateObjectMember("bits_declarations", library_->bits_declarations_);
         GenerateObjectMember("const_declarations", library_->const_declarations_);
         GenerateObjectMember("enum_declarations", library_->enum_declarations_);
-        GenerateObjectMember("interface_declarations", library_->interface_declarations_);
+        GenerateObjectMember("interface_declarations", library_->protocol_declarations_);
         GenerateObjectMember("struct_declarations", library_->struct_declarations_);
         GenerateObjectMember("table_declarations", library_->table_declarations_);
         GenerateObjectMember("union_declarations", library_->union_declarations_);

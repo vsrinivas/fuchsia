@@ -127,7 +127,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
             break;
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
-        case flat::Decl::Kind::kInterface:
+        case flat::Decl::Kind::kProtocol:
             *file << member.type << " " << member.name;
             break;
         case flat::Decl::Kind::kStruct:
@@ -178,7 +178,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
             break;
         case flat::Decl::Kind::kBits:
         case flat::Decl::Kind::kEnum:
-        case flat::Decl::Kind::kInterface:
+        case flat::Decl::Kind::kProtocol:
             *file << member.type << "* out_" << member.name;
             break;
         case flat::Decl::Kind::kStruct:
@@ -228,16 +228,16 @@ void EmitServerMethodDecl(std::ostream* file, std::string_view method_name,
     *file << ")";
 }
 
-void EmitServerDispatchDecl(std::ostream* file, std::string_view interface_name) {
-    *file << "zx_status_t " << interface_name
+void EmitServerDispatchDecl(std::ostream* file, std::string_view protocol_name) {
+    *file << "zx_status_t " << protocol_name
           << "_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const "
-          << interface_name << "_ops_t* ops)";
+          << protocol_name << "_ops_t* ops)";
 }
 
-void EmitServerTryDispatchDecl(std::ostream* file, std::string_view interface_name) {
-    *file << "zx_status_t " << interface_name
+void EmitServerTryDispatchDecl(std::ostream* file, std::string_view protocol_name) {
+    *file << "zx_status_t " << protocol_name
           << "_try_dispatch(void* ctx, fidl_txn_t* txn, fidl_msg_t* msg, const "
-          << interface_name << "_ops_t* ops)";
+          << protocol_name << "_ops_t* ops)";
 }
 
 void EmitServerReplyDecl(std::ostream* file, std::string_view method_name,
@@ -318,8 +318,8 @@ void EmitArraySizeOf(std::ostream* file,
     *file << "sizeof(" << member.element_type << ")";
 }
 
-// This function assumes the |params| are part of a [Layout="Simple"] interface.
-// In particular, simple interfaces don't have nullable structs or nested
+// This function assumes the |params| are part of a [Layout="Simple"] protocol.
+// In particular, simple protocols don't have nullable structs or nested
 // vectors. The only secondary objects they contain are top-level vectors and
 // strings.
 size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
@@ -379,7 +379,7 @@ void EmitLinearizeMessage(std::ostream* file,
                 break;
             case flat::Decl::Kind::kBits:
             case flat::Decl::Kind::kEnum:
-            case flat::Decl::Kind::kInterface:
+            case flat::Decl::Kind::kProtocol:
                 *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
                 break;
             case flat::Decl::Kind::kTable:
@@ -802,22 +802,22 @@ CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos
     return named_enums;
 }
 
-std::map<const flat::Decl*, CGenerator::NamedInterface>
-CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos) {
-    std::map<const flat::Decl*, NamedInterface> named_interfaces;
-    for (const auto& interface_info : interface_infos) {
-        NamedInterface named_interface;
-        named_interface.c_name = NameCodedName(interface_info->name);
-        if (interface_info->HasAttribute("Discoverable")) {
-            named_interface.discoverable_name = NameDiscoverable(*interface_info);
+std::map<const flat::Decl*, CGenerator::NamedProtocol>
+CGenerator::NameProtocols(const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos) {
+    std::map<const flat::Decl*, NamedProtocol> named_protocols;
+    for (const auto& protocol_info : protocol_infos) {
+        NamedProtocol named_protocol;
+        named_protocol.c_name = NameCodedName(protocol_info->name);
+        if (protocol_info->HasAttribute("Discoverable")) {
+            named_protocol.discoverable_name = NameDiscoverable(*protocol_info);
         }
         // TODO: Transport::SocketControl should imply NoHandles.
-        named_interface.transport = ParseTransport(interface_info->GetAttribute("Transport"));
-        for (const auto& method_pointer : interface_info->all_methods) {
+        named_protocol.transport = ParseTransport(protocol_info->GetAttribute("Transport"));
+        for (const auto& method_pointer : protocol_info->all_methods) {
             assert(method_pointer != nullptr);
             const auto& method = *method_pointer;
             NamedMethod named_method;
-            std::string method_name = NameMethod(named_interface.c_name, method);
+            std::string method_name = NameMethod(named_protocol.c_name, method);
             named_method.ordinal = method.generated_ordinal32->value;
             named_method.ordinal_name = NameOrdinal(method_name);
             named_method.generated_ordinal = method.generated_ordinal32->value;
@@ -849,11 +849,11 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
                                      method.maybe_response->typeshape});
                 }
             }
-            named_interface.methods.push_back(std::move(named_method));
+            named_protocol.methods.push_back(std::move(named_method));
         }
-        named_interfaces.emplace(interface_info.get(), std::move(named_interface));
+        named_protocols.emplace(protocol_info.get(), std::move(named_protocol));
     }
-    return named_interfaces;
+    return named_protocols;
 }
 
 std::map<const flat::Decl*, CGenerator::NamedStruct>
@@ -932,11 +932,11 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
     EmitBlank(&file_);
 }
 
-void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
-    if (!named_interface.discoverable_name.empty()) {
-        file_ << "#define " << named_interface.c_name << "_Name \"" << named_interface.discoverable_name << "\"\n";
+void CGenerator::ProduceProtocolForwardDeclaration(const NamedProtocol& named_protocol) {
+    if (!named_protocol.discoverable_name.empty()) {
+        file_ << "#define " << named_protocol.c_name << "_Name \"" << named_protocol.discoverable_name << "\"\n";
     }
-    for (const auto& method_info : named_interface.methods) {
+    for (const auto& method_info : named_protocol.methods) {
         {
             IOFlagsGuard reset_flags(&file_);
             file_ << "#define " << method_info.ordinal_name << " ((uint32_t)0x"
@@ -967,8 +967,8 @@ void CGenerator::ProduceXUnionForwardDeclaration(const NamedXUnion& named_xunion
     GenerateStructTypedef(named_xunion.name);
 }
 
-void CGenerator::ProduceInterfaceExternDeclaration(const NamedInterface& named_interface) {
-    for (const auto& method_info : named_interface.methods) {
+void CGenerator::ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol) {
+    for (const auto& method_info : named_protocol.methods) {
         if (method_info.request)
             file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
         if (method_info.response)
@@ -1018,8 +1018,8 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
     EmitBlank(&file_);
 }
 
-void CGenerator::ProduceInterfaceDeclaration(const NamedInterface& named_interface) {
-    for (const auto& method_info : named_interface.methods) {
+void CGenerator::ProduceProtocolDeclaration(const NamedProtocol& named_protocol) {
+    for (const auto& method_info : named_protocol.methods) {
         if (method_info.request)
             ProduceMessageDeclaration(*method_info.request);
         if (method_info.response)
@@ -1075,8 +1075,8 @@ void CGenerator::ProduceXUnionDeclaration(const NamedXUnion& named_xunion) {
     EmitBlank(&file_);
 }
 
-void CGenerator::ProduceInterfaceClientDeclaration(const NamedInterface& named_interface) {
-    for (const auto& method_info : named_interface.methods) {
+void CGenerator::ProduceProtocolClientDeclaration(const NamedProtocol& named_protocol) {
+    for (const auto& method_info : named_protocol.methods) {
         if (!method_info.request)
             continue;
         std::vector<Member> request;
@@ -1089,8 +1089,8 @@ void CGenerator::ProduceInterfaceClientDeclaration(const NamedInterface& named_i
     EmitBlank(&file_);
 }
 
-void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& named_interface) {
-    for (const auto& method_info : named_interface.methods) {
+void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_protocol) {
+    for (const auto& method_info : named_protocol.methods) {
         if (!method_info.request)
             continue;
         std::vector<Member> request;
@@ -1098,11 +1098,11 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
         GetMethodParameters(library_, method_info, &request, &response);
 
         size_t count = CountSecondaryObjects(request);
-        size_t request_hcount = GetMaxHandlesFor(named_interface.transport,
+        size_t request_hcount = GetMaxHandlesFor(named_protocol.transport,
                                                  method_info.request->typeshape);
         size_t response_hcount = 0;
         if (method_info.response) {
-            response_hcount = GetMaxHandlesFor(named_interface.transport,
+            response_hcount = GetMaxHandlesFor(named_protocol.transport,
                                                method_info.response->typeshape);
         }
         size_t max_hcount = std::max(request_hcount, response_hcount);
@@ -1137,7 +1137,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             file_ << kIndent << "// OPTIMIZED AWAY fidl_encode() of POD-only request\n";
         }
         if (!method_info.response) {
-            switch (named_interface.transport) {
+            switch (named_protocol.transport) {
             case Transport::Channel:
                 if (encode_request) {
                     file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, " << handles_value << ", _wr_num_handles);\n";
@@ -1156,7 +1156,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
             file_ << kIndent << "FIDL_ALIGNDECL char _rd_bytes[_rd_num_bytes];\n";
             if (!response.empty())
                 file_ << kIndent << method_info.response->c_name << "* _response = (" << method_info.response->c_name << "*)_rd_bytes;\n";
-            switch (named_interface.transport) {
+            switch (named_protocol.transport) {
             case Transport::Channel:
                 file_ << kIndent << "zx_channel_call_args_t _args = {\n";
                 file_ << kIndent << kIndent << ".wr_bytes = _wr_bytes,\n";
@@ -1234,7 +1234,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
 
             if (decode_response) {
                 // TODO(FIDL-162): Validate the response ordinal. C++ bindings also need to do that.
-                switch (named_interface.transport) {
+                switch (named_protocol.transport) {
                 case Transport::Channel:
                     file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
                           << ", _rd_bytes, _actual_num_bytes, " << handles_value << ", _actual_num_handles, NULL);\n";
@@ -1278,7 +1278,7 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
                         break;
                     case flat::Decl::Kind::kBits:
                     case flat::Decl::Kind::kEnum:
-                    case flat::Decl::Kind::kInterface:
+                    case flat::Decl::Kind::kProtocol:
                         file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
                         break;
                     case flat::Decl::Kind::kTable:
@@ -1320,9 +1320,9 @@ void CGenerator::ProduceInterfaceClientImplementation(const NamedInterface& name
     }
 } // namespace fidl
 
-void CGenerator::ProduceInterfaceServerDeclaration(const NamedInterface& named_interface) {
-    file_ << "typedef struct " << named_interface.c_name << "_ops {\n";
-    for (const auto& method_info : named_interface.methods) {
+void CGenerator::ProduceProtocolServerDeclaration(const NamedProtocol& named_protocol) {
+    file_ << "typedef struct " << named_protocol.c_name << "_ops {\n";
+    for (const auto& method_info : named_protocol.methods) {
         if (!method_info.request)
             continue;
         std::vector<Member> request;
@@ -1332,14 +1332,14 @@ void CGenerator::ProduceInterfaceServerDeclaration(const NamedInterface& named_i
         EmitServerMethodDecl(&file_, method_info.identifier, request, has_response);
         file_ << ";\n";
     }
-    file_ << "} " << named_interface.c_name << "_ops_t;\n\n";
+    file_ << "} " << named_protocol.c_name << "_ops_t;\n\n";
 
-    EmitServerDispatchDecl(&file_, named_interface.c_name);
+    EmitServerDispatchDecl(&file_, named_protocol.c_name);
     file_ << ";\n";
-    EmitServerTryDispatchDecl(&file_, named_interface.c_name);
+    EmitServerTryDispatchDecl(&file_, named_protocol.c_name);
     file_ << ";\n\n";
 
-    for (const auto& method_info : named_interface.methods) {
+    for (const auto& method_info : named_protocol.methods) {
         if (!method_info.request || !method_info.response)
             continue;
         std::vector<Member> response;
@@ -1351,8 +1351,8 @@ void CGenerator::ProduceInterfaceServerDeclaration(const NamedInterface& named_i
     EmitBlank(&file_);
 }
 
-void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& named_interface) {
-    EmitServerTryDispatchDecl(&file_, named_interface.c_name);
+void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_protocol) {
+    EmitServerTryDispatchDecl(&file_, named_protocol.c_name);
     file_ << " {\n";
     file_ << kIndent << "if (msg->num_bytes < sizeof(fidl_message_header_t)) {\n";
     file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
@@ -1362,7 +1362,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
     file_ << kIndent << "zx_status_t status = ZX_OK;\n";
     file_ << kIndent << "switch (hdr->ordinal) {\n";
 
-    for (const auto& method_info : named_interface.methods) {
+    for (const auto& method_info : named_protocol.methods) {
         if (!method_info.request)
             continue;
         if (method_info.ordinal != method_info.generated_ordinal) {
@@ -1400,7 +1400,7 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
                     break;
                 case flat::Decl::Kind::kBits:
                 case flat::Decl::Kind::kEnum:
-                case flat::Decl::Kind::kInterface:
+                case flat::Decl::Kind::kProtocol:
                     file_ << ", request->" << member.name;
                     break;
                 case flat::Decl::Kind::kTable:
@@ -1444,22 +1444,22 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
     file_ << kIndent << "}\n";
     file_ << "}\n\n";
 
-    EmitServerDispatchDecl(&file_, named_interface.c_name);
+    EmitServerDispatchDecl(&file_, named_protocol.c_name);
     file_ << " {\n";
     file_ << kIndent << "zx_status_t status = "
-          << named_interface.c_name << "_try_dispatch(ctx, txn, msg, ops);\n";
+          << named_protocol.c_name << "_try_dispatch(ctx, txn, msg, ops);\n";
     file_ << kIndent << "if (status == ZX_ERR_NOT_SUPPORTED)\n";
     file_ << kIndent << kIndent << "zx_handle_close_many(msg->handles, msg->num_handles);\n";
     file_ << kIndent << "return status;\n";
     file_ << "}\n\n";
 
-    for (const auto& method_info : named_interface.methods) {
+    for (const auto& method_info : named_protocol.methods) {
         if (!method_info.request || !method_info.response)
             continue;
         std::vector<Member> response;
         GetMethodParameters(library_, method_info, nullptr, &response);
 
-        size_t hcount = GetMaxHandlesFor(named_interface.transport, method_info.response->typeshape);
+        size_t hcount = GetMaxHandlesFor(named_protocol.transport, method_info.response->typeshape);
 
         EmitServerReplyDecl(&file_, method_info.c_name, response);
         file_ << " {\n";
@@ -1504,8 +1504,8 @@ std::ostringstream CGenerator::ProduceHeader() {
     std::map<const flat::Decl*, NamedConst> named_consts =
         NameConsts(library_->const_declarations_);
     std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations_);
-    std::map<const flat::Decl*, NamedInterface> named_interfaces =
-        NameInterfaces(library_->interface_declarations_);
+    std::map<const flat::Decl*, NamedProtocol> named_protocols =
+        NameProtocols(library_->protocol_declarations_);
     std::map<const flat::Decl*, NamedStruct> named_structs =
         NameStructs(library_->struct_declarations_);
     std::map<const flat::Decl*, NamedTable> named_tables =
@@ -1540,10 +1540,10 @@ std::ostringstream CGenerator::ProduceHeader() {
             }
             break;
         }
-        case flat::Decl::Kind::kInterface: {
-            auto iter = named_interfaces.find(decl);
-            if (iter != named_interfaces.end()) {
-                ProduceInterfaceForwardDeclaration(iter->second);
+        case flat::Decl::Kind::kProtocol: {
+            auto iter = named_protocols.find(decl);
+            if (iter != named_protocols.end()) {
+                ProduceProtocolForwardDeclaration(iter->second);
             }
             break;
         }
@@ -1593,10 +1593,10 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kXUnion:
             // Only messages have extern fidl_type_t declarations.
             break;
-        case flat::Decl::Kind::kInterface: {
-            auto iter = named_interfaces.find(decl);
-            if (iter != named_interfaces.end()) {
-                ProduceInterfaceExternDeclaration(iter->second);
+        case flat::Decl::Kind::kProtocol: {
+            auto iter = named_protocols.find(decl);
+            if (iter != named_protocols.end()) {
+                ProduceProtocolExternDeclaration(iter->second);
             }
             break;
         }
@@ -1624,10 +1624,10 @@ std::ostringstream CGenerator::ProduceHeader() {
             // Enums can be entirely forward declared, as they have no
             // dependencies other than standard headers.
             break;
-        case flat::Decl::Kind::kInterface: {
-            auto iter = named_interfaces.find(decl);
-            if (iter != named_interfaces.end()) {
-                ProduceInterfaceDeclaration(iter->second);
+        case flat::Decl::Kind::kProtocol: {
+            auto iter = named_protocols.find(decl);
+            if (iter != named_protocols.end()) {
+                ProduceProtocolDeclaration(iter->second);
             }
             break;
         }
@@ -1672,15 +1672,15 @@ std::ostringstream CGenerator::ProduceHeader() {
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
-            // Only interfaces have client declarations.
+            // Only protocols have client declarations.
             break;
-        case flat::Decl::Kind::kInterface: {
+        case flat::Decl::Kind::kProtocol: {
             if (!HasSimpleLayout(decl))
                 break;
-            auto iter = named_interfaces.find(decl);
-            if (iter != named_interfaces.end()) {
-                ProduceInterfaceClientDeclaration(iter->second);
-                ProduceInterfaceServerDeclaration(iter->second);
+            auto iter = named_protocols.find(decl);
+            if (iter != named_protocols.end()) {
+                ProduceProtocolClientDeclaration(iter->second);
+                ProduceProtocolServerDeclaration(iter->second);
             }
             break;
         }
@@ -1703,8 +1703,8 @@ std::ostringstream CGenerator::ProduceClient() {
     EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
     EmitBlank(&file_);
 
-    std::map<const flat::Decl*, NamedInterface> named_interfaces =
-        NameInterfaces(library_->interface_declarations_);
+    std::map<const flat::Decl*, NamedProtocol> named_protocols =
+        NameProtocols(library_->protocol_declarations_);
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -1715,14 +1715,14 @@ std::ostringstream CGenerator::ProduceClient() {
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
-            // Only interfaces have client implementations.
+            // Only protocols have client implementations.
             break;
-        case flat::Decl::Kind::kInterface: {
+        case flat::Decl::Kind::kProtocol: {
             if (!HasSimpleLayout(decl))
                 break;
-            auto iter = named_interfaces.find(decl);
-            if (iter != named_interfaces.end()) {
-                ProduceInterfaceClientImplementation(iter->second);
+            auto iter = named_protocols.find(decl);
+            if (iter != named_protocols.end()) {
+                ProduceProtocolClientImplementation(iter->second);
             }
             break;
         }
@@ -1742,8 +1742,8 @@ std::ostringstream CGenerator::ProduceServer() {
     EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
     EmitBlank(&file_);
 
-    std::map<const flat::Decl*, NamedInterface> named_interfaces =
-        NameInterfaces(library_->interface_declarations_);
+    std::map<const flat::Decl*, NamedProtocol> named_protocols =
+        NameProtocols(library_->protocol_declarations_);
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
@@ -1754,14 +1754,14 @@ std::ostringstream CGenerator::ProduceServer() {
         case flat::Decl::Kind::kTable:
         case flat::Decl::Kind::kUnion:
         case flat::Decl::Kind::kXUnion:
-            // Only interfaces have client implementations.
+            // Only protocols have client implementations.
             break;
-        case flat::Decl::Kind::kInterface: {
+        case flat::Decl::Kind::kProtocol: {
             if (!HasSimpleLayout(decl))
                 break;
-            auto iter = named_interfaces.find(decl);
-            if (iter != named_interfaces.end()) {
-                ProduceInterfaceServerImplementation(iter->second);
+            auto iter = named_protocols.find(decl);
+            if (iter != named_protocols.end()) {
+                ProduceProtocolServerImplementation(iter->second);
             }
             break;
         }

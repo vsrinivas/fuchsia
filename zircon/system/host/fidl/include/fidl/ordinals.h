@@ -19,14 +19,14 @@ std::string GetSelector(const raw::AttributeList* attributes,
 //
 // The ordinal value is equal to
 //
-//    *((int32_t *)sha256(library_name + "." + interface_name + "/" + selector_name)) & 0x7fffffff;
+//    *((int32_t *)sha256(library_name + "." + protocol_name + "/" + selector_name)) & 0x7fffffff;
 //
-// Note: the slash separator is between the interface_name and selector_name.
+// Note: the slash separator is between the protocol_name and selector_name.
 //
 // The selector_name is retrieved using GetSelector.
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
-                                     const std::string_view& interface_name,
-                                     const raw::InterfaceMethod& method);
+                                     const std::string_view& protocol_name,
+                                     const raw::ProtocolMethod& method);
 
 // Computes the 32bits ordinal for this |xunion_member|.
 //
@@ -45,14 +45,14 @@ raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& librar
 //
 // The ordinal value is equal to
 //
-//    *((int64_t *)sha256(library_name + "/" + interface_name + "." + selector_name)) & 0x7fffffffffffffff;
+//    *((int64_t *)sha256(library_name + "/" + protocol_name + "." + selector_name)) & 0x7fffffffffffffff;
 //
-// Note: the slash separator is between the library_name and interface_name.
+// Note: the slash separator is between the library_name and protocol_name.
 //
 // The selector_name is retrieved using GetSelector.
 raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& library_name,
-                                     const std::string_view& interface_name,
-                                     const raw::InterfaceMethod& method);
+                                     const std::string_view& protocol_name,
+                                     const raw::ProtocolMethod& method);
 
 } // namespace ordinals
 } // namespace fidl

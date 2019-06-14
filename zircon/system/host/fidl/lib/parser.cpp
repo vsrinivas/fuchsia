@@ -598,7 +598,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     return std::make_unique<raw::ParameterList>(scope.GetSourceElement(), std::move(parameter_list));
 }
 
-std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
+std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
 
     ConsumeToken(OfKind(Token::Kind::kArrow));
@@ -636,7 +636,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
     assert(method_name);
     assert(response);
 
-    return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
+    return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(),
                                                   std::move(attributes),
                                                   std::move(method_name),
                                                   nullptr /* maybe_request */,
@@ -644,7 +644,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolEvent(
                                                   std::move(maybe_error));
 }
 
-std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
+std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
     std::unique_ptr<raw::Identifier> method_name) {
 
@@ -682,7 +682,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
     assert(method_name);
     assert(request);
 
-    return std::make_unique<raw::InterfaceMethod>(scope.GetSourceElement(),
+    return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(),
                                                   std::move(attributes),
                                                   std::move(method_name),
                                                   std::move(request),
@@ -693,7 +693,7 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseProtocolMethod(
 void Parser::ParseProtocolMember(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
     std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
-    std::vector<std::unique_ptr<raw::InterfaceMethod>>* methods) {
+    std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
 
     switch (Peek().kind()) {
         case Token::Kind::kArrow: {
@@ -732,10 +732,10 @@ void Parser::ParseProtocolMember(
     }
 }
 
-std::unique_ptr<raw::InterfaceDeclaration>
+std::unique_ptr<raw::ProtocolDeclaration>
 Parser::ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
     std::vector<std::unique_ptr<raw::ComposeProtocol>> composed_protocols;
-    std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
+    std::vector<std::unique_ptr<raw::ProtocolMethod>> methods;
 
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
     if (!Ok())
@@ -778,7 +778,7 @@ Parser::ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes,
     if (!Ok())
         Fail();
 
-    return std::make_unique<raw::InterfaceDeclaration>(scope.GetSourceElement(),
+    return std::make_unique<raw::ProtocolDeclaration>(scope.GetSourceElement(),
                                                     std::move(attributes), std::move(identifier),
                                                     std::move(composed_protocols),
                                                     std::move(methods));
@@ -1071,7 +1071,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
     std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
     std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_declaration_list;
-    std::vector<std::unique_ptr<raw::InterfaceDeclaration>> interface_declaration_list;
+    std::vector<std::unique_ptr<raw::ProtocolDeclaration>> protocol_declaration_list;
     std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
@@ -1091,7 +1091,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return Fail();
 
     auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
-                              &interface_declaration_list, &struct_declaration_list,
+                              &protocol_declaration_list, &struct_declaration_list,
                               &done_with_library_imports, &using_list,
                               &table_declaration_list, &union_declaration_list, &xunion_declaration_list, this]() {
         ASTScope scope(this);
@@ -1120,7 +1120,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
         case CASE_IDENTIFIER(Token::Subkind::kProtocol):
             done_with_library_imports = true;
-            interface_declaration_list.emplace_back(
+            protocol_declaration_list.emplace_back(
                 ParseProtocolDeclaration(std::move(attributes), scope));
             return More;
 
@@ -1174,7 +1174,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     return std::make_unique<raw::File>(
         scope.GetSourceElement(), end,
         std::move(attributes), std::move(library_name), std::move(using_list), std::move(bits_declaration_list),
-        std::move(const_declaration_list), std::move(enum_declaration_list), std::move(interface_declaration_list),
+        std::move(const_declaration_list), std::move(enum_declaration_list), std::move(protocol_declaration_list),
         std::move(struct_declaration_list), std::move(table_declaration_list), std::move(union_declaration_list), std::move(xunion_declaration_list));
 }
 

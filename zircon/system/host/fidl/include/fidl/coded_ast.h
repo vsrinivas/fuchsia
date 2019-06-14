@@ -112,7 +112,7 @@ struct Type {
         kEnum,
         kBits,
         kHandle,
-        kInterfaceHandle,
+        kProtocolHandle,
         kRequestHandle,
         kStruct,
         kTable,
@@ -120,7 +120,7 @@ struct Type {
         kXUnion,
         kPointer,
         kMessage,
-        kInterface,
+        kProtocol,
         kArray,
         kString,
         kVector,
@@ -172,9 +172,9 @@ struct HandleType : public Type {
     const types::Nullability nullability;
 };
 
-struct InterfaceHandleType : public Type {
-    InterfaceHandleType(std::string name, types::Nullability nullability)
-        : Type(Kind::kInterfaceHandle, std::move(name), 4u, CodingNeeded::kAlways),
+struct ProtocolHandleType : public Type {
+    ProtocolHandleType(std::string name, types::Nullability nullability)
+        : Type(Kind::kProtocolHandle, std::move(name), 4u, CodingNeeded::kAlways),
           nullability(nullability) {}
 
     const types::Nullability nullability;
@@ -249,10 +249,10 @@ struct MessageType : public Type {
     std::string qname;
 };
 
-struct InterfaceType : public Type {
-    explicit InterfaceType(std::vector<std::unique_ptr<MessageType>> messages)
-        // N.B. InterfaceTypes are never used in the eventual coding table generation.
-        : Type(Kind::kInterface, "", 0, CodingNeeded::kEnvelopeOnly),
+struct ProtocolType : public Type {
+    explicit ProtocolType(std::vector<std::unique_ptr<MessageType>> messages)
+        // N.B. ProtocolTypes are never used in the eventual coding table generation.
+        : Type(Kind::kProtocol, "", 0, CodingNeeded::kEnvelopeOnly),
           messages(std::move(messages)) {}
 
     std::vector<std::unique_ptr<MessageType>> messages;

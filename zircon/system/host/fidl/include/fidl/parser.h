@@ -208,9 +208,9 @@ private:
 
     std::unique_ptr<raw::Parameter> ParseParameter();
     std::unique_ptr<raw::ParameterList> ParseParameterList();
-    std::unique_ptr<raw::InterfaceMethod> ParseProtocolEvent(
+    std::unique_ptr<raw::ProtocolMethod> ParseProtocolEvent(
         std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope);
-    std::unique_ptr<raw::InterfaceMethod> ParseProtocolMethod(
+    std::unique_ptr<raw::ProtocolMethod> ParseProtocolMethod(
         std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
         std::unique_ptr<raw::Identifier> method_name);
     // ParseProtocolMember parses any one protocol member, i.e. an event,
@@ -218,8 +218,8 @@ private:
     void ParseProtocolMember(
         std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
         std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
-        std::vector<std::unique_ptr<raw::InterfaceMethod>>* methods);
-    std::unique_ptr<raw::InterfaceDeclaration>
+        std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods);
+    std::unique_ptr<raw::ProtocolDeclaration>
     ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
 
     std::unique_ptr<raw::StructMember> ParseStructMember();

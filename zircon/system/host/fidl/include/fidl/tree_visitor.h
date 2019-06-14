@@ -152,13 +152,13 @@ public:
     virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) {
         element->Accept(this);
     }
-    virtual void OnInterfaceMethod(std::unique_ptr<InterfaceMethod> const& element) {
+    virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) {
         element->Accept(this);
     }
     virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) {
         element->Accept(this);
     }
-    virtual void OnInterfaceDeclaration(std::unique_ptr<InterfaceDeclaration> const& element) {
+    virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) {
         element->Accept(this);
     }
     virtual void OnStructMember(std::unique_ptr<StructMember> const& element) {
@@ -203,8 +203,8 @@ public:
 class DeclarationOrderTreeVisitor : public TreeVisitor {
 public:
     virtual void OnFile(std::unique_ptr<File> const& element) override;
-    virtual void OnInterfaceDeclaration(
-        std::unique_ptr<InterfaceDeclaration> const& element) override;
+    virtual void OnProtocolDeclaration(
+        std::unique_ptr<ProtocolDeclaration> const& element) override;
 };
 
 } // namespace raw

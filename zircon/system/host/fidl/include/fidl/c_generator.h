@@ -91,7 +91,7 @@ private:
         const flat::Enum& enum_info;
     };
 
-    struct NamedInterface {
+    struct NamedProtocol {
         std::string c_name;
         std::string discoverable_name;
         Transport transport;
@@ -146,8 +146,8 @@ private:
     NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
     std::map<const flat::Decl*, NamedEnum>
     NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
-    std::map<const flat::Decl*, NamedInterface>
-    NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
+    std::map<const flat::Decl*, NamedProtocol>
+    NameProtocols(const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos);
     std::map<const flat::Decl*, NamedStruct>
     NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
     std::map<const flat::Decl*, NamedTable>
@@ -160,27 +160,27 @@ private:
     void ProduceBitsForwardDeclaration(const NamedBits& named_bits);
     void ProduceConstForwardDeclaration(const NamedConst& named_const);
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);
-    void ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface);
+    void ProduceProtocolForwardDeclaration(const NamedProtocol& named_protocol);
     void ProduceStructForwardDeclaration(const NamedStruct& named_struct);
     void ProduceTableForwardDeclaration(const NamedTable& named_table);
     void ProduceUnionForwardDeclaration(const NamedUnion& named_union);
     void ProduceXUnionForwardDeclaration(const NamedXUnion& named_xunion);
 
-    void ProduceInterfaceExternDeclaration(const NamedInterface& named_interface);
+    void ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol);
 
     void ProduceConstDeclaration(const NamedConst& named_const);
     void ProduceMessageDeclaration(const NamedMessage& named_message);
-    void ProduceInterfaceDeclaration(const NamedInterface& named_interface);
+    void ProduceProtocolDeclaration(const NamedProtocol& named_protocol);
     void ProduceStructDeclaration(const NamedStruct& named_struct);
     void ProduceTableDeclaration(const NamedStruct& named_struct);
     void ProduceUnionDeclaration(const NamedUnion& named_union);
     void ProduceXUnionDeclaration(const NamedXUnion& named_xunion);
 
-    void ProduceInterfaceClientDeclaration(const NamedInterface& named_interface);
-    void ProduceInterfaceClientImplementation(const NamedInterface& named_interface);
+    void ProduceProtocolClientDeclaration(const NamedProtocol& named_protocol);
+    void ProduceProtocolClientImplementation(const NamedProtocol& named_protocol);
 
-    void ProduceInterfaceServerDeclaration(const NamedInterface& named_interface);
-    void ProduceInterfaceServerImplementation(const NamedInterface& named_interface);
+    void ProduceProtocolServerDeclaration(const NamedProtocol& named_protocol);
+    void ProduceProtocolServerImplementation(const NamedProtocol& named_protocol);
 
     const flat::Library* library_;
     std::ostringstream file_;

@@ -172,7 +172,7 @@ void ParameterList::Accept(TreeVisitor* visitor) const {
     }
 }
 
-void InterfaceMethod::Accept(TreeVisitor* visitor) const {
+void ProtocolMethod::Accept(TreeVisitor* visitor) const {
     SourceElementMark sem(visitor, *this);
     if (attributes != nullptr) {
         visitor->OnAttributeList(attributes);
@@ -194,21 +194,21 @@ void ComposeProtocol::Accept(TreeVisitor* visitor) const {
     visitor->OnCompoundIdentifier(protocol_name);
 }
 
-void InterfaceDeclaration::Accept(TreeVisitor* visitor) const {
+void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
     SourceElementMark sem(visitor, *this);
     if (attributes != nullptr) {
         visitor->OnAttributeList(attributes);
     }
     visitor->OnIdentifier(identifier);
-    for (auto superinterface = superinterfaces.begin();
-        superinterface != superinterfaces.end();
-        ++superinterface) {
-        visitor->OnComposeProtocol(*superinterface);
+    for (auto composed_protocol = composed_protocols.begin();
+        composed_protocol != composed_protocols.end();
+        ++composed_protocol) {
+        visitor->OnComposeProtocol(*composed_protocol);
     }
     for (auto method = methods.begin();
         method != methods.end();
         ++method) {
-        visitor->OnInterfaceMethod(*method);
+        visitor->OnProtocolMethod(*method);
     }
 }
 
@@ -325,8 +325,8 @@ void File::Accept(TreeVisitor* visitor) const {
     for (auto& i : enum_declaration_list) {
         visitor->OnEnumDeclaration(i);
     }
-    for (auto& i : interface_declaration_list) {
-        visitor->OnInterfaceDeclaration(i);
+    for (auto& i : protocol_declaration_list) {
+        visitor->OnProtocolDeclaration(i);
     }
     for (auto& i : struct_declaration_list) {
         visitor->OnStructDeclaration(i);

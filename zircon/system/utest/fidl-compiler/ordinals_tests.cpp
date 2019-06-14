@@ -178,7 +178,7 @@ protocol protocol {
     SHA256(reinterpret_cast<const uint8_t*>(hash_name64), strlen(hash_name64), digest64);
     uint64_t expected_hash64 = *(reinterpret_cast<uint64_t*>(digest64)) & 0x7fffffffffffffff;
 
-    const fidl::flat::Interface* iface = library.LookupInterface("protocol");
+    const fidl::flat::Protocol* iface = library.LookupProtocol("protocol");
     uint64_t actual_hash32 = iface->methods[0].generated_ordinal32->value;
     ASSERT_EQ(actual_hash32, expected_hash32, "Expected 32bits hash is not correct");
     uint64_t actual_hash64 = iface->methods[0].generated_ordinal64->value;

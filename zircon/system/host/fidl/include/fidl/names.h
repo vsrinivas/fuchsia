@@ -40,8 +40,8 @@ std::string NameFlatConstant(const flat::Constant* constant);
 std::string NameFlatTypeConstructor(const flat::TypeConstructor* type_ctor);
 std::string NameFlatType(const flat::Type* type);
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind);
-std::string NameDiscoverable(const flat::Interface& interface);
-std::string NameMethod(std::string_view interface_name, const flat::Interface::Method& method);
+std::string NameDiscoverable(const flat::Protocol& protocol);
+std::string NameMethod(std::string_view protocol_name, const flat::Protocol::Method& method);
 std::string NameOrdinal(std::string_view method_name);
 std::string NameGenOrdinal(std::string_view method_name);
 std::string NameMessage(std::string_view method_name, types::MessageKind kind);
@@ -53,8 +53,8 @@ std::string NameFields(std::string_view name);
 
 std::string NameCodedName(const flat::Name& name);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
-std::string NameCodedInterfaceHandle(std::string_view interface_name, types::Nullability nullability);
-std::string NameCodedRequestHandle(std::string_view interface_name, types::Nullability nullability);
+std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability);
+std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability);
 std::string NameCodedArray(std::string_view element_name, uint64_t size);
 std::string NameCodedVector(std::string_view element_name, uint64_t max_size,
                             types::Nullability nullability);

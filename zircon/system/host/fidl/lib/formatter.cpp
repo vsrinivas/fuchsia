@@ -224,7 +224,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
 
         // This is a little weird.  '(' requires ws if it follows an
         // arrow, but not if it follows a method name.  Both of these
-        // are in interface method definitions, so this ends up being
+        // are in protocol method definitions, so this ends up being
         // slightly easier than having it positionally defined during
         // AST traversal.
         if (output_[i] == '(') {
@@ -270,7 +270,7 @@ void FormattingTreeVisitor::Segment::RegularizeSpaces(bool& ws_required_next) {
     ws_required_next = last_char_required_ws;
 }
 
-// Rules are mostly obvious, but see TrackMethodInterfaceAlignment below.
+// Rules are mostly obvious, but see TrackMethodProtocolAlignment below.
 // Precondition: By now, everything should have had its leading ws
 // stripped, and } characters are the first things on their own lines.
 void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
@@ -286,8 +286,8 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
             }
             int indent = current_nesting * kIndentSpaces;
             if (visitor_->newline_means_indent_more_) {
-                if (visitor_->interface_method_alignment_ && visitor_->interface_method_alignment_size_ > -1) {
-                    indent = visitor_->interface_method_alignment_size_;
+                if (visitor_->protocol_method_alignment_ && visitor_->protocol_method_alignment_size_ > -1) {
+                    indent = visitor_->protocol_method_alignment_size_;
                 } else {
                     indent += kIndentSpaces;
                 }
@@ -313,11 +313,11 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
             current_nesting++;
         }
         if (output_[i] == ')') {
-            visitor_->interface_method_alignment_size_ = visitor_->offset_of_first_id_;
+            visitor_->protocol_method_alignment_size_ = visitor_->offset_of_first_id_;
         }
         if (output_[i] == ';') {
-            visitor_->interface_method_alignment_size_ = -1;
-            visitor_->interface_method_alignment_ = false;
+            visitor_->protocol_method_alignment_size_ = -1;
+            visitor_->protocol_method_alignment_ = false;
             visitor_->newline_means_indent_more_ = false;
         }
     }
@@ -329,9 +329,9 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
 //    indent past the beginning of the method name.
 //  - If there is a parameter on the same line after the '(' character,
 //    align at the same vertical column as that parameter.
-void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str) {
+void FormattingTreeVisitor::TrackProtocolMethodAlignment(const std::string& str) {
     static std::locale c_locale("C");
-    if (interface_method_alignment_) {
+    if (protocol_method_alignment_) {
         for (int i = 0; i < static_cast<int>(str.size()); i++) {
             MaybeWindPastComment(str, i);
 
@@ -354,15 +354,15 @@ void FormattingTreeVisitor::TrackInterfaceMethodAlignment(const std::string& str
                         align_on_oparen = true;
                 }
                 if (align_on_oparen) {
-                    interface_method_alignment_size_ = distance_from_last_newline_;
+                    protocol_method_alignment_size_ = distance_from_last_newline_;
                 }
             }
 
             if (isalpha(ch, c_locale) &&
-                interface_method_alignment_size_ == -1) {
+                protocol_method_alignment_size_ == -1) {
                 // This should be the method identifier.
                 offset_of_first_id_ =
-                    interface_method_alignment_size_ =
+                    protocol_method_alignment_size_ =
                         distance_from_last_newline_ + kIndentSpaces - 1;
             }
         }

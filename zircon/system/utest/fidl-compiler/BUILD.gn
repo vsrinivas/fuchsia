@@ -29,7 +29,7 @@ if (current_toolchain == default_toolchain) {
       "$examples_dir/example-7.test.fidl",
       "$examples_dir/example-8.test.fidl",
       "$examples_dir/example-9.test.fidl",
-      "$examples_dir/interface-ordinals.test.fidl",
+      "$examples_dir/protocol-ordinals.test.fidl",
       "$examples_dir/library-a/point.test.fidl",
       "$examples_dir/library-b/view.test.fidl",
       "$examples_dir/simple.test.fidl",

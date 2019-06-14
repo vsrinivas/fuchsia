@@ -681,7 +681,7 @@ Linter::Linter()
         "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
         "enclosing ${CONTEXT_TYPE} '${CONTEXT_ID}'");
 
-    callbacks_.OnInterfaceDeclaration(
+    callbacks_.OnProtocolDeclaration(
         [& linter = *this,
          case_check = invalid_case_for_decl_name,
          &case_type = upper_camel_,
@@ -690,7 +690,7 @@ Linter::Linter()
              "protocol-name-includes-service",
              "Protocols must not include the name 'service.'")]
         //
-        (const raw::InterfaceDeclaration& element) {
+        (const raw::ProtocolDeclaration& element) {
             linter.CheckCase("protocols", element.identifier,
                              case_check, case_type);
             linter.CheckRepeatedName("protocol", element.identifier);
@@ -704,10 +704,10 @@ Linter::Linter()
             linter.EnterContext("protocol", to_string(element.identifier), context_check);
         });
 
-    callbacks_.OnExitInterfaceDeclaration(
+    callbacks_.OnExitProtocolDeclaration(
         [& linter = *this]
         //
-        (const raw::InterfaceDeclaration& element) {
+        (const raw::ProtocolDeclaration& element) {
             linter.ExitContext();
         });
 
@@ -716,7 +716,7 @@ Linter::Linter()
          case_check = invalid_case_for_decl_name,
          &case_type = upper_camel_]
         //
-        (const raw::InterfaceMethod& element) {
+        (const raw::ProtocolMethod& element) {
             linter.CheckCase("methods", element.identifier,
                              case_check, case_type);
             linter.CheckRepeatedName("method", element.identifier);
@@ -729,7 +729,7 @@ Linter::Linter()
                                    "Event names must start with 'On'"),
          &case_type = upper_camel_]
         //
-        (const raw::InterfaceMethod& element) {
+        (const raw::ProtocolMethod& element) {
             std::string id = to_string(element.identifier);
             auto finding = linter.CheckCase("events", element.identifier,
                                             case_check, case_type);

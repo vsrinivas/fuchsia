@@ -439,7 +439,7 @@ struct Decl {
         kBits,
         kConst,
         kEnum,
-        kInterface,
+        kProtocol,
         kStruct,
         kTable,
         kUnion,
@@ -638,16 +638,16 @@ struct IdentifierType : public Type {
 };
 
 struct RequestHandleType : public Type {
-    RequestHandleType(const IdentifierType* interface_type, types::Nullability nullability)
+    RequestHandleType(const IdentifierType* protocol_type, types::Nullability nullability)
         : Type(Kind::kRequestHandle, nullability, HandleType::Shape()),
-          interface_type(interface_type) {}
+          protocol_type(protocol_type) {}
 
-    const IdentifierType* interface_type;
+    const IdentifierType* protocol_type;
 
     Comparison Compare(const Type& other) const override {
         const auto& o = static_cast<const RequestHandleType&>(other);
         return Type::Compare(o)
-            .Compare(*interface_type, *o.interface_type);
+            .Compare(*protocol_type, *o.protocol_type);
     }
 };
 
@@ -851,7 +851,7 @@ struct XUnion : public TypeDecl {
     static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
 };
 
-struct Interface : public TypeDecl {
+struct Protocol : public TypeDecl {
     struct Method {
         Method(Method&&) = default;
         Method& operator=(Method&&) = default;
@@ -878,24 +878,24 @@ struct Interface : public TypeDecl {
         SourceLocation name;
         Struct* maybe_request;
         Struct* maybe_response;
-        // This is set to the |Interface| instance that owns this |Method|,
-        // when the |Interface| is constructed.
-        Interface* owning_interface = nullptr;
+        // This is set to the |Protocol| instance that owns this |Method|,
+        // when the |Protocol| is constructed.
+        Protocol* owning_protocol = nullptr;
     };
 
-    Interface(std::unique_ptr<raw::AttributeList> attributes, Name name,
-              std::set<Name> superinterfaces, std::vector<Method> methods)
-        : TypeDecl(Kind::kInterface, std::move(attributes), std::move(name)),
-          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {
+    Protocol(std::unique_ptr<raw::AttributeList> attributes, Name name,
+              std::set<Name> composed_protocols, std::vector<Method> methods)
+        : TypeDecl(Kind::kProtocol, std::move(attributes), std::move(name)),
+          composed_protocols(std::move(composed_protocols)), methods(std::move(methods)) {
         for (auto& method : this->methods) {
-            method.owning_interface = this;
+            method.owning_protocol = this;
         }
     }
 
-    std::set<Name> superinterfaces;
+    std::set<Name> composed_protocols;
     std::vector<Method> methods;
-    // Pointers here are set after superinterfaces are compiled, and
-    // are owned by the corresponding superinterface.
+    // Pointers here are set after composed_protocols are compiled, and
+    // are owned by the corresponding composed_protocols.
     std::vector<const Method*> all_methods;
 };
 
@@ -993,7 +993,7 @@ private:
 // - The allowed placement of an attribute (e.g. on a method, on a struct
 //   declaration);
 // - The allowed values which an attribute can take.
-// For attributes which may be placed on declarations (e.g. interface, struct,
+// For attributes which may be placed on declarations (e.g. protocol, struct,
 // union, table), a schema may additionally include:
 // - A constraint which must be met by the declaration.
 class AttributeSchema {
@@ -1011,7 +1011,7 @@ public:
         kConstDecl,
         kEnumDecl,
         kEnumMember,
-        kInterfaceDecl,
+        kProtocolDecl,
         kLibrary,
         kMethod,
         kStructDecl,
@@ -1176,10 +1176,10 @@ private:
     bool ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
     bool ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
     bool
-    ConsumeInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> interface_declaration);
+    ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
     bool ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
                               bool anonymous, Struct** out_struct_decl);
-    bool CreateMethodResult(const Name& interface_name, raw::InterfaceMethod* method, Struct* in_response, Struct** out_response);
+    bool CreateMethodResult(const Name& protocol_name, raw::ProtocolMethod* method, Struct* in_response, Struct** out_response);
     bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
     bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
     bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
@@ -1204,7 +1204,7 @@ private:
     bool CompileBits(Bits* bits_declaration);
     bool CompileConst(Const* const_declaration);
     bool CompileEnum(Enum* enum_declaration);
-    bool CompileInterface(Interface* interface_declaration);
+    bool CompileProtocol(Protocol* protocol_declaration);
     bool CompileStruct(Struct* struct_declaration);
     bool CompileTable(Table* table_declaration);
     bool CompileUnion(Union* union_declaration);
@@ -1252,7 +1252,7 @@ public:
     std::vector<std::unique_ptr<Bits>> bits_declarations_;
     std::vector<std::unique_ptr<Const>> const_declarations_;
     std::vector<std::unique_ptr<Enum>> enum_declarations_;
-    std::vector<std::unique_ptr<Interface>> interface_declarations_;
+    std::vector<std::unique_ptr<Protocol>> protocol_declarations_;
     std::vector<std::unique_ptr<Struct>> struct_declarations_;
     std::vector<std::unique_ptr<Table>> table_declarations_;
     std::vector<std::unique_ptr<Union>> union_declarations_;

@@ -115,16 +115,16 @@ struct Vectors {
     END_TEST;
 }
 
-bool CodedTypesOfInterface() {
+bool CodedTypesOfProtocol() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
 library example;
 
-protocol SomeInterface {};
+protocol SomeProtocol {};
 
-protocol UseOfInterface {
-    Call(SomeInterface arg);
+protocol UseOfProtocol {
+    Call(SomeProtocol arg);
 };
 )FIDL");
     ASSERT_TRUE(library.Compile());
@@ -134,20 +134,20 @@ protocol UseOfInterface {
     ASSERT_EQ(2, gen.coded_types().size());
 
     auto type0 = gen.coded_types().at(0).get();
-    ASSERT_STR_EQ("example_SomeInterfaceInterfacenonnullable", type0->coded_name.c_str());
+    ASSERT_STR_EQ("example_SomeProtocolProtocolnonnullable", type0->coded_name.c_str());
     ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
-    ASSERT_EQ(fidl::coded::Type::Kind::kInterfaceHandle, type0->kind);
+    ASSERT_EQ(fidl::coded::Type::Kind::kProtocolHandle, type0->kind);
     ASSERT_EQ(4, type0->size);
-    auto type0_ihandle = static_cast<const fidl::coded::InterfaceHandleType*>(type0);
+    auto type0_ihandle = static_cast<const fidl::coded::ProtocolHandleType*>(type0);
     ASSERT_EQ(fidl::types::Nullability::kNonnullable, type0_ihandle->nullability);
 
     auto type1 = gen.coded_types().at(1).get();
-    ASSERT_STR_EQ("example_UseOfInterfaceCallRequest", type1->coded_name.c_str());
+    ASSERT_STR_EQ("example_UseOfProtocolCallRequest", type1->coded_name.c_str());
     ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
     ASSERT_EQ(24, type1->size);
     auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
-    ASSERT_STR_EQ("example/UseOfInterfaceCallRequest", type1_message->qname.c_str());
+    ASSERT_STR_EQ("example/UseOfProtocolCallRequest", type1_message->qname.c_str());
     ASSERT_EQ(1, type1_message->fields.size());
 
     auto type1_message_field0 = type1_message->fields.at(0);
@@ -157,16 +157,16 @@ protocol UseOfInterface {
     END_TEST;
 }
 
-bool CodedTypesOfRequestOfInterface() {
+bool CodedTypesOfRequestOfProtocol() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
 library example;
 
-protocol SomeInterface {};
+protocol SomeProtocol {};
 
-protocol UseOfRequestOfInterface {
-    Call(request<SomeInterface> arg);
+protocol UseOfRequestOfProtocol {
+    Call(request<SomeProtocol> arg);
 };
 )FIDL");
     ASSERT_TRUE(library.Compile());
@@ -176,7 +176,7 @@ protocol UseOfRequestOfInterface {
     ASSERT_EQ(2, gen.coded_types().size());
 
     auto type0 = gen.coded_types().at(0).get();
-    ASSERT_STR_EQ("example_SomeInterfaceRequestnonnullable", type0->coded_name.c_str());
+    ASSERT_STR_EQ("example_SomeProtocolRequestnonnullable", type0->coded_name.c_str());
     ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type0->kind);
     ASSERT_EQ(4, type0->size);
@@ -184,12 +184,12 @@ protocol UseOfRequestOfInterface {
     ASSERT_EQ(fidl::types::Nullability::kNonnullable, type0_ihandle->nullability);
 
     auto type1 = gen.coded_types().at(1).get();
-    ASSERT_STR_EQ("example_UseOfRequestOfInterfaceCallRequest", type1->coded_name.c_str());
+    ASSERT_STR_EQ("example_UseOfRequestOfProtocolCallRequest", type1->coded_name.c_str());
     ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
     ASSERT_EQ(24, type1->size);
     auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
-    ASSERT_STR_EQ("example/UseOfRequestOfInterfaceCallRequest", type1_message->qname.c_str());
+    ASSERT_STR_EQ("example/UseOfRequestOfProtocolCallRequest", type1_message->qname.c_str());
     ASSERT_EQ(1, type1_message->fields.size());
 
     auto type1_message_field0 = type1_message->fields.at(0);
@@ -585,8 +585,8 @@ BEGIN_TEST_CASE(coded_types_generator_tests)
 
 RUN_TEST(CodedTypesOfArrays);
 RUN_TEST(CodedTypesOfVectors);
-RUN_TEST(CodedTypesOfInterface);
-RUN_TEST(CodedTypesOfRequestOfInterface);
+RUN_TEST(CodedTypesOfProtocol);
+RUN_TEST(CodedTypesOfRequestOfProtocol);
 RUN_TEST(CodedTypesOfXUnions);
 RUN_TEST(CodedTypesOfNullablePointers);
 RUN_TEST(CodedTypesOfStructsWithPaddings);

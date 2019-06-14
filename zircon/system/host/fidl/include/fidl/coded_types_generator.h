@@ -72,7 +72,7 @@ private:
     ContextTypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
     TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
     TypeMap<flat::RequestHandleType, coded::RequestHandleType> request_type_map_;
-    TypeMap<flat::IdentifierType, coded::InterfaceHandleType> interface_type_map_;
+    TypeMap<flat::IdentifierType, coded::ProtocolHandleType> protocol_type_map_;
     ContextTypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
     TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
     TypeMap<flat::StringType, coded::StringType> string_type_map_;

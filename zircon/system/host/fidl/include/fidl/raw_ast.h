@@ -368,9 +368,9 @@ public:
     std::vector<std::unique_ptr<Parameter>> parameter_list;
 };
 
-class InterfaceMethod : public SourceElement {
+class ProtocolMethod : public SourceElement {
 public:
-    InterfaceMethod(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+    ProtocolMethod(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
                     std::unique_ptr<ParameterList> maybe_response,
@@ -400,21 +400,21 @@ public:
     std::unique_ptr<CompoundIdentifier> protocol_name;
 };
 
-class InterfaceDeclaration final : public SourceElement {
+class ProtocolDeclaration final : public SourceElement {
 public:
-    InterfaceDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+    ProtocolDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                          std::unique_ptr<Identifier> identifier,
-                         std::vector<std::unique_ptr<ComposeProtocol>> superinterfaces,
-                         std::vector<std::unique_ptr<InterfaceMethod>> methods)
+                         std::vector<std::unique_ptr<ComposeProtocol>> composed_protocols,
+                         std::vector<std::unique_ptr<ProtocolMethod>> methods)
         : SourceElement(element), attributes(std::move(attributes)), identifier(std::move(identifier)),
-          superinterfaces(std::move(superinterfaces)), methods(std::move(methods)) {}
+          composed_protocols(std::move(composed_protocols)), methods(std::move(methods)) {}
 
     void Accept(TreeVisitor* visitor) const;
 
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
-    std::vector<std::unique_ptr<ComposeProtocol>> superinterfaces;
-    std::vector<std::unique_ptr<InterfaceMethod>> methods;
+    std::vector<std::unique_ptr<ComposeProtocol>> composed_protocols;
+    std::vector<std::unique_ptr<ProtocolMethod>> methods;
 };
 
 class StructMember final : public SourceElement {
@@ -565,7 +565,7 @@ public:
          std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
-         std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
+         std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
          std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
          std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
@@ -577,7 +577,7 @@ public:
           bits_declaration_list(std::move(bits_declaration_list)),
           const_declaration_list(std::move(const_declaration_list)),
           enum_declaration_list(std::move(enum_declaration_list)),
-          interface_declaration_list(std::move(interface_declaration_list)),
+          protocol_declaration_list(std::move(protocol_declaration_list)),
           struct_declaration_list(std::move(struct_declaration_list)),
           table_declaration_list(std::move(table_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)),
@@ -592,7 +592,7 @@ public:
     std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list;
     std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;
-    std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list;
+    std::vector<std::unique_ptr<ProtocolDeclaration>> protocol_declaration_list;
     std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
     std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
     std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;

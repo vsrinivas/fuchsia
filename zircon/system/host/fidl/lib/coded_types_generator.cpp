@@ -74,7 +74,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
             return iter->second;
-        auto name = NameCodedRequestHandle(NameCodedName(request_type->interface_type->name),
+        auto name = NameCodedRequestHandle(NameCodedName(request_type->protocol_type->name),
                                            request_type->nullability);
         auto coded_request_type =
             std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
@@ -164,23 +164,23 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             coded_types_.push_back(std::move(nullable_xunion_type));
             return coded_types_.back().get();
         }
-        case coded::Type::Kind::kInterface: {
-            auto iter = interface_type_map_.find(identifier_type);
-            if (iter != interface_type_map_.end())
+        case coded::Type::Kind::kProtocol: {
+            auto iter = protocol_type_map_.find(identifier_type);
+            if (iter != protocol_type_map_.end())
                 return iter->second;
-            auto name = NameCodedInterfaceHandle(NameCodedName(identifier_type->name),
+            auto name = NameCodedProtocolHandle(NameCodedName(identifier_type->name),
                                                  identifier_type->nullability);
-            auto coded_interface_type = std::make_unique<coded::InterfaceHandleType>(
+            auto coded_protocol_type = std::make_unique<coded::ProtocolHandleType>(
                 std::move(name), identifier_type->nullability);
-            interface_type_map_[identifier_type] = coded_interface_type.get();
-            coded_types_.push_back(std::move(coded_interface_type));
+            protocol_type_map_[identifier_type] = coded_protocol_type.get();
+            coded_types_.push_back(std::move(coded_protocol_type));
             return coded_types_.back().get();
         }
         case coded::Type::Kind::kEnum:
         case coded::Type::Kind::kBits:
             return coded_type;
         case coded::Type::Kind::kPrimitive:
-        case coded::Type::Kind::kInterfaceHandle:
+        case coded::Type::Kind::kProtocolHandle:
         case coded::Type::Kind::kPointer:
         case coded::Type::Kind::kMessage:
         case coded::Type::Kind::kRequestHandle:
@@ -198,16 +198,16 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
 
 void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
     switch (decl->kind) {
-    case flat::Decl::Kind::kInterface: {
-        auto interface_decl = static_cast<const flat::Interface*>(decl);
-        coded::InterfaceType* coded_interface =
-            static_cast<coded::InterfaceType*>(named_coded_types_[&decl->name].get());
+    case flat::Decl::Kind::kProtocol: {
+        auto protocol_decl = static_cast<const flat::Protocol*>(decl);
+        coded::ProtocolType* coded_protocol =
+            static_cast<coded::ProtocolType*>(named_coded_types_[&decl->name].get());
         size_t i = 0;
-        for (const auto& method_pointer : interface_decl->all_methods) {
+        for (const auto& method_pointer : protocol_decl->all_methods) {
             assert(method_pointer != nullptr);
             const auto& method = *method_pointer;
             auto CompileMessage = [&](const flat::Struct& message) -> void {
-                std::unique_ptr<coded::MessageType>& coded_message = coded_interface->messages[i++];
+                std::unique_ptr<coded::MessageType>& coded_message = coded_protocol->messages[i++];
                 std::vector<coded::StructField>& request_fields = coded_message->fields;
                 for (const auto& parameter : message.members) {
                     std::string parameter_name =
@@ -359,21 +359,21 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                                        flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype)));
         break;
     }
-    case flat::Decl::Kind::kInterface: {
-        auto interface_decl = static_cast<const flat::Interface*>(decl);
-        std::string interface_name = NameCodedName(interface_decl->name);
-        std::string interface_qname = NameFlatName(interface_decl->name);
-        std::vector<std::unique_ptr<coded::MessageType>> interface_messages;
-        for (const auto& method_pointer : interface_decl->all_methods) {
+    case flat::Decl::Kind::kProtocol: {
+        auto protocol_decl = static_cast<const flat::Protocol*>(decl);
+        std::string protocol_name = NameCodedName(protocol_decl->name);
+        std::string protocol_qname = NameFlatName(protocol_decl->name);
+        std::vector<std::unique_ptr<coded::MessageType>> protocol_messages;
+        for (const auto& method_pointer : protocol_decl->all_methods) {
             assert(method_pointer != nullptr);
             const auto& method = *method_pointer;
-            std::string method_name = NameMethod(interface_name, method);
-            std::string method_qname = NameMethod(interface_qname, method);
+            std::string method_name = NameMethod(protocol_name, method);
+            std::string method_qname = NameMethod(protocol_qname, method);
             auto CreateMessage = [&](const flat::Struct& message,
                                      types::MessageKind kind) -> void {
                 std::string message_name = NameMessage(method_name, kind);
                 std::string message_qname = NameMessage(method_qname, kind);
-                interface_messages.push_back(std::make_unique<coded::MessageType>(
+                protocol_messages.push_back(std::make_unique<coded::MessageType>(
                     std::move(message_name), std::vector<coded::StructField>(),
                     message.typeshape.Size(), std::move(message_qname)));
             };
@@ -387,7 +387,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             }
         }
         named_coded_types_.emplace(
-            &decl->name, std::make_unique<coded::InterfaceType>(std::move(interface_messages)));
+            &decl->name, std::make_unique<coded::ProtocolType>(std::move(protocol_messages)));
         break;
     }
     case flat::Decl::Kind::kTable: {

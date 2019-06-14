@@ -178,10 +178,10 @@ public:
         return nullptr;
     }
 
-    const fidl::flat::Interface* LookupInterface(const std::string& name) {
-        for (const auto& interface_decl : library_->interface_declarations_) {
-            if (interface_decl->GetName() == name) {
-                return interface_decl.get();
+    const fidl::flat::Protocol* LookupProtocol(const std::string& name) {
+        for (const auto& protocol_decl : library_->protocol_declarations_) {
+            if (protocol_decl->GetName() == name) {
+                return protocol_decl.get();
             }
         }
         return nullptr;

@@ -165,7 +165,7 @@ library fidl.test.json;
 struct Empty {
 };
 
-protocol EmptyInterface {
+protocol EmptyProtocol {
   Send(Empty e);
   -> Receive (Empty e);
   SendAndReceive(Empty e) -> (Empty e);
@@ -181,7 +181,7 @@ protocol EmptyInterface {
   "enum_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.json/EmptyInterface",
+      "name": "fidl.test.json/EmptyProtocol",
       "location": {
         "filename": "json.fidl",
         "line": 7,
@@ -189,8 +189,8 @@ protocol EmptyInterface {
       },
       "methods": [
         {
-          "ordinal": 296942602,
-          "generated_ordinal": 296942602,
+          "ordinal": 285845058,
+          "generated_ordinal": 285845058,
           "name": "Send",
           "location": {
             "filename": "json.fidl",
@@ -224,8 +224,8 @@ protocol EmptyInterface {
           "has_response": false
         },
         {
-          "ordinal": 939543845,
-          "generated_ordinal": 939543845,
+          "ordinal": 388770671,
+          "generated_ordinal": 388770671,
           "name": "Receive",
           "location": {
             "filename": "json.fidl",
@@ -259,8 +259,8 @@ protocol EmptyInterface {
           "maybe_response_has_padding": true
         },
         {
-          "ordinal": 556045674,
-          "generated_ordinal": 556045674,
+          "ordinal": 2071775804,
+          "generated_ordinal": 2071775804,
           "name": "SendAndReceive",
           "location": {
             "filename": "json.fidl",
@@ -341,10 +341,10 @@ protocol EmptyInterface {
   "xunion_declarations": [],
   "declaration_order": [
     "fidl.test.json/Empty",
-    "fidl.test.json/EmptyInterface"
+    "fidl.test.json/EmptyProtocol"
   ],
   "declarations": {
-    "fidl.test.json/EmptyInterface": "interface",
+    "fidl.test.json/EmptyProtocol": "interface",
     "fidl.test.json/Empty": "struct"
   }
 }

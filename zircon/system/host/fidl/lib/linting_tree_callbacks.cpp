@@ -107,18 +107,18 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
             }
             ProcessGapText(element->end_);
         }
-        void OnInterfaceDeclaration(std::unique_ptr<raw::InterfaceDeclaration> const& element) override {
+        void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override {
             ProcessGapText(element->start_);
-            for (auto& callback : callbacks_.interface_declaration_callbacks_) {
+            for (auto& callback : callbacks_.protocol_declaration_callbacks_) {
                 callback(*element.get());
             }
-            DeclarationOrderTreeVisitor::OnInterfaceDeclaration(element);
-            for (auto& callback : callbacks_.exit_interface_declaration_callbacks_) {
+            DeclarationOrderTreeVisitor::OnProtocolDeclaration(element);
+            for (auto& callback : callbacks_.exit_protocol_declaration_callbacks_) {
                 callback(*element.get());
             }
             ProcessGapText(element->end_);
         }
-        void OnInterfaceMethod(std::unique_ptr<raw::InterfaceMethod> const& element) override {
+        void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {
             ProcessGapText(element->start_);
             if (element->maybe_request != nullptr) {
                 for (auto& callback : callbacks_.method_callbacks_) {
@@ -129,7 +129,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
                     callback(*element.get());
                 }
             }
-            DeclarationOrderTreeVisitor::OnInterfaceMethod(element);
+            DeclarationOrderTreeVisitor::OnProtocolMethod(element);
             ProcessGapText(element->end_);
         }
         void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {

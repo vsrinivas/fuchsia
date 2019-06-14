@@ -27,7 +27,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     auto bits_decls_it = element->bits_declaration_list.begin();
     auto const_decls_it = element->const_declaration_list.begin();
     auto enum_decls_it = element->enum_declaration_list.begin();
-    auto interface_decls_it = element->interface_declaration_list.begin();
+    auto protocol_decls_it = element->protocol_declaration_list.begin();
     auto struct_decls_it = element->struct_declaration_list.begin();
     auto table_decls_it = element->table_declaration_list.begin();
     auto union_decls_it = element->union_declaration_list.begin();
@@ -37,7 +37,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         bits_t,
         const_t,
         enum_t,
-        interface_t,
+        protocol_t,
         struct_t,
         table_t,
         union_t,
@@ -63,12 +63,12 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         if (enum_decls_it != element->enum_declaration_list.end()) {
             m[(*enum_decls_it)->start_.previous_end().data().data()] = enum_t;
         }
-        if (interface_decls_it != element->interface_declaration_list.end()) {
-            if (*interface_decls_it == nullptr) {
+        if (protocol_decls_it != element->protocol_declaration_list.end()) {
+            if (*protocol_decls_it == nullptr) {
                 // Used to indicate empty, so let's wind it forward.
-                interface_decls_it = element->interface_declaration_list.end();
+                protocol_decls_it = element->protocol_declaration_list.end();
             } else {
-                m[(*interface_decls_it)->start_.previous_end().data().data()] = interface_t;
+                m[(*protocol_decls_it)->start_.previous_end().data().data()] = protocol_t;
             }
         }
         if (struct_decls_it != element->struct_declaration_list.end()) {
@@ -100,9 +100,9 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
             OnEnumDeclaration(*enum_decls_it);
             ++enum_decls_it;
             break;
-        case interface_t:
-            OnInterfaceDeclaration(*interface_decls_it);
-            ++interface_decls_it;
+        case protocol_t:
+            OnProtocolDeclaration(*protocol_decls_it);
+            ++protocol_decls_it;
             break;
         case struct_t:
             OnStructDeclaration(*struct_decls_it);
@@ -125,8 +125,8 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     OnSourceElementEnd(*element);
 }
 
-void DeclarationOrderTreeVisitor::OnInterfaceDeclaration(
-    std::unique_ptr<InterfaceDeclaration> const& element) {
+void DeclarationOrderTreeVisitor::OnProtocolDeclaration(
+    std::unique_ptr<ProtocolDeclaration> const& element) {
 
     SourceElementMark sem(this, *element);
     if (element->attributes != nullptr) {
@@ -134,7 +134,7 @@ void DeclarationOrderTreeVisitor::OnInterfaceDeclaration(
     }
     OnIdentifier(element->identifier);
 
-    auto compose_it = element->superinterfaces.begin();
+    auto compose_it = element->composed_protocols.begin();
     auto methods_it = element->methods.begin();
 
     enum Next {
@@ -146,7 +146,7 @@ void DeclarationOrderTreeVisitor::OnInterfaceDeclaration(
     for (;;) {
         // Sort in declaration order.
         m.clear();
-        if (compose_it != element->superinterfaces.end()) {
+        if (compose_it != element->composed_protocols.end()) {
             m[(*compose_it)->start_.previous_end().data().data()] = compose_t;
         }
         if (methods_it != element->methods.end()) {
@@ -162,7 +162,7 @@ void DeclarationOrderTreeVisitor::OnInterfaceDeclaration(
             ++compose_it;
             break;
         case method_t:
-            OnInterfaceMethod(*methods_it);
+            OnProtocolMethod(*methods_it);
             ++methods_it;
             break;
         }

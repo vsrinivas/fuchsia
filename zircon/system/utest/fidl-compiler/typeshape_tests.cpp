@@ -1425,7 +1425,7 @@ protocol MessagePort {
   ASSERT_EQ(web_message->members.size(), 1);
   EXPECT_TRUE(CheckFieldShape(web_message->members[0].fieldshape, ExpectedField {}));
 
-  auto message_port = library.LookupInterface("MessagePort");
+  auto message_port = library.LookupProtocol("MessagePort");
   ASSERT_NONNULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
@@ -1470,7 +1470,7 @@ protocol MessagePort {
       .max_handles = 1,
   }));
 
-  auto message_port = library.LookupInterface("MessagePort");
+  auto message_port = library.LookupProtocol("MessagePort");
   ASSERT_NONNULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
@@ -1510,7 +1510,7 @@ protocol MessagePort {
       .max_handles = 1,
   }));
 
-  auto message_port = library.LookupInterface("MessagePort");
+  auto message_port = library.LookupProtocol("MessagePort");
   ASSERT_NONNULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
@@ -1550,7 +1550,7 @@ protocol MessagePort {
       .max_handles = 1,
   }));
 
-  auto message_port = library.LookupInterface("MessagePort");
+  auto message_port = library.LookupProtocol("MessagePort");
   ASSERT_NONNULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
@@ -1852,7 +1852,7 @@ protocol Child {
   ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
   ASSERT_TRUE(child_library.Compile());
 
-  auto child = child_library.LookupInterface("Child");
+  auto child = child_library.LookupProtocol("Child");
   ASSERT_NONNULL(child);
   ASSERT_EQ(child->all_methods.size(), 1);
   auto& sync = child->all_methods[0];

@@ -17,15 +17,15 @@ xunion this_is_a_xunion {
     int32 i;
 };
 
-protocol this_is_an_interface {
+protocol this_is_an_protocol {
     Copy(string s, uint32 count) -> (string s);
 };
 
-struct interfaces_and_requests {
-    this_is_an_interface nonnullable_interface;
-    this_is_an_interface? nullable_interface;
-    request<this_is_an_interface> nonnullable_request;
-    request<this_is_an_interface>? nullable_request;
+struct protocols_and_requests {
+    this_is_an_protocol nonnullable_protocol;
+    this_is_an_protocol? nullable_protocol;
+    request<this_is_an_protocol> nonnullable_request;
+    request<this_is_an_protocol>? nullable_request;
 };
 
 struct primitive_types {
@@ -362,12 +362,12 @@ struct xunions {
     this_is_a_xunion? nullable_xu;
 };
 
-struct interfaces {
-    this_is_an_interface i;
-    this_is_an_interface? nullable_i;
+struct protocols {
+    this_is_an_protocol i;
+    this_is_an_protocol? nullable_i;
 };
 
 struct requests {
-    request<this_is_an_interface> r;
-    request<this_is_an_interface>? nullable_r;
+    request<this_is_an_protocol> r;
+    request<this_is_an_protocol>? nullable_r;
 };

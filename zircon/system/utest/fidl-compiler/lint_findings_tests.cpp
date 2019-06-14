@@ -1745,7 +1745,7 @@ using foo as ${TEST};
         "inline",
         "instanceof",
         "int",
-        "interface",
+        "protocol",
         "is",
         "let",
         "library",

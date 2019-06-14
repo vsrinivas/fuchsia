@@ -112,15 +112,15 @@ raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& librar
 }
 
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,
-                                     const std::string_view& interface_name,
-                                     const raw::InterfaceMethod& method) {
-    return GetGeneratedOrdinal32(library_name, interface_name, method.attributes.get(), method.identifier->location(), method);
+                                     const std::string_view& protocol_name,
+                                     const raw::ProtocolMethod& method) {
+    return GetGeneratedOrdinal32(library_name, protocol_name, method.attributes.get(), method.identifier->location(), method);
 }
 
 raw::Ordinal64 GetGeneratedOrdinal64(const std::vector<std::string_view>& library_name,
-                                     const std::string_view& interface_name,
-                                     const raw::InterfaceMethod& method) {
-    return GetGeneratedOrdinal64(library_name, interface_name, method.attributes.get(), method.identifier->location(), method);
+                                     const std::string_view& protocol_name,
+                                     const raw::ProtocolMethod& method) {
+    return GetGeneratedOrdinal64(library_name, protocol_name, method.attributes.get(), method.identifier->location(), method);
 }
 
 raw::Ordinal32 GetGeneratedOrdinal32(const std::vector<std::string_view>& library_name,

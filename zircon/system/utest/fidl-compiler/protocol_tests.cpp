@@ -24,7 +24,7 @@ protocol Empty {};
 )FIDL");
     ASSERT_TRUE(library.Compile());
 
-    auto protocol = library.LookupInterface("Empty");
+    auto protocol = library.LookupProtocol("Empty");
     ASSERT_NONNULL(protocol);
 
     EXPECT_EQ(protocol->methods.size(), 0);
@@ -50,12 +50,12 @@ protocol HasComposeMethod2 {
 )FIDL");
     ASSERT_TRUE(library.Compile());
 
-    auto protocol1 = library.LookupInterface("HasComposeMethod1");
+    auto protocol1 = library.LookupProtocol("HasComposeMethod1");
     ASSERT_NONNULL(protocol1);
     EXPECT_EQ(protocol1->methods.size(), 1);
     EXPECT_EQ(protocol1->all_methods.size(), 1);
 
-    auto protocol2 = library.LookupInterface("HasComposeMethod2");
+    auto protocol2 = library.LookupProtocol("HasComposeMethod2");
     ASSERT_NONNULL(protocol2);
     EXPECT_EQ(protocol2->methods.size(), 1);
     EXPECT_EQ(protocol2->all_methods.size(), 1);
@@ -95,22 +95,22 @@ protocol D {
 )FIDL");
     ASSERT_TRUE(library.Compile());
 
-    auto protocol_a = library.LookupInterface("A");
+    auto protocol_a = library.LookupProtocol("A");
     ASSERT_NONNULL(protocol_a);
     EXPECT_EQ(protocol_a->methods.size(), 1);
     EXPECT_EQ(protocol_a->all_methods.size(), 1);
 
-    auto protocol_b = library.LookupInterface("B");
+    auto protocol_b = library.LookupProtocol("B");
     ASSERT_NONNULL(protocol_b);
     EXPECT_EQ(protocol_b->methods.size(), 1);
     EXPECT_EQ(protocol_b->all_methods.size(), 2);
 
-    auto protocol_c = library.LookupInterface("C");
+    auto protocol_c = library.LookupProtocol("C");
     ASSERT_NONNULL(protocol_c);
     EXPECT_EQ(protocol_c->methods.size(), 1);
     EXPECT_EQ(protocol_c->all_methods.size(), 2);
 
-    auto protocol_d = library.LookupInterface("D");
+    auto protocol_d = library.LookupProtocol("D");
     ASSERT_NONNULL(protocol_d);
     EXPECT_EQ(protocol_d->methods.size(), 1);
     EXPECT_EQ(protocol_d->all_methods.size(), 4);
@@ -290,7 +290,7 @@ protocol D {
     ASSERT_FALSE(library.Compile());
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "Multiple methods with the same name in an interface");
+    ASSERT_STR_STR(errors[0].c_str(), "Multiple methods with the same name in a protocol");
 
     END_TEST;
 }
@@ -319,7 +319,7 @@ protocol cv {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-                   "Multiple methods with the same ordinal in an interface; "
+                   "Multiple methods with the same ordinal in a protocol; "
                    "previous was at example.fidl:9:4. "
                    "Consider using attribute [Selector=\"f_\"] to change the name used to "
                    "calculate the ordinal.");
@@ -370,9 +370,9 @@ protocol Child {
     auto errors = library.errors();
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
-                   "interface example/NoFragileBase is not marked by [FragileBase] "
-                   "attribute, disallowing interface example/Child from "
-                   "inheriting from it");
+                   "protocol example/NoFragileBase is not marked by [FragileBase] "
+                   "attribute, disallowing protocol example/Child from "
+                   "composing it");
 
     END_TEST;
 }

@@ -55,7 +55,7 @@ private:
     void Generate(const coded::PointerType& pointer);
     void Generate(const coded::MessageType& message_type);
     void Generate(const coded::HandleType& handle_type);
-    void Generate(const coded::InterfaceHandleType& interface_type);
+    void Generate(const coded::ProtocolHandleType& protocol_type);
     void Generate(const coded::RequestHandleType& request_type);
     void Generate(const coded::ArrayType& array_type);
     void Generate(const coded::StringType& string_type);

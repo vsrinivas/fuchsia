@@ -361,7 +361,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     case flat::Type::Kind::kRequestHandle: {
         auto request_handle_type = static_cast<const flat::RequestHandleType*>(type);
         buf << "request<";
-        buf << NameFlatName(request_handle_type->interface_type->name);
+        buf << NameFlatName(request_handle_type->protocol_type->name);
         buf << ">";
         break;
     }
@@ -427,7 +427,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
                 return "fidl_table_t";
             case flat::Decl::Kind::kXUnion:
                 return "fidl_xunion_t";
-            case flat::Decl::Kind::kInterface:
+            case flat::Decl::Kind::kProtocol:
                 return "zx_handle_t";
             }
         }
@@ -459,12 +459,12 @@ std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name
     return StringJoin(library_name, "/") + "/c/fidl.h";
 }
 
-std::string NameDiscoverable(const flat::Interface& interface) {
-    return FormatName(interface.name, ".", ".");
+std::string NameDiscoverable(const flat::Protocol& protocol) {
+    return FormatName(protocol.name, ".", ".");
 }
 
-std::string NameMethod(std::string_view interface_name, const flat::Interface::Method& method) {
-    return std::string(interface_name) + NameIdentifier(method.name);
+std::string NameMethod(std::string_view protocol_name, const flat::Protocol::Method& method) {
+    return std::string(protocol_name) + NameIdentifier(method.name);
 }
 
 std::string NameOrdinal(std::string_view method_name) {
@@ -529,15 +529,15 @@ std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nul
     return name;
 }
 
-std::string NameCodedInterfaceHandle(std::string_view interface_name, types::Nullability nullability) {
-    std::string name(interface_name);
-    name += "Interface";
+std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability) {
+    std::string name(protocol_name);
+    name += "Protocol";
     name += NameNullability(nullability);
     return name;
 }
 
-std::string NameCodedRequestHandle(std::string_view interface_name, types::Nullability nullability) {
-    std::string name(interface_name);
+std::string NameCodedRequestHandle(std::string_view protocol_name, types::Nullability nullability) {
+    std::string name(protocol_name);
     name += "Request";
     name += NameNullability(nullability);
     return name;

@@ -57,7 +57,7 @@ fidl_example("example-8") {
 fidl_example("example-9") {
   nick = "example9"
 }
-fidl_example("interface-ordinals") {
+fidl_example("protocol-ordinals") {
   nick = "ordinals"
 }
 fidl_example("tables") {
@@ -104,7 +104,7 @@ group("examples") {
     ":example-7",
     ":example-8",
     ":example-9",
-    ":interface-ordinals",
+    ":protocol-ordinals",
     ":point",
     ":tables",
     ":test",

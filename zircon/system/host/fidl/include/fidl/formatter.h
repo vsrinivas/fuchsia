@@ -54,15 +54,15 @@ private:
 // particular node's visitor, it usually means that slightly different behavior
 // is needed for that language construct.  For example, using and const
 // declarations respect leading blank lines if they are already there, and
-// struct, enum, and interface declarations require leading blank lines.
+// struct, enum, and protocol declarations require leading blank lines.
 class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 public:
     FormattingTreeVisitor()
         : last_source_location_(nullptr) {}
 
-    virtual void OnInterfaceDeclaration(std::unique_ptr<InterfaceDeclaration> const& element) override {
+    virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {
         OnBlankLineRequiringNode();
-        DeclarationOrderTreeVisitor::OnInterfaceDeclaration(element);
+        DeclarationOrderTreeVisitor::OnProtocolDeclaration(element);
     }
 
     virtual void OnSourceElementStart(const SourceElement& element) override {
@@ -74,12 +74,12 @@ public:
     }
 
     virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) override {
-        // Disabling these in case we're in an interface method and it thinks
+        // Disabling these in case we're in a protocol method and it thinks
         // the next line needs to be indented more.  We don't want an indent
         // after a newline following an attribute list.  It will be reenabled by
         // the next visited AST node in the method.
         newline_means_indent_more_ = false;
-        interface_method_alignment_ = false;
+        protocol_method_alignment_ = false;
         // This prevents the above from being reenabled during our walk of the
         // AttributeList
         ScopedBool suppress(is_member_decl_, false);
@@ -110,14 +110,14 @@ public:
         TreeVisitor::OnEnumDeclaration(element);
     }
 
-    virtual void OnInterfaceMethod(std::unique_ptr<InterfaceMethod> const& element) override {
-        interface_method_alignment_ = true;
-        interface_method_alignment_size_ = -1;
+    virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {
+        protocol_method_alignment_ = true;
+        protocol_method_alignment_size_ = -1;
         next_nonws_char_is_checkpoint_ = false;
         OnBlankLineRespectingNode();
         ScopedBool before(blank_space_before_colon_, false);
         ScopedBool mem(is_member_decl_);
-        TreeVisitor::OnInterfaceMethod(element);
+        TreeVisitor::OnProtocolMethod(element);
     }
 
     virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) override {
@@ -194,14 +194,14 @@ private:
     // Indentations can be caused by nesting in the AST (e.g., if you've started
     // a compound statement) or, in some situations, if there is a newline in
     // the code (e.g., if you've decided to line break before the "->" operator
-    // in the middle of an interface definition).
+    // in the middle of a protocol definition).
 
     // What follows are adjustable properties.  We flip them from true to false
     // at various points in the tree walk depending on what behavior we want.
 
     // When this is true, you get a blank line and indentation at the end of the
     // segment.  This is true for top level decls that *require* blank lines:
-    // e.g., structs, unions, and interfaces.
+    // e.g., structs, unions, and protocols.
     bool blank_line_requiring_node_ = false;
 
     // When this is true, you get a blank line and indentation at the end of the
@@ -213,11 +213,11 @@ private:
     // indentation.
     bool newline_means_indent_more_ = false;
 
-    // This is true in decl headers, but not after the ordinal in an interface
+    // This is true in decl headers, but not after the ordinal in a protocol
     // method or in the element count for relevant types.
     bool blank_space_before_colon_ = true;
 
-    // This is true in decl headers and after the ordinal in an interface
+    // This is true in decl headers and after the ordinal in a protocol
     // method, but not in the element count for relevant types.
     bool blank_space_after_colon_ = true;
 
@@ -225,12 +225,12 @@ private:
     // parameterized type: arrays, vectors, handles, and requests.
     int nested_type_depth_ = 0;
 
-    // Interface methods have fancy alignment: if the last open parenthesis was
+    // Protocol methods have fancy alignment: if the last open parenthesis was
     // at EOL, indentation is to the column that had beginning of method name +
     // kIndentSpaces.  Otherwise, it is to the column with the last open
     // parenthesis + 1.
-    bool interface_method_alignment_ = false;
-    int interface_method_alignment_size_ = -1;
+    bool protocol_method_alignment_ = false;
+    int protocol_method_alignment_size_ = -1;
     int distance_from_last_newline_ = 0;
     int offset_of_first_id_ = 0;
     bool next_nonws_char_is_checkpoint_ = false;
@@ -356,7 +356,7 @@ private:
         // kIndentSpaces.  Any other newlines inside the member decl should be
         // indented additionally.
         if (is_member_decl_) {
-            interface_method_alignment_ = true;
+            protocol_method_alignment_ = true;
             newline_means_indent_more_ = true;
         }
 
@@ -376,7 +376,7 @@ private:
     bool is_member_decl_ = false;
 
     // str is a gap plus the next meaningful token.
-    void TrackInterfaceMethodAlignment(const std::string& str);
+    void TrackProtocolMethodAlignment(const std::string& str);
 
     void OnSourceElementShared(const fidl::Token& current_token) {
         const char* ws_location = current_token.previous_end().data().data();
@@ -390,7 +390,7 @@ private:
             std::string gap(ws_location, size);
             std::string content(current_token.data().data(), current_token.data().size());
             std::string total_string = FormatAndPrintSegment(gap + content);
-            TrackInterfaceMethodAlignment(total_string);
+            TrackProtocolMethodAlignment(total_string);
             formatted_output_ += total_string;
             last_source_location_ = ws_location;
         }

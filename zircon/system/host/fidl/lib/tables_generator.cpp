@@ -308,13 +308,13 @@ void TablesGenerator::Generate(const coded::RequestHandleType& request_type) {
     Emit(&tables_file_, "));\n\n");
 }
 
-void TablesGenerator::Generate(const coded::InterfaceHandleType& interface_type) {
+void TablesGenerator::Generate(const coded::ProtocolHandleType& protocol_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
-    Emit(&tables_file_, NameTable(interface_type.coded_name));
+    Emit(&tables_file_, NameTable(protocol_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
     Emit(&tables_file_, types::HandleSubtype::kChannel);
     Emit(&tables_file_, ", ");
-    Emit(&tables_file_, interface_type.nullability);
+    Emit(&tables_file_, protocol_type.nullability);
     Emit(&tables_file_, "));\n\n");
 }
 
@@ -531,9 +531,9 @@ std::ostringstream TablesGenerator::Produce() {
             Generate(xunion_type);
             break;
         }
-        case coded::Type::Kind::kInterface:
-            // Nothing to generate for interfaces. We've already moved the
-            // messages from the interface into coded_types_ directly.
+        case coded::Type::Kind::kProtocol:
+            // Nothing to generate for protocols. We've already moved the
+            // messages from the protocol into coded_types_ directly.
             break;
         case coded::Type::Kind::kMessage:
             Generate(*static_cast<const coded::MessageType*>(coded_type.get()));
@@ -541,8 +541,8 @@ std::ostringstream TablesGenerator::Produce() {
         case coded::Type::Kind::kHandle:
             Generate(*static_cast<const coded::HandleType*>(coded_type.get()));
             break;
-        case coded::Type::Kind::kInterfaceHandle:
-            Generate(*static_cast<const coded::InterfaceHandleType*>(coded_type.get()));
+        case coded::Type::Kind::kProtocolHandle:
+            Generate(*static_cast<const coded::ProtocolHandleType*>(coded_type.get()));
             break;
         case coded::Type::Kind::kRequestHandle:
             Generate(*static_cast<const coded::RequestHandleType*>(coded_type.get()));

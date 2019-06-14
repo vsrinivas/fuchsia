@@ -22,7 +22,7 @@ protocol Example {
 
     ASSERT_TRUE(library.Compile());
 
-    auto methods = &library.LookupInterface("Example")->methods;
+    auto methods = &library.LookupProtocol("Example")->methods;
     ASSERT_EQ(methods->size(), 1);
     auto method = &methods->at(0);
     auto response = method->maybe_response;

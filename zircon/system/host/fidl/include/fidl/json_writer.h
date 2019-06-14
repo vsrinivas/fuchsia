@@ -14,7 +14,7 @@
 namespace fidl {
 namespace utils {
 
-// Methods or functions named "Emit..." are the actual interface to
+// Methods or functions named "Emit..." are the actual protocol to
 // the JSON output.
 
 // Other public methods take various value types and generate JSON

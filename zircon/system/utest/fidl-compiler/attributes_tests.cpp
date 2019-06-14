@@ -277,7 +277,7 @@ table MyTable {
 };
 
 [Layout = "Simple"]
-protocol MyInterface {
+protocol MyProtocol {
     [Layout = "Simple"]
     MyMethod();
 };
@@ -341,7 +341,7 @@ bool constraint_only_three_members_on_method() {
     TestLibrary library(R"FIDL(
 library fidl.test;
 
-protocol MyInterface {
+protocol MyProtocol {
     [MustHaveThreeMembers] MyMethod();
 };
 
@@ -362,21 +362,21 @@ protocol MyInterface {
     END_TEST;
 }
 
-bool constraint_only_three_members_on_interface() {
+bool constraint_only_three_members_on_protocol() {
     BEGIN_TEST;
 
     TestLibrary library(R"FIDL(
 library fidl.test;
 
 [MustHaveThreeMembers]
-protocol MyInterface {
+protocol MyProtocol {
     MyMethod();
     MySecondMethod();
 };
 
 )FIDL");
     library.AddAttributeSchema("MustHaveThreeMembers", fidl::flat::AttributeSchema({
-                                                                                       fidl::flat::AttributeSchema::Placement::kInterfaceDecl,
+                                                                                       fidl::flat::AttributeSchema::Placement::kProtocolDecl,
                                                                                    },
                                                                                    {
                                                                                        "",
@@ -475,7 +475,7 @@ RUN_TEST(multiple_transports_with_bogus)
 RUN_TEST(incorrect_placement_layout)
 RUN_TEST(constraint_only_three_members_on_struct)
 RUN_TEST(constraint_only_three_members_on_method)
-RUN_TEST(constraint_only_three_members_on_interface)
+RUN_TEST(constraint_only_three_members_on_protocol)
 RUN_TEST(max_bytes)
 RUN_TEST(max_handles)
 RUN_TEST(selector_incorrect_placement)
