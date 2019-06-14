@@ -12,7 +12,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
-#include <ddktl/i2c-channel.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <ddktl/protocol/codec.h>
 
 namespace audio {

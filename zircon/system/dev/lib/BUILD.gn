@@ -10,6 +10,7 @@ group("lib") {
   deps = [
     "amlogic",
     "broadcom",
+    "device-protocol-i2c-channel",
     "device-protocol-pdev",
     "fake-bti",
     "fake_ddk",

@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/i2c-channel.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <fbl/mutex.h>
 #include <hid/bma253.h>
 #include <lib/simplehid/simplehid.h>

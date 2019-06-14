@@ -4,10 +4,10 @@
 
 driver("as370") {
   sources = [
-    "as370.cpp",
     "as370-gpio.cpp",
     "as370-i2c.cpp",
     "as370-usb.cpp",
+    "as370.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",

@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("device-protocol-i2c-channel") {
+  sdk = "source"
+  sdk_headers = [ "lib/device-protocol/i2c-channel.h" ]
+  sources = []
+  public_deps = [
+    # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <ddktl/protocol/i2c.h>
+    "$zx/system/banjo/ddk.protocol.i2c",
+
+    # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <zircon/types.h>
+    "$zx/system/ulib/zx",
+  ]
+}

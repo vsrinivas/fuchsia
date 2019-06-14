@@ -15,6 +15,7 @@ driver("aml-ethernet-s912") {
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",

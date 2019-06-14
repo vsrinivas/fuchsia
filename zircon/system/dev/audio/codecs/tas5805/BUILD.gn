@@ -11,6 +11,7 @@ driver("tas5805") {
     "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -28,6 +29,7 @@ test("tas5805-test") {
   deps = [
     "$zx/system/banjo/ddk.protocol.codec",
     "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mock-i2c",
     "$zx/system/ulib/ddk",

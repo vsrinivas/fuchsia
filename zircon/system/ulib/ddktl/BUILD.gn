@@ -6,11 +6,8 @@ library("ddktl") {
   sdk = "static"
   sdk_publishable = true
   sdk_headers = [
-    "ddktl/protocol/empty-protocol.h",
     "ddktl/device-internal.h",
     "ddktl/device.h",
-    "ddktl/fidl.h",
-    "ddktl/i2c-channel.h",
   ]
   sources = []
   public_deps = [
