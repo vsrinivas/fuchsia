@@ -33,43 +33,54 @@ namespace intel_hda {
 constexpr uint IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
 std::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
-#define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
 // Device FIDL thunks
-fuchsia_hardware_intel_hda_ControllerDevice_ops_t IntelHDAController::CONTROLLER_FIDL_THUNKS = {
-    .GetChannel = [](void* ctx, fidl_txn_t* txn) {
-        return DEV(ctx)->GetChannel(txn);
-    },
+fuchsia_hardware_intel_hda_ControllerDevice_ops_t
+    IntelHDAController::CONTROLLER_FIDL_THUNKS = {
+        .GetChannel =
+            [](void* ctx, fidl_txn_t* txn) {
+                return static_cast<IntelHDAController*>(ctx)->GetChannel(txn);
+            },
 };
 
 // Device interface thunks
 zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
-    .version      = DEVICE_OPS_VERSION,
-    .get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) {
-        return DEV(ctx)->DeviceGetProtocol(proto_id, protocol);
-    },
-    .open         = nullptr,
-    .close        = nullptr,
-    .unbind       = [](void* ctx) { DEV(ctx)->DeviceShutdown(); },
-    .release      = [](void* ctx) { DEV(ctx)->DeviceRelease(); },
-    .read         = nullptr,
-    .write        = nullptr,
-    .get_size     = nullptr,
-    .ioctl        = nullptr,
-    .suspend      = nullptr,
-    .resume       = nullptr,
-    .rxrpc        = nullptr,
-    .message      = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-        return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
-            ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
-    },
+    .version = DEVICE_OPS_VERSION,
+    .get_protocol =
+        [](void* ctx, uint32_t proto_id, void* protocol) {
+            return static_cast<IntelHDAController*>(ctx)->DeviceGetProtocol(
+                proto_id, protocol);
+        },
+    .open = nullptr,
+    .close = nullptr,
+    .unbind =
+        [](void* ctx) {
+            static_cast<IntelHDAController*>(ctx)->DeviceShutdown();
+        },
+    .release =
+        [](void* ctx) {
+            static_cast<IntelHDAController*>(ctx)->DeviceRelease();
+        },
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
+    .ioctl = nullptr,
+    .suspend = nullptr,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+    .message =
+        [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+            return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
+                ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
+        },
 };
 
 ihda_codec_protocol_ops_t IntelHDAController::CODEC_PROTO_THUNKS = {
-    .get_driver_channel = [](void* ctx, zx_handle_t* channel_out) {
-        return DEV(ctx)->dsp_->CodecGetDispatcherChannel(channel_out);
-    },
+    .get_driver_channel =
+        [](void* ctx, zx_handle_t* channel_out) {
+            return static_cast<IntelHDAController*>(ctx)
+                ->dsp_->CodecGetDispatcherChannel(channel_out);
+        },
 };
-#undef DEV
 
 IntelHDAController::IntelHDAController()
     : state_(State::STARTING),
@@ -336,24 +347,25 @@ zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channe
     }
 }
 
-#define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
 zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
-    .version      = DEVICE_OPS_VERSION,
+    .version = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
-    .open         = nullptr,
-    .close        = nullptr,
-    .unbind       = nullptr,
-    .release      = [](void* ctx) { DEV(ctx)->RootDeviceRelease(); },
-    .read         = nullptr,
-    .write        = nullptr,
-    .get_size     = nullptr,
-    .ioctl        = nullptr,
-    .suspend      = nullptr,
-    .resume       = nullptr,
-    .rxrpc        = nullptr,
-    .message      = nullptr,
+    .open = nullptr,
+    .close = nullptr,
+    .unbind = nullptr,
+    .release =
+        [](void* ctx) {
+            static_cast<IntelHDAController*>(ctx)->RootDeviceRelease();
+        },
+    .read = nullptr,
+    .write = nullptr,
+    .get_size = nullptr,
+    .ioctl = nullptr,
+    .suspend = nullptr,
+    .resume = nullptr,
+    .rxrpc = nullptr,
+    .message = nullptr,
 };
-#undef DEV
 
 zx_status_t IntelHDAController::DriverInit(void** out_ctx) {
     // Note: It is assumed that calls to Init/Release are serialized by the
