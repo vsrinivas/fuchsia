@@ -88,6 +88,7 @@ bool TestRunner(const char** device_paths, size_t paths_num) {
 
     fbl::unique_fd fd;
     for (size_t i = 0; i < paths_num; ++i) {
+        printf("Checking %s\n", device_paths[i]);
         EXPECT_EQ(RecursiveWaitForFile(devfs_root, device_paths[i], &fd),
                   ZX_OK, device_paths[i]);
     }
