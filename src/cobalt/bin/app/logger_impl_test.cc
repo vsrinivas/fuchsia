@@ -52,7 +52,7 @@ class LoggerImplTest : public ::testing::Test {
 TEST_F(LoggerImplTest, PauseDuringBatch) {
   EXPECT_EQ(fake_logger_.call_count(), 0);
   logger_->LogCobaltEvents({}, [](Status status) {});
-  EXPECT_EQ(fake_logger_.call_count(), 1);
+  int one_event_call_count = fake_logger_.call_count();
   std::vector<fuchsia::cobalt::CobaltEvent> events;
   events.push_back(CobaltEventBuilder(1).as_event());
   events.push_back(CobaltEventBuilder(1).as_event());
@@ -60,7 +60,7 @@ TEST_F(LoggerImplTest, PauseDuringBatch) {
   events.push_back(CobaltEventBuilder(1).as_event());
   events.push_back(CobaltEventBuilder(1).as_event());
   logger_->LogCobaltEvents(std::move(events), [](Status status) {});
-  EXPECT_EQ(fake_logger_.call_count(), 2);
+  EXPECT_EQ(fake_logger_.call_count(), 2 * one_event_call_count);
 }
 
 }  // namespace cobalt
