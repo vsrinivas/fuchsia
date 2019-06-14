@@ -31,7 +31,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/BUILD.gn:817
+From //build/images/BUILD.gn:818
 
 ### auto_login_to_guest
 Whether basemgr should automatically login as a persistent guest user.
@@ -160,7 +160,7 @@ with `sources` and `outputs` in the style of a copy() target:
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:493
+From //build/images/BUILD.gn:494
 
 ### bootfs_only
 Put the "system image" package in the BOOTFS.  Hence what would
@@ -582,7 +582,7 @@ These come after synthesized arguments to configure blobfs and pkgfs.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:476
+From //build/images/BUILD.gn:477
 
 ### embedder_for_target
 By default, the dynamic library target exposing the embedder API is only
@@ -944,7 +944,7 @@ See also //zircon/docs/kernel_cmdline.md and
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:481
+From //build/images/BUILD.gn:482
 
 ### kernel_cmdline_files
 Files containing additional kernel command line arguments to bake into
@@ -954,7 +954,7 @@ These can be GN `//` source pathnames or absolute system pathnames.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:487
+From //build/images/BUILD.gn:488
 
 ### known_variants
 List of variants that will form the basis for variant toolchains.
@@ -2140,7 +2140,7 @@ package.
 
 **Current value (from the default):** `[]`
 
-From //build/images/BUILD.gn:499
+From //build/images/BUILD.gn:500
 
 ### use_ccache
 Set to true to enable compiling with ccache
