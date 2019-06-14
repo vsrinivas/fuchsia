@@ -96,7 +96,7 @@ zx_status_t InitLogger();
 // Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
-#define FX_LOGST(severity, tag)                      \
+#define FX_LOGST(severity, tag)                                 \
   FX_LOG_LAZY_STREAM(FX_LOG_STREAM(severity, (tag), INT32_MAX), \
                      FX_LOG_IS_ENABLED(severity))
 
@@ -146,13 +146,15 @@ zx_status_t InitLogger();
 // C++ does not allow us to introduce two new variables into
 // a single for loop scope and we need |syslog_internal_do_log| so that
 // the inner for loop doesn't execute twice.
-#define FX_LOGS_FIRST_N(severity, n)                                    \
+#define FX_LOGS_FIRST_N(severity, n) FX_LOGST_FIRST_N(severity, n, nullptr)
+
+#define FX_LOGST_FIRST_N(severity, n, tag)                              \
   for (bool syslog_internal_do_log = true; syslog_internal_do_log;      \
        syslog_internal_do_log = false)                                  \
     for (static syslog::internal::LogFirstNState syslog_internal_state; \
          syslog_internal_do_log && syslog_internal_state.ShouldLog(n);  \
          syslog_internal_do_log = false)                                \
-  FX_LOGS(severity)
+  FX_LOGST(severity, (tag))
 
 // Writes a message to the global logger.
 // |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,

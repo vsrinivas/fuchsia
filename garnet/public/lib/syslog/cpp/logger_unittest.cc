@@ -251,4 +251,25 @@ TEST(Logger, LogFirstN) {
   EXPECT_EQ(0u, outstanding_bytes);
 }
 
+TEST(Logger, LogFirstNWithTag) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  const char* msg = "test message";
+  const char* tags[] = {"tag"};
+  for (auto i = 0; i < 100; i++) {
+    FX_LOGST_FIRST_N(ERROR, 31, tags[0]) << msg;
+  }
+
+  // Check that we can read 31 copies of |msg| from |local|.
+  for (auto i = 0; i < 31; i++) {
+    output_compare_helper_ptr(&local, FX_LOG_ERROR, msg, tags, 1);
+  }
+  // Check there are no more available bytes.
+  size_t outstanding_bytes = 10u;  // init to non zero value.
+  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  EXPECT_EQ(0u, outstanding_bytes);
+}
+
 }  // namespace
