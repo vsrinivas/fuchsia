@@ -121,7 +121,7 @@ private:
     zx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
     zx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
     zx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
-    void        ProbeAudioDSP(zx_device_t* dsp_dev);
+    zx_status_t ProbeAudioDSP(zx_device_t* dsp_dev);
 
     zx_status_t ResetCORBRdPtrLocked() TA_REQ(corb_lock_);
 

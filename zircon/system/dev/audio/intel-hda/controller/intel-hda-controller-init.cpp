@@ -4,7 +4,9 @@
 
 #include <hw/arch_ops.h>
 #include <limits.h>
+#include <zircon/errors.h>
 #include <zircon/thread_annotations.h>
+#include <zircon/status.h>
 
 #include <utility>
 
@@ -494,13 +496,13 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
     return ZX_OK;
 }
 
-void IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
+zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
     // This driver only supports the Audio DSP on Kabylake.
     if ((pci_dev_info_.vendor_id != INTEL_HDA_PCI_VID) ||
         (pci_dev_info_.device_id != INTEL_HDA_PCI_DID_KABYLAKE)) {
         LOG(TRACE, "Audio DSP is not supported for device 0x%04x:0x%04x\n",
             pci_dev_info_.vendor_id, pci_dev_info_.device_id);
-        return;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Look for the processing pipe capability structure. Existence of this
@@ -508,7 +510,7 @@ void IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
     uint32_t offset = REG_RD(&regs()->llch);
     if ((offset == 0) || (offset >= mapped_regs_.size())) {
         LOG(TRACE, "Invalid LLCH offset to capability structures: 0x%08x\n", offset);
-        return;
+        return ZX_ERR_INTERNAL;
     }
 
     hda_pp_registers_t* pp_regs = nullptr;
@@ -530,20 +532,22 @@ void IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
 
     if (found_regs == nullptr) {
         LOG(TRACE, "Pipe processing capability structure not found\n");
-        return;
+        return ZX_ERR_INTERNAL;
     }
 
     fbl::AllocChecker ac;
     dsp_ = fbl::AdoptRef(new (&ac) IntelDsp(this, pp_regs));
     if (!ac.check()) {
         LOG(ERROR, "Out of memory attempting to allocate DSP device\n");
-        return;
+        return ZX_ERR_NO_MEMORY;
     }
     zx_status_t res = dsp_->Init(dsp_dev);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to initialize DSP device (res = %d)\n", res);
-        return;
+        return res;
     }
+
+    return ZX_OK;
 }
 
 zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
@@ -656,56 +660,60 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
         __UNUSED bool should_destruct;
         should_destruct = this->Release();
         ZX_DEBUG_ASSERT(!should_destruct);
-    } else {
-        // Flag the fact that we have entered the operating state.
-        SetState(State::OPERATING);
-
-        // Make sure that interrupts are completely disabled before proceeding.
-        // If we have a unmasked, pending IRQ, we need to make sure that it
-        // generates and interrupt once we have finished this interrupt
-        // configuration.
-        REG_WR(&regs()->intctl, 0u);
-
-        // Clear our STATESTS shadow, setup the WAKEEN register to wake us
-        // up if there is any change to the codec enumeration status.  This will
-        // kick off the process of codec enumeration.
-        REG_SET_BITS(&regs()->wakeen, HDA_REG_STATESTS_MASK);
-
-        // Allow unsolicited codec responses
-        REG_SET_BITS(&regs()->gctl, HDA_REG_GCTL_UNSOL);
-
-        // Compute the set of interrupts we may be interested in during
-        // operation, then enable those interrupts.
-        uint32_t interesting_irqs = HDA_REG_INTCTL_GIE | HDA_REG_INTCTL_CIE;
-        for (uint32_t i = 0; i < countof(all_streams_); ++i) {
-            if (all_streams_[i] != nullptr)
-                interesting_irqs |= HDA_REG_INTCTL_SIE(i);
-        }
-        REG_WR(&regs()->intctl, interesting_irqs);
-
-        // Probe for the Audio DSP. This is done after adding the HDA controller
-        // device because the Audio DSP will be added a child to the HDA
-        // controller and ddktl requires the parent device node to be initialized
-        // at construction time.
-
-        // No need to check for return value because the absence of the Audio
-        // DSP is not a failure.
-        // TODO(yky) Come up with a way to warn for the absence of Audio DSP
-        // on platforms that require it.
-        ProbeAudioDSP(dev_node_);
+        return res;
     }
 
-    return res;
+    // Flag the fact that we have entered the operating state.
+    SetState(State::OPERATING);
+
+    // Make sure that interrupts are completely disabled before proceeding.
+    // If we have a unmasked, pending IRQ, we need to make sure that it
+    // generates and interrupt once we have finished this interrupt
+    // configuration.
+    REG_WR(&regs()->intctl, 0u);
+
+    // Clear our STATESTS shadow, setup the WAKEEN register to wake us
+    // up if there is any change to the codec enumeration status.  This will
+    // kick off the process of codec enumeration.
+    REG_SET_BITS(&regs()->wakeen, HDA_REG_STATESTS_MASK);
+
+    // Allow unsolicited codec responses
+    REG_SET_BITS(&regs()->gctl, HDA_REG_GCTL_UNSOL);
+
+    // Compute the set of interrupts we may be interested in during
+    // operation, then enable those interrupts.
+    uint32_t interesting_irqs = HDA_REG_INTCTL_GIE | HDA_REG_INTCTL_CIE;
+    for (uint32_t i = 0; i < countof(all_streams_); ++i) {
+        if (all_streams_[i] != nullptr)
+            interesting_irqs |= HDA_REG_INTCTL_SIE(i);
+    }
+    REG_WR(&regs()->intctl, interesting_irqs);
+
+    // Probe for the Audio DSP. This is done after adding the HDA controller
+    // device because the Audio DSP will be added a child to the HDA
+    // controller and ddktl requires the parent device node to be initialized
+    // at construction time.
+    zx_status_t dsp_probe_result = ProbeAudioDSP(pci_dev);
+    if (dsp_probe_result != ZX_OK) {
+        LOG(WARN, "Error probing DSP: %s",
+            zx_status_get_string(dsp_probe_result));
+        // We continue despite the failure because the absence of the Audio
+        // DSP is not (always) a failure.
+        // TODO(yky) Come up with a way to warn for the absence of Audio DSP
+        // on platforms that require it.
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t IntelHDAController::Init(zx_device_t* pci_dev) {
     zx_status_t res = InitInternal(pci_dev);
-
     if (res != ZX_OK) {
         DeviceShutdown();
+        return res;
     }
 
-    return res;
+    return ZX_OK;
 }
 
 }  // namespace intel_hda
