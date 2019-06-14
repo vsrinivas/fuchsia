@@ -27,7 +27,7 @@ namespace {
 
 // clang-format off
 const std::map<std::string, std::string> kServices = {
-    {"fuchsia.tracelink.Registry", "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
+    {"fuchsia.tracing.provider.Registry", "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
     {"fuchsia.ui.policy.Presenter", "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
     {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.vulkan.loader.Loader", "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"},

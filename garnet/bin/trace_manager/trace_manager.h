@@ -5,7 +5,6 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_TRACE_MANAGER_H_
 #define GARNET_BIN_TRACE_MANAGER_TRACE_MANAGER_H_
 
-#include <fuchsia/tracelink/cpp/fidl.h>
 #include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -29,9 +28,6 @@ class TraceManager : public fuchsia::tracing::controller::Controller,
   ~TraceManager() override;
 
  private:
-  // TODO(PT-127): Remove after tracelink renaming complete.
-  friend class TracelinkManager;
-
   // |Controller| implementation.
   void StartTracing(fuchsia::tracing::controller::TraceOptions options,
                     zx::socket output, StartTracingCallback cb) override;

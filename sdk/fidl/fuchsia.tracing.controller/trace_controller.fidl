@@ -42,7 +42,7 @@ struct KnownCategory {
     string description;
 };
 
-// This is a copy of tracelink.fidl:BufferingMode.
+// This is a copy of provider.fidl:BufferingMode.
 enum BufferingMode : uint8 {
     ONESHOT = 0;
     CIRCULAR = 1;

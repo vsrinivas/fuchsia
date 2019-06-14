@@ -9,17 +9,9 @@
 namespace tracing {
 
 TraceProviderBundle::TraceProviderBundle(
-    fuchsia::tracelink::ProviderPtr tracelink_provider,
-    uint32_t id, zx_koid_t pid, const std::string& name)
-  : tracelink_provider(std::move(tracelink_provider)), is_tracelink(true),
-    id(id), pid(pid), name(name) {
-}
-
-TraceProviderBundle::TraceProviderBundle(
     fuchsia::tracing::provider::ProviderPtr provider,
     uint32_t id, zx_koid_t pid, const std::string& name)
-  : provider(std::move(provider)), is_tracelink(false),
-    id(id), pid(pid), name(name) {
+  : provider(std::move(provider)), id(id), pid(pid), name(name) {
 }
 
 std::ostream& operator<<(std::ostream& out, const TraceProviderBundle& bundle) {

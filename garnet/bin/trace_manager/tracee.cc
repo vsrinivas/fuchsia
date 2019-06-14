@@ -31,20 +31,6 @@ fuchsia::tracing::provider::BufferingMode EngineBufferingModeToProviderMode(
   }
 }
 
-fuchsia::tracelink::BufferingMode TraceBufferingModeToTracelinkMode(
-    fuchsia::tracing::provider::BufferingMode mode) {
-  switch (mode) {
-    case fuchsia::tracing::provider::BufferingMode::ONESHOT:
-      return fuchsia::tracelink::BufferingMode::ONESHOT;
-    case fuchsia::tracing::provider::BufferingMode::CIRCULAR:
-      return fuchsia::tracelink::BufferingMode::CIRCULAR;
-    case fuchsia::tracing::provider::BufferingMode::STREAMING:
-      return fuchsia::tracelink::BufferingMode::STREAMING;
-    default:
-      __UNREACHABLE;
-  }
-}
-
 uint64_t GetBufferWordsWritten(const uint64_t* buffer, uint64_t size_in_words) {
   const uint64_t* start = buffer;
   const uint64_t* current = start;
@@ -118,26 +104,18 @@ bool Tracee::Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
     return false;
   }
 
-  if (bundle_->is_tracelink) {
-    fuchsia::tracelink::BufferingMode tracelink_mode =
-        TraceBufferingModeToTracelinkMode(buffering_mode);
-    bundle_->tracelink_provider->Start(
-        tracelink_mode, std::move(buffer_vmo_for_provider),
-        std::move(fifo_for_provider), std::move(categories));
-  } else {
-    // TODO(PT-112): Split out Initialize().
-    fuchsia::tracing::provider::ProviderConfig provider_config;
-    provider_config.buffering_mode = buffering_mode;
-    provider_config.buffer = std::move(buffer_vmo_for_provider);
-    provider_config.fifo = std::move(fifo_for_provider);
-    provider_config.categories = std::move(categories);
-    bundle_->provider->Initialize(std::move(provider_config));
+  // TODO(PT-112): Split out Initialize().
+  fuchsia::tracing::provider::ProviderConfig provider_config;
+  provider_config.buffering_mode = buffering_mode;
+  provider_config.buffer = std::move(buffer_vmo_for_provider);
+  provider_config.fifo = std::move(fifo_for_provider);
+  provider_config.categories = std::move(categories);
+  bundle_->provider->Initialize(std::move(provider_config));
 
-    fuchsia::tracing::provider::StartOptions start_options;
-    start_options.buffer_disposition =
-        fuchsia::tracing::provider::BufferDisposition::CLEAR_ENTIRE;
-    bundle_->provider->Start(std::move(start_options));
-  }
+  fuchsia::tracing::provider::StartOptions start_options;
+  start_options.buffer_disposition =
+      fuchsia::tracing::provider::BufferDisposition::CLEAR_ENTIRE;
+  bundle_->provider->Start(std::move(start_options));
 
   buffering_mode_ = buffering_mode;
   buffer_vmo_ = std::move(buffer_vmo);
@@ -157,13 +135,9 @@ bool Tracee::Start(fidl::VectorPtr<std::string> categories, size_t buffer_size,
 void Tracee::Stop() {
   if (state_ != State::kStarted)
     return;
-  if (bundle_->is_tracelink) {
-    bundle_->tracelink_provider->Stop();
-  } else {
-    // TODO(PT-112): Just call terminate.
-    bundle_->provider->Stop();
-    bundle_->provider->Terminate();
-  }
+  // TODO(PT-112): Just call terminate.
+  bundle_->provider->Stop();
+  bundle_->provider->Terminate();
   TransitionToState(State::kStopping);
 }
 

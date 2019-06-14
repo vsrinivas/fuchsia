@@ -22,14 +22,12 @@ source_set("common") {
   sources = [
     "provider_impl.cpp",
     "session.cpp",
-    "tracelink_provider_impl.cpp",
     "utils.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
     ":handler",
     ":headers",
-    "$zx/system/fidl/fuchsia-tracelink:c",
     "$zx/system/fidl/fuchsia-tracing-provider:c",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/fbl",
@@ -59,12 +57,10 @@ library("trace-provider") {
   sdk_headers = [
     "trace-provider/handler.h",
     "trace-provider/provider.h",
-    "trace-provider/tracelink_provider.h",
   ]
   sources = []
   deps = [
     ":common",
-    "$zx/system/fidl/fuchsia-tracelink:c",
     "$zx/system/fidl/fuchsia-tracing-provider:c",
     "$zx/system/ulib/async:async-cpp",
   ]
@@ -96,7 +92,6 @@ library("trace-provider-with-fdio") {
   deps = [
     ":common",
     ":common.fdio-connect",
-    "$zx/system/fidl/fuchsia-tracelink:c",
     "$zx/system/fidl/fuchsia-tracing-provider:c",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/fdio",
@@ -170,7 +165,6 @@ source_set("common.fdio-connect") {
   sources = [
     "fdio_connect.cpp",
     "provider_with_fdio.cpp",
-    "tracelink_provider_with_fdio.cpp",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

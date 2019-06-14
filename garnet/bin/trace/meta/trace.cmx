@@ -14,7 +14,6 @@
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.tracing.controller.Controller"
         ],

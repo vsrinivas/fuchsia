@@ -61,8 +61,6 @@ constexpr uint32_t kYuvSize = 64;
 // the binary, making each test not hermetic wrt. the others. A trade-off is
 // that the |TestWithEnvironment| method is more verbose.
 const std::map<std::string, std::string> kServices = {
-    {"fuchsia.tracelink.Registry",
-     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
     {"fuchsia.tracing.provider.Registry",
      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
     {"fuchsia.ui.policy.Presenter",

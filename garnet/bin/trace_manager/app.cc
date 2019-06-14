@@ -10,12 +10,7 @@ namespace tracing {
 
 TraceManagerApp::TraceManagerApp(const Config& config)
     : context_(sys::ComponentContext::Create()),
-      trace_manager_(context_.get(), config),
-      tracelink_manager_(&trace_manager_) {
-  // TODO(PT-127): Remove after tracelink renaming complete.
-  context_->outgoing()->AddPublicService(
-      tracelink_registry_bindings_.GetHandler(&tracelink_manager_));
-
+      trace_manager_(context_.get(), config) {
   context_->outgoing()->AddPublicService(
       trace_registry_bindings_.GetHandler(&trace_manager_));
 
