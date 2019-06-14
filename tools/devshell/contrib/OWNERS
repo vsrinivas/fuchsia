@@ -16,7 +16,6 @@ per-file format-code=jeremymanson@google.com
 per-file fuzz=aarongreen@google.com
 per-file gce=raggi@google.com
 per-file gen-cargo=cramertj@google.com
-per-file go=raggi@google.com
 per-file iquery=crjohns@google.com
 per-file lint=juliehockett@google.com
 per-file make-fuchsia-vol=raggi@google.com
