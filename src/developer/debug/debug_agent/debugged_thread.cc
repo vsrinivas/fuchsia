@@ -238,6 +238,7 @@ void DebuggedThread::SendExceptionNotification(
 
 void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming.";
+
   run_mode_ = request.how;
   step_in_range_begin_ = request.range_begin;
   step_in_range_end_ = request.range_end;
@@ -684,8 +685,8 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
-const char* DebuggedThread::StateToString(State reason) {
-  switch (reason) {
+const char* DebuggedThread::StateToString(State state) {
+  switch (state) {
     case State::kRunning:
       return "Running";
     case State::kException:
@@ -693,8 +694,21 @@ const char* DebuggedThread::StateToString(State reason) {
     case State::kSuspended:
       return "Suspended";
   }
+
   FXL_NOTREACHED();
-  return "";
+  return "<unknown>";
+}
+
+const char* DebuggedThread::ClientStateToString(ClientState client_state) {
+  switch (client_state) {
+    case ClientState::kRunning:
+      return "Running";
+    case ClientState::kPaused:
+      return "Paused";
+  }
+
+  FXL_NOTREACHED();
+  return "<unknown>";
 }
 
 }  // namespace debug_agent

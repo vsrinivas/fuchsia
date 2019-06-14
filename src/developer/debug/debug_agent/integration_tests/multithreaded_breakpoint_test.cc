@@ -102,6 +102,10 @@ class BreakpointStreamBackend : public MockStreamBackend {
   std::vector<NotifyException> thread_excp_;
   std::vector<NotifyThread> thread_exits_;
 
+  bool initial_thread_check_passed_ = false;
+  bool got_modules_check_passed_ = false;
+  bool process_finished_check_passed_ = false;
+
   TestStage test_stage_ = TestStage::kWaitingForThreadToStart;
 };
 
@@ -291,20 +295,16 @@ void BreakpointStreamBackend::HandleNotifyThreadExiting(NotifyThread thread) {
 }
 
 void BreakpointStreamBackend::ShouldQuitLoop() {
-  static int thread_started = 0;
-
   if (test_stage_ == TestStage::kWaitingForThreadToStart) {
-    static bool got_modules = false;
-
     // The first thread started, we need to resume it.
-    if (thread_started == 0 && thread_starts_.size() == 1u) {
-      thread_started++;
+    if (initial_thread_check_passed_ == 0 && thread_starts_.size() == 1u) {
+      initial_thread_check_passed_ = true;
       ResumeAllThreads();
       return;
     }
 
-    if (!got_modules && so_test_base_addr_ != 0u) {
-      got_modules = true;
+    if (!got_modules_check_passed_ && so_test_base_addr_ != 0u) {
+      got_modules_check_passed_ = true;
       loop()->QuitNow();
       test_stage_ = TestStage::kCreatingOtherThreads;
       DEBUG_LOG(Test) << "Stage change to CREATING OTHER THREADS";
@@ -365,9 +365,8 @@ void BreakpointStreamBackend::ShouldQuitLoop() {
   }
 
   if (test_stage_ == TestStage::kDone) {
-    static bool process_finished = false;
-    if (!process_finished && process_exited_) {
-      process_finished = true;
+    if (!process_finished_check_passed_ && process_exited_) {
+      process_finished_check_passed_ = true;
       loop()->QuitNow();
       test_stage_ = TestStage::kInvalid;
       return;

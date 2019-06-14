@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records_utils.h"
@@ -26,7 +27,6 @@ namespace debug_agent {
 
 class Breakpoint;
 class DebugAgent;
-class DebuggedThread;
 class ProcessBreakpoint;
 class ProcessWatchpoint;
 class Watchpoint;
@@ -87,7 +87,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // kernel and return immediatelly. It will block on all the suspend signals
   // otherwise.
   void SuspendAll(bool synchronous = false,
-                  std::vector<uint64_t>* suspended_koids = nullptr);
+                  std::vector<zx_koid_t>* suspended_koids = nullptr);
 
   // Returns the thread or null if there is no known thread for this koid.
   virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;

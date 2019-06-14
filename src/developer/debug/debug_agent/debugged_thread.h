@@ -48,6 +48,15 @@ class DebuggedThread {
   };
   const char* StateToString(State);
 
+  // Represents the state the client thinks this thread is in. Certain
+  // operations can suspend all the threads of a process and the debugger needs
+  // to know which threads should remain suspended after that operation is done.
+  enum class ClientState {
+    kRunning,
+    kPaused,
+  };
+  const char* ClientStateToString(ClientState);
+
   // When a thread is first created and we get a notification about it, it
   // will be suspended, but when we attach to a process with existing threads
   // it won't in in this state. The |starting| flag indicates that this is
@@ -71,6 +80,9 @@ class DebuggedThread {
   // thread will not necessarily have stopped when this returns. Set the
   // |synchronous| flag for blocking on the suspended signal and make this call
   // block until the thread is suspended.
+  //
+  // |new_state| represents what the new state of the client should be. If no
+  // change is wanted, you can use the overload that doesn't receives that.
   //
   // The return type determines the state the thread was in *before* the suspend
   // operation. That means that if |kRunning| is returned, means that the thread
@@ -110,6 +122,9 @@ class DebuggedThread {
   void WillDeleteProcessBreakpoint(ProcessBreakpoint* bp);
 
   State state() const { return state_; }
+
+  ClientState client_state() const { return client_state_; }
+  void set_client_state(ClientState cs) { client_state_ = cs; }
 
  private:
   enum class OnStop {
@@ -193,6 +208,8 @@ class DebuggedThread {
   // will be resumed. State::kOther implies the suspend_token_ is
   // valid.
   State state_ = State::kRunning;
+  ClientState client_state_ = ClientState::kRunning;
+
   zx::suspend_token suspend_token_;
 
   // This can be set in two cases:

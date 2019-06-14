@@ -157,6 +157,7 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
     DebuggedThread* thread = GetThread(request.thread_koid);
     if (thread) {
       thread->Suspend(true);
+      thread->set_client_state(DebuggedThread::ClientState::kPaused);
 
       // The Suspend call could have failed though most failures should be
       // rare (perhaps we raced with the thread being destroyed). Either way,
@@ -170,7 +171,16 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
     // the client sending the request.
   } else {
     // 0 thread ID means pause all threads.
-    SuspendAll(true);
+    std::vector<zx_koid_t> suspended_koids;
+    SuspendAll(true, &suspended_koids);
+
+    // Change the state of those threads.
+    for (zx_koid_t thread_koid : suspended_koids) {
+      DebuggedThread* thread = GetThread(thread_koid);
+      FXL_DCHECK(thread);
+      thread->set_client_state(DebuggedThread::ClientState::kPaused);
+    }
+
     FillThreadRecords(&reply->threads);
   }
 }
@@ -178,13 +188,17 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
   if (request.thread_koids.empty()) {
     // Empty thread ID list means resume all threads.
-    for (const auto& pair : threads_)
-      pair.second->Resume(request);
+    for (auto& [thread_koid, thread] : threads_) {
+      thread->Resume(request);
+      thread->set_client_state(DebuggedThread::ClientState::kRunning);
+    }
   } else {
     for (uint64_t thread_koid : request.thread_koids) {
       DebuggedThread* thread = GetThread(thread_koid);
-      if (thread)
+      if (thread) {
         thread->Resume(request);
+        thread->set_client_state(DebuggedThread::ClientState::kRunning);
+      }
       // Could be not found if there is a race between the thread exiting and
       // the client sending the request.
     }
