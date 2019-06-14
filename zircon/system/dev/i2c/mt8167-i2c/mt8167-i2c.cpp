@@ -11,7 +11,7 @@
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

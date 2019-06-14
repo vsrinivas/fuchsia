@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 

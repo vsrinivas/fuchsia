@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/phy.h>
 #include <fbl/mutex.h>

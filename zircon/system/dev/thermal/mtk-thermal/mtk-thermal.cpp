@@ -8,7 +8,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/clock.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <soc/mt8167/mt8167-hw.h>

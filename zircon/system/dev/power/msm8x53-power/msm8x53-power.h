@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/powerimpl.h>
 #include <lib/mmio/mmio.h>

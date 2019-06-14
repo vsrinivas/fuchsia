@@ -13,7 +13,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>

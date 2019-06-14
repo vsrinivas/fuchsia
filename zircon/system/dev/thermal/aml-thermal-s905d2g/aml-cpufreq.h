@@ -6,7 +6,7 @@
 
 #include <ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/clock.h>
 #include <hwreg/mmio.h>
 #include <lib/zx/bti.h>

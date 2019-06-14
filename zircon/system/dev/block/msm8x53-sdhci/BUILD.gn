@@ -9,6 +9,7 @@ driver("msm8x53-sdhci") {
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdhci",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

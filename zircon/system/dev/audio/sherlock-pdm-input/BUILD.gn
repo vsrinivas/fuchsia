@@ -13,6 +13,7 @@ driver("sherlock-pdm-input") {
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",

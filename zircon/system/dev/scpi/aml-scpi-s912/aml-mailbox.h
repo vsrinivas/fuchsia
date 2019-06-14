@@ -11,7 +11,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/mailbox.h>
 #include <hw/reg.h>
 #include <lib/sync/completion.h>

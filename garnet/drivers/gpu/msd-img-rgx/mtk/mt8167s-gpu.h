@@ -13,11 +13,11 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
 #include <memory>

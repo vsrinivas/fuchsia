@@ -8,8 +8,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
-#include <ddktl/pdev.h>
 #include <ddktl/device.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <ddktl/protocol/usb/phy.h>

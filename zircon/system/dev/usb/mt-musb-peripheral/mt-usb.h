@@ -6,7 +6,7 @@
 
 #include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>

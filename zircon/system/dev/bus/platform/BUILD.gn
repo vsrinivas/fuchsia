@@ -55,6 +55,7 @@ driver("platform-bus.proxy") {
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.power",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

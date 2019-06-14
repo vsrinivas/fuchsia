@@ -11,7 +11,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>

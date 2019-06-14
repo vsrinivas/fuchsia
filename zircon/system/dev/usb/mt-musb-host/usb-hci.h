@@ -9,6 +9,7 @@
 
 #include <array>
 #include <ddktl/device.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/usb/hci.h>
 #include <ddktl/protocol/usb/bus.h>
 #include <lib/mmio/mmio.h>

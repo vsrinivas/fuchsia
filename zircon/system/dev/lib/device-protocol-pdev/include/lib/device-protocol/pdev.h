@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDKTL_PDEV_H_
-#define DDKTL_PDEV_H_
+#pragma once
 
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
@@ -50,5 +49,3 @@ public:
 };
 
 } // namespace ddk
-
-#endif // DDKTL_PDEV_H_

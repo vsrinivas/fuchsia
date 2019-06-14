@@ -5,7 +5,7 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/camerasensor.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/composite.h>

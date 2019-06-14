@@ -10,24 +10,9 @@ library("ddktl") {
     "ddktl/device.h",
     "ddktl/fidl.h",
     "ddktl/i2c-channel.h",
-    "ddktl/pdev.h",
   ]
-  sources = [
-    "pdev.cpp",
-  ]
+  sources = []
   public_deps = [
-    # <ddktl/pdev.h> has #include <ddktl/protocol/clock.h>.
-    "$zx/system/banjo/ddk.protocol.clock",
-
-    # <ddktl/pdev.h> has #include <ddktl/protocol/gpio.h>.
-    "$zx/system/banjo/ddk.protocol.gpio",
-
-    # <ddktl/pdev.h> has #include <ddktl/protocol/power.h>.
-    "$zx/system/banjo/ddk.protocol.power",
-
-    # <ddktl/pdev.h> has #include <ddktl/protocol/platform/device.h>.
-    "$zx/system/banjo/ddk.protocol.platform.device",
-
     # <ddktl/device-internal.h> has #include <fbl/macros.h>.
     "$zx/system/ulib/fbl:headers",
 

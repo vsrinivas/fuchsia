@@ -12,7 +12,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/fw.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <zircon/syscalls/smc.h>

@@ -13,6 +13,7 @@ driver("mt8167-tdm-input") {
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/audio/lib/simple-audio-stream",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/dev/lib/mt8167",

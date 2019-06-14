@@ -14,6 +14,7 @@ driver("mt-musb-host") {
   deps = [
     "$zx/system/banjo/ddk.protocol.usb.bus",
     "$zx/system/banjo/ddk.protocol.usb.hci",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
     "$zx/system/dev/lib/usb",
@@ -33,6 +34,7 @@ test("mt-hci-transaction-test") {
     "usb-transaction.cpp",
   ]
   deps = [
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",

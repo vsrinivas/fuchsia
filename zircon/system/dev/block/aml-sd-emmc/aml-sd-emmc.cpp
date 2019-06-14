@@ -20,7 +20,7 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdmmc.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>

@@ -12,7 +12,7 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/audio.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/gpio.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/array.h>

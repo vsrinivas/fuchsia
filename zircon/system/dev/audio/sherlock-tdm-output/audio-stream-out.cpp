@@ -6,7 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <soc/aml-t931/t931-gpio.h>
 
 #include "audio-stream-out.h"

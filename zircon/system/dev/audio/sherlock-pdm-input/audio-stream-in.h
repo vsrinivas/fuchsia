@@ -6,7 +6,7 @@
 
 #include <audio-proto/audio-proto.h>
 
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 
 #include <dispatcher-pool/dispatcher-timer.h>
 

@@ -13,7 +13,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/pdev.h>
 #include <fbl/auto_call.h>
 #include <lib/zx/time.h>
 #include <soc/mt8167/mt8167-usb.h>

@@ -8,7 +8,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/mailbox.h>
 #include <ddktl/protocol/scpi.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>

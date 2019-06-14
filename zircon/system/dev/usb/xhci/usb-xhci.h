@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/pci.h>
 #include <ddktl/protocol/platform/device.h>

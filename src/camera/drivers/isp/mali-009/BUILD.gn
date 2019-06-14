@@ -28,6 +28,7 @@ driver_module("mali-009-driver") {
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",

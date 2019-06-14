@@ -7,7 +7,7 @@
 #include "lcd.h"
 #include "mt-sysconfig.h"
 #include <ddktl/protocol/platform/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 namespace mt8167s_display {
 

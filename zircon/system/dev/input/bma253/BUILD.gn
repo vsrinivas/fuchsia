@@ -11,6 +11,7 @@ driver("bma253") {
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -34,6 +35,7 @@ test("bma253-test") {
     "bma253.cpp",
   ]
   deps = [
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mock-hidbus-ifc",
     "$zx/system/dev/lib/mock-i2c",

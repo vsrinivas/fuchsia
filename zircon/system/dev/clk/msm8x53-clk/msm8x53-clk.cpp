@@ -9,7 +9,7 @@
 #include <ddk/protocol/clockimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

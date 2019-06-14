@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>

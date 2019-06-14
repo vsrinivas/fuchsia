@@ -7,7 +7,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <fbl/unique_ptr.h>
 #include <soc/msm8x53/msm8x53-power-regs.h>
 #include <soc/msm8x53/msm8x53-power.h>

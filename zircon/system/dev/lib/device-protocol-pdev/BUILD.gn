@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("device-protocol-pdev") {
+  sdk = "source"
+  sdk_headers = [ "lib/device-protocol/pdev.h" ]
+  sources = [
+    "pdev.cpp",
+  ]
+  public_deps = [
+    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/clock.h>.
+    "$zx/system/banjo/ddk.protocol.clock",
+
+    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/gpio.h>.
+    "$zx/system/banjo/ddk.protocol.gpio",
+
+    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
+    "$zx/system/banjo/ddk.protocol.platform.device",
+
+    # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/power.h>.
+    "$zx/system/banjo/ddk.protocol.power",
+
+    # Banjo protocols have #include <ddk/driver.h>.
+    "$zx/system/ulib/ddk:headers",
+
+    # Banjo protocols have #include <ddktl/device-internal.h>.
+    "$zx/system/ulib/ddktl:headers",
+  ]
+
+  deps = [
+    # pdev.cpp has #include <lib/mmio/mmio.h>.
+    "$zx/system/dev/lib/mmio:headers",
+  ]
+}

@@ -12,7 +12,7 @@
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddktl/pdev.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 #include <fbl/auto_lock.h>

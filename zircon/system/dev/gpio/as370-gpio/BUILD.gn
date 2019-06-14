@@ -9,6 +9,7 @@ driver("as370-gpio") {
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
@@ -27,6 +28,7 @@ test("as370-gpio-test") {
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/mock-mmio-reg",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
