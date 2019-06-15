@@ -9,12 +9,13 @@ group("interactive_minimal") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:shortcut",
+    "//garnet/packages/config:mediasession",
     "//garnet/packages/prod:display_manager",
-    "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:fonts",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
     "//garnet/packages/prod:mediaplayer",
+    "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
   ]
