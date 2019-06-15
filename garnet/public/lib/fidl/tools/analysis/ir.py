@@ -1,3 +1,7 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 import json
 import os
 import sys
@@ -126,6 +130,8 @@ class Enum(Declaration):
                         m.decl(state)
                         for m in self.members) + '\n' + state.indent + '}'
 
+class Bits(Declaration):
+    pass
 
 class Argument(Declaration):
     def __init__(self, method: 'Method', value: dict):
@@ -287,6 +293,7 @@ class Union(Declaration):
 DECLARATION_TYPES = {
     'const': ('const_declarations', Const),
     'enum': ('enum_declarations', Enum),
+    'bits': ('bits_declarations', Bits),
     'interface': ('interface_declarations', Interface),
     'struct': ('struct_declarations', Struct),
     'table': ('table_declarations', Table),
@@ -311,6 +318,10 @@ class Library(dict):
     @property
     def enums(self) -> t.List[Enum]:
         return [Enum(self, value) for value in self['enum_declarations']]
+
+    @property
+    def bits(self) -> t.List[Bits]:
+        return [Bits(self, value) for value in self['bits_declarations']]
 
     @property
     def interfaces(self) -> t.List[Interface]:
@@ -372,6 +383,10 @@ class Libraries(list):
     @property
     def enums(self) -> t.List[Enum]:
         return [enum for library in self for enum in library.enums]
+
+    @property
+    def bits(self) -> t.List[Bits]:
+        return [bit for library in self for bit in library.bits]
 
     @property
     def interfaces(self) -> t.List[Interface]:
