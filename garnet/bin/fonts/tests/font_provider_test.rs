@@ -514,3 +514,53 @@ mod reviewed_api {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod experimental_api {
+    use {
+        failure::{Error, ResultExt},
+        fidl_fuchsia_fonts::FamilyName,
+        fidl_fuchsia_fonts_experimental as fonts_exp, fuchsia_async as fasync,
+        fuchsia_component::client::{launch, launcher, App},
+    };
+
+    fn start_provider_with_default_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
+        let launcher = launcher().context("Failed to open launcher service")?;
+        let app =
+            launch(&launcher, "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
+                .context("Failed to launch fonts_exp::Provider")?;
+
+        let font_provider = app
+            .connect_to_service::<fonts_exp::ProviderMarker>()
+            .context("Failed to connect to fonts_exp::Provider")?;
+
+        Ok((app, font_provider))
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_typeface_by_id() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_default_fonts()?;
+        let response = await!(font_provider.get_typeface_by_id(1, 0));
+        assert!(response.is_err());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_typefaces_by_family() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_default_fonts()?;
+        let mut family = FamilyName { name: String::new() };
+        let response = await!(font_provider.get_typefaces_by_family(&mut family));
+        assert!(response.is_err());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_default_fonts()?;
+        let request =
+            fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query: None };
+        let response = await!(font_provider.list_typefaces(request));
+        assert!(response.is_err());
+        Ok(())
+    }
+}

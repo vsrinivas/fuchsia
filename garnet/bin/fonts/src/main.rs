@@ -11,18 +11,23 @@ mod font_service;
 mod freetype_ffi;
 mod manifest;
 
-use self::font_service::FontService;
-use failure::{Error, ResultExt};
+use self::font_service::{FontService, ProviderRequestStream};
+use failure::Error;
+use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use futures::StreamExt;
 use getopts;
 use std::path::PathBuf;
-use std::sync::Arc;
+
+#[macro_use]
+extern crate fuchsia_syslog as syslog;
 
 const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
 const VENDOR_FONT_MANIFEST_PATH: &str = "/config/data/fonts/manifest.json";
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&["fonts"])?;
+
     let mut opts = getopts::Options::new();
 
     opts.optflag("h", "help", "")
@@ -46,6 +51,8 @@ fn main() -> Result<(), Error> {
         if font_manifest_path.exists() {
             service.load_manifest(&font_manifest_path)?;
         }
+    } else {
+        fx_vlog!(1, "no-default-fonts set, not loading fonts from default location");
     }
 
     for m in options.opt_strs("m") {
@@ -54,15 +61,15 @@ fn main() -> Result<(), Error> {
 
     service.check_can_start()?;
 
-    let service = Arc::new(service);
-
-    let mut executor = fuchsia_async::Executor::new()
-        .context("Creating async executor for Font service failed")?;
-
+    fx_vlog!(1, "Adding FIDL services");
     let mut fs = ServiceFs::new();
     fs.dir("public")
-        .add_fidl_service(move |stream| font_service::spawn_server(service.clone(), stream));
+        .add_fidl_service(ProviderRequestStream::Stable)
+        .add_fidl_service(ProviderRequestStream::Experimental);
     fs.take_and_serve_directory_handle()?;
-    let () = executor.run_singlethreaded(fs.collect());
+    let fs = fs;
+
+    await!(service.run(fs));
+
     Ok(())
 }

@@ -11,10 +11,11 @@ use {
     failure::{format_err, Error, ResultExt},
     fdio, fidl,
     fidl::encoding::{Decodable, OutOfLine},
-    fidl_fuchsia_fonts as fonts,
+    fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
-    fidl_fuchsia_mem as mem, fuchsia_async as fasync,
-    futures::{prelude::*, FutureExt},
+    fidl_fuchsia_mem as mem,
+    fuchsia_component::server::{ServiceFs, ServiceObj},
+    futures::prelude::*,
     log,
     parking_lot::RwLock,
     std::{
@@ -159,6 +160,7 @@ impl FontService {
     }
 
     pub fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
+        fx_vlog!(1, "Loading manifest {:?}", manifest_path);
         let manifest = manifest::FontsManifest::load_from_file(&manifest_path)?;
         self.add_fonts_from_manifest(manifest).with_context(|_| {
             format!("Failed to load fonts from {}", manifest_path.to_string_lossy())
@@ -369,22 +371,66 @@ impl FontService {
             }
         }
     }
-}
 
-pub fn spawn_server(font_service: Arc<FontService>, stream: fonts::ProviderRequestStream) {
-    // TODO(I18N-18): Consider making handle_font_provider_request() and load_asset_to_vmo()
-    // asynchronous and using try_for_each_concurrent() instead of try_for_each() here. That would
-    // be useful only if clients can send more than one concurrent request.
-    fasync::spawn(run_server(font_service, stream).map(|_| ()));
-}
-
-async fn run_server(
-    font_service: Arc<FontService>,
-    mut stream: fonts::ProviderRequestStream,
-) -> Result<(), Error> {
-    while let Some(request) = await!(stream.try_next()).context("Error running provider")? {
-        await!(font_service.handle_font_provider_request(request))
-            .context("Error while handling request")?;
+    #[allow(unused_variables)]
+    async fn handle_experimental_request(
+        &self,
+        request: fonts_exp::ProviderRequest,
+    ) -> Result<(), Error> {
+        match request {
+            fonts_exp::ProviderRequest::GetTypefaceById { id, index, responder } => {
+                Err(format_err!("Unimplemented: GetTypefaceById"))
+            }
+            fonts_exp::ProviderRequest::GetTypefacesByFamily { family, responder } => {
+                Err(format_err!("Unimplemented: GetTypefacesByFamily"))
+            }
+            fonts_exp::ProviderRequest::ListTypefaces { request, responder } => {
+                Err(format_err!("Unimplemented: ListTypefaces"))
+            }
+        }
     }
-    Ok(())
+
+    pub async fn run(self, fs: ServiceFs<ServiceObj<'static, ProviderRequestStream>>) {
+        let self_ = Arc::new(self);
+        await!(fs.for_each_concurrent(None, move |stream| self_.clone().handle_stream(stream)));
+    }
+
+    async fn handle_stream(self: Arc<Self>, stream: ProviderRequestStream) {
+        let self_ = self.clone();
+        match stream {
+            ProviderRequestStream::Stable(stream) => {
+                await!(self_.as_ref().handle_stream_stable(stream)).unwrap_or_default()
+            }
+            ProviderRequestStream::Experimental(stream) => {
+                await!(self_.as_ref().handle_stream_experimental(stream)).unwrap_or_default()
+            }
+        }
+    }
+
+    async fn handle_stream_stable(
+        &self,
+        mut stream: fonts::ProviderRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = await!(stream.try_next()).context("Error running provider")? {
+            await!(self.handle_font_provider_request(request))
+                .context("Error while handling request")?;
+        }
+        Ok(())
+    }
+
+    async fn handle_stream_experimental(
+        &self,
+        mut stream: fonts_exp::ProviderRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = await!(stream.try_next()).context("Error running provider")? {
+            await!(self.handle_experimental_request(request))
+                .context("Error while handling request")?;
+        }
+        Ok(())
+    }
+}
+
+pub enum ProviderRequestStream {
+    Stable(fonts::ProviderRequestStream),
+    Experimental(fonts_exp::ProviderRequestStream),
 }

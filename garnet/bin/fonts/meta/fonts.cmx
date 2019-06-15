@@ -5,6 +5,9 @@
     "sandbox": {
         "features": [
             "config-data"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
         ]
     }
 }
