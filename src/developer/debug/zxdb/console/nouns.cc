@@ -24,7 +24,9 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
+#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
+#include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/format_value.h"
 #include "src/developer/debug/zxdb/console/format_value_process_context_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -280,54 +282,6 @@ Examples
       Attach to job context 2, regardless of the active one.
 )";
 
-void ListJobs(ConsoleContext* context) {
-  auto job_contexts = context->session()->system().GetJobContexts();
-
-  int active_job_context_id = context->GetActiveJobContextId();
-
-  // Sort by ID.
-  std::vector<std::pair<int, JobContext*>> id_job_contexts;
-  for (auto& job_context : job_contexts)
-    id_job_contexts.push_back(
-        std::make_pair(context->IdForJobContext(job_context), job_context));
-  std::sort(id_job_contexts.begin(), id_job_contexts.end());
-
-  std::vector<std::vector<std::string>> rows;
-  for (const auto& pair : id_job_contexts) {
-    rows.emplace_back();
-    std::vector<std::string>& row = rows.back();
-
-    // "Current process" marker (or nothing).
-    if (pair.first == active_job_context_id)
-      row.emplace_back(GetRightArrow());
-    else
-      row.emplace_back();
-
-    // ID.
-    row.push_back(fxl::StringPrintf("%d", pair.first));
-
-    // State and koid (if running).
-    row.push_back(JobContextStateToString(pair.second->GetState()));
-    if (pair.second->GetState() == JobContext::State::kAttached) {
-      row.push_back(
-          fxl::StringPrintf("%" PRIu64, pair.second->GetJob()->GetKoid()));
-    } else {
-      row.emplace_back();
-    }
-
-    row.push_back(DescribeJobContextName(pair.second));
-  }
-
-  OutputBuffer out;
-  FormatTable(
-      {ColSpec(Align::kLeft),
-       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
-       ColSpec(Align::kLeft, 0, "Name")},
-      rows, &out);
-  Console::get()->Output(out);
-}
-
 // Returns true if processing should stop (either a thread command or an error),
 // false to continue processing to the nex noun type.
 bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
@@ -335,14 +289,14 @@ bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return false;
 
   if (cmd.GetNounIndex(Noun::kJob) == Command::kNoIndex) {
-    // Just "job", this lists available job.
-    ListJobs(context);
+    // Just "job", this lists the jobs.
+    Console::get()->Output(FormatJobList(context));
     return true;
   }
 
   FXL_DCHECK(cmd.job_context());
   context->SetActiveJobContext(cmd.job_context());
-  Console::get()->Output(DescribeJobContext(context, cmd.job_context()));
+  Console::get()->Output(FormatJobContext(context, cmd.job_context()));
   return true;
 }
 
@@ -386,53 +340,6 @@ Examples
       Runs process context 2, regardless of the active one.
 )";
 
-void ListProcesses(ConsoleContext* context) {
-  auto targets = context->session()->system().GetTargets();
-
-  int active_target_id = context->GetActiveTargetId();
-
-  // Sort by ID.
-  std::vector<std::pair<int, Target*>> id_targets;
-  for (auto& target : targets)
-    id_targets.push_back(std::make_pair(context->IdForTarget(target), target));
-  std::sort(id_targets.begin(), id_targets.end());
-
-  std::vector<std::vector<std::string>> rows;
-  for (const auto& pair : id_targets) {
-    rows.emplace_back();
-    std::vector<std::string>& row = rows.back();
-
-    // "Current process" marker (or nothing).
-    if (pair.first == active_target_id)
-      row.emplace_back(GetRightArrow());
-    else
-      row.emplace_back();
-
-    // ID.
-    row.push_back(fxl::StringPrintf("%d", pair.first));
-
-    // State and koid (if running).
-    row.push_back(TargetStateToString(pair.second->GetState()));
-    if (pair.second->GetState() == Target::State::kRunning) {
-      row.push_back(
-          fxl::StringPrintf("%" PRIu64, pair.second->GetProcess()->GetKoid()));
-    } else {
-      row.emplace_back();
-    }
-
-    row.push_back(DescribeTargetName(pair.second));
-  }
-
-  OutputBuffer out;
-  FormatTable(
-      {ColSpec(Align::kLeft),
-       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
-       ColSpec(Align::kLeft, 0, "Name")},
-      rows, &out);
-  Console::get()->Output(out);
-}
-
 // Returns true if processing should stop (either a thread command or an error),
 // false to continue processing to the next noun type.
 bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
@@ -441,7 +348,7 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   if (cmd.GetNounIndex(Noun::kProcess) == Command::kNoIndex) {
     // Just "process", this lists available processes.
-    ListProcesses(context);
+    Console::get()->Output(FormatTargetList(context));
     return true;
   }
 
@@ -450,7 +357,7 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // command line (otherwise the command would have been rejected before here).
   FXL_DCHECK(cmd.target());
   context->SetActiveTarget(cmd.target());
-  Console::get()->Output(DescribeTarget(context, cmd.target()));
+  Console::get()->Output(FormatTarget(context, cmd.target()));
   return true;
 }
 

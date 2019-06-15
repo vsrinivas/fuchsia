@@ -19,7 +19,9 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
+#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
+#include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
@@ -78,7 +80,7 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
     }
     out.Append(err);
   } else if (job_context) {
-    out.Append(DescribeJobContext(&console->context(), job_context.get()));
+    out.Append(FormatJobContext(&console->context(), job_context.get()));
   }
 
   console->Output(out);
@@ -108,7 +110,7 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target,
       }
       out.Append(err);
     } else if (target) {
-      out.Append(DescribeTarget(&console->context(), target.get()));
+      out.Append(FormatTarget(&console->context(), target.get()));
     }
 
     console->Output(out);
@@ -647,7 +649,8 @@ Err DoAspace(ConsoleContext* context, const Command& cmd) {
 
 // stdout/stderr ---------------------------------------------------------------
 
-const char kStdioShortHelp[] = "stdout | stderr: Show process io.";
+const char kStdoutShortHelp[] = "stdout: Show process output.";
+const char kStderrShortHelp[] = "stderr: Show process error output.";
 const char kStdioHelp[] =
     R"(stdout | stderr
 
@@ -809,9 +812,9 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kAspace] =
       VerbRecord(&DoAspace, {"aspace", "as"}, kAspaceShortHelp, kAspaceHelp,
                  CommandGroup::kQuery);
-  (*verbs)[Verb::kStdout] = VerbRecord(&DoStdout, {"stdout"}, kStdioShortHelp,
+  (*verbs)[Verb::kStdout] = VerbRecord(&DoStdout, {"stdout"}, kStdoutShortHelp,
                                        kStdioHelp, CommandGroup::kProcess);
-  (*verbs)[Verb::kStderr] = VerbRecord(&DoStderr, {"stderr"}, kStdioShortHelp,
+  (*verbs)[Verb::kStderr] = VerbRecord(&DoStderr, {"stderr"}, kStderrShortHelp,
                                        kStdioHelp, CommandGroup::kProcess);
   (*verbs)[Verb::kPastBacktrace] =
       VerbRecord(&DoPastBacktrace, {"past-backtrace"}, kPastBacktraceShortHelp,

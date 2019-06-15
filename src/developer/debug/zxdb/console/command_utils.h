@@ -12,7 +12,6 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
-#include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -84,8 +83,6 @@ Err ParseHostPort(const std::string& in_host, const std::string& in_port,
 Err ParseHostPort(const std::string& input, std::string* out_host,
                   uint16_t* out_port);
 
-std::string TargetStateToString(Target::State state);
-std::string JobContextStateToString(JobContext::State state);
 std::string ThreadStateToString(
     debug_ipc::ThreadRecord::State state,
     debug_ipc::ThreadRecord::BlockedReason blocked_reason);
@@ -94,18 +91,6 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
                                     const BreakpointSettings& settings);
 std::string BreakpointStopToString(BreakpointSettings::StopMode mode);
 const char* BreakpointEnabledToString(bool enabled);
-
-std::string DescribeTarget(const ConsoleContext* context, const Target* target);
-
-std::string DescribeJobContext(const ConsoleContext* context,
-                               const JobContext* job_context);
-
-// Returns the process name of the given target, depending on the running
-// process or the current app name, as applicable.
-std::string DescribeTargetName(const Target* target);
-
-// Returns the job name of the given job context.
-std::string DescribeJobContextName(const JobContext* job_context);
 
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 

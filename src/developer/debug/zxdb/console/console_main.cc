@@ -68,6 +68,16 @@ Err SetupActions(const CommandLineOptions& options,
   return Err();
 }
 
+void InitConsole(zxdb::Console& console) {
+  console.Init();
+
+  // Help text.
+  OutputBuffer help;
+  help.Append(Syntax::kWarning, "👉 ");
+  help.Append(Syntax::kComment, "To get started, try \"status\" or \"help\".");
+  console.Output(help);
+}
+
 void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
                      std::vector<zxdb::Action> actions) {
   auto callback = [&](zxdb::Err err) {
@@ -80,7 +90,7 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
       msg = fxl::StringPrintf("Error executing actions: %s", err.msg().c_str());
     }
     // Go into interactive mode.
-    console.Init();
+    InitConsole(console);
   };
 
   // This will add the actions to the MessageLoop and oversee that all the
@@ -184,18 +194,7 @@ int ConsoleMain(int argc, const char* argv[]) {
       ScheduleActions(session, console, std::move(actions));
     } else {
       // Interactive mode is the default mode.
-      console.Init();
-
-      // Tip for connecting when run interactively.
-      OutputBuffer help;
-      help.Append(Syntax::kWarning, "👉 ");
-      help.Append(
-          Syntax::kComment,
-          "Please \"connect <ip>:<port>\" matching what you passed to\n   "
-          "run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx "
-          "--port=<port>\n"
-          "   on the target system. Or try \"help\".");
-      console.Output(help);
+      InitConsole(console);
     }
 
     loop.Run();

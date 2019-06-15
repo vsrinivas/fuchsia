@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/status.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
 namespace zxdb {
@@ -341,7 +342,7 @@ void DoCompleteOpenDump(const Command& cmd, const std::string& prefix,
       if (ec) {
         return;
       }
-    } else if (!std::filesystem::is_directory(path)) {
+    } else if (!std::filesystem::is_directory(path, ec)) {
       return;
     }
   }
@@ -417,6 +418,33 @@ Err DoCls(ConsoleContext* context, const Command& cmd,
     callback(Err());
   return Err();
 }
+
+// status ----------------------------------------------------------------------
+
+const char kStatusShortHelp[] = "status: Show debugger status.";
+const char kStatusHelp[] = R"(status: Show debugger status.
+
+  Shows information on the current connection, process, thread, etc. along
+  with suggestions on what to do.
+)";
+
+Err DoStatus(ConsoleContext* context, const Command& cmd,
+             CommandCallback callback = nullptr) {
+  OutputBuffer out;
+  out.Append(GetConnectionStatus(context->session()));
+  out.Append("\n");
+  if (context->session()->IsConnected()) {
+    out.Append(GetJobStatus(context));
+    out.Append("\n");
+    out.Append(GetProcessStatus(context));
+    out.Append("\n");
+  }
+
+  Console::get()->Output(out);
+
+  return Err();
+}
+
 }  // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -437,6 +465,9 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kOpenDump] = VerbRecord(
       &DoOpenDump, &DoCompleteOpenDump, {"opendump"}, kOpenDumpShortHelp,
       kOpenDumpHelp, CommandGroup::kGeneral, SourceAffinity::kNone);
+  (*verbs)[Verb::kStatus] =
+      VerbRecord(&DoStatus, {"status", "stat", "wtf"}, kStatusShortHelp,
+                 kStatusHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
                                     CommandGroup::kGeneral);
 }

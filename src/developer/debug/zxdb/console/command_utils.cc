@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_function.h"
+#include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
@@ -51,7 +52,7 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
       ErrType::kInput,
       fxl::StringPrintf("%s requires a running process but process %d is %s.",
                         command_name, context->IdForTarget(target),
-                        TargetStateToString(state).c_str()));
+                        TargetStateToString(state)));
 }
 
 Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
@@ -261,34 +262,6 @@ Err ParseHostPort(const std::string& input, std::string* out_host,
   return ParseHostPort(host, port, out_host, out_port);
 }
 
-std::string TargetStateToString(Target::State state) {
-  switch (state) {
-    case Target::State::kNone:
-      return "Not running";
-    case Target::State::kStarting:
-      return "Starting";
-    case Target::State::kAttaching:
-      return "Attaching";
-    case Target::State::kRunning:
-      return "Running";
-  }
-  FXL_NOTREACHED();
-  return std::string();
-}
-
-std::string JobContextStateToString(JobContext::State state) {
-  switch (state) {
-    case JobContext::State::kNone:
-      return "Not attached";
-    case JobContext::State::kAttaching:
-      return "Attaching";
-    case JobContext::State::kAttached:
-      return "Attached";
-  }
-  FXL_NOTREACHED();
-  return std::string();
-}
-
 std::string ThreadStateToString(
     debug_ipc::ThreadRecord::State state,
     debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
@@ -340,68 +313,6 @@ std::string BreakpointStopToString(BreakpointSettings::StopMode mode) {
 
 const char* BreakpointEnabledToString(bool enabled) {
   return enabled ? "Enabled" : "Disabled";
-}
-
-std::string DescribeJobContext(const ConsoleContext* context,
-                               const JobContext* job_context) {
-  int id = context->IdForJobContext(job_context);
-  std::string state = JobContextStateToString(job_context->GetState());
-
-  // Koid string. This includes a trailing space when present so it can be
-  // concat'd even when not present and things look nice.
-  std::string koid_str;
-  if (job_context->GetState() == JobContext::State::kAttached) {
-    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ",
-                                 job_context->GetJob()->GetKoid());
-  }
-
-  std::string result =
-      fxl::StringPrintf("Job %d [%s] %s", id, state.c_str(), koid_str.c_str());
-  result += DescribeJobContextName(job_context);
-  return result;
-}
-
-std::string DescribeTarget(const ConsoleContext* context,
-                           const Target* target) {
-  int id = context->IdForTarget(target);
-  std::string state = TargetStateToString(target->GetState());
-
-  // Koid string. This includes a trailing space when present so it can be
-  // concat'd even when not present and things look nice.
-  std::string koid_str;
-  if (target->GetState() == Target::State::kRunning) {
-    koid_str =
-        fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
-  }
-
-  std::string result = fxl::StringPrintf("Process %d [%s] %s", id,
-                                         state.c_str(), koid_str.c_str());
-  result += DescribeTargetName(target);
-  return result;
-}
-
-std::string DescribeTargetName(const Target* target) {
-  // When running, use the object name if any.
-  std::string name;
-  if (target->GetState() == Target::State::kRunning)
-    name = target->GetProcess()->GetName();
-
-  // Otherwise fall back to the program name which is the first arg.
-  if (name.empty()) {
-    const std::vector<std::string>& args = target->GetArgs();
-    if (!args.empty())
-      name += args[0];
-  }
-  return name;
-}
-
-std::string DescribeJobContextName(const JobContext* job_context) {
-  // When running, use the object name if any.
-  std::string name;
-  if (job_context->GetState() == JobContext::State::kAttached)
-    name = job_context->GetJob()->GetName();
-
-  return name;
 }
 
 std::string DescribeThread(const ConsoleContext* context,

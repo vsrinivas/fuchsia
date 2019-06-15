@@ -391,6 +391,8 @@ void Session::Connect(const std::string& host, uint16_t port,
     return;
   }
 
+  connected_host_ = host;
+  connected_port_ = port;
   pending_connection_ = fxl::MakeRefCounted<PendingConnection>(host, port);
   pending_connection_->Initiate(weak_factory_.GetWeakPtr(),
                                 std::move(callback));
@@ -414,6 +416,7 @@ void Session::OpenMinidump(const std::string& path,
   }
 
   is_minidump_ = true;
+  minidump_path_ = path;
   remote_api_ = std::make_unique<MinidumpRemoteAPI>(this);
   auto minidump = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get());
   Err err = minidump->Open(path);
@@ -458,6 +461,7 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
 
   if (is_minidump_) {
     is_minidump_ = false;
+    minidump_path_.clear();
     remote_api_ = std::make_unique<RemoteAPIImpl>(this);
   } else if (!connection_storage_) {
     // The connection is persistent (passed in via the constructor) and can't
@@ -482,6 +486,8 @@ bool Session::ClearConnectionData() {
     return false;
 
   stream_ = nullptr;
+  connected_host_.clear();
+  connected_port_ = 0;
   arch_info_.reset();
   connection_storage_.reset();
   arch_ = debug_ipc::Arch::kUnknown;

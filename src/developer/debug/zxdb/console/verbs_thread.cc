@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/console/format_frame.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
+#include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/format_value.h"
 #include "src/developer/debug/zxdb/console/format_value_process_context_impl.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
@@ -744,8 +745,9 @@ Err PauseTarget(ConsoleContext* context, Target* target,
     if (!weak_process)
       return;
     Console* console = Console::get();
-    console->Output("Paused " + DescribeTarget(&console->context(),
-                                               weak_process->GetTarget()));
+    OutputBuffer out("Paused");
+    out.Append(FormatTarget(&console->context(), weak_process->GetTarget()));
+    console->Output(out);
 
     if (weak_thread) {
       // Thread is current, show current location.
@@ -779,8 +781,8 @@ Err PauseSystem(System* system, Thread* current_thread) {
     for (const Target* target : weak_system->GetTargets()) {
       if (const Process* process = target->GetProcess()) {
         paused_process_count++;
-        out.Append(" " + GetBullet() + " " +
-                   DescribeTarget(&console->context(), target));
+        out.Append(" " + GetBullet() + " ");
+        out.Append(FormatTarget(&console->context(), target));
         out.Append("\n");
       }
     }

@@ -55,12 +55,21 @@ class Session : public SettingStoreObserver {
   void AddObserver(SessionObserver* observer);
   void RemoveObserver(SessionObserver* observer);
 
+  // Returns information about whether this session is connected to a minidump
+  // instead of a live system.
+  bool is_minidump() const { return is_minidump_; }
+
   // Notification about the stream.
   void OnStreamReadable();
   void OnStreamError();
 
   // Returns true if there is currently a connection.
   bool IsConnected() const;
+
+  // Information about the current connection.
+  const std::string minidump_path() const { return minidump_path_; }
+  const std::string connected_host() const { return connected_host_; }
+  uint16_t connected_port() const { return connected_port_; }
 
   // Connects to a remote system. Calling when there is already a connection
   // will issue the callback with an error.
@@ -209,10 +218,15 @@ class Session : public SettingStoreObserver {
 
   // When using non-persistent connections (no connection passed in via the
   // constructor), this will hold the underlying OS connection that is used
-  // to back stream_.
+  // to back stream_ as well as the
   //
   // Code should use stream_ for sending and receiving.
   std::unique_ptr<debug_ipc::BufferedFD> connection_storage_;
+
+  // Stores what the session is currently connected to.
+  std::string minidump_path_;
+  std::string connected_host_;
+  uint16_t connected_port_ = 0;
 
   // When a connection has been requested but is being connected on the
   // background thread, this will hold the pointer.

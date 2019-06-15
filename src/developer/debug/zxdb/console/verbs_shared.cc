@@ -6,6 +6,8 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/console/format_job.h"
+#include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
 namespace zxdb {
@@ -70,12 +72,12 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
     JobContext* new_job_context =
         context->session()->system().CreateNewJobContext(cmd.job_context());
     context->SetActiveJobContext(new_job_context);
-    Console::get()->Output(DescribeJobContext(context, new_job_context));
+    Console::get()->Output(FormatJobContext(context, new_job_context));
   } else {
     Target* new_target =
         context->session()->system().CreateNewTarget(cmd.target());
     context->SetActiveTarget(new_target);
-    Console::get()->Output(DescribeTarget(context, new_target));
+    Console::get()->Output(FormatTarget(context, new_target));
   }
   return Err();
 }
