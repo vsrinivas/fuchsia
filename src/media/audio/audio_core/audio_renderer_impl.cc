@@ -470,7 +470,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Distribute our packet to all our dest links
   ForEachDestLink([moved_packet = std::move(packet_ref)](auto& link) {
-    AsPacketSource(link).PushToPendingQueue(std::move(moved_packet));
+    AsPacketSource(link).PushToPendingQueue(moved_packet);
   });
 
   // Things went well, cancel the cleanup hook.
@@ -497,7 +497,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // will take a reference to the flush token and ensure a callback is queued at
   // the proper time (after all pending packet-complete callbacks are queued).
   ForEachDestLink([moved_token = std::move(flush_token)](auto& link) {
-    AsPacketSource(link).FlushPendingQueue(std::move(moved_token));
+    AsPacketSource(link).FlushPendingQueue(moved_token);
   });
 
   // Invalidate any internal state which gets reset after a flush.
