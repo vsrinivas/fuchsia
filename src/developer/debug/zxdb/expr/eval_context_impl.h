@@ -49,6 +49,7 @@ class EvalContextImpl : public EvalContext {
   ~EvalContextImpl() override;
 
   // EvalContext implementation.
+  ExprLanguage GetLanguage() const override;
   void GetNamedValue(const ParsedIdentifier& name,
                      ValueCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Variable> variable,
@@ -81,6 +82,9 @@ class EvalContextImpl : public EvalContext {
   // Innermost block of the current context. May be null if there is none
   // (this means you won't get any local variable lookups).
   fxl::RefPtr<const CodeBlock> block_;
+
+  // Language extracted from the code block.
+  ExprLanguage language_ = ExprLanguage::kC;
 
   mutable fxl::WeakPtrFactory<EvalContextImpl> weak_factory_;
 };

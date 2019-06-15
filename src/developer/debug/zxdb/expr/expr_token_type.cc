@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/expr_token_type.h"
 
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 
@@ -28,46 +29,55 @@ constexpr bool StringIsAlphanum(std::string_view str) {
 }  // namespace
 
 // Must come before the tables below.
-constexpr ExprTokenRecord::ExprTokenRecord(ExprTokenType t,
+constexpr ExprTokenRecord::ExprTokenRecord(ExprTokenType t, unsigned langs,
                                            std::string_view static_val)
     : type(t),
       static_value(static_val),
-      is_alphanum(StringIsAlphanum(static_val)) {}
+      is_alphanum(StringIsAlphanum(static_val)),
+      languages(langs) {}
 
 namespace {
 
+constexpr unsigned kLangAll = static_cast<unsigned>(ExprLanguage::kC) |
+                              static_cast<unsigned>(ExprLanguage::kRust);
+constexpr unsigned kLangC = static_cast<unsigned>(ExprLanguage::kC);
+constexpr unsigned kLangRust = static_cast<unsigned>(ExprLanguage::kRust);
+
+// Note that we allow a number of things like "sizeof" in Rust as well because
+// there are no good alternatives and these constructs can be useful. We may
+// consider replacing them with a more Rust-like construct in the future.
 constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     // clang-format off
-    {ExprTokenType::kInvalid},
-    {ExprTokenType::kName},
-    {ExprTokenType::kInteger},
-    {ExprTokenType::kEquals,          "="},
-    {ExprTokenType::kEquality,        "=="},
-    {ExprTokenType::kDot,             "."},
-    {ExprTokenType::kComma,           ","},
-    {ExprTokenType::kStar,            "*"},
-    {ExprTokenType::kAmpersand,       "&"},
-    {ExprTokenType::kDoubleAnd,       "&&"},
-    {ExprTokenType::kBitwiseOr,       "|"},
-    {ExprTokenType::kLogicalOr,       "||"},
-    {ExprTokenType::kArrow,           "->"},
-    {ExprTokenType::kLeftSquare,      "["},
-    {ExprTokenType::kRightSquare,     "]"},
-    {ExprTokenType::kLeftParen,       "("},
-    {ExprTokenType::kRightParen,      ")"},
-    {ExprTokenType::kLess,            "<"},
-    {ExprTokenType::kGreater,         ">"},
-    {ExprTokenType::kMinus,           "-"},
-    {ExprTokenType::kPlus,            "+"},
-    {ExprTokenType::kColonColon,      "::"},
-    {ExprTokenType::kTrue,            "true"},
-    {ExprTokenType::kFalse,           "false"},
-    {ExprTokenType::kConst,           "const"},
-    {ExprTokenType::kVolatile,        "volatile"},
-    {ExprTokenType::kRestrict,        "restrict"},
-    {ExprTokenType::kReinterpretCast, "reinterpret_cast"},
-    {ExprTokenType::kStaticCast,      "static_cast"},
-    {ExprTokenType::kSizeof,          "sizeof"},
+    {ExprTokenType::kInvalid,         0},
+    {ExprTokenType::kName,            kLangAll},
+    {ExprTokenType::kInteger,         kLangAll},
+    {ExprTokenType::kEquals,          kLangAll, "="},
+    {ExprTokenType::kEquality,        kLangAll, "=="},
+    {ExprTokenType::kDot,             kLangAll, "."},
+    {ExprTokenType::kComma,           kLangAll, ","},
+    {ExprTokenType::kStar,            kLangAll, "*"},
+    {ExprTokenType::kAmpersand,       kLangAll, "&"},
+    {ExprTokenType::kDoubleAnd,       kLangAll, "&&"},
+    {ExprTokenType::kBitwiseOr,       kLangAll, "|"},
+    {ExprTokenType::kLogicalOr,       kLangAll, "||"},
+    {ExprTokenType::kArrow,           kLangAll, "->"},
+    {ExprTokenType::kLeftSquare,      kLangAll, "["},
+    {ExprTokenType::kRightSquare,     kLangAll, "]"},
+    {ExprTokenType::kLeftParen,       kLangAll, "("},
+    {ExprTokenType::kRightParen,      kLangAll, ")"},
+    {ExprTokenType::kLess,            kLangAll, "<"},
+    {ExprTokenType::kGreater,         kLangAll, ">"},
+    {ExprTokenType::kMinus,           kLangAll, "-"},
+    {ExprTokenType::kPlus,            kLangAll, "+"},
+    {ExprTokenType::kColonColon,      kLangAll, "::"},
+    {ExprTokenType::kTrue,            kLangAll, "true"},
+    {ExprTokenType::kFalse,           kLangAll, "false"},
+    {ExprTokenType::kConst,           kLangAll, "const"},
+    {ExprTokenType::kVolatile,        kLangC,   "volatile"},
+    {ExprTokenType::kRestrict,        kLangC,   "restrict"},
+    {ExprTokenType::kReinterpretCast, kLangC,   "reinterpret_cast"},
+    {ExprTokenType::kStaticCast,      kLangC,   "static_cast"},
+    {ExprTokenType::kSizeof,          kLangAll, "sizeof"},
     // clang-format on
 };
 

@@ -54,7 +54,7 @@ constexpr size_t kNumExprTokenTypes =
 
 struct ExprTokenRecord {
   constexpr ExprTokenRecord() = default;
-  constexpr ExprTokenRecord(ExprTokenType t,
+  constexpr ExprTokenRecord(ExprTokenType t, unsigned langs,
                             std::string_view static_val = std::string_view());
 
   ExprTokenType type = ExprTokenType::kInvalid;
@@ -67,8 +67,8 @@ struct ExprTokenRecord {
   // to separate it from another token requires a non-alphanumeric character.
   bool is_alphanum = false;
 
-  // We will likely need more stuff here such as what languages this token
-  // applies to (C, Rust, etc.).
+  // A bitfield consisting of a combination of ExprLanguage values.
+  unsigned languages = 0;
 };
 
 const ExprTokenRecord& RecordForTokenType(ExprTokenType);

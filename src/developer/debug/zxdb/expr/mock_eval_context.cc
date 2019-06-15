@@ -61,9 +61,10 @@ fxl::RefPtr<SymbolDataProvider> MockEvalContext::GetDataProvider() {
 
 NameLookupCallback MockEvalContext::GetSymbolNameLookupCallback() {
   // This mock version just integrates with builtin types.
-  return [](const ParsedIdentifier& ident, const FindNameOptions& opts) {
+  return [lang = language_](const ParsedIdentifier& ident,
+                            const FindNameOptions& opts) {
     if (opts.find_types) {
-      if (auto type = GetBuiltinType(ident.GetFullName()))
+      if (auto type = GetBuiltinType(lang, ident.GetFullName()))
         return FoundName(std::move(type));
     }
     return FoundName();

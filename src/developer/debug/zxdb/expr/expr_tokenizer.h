@@ -10,13 +10,16 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 
 namespace zxdb {
 
 class ExprTokenizer {
  public:
-  explicit ExprTokenizer(const std::string& input);
+  explicit ExprTokenizer(const std::string& input,
+                         ExprLanguage lang = ExprLanguage::kC);
 
   // Returns true on successful tokenizing. In this case, the tokens can be
   // read from tokens(). On failure, err() will contain the error message, and
@@ -66,6 +69,8 @@ class ExprTokenizer {
   bool can_advance(int n) const { return cur_ + n <= input_.size(); }
 
   std::string input_;
+  ExprLanguage language_;
+
   size_t cur_ = 0;  // Character offset into input_.
 
   Err err_;

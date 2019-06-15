@@ -20,6 +20,8 @@ class MockEvalContext : public EvalContext {
 
   MockSymbolDataProvider* data_provider() { return data_provider_.get(); }
 
+  void set_language(ExprLanguage lang) { language_ = lang; }
+
   // Adds the given mocked variable with the given name and value.
   void AddVariable(const std::string& name, ExprValue v);
 
@@ -28,6 +30,7 @@ class MockEvalContext : public EvalContext {
   void AddType(fxl::RefPtr<Type> type);
 
   // EvalContext implementation.
+  ExprLanguage GetLanguage() const override { return language_; }
   void GetNamedValue(const ParsedIdentifier& ident,
                      ValueCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Variable> variable,
@@ -41,6 +44,7 @@ class MockEvalContext : public EvalContext {
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
   std::map<std::string, ExprValue> values_;
   std::map<std::string, fxl::RefPtr<Type>> types_;
+  ExprLanguage language_ = ExprLanguage::kC;
 };
 
 }  // namespace zxdb

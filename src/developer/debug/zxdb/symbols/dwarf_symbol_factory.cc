@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
@@ -183,6 +184,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(
       break;
     case DwarfTag::kBaseType:
       symbol = DecodeBaseType(die);
+      break;
+    case DwarfTag::kCompileUnit:
+      symbol = DecodeCompileUnit(die);
       break;
     case DwarfTag::kEnumerationType:
       symbol = DecodeEnum(die);
@@ -529,6 +533,28 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(
 
   if (parent)
     result->set_parent(MakeLazy(parent));
+
+  return result;
+}
+
+fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCompileUnit(
+    const llvm::DWARFDie& die) {
+  DwarfDieDecoder decoder(symbols_->context(), die.getDwarfUnit());
+
+  llvm::Optional<const char*> name;
+  decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
+
+  llvm::Optional<uint64_t> language;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_language, &language);
+
+  if (!decoder.Decode(die))
+    return fxl::MakeRefCounted<Symbol>();
+
+  auto result = fxl::MakeRefCounted<CompileUnit>();
+  if (name)
+    result->set_name(*name);
+  if (language)
+    result->set_language(static_cast<DwarfLang>(*language));
 
   return result;
 }

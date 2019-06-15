@@ -14,7 +14,7 @@ namespace zxdb {
 void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
                     bool follow_references,
                     std::function<void(const Err& err, ExprValue value)> cb) {
-  ExprTokenizer tokenizer(input);
+  ExprTokenizer tokenizer(input, context->GetLanguage());
   if (!tokenizer.Tokenize()) {
     cb(tokenizer.err(), ExprValue());
     return;

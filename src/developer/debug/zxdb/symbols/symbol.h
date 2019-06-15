@@ -20,6 +20,7 @@ class ArrayType;
 class BaseType;
 class CodeBlock;
 class Collection;
+class CompileUnit;
 class DataMember;
 class Enumeration;
 class Function;
@@ -123,10 +124,15 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // cases above since it just returns a string, but it's not parseable.
   const Identifier& GetIdentifier() const;
 
+  // Returns the CompileUnit that this symbol is associated with. Returns null
+  // on failure.
+  const CompileUnit* GetCompileUnit() const;
+
   // Manual RTTI.
   virtual const ArrayType* AsArrayType() const;
   virtual const BaseType* AsBaseType() const;
   virtual const CodeBlock* AsCodeBlock() const;
+  virtual const CompileUnit* AsCompileUnit() const;
   virtual const DataMember* AsDataMember() const;
   virtual const Enumeration* AsEnumeration() const;
   virtual const Function* AsFunction() const;
@@ -153,6 +159,10 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   CodeBlock* AsCodeBlock() {
     return const_cast<CodeBlock*>(
         const_cast<const Symbol*>(this)->AsCodeBlock());
+  }
+  CompileUnit* AsCompileUnit() {
+    return const_cast<CompileUnit*>(
+        const_cast<const Symbol*>(this)->AsCompileUnit());
   }
   DataMember* AsDataMember() {
     return const_cast<DataMember*>(

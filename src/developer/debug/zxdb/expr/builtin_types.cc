@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include "src/lib/fxl/logging.h"
+
 namespace zxdb {
 
 namespace {
@@ -20,7 +22,7 @@ struct BuiltinTypeInfo {
 // and "signed int". Note that the modifiers can appear in different orders
 // like "signed short int" vs. "short signed int", and can also have
 // intersperced CV-modifiers like "short volatile signed const int".
-const BuiltinTypeInfo kBuiltinInfo[] = {
+const BuiltinTypeInfo kCBuiltinInfo[] = {
     // clang-format off
 
     { "void",     BaseType::kBaseTypeNone,         0 },
@@ -59,6 +61,33 @@ const BuiltinTypeInfo kBuiltinInfo[] = {
     // clang-format on
 };
 
+const BuiltinTypeInfo kRustBuiltinInfo[] = {
+    // clang-format off
+
+    { "bool",     BaseType::kBaseTypeBoolean,      1 },
+    { "char",     BaseType::kBaseTypeUnsignedChar, 4 },
+
+    // Integer types.
+    { "i8",       BaseType::kBaseTypeSigned,       1 },
+    { "u8",       BaseType::kBaseTypeUnsigned,     1 },
+    { "i16",      BaseType::kBaseTypeSigned,       2 },
+    { "u16",      BaseType::kBaseTypeUnsigned,     2 },
+    { "i32",      BaseType::kBaseTypeSigned,       4 },
+    { "u32",      BaseType::kBaseTypeUnsigned,     4 },
+    { "i64",      BaseType::kBaseTypeSigned,       8 },
+    { "u64",      BaseType::kBaseTypeUnsigned,     8 },
+    { "i128",     BaseType::kBaseTypeSigned,       16 },
+    { "u128",     BaseType::kBaseTypeUnsigned,     16 },
+    { "isize",    BaseType::kBaseTypeSigned,       8 },  // 64-bit system.
+    { "usize",    BaseType::kBaseTypeUnsigned,     8 },
+
+    // Floating-point types.
+    { "f32",      BaseType::kBaseTypeFloat,        4 },
+    { "f64",      BaseType::kBaseTypeFloat,        8 },
+
+    // clang-format on
+};
+
 // Note on zx_status_t: Normally this will be declared in the program as a
 // typedef for an int32. Adding it here allows casting to it even if the
 // typedef is not currently in scope, which in turn will trigger the
@@ -68,22 +97,42 @@ const BuiltinTypeInfo kBuiltinInfo[] = {
 
 using BuiltinTypeInfoMap = std::map<std::string_view, const BuiltinTypeInfo*>;
 
-const BuiltinTypeInfoMap& GetBuiltinTypeMap() {
+const BuiltinTypeInfoMap* GetCBuiltinTypeMap() {
   static BuiltinTypeInfoMap map;
   if (map.empty()) {
-    for (const auto& cur : kBuiltinInfo)
+    for (const auto& cur : kCBuiltinInfo)
       map[cur.name] = &cur;
   }
-  return map;
+  return &map;
+}
+
+const BuiltinTypeInfoMap* GetRustBuiltinTypeMap() {
+  static BuiltinTypeInfoMap map;
+  if (map.empty()) {
+    for (const auto& cur : kRustBuiltinInfo)
+      map[cur.name] = &cur;
+  }
+  return &map;
 }
 
 }  // namespace
 
-fxl::RefPtr<BaseType> GetBuiltinType(std::string_view name) {
-  const auto& map = GetBuiltinTypeMap();
+fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name) {
+  const BuiltinTypeInfoMap* map;
+  switch (lang) {
+    case ExprLanguage::kC:
+      map = GetCBuiltinTypeMap();
+      break;
+    case ExprLanguage::kRust:
+      map = GetRustBuiltinTypeMap();
+      break;
+    default:
+      FXL_NOTREACHED();
+      return nullptr;
+  }
 
-  auto found = map.find(name);
-  if (found == map.end())
+  auto found = map->find(name);
+  if (found == map->end())
     return nullptr;
 
   const BuiltinTypeInfo& info = *found->second;

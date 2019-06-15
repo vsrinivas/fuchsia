@@ -15,6 +15,7 @@ static_library("expr") {
     "eval_operators.h",
     "expr.cc",
     "expr.h",
+    "expr_language.h",
     "expr_node.cc",
     "expr_node.h",
     "expr_parser.cc",

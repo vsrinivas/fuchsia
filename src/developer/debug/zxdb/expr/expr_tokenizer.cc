@@ -65,7 +65,8 @@ const std::vector<const ExprTokenRecord*>& TokensWithFirstChar(char c) {
 
 }  // namespace
 
-ExprTokenizer::ExprTokenizer(const std::string& input) : input_(input) {}
+ExprTokenizer::ExprTokenizer(const std::string& input, ExprLanguage lang)
+    : input_(input), language_(lang) {}
 
 bool ExprTokenizer::Tokenize() {
   while (!done()) {
@@ -157,6 +158,9 @@ bool ExprTokenizer::CurrentMatchesTokenRecord(
   const size_t size = record.static_value.size();
   if (!can_advance(size))
     return false;  // Not enought room.
+
+  if (!(record.languages & static_cast<unsigned>(language_)))
+    return false;  // Doesn't apply to this language.
 
   if (std::string_view(&input_[cur_], size) != record.static_value)
     return false;  // Doesn't match the token static value.

@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -85,16 +86,21 @@ EvalContextImpl::EvalContextImpl(
   if (!location.symbol())
     return;
   const CodeBlock* function = location.symbol().Get()->AsCodeBlock();
-  if (!function)
-    return;
+  if (function) {
+    // Const cast unfortunately required for RefPtr constructor.
+    block_ = fxl::RefPtr<const CodeBlock>(
+        const_cast<CodeBlock*>(function->GetMostSpecificChild(
+            location.symbol_context(), location.address())));
 
-  // Const cast unfortunately required for RefPtr constructor.
-  block_ = fxl::RefPtr<const CodeBlock>(
-      const_cast<CodeBlock*>(function->GetMostSpecificChild(
-          location.symbol_context(), location.address())));
+    // Extract the language for the code if possible.
+    if (const CompileUnit* unit = function->GetCompileUnit())
+      language_ = DwarfLangToExprLanguage(unit->language());
+  }
 }
 
 EvalContextImpl::~EvalContextImpl() = default;
+
+ExprLanguage EvalContextImpl::GetLanguage() const { return language_; }
 
 void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier,
                                     ValueCallback cb) const {
@@ -259,7 +265,7 @@ NameLookupCallback EvalContextImpl::GetSymbolNameLookupCallback() {
 
     // Fall back on builtin types.
     if (result.kind() == FoundName::kNone && opts.find_types) {
-      if (auto type = GetBuiltinType(ident.GetFullName()))
+      if (auto type = GetBuiltinType(language_, ident.GetFullName()))
         return FoundName(std::move(type));
     }
     return result;

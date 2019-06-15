@@ -7,6 +7,7 @@
 
 #include <functional>
 
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -27,6 +28,9 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
       const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value)>;
 
   virtual ~EvalContext() = default;
+
+  // Returns the language associated with the expression.
+  virtual ExprLanguage GetLanguage() const = 0;
 
   // Issues the callback with the value of the given named value in the context
   // of the current expression evaluation. This will handle things like

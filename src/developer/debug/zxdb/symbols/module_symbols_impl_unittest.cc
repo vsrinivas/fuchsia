@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
@@ -92,6 +93,14 @@ TEST(ModuleSymbols, Basic) {
   EXPECT_TRUE(
       StringEndsWith(locations[0].file_line().file(), "/zxdb_symbol_test.cc"));
   EXPECT_EQ(96, locations[0].file_line().line());
+
+  // The function symbol should have a compilation unit with a C-style language
+  // defined and the name should contain the file.
+  ASSERT_TRUE(locations[0].symbol());
+  const CompileUnit* unit = locations[0].symbol().Get()->GetCompileUnit();
+  ASSERT_TRUE(unit);
+  EXPECT_NE(std::string::npos, unit->name().find("zxdb_symbol_test.cc"));
+  EXPECT_TRUE(DwarfLangIsCFamily(unit->language()));
 }
 
 TEST(ModuleSymbols, LineDetailsForAddress) {

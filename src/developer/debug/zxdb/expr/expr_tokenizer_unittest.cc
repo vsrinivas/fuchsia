@@ -243,4 +243,26 @@ TEST(ExprTokenizer, GetErrorContext) {
       ExprTokenizer::GetErrorContext("foo", 3));
 }
 
+// Tests that C and Rust tokens are separated.
+TEST(ExprTokenizer, Language) {
+  // Test that "reinterpret_cast is valid in C but not in Rust.
+  ExprTokenizer c("reinterpret_cast", ExprLanguage::kC);
+  EXPECT_TRUE(c.Tokenize());
+  EXPECT_FALSE(c.err().has_error()) << c.err().msg();
+  auto tokens = c.tokens();
+  ASSERT_EQ(1u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kReinterpretCast, tokens[0].type());
+
+  // In Rust it's interpreted as a regular name.
+  ExprTokenizer r("reinterpret_cast", ExprLanguage::kRust);
+  EXPECT_TRUE(r.Tokenize());
+  EXPECT_FALSE(r.err().has_error()) << r.err().msg();
+  tokens = r.tokens();
+  ASSERT_EQ(1u, tokens.size());
+  EXPECT_EQ(ExprTokenType::kName, tokens[0].type());
+
+  // Currently we don't have any Rust-only tokens. When we add one we should
+  // test that it works only in Rust mode.
+}
+
 }  // namespace zxdb

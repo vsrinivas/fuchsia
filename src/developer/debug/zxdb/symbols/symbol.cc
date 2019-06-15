@@ -28,9 +28,35 @@ const Identifier& Symbol::GetIdentifier() const {
   return *identifier_;
 }
 
+const CompileUnit* Symbol::GetCompileUnit() const {
+  // Currently we don't use compile units very often. This implementation walks
+  // up the symbol hierarchy until we find one. This has the disadvantage that
+  // it decodes the tree of DIEs up to here which is potentially slow, and if
+  // anything fails the path will get lost (even when we can get at the unit
+  // via other means).
+  //
+  // The compile unit is known at the time of decode and we could just stash
+  // a pointer on each symbol. This would make them larger, however, and we
+  // should take steps to ensure that the unit objects are re-used so we don't
+  // get them created all over.
+  //
+  // Each LazySymbol also has an offset of the compile unit. But symbols don't
+  // have a LazySymbol for their *own* symbol. Perhaps they should? In that
+  // case we would add a new function to the symbol factory to get the unit for
+  // a LazySymbol.
+  const Symbol* cur = this;
+  do {
+    if (const CompileUnit* unit = cur->AsCompileUnit())
+      return unit;
+    cur = cur->parent().Get();
+  } while (cur);
+  return nullptr;  // Got to top with no unit found.
+}
+
 const ArrayType* Symbol::AsArrayType() const { return nullptr; }
 const BaseType* Symbol::AsBaseType() const { return nullptr; }
 const CodeBlock* Symbol::AsCodeBlock() const { return nullptr; }
+const CompileUnit* Symbol::AsCompileUnit() const { return nullptr; }
 const Collection* Symbol::AsCollection() const { return nullptr; }
 const DataMember* Symbol::AsDataMember() const { return nullptr; }
 const Enumeration* Symbol::AsEnumeration() const { return nullptr; }
