@@ -24,7 +24,10 @@ async fn main() {
 
 async fn run_locate() -> Result<(), Error> {
     let cfg: LocateConfig = env::args().try_into()?;
-
+    if cfg.help {
+        help();
+        return Ok(());
+    }
     let launcher = launcher().context("Failed to open launcher service.")?;
     let app = launch(
         &launcher,
@@ -79,6 +82,7 @@ fn fuzzy_search_error(e: FuzzySearchError, cfg: LocateConfig) -> Result<(), Erro
 
 struct LocateConfig {
     list: bool,
+    help: bool,
     search_keyword: String,
 }
 
@@ -89,6 +93,16 @@ impl TryFrom<env::Args> for LocateConfig {
         // Ignore arg[0]
         let _ = args.next();
 
+        // check if arg[1] is '--help'
+        let show_help = args.peek() == Some(&"--help".to_string());
+        if show_help {
+            return Ok(LocateConfig {
+                list: false,
+                help: show_help,
+                search_keyword: String::from(""),
+            });
+        }
+
         // Consume arg[1] if it is --list
         let list = args.peek() == Some(&"--list".to_string());
         if list {
@@ -97,7 +111,7 @@ impl TryFrom<env::Args> for LocateConfig {
 
         // Ensure nothing beyond current arg.
         if let (Some(search_keyword), None) = (args.next(), args.next()) {
-            return Ok(LocateConfig { list, search_keyword });
+            return Ok(LocateConfig { list, help: show_help, search_keyword });
         } else {
             help();
             return Err(err_msg("Unable to parse args."));
@@ -106,12 +120,14 @@ impl TryFrom<env::Args> for LocateConfig {
 }
 
 fn help() {
-    println!(
-        r"Usage: locate [--list] <search_keyword>
+    print!(
+        r"Usage: locate [--help] [--list] <search_keyword>
 
 Locates the fuchsia-pkg URL of <search_keyword>.
 
 Options:
-  --list    Allows matching of more than one component."
+  --list    Allows matching of more than one component.
+  --help    Prints this message.
+"
     )
 }

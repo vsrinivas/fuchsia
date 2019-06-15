@@ -18,6 +18,12 @@ use std::io::{BufRead, BufReader};
 /// locate_integration_test.cmx.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    test_locate()?;
+    test_help()?;
+    Ok(())
+}
+
+fn test_locate() -> Result<(), Error> {
     let (pipe, socket) = fdio::pipe_half()?;
     let mut launch_options = LaunchOptions::new();
     launch_options.set_out(FileDescriptor {
@@ -52,6 +58,49 @@ async fn main() -> Result<(), Error> {
     line.clear();
     reader.read_line(&mut line)?;
     assert_eq!(line.is_empty(), true);
+
+    Ok(())
+}
+
+fn test_help() -> Result<(), Error> {
+    let (pipe, socket) = fdio::pipe_half()?;
+    let mut launch_options = LaunchOptions::new();
+    launch_options.set_out(FileDescriptor {
+        type0: HandleType::FileDescriptor as i32,
+        type1: 0,
+        type2: 0,
+        handle0: Some(socket.into()),
+        handle1: None,
+        handle2: None,
+    });
+
+    let launcher = launcher().expect("Failed to open launcher service");
+    let _app = launch_with_options(
+        &launcher,
+        "fuchsia-pkg://fuchsia.com/locate#meta/locate.cmx".to_string(),
+        Some(vec!["--help".to_string()]),
+        launch_options,
+    )
+    .expect("Failed to launch locate");
+
+    let mut reader = BufReader::new(pipe);
+
+    // Assert we got the help message
+    let mut output = Vec::new();
+    reader.read_until(0, &mut output)?;
+    let output_str = String::from_utf8(output)?;
+
+    assert_eq!(
+        output_str,
+        r"Usage: locate [--help] [--list] <search_keyword>
+
+Locates the fuchsia-pkg URL of <search_keyword>.
+
+Options:
+  --list    Allows matching of more than one component.
+  --help    Prints this message.
+"
+    );
 
     Ok(())
 }
