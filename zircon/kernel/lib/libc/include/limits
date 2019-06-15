@@ -11,6 +11,8 @@
 // switches used for the kernel.  So this header fakes out the other libc++
 // headers with a std::numeric_limits that is close enough.
 
+#include <limits.h>
+
 namespace std {
 
 template <class T>
