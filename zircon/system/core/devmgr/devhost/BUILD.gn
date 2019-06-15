@@ -45,7 +45,7 @@ source_set("common") {
     "$zx/system/ulib/fs:fs-for-driver",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
-    "$zx/system/ulib/trace-provider:static",
+    "$zx/system/ulib/trace-provider:trace-provider-driver",
     "$zx/system/ulib/trace-provider:trace-provider-fdio-connect",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",

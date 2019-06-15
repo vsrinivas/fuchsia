@@ -2,52 +2,63 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Common pieces.
-source_set("common") {
-  visibility = [ ":*" ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  sources = [
-    "event.cpp",
-    "observer.cpp",
-  ]
-  deps = [
-    ":headers",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-  ]
+template("trace_library") {
+  library(target_name) {
+    forward_variables_from(invoker, "*")
+
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+
+    sdk_headers = [
+      "trace/internal/event_args.h",
+      "trace/internal/event_common.h",
+      "trace/internal/event_internal.h",
+      "trace/internal/pairs_internal.h",
+      "trace/event.h",
+      "trace/event_args.h",
+      "trace/observer.h",
+    ]
+
+    # Header dependencies, not including the trace engine.
+    # <trace/internal/event_internal.h> has #include <trace-engine/instrumentation.h>.
+    public_deps += [
+      # <trace/internal/event_internal.h> has #include <zircon/syscalls.h>.
+      "$zx/system/ulib/zircon:headers",
+
+      # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
+      "$zx/system/ulib/fbl:headers",
+
+      # <trace/observer.h> has #include <trace-engine/instrumentation.h> (already
+      # covered, <lib/async/cpp/wait.h>, <fit/function.h>, and <lib/zx/event.h>.
+      "$zx/system/ulib/async:async-cpp.headers",
+      "$zx/system/ulib/fit:headers",
+      "$zx/system/ulib/zx:headers",
+    ]
+
+    sources = [
+      "event.cpp",
+      "observer.cpp",
+    ]
+
+    # Source dependencies, not including the trace engine.
+    deps += [
+      "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-cpp",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fit",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
 }
 
-header_deps = [
-  # <trace/internal/event_common.h> has #include <trace-engine/instrumentation.h>.
-  "$zx/system/ulib/trace-engine:headers",
-
-  # <trace/internal/event_args.h> has #include <fbl/string_traits.h>.
-  "$zx/system/ulib/fbl:headers",
-
-  # <trace/observer.h> has #include <fit/function.h>
-  "$zx/system/ulib/fit",
-]
-
 # The default version for the normal case.
-library("trace") {
-  sdk = "static"
-  sdk_headers = [
-    "trace/internal/event_args.h",
-    "trace/internal/event_common.h",
-    "trace/internal/event_internal.h",
-    "trace/internal/pairs_internal.h",
-    "trace/event.h",
-    "trace/event_args.h",
-    "trace/observer.h",
+# TODO(PT-195): libtrace-engine.so is getting linked into places it shouldn't.
+trace_library("trace") {
+  sdk = "source"
+  public_deps = [
+    "$zx/system/ulib/trace-engine:headers",
   ]
-  sources = []
-  public_deps = header_deps
   deps = [
-    ":common",
     "$zx/system/ulib/trace-engine",
   ]
 }
@@ -56,32 +67,25 @@ library("trace") {
 # libtrace-engine.so.
 # N.B. Please verify that you really need this before using it.
 # Generally you DON'T want to use this.
-library("trace-with-static-engine") {
+trace_library("trace-with-static-engine") {
   sdk = "static"
-  sdk_headers = [
-    "trace/internal/event_args.h",
-    "trace/internal/event_common.h",
-    "trace/internal/event_internal.h",
-    "trace/internal/pairs_internal.h",
-    "trace/event.h",
-    "trace/event_args.h",
-    "trace/observer.h",
+  public_deps = [
+    "$zx/system/ulib/trace-engine:trace-engine-static.headers",
   ]
-  sources = []
-  public_deps = header_deps
   deps = [
-    ":common",
     "$zx/system/ulib/trace-engine:trace-engine-static",
   ]
 }
 
 # And again, but this time for drivers.
 # This gets linked into each driver.
-library("trace-driver") {
-  sources = []
-  public_deps = header_deps
+# TODO(PT-196): Move to ddk.
+trace_library("trace-driver") {
+  sdk = "static"
+  public_deps = [
+    "$zx/system/ulib/trace-engine:trace-engine-driver.headers",
+  ]
   deps = [
-    ":common",
     "$zx/system/ulib/trace-engine:trace-engine-driver",
   ]
 }

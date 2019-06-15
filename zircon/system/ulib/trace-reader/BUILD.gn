@@ -38,7 +38,7 @@ test("trace-reader-test") {
   ]
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/trace-engine",
+    "$zx/system/ulib/trace-engine:trace-engine-headers-for-reader",
     "$zx/system/ulib/trace-reader",
     "$zx/system/ulib/zxtest",
   ]

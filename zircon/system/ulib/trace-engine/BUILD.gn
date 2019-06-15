@@ -11,86 +11,95 @@
 # If in doubt, ask. (2) is for very special circumstances where
 # libtrace-engine.so is not available.
 
-common_pieces = {
-  # The crux of the library is the same for each version.  But each one
-  # uses different $defines, so they can't use a common source_set().
-  sources = [
-    "context.cpp",
-    "context_api.cpp",
-    "engine.cpp",
-    "nonce.cpp",
-  ]
-  public_deps = [
-    # <trace-engine/instrumentation.h> has #include <fbl/macros.h>.
-    "$zx/system/ulib/fbl:headers",
-  ]
-  deps = [
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-  ]
+trace_engine_headers = [
+  # buffer_internal.h is not here on purpose.
+  "trace-engine/context.h",
+  "trace-engine/fields.h",
+  "trace-engine/handler.h",
+  "trace-engine/instrumentation.h",
+  "trace-engine/types.h",
+]
+
+trace_engine_header_deps = [
+  # <trace-engine/instrumentation.h> has #include <fbl/macros.h>.
+  "$zx/system/ulib/fbl:headers",
+
+  # <trace-engine/handler.h> has #include <lib/async/dispatcher.h>.
+  "$zx/system/ulib/async:headers",
+]
+
+template("trace_engine_library") {
+  library(target_name) {
+    forward_variables_from(invoker, "*")
+
+    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    if (defined(extra_configs)) {
+      configs += extra_configs
+    }
+
+    # TODO(DX-1043): We can't set sdk_headers until we remove fbl dependencies.
+    sdk_headers = []
+
+    sources = [
+      "context.cpp",
+      "context_api.cpp",
+      "context_impl.h",
+      "engine.cpp",
+      "nonce.cpp",
+    ]
+    deps = [
+      "$zx/system/ulib/async:async-cpp",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
 }
 
 # The default version for the normal case.
-library("trace-engine") {
-  forward_variables_from(common_pieces, "*", [ "public_deps" ])
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
-
-  shared = true
-  static = false
-  configs += [ "$zx/public/gn/config:static-libc++" ]
-
+trace_engine_library("trace-engine") {
   sdk = "shared"
   sdk_publishable = true
-  sdk_headers = []
+  extra_configs = [ "$zx/public/gn/config:static-libc++" ]
+  shared = true
+  static = false
 }
 
 # A special version for programs and shared libraries that can't use
 # libtrace-engine.so, e.g., because it is unavailable.
 # N.B. Please verify that you really need this before using it.
 # Generally you DO NOT want to use this.
-library("trace-engine-static") {
-  forward_variables_from(common_pieces, "*")
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  defines = [ "STATIC_LIBRARY" ]
-
-  shared = false
-  static = true
+trace_engine_library("trace-engine-static") {
   sdk = "static"
-  sdk_headers = [
-    "trace-engine/buffer_internal.h",
-    "trace-engine/context.h",
-    "trace-engine/fields.h",
-    "trace-engine/handler.h",
-    "trace-engine/instrumentation.h",
-    "trace-engine/types.h",
-  ]
+  defines = [ "STATIC_LIBRARY" ]
 }
 
 # And again, but this time for drivers.
 # This gets linked into libdriver.so.
-library("trace-engine-driver") {
-  forward_variables_from(common_pieces, "*")
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+trace_engine_library("trace-engine-driver") {
+  sdk = "static"
   defines = [ "DDK_TRACING" ]
-
-  shared = false
-  static = true
 }
 
-# Header-only source package for use by exported trace-reader package
-library("trace-engine-headers-for-reader") {
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+# Header-only source package for use by trace-provider:handler,
+# which is engine-agnostic.
+library("trace-engine-headers-for-handler") {
   sdk = "source"
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  sdk_headers = trace_engine_headers
+  public_deps = trace_engine_header_deps
+  sources = []
+}
+
+# Header-only source package for use by exported trace-reader package.
+# This code also runs on the host.
+library("trace-engine-headers-for-reader") {
+  sdk = "source"
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  host = true
   sdk_headers = [
     "trace-engine/fields.h",
     "trace-engine/types.h",
   ]
   sources = []
-  host = true
-  deps = [
-    "$zx/system/ulib/fbl",
-  ]
 }
