@@ -59,12 +59,12 @@ pub fn try_inherit_rights_for_clone(source_flags: u32, mut flags: u32) -> Result
 /// If `status` is `Status::OK`.  In this case `OnOpen` may need to contain a description of the
 /// object, and server_end should not be droppped.
 pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<NodeMarker>, status: Status) {
-    if flags & OPEN_FLAG_DESCRIBE == 0 {
-        return;
-    }
-
     if status == Status::OK {
         panic!("send_on_open_with_error() should not be used to respond with Status::OK");
+    }
+
+    if flags & OPEN_FLAG_DESCRIBE == 0 {
+        return;
     }
 
     match server_end.into_stream_and_control_handle() {
