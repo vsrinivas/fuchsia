@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <hwreg/bitfields.h>
 #include <lib/zx/object.h>
 #include <lib/zx/vmar.h>

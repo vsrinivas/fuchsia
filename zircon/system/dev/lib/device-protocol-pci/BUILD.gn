@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("device-protocol-pci") {
+  sdk = "source"
+  sdk_headers = [ "lib/pci/pci.h" ]
+  sources = []
+  public_deps = [
+    # <lib/device-protocol/pci.h> has #include <ddk/protocol/pci.h>
+    "$zx/system/banjo/ddk.protocol.pci",
+
+    # <lib/device-protocol/pci.h> has #include <zircon/syscalls.h>
+    "$zx/system/ulib/zx:headers",
+  ]
+}

@@ -6,7 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <ddktl/protocol/display/controller.h>
 #include <hw/pci.h>
 

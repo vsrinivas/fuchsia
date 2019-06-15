@@ -14,6 +14,7 @@ driver("intel-serialio") {
   deps = [
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/banjo/ddk.protocol.serial",
+    "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

@@ -9,7 +9,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/intelgpucore.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <ddk/protocol/sysmem.h>
 #include <hw/inout.h>
 

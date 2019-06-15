@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/i2c.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <ddk/protocol/pci.h>
 #include <errno.h>
 #include <fcntl.h>

@@ -9,6 +9,7 @@ driver("nvme") {
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

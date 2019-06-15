@@ -85,6 +85,7 @@ source_set("pcie") {
 
   public_deps = [
     "//zircon/public/banjo/ddk.protocol.pci",
+    "//zircon/public/lib/device-protocol-pci",
   ]
 }
 

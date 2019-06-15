@@ -89,6 +89,7 @@ brcmf_core_deps = [
   "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
   "//zircon/public/lib/async-loop",
   "//zircon/public/lib/broadcom",
+  "//zircon/public/lib/device-protocol-pci",
   "//zircon/public/lib/ddk",
   "//zircon/public/lib/driver",
   "//zircon/public/lib/sync",

@@ -12,6 +12,7 @@ group("lib") {
     "broadcom",
     "device-protocol-i2c",
     "device-protocol-i2c-channel",
+    "device-protocol-pci",
     "device-protocol-pdev",
     "fake-bti",
     "fake_ddk",

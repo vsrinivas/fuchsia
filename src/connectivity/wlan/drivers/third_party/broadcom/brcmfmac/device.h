@@ -25,7 +25,7 @@
 #include <atomic>
 
 #include <ddk/driver.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb.h>
 #include <lib/async-loop/loop.h> // to start the worker thread

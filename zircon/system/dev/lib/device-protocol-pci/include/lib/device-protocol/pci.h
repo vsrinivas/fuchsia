@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDK_PROTOCOL_PCI_LIB_H_
-#define DDK_PROTOCOL_PCI_LIB_H_
+#pragma once
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
@@ -34,5 +33,3 @@ static inline zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t
 }
 
 __END_CDECLS
-
-#endif // DDK_PROTOCOL_PCI_LIB_H_

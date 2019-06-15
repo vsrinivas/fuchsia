@@ -52,7 +52,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <hw/inout.h>
 #include <hw/pci.h>
 #include <hw/reg.h>

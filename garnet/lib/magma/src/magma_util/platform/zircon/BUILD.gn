@@ -106,6 +106,7 @@ source_set("device") {
     "$zircon_build_root/public/lib/zx",
     "//zircon/public/banjo/ddk.protocol.pci",
     "//zircon/public/banjo/ddk.protocol.platform.device",
+    "//zircon/public/lib/device-protocol-pci",
   ]
 }
 

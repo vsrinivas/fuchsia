@@ -6,7 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

@@ -28,5 +28,6 @@ driver("e1000") {
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
+    "$zx/system/dev/lib/device-protocol-pci",
   ]
 }

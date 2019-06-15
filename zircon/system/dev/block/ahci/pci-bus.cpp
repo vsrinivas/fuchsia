@@ -5,7 +5,7 @@
 #include "pci-bus.h"
 
 #include <ddk/debug.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <hw/pci.h>
 
 namespace ahci {

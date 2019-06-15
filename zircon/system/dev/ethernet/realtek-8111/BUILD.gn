@@ -11,6 +11,7 @@ driver("realtek-8111") {
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.pci",
+    "$zx/system/dev/lib/device-protocol-pci",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/zircon",
   ]

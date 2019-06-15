@@ -55,6 +55,7 @@ executable("netbuf_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-pci",
   ]
 }
 
@@ -75,6 +76,7 @@ executable("sdio_test") {
     "//zircon/public/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/broadcom",
+    "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",

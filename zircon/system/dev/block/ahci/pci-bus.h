@@ -7,7 +7,7 @@
 #include "bus.h"
 
 #include <ddk/protocol/pci.h>
-#include <ddk/protocol/pci-lib.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
