@@ -320,6 +320,7 @@ TEST(SdioControllerDeviceTest, DdkLifecycle) {
     Bind ddk;
     EXPECT_OK(dut.AddDevice());
     dut.DdkUnbind();
+    dut.StopSdioIrqThread();
 
     ddk.Ok();
     EXPECT_EQ(ddk.total_children(), 4);

@@ -61,6 +61,7 @@ test("sdmmc-test") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/pretty",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
