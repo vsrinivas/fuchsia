@@ -204,7 +204,7 @@ impl ElfRunner {
         // applications to get handles to things the application author didn't intend.
         library_loader::start(lib_proxy, ll_service_chan);
 
-        let executable_vmo = await!(library_loader::load_vmo(pkg_proxy, bin_path))
+        let executable_vmo = await!(library_loader::load_vmo(pkg_proxy, &bin_path))
             .context("error loading executable")?;
 
         let child_job = job_default().create_child_job()?;
