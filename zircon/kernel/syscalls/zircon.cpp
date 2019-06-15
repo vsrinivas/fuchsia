@@ -67,22 +67,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 // update pvclock too.
 ktl::atomic<int64_t> utc_offset;
 
-zx_time_t sys_clock_get(zx_clock_t clock_id) {
-    switch (clock_id) {
-    case ZX_CLOCK_MONOTONIC:
-        return current_time();
-    case ZX_CLOCK_UTC:
-        return current_time() + utc_offset.load();
-    case ZX_CLOCK_THREAD:
-        return ThreadDispatcher::GetCurrent()->runtime_ns();
-    default:
-        //TODO: figure out the best option here
-        return 0u;
-    }
-}
-
-// zx_status_t zx_clock_get_new
-zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
+static zx_status_t clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
     zx_time_t time;
     switch (clock_id) {
     case ZX_CLOCK_MONOTONIC:
@@ -99,6 +84,14 @@ zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_t
     }
 
     return out_time.copy_to_user(time);
+}
+
+zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
+    return clock_get(clock_id, out_time);
+}
+
+zx_status_t sys_clock_get_new(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
+    return clock_get(clock_id, out_time);
 }
 
 zx_time_t sys_clock_get_monotonic() {
