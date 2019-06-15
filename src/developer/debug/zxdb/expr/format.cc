@@ -8,7 +8,12 @@
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
+#include "src/developer/debug/zxdb/expr/resolve_array.h"
+#include "src/developer/debug/zxdb/expr/resolve_collection.h"
+#include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -154,6 +159,68 @@ void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
   }
 }
 
+void FormatCollection(FormatNode* node,
+                      const Collection* coll,
+                      const FormatExprValueOptions& options,
+                      fxl::RefPtr<EvalContext> eval_context) {
+  if (coll->is_declaration()) {
+    // Sometimes a value will have a type that's a forward declaration and we
+    // couldn't resolve its concrete type. Print an error instead of "{}".
+    node->set_err(Err("No definition."));
+    return;
+  }
+
+  // Base classes.
+  for (const auto& lazy_inherited : coll->inherited_from()) {
+    const InheritedFrom* inherited = lazy_inherited.Get()->AsInheritedFrom();
+    if (!inherited)
+      continue;
+
+    const Collection* from = inherited->from().Get()->AsCollection();
+    if (!from)
+      continue;
+
+    // Some base classes are empty. Only show if this base class or any of
+    // its base classes have member values.
+    VisitResult has_members_result =
+        VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
+          if (cur->data_members().empty())
+            return VisitResult::kContinue;
+          return VisitResult::kDone;
+        });
+    if (has_members_result == VisitResult::kContinue)
+      continue;
+
+    // Derived class nodes are named by the type of the base class.
+    std::string from_name = from->GetFullName();
+
+    ExprValue from_value;
+    Err err = ResolveInherited(node->value(), inherited, &from_value);
+    if (err.has_error()) {
+      node->children().push_back(std::make_unique<FormatNode>(from_name, err));
+    } else {
+      node->children().push_back(std::make_unique<FormatNode>(from_name, from_value));
+    }
+  }
+
+  // Data members.
+  for (const auto& lazy_member : coll->data_members()) {
+    const DataMember* member = lazy_member.Get()->AsDataMember();
+    if (!member)
+      continue;
+
+    std::string member_name = member->GetAssignedName();
+
+    ExprValue member_value;
+    Err err = ResolveMember(eval_context, node->value(), member, &member_value);
+    if (err.has_error()) {
+      node->children().push_back(std::make_unique<FormatNode>(member_name, err));
+    } else {
+      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value));
+    }
+  }
+}
+
 }  // namespace
 
 void FillFormatNode(FormatNode* node, fxl::RefPtr<EvalContext> context) {
@@ -192,6 +259,9 @@ void FillFormatNodeDescription(FormatNode* node,
 
   // All code paths below convert to "described" state.
   node->set_state(FormatNode::kDescribed);
+  node->set_description(std::string());
+  node->children().clear();
+  node->set_err(Err());
 
   // Format type name.
   if (!node->value().type()) {
@@ -209,6 +279,8 @@ void FillFormatNodeDescription(FormatNode* node,
   if (IsNumericBaseType(node->value().GetBaseType())) {
     // Numeric types.
     FormatNumeric(node, options);
+  } else if (const Collection* coll = type->AsCollection()) {
+    FormatCollection(node, coll, options, context);
   } else {
     node->set_err(Err("Unsupported type for new formatting system."));
   }

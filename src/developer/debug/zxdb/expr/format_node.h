@@ -69,6 +69,8 @@ namespace zxdb {
 // infintely recursive.
 class FormatNode {
  public:
+  using ChildVector = std::vector<std::unique_ptr<FormatNode>>;
+
   // The original source or the value for this node.
   enum Source {
     kValue,       // Value is given, nothing to do.
@@ -101,6 +103,7 @@ class FormatNode {
 
   FormatNode();
   FormatNode(const std::string& name, ExprValue value);
+  FormatNode(const std::string& name, Err err);
   explicit FormatNode(const std::string& expression);
 
   // Not copyable nor moveable since this doesn't work with the weak ptr
@@ -144,9 +147,19 @@ class FormatNode {
   const std::string& description() const { return description_; }
   void set_description(std::string d) { description_ = std::move(d); }
 
-  // Setting the error does not issue any notifications. Callers should set the
-  // error and then set the value or description (according to what the error
-  // was about) to empty to issue notifications.
+  const ChildVector& children() const { return children_; }
+  ChildVector& children() { return children_; }
+
+  // There could have been an error filling in the node. The error could be
+  // from computing the value of the expression, or in formatting the
+  // ExprValue.
+  //
+  // The state of the node will represent the last good state. So if there was
+  // an error evaluating the expression, the state will be "unevaluated" and
+  // it could be evaluated again in a new context to resolve the error. If
+  // there was an error formatting the value (say symbols are incorrect) the
+  // state will be "has value" and in this case trying to reevaluate won't
+  // recover from the error without the value changing.
   const Err& err() const { return err_; }
   void set_err(const Err& e) { err_ = e; }
 
@@ -163,7 +176,7 @@ class FormatNode {
   std::string description_;
   Err err_;
 
-  std::map<std::string, FormatNode> children_;
+  ChildVector children_;
 
   fxl::WeakPtrFactory<FormatNode> weak_factory_;
 };

@@ -10,6 +10,10 @@
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
 
@@ -30,17 +34,64 @@ class FormatTest : public TestWithLoop {
     return node;
   }
 
-  // Returns "<type>, <description>" for the given formatting.
-  // On error, returns "Err: <msg>".
-  std::string SyncTypeDesc(const ExprValue& value,
-                           const FormatExprValueOptions& opts) {
-    auto node = SyncFormat(value, opts);
+  // Recursively describes all nodes in the given tree.
+  void RecursiveSyncDescribe(FormatNode* node,
+                             const FormatExprValueOptions& opts) {
+    FillFormatNodeDescription(node, opts, eval_context_);
+    for (auto& c : node->children())
+      RecursiveSyncDescribe(c.get(), opts);
+  }
+
+  // Returns "<type>, <description>" for the given formatted node. Errors
+  // are also output.
+  std::string GetTypeDesc(const FormatNode* node) {
     if (node->err().has_error())
       return "Err: " + node->err().msg();
     return node->type() + ", " + node->description();
   }
 
+  // Returns "<type>, <description>" for the given formatting.
+  // On error, returns "Err: <msg>".
+  std::string SyncTypeDesc(const ExprValue& value,
+                           const FormatExprValueOptions& opts) {
+    auto node = SyncFormat(value, opts);
+    return GetTypeDesc(node.get());
+  }
+
+  // Recursively formats the values until everything is described and
+  // outputs a hierarchical tree structure, each level indented two spaces.
+  //
+  // Note that normally the root name will be empty so it will start with
+  // " = <type>, <description>"
+  //
+  // <name> = <type>, <description>
+  //   <child name> = <child type>, <child description>
+  //     <child level 2 name> = <child 2 type>, <child 2 description>
+  //   <child name> = <child type>, <child description>
+  std::string SyncTreeTypeDesc(const ExprValue& value,
+                               const FormatExprValueOptions& opts) {
+    auto node = std::make_unique<FormatNode>(std::string(), value);
+    RecursiveSyncDescribe(node.get(), opts);
+
+    std::string result;
+    RecursiveTreeTypeDesc(node.get(), &result, 0);
+    return result;
+  }
+
  private:
+  // Recursive backend for SyncTreeTypeDesc.
+  void RecursiveTreeTypeDesc(const FormatNode* node,
+                             std::string* output,
+                             int indent) {
+    output->append(std::string(indent * 2, ' '));
+    output->append(node->name());
+    output->append(" = ");
+    output->append(GetTypeDesc(node));
+    output->append("\n");
+    for (auto& c : node->children())
+      RecursiveTreeTypeDesc(c.get(), output, indent + 1);
+  }
+
   fxl::RefPtr<MockEvalContext> eval_context_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
 };
@@ -196,6 +247,137 @@ TEST_F(FormatTest, Float) {
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double"),
       std::vector<uint8_t>(&buffer[0], &buffer[8]));
   EXPECT_EQ("double, 9.875e+12", SyncTypeDesc(val_double, opts));
+}
+
+TEST_F(FormatTest, Structs) {
+  FormatExprValueOptions opts;
+  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
+
+  auto int32_type = MakeInt32Type();
+
+  // Make an int reference. Reference type printing combined with struct type
+  // printing can get complicated.
+  auto int_ref = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
+                                                   LazySymbol(int32_type));
+
+  // The references point to this data.
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress, {0x12, 0, 0, 0});
+
+  // Struct with two values, an int and a int&, and a pair of two of those
+  // structs.
+  auto foo = MakeCollectionType(DwarfTag::kStructureType, "Foo",
+                                {{"a", int32_type}, {"b", int_ref}});
+  auto pair = MakeCollectionType(DwarfTag::kStructureType, "Pair",
+                                 {{"first", foo}, {"second", foo}});
+
+  ExprValue pair_value(
+      pair, {0x11, 0x00, 0x11, 0x00,                            // (int32) a
+             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // (int32&) b
+             0x33, 0x00, 0x33, 0x00,                            // (int32) a
+             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});  // (int32&) b
+
+  // The references when not printing all types are printed after the
+  // struct member name.
+  EXPECT_EQ(
+      " = Pair, \n"
+      "  first = Foo, \n"
+      "    a = int32_t, 0x110011\n"
+      // TODO(brettw) should be "    b = int32_t&, 0x1100 = 0x10" or similar
+      // when refs are supported.
+      "    b = Err: Unsupported type for new formatting system.\n"
+      "  second = Foo, \n"
+      "    a = int32_t, 0x330033\n"
+      // TODO(brettw) should be "    b = int32_t&, 0x1100 = 0x10" or similar
+      // when refs are supported.
+      "    b = Err: Unsupported type for new formatting system.\n",
+      SyncTreeTypeDesc(pair_value, opts));
+
+  // Test an anonymous struct. Clang will generate structs with no names for
+  // things like closures.
+  auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
+  auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kPointerType, LazySymbol(anon_struct));
+  ExprValue anon_value(anon_struct_ptr,
+                       {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+  // TODO(brettw) should be "((anon struct)*) 0x1100",
+  EXPECT_EQ(" = Err: Unsupported type for new formatting system.\n", SyncTreeTypeDesc(anon_value, opts));
+}
+
+// GDB and LLDB both print all members of a union and accept the possibility
+// that sometimes one of them might be garbage, we do the same.
+TEST_F(FormatTest, Union) {
+  FormatExprValueOptions opts;
+
+  // Define a union type with two int32 values.
+  auto int32_type = MakeInt32Type();
+
+  auto union_type =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kUnionType, "MyUnion");
+  union_type->set_byte_size(int32_type->byte_size());
+
+  std::vector<LazySymbol> data_members;
+
+  auto member_1 = fxl::MakeRefCounted<DataMember>();
+  member_1->set_assigned_name("a");
+  member_1->set_type(LazySymbol(int32_type));
+  member_1->set_member_location(0);
+  data_members.push_back(LazySymbol(member_1));
+
+  auto member_2 = fxl::MakeRefCounted<DataMember>();
+  member_2->set_assigned_name("b");
+  member_2->set_type(LazySymbol(int32_type));
+  member_2->set_member_location(0);
+  data_members.push_back(LazySymbol(member_2));
+
+  union_type->set_data_members(std::move(data_members));
+
+  ExprValue value(union_type, {42, 0, 0, 0});
+  EXPECT_EQ(" = MyUnion, \n"
+            "  a = int32_t, 42\n"
+            "  b = int32_t, 42\n", SyncTreeTypeDesc(value, opts));
+}
+
+// Tests formatting when a class has derived base classes.
+TEST_F(FormatTest, DerivedClasses) {
+  auto int32_type = MakeInt32Type();
+  auto base = MakeCollectionType(DwarfTag::kStructureType, "Base",
+                                 {{"a", int32_type}, {"b", int32_type}});
+
+  // This second base class is empty, it should be omitted from the output.
+  auto empty_base =
+      fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "EmptyBase");
+
+  // Derived class, leave enough room to hold |Base|.
+  auto derived = MakeCollectionTypeWithOffset(
+      DwarfTag::kStructureType, "Derived", base->byte_size(),
+      {{"c", int32_type}, {"d", int32_type}});
+
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0);
+  auto empty_inherited =
+      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(empty_base), 0);
+  derived->set_inherited_from(
+      {LazySymbol(inherited), LazySymbol(empty_inherited)});
+
+  uint8_t kAValue = 1;
+  uint8_t kBValue = 2;
+  uint8_t kCValue = 3;
+  uint8_t kDValue = 4;
+  ExprValue value(derived, {kAValue, 0, 0, 0,    // (int32) Base.a
+                            kBValue, 0, 0, 0,    // (int32) Base.b
+                            kCValue, 0, 0, 0,    // (int32) Derived.c
+                            kDValue, 0, 0, 0});  // (int32) Derived.d
+
+  // Only the Base should be printed, EmptyBase should be omitted because it
+  // has no data.
+  FormatExprValueOptions opts;
+  EXPECT_EQ(" = Derived, \n"
+            "  Base = Base, \n"
+            "    a = int32_t, 1\n"
+            "    b = int32_t, 2\n"
+            "  c = int32_t, 3\n"
+            "  d = int32_t, 4\n",
+            SyncTreeTypeDesc(value, opts));
 }
 
 }  // namespace zxdb

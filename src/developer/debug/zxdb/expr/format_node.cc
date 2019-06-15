@@ -15,6 +15,13 @@ FormatNode::FormatNode(const std::string& name, ExprValue value)
       value_(std::move(value)),
       weak_factory_(this) {}
 
+FormatNode::FormatNode(const std::string& name, Err err)
+    : source_(kValue),
+      state_(kDescribed),
+      name_(name),
+      err_(std::move(err)),
+      weak_factory_(this) {}
+
 FormatNode::FormatNode(const std::string& expression)
     : source_(kExpression),
       state_(kUnevaluated),
