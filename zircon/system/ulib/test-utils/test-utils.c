@@ -318,6 +318,14 @@ void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, 
         tu_fatal(__func__, status);
 }
 
+void tu_unset_exception_port(zx_handle_t handle) {
+    if (handle == 0)
+        handle = zx_process_self();
+    zx_status_t status = zx_task_bind_exception_port(handle, ZX_HANDLE_INVALID, 0, 0);
+    if (status < 0)
+        tu_fatal(__func__, status);
+}
+
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals)
 {
     uint64_t key = tu_get_koid(handle);

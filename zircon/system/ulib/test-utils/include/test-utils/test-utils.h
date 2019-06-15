@@ -136,9 +136,11 @@ zx_handle_t tu_job_create(zx_handle_t job);
 
 zx_handle_t tu_io_port_create(void);
 
-// Set the exception port for |handle| which is a process or thread.
+// Set/unset the exception port for |handle| which is a process or thread.
+// Passing ZX_HANDLE_INVALID for |handle| means self.
 
 void tu_set_exception_port(zx_handle_t handle, zx_handle_t eport, uint64_t key, uint32_t options);
+void tu_unset_exception_port(zx_handle_t handle);
 
 // Add |handle| to the list of things |port| watches.
 // When |handle| is signaled with a signal in |signals| a zx_packet_signal_t
