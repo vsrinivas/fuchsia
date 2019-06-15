@@ -1,0 +1,55 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.factory;
+using fuchsia.io;
+
+// NOTE: This API will be completely removed when components v2 is implemented.
+// TODO(mbrunson): Add link to factory scaffolding library when available to
+// allow easier transition to components v2 for clients.
+
+/// This protocol is a base protocol for all providers of factory store
+/// directories. It exposes a single method to allow clients to establish a
+/// connection to a directory containing the relevant factory data. All files
+/// surfaced by a component that implements FactoryStoreProvider (or any
+/// protocol that depends on it) are expected to be validated for consistency
+/// before being exposed to clients.
+[FragileBase]
+protocol FactoryStoreProvider {
+    GetFactoryStore(request<fuchsia.io.Directory> dir);
+};
+
+/// This protocol exposes a method to connect to a directory containing
+/// Cast-specific factory data: public certificates and keys for
+/// authentication with Cast servers.
+[Discoverable]
+protocol CastCredentialsFactoryStoreProvider {
+  compose FactoryStoreProvider;
+};
+
+/// This protocol exposes a method to connect to a directory containing
+/// Widevine-specific factory data: public certificates and keys for
+/// authentication with Widevine systems.
+[Discoverable]
+protocol WidevineFactoryStoreProvider {
+  compose FactoryStoreProvider;
+};
+
+/// This protocol exposes a method to connect to a directory containing
+/// PlayReady-specific factory data: public certificates and keys for
+/// authentication with PlayReady systems.
+[Discoverable]
+protocol PlayReadyFactoryStoreProvider {
+  compose FactoryStoreProvider;
+};
+
+/// This protocol exposes a method to connect to a directory containing
+/// miscellaneous factory data such as tuning/calibration files, region-specific
+/// audio files, factory process metadata files, and more. Any raw files not
+/// covered by other FactoryStoreProviders or methods in fuchsia.hwinfo will
+/// appear here.
+[Discoverable]
+protocol MiscFactoryStoreProvider {
+  compose FactoryStoreProvider;
+};
