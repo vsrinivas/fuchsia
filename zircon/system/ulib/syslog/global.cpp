@@ -14,10 +14,12 @@ fbl::unique_ptr<fx_logger> g_logger_ptr;
 
 } // namespace
 
+__EXPORT
 fx_logger_t* fx_log_get_logger() {
     return g_logger_ptr.get();
 }
 
+__EXPORT
 zx_status_t fx_log_init(void) {
     fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                  .console_fd = -1,
@@ -28,6 +30,7 @@ zx_status_t fx_log_init(void) {
     return fx_log_init_with_config(&config);
 }
 
+__EXPORT
 zx_status_t fx_log_init_with_config(const fx_logger_config_t* config) {
     if (config == nullptr) {
         return ZX_ERR_BAD_STATE;
@@ -49,8 +52,9 @@ extern inline bool fx_log_is_enabled(fx_log_severity_t severity);
 
 __BEGIN_CDECLS
 
+__EXPORT
 // This clears out global logger. This is used from tests
-void fx_log_reset_global() {
+void fx_log_reset_global_for_testing() {
     g_logger_ptr.reset(nullptr);
 }
 

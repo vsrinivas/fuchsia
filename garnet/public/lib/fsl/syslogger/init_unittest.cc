@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fsl/syslogger/init.h"
+
 #include <lib/syslog/logger.h>
 
 #include "gtest/gtest.h"
-#include "lib/fsl/syslogger/init.h"
-#include "src/lib/fxl/command_line.h"
 #include "lib/syslog/cpp/logger.h"
+#include "src/lib/fxl/command_line.h"
 
 __BEGIN_CDECLS
 
 // This does not come from header file as this function should only be used in
 // tests and is not for general use.
-void fx_log_reset_global(void);
+void fx_log_reset_global_for_testing(void);
 
 __END_CDECLS
 
@@ -94,16 +95,16 @@ TEST(SysloggerSettings, ParseInvalidOptions) {
 }
 
 TEST(SysLoggerInit, Init) {
-  fx_log_reset_global();
+  fx_log_reset_global_for_testing();
   ASSERT_EQ(ZX_OK,
             InitLoggerFromCommandLine(
                 fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"}),
                 {"tag1", "tag2"}));
-  fx_log_reset_global();
+  fx_log_reset_global_for_testing();
   ASSERT_EQ(ZX_OK,
             InitLoggerFromCommandLine(
                 fxl::CommandLineFromInitializerList({"argv0", "--verbose=0"})));
-  fx_log_reset_global();
+  fx_log_reset_global_for_testing();
 }
 
 }  // namespace

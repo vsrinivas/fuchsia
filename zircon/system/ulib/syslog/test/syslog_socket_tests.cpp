@@ -4,9 +4,9 @@
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <lib/zx/socket.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/wire_format.h>
+#include <lib/zx/socket.h>
 #include <unittest/unittest.h>
 
 #include <errno.h>
@@ -21,7 +21,7 @@ __BEGIN_CDECLS
 
 // This does not come from header file as this function should only be used in
 // tests and is not for general use.
-void fx_log_reset_global(void);
+void fx_log_reset_global_for_testing(void);
 
 __END_CDECLS
 
@@ -40,8 +40,8 @@ namespace {
 
 class Cleanup {
 public:
-    Cleanup() { fx_log_reset_global(); }
-    ~Cleanup() { fx_log_reset_global(); }
+    Cleanup() { fx_log_reset_global_for_testing(); }
+    ~Cleanup() { fx_log_reset_global_for_testing(); }
 };
 
 } // namespace

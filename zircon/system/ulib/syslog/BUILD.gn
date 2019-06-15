@@ -23,5 +23,8 @@ library("syslog") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [
+    "$zx/public/gn/config:static-libc++",
+    "$zx/public/gn/config:visibility_hidden",
+  ]
 }

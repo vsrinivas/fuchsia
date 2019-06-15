@@ -17,7 +17,7 @@ __BEGIN_CDECLS
 
 // This does not come from header file as this function should only be used in
 // tests and is not for general use.
-void fx_log_reset_global(void);
+void fx_log_reset_global_for_testing(void);
 
 __END_CDECLS
 namespace {
@@ -37,7 +37,7 @@ public:
     Fixture()
         : fds_valid_(false), loop_(&kAsyncLoopConfigNoAttachToThread), error_status_(0) {}
     ~Fixture() {
-        fx_log_reset_global();
+        fx_log_reset_global_for_testing();
         if (fds_valid_) {
             close(pipefd_[0]);
             close(pipefd_[1]);

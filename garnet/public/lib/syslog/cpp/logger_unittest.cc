@@ -15,15 +15,15 @@ __BEGIN_CDECLS
 
 // This does not come from header file as this function should only be used in
 // tests and is not for general use.
-void fx_log_reset_global(void);
+void fx_log_reset_global_for_testing(void);
 __END_CDECLS
 
 namespace {
 
 class Cleanup {
  public:
-  Cleanup() { fx_log_reset_global(); }
-  ~Cleanup() { fx_log_reset_global(); }
+  Cleanup() { fx_log_reset_global_for_testing(); }
+  ~Cleanup() { fx_log_reset_global_for_testing(); }
 };
 
 bool ends_with(const char* str, const char* suffix) {
@@ -76,7 +76,7 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity,
 TEST(LogInit, Init) {
   Cleanup cleanup;
   ASSERT_EQ(ZX_OK, syslog::InitLogger());
-  fx_log_reset_global();
+  fx_log_reset_global_for_testing();
   ASSERT_EQ(ZX_OK, syslog::InitLogger({"tag1", "tag2"}));
 }
 
