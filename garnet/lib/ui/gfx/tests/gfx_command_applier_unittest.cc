@@ -20,28 +20,28 @@ TEST_F(GfxCommandApplierTest, NewCreateEntityNodeCmd) {
 
   // Valid id passes
   EXPECT_TRUE(GfxCommandApplier::ApplyCommand(
-      session_.get(), &empty_command_context,
+      session(), &empty_command_context,
       scenic::NewCreateEntityNodeCmd(/*id*/ 1)));
 
   // Invalid id fails
   EXPECT_FALSE(GfxCommandApplier::ApplyCommand(
-      session_.get(), &empty_command_context,
+      session(), &empty_command_context,
       scenic::NewCreateEntityNodeCmd(/*id*/ 0)));
 }
 
 TEST_F(GfxCommandApplierTest, EraseResource) {
   CommandContext empty_command_context(nullptr);
   EXPECT_TRUE(GfxCommandApplier::ApplyCommand(
-      session_.get(), &empty_command_context,
+      session(), &empty_command_context,
       scenic::NewCreateEntityNodeCmd(/*id*/ 3)));
   // Erasing non-existent resource fails
   EXPECT_FALSE(
-      GfxCommandApplier::ApplyCommand(session_.get(), &empty_command_context,
+      GfxCommandApplier::ApplyCommand(session(), &empty_command_context,
                                       scenic::NewReleaseResourceCmd(/*id*/ 2)));
 
   // Erasing existing resource passes
   EXPECT_TRUE(
-      GfxCommandApplier::ApplyCommand(session_.get(), &empty_command_context,
+      GfxCommandApplier::ApplyCommand(session(), &empty_command_context,
                                       scenic::NewReleaseResourceCmd(/*id*/ 3)));
 }
 
@@ -51,7 +51,7 @@ TEST_F(GfxCommandApplierTest, SeparateSessionsAreIndependent) {
   CommandContext empty_command_context(nullptr);
 
   EXPECT_TRUE(GfxCommandApplier::ApplyCommand(
-      session_.get(), &empty_command_context,
+      session(), &empty_command_context,
       scenic::NewCreateEntityNodeCmd(/*id*/ 3)));
   EXPECT_FALSE(
       GfxCommandApplier::ApplyCommand(session2.get(), &empty_command_context,
@@ -60,7 +60,7 @@ TEST_F(GfxCommandApplierTest, SeparateSessionsAreIndependent) {
       session2.get(), &empty_command_context,
       scenic::NewCreateEntityNodeCmd(/*id*/ 3)));
   EXPECT_TRUE(
-      GfxCommandApplier::ApplyCommand(session_.get(), &empty_command_context,
+      GfxCommandApplier::ApplyCommand(session(), &empty_command_context,
                                       scenic::NewReleaseResourceCmd(/*id*/ 3)));
   EXPECT_TRUE(
       GfxCommandApplier::ApplyCommand(session2.get(), &empty_command_context,

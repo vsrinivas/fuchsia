@@ -16,13 +16,6 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-class SessionForTest : public Session {
- public:
-  SessionForTest(SessionId id, SessionContext context,
-                 EventReporter* event_reporter = EventReporter::Default(),
-                 ErrorReporter* error_reporter = ErrorReporter::Default());
-};
-
 class SessionHandlerForTest : public SessionHandler {
  public:
   SessionHandlerForTest(

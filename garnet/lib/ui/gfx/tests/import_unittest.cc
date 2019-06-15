@@ -18,14 +18,21 @@ class ImportTest : public SessionTest {
  public:
   ImportTest() {}
 
-  std::unique_ptr<SessionForTest> CreateSession() override {
-    SessionContext session_context = CreateBarebonesSessionContext();
+  void TearDown() override {
+    SessionTest::TearDown();
+
+    resource_linker_.reset();
+  }
+
+  SessionContext CreateSessionContext() override {
+    SessionContext session_context = SessionTest::CreateSessionContext();
+
+    FXL_DCHECK(!resource_linker_);
 
     resource_linker_ = std::make_unique<ResourceLinker>();
     session_context.resource_linker = resource_linker_.get();
 
-    return std::make_unique<SessionForTest>(1, std::move(session_context), this,
-                                            error_reporter());
+    return session_context;
   }
 
   std::unique_ptr<ResourceLinker> resource_linker_;
@@ -43,7 +50,7 @@ TEST_F(ImportTest, ExportsResourceViaCmd) {
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(resource_id)));
 
   // Assert that the entity node was correctly mapped in.
-  ASSERT_EQ(1u, session_->GetMappedResourceCount());
+  ASSERT_EQ(1u, session()->GetMappedResourceCount());
 
   // Apply the export command.
   ASSERT_TRUE(
@@ -64,7 +71,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaCmd) {
 
   // Assert that the import node was correctly mapped in. It has not been linked
   // yet.
-  ASSERT_EQ(1u, session_->GetMappedResourceCount());
+  ASSERT_EQ(1u, session()->GetMappedResourceCount());
 
   // Assert that the import node was setup with the correct properties.
   auto import_node = FindResource<Import>(1);
@@ -94,7 +101,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(1u, session_->GetMappedResourceCount());
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
   }
 
   // Bindings not yet resolved.
@@ -117,7 +124,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(2)));
 
     // Assert that the entity node was correctly mapped in.
-    ASSERT_EQ(2u, session_->GetMappedResourceCount());
+    ASSERT_EQ(2u, session()->GetMappedResourceCount());
 
     // Apply the export command.
     ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(2, std::move(source))));
@@ -205,8 +212,8 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   RunLoopUntilIdle();
 
   // Verify that we got an ImportUnboundEvent.
-  EXPECT_EQ(1u, events_.size());
-  fuchsia::ui::scenic::Event event = std::move(events_[0]);
+  EXPECT_EQ(1u, events().size());
+  auto& event = std::move(events()[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound,
             event.gfx().Which());
@@ -236,8 +243,8 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   RunLoopUntilIdle();
 
   // Verify that we got an ImportUnboundEvent.
-  EXPECT_EQ(1u, events_.size());
-  fuchsia::ui::scenic::Event event = std::move(events_[0]);
+  EXPECT_EQ(1u, events().size());
+  auto& event = std::move(events()[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound,
             event.gfx().Which());
@@ -268,7 +275,7 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(1u, session_->GetMappedResourceCount());
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
 
     // Assert that the resource linker is ready to potentially link the
     // resource.
@@ -318,7 +325,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
-        ASSERT_EQ(1u, session_->GetMappedResourceCount());
+        ASSERT_EQ(1u, session()->GetMappedResourceCount());
         ASSERT_TRUE(destination_handle_released);
         ASSERT_TRUE(import_node_released);
 
@@ -354,7 +361,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     ASSERT_TRUE(import_node);
 
     // Assert that the nodes were correctly mapped in.
-    ASSERT_EQ(2u, session_->GetMappedResourceCount());
+    ASSERT_EQ(2u, session()->GetMappedResourceCount());
 
     // Nodes should be bound together.
     ASSERT_EQ(exported_node.get(), import_node->imported_resource());
@@ -406,7 +413,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
-        ASSERT_EQ(1u, session_->GetMappedResourceCount());
+        ASSERT_EQ(1u, session()->GetMappedResourceCount());
         ASSERT_TRUE(destination_handle_released);
         ASSERT_TRUE(import_node_released);
 
@@ -443,7 +450,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
     ASSERT_TRUE(import_node);
 
     // Assert that the nodes were correctly mapped in.
-    ASSERT_EQ(2u, session_->GetMappedResourceCount());
+    ASSERT_EQ(2u, session()->GetMappedResourceCount());
 
     // Nodes should be bound together.
     ASSERT_EQ(exported_node.get(), import_node->imported_resource());
@@ -495,7 +502,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
-        ASSERT_EQ(1u, session_->GetMappedResourceCount());
+        ASSERT_EQ(1u, session()->GetMappedResourceCount());
         ASSERT_TRUE(destination_handle1_released);
         ASSERT_TRUE(destination_handle2_released);
         ASSERT_TRUE(import_node_released);
@@ -534,7 +541,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
     ASSERT_TRUE(import_node);
 
     // Assert that the nodes were correctly mapped in.
-    ASSERT_EQ(2u, session_->GetMappedResourceCount());
+    ASSERT_EQ(2u, session()->GetMappedResourceCount());
 
     // Nodes should be bound together.
     ASSERT_EQ(exported_node.get(), import_node->imported_resource());
@@ -604,7 +611,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
 
         // Ensure that our export was unbound after all the necessary
         // preconditions were met.
-        ASSERT_EQ(1u, session_->GetMappedResourceCount());
+        ASSERT_EQ(1u, session()->GetMappedResourceCount());
         ASSERT_TRUE(destination_handle1_released);
         ASSERT_TRUE(destination_handle2_released);
         ASSERT_TRUE(import_node1_released);
@@ -650,7 +657,7 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
     ASSERT_TRUE(import_node2);
 
     // Assert that the nodes were correctly mapped in.
-    ASSERT_EQ(3u, session_->GetMappedResourceCount());
+    ASSERT_EQ(3u, session()->GetMappedResourceCount());
 
     // Nodes should be bound together.
     ASSERT_EQ(exported_node.get(), import_node1->imported_resource());
@@ -724,7 +731,7 @@ TEST_F(ImportTest,
 
   // Assert that the import node was correctly mapped in. It has not been
   // linked yet.
-  ASSERT_EQ(1u, session_->GetMappedResourceCount());
+  ASSERT_EQ(1u, session()->GetMappedResourceCount());
 
   // Resolve by the import container.
 
@@ -769,7 +776,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(1u, session_->GetMappedResourceCount());
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
 
     // Assert that the import node was setup with the correct properties.
     auto import_node = FindResource<Import>(1);
@@ -811,7 +818,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
 
     // Assert that the import node was correctly mapped in. It has not been
     // linked yet.
-    ASSERT_EQ(1u, session_->GetMappedResourceCount());
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
   }
 
   // Bindings not yet resolved.
@@ -834,7 +841,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
     ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(2)));
 
     // Assert that the entity node was correctly mapped in.
-    ASSERT_EQ(2u, session_->GetMappedResourceCount());
+    ASSERT_EQ(2u, session()->GetMappedResourceCount());
 
     // Apply the export command.
     ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(2, std::move(source))));

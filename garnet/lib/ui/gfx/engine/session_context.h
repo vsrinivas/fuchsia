@@ -34,19 +34,19 @@ using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 // from Session to other classes.
 struct SessionContext {
   vk::Device vk_device;
-  escher::Escher* escher;
-  escher::ResourceRecycler* escher_resource_recycler;
-  escher::ImageFactory* escher_image_factory;
+  escher::Escher* escher = nullptr;
+  escher::ResourceRecycler* escher_resource_recycler = nullptr;
+  escher::ImageFactory* escher_image_factory = nullptr;
   // TODO(SCN-1168): Remove |escher_rounded_rect_factory| from here.
-  escher::RoundedRectFactory* escher_rounded_rect_factory;
-  escher::ReleaseFenceSignaller* release_fence_signaller;
-  EventTimestamper* event_timestamper;
-  SessionManager* session_manager;
-  FrameScheduler* frame_scheduler;
-  DisplayManager* display_manager;
+  escher::RoundedRectFactory* escher_rounded_rect_factory = nullptr;
+  escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
+  EventTimestamper* event_timestamper = nullptr;
+  SessionManager* session_manager = nullptr;
+  FrameScheduler* frame_scheduler = nullptr;
+  DisplayManager* display_manager = nullptr;
   SceneGraphWeakPtr scene_graph;
-  ResourceLinker* resource_linker;
-  ViewLinker* view_linker;
+  ResourceLinker* resource_linker = nullptr;
+  ViewLinker* view_linker = nullptr;
 };
 
 }  // namespace gfx

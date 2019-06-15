@@ -35,14 +35,21 @@ class ViewTest : public SessionTest {
  public:
   ViewTest() {}
 
-  std::unique_ptr<SessionForTest> CreateSession() override {
-    SessionContext session_context = CreateBarebonesSessionContext();
+  void TearDown() override {
+    SessionTest::TearDown();
+
+    view_linker_.reset();
+  }
+
+  SessionContext CreateSessionContext() override {
+    SessionContext session_context = SessionTest::CreateSessionContext();
+
+    FXL_DCHECK(!view_linker_);
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();
 
-    return std::make_unique<SessionForTest>(1, std::move(session_context), this,
-                                            error_reporter());
+    return session_context;
   }
 
   std::unique_ptr<ViewLinker> view_linker_;
@@ -97,7 +104,7 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_TRUE(view_holder);
   EXPECT_EQ(nullptr, view_holder->view());
-  EXPECT_EQ(1u, session_->GetMappedResourceCount());
+  EXPECT_EQ(1u, session()->GetMappedResourceCount());
   EXPECT_EQ(1u, view_linker_->ExportCount());
   EXPECT_EQ(1u, view_linker_->UnresolvedExportCount());
   EXPECT_EQ(0u, view_linker_->ImportCount());
@@ -115,7 +122,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
   auto view = FindResource<View>(view_id);
   EXPECT_TRUE(view);
   EXPECT_EQ(nullptr, view->view_holder());
-  EXPECT_EQ(1u, session_->GetMappedResourceCount());
+  EXPECT_EQ(1u, session()->GetMappedResourceCount());
   EXPECT_EQ(0u, view_linker_->ExportCount());
   EXPECT_EQ(0u, view_linker_->UnresolvedExportCount());
   EXPECT_EQ(1u, view_linker_->ImportCount());
@@ -133,7 +140,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_TRUE(view_holder);
   EXPECT_EQ(nullptr, view_holder->view());
-  EXPECT_EQ(1u, session_->GetMappedResourceCount());
+  EXPECT_EQ(1u, session()->GetMappedResourceCount());
   EXPECT_EQ(1u, view_linker_->ExportCount());
   EXPECT_EQ(1u, view_linker_->UnresolvedExportCount());
   EXPECT_EQ(0u, view_linker_->ImportCount());
@@ -148,14 +155,14 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_TRUE(view);
   EXPECT_EQ(view.get(), view_holder->view());
   EXPECT_EQ(view_holder.get(), view->view_holder());
-  EXPECT_EQ(2u, session_->GetMappedResourceCount());
+  EXPECT_EQ(2u, session()->GetMappedResourceCount());
   EXPECT_EQ(1u, view_linker_->ExportCount());
   EXPECT_EQ(0u, view_linker_->UnresolvedExportCount());
   EXPECT_EQ(1u, view_linker_->ImportCount());
   EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 
-  EXPECT_NE(0u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_NE(0u, events().size());
+  const fuchsia::ui::scenic::Event& event = events()[0];
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected,
             event.gfx().Which());
 }
@@ -175,7 +182,7 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   EXPECT_FALSE(view_holder);
-  EXPECT_EQ(0u, session_->GetMappedResourceCount());
+  EXPECT_EQ(0u, session()->GetMappedResourceCount());
   EXPECT_EQ(0u, view_linker_->ExportCount());
   EXPECT_EQ(0u, view_linker_->UnresolvedExportCount());
   EXPECT_EQ(0u, view_linker_->ImportCount());
@@ -190,13 +197,13 @@ TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  events_.clear();
+  uint32_t next_event_id = events().size();
 
   // Destroy the ViewHolder and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_holder_id));
 
   EXPECT_ERROR_COUNT(0);
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected,
             event.gfx().Which());
 }
@@ -209,14 +216,13 @@ TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
       view_holder_id, std::move(view_holder_token), "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
-  events_.clear();
+  uint32_t next_event_id = events().size();
 
   // Destroy the ViewHolder and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_id));
 
   EXPECT_ERROR_COUNT(0);
-  EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
             event.gfx().Which());
 }
@@ -232,7 +238,7 @@ TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
   EXPECT_ERROR_COUNT(0);
   bool view_holder_connected_event = false;
   bool view_connected_event = false;
-  for (fuchsia::ui::scenic::Event& event : events_) {
+  for (const fuchsia::ui::scenic::Event& event : events()) {
     if (event.gfx().Which() ==
         fuchsia::ui::gfx::Event::Tag::kViewHolderConnected) {
       view_holder_connected_event = true;
@@ -243,7 +249,6 @@ TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
   }
   EXPECT_TRUE(view_holder_connected_event);
   EXPECT_TRUE(view_connected_event);
-  events_.clear();
 }
 
 TEST_F(ViewTest, ViewHolderConnectsToScene) {
@@ -257,7 +262,7 @@ TEST_F(ViewTest, ViewHolderConnectsToScene) {
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
-  events_.clear();
+  uint32_t next_event_id = events().size();
 
   // Create a Scene and connect the ViewHolder to the Scene.
   const ResourceId scene_id = 3u;
@@ -267,8 +272,7 @@ TEST_F(ViewTest, ViewHolderConnectsToScene) {
   Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
 
   // Verify the scene was successfully set.
-  EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
             event.gfx().Which());
 }
@@ -283,7 +287,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
   auto view = FindResource<View>(view_id);
-  events_.clear();
+
   // Create a Scene and connect the ViewHolder to the Scene.
   const ResourceId scene_id = 3u;
   Apply(scenic::NewCreateSceneCmd(scene_id));
@@ -309,21 +313,21 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
     EXPECT_EQ(1u, view_holder->children().size());
     // The view is detached from the scene but still attached to the ViewHolder.
     bool detached_from_scene_event = false;
-    for (fuchsia::ui::scenic::Event& event : events_) {
+    for (const fuchsia::ui::scenic::Event& event : events()) {
       detached_from_scene_event |=
           (event.gfx().Which() ==
            fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene);
     }
     EXPECT_TRUE(detached_from_scene_event);
-    events_.clear();
   }  // view_holder out of scope, release reference.
 
   // Now, release the ViewHolder resource. Its link should be destroyed.
+  uint32_t next_event_id = events().size();
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(view_holder_id)));
   EXPECT_ERROR_COUNT(0);
   bool view_holder_disconnected_event = false;
-  for (fuchsia::ui::scenic::Event& event : events_) {
-    if (event.gfx().Which() ==
+  for (uint32_t i = next_event_id; i < events().size(); ++i) {
+    if (events()[i].gfx().Which() ==
         fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected) {
       view_holder_disconnected_event = true;
       break;
@@ -346,7 +350,6 @@ TEST_F(ViewTest, ViewHolderChildrenReleasedFromSceneGraphWhenViewDestroyed) {
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
-  events_.clear();
   // Create child nodes for the View.
   const ResourceId node1_id = 3u;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node1_id)));
@@ -393,7 +396,6 @@ TEST_F(ViewTest, ViewNodeChildAddedToViewHolder) {
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
-  events_.clear();
 
   auto view_node = view->GetViewNode();
   EXPECT_TRUE(view->GetViewNode());
@@ -427,7 +429,6 @@ TEST_F(ViewTest, ViewNodePairedToView) {
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
   auto view = FindResource<View>(view_id);
-  events_.clear();
 
   auto view_node = view->GetViewNode();
   EXPECT_NE(nullptr, view_node);
@@ -448,7 +449,6 @@ TEST_F(ViewTest, ViewNodeNotInResourceMap) {
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
-  events_.clear();
 
   EXPECT_NE(nullptr, view->GetViewNode());
   EXPECT_EQ(nullptr, FindResource<ViewNode>(view->GetViewNode()->id()).get());
@@ -479,7 +479,7 @@ TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
   Apply(scenic::NewAddChildCmd(kSceneId, kEntityNodeId));
 
   // Verify scene was set on ViewHolder
-  const fuchsia::ui::scenic::Event& event = events_.back();
+  const fuchsia::ui::scenic::Event& event = events().back();
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
             event.gfx().Which());
 }
@@ -498,7 +498,7 @@ TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   auto scene = FindResource<Scene>(scene_id);
   EXPECT_TRUE(scene);
   Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
-  EXPECT_EQ(0u, events_.size());
+  EXPECT_EQ(0u, events().size());
 
   // Link the View to the ViewHolder.
   const ResourceId view_id = 2u;
@@ -507,14 +507,14 @@ TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   EXPECT_ERROR_COUNT(0);
 
   // Verify the connect event was emitted before the scene attached event.
-  EXPECT_EQ(4u, events_.size());
+  EXPECT_EQ(4u, events().size());
   EXPECT_ERROR_COUNT(0);
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  const fuchsia::ui::scenic::Event& event = events()[0];
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected,
             event.gfx().Which());
 
   bool view_attached_to_scene_event = false;
-  for (fuchsia::ui::scenic::Event& event : events_) {
+  for (const fuchsia::ui::scenic::Event& event : events()) {
     if (event.gfx().Which() ==
         fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
       view_attached_to_scene_event = true;
@@ -537,17 +537,15 @@ TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
   EXPECT_EQ(view.get(), view_holder->view());
-
-  // Clear View/ViewHolder connected events from the session.
-  events_.clear();
+  uint32_t next_event_id = events().size();
 
   // Trigger a change in the ViewState. Mark as rendering.
   view->SignalRender();
 
   // Verify that one ViewState change event was enqueued.
   RunLoopUntilIdle();
-  EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_LT(next_event_id, events().size());
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   VerifyViewState(event, true);
 }
 
@@ -565,8 +563,7 @@ TEST_F(ViewTest, RenderStateAcrossManyFrames) {
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
   EXPECT_EQ(view.get(), view_holder->view());
-  // Clear View/ViewHolder connected events from the session.
-  events_.clear();
+  uint32_t next_event_id = events().size();
 
   // Trigger a change in the ViewState. Mark as rendering.
   view->SignalRender();
@@ -579,8 +576,8 @@ TEST_F(ViewTest, RenderStateAcrossManyFrames) {
   RunLoopUntilIdle();
 
   // Verify that one ViewState change event was enqueued.
-  EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_LT(next_event_id, events().size());
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   VerifyViewState(event, true);
 }
 
@@ -598,19 +595,20 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
   {
     auto view = FindResource<View>(view_id);
     // Verify resources are mapped and linked.
-    EXPECT_EQ(2u, session_->GetMappedResourceCount());
+    EXPECT_EQ(2u, session()->GetMappedResourceCount());
     // Mark the view as rendering.
     view->SignalRender();
     RunLoopUntilIdle();
-    events_.clear();
   }  // Exit scope should destroy the view and disconnect the link.
+
+  uint32_t next_event_id = events().size();
   Apply(scenic::NewReleaseResourceCmd(view_id));
 
-  EXPECT_EQ(2u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_LT(next_event_id, events().size());
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   VerifyViewState(event, false);
 
-  const fuchsia::ui::scenic::Event& event2 = events_.back();
+  const fuchsia::ui::scenic::Event& event2 = events().back();
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event2.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
             event2.gfx().Which());
@@ -627,17 +625,17 @@ TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
 
   // Verify resources are mapped and linked.
-  EXPECT_EQ(2u, session_->GetMappedResourceCount());
-  events_.clear();
+  EXPECT_EQ(2u, session()->GetMappedResourceCount());
+  uint32_t next_event_id = events().size();
   EXPECT_ERROR_COUNT(0);
 
   // Destroy the view. The link between View and ViewHolder should be
   // disconnected.
   Apply(scenic::NewReleaseResourceCmd(view_id));
-  EXPECT_EQ(1u, session_->GetMappedResourceCount());
+  EXPECT_EQ(1u, session()->GetMappedResourceCount());
 
-  EXPECT_EQ(1u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_.back();
+  EXPECT_LT(next_event_id, events().size());
+  const fuchsia::ui::scenic::Event& event = events().back();
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
             event.gfx().Which());
@@ -654,7 +652,7 @@ TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
 
   // Destroy the ViewHolder and disconnect the link.
   Apply(scenic::NewReleaseResourceCmd(view_holder_id));
-  events_.clear();
+  uint32_t event_size = events().size();
 
   // Mark the view as rendering.
   auto view = FindResource<View>(view_id);
@@ -663,7 +661,7 @@ TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
   EXPECT_ERROR_COUNT(0);
 
   // No additional render state events should have been posted.
-  EXPECT_EQ(0u, events_.size());
+  EXPECT_EQ(event_size, events().size());
 }
 
 TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
@@ -677,7 +675,6 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   EXPECT_ERROR_COUNT(0);
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   auto view = FindResource<View>(view_id);
-  events_.clear();
 
   // Make sure that the ViewHolder is connected to the Scene and the View is
   // rendering.
@@ -687,17 +684,18 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
   view->SignalRender();
   RunLoopUntilIdle();
-  events_.clear();
+
+  uint32_t next_event_id = events().size();
 
   // Detach ViewHolder from the scene.
   view_holder->Detach();
 
   // The "stopped rendering" event should have emitted before the "detached from
   // scene" event.
-  EXPECT_EQ(2u, events_.size());
-  const fuchsia::ui::scenic::Event& event = events_[0];
+  EXPECT_LT(next_event_id, events().size());
+  const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   VerifyViewState(event, false);
-  const fuchsia::ui::scenic::Event& event2 = events_.back();
+  const fuchsia::ui::scenic::Event& event2 = events().back();
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene,
             event2.gfx().Which());
 }

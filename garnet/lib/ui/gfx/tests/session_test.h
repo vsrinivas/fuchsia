@@ -20,8 +20,12 @@ namespace test {
 
 class SessionTest : public ErrorReportingTest, public EventReporter {
  protected:
+  // Subclasses that override SetUp() and TearDown() should be sure to call
+  // their parent class's implementations.
+
   // | ::testing::Test |
   void SetUp() override;
+  // | ::testing::Test |
   void TearDown() override;
 
   // |EventReporter|
@@ -29,28 +33,35 @@ class SessionTest : public ErrorReportingTest, public EventReporter {
   void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override;
 
-  // Subclasses should override to provide their own Session.
-  virtual std::unique_ptr<SessionForTest> CreateSession();
-
-  // Creates a SessionContext with only a SessionManager and a
-  // FrameScheduler.
-  SessionContext CreateBarebonesSessionContext();
+  std::unique_ptr<Session> CreateSession();
 
   // Apply the specified Command.  Return true if it was applied successfully,
   // and false if an error occurred.
-  bool Apply(::fuchsia::ui::gfx::Command command) {
-    CommandContext context(nullptr);
-    return session_->ApplyCommand(&context, std::move(command));
-  }
+  bool Apply(::fuchsia::ui::gfx::Command command);
 
   template <class ResourceT>
   fxl::RefPtr<ResourceT> FindResource(ResourceId id) {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 
+  Session* session() { return session_.get(); }
+  const std::vector<fuchsia::ui::scenic::Event>& events() { return events_; }
+  DisplayManager* display_manager() { return display_manager_.get(); }
+
+ protected:
+  // Creates a SessionContext with only a SessionManager and a
+  // FrameScheduler. Subclasses should override to customize Session creation.
+  virtual SessionContext CreateSessionContext();
+  // Creates an empty CommandContext for Apply(). Subclasses should override to
+  // customize command application.
+  virtual CommandContext CreateCommandContext();
+
+ private:
+  SessionContext session_context_;
+
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
-  std::unique_ptr<SessionForTest> session_;
+  std::unique_ptr<Session> session_;
   std::unique_ptr<SessionManager> session_manager_;
   std::vector<fuchsia::ui::scenic::Event> events_;
 };

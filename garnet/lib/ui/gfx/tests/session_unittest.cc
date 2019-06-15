@@ -17,10 +17,10 @@ namespace gfx {
 namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
-  EXPECT_TRUE(session_->ScheduleUpdate(
+  EXPECT_TRUE(session()->ScheduleUpdate(
       /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
-  EXPECT_FALSE(session_->ScheduleUpdate(
+  EXPECT_FALSE(session()->ScheduleUpdate(
       /*presentation_time*/ 0, std::vector<::fuchsia::ui::gfx::Command>(),
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
@@ -31,10 +31,10 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
-  EXPECT_TRUE(session_->ScheduleUpdate(
+  EXPECT_TRUE(session()->ScheduleUpdate(
       /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
-  EXPECT_TRUE(session_->ScheduleUpdate(
+  EXPECT_TRUE(session()->ScheduleUpdate(
       /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
@@ -57,21 +57,21 @@ TEST_F(SessionTest, AddAndRemoveResource) {
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(4)));
   EXPECT_TRUE(Apply(scenic::NewAddChildCmd(1, 2)));
   EXPECT_TRUE(Apply(scenic::NewAddPartCmd(1, 3)));
-  EXPECT_EQ(4U, session_->GetTotalResourceCount());
-  EXPECT_EQ(4U, session_->GetMappedResourceCount());
+  EXPECT_EQ(4U, session()->GetTotalResourceCount());
+  EXPECT_EQ(4U, session()->GetMappedResourceCount());
 
   // Even though we release node 2 and 3, they continue to exist because they
   // referenced by node 1.  Only node 4 is destroyed.
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(2)));
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(3)));
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(4)));
-  EXPECT_EQ(3U, session_->GetTotalResourceCount());
-  EXPECT_EQ(1U, session_->GetMappedResourceCount());
+  EXPECT_EQ(3U, session()->GetTotalResourceCount());
+  EXPECT_EQ(1U, session()->GetMappedResourceCount());
 
   // Releasing node 1 causes nodes 1-3 to be destroyed.
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(1)));
-  EXPECT_EQ(0U, session_->GetTotalResourceCount());
-  EXPECT_EQ(0U, session_->GetMappedResourceCount());
+  EXPECT_EQ(0U, session()->GetTotalResourceCount());
+  EXPECT_EQ(0U, session()->GetMappedResourceCount());
 }
 
 TEST_F(SessionTest, Labeling) {

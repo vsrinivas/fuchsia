@@ -12,11 +12,6 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-SessionForTest::SessionForTest(SessionId id, SessionContext context,
-                               EventReporter* event_reporter,
-                               ErrorReporter* error_reporter)
-    : Session(id, std::move(context), event_reporter, error_reporter) {}
-
 SessionHandlerForTest::SessionHandlerForTest(SessionContext session_context,
                                              SessionId session_id,
                                              Scenic* scenic,

@@ -19,8 +19,22 @@ class CompositorTest : public SessionTest {
  public:
   CompositorTest() {}
 
-  std::unique_ptr<SessionForTest> CreateSession() override {
-    SessionContext session_context = CreateBarebonesSessionContext();
+  void TearDown() override {
+    SessionTest::TearDown();
+
+    view_linker_.reset();
+    resource_linker_.reset();
+    time_stamper_.reset();
+    scene_graph_.reset();
+  }
+
+  SessionContext CreateSessionContext() override {
+    SessionContext session_context = SessionTest::CreateSessionContext();
+
+    FXL_DCHECK(!scene_graph_);
+    FXL_DCHECK(!time_stamper_);
+    FXL_DCHECK(!resource_linker_);
+    FXL_DCHECK(!view_linker_);
 
     // Generate scene graph.
     scene_graph_ = std::make_unique<SceneGraph>();
@@ -41,8 +55,7 @@ class CompositorTest : public SessionTest {
     session_context.scene_graph = scene_graph_->GetWeakPtr();
 
     // Return session
-    return std::make_unique<SessionForTest>(1, std::move(session_context), this,
-                                            error_reporter());
+    return session_context;
   }
 
  private:
@@ -63,7 +76,7 @@ TEST_F(CompositorTest, Validation) {
   ASSERT_TRUE(Apply(scenic::NewSetDisplayColorConversionCmdHACK(
       CompositorId, preoffsets, matrix, postoffsets)));
 
-  Display* display = display_manager_->default_display();
+  Display* display = display_manager()->default_display();
   ASSERT_TRUE(display != nullptr);
 
   const ColorTransform& transform = display->color_transform();

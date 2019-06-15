@@ -31,31 +31,27 @@ class ViewClippingTest : public VkSessionTest {
  public:
   // We need a rounded rect factory and a view linker which
   // the base VkSessionTest doesn't have.
-  std::unique_ptr<SessionForTest> CreateSession() override {
-    SessionContext session_context = CreateBarebonesSessionContext();
-    auto vulkan_device = CreateVulkanDeviceQueues();
-    escher_ = std::make_unique<Escher>(vulkan_device);
-    release_fence_signaller_ = std::make_unique<ReleaseFenceSignaller>(
-        escher_->command_buffer_sequencer());
-    image_factory_ = std::make_unique<ImageFactoryAdapter>(
-        escher_->gpu_allocator(), escher_->resource_recycler());
+  void TearDown() override {
+    VkSessionTest::TearDown();
 
-    session_context.vk_device = escher_->vk_device();
-    session_context.escher = escher_.get();
-    session_context.escher_resource_recycler = escher_->resource_recycler();
-    session_context.escher_image_factory = image_factory_.get();
-    session_context.release_fence_signaller = release_fence_signaller_.get();
+    view_linker_.reset();
+  }
+
+  // We need a view linker which the base VkSessionTest doesn't have.
+  SessionContext CreateSessionContext() override {
+    auto session_context = VkSessionTest::CreateSessionContext();
+
+    FXL_DCHECK(!view_linker_);
+    FXL_DCHECK(!rounded_rect_factory_);
 
     rounded_rect_factory_ =
-        std::make_unique<escher::RoundedRectFactory>(escher_->GetWeakPtr());
+        std::make_unique<escher::RoundedRectFactory>(escher()->GetWeakPtr());
     session_context.escher_rounded_rect_factory = rounded_rect_factory_.get();
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();
 
-    OnSessionContextCreated(&session_context);
-    return std::make_unique<SessionForTest>(1, std::move(session_context), this,
-                                            error_reporter());
+    return session_context;
   }
 
  private:

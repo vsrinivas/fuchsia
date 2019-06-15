@@ -37,7 +37,7 @@ TEST_F(StereoCameraTest, Basic) {
       camera_id, glm::value_ptr(left_projection),
       glm::value_ptr(right_projection))));
 
-  auto camera = session_->resources()->FindResource<StereoCamera>(camera_id);
+  auto camera = session()->resources()->FindResource<StereoCamera>(camera_id);
   EXPECT_TRUE(camera);
 
   EXPECT_TRUE(escher::CompareMatrix(

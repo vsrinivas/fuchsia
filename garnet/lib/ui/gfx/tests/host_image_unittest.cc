@@ -47,11 +47,21 @@ namespace test {
 
 class HostImageTest : public VkSessionTest {
  public:
-  void OnSessionContextCreated(SessionContext* context) override {
-    ASSERT_FALSE(listener);
+  void TearDown() override {
+    VkSessionTest::TearDown();
+    listener.reset();
+  }
+
+  SessionContext CreateSessionContext() override {
+    auto context = VkSessionTest::CreateSessionContext();
+
+    FXL_DCHECK(!listener);
+
     listener =
-        std::make_unique<ImageFactoryListener>(context->escher_image_factory);
-    context->escher_image_factory = listener.get();
+        std::make_unique<ImageFactoryListener>(context.escher_image_factory);
+    context.escher_image_factory = listener.get();
+
+    return context;
   }
 
   std::unique_ptr<ImageFactoryListener> listener;

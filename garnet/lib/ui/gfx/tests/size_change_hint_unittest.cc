@@ -15,14 +15,20 @@ class SizeChangeHintTest : public SessionTest {
  public:
   SizeChangeHintTest() {}
 
-  std::unique_ptr<SessionForTest> CreateSession() override {
-    SessionContext session_context = CreateBarebonesSessionContext();
+  void TearDown() override {
+    SessionTest::TearDown();
+    resource_linker_.reset();
+  }
+
+  SessionContext CreateSessionContext() override {
+    SessionContext session_context = SessionTest::CreateSessionContext();
+
+    FXL_DCHECK(!resource_linker_);
 
     resource_linker_ = std::make_unique<ResourceLinker>();
     session_context.resource_linker = resource_linker_.get();
 
-    return std::make_unique<SessionForTest>(1, std::move(session_context), this,
-                                            error_reporter());
+    return session_context;
   }
 
   std::unique_ptr<ResourceLinker> resource_linker_;
@@ -63,8 +69,8 @@ TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   RunLoopUntilIdle();
 
   // Verify that we got an SizeChangeHintEvent.
-  EXPECT_EQ(1u, events_.size());
-  fuchsia::ui::scenic::Event event = std::move(events_[0]);
+  EXPECT_EQ(1u, events().size());
+  auto& event = std::move(events()[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kSizeChangeHint,
             event.gfx().Which());

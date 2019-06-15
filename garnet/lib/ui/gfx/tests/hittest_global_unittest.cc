@@ -24,13 +24,13 @@
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "gtest/gtest.h"
-#include "src/ui/lib/escher/forward_declarations.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/forward_declarations.h"
 
 // The test setup here is sufficiently different from hittest_unittest.cc to
 // merit its own file.  We access the global hit test through the compositor,
@@ -48,7 +48,9 @@ namespace test {
 class CustomSession {
  public:
   CustomSession(SessionId id, SessionContext session_context) {
-    session_ = std::make_unique<SessionForTest>(id, std::move(session_context));
+    session_ = std::make_unique<Session>(id, std::move(session_context),
+                                         EventReporter::Default(),
+                                         ErrorReporter::Default());
   }
 
   ~CustomSession() {}
@@ -61,7 +63,7 @@ class CustomSession {
   }
 
  private:
-  std::unique_ptr<SessionForTest> session_;
+  std::unique_ptr<Session> session_;
 };
 
 // Loop fixture provides dispatcher for Engine's EventTimestamper.

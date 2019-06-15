@@ -23,14 +23,17 @@ class VkSessionTest : public SessionTest {
   static vk::MemoryRequirements GetBufferRequirements(
       vk::Device device, vk::DeviceSize size, vk::BufferUsageFlags usage_flags);
 
-  // |SessionTest|
-  std::unique_ptr<SessionForTest> CreateSession() override;
+  void TearDown() override;
 
-  // This function provides a mechanism for tests to inject their own objects
-  // into the SessionContext before construction.
-  virtual void OnSessionContextCreated(SessionContext* context) {}
+  escher::Escher* escher() { return escher_.get(); }
 
  protected:
+  // |SessionTest|
+  SessionContext CreateSessionContext() override;
+  // |SessionTest|
+  CommandContext CreateCommandContext() override;
+
+ private:
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;

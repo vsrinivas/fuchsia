@@ -82,9 +82,23 @@ vk::MemoryRequirements VkSessionTest::GetBufferRequirements(
   return retval;
 }
 
-std::unique_ptr<SessionForTest> VkSessionTest::CreateSession() {
-  SessionContext session_context = CreateBarebonesSessionContext();
+void VkSessionTest::TearDown() {
+  SessionTest::TearDown();
+
+  image_factory_.reset();
+  release_fence_signaller_.reset();
+  escher_.reset();
+}
+
+SessionContext VkSessionTest::CreateSessionContext() {
+  auto session_context = SessionTest::CreateSessionContext();
+
   auto vulkan_device = CreateVulkanDeviceQueues();
+
+  FXL_DCHECK(!escher_);
+  FXL_DCHECK(!release_fence_signaller_);
+  FXL_DCHECK(!image_factory_);
+
   escher_ = std::make_unique<Escher>(vulkan_device);
   release_fence_signaller_ = std::make_unique<ReleaseFenceSignaller>(
       escher_->command_buffer_sequencer());
@@ -97,10 +111,12 @@ std::unique_ptr<SessionForTest> VkSessionTest::CreateSession() {
   session_context.escher_image_factory = image_factory_.get();
   session_context.release_fence_signaller = release_fence_signaller_.get();
 
-  OnSessionContextCreated(&session_context);
+  return session_context;
+}
 
-  return std::make_unique<SessionForTest>(1, std::move(session_context), this,
-                                          error_reporter());
+CommandContext VkSessionTest::CreateCommandContext() {
+  return CommandContext(
+      escher::BatchGpuUploader::New(escher_->GetWeakPtr(), /* trace_id = */ 0));
 }
 
 }  // namespace test
