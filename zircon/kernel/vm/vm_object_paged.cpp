@@ -160,7 +160,7 @@ VmObjectPaged::~VmObjectPaged() {
             Guard<fbl::Mutex> guard{&lock_};
             if (parent_) {
                 // Release any COW pages in ancestors retained by this vmo.
-                ReleaseCowParentPagesLocked(0, parent_limit_, true, &list);
+                ReleaseCowParentPagesLocked(0, parent_limit_, &list);
 
                 LTRACEF("removing ourself from our parent %p\n", parent_.get());
                 parent_->RemoveChild(this, guard.take());
@@ -410,6 +410,8 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
     parent_offset_ = 0;
     parent_limit_ = size_;
 
+    DEBUG_ASSERT(parent_start_limit_ == 0); // Should only ever be set for hidden vmos
+
     // Move everything into the hidden parent, for immutability
     hidden_parent->page_list_ = std::move(page_list_);
     hidden_parent->size_ = size_;
@@ -576,8 +578,10 @@ void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adop
     if (child.parent_offset_ + child.parent_limit_ > parent_limit_) {
         if (parent_limit_ < child.parent_offset_) {
             child.parent_limit_ = 0;
+            child.parent_start_limit_ = 0;
         } else {
             child.parent_limit_ = parent_limit_ - child.parent_offset_;
+            child.parent_start_limit_ = fbl::min(child.parent_start_limit_, child.parent_limit_);
         }
     }
 
@@ -586,6 +590,18 @@ void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adop
     bool overflow = add_overflow(parent_offset_, child.parent_offset_, &child.parent_offset_);
     // Overflow here means that something went wrong when setting up parent limits.
     DEBUG_ASSERT(!overflow);
+
+    if (child.is_hidden()) {
+        // After the merge, either |child| can't see anything in parent (in which case
+        // the parent limits could be anything), or |child|'s first visible offset will be
+        // at least as large as |this|'s first visible offset.
+        DEBUG_ASSERT(child.parent_start_limit_ == child.parent_limit_
+                || parent_offset_ + parent_start_limit_
+                        <= child.parent_offset_ + child.parent_start_limit_);
+    } else {
+        // non-hidden vmos should always have zero parent_start_limit_
+        DEBUG_ASSERT(child.parent_start_limit_ == 0);
+    }
 
     list_node covered_pages;
     list_initialize(&covered_pages);
@@ -806,7 +822,7 @@ bool VmObjectPaged::HasAttributedAncestorPageLocked(uint64_t offset) const {
             } else {
                 auto& sib = left ?  parent->right_child_locked() : parent->left_child_locked();
                 DEBUG_ASSERT(sib.page_attribution_user_id_ == parent->page_attribution_user_id_);
-                if (sib.parent_offset_ <= parent_offset
+                if (sib.parent_offset_ + sib.parent_start_limit_ <= parent_offset
                         && parent_offset < sib.parent_offset_ + sib.parent_limit_) {
                     // The offset is visible to the current vmo, so there can't be any migrated
                     // pages in the sibling subtree corresponding to the offset. And since the page
@@ -881,12 +897,12 @@ bool VmObjectPaged::IsUniAccessibleLocked(vm_page_t* page, uint64_t offset) cons
         return true;
     }
 
-    if (offset < left_child_locked().parent_offset_
+    if (offset < left_child_locked().parent_offset_ + left_child_locked().parent_start_limit_
             || offset >= left_child_locked().parent_offset_ + left_child_locked().parent_limit_) {
         return true;
     }
 
-    if (offset < right_child_locked().parent_offset_
+    if (offset < right_child_locked().parent_offset_ + right_child_locked().parent_start_limit_
             || offset >= right_child_locked().parent_offset_ + right_child_locked().parent_limit_) {
         return true;
     }
@@ -1587,18 +1603,15 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
     return found_pinned;
 }
 
-void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bool update_limit,
+void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
                                                 list_node_t* free_list) {
-    if (start == end) {
+    start = fbl::max(start, parent_start_limit_);
+    end = fbl::min(end, parent_limit_);
+    if (start >= end) {
         return;
     }
 
-    // This vmo is only retaining pages less than parent_limit_, so we shouldn't
-    // be trying to release any pages above this limit.
-    DEBUG_ASSERT(start < parent_limit_);
-    DEBUG_ASSERT(end <= parent_limit_);
-
-    if (!parent_ || !parent_->is_hidden()) {
+    if (!parent_ || !parent_->is_hidden() || parent_start_limit_ == parent_limit_) {
         return;
     }
     auto parent = VmObjectPaged::AsVmObjectPaged(parent_);
@@ -1610,6 +1623,18 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bo
     bool overflow = add_overflow(start, parent_offset_, &parent_range_start);
     bool overflow2 = add_overflow(end, parent_offset_, &parent_range_end);
     DEBUG_ASSERT(!overflow && !overflow2); // vmo creation should have failed.
+
+    bool skip_split_bits;
+    if (parent_limit_ == end) {
+        parent_limit_ = start;
+        parent_start_limit_ = fbl::min(parent_limit_, parent_start_limit_);
+        skip_split_bits = true;
+    } else if (start == parent_start_limit_) {
+        parent_start_limit_ = end;
+        skip_split_bits = true;
+    } else {
+        skip_split_bits = false;
+    }
 
     // Drop any pages in the parent which are outside of the other child's accessibility, and
     // recursively release COW pages in ancestor vmos in those inaccessible regions.
@@ -1623,13 +1648,12 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bo
     // don't want the parent's parent_limit_ to be updated if the sibling can still access
     // the pages.
     uint64_t tail_start;
-    if (other.parent_limit_ != 0) {
-        if (parent_range_start < other.parent_offset_) {
-            uint64_t head_end = fbl::min(other.parent_offset_, parent_range_end);
+    if (other.parent_start_limit_ != other.parent_limit_) {
+        if (parent_range_start < other.parent_offset_ + other.parent_start_limit_) {
+            uint64_t head_end =
+                    fbl::min(other.parent_offset_ + other.parent_start_limit_, parent_range_end);
             parent->page_list_.RemovePages(parent_range_start, head_end, free_list);
-            parent->ReleaseCowParentPagesLocked(fbl::min(parent->parent_limit_, parent_range_start),
-                                                fbl::min(parent->parent_limit_, head_end),
-                                                false, free_list);
+            parent->ReleaseCowParentPagesLocked(parent_range_start, head_end, free_list);
         }
         tail_start = fbl::max(other.parent_offset_ + other.parent_limit_, parent_range_start);
     } else {
@@ -1639,20 +1663,13 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bo
     }
     if (tail_start < parent_range_end) {
         parent->page_list_.RemovePages(tail_start, parent_range_end, free_list);
-        parent->ReleaseCowParentPagesLocked(
-                fbl::min(parent->parent_limit_, tail_start),
-                fbl::min(parent->parent_limit_, parent_range_end),
-                update_limit, free_list);
-    }
-
-    if (update_limit) {
-        parent_limit_ = start;
+        parent->ReleaseCowParentPagesLocked(tail_start, parent_range_end, free_list);
     }
 
     // Any pages left were accesible by both children. Free any pages that were already split
     // into the other child, and mark any unsplit pages. We don't need to recurse on this
     // range because the visibility of ancestor pages in this range isn't changing.
-    parent->page_list_.RemovePages([update_limit, left](vm_page_t*& page, auto offset) -> bool {
+    parent->page_list_.RemovePages([skip_split_bits, left](vm_page_t*& page, auto offset) -> bool {
         // Simply checking if the page is resident in |this|->page_list_ is insufficient, as the
         // page split into this vmo could have been migrated anywhere into is children. To avoid
         // having to search its entire child subtree, we need to track into which subtree
@@ -1660,7 +1677,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bo
         if (left ? page->object.cow_right_split : page->object.cow_left_split) {
             return true;
         }
-        if (!update_limit) {
+        if (!skip_split_bits) {
             // Only bother setting the split bits if we didn't make the page
             // inaccessible through parent_limit_;
             if (left) {
@@ -1730,8 +1747,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
         if (parent_ && parent_->is_hidden()) {
             // Release any COW pages that are no longer necessary. This will also
             // update the parent limit.
-            ReleaseCowParentPagesLocked(fbl::min(start, parent_limit_),
-                                        fbl::min(end, parent_limit_), true, &free_list);
+            ReleaseCowParentPagesLocked(start, end, &free_list);
         } else {
             parent_limit_ = fbl::min(parent_limit_, s);
         }

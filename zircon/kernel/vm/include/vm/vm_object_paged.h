@@ -292,12 +292,7 @@ private:
     // This function recursively invokes itself for regions of the parent vmo which are
     // not accessible by the sibling vmo.
     // TODO(ZX-757): Carefully constructed clone chains can blow the stack.
-    //
-    // If |update_limit| is set, then this function will recursively update parent_limit_ of
-    // this and ancestor vmos to account for the fact that this vmo will never access pages
-    // in its parent above |start|.
-    void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, bool update_limit,
-                                     list_node_t* free_list)
+    void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, list_node_t* free_list)
             // Calling into the parents confuses analysis
             TA_NO_THREAD_SAFETY_ANALYSIS;
 
@@ -334,10 +329,16 @@ private:
     // members
     const uint32_t options_;
     uint64_t size_ TA_GUARDED(lock_) = 0;
-    // offset in the *parent* where this object starts
+    // Offset in the *parent* where this object starts.
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
-    // offset in *this object* where it stops referring to its parent
+    // Offset in *this object* above which accesses will no longer access the parent.
     uint64_t parent_limit_ TA_GUARDED(lock_) = 0;
+    // Offset in *this object* below which this vmo stops referring to its parent. This field
+    // is only useful for hidden vmos, where it is used by ::ReleaseCowPagesParentLocked
+    // together with parent_limit_ to reduce how often page split bits need to be set. It is
+    // effectively a summary of the parent_offset_ values of all descendants - unlike
+    // parent_limit_, this value does not directly impact page lookup.
+    uint64_t parent_start_limit_ TA_GUARDED(lock_) = 0;
     const uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 

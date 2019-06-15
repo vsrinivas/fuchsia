@@ -486,6 +486,132 @@ bool offset_test() {
     END_TEST;
 }
 
+// Tests writing to the clones of a clone created with an offset.
+bool offset_test2() {
+    BEGIN_TEST;
+
+    uint64_t original = 0;
+    if (get_root_resource) {
+        original = kmem_vmo_mem_usage();
+    }
+
+    zx::vmo vmo;
+    ASSERT_TRUE(init_page_tagged_vmo(4, &vmo));
+
+    // Create a clone at an offset.
+    zx::vmo offset_clone;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                               ZX_PAGE_SIZE, 3 * ZX_PAGE_SIZE, &offset_clone), ZX_OK);
+
+    // Create two clones to fully divide the previous partial clone.
+    zx::vmo clone1;
+    ASSERT_EQ(offset_clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                                        0, 2 * ZX_PAGE_SIZE, &clone1), ZX_OK);
+
+    zx::vmo clone2;
+    ASSERT_EQ(offset_clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                                        2 * ZX_PAGE_SIZE, 1 * ZX_PAGE_SIZE, &clone2), ZX_OK);
+
+    ASSERT_TRUE(vmo_check(clone1, 2));
+    ASSERT_TRUE(vmo_check(clone1, 3, ZX_PAGE_SIZE));
+    ASSERT_TRUE(vmo_check(clone2, 4));
+
+    // Write to one of the pages in the offset clone, close the clone, and check that
+    // things are still correct.
+    ASSERT_TRUE(vmo_write(offset_clone, 4, ZX_PAGE_SIZE));
+    offset_clone.reset();
+
+    ASSERT_TRUE(vmo_check(clone1, 2));
+    ASSERT_TRUE(vmo_check(clone1, 3, ZX_PAGE_SIZE));
+    ASSERT_TRUE(vmo_check(clone2, 4));
+
+    // Check that the total amount of allocated memory is correct. It's not defined how
+    // many pages should be blamed to vmo and clone1 after closing offset_clone (which was
+    // forked), but no vmo can be blamed for more pages than its total size.
+    const uint64_t kImplCost1 = 4 * ZX_PAGE_SIZE;
+    const uint64_t kImplCost2 = ZX_PAGE_SIZE;
+    ASSERT_EQ(vmo_committed_bytes(vmo), kImplCost1);
+    ASSERT_EQ(vmo_committed_bytes(clone1), kImplCost2);
+    ASSERT_EQ(vmo_committed_bytes(clone2), 0);
+    static_assert(kImplCost1 <= 4 * ZX_PAGE_SIZE && kImplCost2 <= 2 * ZX_PAGE_SIZE);
+    if (get_root_resource) {
+        ASSERT_EQ(original + kImplCost1 + kImplCost2, kmem_vmo_mem_usage());
+    }
+
+    // Clone the first clone and check that any extra pages were freed.
+    clone1.reset();
+    ASSERT_EQ(vmo_committed_bytes(vmo), 4 * ZX_PAGE_SIZE);
+    ASSERT_EQ(vmo_committed_bytes(clone2), 0);
+    if (get_root_resource) {
+        ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, kmem_vmo_mem_usage());
+    }
+
+    clone2.reset();
+
+    if (get_root_resource) {
+        ASSERT_EQ(original + 4 * ZX_PAGE_SIZE, kmem_vmo_mem_usage());
+    }
+
+    END_TEST;
+}
+
+// Tests writes to a page in a clone that is offset from the original and has a clone itself.
+bool offset_progressive_write_test() {
+    BEGIN_TEST;
+
+    uint64_t original = 0;
+    if (get_root_resource) {
+        original = kmem_vmo_mem_usage();
+    }
+
+    zx::vmo vmo;
+    ASSERT_TRUE(init_page_tagged_vmo(2, &vmo));
+
+    zx::vmo clone;
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                               ZX_PAGE_SIZE, 2 * ZX_PAGE_SIZE, &clone), ZX_OK);
+
+    // Check that the child has the right data.
+    ASSERT_TRUE(vmo_check(clone, 2));
+
+    // Write to the clone and check that everything still has the correct data.
+    ASSERT_TRUE(vmo_write(clone, 3));
+    ASSERT_TRUE(vmo_check(clone, 3));
+    ASSERT_TRUE(vmo_check(vmo, 1));
+    ASSERT_TRUE(vmo_check(vmo, 2, ZX_PAGE_SIZE));
+
+    zx::vmo clone2;
+    ASSERT_EQ(clone.create_child(ZX_VMO_CHILD_COPY_ON_WRITE2,
+                                 ZX_PAGE_SIZE, ZX_PAGE_SIZE, &clone2), ZX_OK);
+
+    // Write to the clone again, and check that the write doesn't consume any
+    // extra pages as the page isn't accessible by clone2.
+    ASSERT_TRUE(vmo_write(clone, 4));
+
+    ASSERT_EQ(vmo_committed_bytes(vmo), 2 * ZX_PAGE_SIZE);
+    ASSERT_EQ(vmo_committed_bytes(clone), ZX_PAGE_SIZE);
+    ASSERT_EQ(vmo_committed_bytes(clone2), 0);
+    if (get_root_resource) {
+        ASSERT_EQ(original + 3 * ZX_PAGE_SIZE, kmem_vmo_mem_usage());
+    }
+
+    // Reset the original vmo and clone2, and make sure that the clone stays correct.
+    vmo.reset();
+    ASSERT_TRUE(vmo_check(clone, 4));
+
+    clone2.reset();
+    ASSERT_TRUE(vmo_check(clone, 4));
+
+    // Check that the clone doesn't unnecessarily retain pages.
+    ASSERT_EQ(vmo_committed_bytes(clone), ZX_PAGE_SIZE);
+    if (get_root_resource) {
+        ASSERT_EQ(original + ZX_PAGE_SIZE, kmem_vmo_mem_usage());
+    }
+
+    END_TEST;
+}
+
+
 // Tests that a clone of a clone which overflows its parent properly interacts with
 // both of its ancestors (i.e. the orignal vmo and the first clone).
 bool overflow_test() {
@@ -1706,6 +1832,8 @@ RUN_TEST(obj_mem_accounting_test)
 RUN_TEST(kmem_accounting_test)
 RUN_TEST(zero_page_write_test)
 RUN_TEST(offset_test)
+RUN_TEST(offset_test2)
+RUN_TEST(offset_progressive_write_test)
 RUN_TEST(overflow_test)
 RUN_TEST(small_clone_test)
 RUN_TEST(small_clone_child_test)
