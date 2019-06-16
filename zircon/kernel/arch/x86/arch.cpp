@@ -93,15 +93,6 @@ void arch_enter_uspace(iframe_t* iframe) {
     /* check that the kernel stack is set properly */
     DEBUG_ASSERT(is_kernel_address(x86_get_percpu()->default_tss.rsp0));
 
-    // TODO(dje): FS,GS access is in flux. This will need to be updated
-    // when that work is completed.
-
-    /* set up user's fs: gs: base */
-    write_msr(X86_MSR_IA32_FS_BASE, 0);
-
-    /* set the KERNEL_GS_BASE msr here, because we're going to swapgs below */
-    write_msr(X86_MSR_IA32_KERNEL_GS_BASE, 0);
-
     x86_uspace_entry(iframe);
     __UNREACHABLE;
 }

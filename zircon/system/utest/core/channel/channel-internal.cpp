@@ -148,7 +148,8 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         ASSERT_EQ(zx::thread::create(proc, "mini-p-channel-test-thrd", 2u, 0u, &thread), ZX_OK);
 
         zx::channel cmd_channel;
-        ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), local.release(),
+        ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(),
+                                         local.release(), true,
                                          cmd_channel.reset_and_get_address()));
 
         auto cleanup = fbl::MakeAutoCall([&cmd_channel]() {

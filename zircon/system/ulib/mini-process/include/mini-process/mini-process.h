@@ -55,6 +55,9 @@ __BEGIN_CDECLS
 // The process requests a attempts to use the null handle with replace_as_executable.
 // This forwards the result of that operation
 #define MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE (1 << 14)
+// This checks the word the thread register points to against expected value.
+#define MINIP_CMD_CHECK_THREAD_POINTER       (1 << 15)
+#define MINIP_THREAD_POINTER_CHECK_VALUE     (0xdeadbeeffeedfaceUL)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.
@@ -66,9 +69,13 @@ zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
 // a minimal process that has no VDSO and loops forever. If |cntrl_channel|
 // is valid then upon successful return it contains the handle to a channel
 // that the new process is listening to for commands via mini_process_cmd().
+// If |wait_for_ack| is false, mini_process_wait_for_ack() must be called
+// before mini_process_cmd(); otherwise this blocks until the process has
+// started up and read from the control channel.
 zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
                                    zx_handle_t vmar,
                                    zx_handle_t transferred_handle,
+                                   bool wait_for_ack,
                                    zx_handle_t* cntrl_channel);
 
 // Loads the vDSO into a process.  |base| and |entry| can be NULL.  This is not
@@ -85,6 +92,10 @@ zx_status_t mini_process_load_stack(zx_handle_t vmar, bool with_code,
 
 // Starts a no-VDSO infinite-loop thread.
 zx_status_t start_mini_process_thread(zx_handle_t thread, zx_handle_t vmar);
+
+// Consume the reply from a successful start_mini_process_etc() call with
+// |wait_for_ack| false.
+zx_status_t mini_process_wait_for_ack(zx_handle_t cntrl_channel);
 
 // Execute in the mini process any set of the MINIP_CMD_ commands above.
 // The |cntrl_channel| should be the same as the one returned by

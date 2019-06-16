@@ -122,9 +122,38 @@ zx_status_t mini_process_load_vdso(zx_handle_t process, zx_handle_t vmar,
     return status;
 }
 
+zx_status_t mini_process_wait_for_ack(zx_handle_t control_channel) {
+    zx_signals_t observed;
+    zx_status_t status = zx_object_wait_one(
+        control_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+        ZX_TIME_INFINITE, &observed);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if (observed & ZX_CHANNEL_PEER_CLOSED) {
+        // the child process died prematurely.
+        return ZX_ERR_UNAVAILABLE;
+    }
+
+    if (observed & ZX_CHANNEL_READABLE) {
+        uint32_t ack[2];
+        uint32_t actual_handles;
+        uint32_t actual_bytes;
+        status = zx_channel_read(control_channel, 0u, ack, NULL,
+                                 sizeof(uint32_t) * 2, 0u,
+                                 &actual_bytes, &actual_handles);
+    } else {
+        status = ZX_ERR_BAD_STATE;
+    }
+
+    return status;
+}
+
 zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
                                    zx_handle_t vmar,
                                    zx_handle_t transferred_handle,
+                                   bool wait_for_ack,
                                    zx_handle_t* control_channel) {
     zx_vaddr_t stack_base = 0;
     zx_vaddr_t sp = 0;
@@ -172,22 +201,11 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         if (status != ZX_OK)
             goto exit;
 
-        uint32_t observed;
-        status = zx_object_wait_one(chn[0],
-            ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_TIME_INFINITE, &observed);
-
-        if (observed & ZX_CHANNEL_PEER_CLOSED) {
-            // the child process died prematurely.
-            status = ZX_ERR_UNAVAILABLE;
-            goto exit;
-        }
-
-        if (observed & ZX_CHANNEL_READABLE) {
-            uint32_t ack[2];
-            uint32_t actual_handles;
-            uint32_t actual_bytes;
-            status = zx_channel_read(
-                chn[0], 0u, ack, NULL, sizeof(uint32_t) * 2, 0u, &actual_bytes, &actual_handles);
+        if (wait_for_ack) {
+            status = mini_process_wait_for_ack(chn[0]);
+            if (status != ZX_OK) {
+                goto exit;
+            }
         }
 
         *control_channel = chn[0];
@@ -254,7 +272,8 @@ zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
     if (status != ZX_OK)
         goto exit;
 
-    status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, &channel);
+    status = start_mini_process_etc(*process, *thread, vmar,
+                                    transferred_handle, true, &channel);
     transferred_handle = ZX_HANDLE_INVALID; // The transferred_handle gets consumed.
 exit:
     if (status != ZX_OK) {

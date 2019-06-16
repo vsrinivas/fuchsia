@@ -37,24 +37,14 @@ FUNCTION(x86_uspace_entry)
     movq X86_IFRAME_OFFSET_R15(%rdi), %r15
     movq X86_IFRAME_OFFSET_RDI(%rdi), %rdi
 
-    // We need a register to zero out the segment registers.
-    // Save %rax before the swapgs so that if this push faults then gs will
-    // still be valid for the kernel. This isn't likely to happen, but we
-    // play it safe.
-    pushq %rax
-
     // We do not need to clear extended register state, since the kernel only
-    // uses the general purpose registers, and the extended state is initialized
-    // to a cleared state.
+    // uses the general purpose registers, and the extended state is
+    // initialized to a cleared state.  Likewise the segment registers are
+    // always cleared on context-switch, so their starting state is fine.  The
+    // fs.base and gs.base values or the extended register state might have
+    // been set via thread_write_state while the thread was suspended before
+    // entering userspace and those values should be preserved.
 
     swapgs
-
-    xorl %eax, %eax
-    mov %ax, %ds
-    mov %ax, %es
-    mov %ax, %fs
-    mov %ax, %gs
-    popq %rax
-
     iretq
 END_FUNCTION(x86_uspace_entry)

@@ -87,8 +87,9 @@ public:
         zx::channel minip_channel;
         // Start the process before we mess with the VMAR,
         // so we don't step on the mapping done by start_mini_process_etc.
-        ASSERT_OK(start_mini_process_etc(process_.get(), thread.get(), vmar_.get(),
-                                         unmapped_vmo.release(),
+        ASSERT_OK(start_mini_process_etc(process_.get(), thread.get(),
+                                         vmar_.get(), unmapped_vmo.release(),
+                                         true,
                                          minip_channel.reset_and_get_address()),
                   "Failed to start mini process.");
         minip_channel.reset();

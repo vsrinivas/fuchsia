@@ -64,7 +64,8 @@ static zx::process make_test_process(const zx::job& job, zx::thread* out_thread,
         return zx::process();
 
     auto thr = thread.release();
-    status = start_mini_process_etc(proc.get(), thr, vmar.get(), event.release(), ctrl);
+    status = start_mini_process_etc(proc.get(), thr, vmar.get(),
+                                    event.release(), true, ctrl);
     if (status != ZX_OK)
         return zx::process();
 

@@ -55,7 +55,8 @@ void CreateMiniProcess(const zx::job& job, zx::process* process, zx::thread* thr
     zx::event event;
     ASSERT_OK(zx::event::create(0, &event));
 
-    ASSERT_OK(start_mini_process_etc(process->get(), thread->get(), vmar.get(), event.release(),
+    ASSERT_OK(start_mini_process_etc(process->get(), thread->get(), vmar.get(),
+                                     event.release(), true,
                                      command_channel->reset_and_get_address()));
 }
 

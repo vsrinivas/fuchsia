@@ -7,6 +7,16 @@
 #include <lib/backtrace-request/backtrace-request.h>
 #include <mini-process/mini-process.h>
 
+static uintptr_t ReadFromThreadPointer(void) {
+#ifdef __x86_64__
+    uintptr_t word;
+    __asm__("mov %%fs:0, %0" : "=r" (word));
+    return word;
+#else
+    return *(uintptr_t*)__builtin_thread_pointer();
+#endif
+}
+
 // This function is the entire program that the child process will execute. It
 // gets directly mapped into the child process via zx_vmo_write() so it,
 //
@@ -213,6 +223,15 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                         __builtin_trap();
 
                     cmd.status = ctx.vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_CHECK_THREAD_POINTER) {
+                    what &= ~MINIP_CMD_CHECK_THREAD_POINTER;
+                    if (ReadFromThreadPointer() == MINIP_THREAD_POINTER_CHECK_VALUE) {
+                        cmd.status = ZX_OK;
+                    } else {
+                        cmd.status = ZX_ERR_BAD_STATE;
+                    }
                     goto reply;
                 }
 

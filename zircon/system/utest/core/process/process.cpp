@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <atomic>
+#include <cassert>
+#include <climits>
 #include <threads.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -18,6 +20,12 @@
 #include <unittest/unittest.h>
 
 namespace {
+
+#ifdef __aarch64__
+constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::tpidr;
+#elif defined(__x86_64__)
+constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::fs_base;
+#endif
 
 const zx_time_t kTimeoutNs = ZX_MSEC(250);
 
@@ -35,7 +43,8 @@ bool mini_process_sanity() {
     ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
 
     zx_handle_t cmd_channel;
-    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, &cmd_channel), ZX_OK);
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, true,
+                                     &cmd_channel), ZX_OK);
 
     EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_ECHO_MSG, nullptr), ZX_OK);
 
@@ -203,7 +212,7 @@ bool kill_process_via_vmar_destroy() {
 
     // Make the process busy-wait rather than using a vDSO call because
     // if it maps in the vDSO then zx_vmar_destroy is prohibited.
-    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, nullptr),
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, true, nullptr),
               ZX_OK);
 
     // Destroying the root VMAR should cause the process to terminate.
@@ -263,9 +272,11 @@ bool kill_channel_handle_cycle() {
 
     zx_handle_t minip_chn[2];
 
-    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0], &minip_chn[0]),
+    EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0],
+                                     true, &minip_chn[0]),
               ZX_OK);
-    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1], &minip_chn[1]),
+    EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1],
+                                     true, &minip_chn[1]),
               ZX_OK);
 
     EXPECT_EQ(zx_handle_close(vmar2), ZX_OK);
@@ -330,8 +341,8 @@ bool info_reflects_process_state() {
 
     zx_handle_t minip_chn;
     // Start the process and make (relatively) certain it's alive.
-    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, &minip_chn),
-              ZX_OK);
+    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, true,
+                                     &minip_chn), ZX_OK);
     zx_signals_t signals;
     ASSERT_EQ(zx_object_wait_one(
         proc, ZX_TASK_TERMINATED, zx_deadline_after(kTimeoutNs), &signals), ZX_ERR_TIMED_OUT);
@@ -399,7 +410,8 @@ public:
         // We don't use this event but starting a new process requires passing it a handle.
         zx_handle_t event = ZX_HANDLE_INVALID;
         ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
-        ASSERT_EQ(start_mini_process_etc(process_, threads_[0], vmar_, event, nullptr), ZX_OK);
+        ASSERT_EQ(start_mini_process_etc(process_, threads_[0], vmar_, event,
+                                         true, nullptr), ZX_OK);
 
         for (int i = 1; i < num_threads_; ++i) {
             ASSERT_EQ(start_mini_process_thread(threads_[i], vmar_), ZX_OK);
@@ -808,6 +820,79 @@ bool create_and_kill_job_race_stress() {
     END_TEST;
 }
 
+bool process_start_write_thread_state() {
+    BEGIN_TEST;
+
+    zx_handle_t proc;
+    zx_handle_t vmar;
+    ASSERT_EQ(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar), ZX_OK);
+
+    zx_handle_t thread;
+    ASSERT_EQ(zx_thread_create(proc, "th", 2u, 0u, &thread), ZX_OK);
+
+    // Suspend the thread before it starts.
+    zx_handle_t token;
+    ASSERT_EQ(zx_task_suspend(thread, &token), ZX_OK);
+
+    zx_handle_t event;
+    ASSERT_EQ(zx_event_create(0u, &event), ZX_OK);
+
+    zx_handle_t minip_chn;
+    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event,
+                                     false, &minip_chn), ZX_OK);
+
+    // Get a known word into memory to point the thread pointer at.  It would
+    // be simpler and sufficient for the purpose of this test just to check
+    // the value of the thread register itself for a known bit pattern.  But
+    // on older x86 hardware there is no unprivileged way to read the register
+    // directly (rdfsbase) and it can only be used in a memory access.
+    const uintptr_t kCheckValue = MINIP_THREAD_POINTER_CHECK_VALUE;
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmo), ZX_OK);
+    ASSERT_EQ(zx_vmo_write(vmo, &kCheckValue, 0, sizeof(kCheckValue)), ZX_OK);
+    uintptr_t addr;
+    ASSERT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ, 0, vmo, 0, PAGE_SIZE, &addr),
+              ZX_OK);
+    EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
+
+    // Wait for the new thread to reach quiescent suspended state.
+    zx_signals_t signals;
+    EXPECT_EQ(zx_object_wait_one(
+        thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &signals), ZX_OK);
+    EXPECT_TRUE(signals & ZX_THREAD_SUSPENDED);
+
+    // Fetch the initial register state.
+    zx_thread_state_general_regs_t regs;
+    ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS,
+                                   &regs, sizeof(regs)), ZX_OK);
+    EXPECT_EQ(regs.*kThreadRegister, 0);
+
+    // Write it back with the thread register pointed at our memory.
+    regs.*kThreadRegister = addr;
+    ASSERT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS,
+                                    &regs, sizeof(regs)), ZX_OK);
+
+    // Now let the thread run again.
+    EXPECT_EQ(zx_handle_close(token), ZX_OK);
+
+    // Complete the startup handshake that had to be delayed while the thread
+    // was suspended.
+    EXPECT_EQ(mini_process_wait_for_ack(minip_chn), ZX_OK);
+
+    // Now have it read from its thread pointer and check the value.
+    EXPECT_EQ(mini_process_cmd(minip_chn, MINIP_CMD_CHECK_THREAD_POINTER,
+                               nullptr), ZX_OK);
+
+    // All done!
+    EXPECT_EQ(mini_process_cmd(minip_chn, MINIP_CMD_EXIT_NORMAL, nullptr),
+              ZX_ERR_PEER_CLOSED);
+
+    EXPECT_EQ(zx_handle_close(proc), ZX_OK);
+    EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
+    EXPECT_EQ(zx_handle_close(thread), ZX_OK);
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(process_tests)
@@ -831,5 +916,6 @@ RUN_TEST(suspend_thread_and_process_before_starting_process);
 RUN_TEST(suspend_twice);
 RUN_TEST(suspend_twice_before_creating_threads);
 RUN_TEST(suspend_with_dying_thread);
+RUN_TEST(process_start_write_thread_state)
 RUN_TEST_LARGE(create_and_kill_job_race_stress);
 END_TEST_CASE(process_tests)
