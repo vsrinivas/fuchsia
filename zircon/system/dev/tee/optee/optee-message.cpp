@@ -40,15 +40,16 @@ constexpr bool IsParameterOutput(fuchsia_tee_Direction direction) {
 
 } // namespace
 
-bool Message::TryInitializeParameters(size_t starting_param_index,
-                                      const fuchsia_tee_ParameterSet& parameter_set,
-                                      SharedMemoryManager::ClientMemoryPool* temp_memory_pool) {
+zx_status_t Message::TryInitializeParameters(
+    size_t starting_param_index,
+    const fuchsia_tee_ParameterSet& parameter_set,
+    SharedMemoryManager::ClientMemoryPool* temp_memory_pool) {
     // If we don't have any parameters to parse, then we can just skip this
     if (parameter_set.count == 0) {
-        return true;
+        return ZX_OK;
     }
 
-    bool is_valid = true;
+    zx_status_t status = ZX_OK;
     for (size_t i = 0; i < parameter_set.count; i++) {
         MessageParam& optee_param = params()[starting_param_index + i];
         const fuchsia_tee_Parameter& zx_param = parameter_set.parameters[i];
@@ -58,25 +59,24 @@ bool Message::TryInitializeParameters(size_t starting_param_index,
             optee_param.attribute = MessageParam::kAttributeTypeNone;
             break;
         case fuchsia_tee_ParameterTag_value:
-            is_valid = TryInitializeValue(zx_param.value, &optee_param);
+            status = TryInitializeValue(zx_param.value, &optee_param);
             break;
         case fuchsia_tee_ParameterTag_buffer:
-            is_valid = TryInitializeBuffer(zx_param.buffer, temp_memory_pool, &optee_param);
+            status = TryInitializeBuffer(zx_param.buffer, temp_memory_pool, &optee_param);
             break;
         default:
-            return false;
+            return ZX_ERR_INVALID_ARGS;
         }
 
-        if (!is_valid) {
-            zxlogf(ERROR, "optee: failed to initialize parameters\n");
-            return false;
+        if (status != ZX_OK) {
+            return status;
         }
     }
 
-    return true;
+    return status;
 }
 
-bool Message::TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* out_param) {
+zx_status_t Message::TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* out_param) {
     ZX_DEBUG_ASSERT(out_param != nullptr);
 
     switch (value.direction) {
@@ -90,18 +90,18 @@ bool Message::TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* o
         out_param->attribute = MessageParam::kAttributeTypeValueInOut;
         break;
     default:
-        return false;
+        return ZX_ERR_INVALID_ARGS;
     }
     out_param->payload.value.generic.a = value.a;
     out_param->payload.value.generic.b = value.b;
     out_param->payload.value.generic.c = value.c;
 
-    return true;
+    return ZX_OK;
 }
 
-bool Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
-                                  SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
-                                  MessageParam* out_param) {
+zx_status_t Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
+                                         SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+                                         MessageParam* out_param) {
     ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
     ZX_DEBUG_ASSERT(out_param != nullptr);
 
@@ -121,20 +121,20 @@ bool Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
         attribute = MessageParam::kAttributeTypeTempMemInOut;
         break;
     default:
-        return false;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // If an invalid VMO was provided, but the buffer is only an output, this is just a size check.
     if (!vmo.is_valid()) {
         if (IsParameterInput(buffer.direction)) {
-            return false;
+            return ZX_ERR_INVALID_ARGS;
         } else {
             // No need to allocate a temporary buffer from the shared memory pool,
             out_param->attribute = attribute;
             out_param->payload.temporary_memory.buffer = 0;
             out_param->payload.temporary_memory.size = buffer.size;
             out_param->payload.temporary_memory.shared_memory_reference = 0;
-            return true;
+            return ZX_OK;
         }
     }
 
@@ -143,10 +143,11 @@ bool Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
     // looked up upon return from TEE and to tie the lifetimes of the Message and the temporary
     // shared memory together.
     SharedMemoryPtr shared_mem;
-    if (temp_memory_pool->Allocate(buffer.size, &shared_mem) != ZX_OK) {
+    zx_status_t status = temp_memory_pool->Allocate(buffer.size, &shared_mem);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "optee: Failed to allocate temporary shared memory (%" PRIu64 ")\n",
                buffer.size);
-        return false;
+        return status;
     }
 
     uint64_t paddr = static_cast<uint64_t>(shared_mem->paddr());
@@ -157,10 +158,10 @@ bool Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
     // Input buffers should be copied into the shared memory buffer. Output only buffers can skip
     // this step.
     if (IsParameterInput(buffer.direction)) {
-        zx_status_t status = temp_shared_mem.SyncToSharedMemory();
+        status = temp_shared_mem.SyncToSharedMemory();
         if (status != ZX_OK) {
             zxlogf(ERROR, "optee: shared memory sync failed (%d)\n", status);
-            return false;
+            return status;
         }
     }
 
@@ -171,7 +172,7 @@ bool Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
     out_param->payload.temporary_memory.buffer = paddr;
     out_param->payload.temporary_memory.size = buffer.size;
     out_param->payload.temporary_memory.shared_memory_reference = index;
-    return true;
+    return ZX_OK;
 }
 
 zx_status_t
@@ -353,28 +354,31 @@ zx_handle_t Message::TemporarySharedMemory::ReleaseVmo() {
     return vmo_.release();
 }
 
-OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
-                                       SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
-                                       const Uuid& trusted_app,
-                                       const fuchsia_tee_ParameterSet& parameter_set) {
+fit::result<OpenSessionMessage, zx_status_t>
+OpenSessionMessage::TryCreate(SharedMemoryManager::DriverMemoryPool* message_pool,
+                              SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+                              const Uuid& trusted_app,
+                              const fuchsia_tee_ParameterSet& parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
+    ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
 
     const size_t num_params = parameter_set.count + kNumFixedOpenSessionParams;
     ZX_DEBUG_ASSERT(num_params <= std::numeric_limits<uint32_t>::max());
 
-    zx_status_t status = message_pool->Allocate(CalculateSize(num_params), &memory_);
-
+    SharedMemoryPtr memory;
+    zx_status_t status = message_pool->Allocate(CalculateSize(num_params), &memory);
     if (status != ZX_OK) {
-        memory_ = nullptr;
-        return;
+        return fit::error(status);
     }
 
-    header()->command = Command::kOpenSession;
-    header()->cancel_id = 0;
-    header()->num_params = static_cast<uint32_t>(num_params);
+    OpenSessionMessage message(std::move(memory));
 
-    MessageParam& trusted_app_param = params()[kTrustedAppParamIndex];
-    MessageParam& client_app_param = params()[kClientAppParamIndex];
+    message.header()->command = Command::kOpenSession;
+    message.header()->cancel_id = 0;
+    message.header()->num_params = static_cast<uint32_t>(num_params);
+
+    MessageParam& trusted_app_param = message.params()[kTrustedAppParamIndex];
+    MessageParam& client_app_param = message.params()[kClientAppParamIndex];
 
     trusted_app_param.attribute = MessageParam::kAttributeTypeMeta |
                                   MessageParam::kAttributeTypeValueInput;
@@ -388,50 +392,61 @@ OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* me
     client_app_param.payload.value.generic.b = 0;
     client_app_param.payload.value.generic.c = TEEC_LOGIN_PUBLIC;
 
-    // If we fail to initialize the parameters, then null out the message memory.
-    if (!TryInitializeParameters(kNumFixedOpenSessionParams, parameter_set, temp_memory_pool)) {
-        memory_ = nullptr;
+    status = message.TryInitializeParameters(kNumFixedOpenSessionParams, parameter_set,
+                                             temp_memory_pool);
+    if (status != ZX_OK) {
+        return fit::error(status);
     }
+
+    return fit::ok(std::move(message));
 }
 
-CloseSessionMessage::CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
-                                         uint32_t session_id) {
+fit::result<CloseSessionMessage, zx_status_t>
+CloseSessionMessage::TryCreate(SharedMemoryManager::DriverMemoryPool* message_pool,
+                               uint32_t session_id) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
 
-    zx_status_t status = message_pool->Allocate(CalculateSize(kNumParams), &memory_);
-
+    SharedMemoryPtr memory;
+    zx_status_t status = message_pool->Allocate(CalculateSize(kNumParams), &memory);
     if (status != ZX_OK) {
-        memory_ = nullptr;
-        return;
+        return fit::error(status);
     }
 
-    header()->command = Command::kCloseSession;
-    header()->num_params = static_cast<uint32_t>(kNumParams);
-    header()->session_id = session_id;
+    CloseSessionMessage message(std::move(memory));
+    message.header()->command = Command::kCloseSession;
+    message.header()->num_params = static_cast<uint32_t>(kNumParams);
+    message.header()->session_id = session_id;
+
+    return fit::ok(std::move(message));
 }
 
-InvokeCommandMessage::InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
-                                           SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
-                                           uint32_t session_id, uint32_t command_id,
-                                           const fuchsia_tee_ParameterSet& parameter_set) {
+fit::result<InvokeCommandMessage, zx_status_t>
+InvokeCommandMessage::TryCreate(SharedMemoryManager::DriverMemoryPool* message_pool,
+                                SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+                                uint32_t session_id, uint32_t command_id,
+                                const fuchsia_tee_ParameterSet& parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
 
-    zx_status_t status = message_pool->Allocate(CalculateSize(parameter_set.count), &memory_);
-
+    SharedMemoryPtr memory;
+    zx_status_t status = message_pool->Allocate(CalculateSize(parameter_set.count), &memory);
     if (status != ZX_OK) {
-        memory_ = nullptr;
-        return;
+        return fit::error(status);
     }
 
-    header()->command = Command::kInvokeCommand;
-    header()->session_id = session_id;
-    header()->app_function = command_id;
-    header()->cancel_id = 0;
-    header()->num_params = parameter_set.count;
+    InvokeCommandMessage message(std::move(memory));
 
-    if (!TryInitializeParameters(0, parameter_set, temp_memory_pool)) {
-        memory_ = nullptr;
+    message.header()->command = Command::kInvokeCommand;
+    message.header()->session_id = session_id;
+    message.header()->app_function = command_id;
+    message.header()->cancel_id = 0;
+    message.header()->num_params = parameter_set.count;
+
+    status = message.TryInitializeParameters(0, parameter_set, temp_memory_pool);
+    if (status != ZX_OK) {
+        return fit::error(status);
     }
+
+    return fit::ok(std::move(message));
 }
 
 bool RpcMessage::TryInitializeMembers() {

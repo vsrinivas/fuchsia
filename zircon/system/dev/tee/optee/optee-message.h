@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include <inttypes.h>
-
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/fit/result.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
 #include <zircon/assert.h>
 
+#include <cinttypes>
 #include <type_traits>
 #include <utility>
 
@@ -222,16 +222,18 @@ public:
     Message(const Message&) = delete;
     Message& operator=(const Message&) = delete;
 
+    ~Message() = default;
+
 protected:
     using MessageBase::MessageBase; // inherit constructors
 
-    bool TryInitializeParameters(size_t starting_param_index,
-                                 const fuchsia_tee_ParameterSet& parameter_set,
-                                 SharedMemoryManager::ClientMemoryPool* temp_memory_pool);
-    bool TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* out_param);
-    bool TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
-                             SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
-                             MessageParam* out_param);
+    zx_status_t TryInitializeParameters(size_t starting_param_index,
+                                        const fuchsia_tee_ParameterSet& parameter_set,
+                                        SharedMemoryManager::ClientMemoryPool* temp_memory_pool);
+    zx_status_t TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* out_param);
+    zx_status_t TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
+                                    SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+                                    MessageParam* out_param);
 
     zx_status_t CreateOutputParameterSet(size_t starting_param_index,
                                          fuchsia_tee_ParameterSet* out_parameter_set);
@@ -274,10 +276,11 @@ private:
 // This OP-TEE message is used to start a session between a client app and trusted app.
 class OpenSessionMessage : public Message {
 public:
-    explicit OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
-                                SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
-                                const Uuid& trusted_app,
-                                const fuchsia_tee_ParameterSet& parameter_set);
+    static fit::result<OpenSessionMessage, zx_status_t>
+    TryCreate(SharedMemoryManager::DriverMemoryPool* message_pool,
+              SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+              const Uuid& trusted_app,
+              const fuchsia_tee_ParameterSet& parameter_set);
 
     // Outputs
     uint32_t session_id() const { return header()->session_id; }
@@ -289,7 +292,8 @@ public:
     }
 
 protected:
-    using Message::header; // make header() protected
+    using Message::header;  // make header() protected
+    using Message::Message; // inherit constructors
 
     static constexpr size_t kNumFixedOpenSessionParams = 2;
     static constexpr size_t kTrustedAppParamIndex = 0;
@@ -301,15 +305,16 @@ protected:
 // This OP-TEE message is used to close an existing open session.
 class CloseSessionMessage : public Message {
 public:
-    explicit CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
-                                 uint32_t session_id);
+    static fit::result<CloseSessionMessage, zx_status_t>
+    TryCreate(SharedMemoryManager::DriverMemoryPool* message_pool, uint32_t session_id);
 
     // Outputs
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
 
 protected:
-    using Message::header; // make header() protected
+    using Message::header;  // make header() protected
+    using Message::Message; // inherit constructors
 
     static constexpr size_t kNumParams = 0;
 };
@@ -319,10 +324,11 @@ protected:
 // This OP-TEE message is used to invoke a command on a session between client app and trusted app.
 class InvokeCommandMessage : public Message {
 public:
-    explicit InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
-                                  SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
-                                  uint32_t session_id, uint32_t command_id,
-                                  const fuchsia_tee_ParameterSet& parameter_set);
+    static fit::result<InvokeCommandMessage, zx_status_t>
+    TryCreate(SharedMemoryManager::DriverMemoryPool* message_pool,
+              SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
+              uint32_t session_id, uint32_t command_id,
+              const fuchsia_tee_ParameterSet& parameter_set);
 
     // Outputs
     uint32_t return_code() const { return header()->return_code; }
@@ -331,6 +337,9 @@ public:
     zx_status_t CreateOutputParameterSet(fuchsia_tee_ParameterSet* out_parameter_set) {
         return Message::CreateOutputParameterSet(0, out_parameter_set);
     }
+
+protected:
+    using Message::Message; // inherit constructors
 };
 
 // RpcMessage

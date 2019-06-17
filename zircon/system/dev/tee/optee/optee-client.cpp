@@ -417,14 +417,19 @@ zx_status_t OpteeClient::OpenSession(const fuchsia_tee_Uuid* trusted_app,
 
     Uuid ta_uuid{*trusted_app};
 
-    OpenSessionMessage message{controller_->driver_pool(), controller_->client_pool(),
-                               ta_uuid, *parameter_set};
-
-    if (!message.is_valid()) {
+    auto create_result = OpenSessionMessage::TryCreate(controller_->driver_pool(),
+                                                       controller_->client_pool(),
+                                                       ta_uuid,
+                                                       *parameter_set);
+    if (!create_result.is_ok()) {
+        zxlogf(ERROR, "optee::%s: failed to create OpenSessionMessage (status: %d)",
+               __FUNCTION__, create_result.error());
         result.return_code = TEEC_ERROR_COMMUNICATION;
         result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
         return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
+
+    OpenSessionMessage message = create_result.take_value();
 
     uint32_t call_code = controller_->CallWithMessage(
         message, fbl::BindMember(this, &OpteeClient::HandleRpc));
@@ -468,14 +473,19 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
         return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
-    InvokeCommandMessage message{controller_->driver_pool(), controller_->client_pool(),
-                                 session_id, command_id, *parameter_set};
-
-    if (!message.is_valid()) {
+    auto create_result = InvokeCommandMessage::TryCreate(controller_->driver_pool(),
+                                                         controller_->client_pool(),
+                                                         session_id, command_id,
+                                                         *parameter_set);
+    if (!create_result.is_ok()) {
+        zxlogf(ERROR, "optee::%s: failed to create InvokeCommandMessage (status: %d)",
+               __FUNCTION__, create_result.error());
         result.return_code = TEEC_ERROR_COMMUNICATION;
         result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
         return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
+
+    InvokeCommandMessage message = create_result.take_value();
 
     uint32_t call_code = controller_->CallWithMessage(
         message, fbl::BindMember(this, &OpteeClient::HandleRpc));
@@ -502,11 +512,14 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
 }
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
-    CloseSessionMessage message{controller_->driver_pool(), session_id};
-
-    if (!message.is_valid()) {
-        return ZX_ERR_NO_RESOURCES;
+    auto create_result = CloseSessionMessage::TryCreate(controller_->driver_pool(), session_id);
+    if (!create_result.is_ok()) {
+        zxlogf(ERROR, "optee::%s: failed to create CloseSessionMessage (status: %d)",
+               __FUNCTION__, create_result.error());
+        return create_result.error();
     }
+
+    CloseSessionMessage message = create_result.take_value();
 
     uint32_t call_code = controller_->CallWithMessage(
         message, fbl::BindMember(this, &OpteeClient::HandleRpc));
