@@ -8,7 +8,7 @@ use {
     failure::{Error, ResultExt},
     fdio,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg as fpkg, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, macros::*},
@@ -77,7 +77,7 @@ fn open_in_namespace(path: &str, dir: ServerEnd<DirectoryMarker>) -> Result<(), 
         fdio::fdio_sys::fdio_ns_connect(
             ns_ptr,
             cstr.as_ptr(),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             dir.into_channel().into_raw(),
         )
     })?;

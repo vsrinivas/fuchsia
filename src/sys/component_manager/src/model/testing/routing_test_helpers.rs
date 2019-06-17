@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE,
-        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::{
@@ -491,7 +491,7 @@ impl OutDir {
                         .expect("failed to add data entry");
                 }
                 pseudo_dir.open(
-                    OPEN_RIGHT_READABLE,
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     MODE_TYPE_DIRECTORY,
                     &mut iter::empty(),
                     ServerEnd::new(server_end.into_channel()),

@@ -6,7 +6,9 @@ use {
     crate::model::*,
     cm_rust::{self, Capability, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl, OfferSource},
     failure::format_err,
-    fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{
+        MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fuchsia_zircon as zx,
     std::sync::Arc,
 };
@@ -59,7 +61,7 @@ async fn route_capability<'a>(
 ) -> Result<(), ModelError> {
     let source = await!(find_capability_source(model, capability, abs_moniker))?;
 
-    let flags = OPEN_RIGHT_READABLE;
+    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     match source {
         CapabilitySource::ComponentMgrNamespace(source_capability) => {
             if let Some(path) = source_capability.path() {

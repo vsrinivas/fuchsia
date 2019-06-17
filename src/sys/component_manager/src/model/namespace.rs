@@ -8,7 +8,9 @@ use {
     crate::model::*,
     cm_rust::{self, ComponentDecl, UseDirectoryDecl, UseServiceDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{
+        DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
@@ -236,7 +238,7 @@ impl IncomingNamespace {
             let (client_end, server_end) =
                 create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
             pseudo_dir.open(
-                OPEN_RIGHT_READABLE,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 &mut iter::empty(),
                 server_end,

@@ -419,7 +419,7 @@ mod tests {
                 "test_file" => read_only(|| Ok(test_content_bytes.clone())),
             };
             dir.open(
-                fio::OPEN_RIGHT_READABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 &mut iter::empty(),
                 ServerEnd::new(dir_server),
