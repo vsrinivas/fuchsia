@@ -250,7 +250,8 @@ void LoggerImpl::LogCobaltEvents(
     fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
   TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogCobaltEvents");
   logger_.internal_metrics()->LoggerCalled(
-      logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogCobaltEvents);
+      logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogCobaltEvents,
+      logger_.project_context()->project());
 
   // tracking LoggerCalled events is expensive (~3.5ms/event). We want
   // LogCobaltEvents to be a more performance concious alternative, so we pause
