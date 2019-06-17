@@ -1,0 +1,42 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "default_url": "fuchsia-pkg://fuchsia.com/netstack_c_api_tests#meta/netstack_external_network_test_client.cmx",
+            "environment": {
+                "name": "external_network_environment",
+                "services": {
+                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "external_network_endpoint",
+                            "-i",
+                            "192.168.0.1/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {}
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "external_network_endpoint"
+                        }
+                    ],
+                    "name": "external_network"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/netstack_external_network_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

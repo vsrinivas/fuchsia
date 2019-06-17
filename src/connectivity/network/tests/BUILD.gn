@@ -55,6 +55,17 @@ test("netstack_bsdsocket_c_api_test") {
   ]
 }
 
+test("netstack_external_network_test_client") {
+  if (is_linux || is_fuchsia) {
+    sources = [
+      "external_network_test_client.cc",
+    ]
+  }
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 test("netstack_fuchsia_c_api_test") {
   sources = [
     "fdio_test.cc",
@@ -82,16 +93,39 @@ test("netstack_no_network_test") {
   ]
 }
 
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/netstack_external_network_test", "")
+}
+
 test_package("netstack_c_api_tests") {
   deps = [
+    ":netemul_empty_binaries",
     ":netstack_bsdsocket_c_api_test",
+    ":netstack_external_network_test_client",
     ":netstack_fuchsia_c_api_test",
     ":netstack_no_network_test",
+  ]
+
+  binaries = [
+    {
+      name = "netstack_external_network_test_client"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/netstack_external_network_test_client.cmx")
+      dest = "netstack_external_network_test_client.cmx"
+    },
   ]
 
   tests = [
     {
       name = "netstack_bsdsocket_c_api_test"
+      environments = [ qemu_env ]
+    },
+    {
+      name = "netstack_external_network_test"
       environments = [ qemu_env ]
     },
     {
