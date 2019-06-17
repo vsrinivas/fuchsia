@@ -25,6 +25,14 @@ pub struct OutputPacket {
     pub packet: ValidPacket,
 }
 
+/// Returns all the packets in the output with preserved order.
+pub fn output_packets(output: &[Output]) -> impl Iterator<Item = &OutputPacket> {
+    output.iter().filter_map(|output| match output {
+        Output::Packet(packet) => Some(packet),
+        _ => None,
+    })
+}
+
 /// Output represents any output from a stream we might want to validate programmatically.
 ///
 /// This may extend to contain not just explicit events but certain stream control behaviors or

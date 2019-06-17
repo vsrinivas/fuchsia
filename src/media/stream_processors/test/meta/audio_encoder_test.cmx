@@ -15,7 +15,9 @@
             "class/media-codec",
             "class/sysmem"
         ],
-        "features": [],
+        "features": [
+            "system-temp"
+        ],
         "services": [
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.tracing.provider.Registry",

@@ -100,6 +100,7 @@ rustc_test("audio_encoder_test_bin") {
     ":stream_processor_test_lib",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/mundane",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//third_party/rust_crates:byteorder",
@@ -107,6 +108,8 @@ rustc_test("audio_encoder_test_bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:rand",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
 

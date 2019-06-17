@@ -34,6 +34,18 @@ pub const IMAGE_FORMAT_CONSTRAINTS_DEFAULT: ImageFormatConstraints = ImageFormat
     required_max_bytes_per_row: 0,
 };
 
+pub const BUFFER_MEMORY_CONSTRAINTS_DEFAULT: BufferMemoryConstraints = BufferMemoryConstraints {
+    min_size_bytes: 0,
+    max_size_bytes: std::u32::MAX,
+    physically_contiguous_required: false,
+    secure_required: false,
+    ram_domain_supported: false,
+    cpu_domain_supported: true,
+    inaccessible_domain_supported: false,
+    heap_permitted_count: 0,
+    heap_permitted: [HeapType::SystemRam; 32],
+};
+
 pub const BUFFER_COLLECTION_CONSTRAINTS_DEFAULT: BufferCollectionConstraints =
     BufferCollectionConstraints {
         usage: BufferUsage { cpu: 1, vulkan: 0, display: 0, video: 1 },
@@ -43,17 +55,7 @@ pub const BUFFER_COLLECTION_CONSTRAINTS_DEFAULT: BufferCollectionConstraints =
         min_buffer_count: 0,
         max_buffer_count: 0,
         has_buffer_memory_constraints: false,
-        buffer_memory_constraints: BufferMemoryConstraints {
-            min_size_bytes: 0,
-            max_size_bytes: std::u32::MAX,
-            physically_contiguous_required: false,
-            secure_required: false,
-            ram_domain_supported: false,
-            cpu_domain_supported: true,
-            inaccessible_domain_supported: false,
-            heap_permitted_count: 0,
-            heap_permitted: [HeapType::SystemRam; 32],
-        },
+        buffer_memory_constraints: BUFFER_MEMORY_CONSTRAINTS_DEFAULT,
         image_format_constraints_count: 0,
         image_format_constraints: [IMAGE_FORMAT_CONSTRAINTS_DEFAULT; 32],
     };
