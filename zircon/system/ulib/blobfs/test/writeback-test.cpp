@@ -12,7 +12,7 @@ namespace blobfs {
 namespace {
 
 // Enqueue a request which fits within writeback buffer.
-TEST(EnqueuePaginated, EnqueueSmallRequests) {
+TEST(EnqueuePaginatedTest, EnqueueSmallRequests) {
     MockTransactionManager transaction_manager;
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
@@ -20,13 +20,13 @@ TEST(EnqueuePaginated, EnqueueSmallRequests) {
     constexpr size_t kXferSize = kWritebackCapacity * kBlockSize;
     ASSERT_EQ(ZX_OK, zx::vmo::create(kXferSize, 0, &vmo));
     ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
-    ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
-                                      vmo, 0, 0, kXferSize / kBlockSize));
+    ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr, vmo, 0, 0,
+                                      kXferSize / kBlockSize));
     ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
 }
 
 // Enqueue a request which does not fit within writeback buffer.
-TEST(EnqueuePaginated, EnqueueLargeRequests) {
+TEST(EnqueuePaginatedTest, EnqueueLargeRequests) {
     MockTransactionManager transaction_manager;
     zx::vmo vmo;
     fbl::unique_ptr<WritebackWork> work;
@@ -34,8 +34,8 @@ TEST(EnqueuePaginated, EnqueueLargeRequests) {
     constexpr size_t kXferSize = kWritebackCapacity * kBlockSize;
     ASSERT_EQ(ZX_OK, zx::vmo::create(kXferSize, 0, &vmo));
     ASSERT_EQ(ZX_OK, transaction_manager.CreateWork(&work, nullptr));
-    ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
-                                      vmo, 0, 0, kXferSize / kBlockSize));
+    ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr, vmo, 0, 0,
+                                      kXferSize / kBlockSize));
     ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
 }
 
@@ -53,11 +53,9 @@ TEST(EnqueuePaginatedTest, EnqueueMany) {
     static_assert(kBufferSizeBytes % 4 == 0, "Bad segment count");
     constexpr size_t kXferSize = kBufferSizeBytes / kSegments;
     for (size_t i = 0; i < kSegments; i++) {
-        ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr,
-                                          vmo,
+        ASSERT_EQ(ZX_OK, EnqueuePaginated(&work, &transaction_manager, nullptr, vmo,
                                           (i * kXferSize) / kBlockSize,
-                                          (i * kXferSize) / kBlockSize,
-                                          kXferSize / kBlockSize));
+                                          (i * kXferSize) / kBlockSize, kXferSize / kBlockSize));
     }
     ASSERT_EQ(ZX_OK, transaction_manager.EnqueueWork(std::move(work), EnqueueType::kData));
 }
@@ -122,7 +120,7 @@ TEST(FlushRequestsTest, FlushOneRequest) {
         }
     } manager;
     fbl::Vector<BufferedOperation> operations;
-    operations.push_back(BufferedOperation { kVmoid, Operation { OperationType::kWrite, 1, 2, 3 }});
+    operations.push_back(BufferedOperation{kVmoid, Operation{OperationType::kWrite, 1, 2, 3}});
     EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
@@ -144,14 +142,8 @@ TEST(FlushRequestsTest, FlushManyRequests) {
         }
     } manager;
     fbl::Vector<BufferedOperation> operations;
-    operations.push_back(BufferedOperation {
-        kVmoidA,
-        Operation { OperationType::kWrite, 1, 2, 3 }
-    });
-    operations.push_back(BufferedOperation {
-        kVmoidB,
-        Operation { OperationType::kWrite, 4, 5, 6 }
-    });
+    operations.push_back(BufferedOperation{kVmoidA, Operation{OperationType::kWrite, 1, 2, 3}});
+    operations.push_back(BufferedOperation{kVmoidB, Operation{OperationType::kWrite, 4, 5, 6}});
     EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
 
@@ -177,10 +169,8 @@ TEST(FlushRequestsTest, FlushAVeryLargeNumberOfRequests) {
 
     fbl::Vector<BufferedOperation> operations;
     for (size_t i = 0; i < kOperationCount; i++) {
-        operations.push_back(BufferedOperation {
-            kVmoid,
-            Operation { OperationType::kWrite, i * 2, i * 2, 1 }
-        });
+        operations.push_back(
+            BufferedOperation{kVmoid, Operation{OperationType::kWrite, i * 2, i * 2, 1}});
     }
     EXPECT_EQ(ZX_OK, FlushWriteRequests(&manager, operations));
 }
@@ -192,7 +182,7 @@ TEST(FlushRequestsTest, BadFlush) {
         }
     } manager;
     fbl::Vector<BufferedOperation> operations;
-    operations.push_back(BufferedOperation { 1, Operation { OperationType::kWrite, 1, 2, 3 }});
+    operations.push_back(BufferedOperation{1, Operation{OperationType::kWrite, 1, 2, 3}});
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, FlushWriteRequests(&manager, operations));
 }
 
