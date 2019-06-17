@@ -167,6 +167,7 @@ sdk("images") {
   }
 }
 
+# TODO(DX-1667): break this target down into smaller chunks.
 sdk("core") {
   id = sdk_id
 
@@ -180,6 +181,7 @@ sdk("core") {
     ":musl_license",
     ":open_source",
     ":vulkan_license",
+    "devices",
     "docs",
     "tools:dev_finder_sdk($host_toolchain)",
     "tools:symbolize_sdk($host_toolchain)",

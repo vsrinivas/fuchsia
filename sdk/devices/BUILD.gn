@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_device_profile.gni")
+import("//build/sdk/sdk_molecule.gni")
+import("//sdk/config.gni")
+
+template("device") {
+  sdk_device_profile(target_name) {
+    category = "partner"
+
+    description = invoker.description
+
+    images = "gs://fuchsia/development/$sdk_id/images/$target_name.tgz"
+
+    packages = "gs://fuchsia/development/$sdk_id/packages/$target_name.tar.gz"
+  }
+}
+
+devices = [
+  {
+    name = "generic-arm64"
+    description = "A generic arm64 device"
+  },
+  {
+    name = "generic-x64"
+    description = "A generic x64 device"
+  },
+  {
+    name = "qemu-arm64"
+    description = "arm64 images runnable on QEMU"
+  },
+  {
+    name = "qemu-x64"
+    description = "x64 images runnable on QEMU"
+  },
+]
+
+all_devices = []
+
+foreach(device, devices) {
+  device(device.name) {
+    description = device.description
+  }
+  all_devices += [ ":${device.name}" ]
+}
+
+sdk_molecule("devices") {
+  deps = all_devices
+}

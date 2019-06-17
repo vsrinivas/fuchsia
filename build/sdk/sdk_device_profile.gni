@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+
+# Declares a device profile supported for SDK development.
+#
+# Parameters
+#
+#   category (required)
+#     Publication level of the document set in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   description (required)
+#     Description of the profile.
+#
+#   images (required)
+#     GCS URL of the archive containing system images.
+#
+#   packages (required)
+#     GCS URL of the archive containing a complementary package repository.
+
+template("sdk_device_profile") {
+  assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.description), "Must define a description")
+  assert(defined(invoker.images), "Must define an images archive")
+  assert(defined(invoker.packages), "Must define a packages archive")
+
+  name = target_name
+  if (defined(invoker.name)) {
+    name = invoker.name
+  }
+
+  sdk_atom(target_name) {
+    forward_variables_from(invoker, [ "category" ])
+
+    id = "sdk://device/$name"
+
+    # This atom does not contain any actual files, only metadata.
+    files = []
+
+    meta = {
+      schema = "device_profile"
+      dest = "device/$name.json"
+      value = {
+        type = "device_profile"
+        name = name
+        description = invoker.description
+        images_url = invoker.images
+        packages_url = invoker.packages
+      }
+    }
+  }
+}

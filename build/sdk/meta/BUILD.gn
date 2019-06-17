@@ -13,6 +13,7 @@ schemas = [
   "cc_source_library.json",
   "common.json",
   "dart_library.json",
+  "device_profile.json",
   "documentation.json",
   "fidl_library.json",
   "host_tool.json",

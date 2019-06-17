@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/device_profile.json",
+  "description": "A supported device configuration for SDK development",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "allOf": [
+            {
+              "$ref": "common.json#/definitions/type"
+            },
+            {
+              "enum": [
+                "device_profile"
+              ]
+            }
+          ]
+        },
+        "description": {
+          "description": "A description of the device's configuration",
+          "type": "string"
+        },
+        "images_url": {
+          "description": "GCS URL of the archive containing system images",
+          "type": "string"
+        },
+        "packages_url": {
+          "description": "GCS URL of the archive containing a package repository",
+          "type": "string"
+        }
+      },
+      "required": [
+        "description",
+        "images_url",
+        "packages_url",
+
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}
