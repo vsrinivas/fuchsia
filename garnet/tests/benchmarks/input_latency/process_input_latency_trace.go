@@ -164,7 +164,7 @@ func reportInputLatency(model benchmarking.Model, testSuite string, testResultsF
 		fmt.Printf("Total input latency median: %.4gms\n", median)
 		fmt.Printf("Total input latency max: %.4gms\n", max)
 	} else {
-		fmt.Printf("Warning, computed 0 total input latency values\n")
+		panic("Error, computed 0 total input latency values\n")
 	}
 }
 
