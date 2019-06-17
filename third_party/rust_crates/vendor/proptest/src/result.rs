@@ -31,11 +31,11 @@
 use core::fmt;
 use core::marker::PhantomData;
 
-use strategy::*;
-use test_runner::*;
+use crate::strategy::*;
+use crate::test_runner::*;
 
 // Re-export the type for easier usage.
-pub use option::{prob, Probability};
+pub use crate::option::{prob, Probability};
 
 struct WrapOk<T, E>(PhantomData<T>, PhantomData<E>);
 impl<T, E> Clone for WrapOk<T, E> {
@@ -186,7 +186,7 @@ mod test {
     use super::*;
 
     fn count_ok_of_1000(s: impl Strategy<Value = Result<(), ()>>) -> u32 {
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let mut count = 0;
         for _ in 0..1000 {
             count += s.new_tree(&mut runner).unwrap()

@@ -7,7 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std_facade::Box;
+use crate::std_facade::Box;
 use core::u32;
 
 #[cfg(feature = "std")]
@@ -19,10 +19,11 @@ use std::ffi::OsString;
 #[cfg(feature = "std")]
 use std::str::FromStr;
 
-use test_runner::FailurePersistence;
+use crate::test_runner::FailurePersistence;
 #[cfg(feature = "std")]
-use test_runner::FileFailurePersistence;
-use test_runner::result_cache::{noop_result_cache, ResultCache};
+use crate::test_runner::FileFailurePersistence;
+use crate::test_runner::rng::RngAlgorithm;
+use crate::test_runner::result_cache::{noop_result_cache, ResultCache};
 
 #[cfg(feature = "std")]
 const CASES: &str = "PROPTEST_CASES";
@@ -42,6 +43,7 @@ const FORK: &str = "PROPTEST_FORK";
 const TIMEOUT: &str = "PROPTEST_TIMEOUT";
 #[cfg(feature = "std")]
 const VERBOSE: &str = "PROPTEST_VERBOSE";
+const RNG_ALGORITHM: &str = "PROPTEST_RNG_ALGORITHM";
 
 #[cfg(feature = "std")]
 fn contextualize_config(mut result: Config) -> Config {
@@ -88,6 +90,8 @@ fn contextualize_config(mut result: Config) -> Config {
                 &value, &mut result.max_shrink_iters, "u32", MAX_SHRINK_ITERS),
             VERBOSE => parse_or_warn(
                 &value, &mut result.verbose, "u32", VERBOSE),
+            RNG_ALGORITHM => parse_or_warn(
+                &value, &mut result.rng_algorithm, "RngAlgorithm", RNG_ALGORITHM),
 
             _ => if var.starts_with("PROPTEST_") {
                 eprintln!("proptest: Ignoring unknown env-var {}.", var);
@@ -101,32 +105,36 @@ fn contextualize_config(mut result: Config) -> Config {
 #[cfg(not(feature = "std"))]
 fn contextualize_config(result: Config) -> Config { result }
 
-/// The default config, computed by combining environment variables and
-/// defaults.
+fn default_default_config() -> Config {
+    Config {
+        cases: 256,
+        max_local_rejects: 65_536,
+        max_global_rejects: 1024,
+        max_flat_map_regens: 1_000_000,
+        failure_persistence: None,
+        source_file: None,
+        test_name: None,
+        #[cfg(feature = "fork")]
+        fork: false,
+        #[cfg(feature = "timeout")]
+        timeout: 0,
+        #[cfg(feature = "std")]
+        max_shrink_time: 0,
+        max_shrink_iters: u32::MAX,
+        result_cache: noop_result_cache,
+        #[cfg(feature = "std")]
+        verbose: 0,
+        rng_algorithm: RngAlgorithm::default(),
+        _non_exhaustive: (),
+    }
+}
+
+// The default config, computed by combining environment variables and
+// defaults.
+#[cfg(feature = "std")]
 lazy_static! {
     static ref DEFAULT_CONFIG: Config = {
-        let result = Config {
-            cases: 256,
-            max_local_rejects: 65_536,
-            max_global_rejects: 1024,
-            max_flat_map_regens: 1_000_000,
-            failure_persistence: None,
-            source_file: None,
-            test_name: None,
-            #[cfg(feature = "fork")]
-            fork: false,
-            #[cfg(feature = "timeout")]
-            timeout: 0,
-            #[cfg(feature = "std")]
-            max_shrink_time: 0,
-            max_shrink_iters: u32::MAX,
-            result_cache: noop_result_cache,
-            #[cfg(feature = "std")]
-            verbose: 0,
-            _non_exhaustive: (),
-        };
-
-        contextualize_config(result)
+        contextualize_config(default_default_config())
     };
 }
 
@@ -290,6 +298,15 @@ pub struct Config {
     #[cfg(feature = "std")]
     pub verbose: u32,
 
+    /// The RNG algorithm to use when not using a user-provided RNG.
+    ///
+    /// The default is `RngAlgorithm::default()`, which can be overridden by
+    /// setting the `PROPTEST_RNG_ALGORITHM` environment variable to one of the following:
+    ///
+    /// - `xs` — `RngAlgorithm::XorShift`
+    /// - `cc` — `RngAlgorithm::ChaCha`
+    pub rng_algorithm: RngAlgorithm,
+
     // Needs to be public so FRU syntax can be used.
     #[doc(hidden)]
     pub _non_exhaustive: (),
@@ -400,8 +417,16 @@ impl Config {
     }
 }
 
+#[cfg(feature = "std")]
 impl Default for Config {
     fn default() -> Self {
         DEFAULT_CONFIG.clone()
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl Default for Config {
+    fn default() -> Self {
+        default_default_config()
     }
 }

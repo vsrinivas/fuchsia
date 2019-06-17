@@ -346,7 +346,7 @@ mod serde_tests {
 mod rule_tests {
     use super::*;
     use fuchsia_inspect::assert_inspect_tree;
-    use proptest::{prop_compose, proptest, proptest_helper};
+    use proptest::prelude::*;
 
     macro_rules! test_new_error {
         (

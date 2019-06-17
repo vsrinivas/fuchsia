@@ -69,7 +69,7 @@ impl From<FromHexError> for ParseHashError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
+    use proptest::prelude::*;
     use std::str::FromStr;
 
     proptest! {

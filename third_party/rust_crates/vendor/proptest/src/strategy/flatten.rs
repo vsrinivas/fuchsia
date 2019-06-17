@@ -8,11 +8,11 @@
 // except according to those terms.
 
 use core::mem;
-use std_facade::{fmt, Arc};
+use crate::std_facade::{fmt, Arc};
 
-use strategy::fuse::Fuse;
-use strategy::traits::*;
-use test_runner::*;
+use crate::strategy::fuse::Fuse;
+use crate::strategy::traits::*;
+use crate::test_runner::*;
 
 /// Adaptor that flattens a `Strategy` which produces other `Strategy`s into a
 /// `Strategy` that picks one of those strategies and then picks values from
@@ -224,7 +224,7 @@ impl<S : Clone, F> Clone for IndFlattenMap<S, F> {
 impl<S : Strategy, R : Strategy,
      F : Fn(S::Value) -> R>
 Strategy for IndFlattenMap<S, F> {
-    type Tree = ::tuple::TupleValueTree<(S::Tree, R::Tree)>;
+    type Tree = crate::tuple::TupleValueTree<(S::Tree, R::Tree)>;
     type Value = (S::Value, R::Value);
 
     fn new_tree(&self, runner: &mut TestRunner) -> NewTree<Self> {
@@ -232,13 +232,13 @@ Strategy for IndFlattenMap<S, F> {
         let right_source = (self.fun)(left.current());
         let right = right_source.new_tree(runner)?;
 
-        Ok(::tuple::TupleValueTree::new((left, right)))
+        Ok(crate::tuple::TupleValueTree::new((left, right)))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use strategy::just::Just;
+    use crate::strategy::just::Just;
     use super::*;
 
     #[test]
@@ -250,8 +250,8 @@ mod test {
             |a| (Just(a), (a-5..a+5)));
 
         let mut failures = 0;
+        let mut runner = TestRunner::deterministic();
         for _ in 0..1000 {
-            let mut runner = TestRunner::default();
             let case = input.new_tree(&mut runner).unwrap();
             let result = runner.run_one(case, |(a, b)| {
                 if a <= 10000 || b <= a {

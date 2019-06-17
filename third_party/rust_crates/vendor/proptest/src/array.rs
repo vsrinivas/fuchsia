@@ -20,8 +20,8 @@
 
 use core::marker::PhantomData;
 
-use strategy::*;
-use test_runner::*;
+use crate::strategy::*;
+use crate::test_runner::*;
 
 /// A `Strategy` which generates fixed-size arrays containing values drawn from
 /// an inner strategy.
@@ -36,7 +36,6 @@ use test_runner::*;
 /// ## Example
 ///
 /// ```
-/// #[macro_use] extern crate proptest;
 /// use proptest::prelude::*;
 ///
 /// proptest! {
@@ -257,7 +256,7 @@ mod test {
         }
 
         let input = [0..32, 0..32];
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
 
         let mut cases_tested = 0;
         for _ in 0..256 {

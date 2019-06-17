@@ -8,10 +8,10 @@
 // except according to those terms.
 
 use core::any::Any;
-use std_facade::{fmt, Box, Vec, BTreeMap, BTreeSet};
+use crate::std_facade::{fmt, Box, Vec, BTreeMap, BTreeSet};
 
-use test_runner::failure_persistence::FailurePersistence;
-use test_runner::Seed;
+use crate::test_runner::failure_persistence::FailurePersistence;
+use crate::test_runner::failure_persistence::PersistedSeed;
 
 /// Failure persistence option that loads and saves seeds in memory
 /// on the heap. This may be useful when accumulating test failures
@@ -20,22 +20,22 @@ use test_runner::Seed;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MapFailurePersistence {
     /// Backing map, keyed by source_file.
-    pub map: BTreeMap<&'static str, BTreeSet<Seed>>
+    pub map: BTreeMap<&'static str, BTreeSet<PersistedSeed>>
 }
 
 impl FailurePersistence for MapFailurePersistence {
-    fn load_persisted_failures(&self, source_file: Option<&'static str>)
-                               -> Vec<Seed> {
+    fn load_persisted_failures2(&self, source_file: Option<&'static str>)
+                                -> Vec<PersistedSeed> {
         source_file
             .and_then(|source| self.map.get(source))
             .map(|seeds| seeds.iter().cloned().collect::<Vec<_>>())
             .unwrap_or_default()
     }
 
-    fn save_persisted_failure(
+    fn save_persisted_failure2(
         &mut self,
         source_file: Option<&'static str>,
-        seed: Seed,
+        seed: PersistedSeed,
         _shrunken_value: &dyn fmt::Debug,
     ) {
         let s = match source_file {
@@ -60,32 +60,32 @@ impl FailurePersistence for MapFailurePersistence {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_runner::failure_persistence::tests::*;
+    use crate::test_runner::failure_persistence::tests::*;
 
     #[test]
     fn initial_map_is_empty() {
         assert!(MapFailurePersistence::default()
-                    .load_persisted_failures(HI_PATH).is_empty())
+                    .load_persisted_failures2(HI_PATH).is_empty())
     }
 
     #[test]
     fn seeds_recoverable() {
         let mut p = MapFailurePersistence::default();
-        p.save_persisted_failure(HI_PATH, INC_SEED, &"");
-        let restored = p.load_persisted_failures(HI_PATH);
+        p.save_persisted_failure2(HI_PATH, INC_SEED, &"");
+        let restored = p.load_persisted_failures2(HI_PATH);
         assert_eq!(1, restored.len());
         assert_eq!(INC_SEED, *restored.first().unwrap());
 
-        assert!(p.load_persisted_failures(None).is_empty());
-        assert!(p.load_persisted_failures(UNREL_PATH).is_empty());
+        assert!(p.load_persisted_failures2(None).is_empty());
+        assert!(p.load_persisted_failures2(UNREL_PATH).is_empty());
     }
 
     #[test]
     fn seeds_deduplicated() {
         let mut p = MapFailurePersistence::default();
-        p.save_persisted_failure(HI_PATH, INC_SEED, &"");
-        p.save_persisted_failure(HI_PATH, INC_SEED, &"");
-        let restored = p.load_persisted_failures(HI_PATH);
+        p.save_persisted_failure2(HI_PATH, INC_SEED, &"");
+        p.save_persisted_failure2(HI_PATH, INC_SEED, &"");
+        let restored = p.load_persisted_failures2(HI_PATH);
         assert_eq!(1, restored.len());
     }
 }

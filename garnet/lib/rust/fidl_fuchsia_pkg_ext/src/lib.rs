@@ -5,10 +5,6 @@
 //! `fidl_fuchsia_pkg_ext` contains wrapper types around the auto-generated `fidl_fuchsia_pkg`
 //! bindings.
 
-#[cfg(test)]
-#[macro_use]
-extern crate proptest;
-
 mod types;
 pub use crate::types::{BlobId, BlobInfo};
 

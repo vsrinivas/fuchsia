@@ -125,7 +125,6 @@ mod test_build_with_file_system {
     use crate::test::*;
     use maplit::{btreemap, hashmap};
     use proptest::prelude::*;
-    use proptest::{prop_assert, prop_assert_eq, proptest, proptest_helper};
     use rand::SeedableRng;
     use std::collections::{HashMap, HashSet};
     use std::io;
@@ -366,7 +365,6 @@ mod test_build {
     use super::*;
     use crate::test::*;
     use proptest::prelude::*;
-    use proptest::{prop_assert, prop_assert_eq, proptest, proptest_helper};
     use rand::SeedableRng;
     use std::fs;
     use std::io::{self, Write};

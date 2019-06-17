@@ -304,10 +304,7 @@ mod hex_serde {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        proptest::{prelude::*, prop_compose, proptest, proptest_helper},
-    };
+    use {super::*, proptest::prelude::*};
 
     prop_compose! {
         fn arb_url()(

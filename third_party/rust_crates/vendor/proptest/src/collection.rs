@@ -14,16 +14,16 @@ use core::hash::Hash;
 use core::ops::{Add, Range, RangeTo, RangeInclusive, RangeToInclusive};
 use core::usize;
 
-use std_facade::{fmt, Vec, VecDeque, BinaryHeap, BTreeMap, BTreeSet, LinkedList};
+use crate::std_facade::{fmt, Vec, VecDeque, BinaryHeap, BTreeMap, BTreeSet, LinkedList};
 
 #[cfg(feature = "std")]
-use std_facade::{HashMap, HashSet};
+use crate::std_facade::{HashMap, HashSet};
 
-use bits::{BitSetLike, VarBitSet};
-use num::sample_uniform_incl;
-use strategy::*;
-use tuple::TupleValueTree;
-use test_runner::*;
+use crate::bits::{BitSetLike, VarBitSet};
+use crate::num::sample_uniform_incl;
+use crate::strategy::*;
+use crate::tuple::TupleValueTree;
+use crate::test_runner::*;
 
 //==============================================================================
 // SizeRange
@@ -141,17 +141,6 @@ impl From<RangeInclusive<usize>> for SizeRange {
 /// Given `..=high`, then a size range `[0, high]` is the result.
 impl From<RangeToInclusive<usize>> for SizeRange {
     fn from(high: RangeToInclusive<usize>) -> Self { size_range(0..=high.end) }
-}
-
-impl From<SizeRange> for Range<usize> {
-    fn from(sr: SizeRange) -> Self {
-        sr.start()..sr.end_excl()
-    }
-}
-
-/// Given a size range `[low, high]`, then a range `low..=high` is returned.
-impl From<SizeRange> for RangeInclusive<usize> {
-    fn from(sr: SizeRange) -> Self { sr.start()..=sr.end_incl() }
 }
 
 #[cfg(feature = "frunk")]
@@ -635,15 +624,15 @@ impl<T : ValueTree> ValueTree for VecValueTree<T> {
 mod test {
     use super::*;
 
-    use bits;
+    use crate::bits;
 
     #[test]
     fn test_vec() {
         let input = vec(1usize..20usize, 5..20);
         let mut num_successes = 0;
 
+        let mut runner = TestRunner::deterministic();
         for _ in 0..256 {
-            let mut runner = TestRunner::default();
             let case = input.new_tree(&mut runner).unwrap();
             let start = case.current();
             // Has correct length
@@ -708,7 +697,7 @@ mod test {
     fn test_map() {
         // Only 8 possible keys
         let input = hash_map("[ab]{3}", "a", 2..3);
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
 
         for _ in 0..256 {
             let v = input.new_tree(&mut runner).unwrap().current();
@@ -721,7 +710,7 @@ mod test {
     fn test_set() {
         // Only 8 possible values
         let input = hash_set("[ab]{3}", 2..3);
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
 
         for _ in 0..256 {
             let v = input.new_tree(&mut runner).unwrap().current();

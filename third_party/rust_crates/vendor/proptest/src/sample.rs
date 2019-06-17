@@ -17,17 +17,17 @@ use core::fmt;
 use core::mem;
 use core::ops::Range;
 use core::u64;
-use std_facade::{Cow, Vec, Arc};
+use crate::std_facade::{Cow, Vec, Arc};
 
 use rand::Rng;
 
-use bits::{self, BitSetValueTree, SampledBitSetStrategy, VarBitSet};
-use num;
-use strategy::*;
-use test_runner::*;
+use crate::bits::{self, BitSetValueTree, SampledBitSetStrategy, VarBitSet};
+use crate::num;
+use crate::strategy::*;
+use crate::test_runner::*;
 
 /// Re-exported to make usage more ergonomic.
-pub use collection::{SizeRange, size_range};
+pub use crate::collection::{SizeRange, size_range};
 
 /// Sample subsequences whose size are within `size` from the given collection
 /// `values`.
@@ -187,7 +187,6 @@ pub fn select<T : Clone + fmt::Debug + 'static>
 /// call to `prop_flat_map()`.
 ///
 /// ```
-/// #[macro_use] extern crate proptest;
 /// use proptest::prelude::*;
 ///
 /// proptest! {
@@ -290,7 +289,6 @@ impl IndexStrategy {
 /// Generate a non-indexable collection and a value to pick out of it.
 ///
 /// ```
-/// #[macro_use] extern crate proptest;
 /// use proptest::prelude::*;
 ///
 /// proptest! {
@@ -413,10 +411,10 @@ impl Selector {
 
 #[cfg(test)]
 mod test {
-    use std_facade::BTreeSet;
+    use crate::std_facade::BTreeSet;
 
     use super::*;
-    use arbitrary::any;
+    use crate::arbitrary::any;
 
     #[test]
     fn sample_slice() {
@@ -424,7 +422,7 @@ mod test {
         let mut size_counts = [0; 8];
         let mut value_counts = [0; 8];
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = subsequence(VALUES, 3..7);
 
         for _ in 0..2048 {
@@ -462,7 +460,7 @@ mod test {
         // Just test that the types work out
         let values = vec![0, 1, 2, 3, 4];
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = subsequence(values, 1..3);
 
         let _ = input.new_tree(&mut runner).unwrap().current();
@@ -473,7 +471,7 @@ mod test {
         let values = vec![0, 1, 2, 3, 4, 5, 6, 7];
         let mut counts = [0; 8];
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = select(values);
 
         for _ in 0..1024 {
@@ -498,7 +496,7 @@ mod test {
 
     #[test]
     fn subseq_empty_vec_works() {
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = subsequence(Vec::<()>::new(), 0..1);
         assert_eq!(Vec::<()>::new(), input.new_tree(&mut runner).unwrap().current());
     }
@@ -506,14 +504,14 @@ mod test {
     #[test]
     fn subseq_full_vec_works() {
         let v = vec![1u32, 2u32, 3u32];
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = subsequence(v.clone(), 3);
         assert_eq!(v, input.new_tree(&mut runner).unwrap().current());
     }
 
     #[test]
     fn index_works() {
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = any::<Index>();
         let col = vec!["foo", "bar", "baz"];
         let mut seen = BTreeSet::new();
@@ -532,7 +530,7 @@ mod test {
 
     #[test]
     fn selector_works() {
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = any::<Selector>();
         let col: BTreeSet<&str> = vec!["foo", "bar", "baz"].into_iter().collect();
         let mut seen = BTreeSet::new();

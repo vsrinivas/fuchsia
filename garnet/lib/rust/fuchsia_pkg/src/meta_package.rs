@@ -93,7 +93,7 @@ mod tests {
     use crate::errors::{PackageNameError, PackageVariantError};
     use crate::test::{random_meta_package, random_package_name, random_package_variant};
     use lazy_static::lazy_static;
-    use proptest::{proptest, proptest_helper};
+    use proptest::prelude::*;
     use regex::Regex;
 
     #[test]

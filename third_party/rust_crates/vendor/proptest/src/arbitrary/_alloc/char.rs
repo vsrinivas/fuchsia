@@ -12,9 +12,9 @@
 use core::char::*;
 use core::iter::once;
 use core::ops::Range;
-use std_facade::Vec;
+use crate::std_facade::Vec;
 
-use collection::vec;
+use crate::collection::vec;
 
 multiplex_alloc! {
     core::char::DecodeUtf16, std::char::DecodeUtf16,
@@ -24,9 +24,9 @@ multiplex_alloc! {
 
 const VEC_MAX: usize = ::core::u16::MAX as usize;
 
-use strategy::*;
-use strategy::statics::static_map;
-use arbitrary::*;
+use crate::strategy::*;
+use crate::strategy::statics::static_map;
+use crate::arbitrary::*;
 
 macro_rules! impl_wrap_char {
     ($type: ty, $mapper: expr) => {
@@ -43,6 +43,7 @@ impl_wrap_char!(ToLowercase, char::to_lowercase);
 #[cfg(feature = "unstable")]
 impl_wrap_char!(ToUppercase, char::to_uppercase);
 
+#[cfg(feature = "break-dead-code")]
 arbitrary!(DecodeUtf16<<Vec<u16> as IntoIterator>::IntoIter>,
     SMapped<Vec<u16>, Self>;
     static_map(vec(any::<u16>(), ..VEC_MAX), decode_utf16)
@@ -71,8 +72,12 @@ mod test {
         escape_default => EscapeDefault,
         escape_unicode => EscapeUnicode,
         parse_char_error => ParseCharError,
-        decode_utf16 => DecodeUtf16<<Vec<u16> as IntoIterator>::IntoIter>,
         decode_utf16_error => DecodeUtf16Error
+    );
+
+    #[cfg(feature = "break-dead-code")]
+    no_panic_test!(
+        decode_utf16 => DecodeUtf16<<Vec<u16> as IntoIterator>::IntoIter>
     );
 
     #[cfg(feature = "unstable")]

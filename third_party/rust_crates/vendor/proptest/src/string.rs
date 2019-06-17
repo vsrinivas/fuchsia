@@ -14,7 +14,7 @@ use core::mem;
 use core::fmt;
 use core::ops::RangeInclusive;
 use core::u32;
-use std_facade::{Cow, Box, String, Vec, ToOwned};
+use crate::std_facade::{Cow, Box, String, Vec, ToOwned};
 
 use regex_syntax::{Parser, Error as ParseError};
 use regex_syntax::hir::{
@@ -22,11 +22,11 @@ use regex_syntax::hir::{
     RepetitionKind::{self, *}, RepetitionRange::*
 };
 
-use bool;
-use char;
-use collection::{vec, size_range, SizeRange};
-use strategy::*;
-use test_runner::*;
+use crate::bool;
+use crate::char;
+use crate::collection::{vec, size_range, SizeRange};
+use crate::strategy::*;
+use crate::test_runner::*;
 
 /// Wraps the regex that forms the `Strategy` for `String` so that a sensible
 /// `Default` can be given. The default is a string of non-control characters.
@@ -99,6 +99,37 @@ impl Strategy for str {
 }
 
 type ParseResult<T> = Result<RegexGeneratorStrategy<T>, Error>;
+
+#[doc(hidden)]
+/// A type which knows how to produce a `Strategy` from a regular expression
+/// generating the type.
+///
+/// This trait exists for the benefit of `#[proptest(regex = "...")]`.
+/// It is semver extempt, so use at your own risk.
+/// If you found a use for the trait beyond `Vec<u8>` and `String`,
+/// please file an issue at https://github.com/AltSysrq/proptest.
+pub trait StrategyFromRegex: Sized + fmt::Debug {
+    type Strategy: Strategy<Value = Self>;
+
+    /// Produce a strategy for `Self` from the `regex`.
+    fn from_regex(regex: &str) -> Self::Strategy;
+}
+
+impl StrategyFromRegex for String {
+    type Strategy = RegexGeneratorStrategy<Self>;
+
+    fn from_regex(regex: &str) -> Self::Strategy {
+        string_regex(regex).unwrap()
+    }
+}
+
+impl StrategyFromRegex for Vec<u8> {
+    type Strategy = RegexGeneratorStrategy<Self>;
+
+    fn from_regex(regex: &str) -> Self::Strategy {
+        bytes_regex(regex).unwrap()
+    }
+}
 
 /// Creates a strategy which generates strings matching the given regular
 /// expression.
@@ -307,7 +338,7 @@ mod test {
         let mut generated = HashSet::new();
 
         let strategy = string_regex(pattern).unwrap();
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         for _ in 0..iterations {
             let mut value = strategy.new_tree(&mut runner).unwrap();
 

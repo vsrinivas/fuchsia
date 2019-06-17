@@ -1,5 +1,5 @@
 //-
-// Copyright 2017, 2018 The proptest developers
+// Copyright 2017, 2018, 2019 The proptest developers
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -12,7 +12,7 @@ use core::{fmt, iter};
 use std::panic::{self, AssertUnwindSafe};
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
-use std_facade::{Box, Arc, Vec, BTreeMap, String};
+use crate::std_facade::{Box, Arc, Vec, BTreeMap, String};
 
 #[cfg(feature = "fork")]
 use std::fs;
@@ -25,14 +25,15 @@ use rusty_fork;
 #[cfg(feature = "fork")]
 use tempfile;
 
-use test_runner::{TestRng, Seed};
-use test_runner::errors::*;
-use test_runner::config::*;
-use test_runner::reason::*;
-use test_runner::result_cache::*;
+use crate::test_runner::rng::TestRng;
+use crate::test_runner::errors::*;
+use crate::test_runner::config::*;
+use crate::test_runner::reason::*;
+use crate::test_runner::result_cache::*;
+use crate::test_runner::failure_persistence::PersistedSeed;
 #[cfg(feature = "fork")]
-use test_runner::replay;
-use strategy::*;
+use crate::test_runner::replay;
+use crate::strategy::*;
 
 #[cfg(feature = "fork")]
 const ENV_FORK_FILE: &'static str = "_PROPTEST_FORKFILE";
@@ -266,13 +267,48 @@ type TestRunResult<S> = Result<(), TestError<<S as Strategy>::Value>>;
 
 impl TestRunner {
     /// Create a fresh `TestRunner` with the given configuration.
+    ///
+    /// The runner will use an RNG with a generated seed and the default
+    /// algorithm.
+    ///
+    /// In `no_std` environments, every `TestRunner` will use the same
+    /// hard-coded seed. This seed is not contractually guaranteed and may be
+    /// changed between releases without notice.
     pub fn new(config: Config) -> Self {
+        let algorithm = config.rng_algorithm;
+        TestRunner::new_with_rng(config, TestRng::default_rng(algorithm))
+    }
+
+    /// Create a fresh `TestRunner` with the standard deterministic RNG.
+    ///
+    /// This is sugar for the following:
+    ///
+    /// ```rust
+    /// # use proptest::test_runner::*;
+    /// let config = Config::default();
+    /// let algorithm = config.rng_algorithm;
+    /// TestRunner::new_with_rng(
+    ///     config,
+    ///     TestRng::deterministic_rng(algorithm));
+    /// ```
+    ///
+    /// Refer to `TestRng::deterministic_rng()` for more information on the
+    /// properties of the RNG used here.
+    pub fn deterministic() -> Self {
+        let config = Config::default();
+        let algorithm = config.rng_algorithm;
+        TestRunner::new_with_rng(
+            config, TestRng::deterministic_rng(algorithm))
+    }
+
+    /// Create a fresh `TestRunner` with the given configuration and RNG.
+    pub fn new_with_rng(config: Config, rng: TestRng) -> Self {
         TestRunner {
             config: config,
             successes: 0,
             local_rejects: 0,
             global_rejects: 0,
-            rng: TestRng::default_rng(),
+            rng: rng,
             flat_map_regens: Arc::new(AtomicUsize::new(0)),
             local_reject_detail: BTreeMap::new(),
             global_reject_detail: BTreeMap::new(),
@@ -472,15 +508,15 @@ impl TestRunner {
     {
         let old_rng = self.rng.clone();
 
-        let persisted_failure_seeds: Vec<Seed> =
+        let persisted_failure_seeds: Vec<PersistedSeed> =
             self.config.failure_persistence
                 .as_ref()
-                .map(|f| f.load_persisted_failures(self.config.source_file))
+                .map(|f| f.load_persisted_failures2(self.config.source_file))
                 .unwrap_or_default();
 
         let mut result_cache = self.new_cache();
 
-        for persisted_seed in persisted_failure_seeds {
+        for PersistedSeed(persisted_seed) in persisted_failure_seeds {
             self.rng.set_seed(persisted_seed);
             self.gen_and_run_case(strategy, &test, &mut replay,
                                   &mut *result_cache, &mut fork_output)?;
@@ -501,8 +537,8 @@ impl TestRunner {
                     // process. The parent relies on it remaining consistent
                     // and will take care of updating it itself.
                     if !fork_output.is_in_fork() {
-                        failure_persistence.save_persisted_failure(
-                            *source_file, seed, value);
+                        failure_persistence.save_persisted_failure2(
+                            *source_file, PersistedSeed(seed), value);
                     }
                 }
             }
@@ -715,7 +751,7 @@ impl TestRunner {
 
 #[cfg(feature = "fork")]
 fn init_replay(rng: &mut TestRng) -> (Vec<TestCaseResult>, ForkOutput) {
-    use test_runner::replay::{open_file, Replay, ReplayFileStatus::*};
+    use crate::test_runner::replay::{open_file, Replay, ReplayFileStatus::*};
 
     if let Some(path) = env::var_os(ENV_FORK_FILE) {
         let mut file = open_file(&path).expect("Failed to open replay file");
@@ -814,8 +850,8 @@ mod test {
     use std::fs;
 
     use super::*;
-    use test_runner::FileFailurePersistence;
-    use strategy::Strategy;
+    use crate::test_runner::FileFailurePersistence;
+    use crate::strategy::Strategy;
 
     #[test]
     fn gives_up_after_too_many_rejections() {
@@ -941,8 +977,8 @@ mod test {
     fn new_rng_makes_separate_rng() {
         use rand::Rng;
         let mut runner = TestRunner::default();
-        let from_1 = runner.new_rng().gen::<Seed>();
-        let from_2 = runner.rng().gen::<Seed>();
+        let from_1 = runner.new_rng().gen::<[u8;16]>();
+        let from_2 = runner.rng().gen::<[u8;16]>();
         assert_ne!(from_1, from_2);
     }
 
@@ -1092,7 +1128,7 @@ mod test {
         for _ in 0..256 {
             let mut runner = TestRunner::new(Config {
                 failure_persistence: None,
-                result_cache: ::test_runner::result_cache::basic_result_cache,
+                result_cache: crate::test_runner::result_cache::basic_result_cache,
                 .. Config::default()
             });
             let pass = Rc::new(Cell::new(true));
@@ -1181,7 +1217,7 @@ mod timeout_tests {
 
     fn test_shrink_bail(config: Config) {
         let mut runner = TestRunner::new(config);
-        let result = runner.run(&::num::u64::ANY, |v| {
+        let result = runner.run(&crate::num::u64::ANY, |v| {
             thread::sleep(Duration::from_millis(250));
             prop_assert!(v <= u32::MAX as u64);
             Ok(())

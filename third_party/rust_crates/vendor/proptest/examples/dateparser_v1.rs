@@ -7,8 +7,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[macro_use]
-extern crate proptest;
+use proptest::prelude::*;
 
 fn parse_date(s: &str) -> Option<(u32, u32, u32)> {
     if 10 != s.len() {
@@ -33,8 +32,8 @@ fn parse_date(s: &str) -> Option<(u32, u32, u32)> {
 
 // NB We omit #[test] on these functions so that main() can call them.
 proptest! {
-    fn doesnt_crash(ref s in "\\PC*") {
-        parse_date(s);
+    fn doesnt_crash(s in "\\PC*") {
+        parse_date(&s);
     }
 }
 

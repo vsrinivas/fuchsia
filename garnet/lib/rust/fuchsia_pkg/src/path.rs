@@ -93,7 +93,6 @@ mod check_resource_path_tests {
     use super::*;
     use crate::test::*;
     use proptest::prelude::*;
-    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
 
     // Tests for invalid paths
     #[test]
@@ -211,7 +210,7 @@ mod check_resource_path_tests {
 mod check_package_name_tests {
     use super::*;
     use crate::test::random_package_name;
-    use proptest::{prop_assert, prop_assert_eq, proptest, proptest_helper};
+    use proptest::prelude::*;
 
     #[test]
     fn test_reject_empty_name() {
@@ -250,7 +249,7 @@ mod check_package_name_tests {
 mod check_package_variant_tests {
     use super::*;
     use crate::test::random_package_variant;
-    use proptest::{prop_assert, prop_assert_eq, proptest, proptest_helper};
+    use proptest::prelude::*;
 
     #[test]
     fn test_reject_empty_variant() {

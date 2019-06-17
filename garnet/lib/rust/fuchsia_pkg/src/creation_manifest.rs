@@ -140,7 +140,7 @@ mod tests {
     use crate::errors::ResourcePathError::PathStartsWithSlash;
     use crate::test::*;
     use maplit::btreemap;
-    use proptest::{prop_assert, prop_assert_eq, prop_assume, proptest, proptest_helper};
+    use proptest::prelude::*;
     use serde_json::json;
 
     fn from_json_value(

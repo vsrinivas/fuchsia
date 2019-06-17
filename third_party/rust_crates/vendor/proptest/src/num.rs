@@ -15,7 +15,7 @@
 use rand::distributions::{Distribution, Standard};
 use rand::distributions::uniform::{Uniform, SampleUniform};
 use core::ops::Range;
-use test_runner::TestRunner;
+use crate::test_runner::TestRunner;
 
 pub(crate) fn sample_uniform<X : SampleUniform>
     (run: &mut TestRunner, range: Range<X>) -> X {
@@ -123,8 +123,8 @@ macro_rules! signed_integer_bin_search {
         pub mod $typ {
             use rand::Rng;
 
-            use strategy::*;
-            use test_runner::TestRunner;
+            use crate::strategy::*;
+            use crate::test_runner::TestRunner;
 
             int_any!($typ);
 
@@ -225,8 +225,8 @@ macro_rules! unsigned_integer_bin_search {
         pub mod $typ {
             use rand::Rng;
 
-            use strategy::*;
-            use test_runner::TestRunner;
+            use crate::strategy::*;
+            use crate::test_runner::TestRunner;
 
             int_any!($typ);
 
@@ -307,12 +307,14 @@ signed_integer_bin_search!(i8);
 signed_integer_bin_search!(i16);
 signed_integer_bin_search!(i32);
 signed_integer_bin_search!(i64);
+#[cfg(not(target_arch = "wasm32"))]
 signed_integer_bin_search!(i128);
 signed_integer_bin_search!(isize);
 unsigned_integer_bin_search!(u8);
 unsigned_integer_bin_search!(u16);
 unsigned_integer_bin_search!(u32);
 unsigned_integer_bin_search!(u64);
+#[cfg(not(target_arch = "wasm32"))]
 unsigned_integer_bin_search!(u128);
 unsigned_integer_bin_search!(usize);
 
@@ -642,8 +644,8 @@ macro_rules! float_bin_search {
 
             use rand::Rng;
 
-            use strategy::*;
-            use test_runner::TestRunner;
+            use crate::strategy::*;
+            use crate::test_runner::TestRunner;
             use super::{FloatTypes, FloatLayout};
 
             float_any!($typ);
@@ -816,14 +818,14 @@ float_bin_search!(f64);
 
 #[cfg(test)]
 mod test {
-    use strategy::*;
-    use test_runner::*;
+    use crate::strategy::*;
+    use crate::test_runner::*;
 
     use super::*;
 
     #[test]
     fn u8_inclusive_end_included() {
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let mut ok = 0;
         for _ in 0..20 {
             let tree = (0..=1).new_tree(&mut runner).unwrap();
@@ -840,7 +842,7 @@ mod test {
 
     #[test]
     fn u8_inclusive_to_end_included() {
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let mut ok = 0;
         for _ in 0..20 {
             let tree = (..=1u8).new_tree(&mut runner).unwrap();
@@ -988,7 +990,7 @@ mod test {
         macro_rules! contract_sanity {
             ($t:tt) => {
                 mod $t {
-                    use strategy::check_strategy_sanity;
+                    use crate::strategy::check_strategy_sanity;
 
                     const FOURTY_TWO: $t = 42 as $t;
                     const FIFTY_SIX: $t = 56 as $t;
@@ -1150,7 +1152,7 @@ mod test {
             let mut seen_infinite = 0;
             let mut seen_quiet_nan = 0;
             let mut seen_signaling_nan = 0;
-            let mut runner = TestRunner::default();
+            let mut runner = TestRunner::deterministic();
 
             // Check whether this version of Rust honours the NaN payload in
             // from_bits
@@ -1274,18 +1276,18 @@ mod test {
     }
 
     proptest! {
-        #![proptest_config(::test_runner::Config::with_cases(1024))]
+        #![proptest_config(crate::test_runner::Config::with_cases(1024))]
 
         #[test]
         fn f32_any_generates_desired_values(
-            strategy in ::bits::u32::ANY.prop_map(f32::Any::from_bits)
+            strategy in crate::bits::u32::ANY.prop_map(f32::Any::from_bits)
         ) {
             float_generation_test_body!(strategy, f32);
         }
 
         #[test]
         fn f32_any_sanity(
-            strategy in ::bits::u32::ANY.prop_map(f32::Any::from_bits)
+            strategy in crate::bits::u32::ANY.prop_map(f32::Any::from_bits)
         ) {
             check_strategy_sanity(strategy, Some(CheckStrategySanityOptions {
                 strict_complicate_after_simplify: false,
@@ -1295,14 +1297,14 @@ mod test {
 
         #[test]
         fn f64_any_generates_desired_values(
-            strategy in ::bits::u32::ANY.prop_map(f64::Any::from_bits)
+            strategy in crate::bits::u32::ANY.prop_map(f64::Any::from_bits)
         ) {
             float_generation_test_body!(strategy, f64);
         }
 
         #[test]
         fn f64_any_sanity(
-            strategy in ::bits::u32::ANY.prop_map(f64::Any::from_bits)
+            strategy in crate::bits::u32::ANY.prop_map(f64::Any::from_bits)
         ) {
             check_strategy_sanity(strategy, Some(CheckStrategySanityOptions {
                 strict_complicate_after_simplify: false,

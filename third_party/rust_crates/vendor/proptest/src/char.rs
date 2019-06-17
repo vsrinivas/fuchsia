@@ -18,13 +18,13 @@
 //! inclusive ranges.
 
 use core::ops::RangeInclusive;
-use std_facade::Cow;
+use crate::std_facade::Cow;
 
 use rand::Rng;
 
-use num;
-use strategy::*;
-use test_runner::*;
+use crate::num;
+use crate::strategy::*;
+use crate::test_runner::*;
 
 /// An inclusive char range from fst to snd.
 type CharRange = RangeInclusive<char>;
@@ -47,8 +47,10 @@ pub const DEFAULT_SPECIAL_CHARS: &[char] = &[
     '¥',
     // No non-Unicode encoding has both ¥ and Ѩ
     'Ѩ',
-    // More Unicode edge-cases: BOM, replacement character, and non-BMP
-    '\u{FEFF}', '\u{FFFD}', '🕴',
+    // In UTF-8, Ⱥ increases in length from 2 to 3 bytes when lowercased
+    'Ⱥ',
+    // More Unicode edge-cases: BOM, replacement character, RTL override, and non-BMP
+    '\u{FEFF}', '\u{FFFD}', '\u{202E}', '🕴',
 ];
 
 /// A default sequence of ranges used preferentially when generating random
@@ -296,45 +298,42 @@ mod test {
     use std::vec::Vec;
 
     use super::*;
-    use collection;
+    use crate::collection;
 
-    #[test]
-    fn stays_in_range() {
-        let meta_input = collection::vec(
+    proptest! {
+        #[test]
+        fn stays_in_range(input_ranges in collection::vec(
             (0..::std::char::MAX as u32,
              0..::std::char::MAX as u32),
-            1..5);
-        TestRunner::default().run(
-            &meta_input, |input_ranges| {
-                let input = ranges(Cow::Owned(input_ranges.iter().map(
-                    |&(lo, hi)| ::std::char::from_u32(lo).and_then(
-                        |lo| ::std::char::from_u32(hi).map(
-                            |hi| min(lo, hi) ..= max(lo, hi)))
-                        .ok_or_else(|| TestCaseError::reject("non-char")))
-                    .collect::<Result<Vec<CharRange>,_>>()?));
+            1..5))
+        {
+            let input = ranges(Cow::Owned(input_ranges.iter().map(
+                |&(lo, hi)| ::std::char::from_u32(lo).and_then(
+                    |lo| ::std::char::from_u32(hi).map(
+                        |hi| min(lo, hi) ..= max(lo, hi)))
+                    .ok_or_else(|| TestCaseError::reject("non-char")))
+                                          .collect::<Result<Vec<CharRange>,_>>()?));
 
-                let mut runner = TestRunner::default();
-                for _ in 0..256 {
-                    let mut value = input.new_tree(&mut runner).unwrap();
-                    loop {
-                        let ch = value.current() as u32;
-                        assert!(input_ranges.iter().any(
-                            |&(lo, hi)| ch >= min(lo, hi) &&
-                                ch <= max(lo, hi)));
+            let mut runner = TestRunner::default();
+            for _ in 0..256 {
+                let mut value = input.new_tree(&mut runner).unwrap();
+                loop {
+                    let ch = value.current() as u32;
+                    assert!(input_ranges.iter().any(
+                        |&(lo, hi)| ch >= min(lo, hi) &&
+                            ch <= max(lo, hi)));
 
-                        if !value.simplify() { break; }
-                    }
+                    if !value.simplify() { break; }
                 }
-
-                Ok(())
-            }).unwrap()
+            }
+        }
     }
 
     #[test]
     fn applies_desired_bias() {
         let mut men_in_business_suits_levitating = 0;
         let mut ascii_printable = 0;
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
 
         for _ in 0..1024 {
             let ch = any().new_tree(&mut runner).unwrap().current();
@@ -352,7 +351,7 @@ mod test {
     #[test]
     fn doesnt_shrink_to_ascii_control() {
         let mut accepted = 0;
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
 
         for _ in 0..256 {
             let mut value = any().new_tree(&mut runner).unwrap();

@@ -18,16 +18,16 @@
 
 use core::marker::PhantomData;
 use core::mem;
-use std_facade::{fmt, Vec};
+use crate::std_facade::{fmt, Vec};
 
 #[cfg(feature = "bit-set")]
 use bit_set::BitSet;
-use rand::{self, Rng};
+use rand::{self, Rng, seq::IteratorRandom};
 
-use collection::SizeRange;
-use num::sample_uniform_incl;
-use strategy::*;
-use test_runner::*;
+use crate::collection::SizeRange;
+use crate::num::sample_uniform_incl;
+use crate::strategy::*;
+use crate::test_runner::*;
 
 /// Trait for types which can be handled with `BitSetStrategy`.
 #[cfg_attr(feature="cargo-clippy", allow(len_without_is_empty))]
@@ -263,10 +263,11 @@ impl<T : BitSetLike> Strategy for SampledBitSetStrategy<T> {
         let mut bits = T::new_bitset(self.bits.end_excl());
         let count = sample_uniform_incl(
             runner, self.size.start(), self.size.end_incl());
-        for bit in
-            rand::seq::sample_iter(runner.rng(), self.bits.iter(), count)
-            .expect("not enough bits to sample")
-        {
+        if bits.len() < count {
+            panic!("not enough bits to sample");
+        }
+
+        for bit in self.bits.iter().choose_multiple(runner.rng(), count) {
             bits.set(bit);
         }
 
@@ -517,7 +518,7 @@ mod test {
     fn generates_values_in_mask() {
         let mut accum = 0;
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = u32::masked(0xdeadbeef);
         for _ in 0..1024 {
             accum |= input.new_tree(&mut runner).unwrap().current();
@@ -536,7 +537,7 @@ mod test {
         mask.insert(0);
         mask.insert(2);
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = bitset::masked(mask);
         for _ in 0..32 {
             let v = input.new_tree(&mut runner).unwrap().current();
@@ -555,7 +556,7 @@ mod test {
 
         let mask = vec![true, false, true, false];
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         let input = bool_vec::masked(mask);
         for _ in 0..32 {
             let v = input.new_tree(&mut runner).unwrap().current();
@@ -608,7 +609,7 @@ mod test {
         let mut seen_counts = [0; 32];
         let mut seen_bits = [0; 32];
 
-        let mut runner = TestRunner::default();
+        let mut runner = TestRunner::deterministic();
         for _ in 0..2048 {
             let value = input.new_tree(&mut runner).unwrap().current();
             let count = value.count_ones() as usize;

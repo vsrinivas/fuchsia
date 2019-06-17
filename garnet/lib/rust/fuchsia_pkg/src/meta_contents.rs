@@ -145,9 +145,6 @@ mod tests {
     use crate::test::*;
     use maplit::btreemap;
     use proptest::prelude::*;
-    use proptest::{
-        prop_assert, prop_assert_eq, prop_assume, prop_compose, proptest, proptest_helper,
-    };
     use std::str::FromStr;
 
     #[test]
