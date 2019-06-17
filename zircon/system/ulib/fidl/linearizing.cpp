@@ -79,6 +79,11 @@ public:
     // would not be usable anyways.
     static constexpr bool kContinueAfterConstraintViolation = false;
 
+    // When we encounter a non-nullable vector/string with zero count, do not check the
+    // data pointer. It is cumbersome for the caller to provide a meaningful value other than NULL
+    // in the case of an empty vector/string.
+    static constexpr bool kAllowNonNullableCollectionsToBeAbsent = true;
+
     Status VisitPointer(Position ptr_position,
                         ObjectPointerPointer object_ptr_ptr,
                         uint32_t inline_size,

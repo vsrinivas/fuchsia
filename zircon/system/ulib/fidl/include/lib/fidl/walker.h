@@ -749,16 +749,21 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         case Frame::kStateString: {
             auto string_ptr = PtrTo<fidl_string_t>(frame->position);
             if (string_ptr->data == nullptr) {
-                if (!frame->string_state.nullable) {
+                if (!frame->string_state.nullable &&
+                    !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
                     visitor.OnError("non-nullable string is absent");
                     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
                 }
-                if (string_ptr->size != 0) {
+                if (string_ptr->size == 0) {
+                    if (frame->string_state.nullable ||
+                        !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
+                        Pop();
+                        continue;
+                    }
+                } else {
                     visitor.OnError("string is absent but length is not zero");
                     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
                 }
-                Pop();
-                continue;
             }
             uint64_t bound = frame->string_state.max_size;
             uint64_t size = string_ptr->size;
@@ -799,16 +804,21 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         case Frame::kStateVector: {
             auto vector_ptr = PtrTo<fidl_vector_t>(frame->position);
             if (vector_ptr->data == nullptr) {
-                if (!frame->vector_state.nullable) {
+                if (!frame->vector_state.nullable &&
+                    !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
                     visitor.OnError("non-nullable vector is absent");
                     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
                 }
-                if (vector_ptr->count != 0) {
+                if (vector_ptr->count == 0) {
+                    if (frame->vector_state.nullable ||
+                        !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
+                        Pop();
+                        continue;
+                    }
+                } else {
                     visitor.OnError("absent vector of non-zero elements");
                     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
                 }
-                Pop();
-                continue;
             }
             if (vector_ptr->count > frame->vector_state.max_count) {
                 visitor.OnError("message tried to access too large of a bounded vector");

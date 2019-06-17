@@ -1242,7 +1242,45 @@ bool encode_absent_nonnullable_vector_of_uint32_error() {
     END_TEST;
 }
 
+bool encode_absent_and_empty_nonnullable_vector_of_uint32_error() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{0, nullptr};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status =
+        fidl_encode(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
+                    sizeof(message.inline_struct), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
 bool encode_absent_nullable_vector_of_uint32() {
+    BEGIN_TEST;
+
+    unbounded_nullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{0, nullptr};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&unbounded_nullable_vector_of_uint32_message_type, &message,
+                              sizeof(message.inline_struct), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error);
+
+    auto message_uint32 = reinterpret_cast<uint64_t>(message.inline_struct.vector.data);
+    EXPECT_EQ(message_uint32, FIDL_ALLOC_ABSENT);
+
+    END_TEST;
+}
+
+bool encode_absent_nullable_vector_of_uint32_non_zero_length_error() {
     BEGIN_TEST;
 
     unbounded_nullable_vector_of_uint32_message_layout message = {};
@@ -2023,7 +2061,9 @@ RUN_TEST(encode_present_nullable_bounded_vector_of_handles_short_error)
 RUN_TEST(encode_present_nonnullable_vector_of_uint32)
 RUN_TEST(encode_present_nullable_vector_of_uint32)
 RUN_TEST(encode_absent_nonnullable_vector_of_uint32_error)
+RUN_TEST(encode_absent_and_empty_nonnullable_vector_of_uint32_error)
 RUN_TEST(encode_absent_nullable_vector_of_uint32)
+RUN_TEST(encode_absent_nullable_vector_of_uint32_non_zero_length_error)
 RUN_TEST(encode_present_nonnullable_bounded_vector_of_uint32)
 RUN_TEST(encode_present_nullable_bounded_vector_of_uint32)
 RUN_TEST(encode_absent_nonnullable_bounded_vector_of_uint32)

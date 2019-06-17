@@ -1265,7 +1265,23 @@ bool decode_absent_nonnullable_vector_of_uint32_error() {
 
     const char* error = nullptr;
     auto status = fidl_decode(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), nullptr, 0, &error);
+                              sizeof(message.inline_struct), nullptr, 0, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
+bool decode_absent_and_empty_nonnullable_vector_of_uint32_error() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
+
+    const char* error = nullptr;
+    auto status = fidl_decode(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
+                              sizeof(message.inline_struct), nullptr, 0, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
@@ -1288,6 +1304,22 @@ bool decode_absent_nullable_vector_of_uint32() {
 
     auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
     EXPECT_NULL(message_uint32);
+
+    END_TEST;
+}
+
+bool decode_absent_nullable_vector_of_uint32_non_zero_length_error() {
+    BEGIN_TEST;
+
+    unbounded_nullable_vector_of_uint32_message_layout message = {};
+    message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
+
+    const char* error = nullptr;
+    auto status = fidl_decode(&unbounded_nullable_vector_of_uint32_message_type, &message,
+                              sizeof(message.inline_struct), nullptr, 0u, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
 
     END_TEST;
 }
@@ -2135,7 +2167,9 @@ RUN_TEST(decode_present_nullable_bounded_vector_of_handles_short_error)
 RUN_TEST(decode_present_nonnullable_vector_of_uint32)
 RUN_TEST(decode_present_nullable_vector_of_uint32)
 RUN_TEST(decode_absent_nonnullable_vector_of_uint32_error)
+RUN_TEST(decode_absent_and_empty_nonnullable_vector_of_uint32_error)
 RUN_TEST(decode_absent_nullable_vector_of_uint32)
+RUN_TEST(decode_absent_nullable_vector_of_uint32_non_zero_length_error)
 RUN_TEST(decode_present_nonnullable_bounded_vector_of_uint32)
 RUN_TEST(decode_present_nullable_bounded_vector_of_uint32)
 RUN_TEST(decode_absent_nonnullable_bounded_vector_of_uint32)

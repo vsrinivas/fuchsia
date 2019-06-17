@@ -101,7 +101,11 @@ public:
 private:
     // Visit an indirection, which can be the data pointer of a string/vector, the data pointer
     // of an envelope from a table, the pointer in a nullable type, etc.
-    // Only called when the pointer is present.
+    //
+    // If kAllowNonNullableCollectionsToBeAbsent is false, this is only called when
+    // the pointer is present.
+    // Otherwise, this is called in case of present pointers, as well as non-nullable but absent
+    // vectors and strings.
     //
     // |ptr_position|   Position of the pointer.
     // |object_ptr_ptr| Pointer to the data pointer, obtained from |ptr_position.Get(start)|.
@@ -188,6 +192,14 @@ constexpr bool CheckVisitorInterface() {
     static_assert(std::is_same<decltype(ImplSubType::kContinueAfterConstraintViolation),
                                const bool>::value,
                   "ImplSubType must declare constexpr bool kContinueAfterConstraintViolation");
+
+    // kAllowNonNullableCollectionsToBeAbsent:
+    // - When true, the walker will allow non-nullable vectors/strings to have a null data pointer
+    //   and zero count, treating them as if they are empty (non-null data pointer and zero count).
+    // - When false, the above case becomes a constraint violation error.
+    static_assert(std::is_same<decltype(ImplSubType::kAllowNonNullableCollectionsToBeAbsent),
+                               const bool>::value,
+                  "ImplSubType must declare constexpr bool kAllowNonNullableCollectionsToBeAbsent");
 
     static_assert(std::is_same<
                       typename internal::callable_traits<

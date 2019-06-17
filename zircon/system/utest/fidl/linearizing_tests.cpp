@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <limits.h>
 #include <memory>
+#include <vector>
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/string_view.h>
@@ -186,6 +187,58 @@ bool linearize_vector_of_uint32() {
     status = fidl_linearize(&unbounded_nonnullable_vector_of_uint32_message_type,
                             &message,
                             buffer.get(),
+                            actual_num_bytes - 1,
+                            nullptr,
+                            &error);
+    EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
+    EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
+bool linearize_vector_of_nonnullable_uint32_coerce_null_to_empty() {
+    BEGIN_TEST;
+
+    std::vector<uint8_t> buffer(512);
+    unbounded_nonnullable_vector_of_uint32_inline_data message = {};
+    message.header.flags = 123;
+    message.header.ordinal = 456;
+    message.header.txid = 789;
+    // Null data pointer and zero count should be treated as an empty vector
+    // by the linearizer.
+    message.vector = (fidl_vector_t) {
+        .count = 0,
+        .data = nullptr,
+    };
+
+    const char* error = nullptr;
+    zx_status_t status;
+    uint32_t actual_num_bytes = 0;
+    status = fidl_linearize(&unbounded_nonnullable_vector_of_uint32_message_type,
+                            &message,
+                            &buffer[0],
+                            static_cast<uint32_t>(buffer.size()),
+                            &actual_num_bytes,
+                            &error);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_NULL(error, error);
+    ASSERT_EQ(actual_num_bytes, sizeof(message));
+
+    auto linearized_message =
+        reinterpret_cast<unbounded_nonnullable_vector_of_uint32_inline_data*>(&buffer[0]);
+    EXPECT_EQ(memcmp(&message.header,
+                     &linearized_message->header,
+                     sizeof(message.header)), 0);
+    EXPECT_NONNULL(linearized_message->vector.data);
+    // Verify that the data pointer in the linearized message points to the next
+    // out-of-line location.
+    EXPECT_EQ(linearized_message->vector.data,
+              reinterpret_cast<uint8_t*>(linearized_message) + sizeof(message));
+
+    // Verify that linearizing with less number of bytes does fail
+    status = fidl_linearize(&unbounded_nonnullable_vector_of_uint32_message_type,
+                            &message,
+                            &buffer[0],
                             actual_num_bytes - 1,
                             nullptr,
                             &error);
@@ -706,6 +759,7 @@ END_TEST_CASE(unaligned)
 
 BEGIN_TEST_CASE(vectors)
 RUN_TEST(linearize_vector_of_uint32)
+RUN_TEST(linearize_vector_of_nonnullable_uint32_coerce_null_to_empty)
 RUN_TEST(linearize_vector_of_string)
 END_TEST_CASE(vectors)
 

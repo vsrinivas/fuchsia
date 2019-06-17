@@ -65,6 +65,8 @@ public:
 
     static constexpr bool kContinueAfterConstraintViolation = true;
 
+    static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
+
     Status VisitPointer(Position ptr_position,
                         ObjectPointerPointer object_ptr_ptr,
                         uint32_t inline_size,
