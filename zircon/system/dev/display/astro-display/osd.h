@@ -64,7 +64,7 @@ public:
     zx_status_t Configure();
     void Disable();
     // This function will apply configuration when VSYNC interrupt occurs using RDMA
-    void FlipOnVsync(const display_config_t* config);
+    void FlipOnVsync(uint8_t idx, const display_config_t* config);
     void Dump();
     void Release();
 

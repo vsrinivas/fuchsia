@@ -173,11 +173,7 @@ uint32_t Osd::FloatToFixed3_10(float f) {
     return fixed_num;
 }
 
-void Osd::FlipOnVsync(const display_config_t* config) {
-
-    // extract index
-    uint8_t idx = (uint8_t) config->layer_list[0]->cfg.primary.image.handle;
-
+void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     // Get the first available channel
     int rdma_channel = GetNextAvailableRdmaChannel();
     uint8_t retry_count = 0;
@@ -494,7 +490,7 @@ int Osd::GetNextAvailableRdmaChannel() {
 
 zx_status_t Osd::SetupRdma() {
     zx_status_t status = ZX_OK;
-    DISP_INFO("Setting up RDMA\n");
+    DISP_INFO("Setting up Display RDMA\n");
 
     // since we are flushing the caches, make sure the tables are at least cache_line apart
     ZX_DEBUG_ASSERT(kChannelBaseOffset > zx_system_get_dcache_line_size());

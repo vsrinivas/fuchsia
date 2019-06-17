@@ -259,6 +259,11 @@ void AstroDisplay::DisplayControllerImplSetDisplayControllerInterface(
 zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                               size_t offset) {
     zx_status_t status = ZX_OK;
+    auto import_info = std::make_unique<ImageInfo>();
+    if (import_info == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     fbl::AutoLock lock(&image_lock_);
 
     if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != format_) {
@@ -284,11 +289,10 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
         status = ZX_ERR_NO_RESOURCES;
         return status;
     }
-    if (imported_images_.GetOne(local_canvas_idx)) {
-        DISP_INFO("Reusing previously allocated canvas (index = %d)\n", local_canvas_idx);
-    }
-    imported_images_.SetOne(local_canvas_idx);
-    image->handle = local_canvas_idx;
+
+    import_info->canvas_idx = local_canvas_idx;
+    image->handle = reinterpret_cast<uint64_t>(import_info.get());
+    imported_images_.push_back(std::move(import_info));
     return status;
 }
 
@@ -297,6 +301,10 @@ zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
                                                            zx_unowned_handle_t handle,
                                                            uint32_t index) {
     zx_status_t status = ZX_OK;
+    auto import_info = std::make_unique<ImageInfo>();
+    if (import_info == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
     if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != format_) {
         status = ZX_ERR_INVALID_ARGS;
@@ -353,21 +361,19 @@ zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
         return status;
     }
     fbl::AutoLock lock(&image_lock_);
-    if (imported_images_.GetOne(local_canvas_idx)) {
-        DISP_INFO("Reusing previously allocated canvas (index = %d)\n", local_canvas_idx);
-    }
-    imported_images_.SetOne(local_canvas_idx);
-    image->handle = local_canvas_idx;
+    import_info->canvas_idx = local_canvas_idx;
+    image->handle = reinterpret_cast<uint64_t>(import_info.get());
+    imported_images_.push_back(std::move(import_info));
     return status;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void AstroDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     fbl::AutoLock lock(&image_lock_);
-    size_t local_canvas_idx = (size_t)image->handle;
-    if (imported_images_.GetOne(local_canvas_idx)) {
-        imported_images_.ClearOne(local_canvas_idx);
-        amlogic_canvas_free(&canvas_, static_cast<uint8_t>(local_canvas_idx));
+    auto info = reinterpret_cast<ImageInfo*>(image->handle);
+    auto local_canvas_idx = info->canvas_idx;
+    if(imported_images_.erase(*info) != nullptr) {
+        amlogic_canvas_free(&canvas_, local_canvas_idx);
     }
 }
 
@@ -436,7 +442,7 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_
     ZX_DEBUG_ASSERT(display_configs);
 
     fbl::AutoLock lock(&display_lock_);
-    uint8_t addr;
+
     if (display_count == 1 && display_configs[0]->layer_count) {
        if (!full_init_done_) {
             zx_status_t status;
@@ -449,10 +455,11 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_
 
         // Since Astro does not support plug'n play (fixed display), there is no way
         // a checked configuration could be invalid at this point.
-        addr = (uint8_t) (uint64_t) display_configs[0]->layer_list[0]->cfg.primary.image.handle;
+        auto info = reinterpret_cast<ImageInfo*>(display_configs[0]
+                                                 ->layer_list[0]->cfg.primary.image.handle);
         current_image_valid_= true;
-        current_image_ = addr;
-        osd_->FlipOnVsync(display_configs[0]);
+        current_image_ = display_configs[0]->layer_list[0]->cfg.primary.image.handle;
+        osd_->FlipOnVsync(info->canvas_idx, display_configs[0]);
     } else {
         current_image_valid_= false;
         if (full_init_done_) {
@@ -533,12 +540,6 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
 
     format_ = ZX_PIXEL_FORMAT_RGB_x888;
     stride_ = DisplayControllerImplComputeLinearStride(width_, format_);
-
-    {
-        // Reset imported_images_ bitmap
-        fbl::AutoLock lock(&image_lock_);
-        imported_images_.Reset(kMaxImportedImages);
-    }
 
     if (dc_intf_.is_valid()) {
         added_display_args_t args;

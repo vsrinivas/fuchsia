@@ -25,11 +25,10 @@
 #include <ddktl/protocol/dsiimpl.h>
 
 #include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include "vpu.h"
 #include "osd.h"
 #include "astro-clock.h"
@@ -38,10 +37,11 @@
 
 namespace astro_display {
 
-class AstroDisplay;
+struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
+    uint8_t canvas_idx;
+};
 
-constexpr uint8_t kMaxImportedImages = 255;
-using ImportedImageBitmap = bitmap::RawBitmapGeneric<bitmap::FixedStorage<kMaxImportedImages>>;
+class AstroDisplay;
 
 // AstroDisplay will implement only a few subset of Device.
 using DeviceType = ddk::Device<AstroDisplay, ddk::Unbindable>;
@@ -67,7 +67,7 @@ public:
                                                      uint32_t** layer_cfg_results,
                                                      size_t* layer_cfg_result_count);
     void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
-                                             size_t display_count);
+                                                 size_t display_count);
     uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out);
     zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
@@ -131,7 +131,7 @@ private:
 
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
-    uint8_t current_image_ TA_GUARDED(display_lock_);
+    uint64_t current_image_ TA_GUARDED(display_lock_);
     bool current_image_valid_ TA_GUARDED(display_lock_);
 
     // display dimensions and format
@@ -158,8 +158,8 @@ private:
     // Display controller related data
     ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
-    // Simple hashtable
-    ImportedImageBitmap imported_images_ TA_GUARDED(image_lock_);
+    // Imported Images
+    fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
 
     // DSIIMPL Protocol
     ddk::DsiImplProtocolClient dsiimpl_ = {};
