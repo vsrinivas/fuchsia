@@ -62,8 +62,8 @@ zx_status_t HardwareDevice::Enumerate() {
 }
 
 void HardwareDevice::Disconnect() {
-    for (uint8_t i=0; i<=kMaxEpNum; i++) {
-        if (ep_q_[i] != nullptr) {
+    for (uint8_t i = 0; i < kMaxEndpointCount; i++) {
+        if (ep_q_[i]) {
             ep_q_[i]->Halt();
         }
     }
@@ -170,8 +170,8 @@ zx_status_t HardwareDevice::DisableEndpoint(const usb_endpoint_descriptor_t& des
 }
 
 size_t HardwareDevice::GetMaxTransferSize(uint8_t ep) {
-    if (ep > kMaxEpNum || !ep_q_[ep]) {
-        zxlogf(ERROR, "%s: unconfigured endpoint\n", __func__);
+    if (ep >= kMaxEndpointCount || !ep_q_[ep]) {
+        zxlogf(ERROR, "%s: unconfigured endpoint: %d\n", __func__, ep);
         return 0;
     }
     return ep_q_[ep]->GetMaxTransferSize();

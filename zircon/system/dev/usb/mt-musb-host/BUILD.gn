@@ -3,6 +3,13 @@
 # found in the LICENSE file.
 
 driver("mt-musb-host") {
+  deps = [
+    ":common",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
   sources = [
     "usb-device.cpp",
     "usb-hci.cpp",
@@ -11,7 +18,7 @@ driver("mt-musb-host") {
     "usb-spew.cpp",
     "usb-transaction.cpp",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.usb.bus",
     "$zx/system/banjo/ddk.protocol.usb.hci",
     "$zx/system/dev/lib/device-protocol-pdev",
@@ -25,6 +32,18 @@ driver("mt-musb-host") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+
+test("mt-hci-test") {
+  output_name = "mt-hci-test"
+  sources = [
+    "usb-hci-test.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/zxtest",
   ]
 }
 

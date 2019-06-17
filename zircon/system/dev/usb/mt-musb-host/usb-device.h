@@ -16,8 +16,9 @@
 
 namespace mt_usb_hci {
 
-// The (inclusive) maximum endpont number.
-constexpr int kMaxEpNum = 8;
+// The maximum number of endpoints any USB device could theoretically support.  Endpoint addresses
+// are 4-bit values.
+constexpr int kMaxEndpointCount = 16;
 
 // UsbDevice is a usb spec-compliant device.
 class UsbDevice {
@@ -103,7 +104,7 @@ private:
     const usb_speed_t speed_;
 
     // Array of RequestQueue unique_ptrs indexed by endpoint-number.
-    std::array<std::unique_ptr<RequestQueue>, kMaxEpNum+1> ep_q_;
+    std::array<std::unique_ptr<RequestQueue>, kMaxEndpointCount> ep_q_;
 };
 
 } // namespace mt_usb_hci

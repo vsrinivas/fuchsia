@@ -8,12 +8,14 @@
 #include "usb-root-hub.h"
 #include "usb-spew.h"
 
+#include <algorithm>
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
 #include <soc/mt8167/mt8167-usb.h>
 #include <soc/mt8167/mt8167-usb-phy.h>
@@ -197,9 +199,9 @@ zx_status_t UsbHci::Create(zx_device_t* parent) {
 }
 
 void UsbHci::DdkUnbind() {
-    if (irq_thread_) {
+    if (irq_thread_.joinable()) {
         irq_.destroy();
-        thrd_join(irq_thread_, nullptr);
+        irq_thread_.join();
     }
 }
 
@@ -214,14 +216,14 @@ zx_status_t UsbHci::Init() {
     }
 
     auto go = [](void* arg) { return static_cast<UsbHci*>(arg)->IrqThread(); };
-    auto rc = thrd_create_with_name(&irq_thread_, go, this, "usb-hci-irq-thread");
-    if (rc != thrd_success) {
+    irq_thread_ = std::thread(go, this);
+    if (!irq_thread_.joinable()) {
         return ZX_ERR_INTERNAL;
     }
 
     auto cleanup = fbl::MakeAutoCall([&]() {
         irq_.destroy();
-        thrd_join(irq_thread_, nullptr);
+        irq_thread_.join();
     });
 
     status = InitRootHub();
@@ -229,7 +231,7 @@ zx_status_t UsbHci::Init() {
         return status;
     }
 
-    status = InitFifo();
+    status = InitEndpointControllers();
     if (status != ZX_OK) {
         return status;
     }
@@ -255,7 +257,7 @@ void UsbHci::HandleIrq() {
     // See: MUSBMHDRC 13.2 for the order in which IRQ events need to be serviced.
     if (irqs.conn()) HandleConnect();
     if (irqs.discon()) HandleDisconnect();
-    for (uint8_t i=0; i <= kMaxEpNum; i++) {
+    for (uint8_t i = 0; i <= std::max(rx_ep_count_, tx_ep_count_); i++) {
         auto mask = static_cast<uint16_t>(1 << i);
         if ((tx_irqs.ep_tx() & mask) || (rx_irqs.ep_rx() & mask)) {
             // Here, note that each endpoint can either be an IN or OUT-type endpoint, but not both.
@@ -306,7 +308,7 @@ int UsbHci::IrqThread() {
     for (;;) {
         status = irq_.wait(nullptr);
         if (status == ZX_ERR_CANCELED) {
-            zxlogf(TRACE, "error break\n");
+            zxlogf(TRACE, "irq thread break\n");
             break;
         } else if (status != ZX_OK) {
             zxlogf(ERROR, "irq wait error: %s\n", zx_status_get_string(status));
@@ -363,28 +365,33 @@ zx_status_t UsbHci::InitRootHub() {
     return ZX_OK;
 }
 
-zx_status_t UsbHci::InitFifo() {
+zx_status_t UsbHci::InitEndpointControllers() {
+    auto epinfo = regs::EPINFO::Get().ReadFrom(usb_mmio());
+    rx_ep_count_ = epinfo.rxendpoints();
+    tx_ep_count_ = epinfo.txendpoints();
+
     // Each FIFO is initialized to the largest it could possibly be (singly-buffered).  As endpoints
     // are subsequently intialized, each FIFO will be appropriately resized based on the needs of
     // the endpoint the FIFO supports.  Here, note that FIFO assumes 64-bit wordsize.
     constexpr uint32_t fifo_size = kFifoMaxSize >> 3;
     uint32_t fifo_addr = (64 >> 3); // The first 64 bytes are used by endpoint-0.
-    for (uint8_t i = 1; i <= kMaxEpNum; i++) {
+    for (uint8_t i = 1; i <= rx_ep_count_; i++) {
         regs::INDEX::Get().FromValue(0).set_selected_endpoint(i).WriteTo(usb_mmio());
-
-        regs::TXFIFOADD::Get().FromValue(0)
-            .set_txfifoadd(static_cast<uint16_t>(fifo_addr))
-            .WriteTo(usb_mmio());
-        fifo_addr += fifo_size;
-
         regs::RXFIFOADD::Get().FromValue(0)
             .set_rxfifoadd(static_cast<uint16_t>(fifo_addr))
             .WriteTo(usb_mmio());
         fifo_addr += fifo_size;
 
         // See: MUSBMHDRC section 3.10.1.
-        regs::TXFIFOSZ::Get().FromValue(0).set_txsz(0x9).WriteTo(usb_mmio());
         regs::RXFIFOSZ::Get().FromValue(0).set_rxsz(0x9).WriteTo(usb_mmio());
+    }
+    for (uint8_t i = 1; i <= tx_ep_count_; i++) {
+        regs::INDEX::Get().FromValue(0).set_selected_endpoint(i).WriteTo(usb_mmio());
+        regs::TXFIFOADD::Get().FromValue(0)
+            .set_txfifoadd(static_cast<uint16_t>(fifo_addr))
+            .WriteTo(usb_mmio());
+        fifo_addr += fifo_size;
+        regs::TXFIFOSZ::Get().FromValue(0).set_txsz(0x9).WriteTo(usb_mmio());
     }
     return ZX_OK;
 }
