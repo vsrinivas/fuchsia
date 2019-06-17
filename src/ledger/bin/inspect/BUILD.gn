@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/*" ]
+
+source_set("inspect") {
+  sources = [
+    "inspect.cc",
+    "inspect.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/storage/public",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ledger",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "inspect_unittest.cc",
+  ]
+
+  deps = [
+    ":inspect",
+    "//garnet/public/lib/gtest",
+    "//src/ledger/bin/app:constants",
+    "//src/ledger/bin/storage/public",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}

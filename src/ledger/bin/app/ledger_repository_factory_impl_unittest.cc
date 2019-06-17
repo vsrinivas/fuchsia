@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
@@ -45,7 +46,8 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
     top_level_inspect_node_ = inspect::Node(kTestTopLevelNodeName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
-        top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent));
+        top_level_inspect_node_.CreateChild(
+            kRepositoriesInspectPathComponent.ToString()));
   }
 
   ~LedgerRepositoryFactoryImplTest() override {}
@@ -107,8 +109,8 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
       hierarchy,
       AllOf(NodeMatches(AllOf(NameMatches(kTestTopLevelNodeName),
                               MetricList(IsEmpty()), PropertyList(IsEmpty()))),
-            ChildrenMatch(UnorderedElementsAre(NodeMatches(
-                AllOf(NameMatches(kRepositoriesInspectPathComponent)))))));
+            ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                NameMatches(kRepositoriesInspectPathComponent.ToString())))))));
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest,
@@ -139,11 +141,11 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // under which it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
   auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
-  auto lone_repository_match = NodeMatches(
-      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL))));
-  auto first_inspection_repositories_match =
-      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent)),
-            ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
+  auto lone_repository_match = NodeMatches(MetricList(
+      Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))));
+  auto first_inspection_repositories_match = AllOf(
+      NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+      ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
   auto first_inspection_top_level_match =
       ChildrenMatch(UnorderedElementsAre(first_inspection_repositories_match));
   EXPECT_THAT(top_hierarchy, first_inspection_top_level_match);
@@ -161,12 +163,12 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
       NodeMatches(AllOf(NameMatches(first_repository_name),
                         MetricList(Contains(UIntMetricIs(
-                            kRequestsInspectPathComponent, 1UL))))),
-      NodeMatches(MetricList(
-          Contains(UIntMetricIs(kRequestsInspectPathComponent, 1UL)))));
-  auto second_inspection_repositories_match = UnorderedElementsAre(
-      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent)),
-            ChildrenMatch(second_inspection_two_repositories_match)));
+                            kRequestsInspectPathComponent.ToString(), 1UL))))),
+      NodeMatches(MetricList(Contains(
+          UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL)))));
+  auto second_inspection_repositories_match = UnorderedElementsAre(AllOf(
+      NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+      ChildrenMatch(second_inspection_two_repositories_match)));
   auto second_inspection_top_level_match =
       ChildrenMatch(second_inspection_repositories_match);
   EXPECT_THAT(top_hierarchy, second_inspection_top_level_match);
@@ -192,13 +194,13 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
       NodeMatches(AllOf(NameMatches(first_repository_name),
                         MetricList(Contains(UIntMetricIs(
-                            kRequestsInspectPathComponent, 2UL))))),
+                            kRequestsInspectPathComponent.ToString(), 2UL))))),
       NodeMatches(AllOf(NameMatches(second_repository_name),
                         MetricList(Contains(UIntMetricIs(
-                            kRequestsInspectPathComponent, 1UL))))));
-  auto third_inspection_repositories_match = UnorderedElementsAre(
-      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent)),
-            ChildrenMatch(third_inspection_two_repositories_match)));
+                            kRequestsInspectPathComponent.ToString(), 1UL))))));
+  auto third_inspection_repositories_match = UnorderedElementsAre(AllOf(
+      NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+      ChildrenMatch(third_inspection_two_repositories_match)));
   auto third_inspection_top_level_match =
       ChildrenMatch(third_inspection_repositories_match);
   EXPECT_THAT(top_hierarchy, third_inspection_top_level_match);

@@ -16,6 +16,7 @@
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
+#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
@@ -44,10 +45,10 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       page_usage_listener_(page_usage_listener),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       inspect_node_(std::move(inspect_node)),
-      requests_metric_(
-          inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent, 0UL)),
+      requests_metric_(inspect_node_.CreateUIntMetric(
+          kRequestsInspectPathComponent.ToString(), 0UL)),
       ledgers_inspect_node_(
-          inspect_node_.CreateChild(kLedgersInspectPathComponent)) {
+          inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });

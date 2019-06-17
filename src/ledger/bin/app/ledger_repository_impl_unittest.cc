@@ -25,6 +25,7 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
@@ -64,7 +65,7 @@ using ::testing::IsEmpty;
     ledger_expectations.push_back(NodeMatches(NameMatches(ledger_name)));
   }
   return ChildrenMatch(ElementsAre(ChildrenMatch(ElementsAre(
-      AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent)),
+      AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent.ToString())),
             ChildrenMatch(ElementsAreArray(ledger_expectations)))))));
 }
 
@@ -180,9 +181,10 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   // is present and is zero.
   inspect::ObjectHierarchy zeroth_hierarchy;
   ASSERT_TRUE(Read(&zeroth_hierarchy));
-  EXPECT_THAT(zeroth_hierarchy,
-              ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
-                  UIntMetricIs(kRequestsInspectPathComponent, 0UL)))))));
+  EXPECT_THAT(
+      zeroth_hierarchy,
+      ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
+          UIntMetricIs(kRequestsInspectPathComponent.ToString(), 0UL)))))));
 
   // When one binding has been made to the repository, check that the "requests"
   // metric is present and is one.
@@ -190,9 +192,10 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   repository_->BindRepository(first_ledger_repository_ptr.NewRequest());
   inspect::ObjectHierarchy first_hierarchy;
   ASSERT_TRUE(Read(&first_hierarchy));
-  EXPECT_THAT(first_hierarchy,
-              ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
-                  UIntMetricIs(kRequestsInspectPathComponent, 1UL)))))));
+  EXPECT_THAT(
+      first_hierarchy,
+      ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
+          UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL)))))));
 
   // When two bindings have been made to the repository, check that the
   // "requests" metric is present and is two.
@@ -200,9 +203,10 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   repository_->BindRepository(second_ledger_repository_ptr.NewRequest());
   inspect::ObjectHierarchy second_hierarchy;
   ASSERT_TRUE(Read(&second_hierarchy));
-  EXPECT_THAT(second_hierarchy,
-              ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
-                  UIntMetricIs(kRequestsInspectPathComponent, 2UL)))))));
+  EXPECT_THAT(
+      second_hierarchy,
+      ChildrenMatch(Contains(NodeMatches(MetricList(Contains(
+          UIntMetricIs(kRequestsInspectPathComponent.ToString(), 2UL)))))));
 }
 
 TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {

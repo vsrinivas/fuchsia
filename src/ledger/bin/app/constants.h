@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_CONSTANTS_H_
 #define SRC_LEDGER_BIN_APP_CONSTANTS_H_
 
-#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -22,16 +21,6 @@ inline constexpr fxl::StringView kServerIdFilename = "server_id";
 
 // The serialization version of PageUsage DB.
 inline constexpr fxl::StringView kPageUsageDbSerializationVersion = "1";
-
-// The filesystem directory in which the Inspect hierarchy appears.
-inline constexpr char kInspectNodesDirectory[] = "inspect";
-// The name given to the top-level object at the root of the Inspect hierarchy.
-inline constexpr char kTopLevelNodeName[] = "ledger_component";
-inline constexpr char kRepositoriesInspectPathComponent[] = "repositories";
-inline constexpr char kLedgersInspectPathComponent[] = "ledgers";
-// TODO(nathaniel): "requests" was introduced as a demonstration; it should be
-// either given real meaning or cleaned up.
-inline constexpr char kRequestsInspectPathComponent[] = "requests";
 
 }  // namespace ledger
 

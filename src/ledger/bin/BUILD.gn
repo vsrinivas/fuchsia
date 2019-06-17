@@ -36,6 +36,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/environment:unittests",
     "//src/ledger/bin/fidl/syncable:unittests",
     "//src/ledger/bin/filesystem:unittests",
+    "//src/ledger/bin/inspect:unittests",
     "//src/ledger/bin/lock:unittests",
     "//src/ledger/bin/p2p_provider/impl:unittests",
     "//src/ledger/bin/p2p_sync/impl:unittests",

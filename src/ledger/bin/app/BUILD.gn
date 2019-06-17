@@ -14,6 +14,7 @@ executable("app") {
   ]
 
   deps = [
+    ":constants",
     ":lib",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/fsl",
@@ -27,6 +28,7 @@ executable("app") {
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:syncable",
     "//src/ledger/bin/fidl/include",
+    "//src/ledger/bin/inspect",
     "//src/ledger/bin/p2p_sync/impl",
     "//src/ledger/bin/storage/impl:lib",
     "//src/ledger/bin/storage/public",
@@ -46,8 +48,6 @@ source_set("lib") {
     "active_page_manager_container.h",
     "branch_tracker.cc",
     "branch_tracker.h",
-    "constants.cc",
-    "constants.h",
     "delaying_facade.h",
     "diff_utils.cc",
     "diff_utils.h",
@@ -107,6 +107,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":constants",
     ":serialization_version",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
@@ -125,6 +126,7 @@ source_set("lib") {
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/inspect",
     "//src/ledger/bin/lock",
     "//src/ledger/bin/p2p_provider/impl",
     "//src/ledger/bin/p2p_sync/impl",
@@ -143,6 +145,23 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.netconnector",
     "//sdk/lib/sys/cpp",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.cc",
+    "constants.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ledger",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -188,6 +207,7 @@ source_set("unittests") {
   ]
 
   deps = [
+    ":constants",
     ":lib",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
@@ -204,6 +224,7 @@ source_set("unittests") {
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/fidl/include:include",
+    "//src/ledger/bin/inspect",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/impl:lib",
     "//src/ledger/bin/storage/public",

@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/app/constants.h"
 
-#include <fuchsia/ledger/internal/cpp/fidl.h>
+#include <fuchsia/ledger/cpp/fidl.h>
 
 #include <string>
 
