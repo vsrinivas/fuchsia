@@ -40,6 +40,15 @@ test_platforms = [
     cpu = "x64"
   },
   {
+    device_type = "Astro"
+    cpu = "arm64"
+  },
+  {
+    device_type = "Khadas Vim2 Max"
+    cpu = "arm64"
+  },
+
+  {
     os = "Linux"
     cpu = "x64"
   },
@@ -65,17 +74,5 @@ test_platforms = [
     testbed = "wifi_rf_chamber_nuc"
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
-  },
-  # The platforms below are experimental and may not yet be targeted.
-  # See IN-876
-  {
-    device_type = "Astro"
-    cpu = "arm64"
-  },
-
-  # See IN-571.
-  {
-    device_type = "Khadas Vim2 Max"
-    cpu = "arm64"
   },
 ]

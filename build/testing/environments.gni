@@ -28,9 +28,6 @@ vim2_env = {
   dimensions = {
     device_type = "Khadas Vim2 Max"
   }
-
-  # TODO(IN-571): Delete after bring-up.
-  tags = [ "vim2" ]
 }
 
 linux_env = {

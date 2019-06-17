@@ -61,11 +61,6 @@ template("test_spec") {
     if (!envs_specified) {
       environments = [ qemu_env ]
     }
-
-    if (board_name == "vim2" && !envs_specified) {
-      # TODO(IN-571): Remove after vim2s are ready to be targeted.
-      environments += [ vim2_env ]
-    }
   } else if (is_linux || is_mac) {
     if (!defined(environments)) {
       if (is_linux) {
@@ -220,12 +215,6 @@ template("test_spec") {
       # enforce the "mac" tag in that case to filter out other tests.
       assert(defined(env.tags) && [ "mac" ] + env.tags - env.tags == [],
              "Mac environments must have a tag of \"mac\"")
-    }
-
-    # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
-    if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
-      assert(defined(env.tags) && [ "vim2" ] + env.tags - env.tags == [],
-             "vim2s may not yet be targeted.")
     }
 
     has_allowed_device_type = defined(dims.device_type) &&
