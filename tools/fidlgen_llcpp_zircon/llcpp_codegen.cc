@@ -203,6 +203,15 @@ bool DoValidate(std::filesystem::path zircon_build_root,
       alt_source
     };
     RunCommand(fidlgen_llcpp_path, zircon_build_root, args);
+
+    // TODO(FIDL-673): Temporarily ignore changes to the fuchsia.hardware.camera
+    // library on macOS, until the root issue in fidlc is addressed.
+#if defined(__APPLE__) && defined(__MACH__)
+    if (target.name == "fuchsia.hardware.camera") {
+      continue;
+    }
+#endif
+
     if (!Diff(header, alt_header)) {
       std::cerr << header << " is different from " << alt_header << std::endl;
       return false;
