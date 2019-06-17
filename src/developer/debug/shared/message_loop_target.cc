@@ -125,6 +125,25 @@ zx_status_t MessageLoopTarget::AddExceptionHandler(int id, zx_handle_t object,
   return ZX_OK;
 }
 
+zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id,
+                                                          zx_handle_t object,
+                                                          uint32_t options,
+                                                          WatchInfo* info) {
+  ChannelExceptionHandler handler;
+  zx_status_t status = handler.Init(id, object, options);
+  if (status != ZX_OK)
+    return status;
+
+  // The handler should not be there already.
+  FXL_DCHECK(exception_channel_handlers_.find(handler.handle()) ==
+             exception_channel_handlers_.end());
+
+  info->exception_channel_handler_key = handler.handle();
+  exception_channel_handlers_[handler.handle()] = std::move(handler);
+
+  return ZX_OK;
+}
+
 MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd,
                                                     FDWatcher* watcher) {
   WatchInfo info;
@@ -433,18 +452,18 @@ void MessageLoopTarget::StopWatching(int id) {
 
   switch (info.type) {
     case WatchType::kProcessExceptions: {
-      RemoveExceptionHandler(info.exception_handler_key);
-      RemoveSignalHandler(info.signal_handler_key);
+      RemoveExceptionHandler(&info);
+      RemoveSignalHandler(&info);
       break;
     }
     case WatchType::kJobExceptions: {
-      RemoveExceptionHandler(info.exception_handler_key);
+      RemoveExceptionHandler(&info);
       break;
     }
     case WatchType::kTask:
     case WatchType::kFdio:
     case WatchType::kSocket:
-      RemoveSignalHandler(info.signal_handler_key);
+      RemoveSignalHandler(&info);
       break;
   }
   watches_.erase(found);
@@ -472,16 +491,34 @@ void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info,
   info.fd_watcher->OnFDReady(info.fd, readable, writable, false);
 }
 
-void MessageLoopTarget::RemoveSignalHandler(const async_wait_t* key) {
+void MessageLoopTarget::RemoveSignalHandler(WatchInfo* info) {
+  const async_wait_t* key = info->signal_handler_key;
   FXL_DCHECK(key);
+
   size_t erase_count = signal_handlers_.erase(key);
   FXL_DCHECK(erase_count == 1u);
+
+  info->signal_handler_key = nullptr;
 }
 
-void MessageLoopTarget::RemoveExceptionHandler(const async_exception_t* key) {
+void MessageLoopTarget::RemoveExceptionHandler(WatchInfo* info) {
+  const async_exception_t* key = info->exception_handler_key;
   FXL_DCHECK(key);
+
   size_t erase_count = exception_handlers_.erase(key);
   FXL_DCHECK(erase_count == 1u);
+
+  info->exception_handler_key = nullptr;
+}
+
+void MessageLoopTarget::RemoveChannelExceptionHandler(WatchInfo* info) {
+  const async_wait_t* key = info->exception_channel_handler_key;
+  FXL_DCHECK(key);
+
+  size_t erase_count = exception_channel_handlers_.erase(key);
+  FXL_DCHECK(erase_count == 1u);
+
+  info->exception_channel_handler_key = nullptr;
 }
 
 void MessageLoopTarget::AddException(const ExceptionHandler& handler,

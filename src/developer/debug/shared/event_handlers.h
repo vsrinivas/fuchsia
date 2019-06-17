@@ -71,6 +71,33 @@ class ExceptionHandler {
   std::unique_ptr<async_exception_t> handle_;
 };
 
+// This is the exception handler that uses exception token instead of the
+// deprecated exception ports.
+class ChannelExceptionHandler {
+ public:
+  static void Handler(async_dispatcher_t*, async_wait_t*, zx_status_t,
+                      const zx_packet_signal_t*);
+
+  ChannelExceptionHandler();
+  ~ChannelExceptionHandler();
+
+  ChannelExceptionHandler(ChannelExceptionHandler&&);
+  ChannelExceptionHandler& operator=(ChannelExceptionHandler&&);
+
+  zx_status_t Init(int id, zx_handle_t object, zx_signals_t signals);
+
+  int watch_info_id() const { return watch_info_id_; }
+  const async_wait_t* handle() const { return handle_.get(); }
+
+ private:
+  zx_status_t WaitForSignals() const;
+
+  int watch_info_id_ = -1;
+  std::unique_ptr<async_wait_t> handle_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ChannelExceptionHandler);
+};
+
 }  // namespace debug_ipc
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_

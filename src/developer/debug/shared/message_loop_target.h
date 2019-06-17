@@ -44,6 +44,8 @@ class MessageLoopTarget final : public MessageLoop {
   using SignalHandlerMap = std::map<const async_wait_t*, SignalHandler>;
   using ExceptionHandlerMap =
       std::map<const async_exception_t*, ExceptionHandler>;
+  using ChannelExceptionHandlerMap =
+      std::map<const async_wait_t*, ChannelExceptionHandler>;
 
   MessageLoopTarget();
   ~MessageLoopTarget();
@@ -108,6 +110,10 @@ class MessageLoopTarget final : public MessageLoop {
     return exception_handlers_;
   }
 
+  const ChannelExceptionHandlerMap& exception_channel_handlers() const {
+    return exception_channel_handlers_;
+  }
+
  private:
   const WatchInfo* FindWatchInfo(int id) const;
 
@@ -125,6 +131,10 @@ class MessageLoopTarget final : public MessageLoop {
   // Handles WatchHandles event. These are all the events that are not C++ tasks
   // posted to the message loop.
   void HandleException(const ExceptionHandler&, zx_port_packet_t packet);
+
+  // Handlers exceptions channel.
+  void HandleExceptionChannel(const ChannelExceptionHandler&,
+                              zx::exception&& exception);
 
   // Handle an event of the given type.
   void OnFdioSignal(int watch_id, const WatchInfo& info, zx_signals_t observed);
@@ -151,14 +161,29 @@ class MessageLoopTarget final : public MessageLoop {
   // |associated_info| needs to be updated with the fact that it has an
   // associated SignalHandler.
   zx_status_t AddSignalHandler(int, zx_handle_t, zx_signals_t, WatchInfo* info);
-  void RemoveSignalHandler(const async_wait_t* id);
+  void RemoveSignalHandler(WatchInfo* info);
 
   ExceptionHandlerMap exception_handlers_;
   // See ExceptionHandler constructor.
   // |associated_info| needs to be updated with the fact that it has an
   // associated ExceptionHandler.
-  zx_status_t AddExceptionHandler(int, zx_handle_t, uint32_t, WatchInfo* info);
-  void RemoveExceptionHandler(const async_exception_t*);
+  // |options| are the options to be bassed to |zx_task_bind_exception_port|.
+  zx_status_t AddExceptionHandler(int id, zx_handle_t object, uint32_t options,
+                                  WatchInfo* info);
+  void RemoveExceptionHandler(WatchInfo*);
+
+  // Exception Token Handlers are what handle exception channels.
+  // These are similar to SignalHandlers, but have different handling semantics.
+  // Particularly, they are meant to return out exception_tokens to their
+  // handlers.
+  ChannelExceptionHandlerMap exception_channel_handlers_;
+
+  // Listens to the exception channel. Will call |HandleChannelException| on
+  // this message loop.
+  // |options| are the options to be bassed to |zx_task_bind_exception_port|.
+  zx_status_t AddChannelExceptionHandler(int id, zx_handle_t object,
+                                         uint32_t options, WatchInfo* info);
+  void RemoveChannelExceptionHandler(WatchInfo*);
 
   // Every exception source (ExceptionHandler) will get an async_exception_t*
   // that works as a "key" for the async_loop. This async_exception_t* is what
@@ -204,6 +229,7 @@ struct MessageLoopTarget::WatchInfo {
   // watch id.
   const async_wait_t* signal_handler_key = nullptr;
   const async_exception_t* exception_handler_key = nullptr;
+  const async_wait_t* exception_channel_handler_key = nullptr;
 };
 
 }  // namespace debug_ipc

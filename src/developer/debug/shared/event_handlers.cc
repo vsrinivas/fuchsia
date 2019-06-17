@@ -158,4 +158,35 @@ void ExceptionHandler::Handler(async_dispatcher_t*,
   loop->HandleException(exception_handler, std::move(new_packet));
 }
 
+// ChannelExceptionHandler -----------------------------------------------------
+
+ChannelExceptionHandler::ChannelExceptionHandler() = default;
+ChannelExceptionHandler::~ChannelExceptionHandler() {
+  // TODO(donosoc): This CL is just adding the correct placeholder code.
+  //                Actual implementation is due for another CL.
+  FXL_NOTIMPLEMENTED();
+}
+
+ChannelExceptionHandler::ChannelExceptionHandler(ChannelExceptionHandler&&) =
+    default;
+ChannelExceptionHandler& ChannelExceptionHandler::operator=(
+    ChannelExceptionHandler&&) = default;
+
+zx_status_t ChannelExceptionHandler::Init(int id, zx_handle_t object,
+                                          zx_signals_t signals) {
+  FXL_NOTREACHED() << "Not implemented.";
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ChannelExceptionHandler::WaitForSignals() const {
+  FXL_NOTREACHED() << "Not implemented.";
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void ChannelExceptionHandler::Handler(async_dispatcher_t*, async_wait_t* wait,
+                                      zx_status_t status,
+                                      const zx_packet_signal_t* signal) {
+  FXL_NOTREACHED() << "Not implemented.";
+}
+
 }  // namespace debug_ipc

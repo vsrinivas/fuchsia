@@ -48,6 +48,7 @@ static_library("shared") {
       "event_handlers.h",
       "message_loop_target.cc",
       "message_loop_target.h",
+      "zircon_exception_watcher.h",
       "zircon_utils.cc",
       "zircon_utils.h",
     ]
