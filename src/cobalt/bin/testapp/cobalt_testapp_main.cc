@@ -15,6 +15,8 @@
 #include <sstream>
 #include <string>
 
+#include <lib/fsl/syslogger/init.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/svc/cpp/services.h"
@@ -41,7 +43,10 @@ constexpr fxl::StringView kOverrideProberWarning = "override_prober_warning";
 int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
+  fsl::InitLoggerFromCommandLine(command_line, {"cobalt", "testapp"});
   bool use_network = !command_line.HasOption(kNoNetworkForTesting);
+
+  FX_LOGS(INFO) << "The Cobalt testapp is starting.";
 
   bool test_for_prober = command_line.HasOption(kTestForProber);
   if (test_for_prober && !command_line.HasOption(kOverrideProberWarning)) {
