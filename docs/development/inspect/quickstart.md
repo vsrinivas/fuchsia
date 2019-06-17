@@ -176,7 +176,7 @@ Now you can use inspect! For example try the following:
 let hello_world_property = inspect.create_string("hello", "world!");
 ```
 
-See [this example](garnet/examples/rust/inspect-rs/src/main.rs) for further
+See [this example](/garnet/examples/rust/inspect-rs/src/main.rs) for further
 learning of other types offered by the API.
 
 To test your inspect code, you can use `assert_inspect_tree`:
@@ -191,7 +191,7 @@ assert_inspect_tree!(inspector, root: {
 });
 ```
 
-Learn more about [testing](garnet/public/rust/fuchsia-inspect/src/testing.rs) inspect.
+Learn more about [testing](/garnet/public/rust/fuchsia-inspect/src/testing.rs) inspect.
 
 See [the docs](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
 to learn about other methods offered by the Rust API.
