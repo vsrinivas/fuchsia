@@ -342,6 +342,15 @@ impl FontService {
         )
     }
 
+    fn get_typeface_by_id(&self, id: u32) -> Result<fonts::TypefaceResponse, Error> {
+        let response = fonts::TypefaceResponse {
+            buffer: Some(self.assets.get_asset(id)?),
+            buffer_id: Some(id),
+            font_index: None,
+        };
+        Ok(response)
+    }
+
     async fn handle_font_provider_request(
         &self,
         request: fonts::ProviderRequest,
@@ -378,8 +387,9 @@ impl FontService {
         request: fonts_exp::ProviderRequest,
     ) -> Result<(), Error> {
         match request {
-            fonts_exp::ProviderRequest::GetTypefaceById { id, index, responder } => {
-                Err(format_err!("Unimplemented: GetTypefaceById"))
+            fonts_exp::ProviderRequest::GetTypefaceById { id, responder } => {
+                let response = self.get_typeface_by_id(id)?;
+                Ok(responder.send(response)?)
             }
             fonts_exp::ProviderRequest::GetTypefacesByFamily { family, responder } => {
                 Err(format_err!("Unimplemented: GetTypefacesByFamily"))

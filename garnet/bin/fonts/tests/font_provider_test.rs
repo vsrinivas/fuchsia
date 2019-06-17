@@ -540,8 +540,10 @@ mod experimental_api {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_typeface_by_id() -> Result<(), Error> {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
-        let response = await!(font_provider.get_typeface_by_id(1, 0));
-        assert!(response.is_err());
+        // There will always be a font with index 0 unless manifest loading fails.
+        let response = await!(font_provider.get_typeface_by_id(0))?;
+        assert_eq!(response.buffer_id, Some(0));
+        assert!(response.buffer.is_some());
         Ok(())
     }
 
