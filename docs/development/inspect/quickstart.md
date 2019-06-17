@@ -177,7 +177,21 @@ let hello_world_property = inspect.create_string("hello", "world!");
 ```
 
 See [this example](garnet/examples/rust/inspect-rs/src/main.rs) for further
-learning of other types offer by the API, and how to test your inspect usage.
+learning of other types offered by the API.
+
+To test your inspect code, you can use `assert_inspect_tree`:
+
+```
+assert_inspect_tree!(inspector, root: {
+  child1: {
+    some_property_name: 1.0,
+    another_property: "example",
+    children: {},
+  }
+});
+```
+
+Learn more about [testing](garnet/public/rust/fuchsia-inspect/src/testing.rs) inspect.
 
 See [the docs](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
 to learn about other methods offered by the Rust API.
