@@ -38,6 +38,8 @@ rustc_binary("bin") {
 }
 
 package("archivist") {
+  deprecated_shell = "//build"
+
   deps = [
     ":bin",
   ]

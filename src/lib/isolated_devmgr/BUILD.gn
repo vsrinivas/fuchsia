@@ -79,6 +79,8 @@ devmgr_manifest("devmgr-manifest") {
 }
 
 package("isolated_devmgr_tests") {
+  deprecated_shell = "//build"
+
   testonly = true
   deps = [
     ":devmgr-manifest",

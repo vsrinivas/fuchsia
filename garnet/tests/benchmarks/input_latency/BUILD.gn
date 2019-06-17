@@ -25,6 +25,8 @@ go_binary("process_input_latency_trace") {
 }
 
 package("garnet_input_latency_benchmarks") {
+  deprecated_shell = "//build"
+
   testonly = true
 
   deps = [

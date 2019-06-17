@@ -179,6 +179,8 @@ devmgr_manifest("devmgr_manifest") {
 }
 
 package("netemul_devmgr") {
+  deprecated_shell = "//build"
+
   testonly = true
 
   deps = [
