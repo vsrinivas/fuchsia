@@ -3,21 +3,14 @@
 ## Overview
 
 The debugger is for C/C++ code running on Fuchsia compiled in-tree for either
-CPU (ARM64 or x64). The state of other languages (like Rust) can be seen
-[here](#other-languages).
+CPU (ARM64 or x64). Rust works but is less feature-complete. The state of
+languages including Rust can be seen [here](#other-languages).
 
 This is the very detailed setup guide. Please see:
 
   * The [user guide](debugger_usage.md) for help on debugger commands.
 
 The debugger runs remotely only (you can't do self-hosted debug).
-
-### Limitations
-
-  * Variables in non-top stack frames aren't available as often as they could
-    be.
-
-  * Obviously many advanced features are missing.
 
 ### Bugs (Googlers only)
 
@@ -144,7 +137,10 @@ If you're connecting or running many times, there are command-line switches:
 zxdb -c [fe80::5054:4d:fe63:5e7a%br0]:2345
 ```
 
-See `help connect` for more examples, including IPv6 syntax.
+  * The `status` command will give you a summary of the current state of the
+    debugger.
+
+  * See `help connect` for more examples, including IPv6 syntax.
 
 ### Read the user guide
 
@@ -156,7 +152,7 @@ instructions!
 ### Running out-of-tree
 
 You can run with kernels or user programs compiled elsewhere with some extra
-steps.
+steps. We hope this will become easier over time.
 
 Be aware that we aren't yet treating the protocol as frozen. Ideally the
 debugger will be from the same build as the operating system itself (more
@@ -210,7 +206,8 @@ expectations:
 Symbol index status
 
   Indexed  Source path
-      950  /home/me/build/garnet/out/x64/ids.txt
+      950  /home/me/build/out/x64/ids.txt
+ (folder)  /home/me/build/out/x64
         0  my_dir/my_file
 ```
 

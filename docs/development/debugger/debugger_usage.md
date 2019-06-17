@@ -20,6 +20,9 @@ Connected successfully.
 [zxdb]
 ```
 
+The `status` command will give the current state of the debugger. Be aware if
+the remote system dies the debugger won't always notice the connection is gone.
+
 ### Debugging a process or component.
 
 Running a process on Fuchsia is more complicated than in other systems because
@@ -32,8 +35,14 @@ process name is usually the name of the build target that generates it. To
 check what this is, use "ps" (either in the debugger or from a system shell)
 with it running.
 
-This example sets a pending breakpoint on `main` to stop at the beginning of
-execution, and waits for a process called "my_app" to start:
+> Note: only the first 32 bytes of the name are included in the Zircon process
+> description. Sometimes the number of path components can cause the name to be
+> truncated. If the filter isn't working, check the actual name in "ps". We hope
+> to have a better way to match this in the future.
+
+This example sets a pending breakpoint on `main` (Rust users: use "@main") to
+stop at the beginning of execution, and waits for a process called "my_app" to
+start:
 
 ```
 [zxdb] set filters my_app
@@ -92,12 +101,16 @@ Minimal console apps including some unit tests can be launched directly from
 within the debugger which avoids the "set filters" dance:
 
 ```
-[zxdb] break main
-Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
+[zxdb] break @main
+Breakpoint 1 (Software) on Global, Enabled, stop=All, @ @main
 Pending: No matches for location, it will be pending library loads.
 
 [zxdb] run /bin/cowsay
 ```
+
+> The "@main" symbol will match the process' entrypoint which is particularly
+> useful for Rust where things live in a namespace. For C/C++, it's equivalent
+> to "main".
 
 If you get a shared library load error or errors about files or services not
 being found, it means the app can't be run from within the debugger's launcher
@@ -151,9 +164,10 @@ with the debugger. In contrast, zxdb has an asynchronous model similar to most
 GUI debuggers. In this model, the user is exclusively interacting with the
 debugger while arbitrary processes or threads are running or stopped.
 
-Currently there is no way to see or interact with a process’ stdin and stdout
-from the debugger. See [DX-595](https://fuchsia.atlassian.net/browse/DX-595) and
-[DX-596](https://fuchsia.atlassian.net/browse/DX-596).
+When the debugger itself launches a program it will print the program's stdout
+and stderr to the console. When you attach (either with a filter or with the
+`attach` command) they will go to the original place. Currently there is no way
+to interact with a process’ stdin.
 
 zxdb has a regular noun/verb model for typed commands. The rest of this section
 gives an overview of the syntax that applies to all commands. Specific commands
@@ -173,58 +187,59 @@ The possible nouns (and their abbreviations) are:
 
 If you type a noun by itself, it lists the available objects of that type:
 
-List attached processes
+  * List attached processes
 
-```
-[zxdb] process
-  # State       Koid Name
-▶ 1 Not running 3471 /pkgfs/packages/debug_agent_tests/0/test/zxdb_test_app
-```
+    ```
+    [zxdb] process
+      # State       Koid Name
+    ▶ 1 Not running 3471 /pkgfs/packages/debug_agent_tests/0/test/zxdb_test_app
+    ```
 
-List attached jobs
+  * List attached jobs
 
-```
-[zxdb] job
-  # State   Koid Name
-▶ 1 running 3471 sys
-```
+    ```
+    [zxdb] job
+      # State   Koid Name
+    ▶ 1 running 3471 sys
+    ```
 
-List threads in the current process:
+  * List threads in the current process:
 
-```
-[zxdb] thread
-  # State   Koid Name
-▶ 1 Blocked 1348 initial-thread
-  2 Blocked 1356 some-other-thread
-```
+    ```
+    [zxdb] thread
+      # State   Koid Name
+    ▶ 1 Blocked 1348 initial-thread
+      2 Blocked 1356 some-other-thread
+    ```
 
-List stack frames in the current thread (the thread must be stopped):
+  * List stack frames in the current thread (the thread must be stopped—see
+    `pause` below):
 
-```
-[zxdb] frame
-▶ 0 fxl::CommandLineFromIterators<const char *const *>() • command_line.h:203
-  1 fxl::CommandLineFromArgcArgv() • command_line.h:224
-  2 main() • main.cc:174
-```
+    ```
+    [zxdb] frame
+    ▶ 0 fxl::CommandLineFromIterators<const char *const *>() • command_line.h:203
+      1 fxl::CommandLineFromArgcArgv() • command_line.h:224
+      2 main() • main.cc:174
+    ```
 
 #### Selecting defaults
 
 If you type a noun and its index, you select that as the default for subsequent
 commands. It also tells you the stats about the new default.
 
-Select thread 3 to be the default for future commands:
+  * Select thread 3 to be the default for future commands:
 
-```
-[zxdb] thread 3
-Thread 3 Blocked koid=9940 worker-thread
-```
+    ```
+    [zxdb] thread 3
+    Thread 3 Blocked koid=9940 worker-thread
+    ```
 
-Select breakpoint 2 to be the default:
+  * Select breakpoint 2 to be the default:
 
-```
-[zxdb] breakpoint 2
-Breakpoint 2 (Software) on Global, Enabled, stop=All, @ MyFunction
-```
+    ```
+    [zxdb] breakpoint 2
+    Breakpoint 2 (Software) on Global, Enabled, stop=All, @ MyFunction
+    ```
 
 ### Verbs
 
@@ -359,36 +374,43 @@ Breakpoint 3 (Software) on Global, Enabled, stop=All, @ main
 
 A location can be expressed in many different ways.
 
-Plain function name:
+  * Plain function name:
 
-```
-break main
-```
+    ```
+    break main
+    ```
 
-Member function or functions inside namespaces:
+    There is a special symbol "@main" that matches the entrypoint of the process.
+    This is useful for Rust where the entrypoint is usually in a namespace:
 
-```
-break my_namespace::MyClass::MyFunction
-```
+    ```
+    break @main
+    ```
 
-Source file + line number (separate with a colon):
+  * Member function or functions inside namespaces:
 
-```
-break mymain.cc:22
-```
+    ```
+    break my_namespace::MyClass::MyFunction
+    ```
 
-Line number within the current frame’s current source file (useful when
-stepping):
+  * Source file + line number (separate with a colon):
 
-```
-break 23
-```
+    ```
+    break mymain.cc:22
+    ```
 
-Memory address:
+  * Line number within the current frame’s current source file (useful when
+    stepping):
 
-```
-break 0xf72419a01
-```
+    ```
+    break 23
+    ```
+
+  * Memory address:
+
+    ```
+    break 0xf72419a01
+    ```
 
 To list all breakpoints:
 
@@ -396,8 +418,8 @@ To list all breakpoints:
 [zxdb] breakpoint
 ```
 
-_Note: this is the “breakpoint” noun (a noun by itself lists the things
-associated with it). It is not plural._
+> Note: this is the “breakpoint” noun (a noun by itself lists the things
+> associated with it). It is not plural.
 
 To clear a specific breakpoint, give that breakpoint index as the context for
 the clear command (see “Interaction model” above). Here’s we’re using the
@@ -454,7 +476,18 @@ the `pause` command:
 
 ```
 [zxdb] thread 2 pause
+🛑 syscalls-x86-64.S:67
+   65 m_syscall zx_port_create 60 2 1
+   66 m_syscall zx_port_queue 61 2 1
+ ▶ 67 m_syscall zx_port_wait 62 3 0
+   68 m_syscall zx_port_cancel 63 3 1
+   69 m_syscall zx_timer_create 64 3 1
 ```
+
+> When a thread is paused the debugger will show the current source code
+> location. Often threads will be in a system call which will resolve to the
+> location in the assembly-language macro file that generated the system call
+> as shown in the above example.
 
 Running `pause` by itself with no context will pause all threads of all
 processes currently attached:
@@ -607,8 +640,8 @@ Things that don’t currently work are:
 
   * Math ([DX-600](https://fuchsia.atlassian.net/browse/DX-600))
   * Function calls ([DX-599](https://fuchsia.atlassian.net/browse/DX-599))
-  * Casting ([DX-479](https://fuchsia.atlassian.net/browse/DX-479))
   * Pretty-printing (especially for STL) ([DX-601](https://fuchsia.atlassian.net/browse/DX-601))
+  * Various Rust-isms (please file feature requests!).
 
 ### Controlling execution (stepping, etc.)
 
