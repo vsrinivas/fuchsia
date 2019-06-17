@@ -10,8 +10,6 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 
-use std::env;
-
 async fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(), Error> {
     while let Some(EchoRequest::EchoString { value, responder }) =
         await!(stream.try_next()).context("error running echo server")?
@@ -27,23 +25,23 @@ async fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(
     Ok(())
 }
 
-enum IncomingServices {
+enum IncomingService {
     Echo(EchoRequestStream),
     // ... more services here
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let quiet = env::args().any(|arg| arg == "-q");
+    let quiet = std::env::args().any(|arg| arg == "-q");
 
     let mut fs = ServiceFs::new_local();
     fs.dir("public")
-      .add_fidl_service(IncomingServices::Echo);
+      .add_fidl_service(IncomingService::Echo);
 
     fs.take_and_serve_directory_handle()?;
 
     const MAX_CONCURRENT: usize = 10_000;
-    let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::Echo(stream)|
+    let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Echo(stream)|
         run_echo_server(stream, quiet)
             .unwrap_or_else(|e| println!("{:?}", e))
     );

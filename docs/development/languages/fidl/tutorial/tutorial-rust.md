@@ -87,9 +87,8 @@ Here are the import declarations in the Rust server implementation:
 
 ```rust
 use failure::{Error, ResultExt};
-use fidl::endpoints2::{ServiceMarker, RequestStream};
-use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
-use fuchsia_app::server::ServicesServer;
+use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
+use fuchsia_component::server::ServiceFs;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 ```
@@ -97,18 +96,14 @@ use futures::prelude::*;
     dynamically-dispatched `Error` type as well as a extension trait that adds
     the `context` method to `Result` for providing extra information about
     where the error occurred.
--   `fidl::endpoints2::ServiceMarker` is the trait implemented by `XXXMarker`
-    types. It provides the associated string `NAME`.
 -   `fidl_fidl_examples_echo` contains bindings for the `Echo` protocol.
     This file is generated from the protocol defined in `echo.fidl`.
     These bindings include:
-    -   The `EchoMarker` type, a [zero-sized type] used to hold compile-time
-        metadata about the `Echo` service (such as `NAME`)
     -   The `EchoRequest` type, an enum over all of the different request types
         that can be received.
     -   The `EchoRequestStream` type, a [`Stream`] of incoming requests for the
         server to handle.
--   `ServicesServer` links service requests to service launcher functions.
+-   `ServiceFs` links service requests to service launcher functions.
 -   `fuchsia_async`, often aliased to the abbreviated `fasync`, is the runtime
     library for running asynchronous tasks on Fuchsia. It also provides
     asynchronous bindings to a number of Fuchsia primitives, such as channels,
@@ -135,67 +130,97 @@ use futures::prelude::*;
 Everything starts with main():
 
 ```rust
+#[fasync::run_singlethreaded]
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let quiet = env::args().any(|arg| arg == "-q");
+    let quiet = std::env::args().any(|arg| arg == "-q");
 
-    let fut = ServicesServer::new()
-                .add_service((EchoMarker::NAME, move |chan| spawn_echo_server(chan, quiet)))
-                .start()
-                .context("Error starting echo services server")?;
+    let mut fs = ServiceFs::new_local()
+    fs.dir("public")
+      .add_fidl_service(IncomingService::Echo);
 
-    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
+    fs.take_and_serve_directory_handle()?;
+
+    const MAX_CONCURRENT: usize = 10_000;
+    let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Echo(stream)| {
+        run_echo_server(stream, quiet)
+            .unwrap_or_else(|e| println!("{:?}", e))
+    });
+
+    await!(fut);
     Ok(())
 }
 ```
 
-`main` creates an asynchronous task executor and a `ServicesServer` and runs the
-`ServicesServer` to completion on the executor. You may notice that `main`
-returns a `Result` type: if an `Error` is returned from `main` as a result of
-one of the `?` lines, the error will be `Debug` printed and the program will
-return with a status code indicating failure. Functions that return `Result`,
-such as `async::Executor::new()`, can have extra information appended to their
-error message via the `context` function provided by `failure::ResultExt`.
+`main` creates a `ServiceFs` and asynchronously runs it to completion.
+You may notice that `main` is `async`.
+The `run_singlethreaded`, `run`, and `run_until_stalled` macros from
+the `fuchsia_async` crate can be used to run asynchronous `main` or test
+functions to completion using the `fuchsia_async::Executor`.
 
-The `ServicesServer` represents a collection of services that can be provided.
-`add_service` takes a tuple of `service_name` and `service_start_fn`. We pass
-it the name of our `Echo` service, `EchoMarker::NAME`, and a function which
-takes a channel and spawns the echo server onto that channel. We then attempt
-to `start` the `ServicesServer`, which binds it to the startup handle of the
-current component. If that binding fails, the
-"Error starting echo services server" occurs. Otherwise, we get back a `Future`
-which, when run on the executor, will process and delegate incoming service
-requests until a protocol error occurs or the startup handle is closed.
+`main` also returns `Result<(), Error>`. If an `Error` is returned from `main`
+as a result of one of the `?` lines, the error will be `Debug` printed and
+the program will return with a status code indicating failure.
 
-### `fn spawn_echo_server`
+The `ServiceFs` represents a filesystem containing various services.
+Services exposed inside the `"public"` directory will be offered to other
+components. The `add_fidl_service` function can be used to offer a
+`\[Discoverable\]` FIDL service inside the file system.
+
+The `add_fidl_service` function accepts any closure with a `RequestStream`
+argument type. This closure can return a value of any type, but the return
+type of all closures passed to `add_fidl_service` must match. The return
+values of all `add_fidl_service` closures will become the elements in the
+`ServiceFs` stream.
+
+In this case, the argument to `add_fidl_service` is an `IncomingService`
+enum variant constructor which accepts a value of type `EchoRequestStream`
+and returns a value of type `IncomingService`. In this simple example, the
+`IncomingService` enum is redundant and could be replaced with a simple
+function `|stream| stream` that directly passed-through the
+`EchoRequestStream` (causing the `ServiceFs` stream to yield values of type
+`EchoRequestSTream` rather than values of type `IncomingService`).
+However, more complex servers may offer multiple services, in which case the
+various types of incoming `RequestStream`s will need to be returned from the
+stream as a single `enum` type.
+
+In order to offer services to the outside world, we need to call the
+`take_and_serve_directory_handle` function. This function removes the
+current process's directory handle and connects it to `ServiceFs`.
+Note that, since this removes the handle from the process's handle table,
+this function can only be called once per process. If you wish to provide
+a `ServiceFs` to a different channel, you can use the `serve_connection`
+function.
+
+To actually run our filesystem, we'll need to handle the incoming stream
+of request streams (one request stream per client connection). We use
+`for_each_concurrent` to loop over the `IncomingService`s and
+`run_echo_server` for each of them. Note that we use `for_each_concurrent`
+rather than `for_each` or a manual `while let` loop in order to serve
+multiple client connections concurrently.
+
+### `fn run_echo_server`
 
 ```rust
-fn spawn_echo_server(chan: fasync::Channel, quiet: bool) {
-    fasync::spawn(async move {
-        let mut stream = EchoRequestStream::from_channel(chan);
-        while let Some(EchoRequest::EchoString { value, responder }) =
-            await!(stream.try_next()).context("error running echo server")?
-        {
-            if !quiet {
-                println!("Received echo request for string {:?}", value);
-            }
-            responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-            if !quiet {
-                println!("echo response sent successfully");
-            }
+fn run_echo_server(mut stream: EchoRequestStream, quiet: bool) -> Result<(), Error> {
+    while let Some(EchoRequest::EchoString { value, responder }) =
+        await!(stream.try_next()).context("error running echo server")?
+    {
+        if !quiet {
+            println!("Received echo request for string {:?}", value);
         }
-        Ok(())
-    }.unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)));
+        responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
+        if !quiet {
+            println!("echo response sent successfully");
+        }
+    }
+    Ok(())
 }
 ```
 
-When a request for an echo service is received, `spawn_echo_server` is called
-with the channel to host the `Echo` service on. The channel that will contain
-incoming requests is turned into an `EchoRequestStream`, an asynchronous
-stream of `EchoRequest`s.
-
-We use `async move { ... }` to create an asynchronous block, and spawn that
-asynchronous task onto the local executor using `fasync::spawn`.
+In `run_echo_server`, we serve all requests for a particular client connection
+(one `EchoRequestStream`). Because we don't need to do any asynchronous work
+when processing a request, there's no value in processing requests concurrently,
+so we use a simple `while let` loop to iterate over and respond to each request.
 
 The `.try_next()` function will return a future which yields a value of type
 `Result<Option<EchoRequest>, fidl::Error>`. We `await!` the future, causing
@@ -278,8 +303,8 @@ async fn main() -> Result<(), Error> {
     // Launch the server and connect to the echo service.
     let Opt { server_url } = Opt::from_args();
 
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
-    let app = launcher.launch(server_url, None)
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch(&launcher, server_url, None)
                       .context("Failed to launch echo service")?;
 
     let echo = app.connect_to_service::<EchoMarker>()
