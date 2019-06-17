@@ -24,7 +24,7 @@ TEST(OutputSink, Basic) {
       }
       total_read += output_packet->valid_length_bytes();
       recycle(output_packet);
-      return OutputSink::kSent;
+      return OutputSink::kSuccess;
     };
 
     auto under_test = OutputSink(sender, thrd_current());
@@ -67,16 +67,20 @@ TEST(OutputSink, Basic) {
 
     size_t total_written = 0;
     for (auto write_size : write_sizes) {
-      auto [output_block, status] =
-          under_test.NextOutputBlock(write_size, /*timestamp=*/std::nullopt);
+      auto status = under_test.NextOutputBlock(
+          write_size, /*timestamp=*/std::nullopt,
+          [write_size,
+           &total_written](OutputSink::OutputBlock output_block) mutable
+          -> std::pair<size_t, OutputSink::UserStatus> {
+            EXPECT_NE(output_block.data, nullptr);
+            EXPECT_EQ(output_block.len, write_size);
+            for (size_t i = 0; i < write_size; ++i) {
+              output_block.data[i] = (total_written + i) % 256;
+            }
+            total_written += write_size;
+            return {write_size, OutputSink::kSuccess};
+          });
       EXPECT_EQ(status, OutputSink::kOk);
-      EXPECT_NE(output_block.data, nullptr);
-      EXPECT_EQ(output_block.len, write_size);
-
-      for (size_t i = 0; i < write_size; ++i) {
-        output_block.data[i] = (total_written + i) % 256;
-      }
-      total_written += write_size;
     }
 
     EXPECT_EQ(under_test.Flush(), OutputSink::kOk);
@@ -102,10 +106,15 @@ TEST(OutputSink, ReportsSendError) {
   auto packets = Packets(1);
   under_test.AddOutputPacket(packets.ptr(0));
 
-  auto [output_block, status] = under_test.NextOutputBlock(10, /*timestamp=*/
-                                                           std::nullopt);
+  auto status = under_test.NextOutputBlock(
+      10, /*timestamp=*/
+      std::nullopt,
+      [](OutputSink::OutputBlock output_block)
+          -> std::pair<size_t, OutputSink::UserStatus> {
+        return {10u, OutputSink::kSuccess};
+      });
   EXPECT_EQ(status, OutputSink::kOk);
-  EXPECT_EQ(under_test.Flush(), OutputSink::kSendError);
+  EXPECT_EQ(under_test.Flush(), OutputSink::kUserError);
   EXPECT_TRUE(send_called);
 }
 
@@ -118,8 +127,13 @@ TEST(OutputSink, ReportsBuffersTooSmallError) {
   auto packets = Packets(1);
   under_test.AddOutputPacket(packets.ptr(0));
 
-  auto [output_block, status] = under_test.NextOutputBlock(10, /*timestamp=*/
-                                                           std::nullopt);
+  auto status = under_test.NextOutputBlock(
+      10, /*timestamp=*/
+      std::nullopt,
+      [](OutputSink::OutputBlock output_block)
+          -> std::pair<size_t, OutputSink::UserStatus> {
+        return {10u, OutputSink::kSuccess};
+      });
   EXPECT_EQ(status, OutputSink::kBuffersTooSmall);
 }
 
@@ -127,7 +141,7 @@ TEST(OutputSink, ReportsBuffersTooSmallAtRequestTime) {
   // It's important we reject small buffers at request time, because we may have
   // only have one buffer.
 
-  auto sender = [](CodecPacket* output_packet) { return OutputSink::kSent; };
+  auto sender = [](CodecPacket* output_packet) { return OutputSink::kSuccess; };
 
   auto under_test = OutputSink(sender, thrd_current());
   auto buffers = Buffers({2, 1});
@@ -138,25 +152,40 @@ TEST(OutputSink, ReportsBuffersTooSmallAtRequestTime) {
   under_test.AddOutputPacket(packets.ptr(1));
 
   {
-    auto [output_block, status] = under_test.NextOutputBlock(2, /*timestamp=*/
-                                                             std::nullopt);
+    auto status = under_test.NextOutputBlock(
+        2, /*timestamp=*/
+        std::nullopt,
+        [](OutputSink::OutputBlock output_block)
+            -> std::pair<size_t, OutputSink::UserStatus> {
+          return {2u, OutputSink::kSuccess};
+        });
     EXPECT_EQ(status, OutputSink::kOk);
   }
 
   {
-    auto [output_block, status] = under_test.NextOutputBlock(2, /*timestamp=*/
-                                                             std::nullopt);
+    auto status = under_test.NextOutputBlock(
+        2, /*timestamp=*/
+        std::nullopt,
+        [](OutputSink::OutputBlock output_block)
+            -> std::pair<size_t, OutputSink::UserStatus> {
+          return {2u, OutputSink::kSuccess};
+        });
     EXPECT_EQ(status, OutputSink::kBuffersTooSmall);
   }
 }
 
 TEST(OutputSink, StopsAllWaits) {
-  auto sender = [](CodecPacket* output_packet) { return OutputSink::kSent; };
+  auto sender = [](CodecPacket* output_packet) { return OutputSink::kSuccess; };
 
   auto under_test = OutputSink(sender, thrd_current());
   under_test.StopAllWaits();
-  auto [output_block, status] = under_test.NextOutputBlock(1, /*timestamp=*/
-                                                           std::nullopt);
+  auto status = under_test.NextOutputBlock(
+      1, /*timestamp=*/
+      std::nullopt,
+      [](OutputSink::OutputBlock output_block)
+          -> std::pair<size_t, OutputSink::UserStatus> {
+        return {1u, OutputSink::kSuccess};
+      });
   EXPECT_EQ(status, OutputSink::kUserTerminatedWait);
 }
 
@@ -167,7 +196,7 @@ TEST(OutputSink, TimestampsPropagate) {
     send_called = true;
     EXPECT_TRUE(output_packet->has_timestamp_ish());
     EXPECT_EQ(output_packet->timestamp_ish(), kExpectedTimestamp);
-    return OutputSink::kSent;
+    return OutputSink::kSuccess;
   };
 
   auto under_test = OutputSink(sender, thrd_current());
@@ -176,11 +205,65 @@ TEST(OutputSink, TimestampsPropagate) {
   auto packets = Packets(1);
   under_test.AddOutputPacket(packets.ptr(0));
 
-  auto [output_block, status] =
-      under_test.NextOutputBlock(1, /*timestamp=*/
-                                 {kExpectedTimestamp});
+  auto status = under_test.NextOutputBlock(
+      1, /*timestamp=*/
+      {kExpectedTimestamp},
+      [](OutputSink::OutputBlock output_block)
+          -> std::pair<size_t, OutputSink::UserStatus> {
+        return {1u, OutputSink::kSuccess};
+      });
   EXPECT_EQ(status, OutputSink::kOk);
 
   EXPECT_EQ(under_test.Flush(), OutputSink::kOk);
   EXPECT_TRUE(send_called);
+}
+
+TEST(OutputSink, BlocksResize) {
+  std::optional<int> emitted_packet_size;
+  auto sender = [&emitted_packet_size](CodecPacket* output_packet) {
+    emitted_packet_size = output_packet->valid_length_bytes();
+    return OutputSink::kSuccess;
+  };
+
+  auto under_test = OutputSink(sender, thrd_current());
+  auto buffers = Buffers({100});
+  under_test.AddOutputBuffer(buffers.ptr(0));
+  auto packets = Packets(1);
+  under_test.AddOutputPacket(packets.ptr(0));
+
+  auto status = under_test.NextOutputBlock(
+      100, std::nullopt,
+      [](OutputSink::OutputBlock output_block)
+          -> std::pair<size_t, OutputSink::UserStatus> {
+        return {50u, OutputSink::kSuccess};
+      });
+  EXPECT_EQ(status, OutputSink::kOk);
+
+  EXPECT_EQ(under_test.Flush(), OutputSink::kOk);
+  EXPECT_EQ(emitted_packet_size.value_or(-1), 50);
+}
+
+TEST(OutputSink, RespectsWriteError) {
+  bool send_called = false;
+  auto sender = [&send_called](CodecPacket* output_packet) {
+    send_called = true;
+    return OutputSink::kSuccess;
+  };
+
+  auto under_test = OutputSink(sender, thrd_current());
+  auto buffers = Buffers({100});
+  under_test.AddOutputBuffer(buffers.ptr(0));
+  auto packets = Packets(1);
+  under_test.AddOutputPacket(packets.ptr(0));
+
+  auto status = under_test.NextOutputBlock(
+      100, std::nullopt,
+      [](OutputSink::OutputBlock output_block)
+          -> std::pair<size_t, OutputSink::UserStatus> {
+        return {0, OutputSink::kError};
+      });
+  EXPECT_EQ(status, OutputSink::kUserError);
+
+  EXPECT_EQ(under_test.Flush(), OutputSink::kOk);
+  EXPECT_FALSE(send_called);
 }

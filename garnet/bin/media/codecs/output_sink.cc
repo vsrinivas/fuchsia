@@ -25,20 +25,21 @@ void OutputSink::AddOutputBuffer(const CodecBuffer* output_buffer) {
   free_output_buffers_.Push(std::move(output_buffer));
 }
 
-std::pair<OutputSink::OutputBlock, OutputSink::Status>
-OutputSink::NextOutputBlock(size_t write_size,
-                            std::optional<uint64_t> timestamp_ish) {
+OutputSink::Status OutputSink::NextOutputBlock(
+    size_t write_size, std::optional<uint64_t> timestamp_ish,
+    fit::function<std::pair<size_t, UserStatus>(OutputBlock)>
+        output_block_writer) {
   ZX_DEBUG_ASSERT(thrd_current() == writer_thread_);
   ZX_DEBUG_ASSERT(write_size > 0);
 
   if (!CurrentPacketHasRoomFor(write_size)) {
     if (SendCurrentPacket() != kOk) {
-      return {{}, kSendError};
+      return kUserError;
     }
 
     Status status = SetNewPacketForWrite(write_size);
     if (status != kOk) {
-      return {{}, status};
+      return status;
     }
   }
   ZX_DEBUG_ASSERT(current_packet_);
@@ -52,18 +53,22 @@ OutputSink::NextOutputBlock(size_t write_size,
               current_packet_->valid_length_bytes(),
       .len = write_size,
   };
-  current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() +
-                                       write_size);
 
-  return {std::move(output_block), kOk};
+  auto [bytes_written, write_status] = output_block_writer(output_block);
+  if (write_status != kSuccess) {
+    return kUserError;
+  }
+
+  current_packet_->SetValidLengthBytes(current_packet_->valid_length_bytes() +
+                                       bytes_written);
+  return kOk;
 }
 
 OutputSink::Status OutputSink::Flush() {
   ZX_DEBUG_ASSERT(thrd_current() == writer_thread_);
-  ZX_DEBUG_ASSERT(current_packet_ == nullptr ||
-                  current_packet_->valid_length_bytes() > 0);
 
-  if (current_packet_ == nullptr) {
+  if (current_packet_ == nullptr ||
+      current_packet_->valid_length_bytes() == 0) {
     return kOk;
   }
 
@@ -84,8 +89,8 @@ OutputSink::Status OutputSink::SendCurrentPacket() {
   ZX_DEBUG_ASSERT_MSG(current_packet_->valid_length_bytes() > 0,
                       "Attempting to send empty packet.");
 
-  if (sender_(current_packet_) != kSent) {
-    return kSendError;
+  if (sender_(current_packet_) != kSuccess) {
+    return kUserError;
   }
 
   current_packet_ = nullptr;

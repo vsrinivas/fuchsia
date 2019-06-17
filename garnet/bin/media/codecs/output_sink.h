@@ -32,12 +32,12 @@
 // guidance.
 class OutputSink {
  public:
-  enum SendStatus {
-    kSent = 0,
+  enum UserStatus {
+    kSuccess = 0,
     kError = 1,
   };
 
-  using Sender = fit::function<SendStatus(CodecPacket* output_packet)>;
+  using Sender = fit::function<UserStatus(CodecPacket* output_packet)>;
 
   // Output blocks are slices of the underlying packet and buffer.
   //
@@ -51,7 +51,7 @@ class OutputSink {
     kOk = 0,
     kUserTerminatedWait = 1,
     kBuffersTooSmall = 2,
-    kSendError = 3,
+    kUserError = 3,
   };
 
   // Constructs a new output sink that will use `sender` to emit complete or
@@ -70,10 +70,14 @@ class OutputSink {
   // This call is allowed from any thread at any time.
   void AddOutputBuffer(const CodecBuffer* output_buffer);
 
-  // Returns a pointer to the next block in the output stream that is
-  // `write_size` in length. The output block is only valid if status is `kOk`.
+  // Runs the given function, passing in the next output block of at least
+  // `write_size` bytes.
   //
-  // OutputBlocks are valid until the next call to NextOutputBlock.
+  // The function should return the amount of bytes actually written to the
+  // block.
+  //
+  // OutputBlocks are valid for their lifetime as an argument and should not be
+  // stashed.
   //
   // The containing packet will be sent when flushed or when it has no room for
   // the next write.
@@ -83,8 +87,10 @@ class OutputSink {
   // call to `StopAllWaits()` terminates the wait.
   //
   // This should only be called on the writer thread.
-  std::pair<OutputBlock, Status> NextOutputBlock(
-      size_t write_size, std::optional<uint64_t> timestamp);
+  Status NextOutputBlock(
+      size_t write_size, std::optional<uint64_t> timestamp_ish,
+      fit::function<std::pair<size_t, UserStatus>(OutputBlock)>
+          output_block_writer);
 
   // Flushes the current output packet even if it isn't full.
   //
