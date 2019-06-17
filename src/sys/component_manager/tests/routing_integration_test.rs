@@ -8,12 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::{self, LaunchOptions},
     fuchsia_runtime::HandleType,
-    std::{
-        fs::File,
-        io::Read,
-        str,
-        time::{Duration, SystemTime},
-    },
+    std::{fs::File, io::Read, str},
 };
 
 fn main() {
@@ -21,7 +16,7 @@ fn main() {
 }
 
 fn run_test() {
-    let mut _executor = fasync::Executor::new().expect("error creating executor");
+    let _executor = fasync::Executor::new().expect("error creating executor");
     let launcher = client::launcher().expect("failed to connect to launcher");
     let (mut pipe, pipe_handle) = make_pipe();
     let mut options = LaunchOptions::new();
@@ -55,15 +50,31 @@ fn make_pipe() -> (std::fs::File, FileDescriptor) {
     }
 }
 
-fn read_from_pipe(f: &mut File, msg: &str) {
+fn read_from_pipe(f: &mut File, expected_msg: &str) {
     let mut buf = [0; 1024];
-    let mut out = String::new();
-    let start = SystemTime::now();
-    while out.find(msg).is_none() {
+
+    let mut actual = Vec::new();
+    let expected = expected_msg.as_bytes();
+
+    loop {
         let n = f.read(&mut buf).expect("failed to read pipe");
-        out.push_str(str::from_utf8(&buf[0..n]).expect("string is not utf-8"));
-        if start.elapsed().unwrap() > Duration::from_secs(60) {
-            panic!("reading from pipe timed out");
+        actual.extend_from_slice(&buf[0..n]);
+
+        if &*actual == expected {
+            break;
+        }
+
+        if actual.len() >= expected.len() || expected[..actual.len()] != *actual {
+            let actual_msg = String::from_utf8(actual.clone())
+                .map(|v| format!("'{}'", v))
+                .unwrap_or("Non UTF-8".to_string());
+            panic!(
+                "Received bytes do not match the expectation\n\
+                 Expected: '{}'\n\
+                 Actual:   {}\n\
+                 Actual bytes: {:?}",
+                expected_msg, actual_msg, actual
+            );
         }
     }
 }
