@@ -27,6 +27,15 @@ KCOUNTER(dispatcher_vmar_destroy_count, "dispatcher.vmar.destroy")
 
 namespace {
 
+template <uint32_t FromFlag, uint32_t ToFlag>
+uint32_t ExtractFlag(uint32_t* flags) {
+    if (*flags & FromFlag) {
+        *flags &= ~FromFlag;
+        return ToFlag;
+    }
+    return 0;
+}
+
 // Split out the syscall flags into vmar flags and mmu flags.  Note that this
 // does not validate that the requested protections in *flags* are valid.  For
 // that use is_valid_mapping_protection()
@@ -52,42 +61,15 @@ zx_status_t split_syscall_flags(
 
     // Figure out vmar flags
     uint32_t vmar = 0;
-    if (flags & ZX_VM_COMPACT) {
-        vmar |= VMAR_FLAG_COMPACT;
-        flags &= ~ZX_VM_COMPACT;
-    }
-    if (flags & ZX_VM_SPECIFIC) {
-        vmar |= VMAR_FLAG_SPECIFIC;
-        flags &= ~ZX_VM_SPECIFIC;
-    }
-    if (flags & ZX_VM_SPECIFIC_OVERWRITE) {
-        vmar |= VMAR_FLAG_SPECIFIC_OVERWRITE;
-        flags &= ~ZX_VM_SPECIFIC_OVERWRITE;
-    }
-    if (flags & ZX_VM_CAN_MAP_SPECIFIC) {
-        vmar |= VMAR_FLAG_CAN_MAP_SPECIFIC;
-        flags &= ~ZX_VM_CAN_MAP_SPECIFIC;
-    }
-    if (flags & ZX_VM_CAN_MAP_READ) {
-        vmar |= VMAR_FLAG_CAN_MAP_READ;
-        flags &= ~ZX_VM_CAN_MAP_READ;
-    }
-    if (flags & ZX_VM_CAN_MAP_WRITE) {
-        vmar |= VMAR_FLAG_CAN_MAP_WRITE;
-        flags &= ~ZX_VM_CAN_MAP_WRITE;
-    }
-    if (flags & ZX_VM_CAN_MAP_EXECUTE) {
-        vmar |= VMAR_FLAG_CAN_MAP_EXECUTE;
-        flags &= ~ZX_VM_CAN_MAP_EXECUTE;
-    }
-    if (flags & ZX_VM_REQUIRE_NON_RESIZABLE) {
-        vmar |= VMAR_FLAG_REQUIRE_NON_RESIZABLE;
-        flags &= ~ZX_VM_REQUIRE_NON_RESIZABLE;
-    }
-    if (flags & ZX_VM_ALLOW_FAULTS) {
-        vmar |= VMAR_FLAG_ALLOW_FAULTS;
-        flags &= ~ZX_VM_ALLOW_FAULTS;
-    }
+    vmar |= ExtractFlag<ZX_VM_COMPACT, VMAR_FLAG_COMPACT>(&flags);
+    vmar |= ExtractFlag<ZX_VM_SPECIFIC, VMAR_FLAG_SPECIFIC>(&flags);
+    vmar |= ExtractFlag<ZX_VM_SPECIFIC_OVERWRITE, VMAR_FLAG_SPECIFIC_OVERWRITE>(&flags);
+    vmar |= ExtractFlag<ZX_VM_CAN_MAP_SPECIFIC, VMAR_FLAG_CAN_MAP_SPECIFIC>(&flags);
+    vmar |= ExtractFlag<ZX_VM_CAN_MAP_READ, VMAR_FLAG_CAN_MAP_READ>(&flags);
+    vmar |= ExtractFlag<ZX_VM_CAN_MAP_WRITE, VMAR_FLAG_CAN_MAP_WRITE>(&flags);
+    vmar |= ExtractFlag<ZX_VM_CAN_MAP_EXECUTE, VMAR_FLAG_CAN_MAP_EXECUTE>(&flags);
+    vmar |= ExtractFlag<ZX_VM_REQUIRE_NON_RESIZABLE, VMAR_FLAG_REQUIRE_NON_RESIZABLE>(&flags);
+    vmar |= ExtractFlag<ZX_VM_ALLOW_FAULTS, VMAR_FLAG_ALLOW_FAULTS>(&flags);
 
     if (flags & ((1u << ZX_VM_ALIGN_BASE) - 1u)) {
         return ZX_ERR_INVALID_ARGS;
