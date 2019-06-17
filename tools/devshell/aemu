@@ -5,12 +5,13 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-e <directory>] [-w <size>] [--audio] [--headless] [--debugger]
+## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port>] [-e <directory>] [-w <size>] [--audio] [--headless] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
+##   -g <port> enable gRPC service on port to control the emulator
 ##   -w <size> window size, default is 1280x800
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
@@ -31,6 +32,7 @@ AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=no
 WINDOW_SIZE="1280x800"
+GRPC=0
 
 while [[ $# -ge 1 ]]; do
   case "$1" in
@@ -56,6 +58,10 @@ while [[ $# -ge 1 ]]; do
   -e)
     shift
     AEMU_DIR="$1"
+    ;;
+  -g)
+    shift
+    GRPC="$1"
     ;;
   -w)
     shift
@@ -135,6 +141,10 @@ OPTIONS+=("-feature" "$FEATURES")
 OPTIONS+=("-window-size" "$WINDOW_SIZE")
 if (( $DEBUGGER )); then
     OPTIONS+=("-wait-for-debugger")
+fi
+
+if (( $GRPC )); then
+  OPTIONS+=("-grpc" "$GRPC")
 fi
 
 if (( $NET )); then
