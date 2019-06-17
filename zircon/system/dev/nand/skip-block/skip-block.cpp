@@ -404,8 +404,8 @@ zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_skipblock_SkipBlock_dispatch(this, txn, msg, &fidl_ops);
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = SkipBlockDevice::Create;
     return ops;

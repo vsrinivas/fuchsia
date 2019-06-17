@@ -186,7 +186,7 @@ void Sherlock::DdkRelease() {
     delete this;
 }
 
-static zx_driver_ops_t driver_ops = [](){
+static constexpr zx_driver_ops_t driver_ops = [](){
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = Sherlock::Create;

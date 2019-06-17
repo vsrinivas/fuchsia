@@ -1221,7 +1221,7 @@ zx_status_t Dwc2::UsbDciCancelAll(uint8_t ep) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_driver_ops_t driver_ops = [](){
+static constexpr zx_driver_ops_t driver_ops = [](){
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = Dwc2::Create;

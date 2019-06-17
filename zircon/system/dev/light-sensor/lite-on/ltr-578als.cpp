@@ -226,8 +226,8 @@ zx_status_t Ltr578Als::HidbusSetProtocol(hid_protocol_t protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = Ltr578Als::Create;
     return ops;

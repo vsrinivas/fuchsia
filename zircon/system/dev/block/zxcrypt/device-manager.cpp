@@ -174,8 +174,8 @@ zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_
     return ZX_OK;
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = DeviceManager::Create;
     return ops;

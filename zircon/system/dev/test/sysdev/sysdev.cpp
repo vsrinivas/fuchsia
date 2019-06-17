@@ -131,8 +131,8 @@ zx_status_t Sysdev::MakeComposite() {
                                 components, countof(components), UINT32_MAX);
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.create = Sysdev::Create;
     return ops;

@@ -490,7 +490,7 @@ zx_status_t ftdi_bind(void* ctx, zx_device_t* device) {
     return status;
 }
 
-static zx_driver_ops_t ftdi_driver_ops = []() {
+static constexpr zx_driver_ops_t ftdi_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = ftdi_bind;

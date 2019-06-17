@@ -419,7 +419,7 @@ zx_status_t SerialDevice::Bind() {
     return DdkAdd("serial", 0, props, fbl::count_of(props));
 }
 
-static zx_driver_ops_t serial_driver_ops = []() {
+static constexpr zx_driver_ops_t serial_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = SerialDevice::Create;

@@ -335,8 +335,8 @@ zx_status_t AmlUart::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = AmlUart::Create;
     return ops;

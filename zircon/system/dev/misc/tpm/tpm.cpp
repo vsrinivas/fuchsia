@@ -253,8 +253,8 @@ Device::Device(zx_device_t* parent, fbl::unique_ptr<HardwareInterface> iface)
 Device::~Device() {
 }
 
-static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
+static constexpr zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
     ops.bind = tpm::Device::Create;
     return ops;
