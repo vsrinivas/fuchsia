@@ -5,7 +5,7 @@
 
 ### register dev host as target's update source
 
-## usage: fx add-update-source [--type=TYPE] [--name=NAME] [--disable-source=NAME]
+## usage: fx add-update-source [--type=TYPE] [--name=NAME]
 ##
 ## Configure target device to use a new update source.
 ##
@@ -16,7 +16,6 @@
 ## update source.
 ##
 ## --name=NAME           Name the generated update source config NAME. Defaults to the config type.
-## --disable-source=NAME Disable the update source with NAME after adding the new update source.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
@@ -32,7 +31,6 @@ function main {
   config_type="devhost"
   port="8083"
   source_name=""
-  disable_source=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
       --port)
@@ -45,10 +43,6 @@ function main {
         ;;
       --name)
         source_name="$2"
-        shift
-        ;;
-      --disable-source)
-        disable_source="$2"
         shift
         ;;
       *)
@@ -99,11 +93,6 @@ function main {
       echo >&2 " - Can the target reach the development host on tcp port 8083?"
     fi
     return "$err"
-  fi
-
-  if [[ -n "${disable_source}" ]]; then
-    # Best effort, don't show status or fail on error
-    fx-command-run shell amberctl disable_src -n "${disable_source}" >/dev/null 2>/dev/null || true
   fi
 }
 

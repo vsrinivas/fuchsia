@@ -295,7 +295,33 @@ impl AmberConnect for MockAmberConnector {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub(crate) struct CloneAmberConnector {
+    amber: AmberProxy,
+}
+
+impl CloneAmberConnector {
+    pub(crate) fn new(amber: AmberProxy) -> Self {
+        Self { amber }
+    }
+}
+
+impl AmberConnect for CloneAmberConnector {
+    fn connect(&self) -> Result<AmberProxy, fuchsia_zircon::Status> {
+        Ok(self.amber.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct FailAmberConnector;
+
+impl AmberConnect for FailAmberConnector {
+    fn connect(&self) -> Result<AmberProxy, Status> {
+        Err(Status::INTERNAL)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct ClosedAmberConnector;
 
 impl AmberConnect for ClosedAmberConnector {

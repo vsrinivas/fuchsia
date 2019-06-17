@@ -134,6 +134,24 @@ impl Rule {
             _node: node,
         }
     }
+
+    /// Determines the replacement source id, if this rule rewrites all of "fuchsia.com".
+    pub fn fuchsia_replacement(&self) -> Option<String> {
+        if self.host_match == "fuchsia.com" && self.path_prefix_match == "/" {
+            if let Some(n) = self.host_replacement.rfind(".fuchsia.com") {
+                let (host_replacement, _) = self.host_replacement.split_at(n);
+                host_replacement
+                    .split('.')
+                    .nth(1)
+                    .map(|s| s.to_owned())
+                    .or_else(|| Some(self.host_replacement.clone()))
+            } else {
+                Some(self.host_replacement.clone())
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl TryFrom<fidl::Rule> for Rule {
@@ -322,7 +340,6 @@ mod serde_tests {
 
         assert_eq!(serde_json::to_value(expected).unwrap(), json);
     }
-
 }
 
 #[cfg(test)]
@@ -606,5 +623,57 @@ mod rule_tests {
                 }
             );
         }
+    }
+
+    #[test]
+    fn test_non_fuchsia_replacement_nontrivial_match_path() {
+        let rules = [
+            Rule::new("fuchsia.com", "fuchsia.com", "/foo", "/bar").unwrap(),
+            Rule::new("fuchsia.com", "fuchsia.com", "/foo/", "/").unwrap(),
+        ];
+
+        for rule in &rules {
+            assert_eq!(rule.fuchsia_replacement(), None);
+        }
+    }
+
+    #[test]
+    fn test_non_fuchsia_replacement_wrong_domain() {
+        let rules = [
+            Rule::new("subdomain.fuchsia.com", "fuchsia.com", "/", "/").unwrap(),
+            Rule::new("example.com", "fuchsia.com", "/", "/").unwrap(),
+        ];
+
+        for rule in &rules {
+            assert_eq!(rule.fuchsia_replacement(), None);
+        }
+    }
+
+    #[test]
+    fn test_fuchsia_replacement_accepts_any_replacements() {
+        let rules = [
+            Rule::new("fuchsia.com", "example.com", "/", "/").unwrap(),
+            Rule::new("fuchsia.com", "fuchsia.com", "/", "/bar/").unwrap(),
+        ];
+
+        for rule in &rules {
+            assert!(rule.fuchsia_replacement().is_some());
+        }
+    }
+
+    fn verify_fuchsia_replacement(
+        host_replacement: impl Into<String>,
+        source_id: impl Into<String>,
+    ) {
+        let rule = Rule::new("fuchsia.com", host_replacement, "/", "/").unwrap();
+        assert_eq!(rule.fuchsia_replacement(), Some(source_id.into()));
+    }
+
+    #[test]
+    fn test_fuchsia_replacement() {
+        verify_fuchsia_replacement("test.example.com", "test.example.com");
+        verify_fuchsia_replacement("test.fuchsia.com", "test.fuchsia.com");
+        verify_fuchsia_replacement("a.b-c.d.fuchsia.com", "b-c");
+        verify_fuchsia_replacement("a.b-c.d.example.com", "a.b-c.d.example.com");
     }
 }

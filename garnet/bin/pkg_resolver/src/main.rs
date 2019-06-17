@@ -19,6 +19,7 @@ use {
     std::sync::Arc,
 };
 
+mod amber;
 mod amber_connector;
 mod repository_manager;
 mod repository_service;
@@ -55,7 +56,9 @@ fn main() -> Result<(), Error> {
     let inspector = fuchsia_inspect::Inspector::new();
     let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
 
-    let repo_manager = Arc::new(RwLock::new(load_repo_manager()));
+    let amber_connector = AmberConnector::new();
+
+    let repo_manager = Arc::new(RwLock::new(load_repo_manager(amber_connector.clone())));
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(rewrite_inspect_node)));
 
     let resolver_cb = {
@@ -89,7 +92,8 @@ fn main() -> Result<(), Error> {
     };
 
     let rewrite_cb = move |stream| {
-        let mut rewrite_service = RewriteService::new(rewrite_manager.clone());
+        let mut rewrite_service =
+            RewriteService::new(rewrite_manager.clone(), amber_connector.clone());
 
         fasync::spawn(
             async move { await!(rewrite_service.handle_client(stream)) }
@@ -112,10 +116,10 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn load_repo_manager() -> RepositoryManager<AmberConnector> {
+fn load_repo_manager(amber_connector: AmberConnector) -> RepositoryManager<AmberConnector> {
     // report any errors we saw, but don't error out because otherwise we won't be able
     // to update the system.
-    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH, AmberConnector::new())
+    RepositoryManagerBuilder::new(DYNAMIC_REPO_PATH, amber_connector)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder
