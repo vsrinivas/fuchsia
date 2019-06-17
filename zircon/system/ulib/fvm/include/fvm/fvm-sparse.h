@@ -43,7 +43,7 @@ namespace fvm {
 //   P2, Extent 0
 
 constexpr uint64_t kSparseFormatMagic = (0x53525053204d5646ull);  // 'FVM SPRS'
-constexpr uint64_t kSparseFormatVersion = 0x2;
+constexpr uint64_t kSparseFormatVersion = 0x3;
 
 typedef enum sparse_flags {
   kSparseFlagLz4 = 0x1,
@@ -58,6 +58,10 @@ typedef struct sparse_image {
   uint64_t header_length;
   uint64_t slice_size;  // Unit: Bytes
   uint64_t partition_count;
+  // Size in bytes for the maximum disk size this fvm image will reference.
+  // If set to 0, will use the disk size at format time as the maximum size.
+  // The initial size is always the size of the block device being formatted.
+  uint64_t maximum_disk_size;
   uint32_t flags;
 } __attribute__((packed)) sparse_image_t;
 

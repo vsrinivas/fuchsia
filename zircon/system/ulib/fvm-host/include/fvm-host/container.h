@@ -5,7 +5,6 @@
 #pragma once
 
 #include <fcntl.h>
-#include <lz4/lz4frame.h>
 #include <string.h>
 
 #include <fbl/auto_call.h>
@@ -14,6 +13,7 @@
 #include <fbl/vector.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
+#include <lz4/lz4frame.h>
 
 #include "file-wrapper.h"
 #include "format.h"
@@ -181,11 +181,21 @@ class SparseContainer final : public Container {
   static zx_status_t CreateNew(const char* path, size_t slice_size, uint32_t flags,
                                fbl::unique_ptr<SparseContainer>* out);
 
+  // Creates a new SparseContainer at the given |path|, regardless of whether one already exists.
+  // Uses the provided |slice_size|, |max_disk_size| and |flags| to create the container and returns
+  // the result in |out|.
+  static zx_status_t CreateNew(const char* path, size_t slice_size, uint32_t flags,
+                               uint64_t max_disk_size, fbl::unique_ptr<SparseContainer>* out);
+
   // Creates a SparseContainer from the image located at |path|. Fails if a valid image does not
   // already exist.
   static zx_status_t CreateExisting(const char* path, fbl::unique_ptr<SparseContainer>* out);
 
   ~SparseContainer();
+
+  // Returns the maximum disk size the FVM will be able to address. This allows preallocating
+  // metadata storage when formatting an FVM.
+  uint64_t MaximumDiskSize() const;
 
   zx_status_t Verify() const final;
 

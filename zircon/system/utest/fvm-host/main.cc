@@ -190,17 +190,21 @@ bool AddPartitions(Container* container, bool enable_data, bool should_pass) {
 
 // Creates a sparse container and adds partitions to it. When should_pass is false,
 // the function surfaces the error in adding partition to caller without asserting.
-bool CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enable_data = true) {
+bool CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enable_data = true,
+                  uint64_t max_disk_size = 0) {
   BEGIN_HELPER;
 
   const char* path = ((flags & fvm::kSparseFlagLz4) != 0) ? sparse_lz4_path : sparse_path;
   unittest_printf("Creating sparse container: %s\n", path);
   fbl::unique_ptr<SparseContainer> sparseContainer;
-  ASSERT_EQ(SparseContainer::CreateNew(path, slice_size, flags, &sparseContainer), ZX_OK,
-            "Failed to initialize sparse container");
+  ASSERT_EQ(SparseContainer::CreateNew(path, slice_size, flags, max_disk_size, &sparseContainer),
+            ZX_OK, "Failed to initialize sparse container");
   ASSERT_TRUE(AddPartitions(sparseContainer.get(), enable_data, should_pass));
   if (should_pass) {
     ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
+    if (max_disk_size > 0) {
+      ASSERT_EQ(sparseContainer->MaximumDiskSize(), max_disk_size);
+    }
     uint64_t data_size = 0, inode_count = 0, used_size = 0;
     if ((flags & fvm::kSparseFlagLz4) == 0) {
       ASSERT_EQ(sparseContainer->UsedSize(&used_size), ZX_OK);
@@ -896,6 +900,29 @@ bool RecreateFvmWithDifferentSliceSize() {
   END_TEST;
 }
 
+bool TestCreatePreallocatedSparseImage() {
+  BEGIN_TEST;
+  constexpr uint64_t kMaxSize = 35ull << 30;
+  ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE, true, true, kMaxSize));
+  fbl::unique_ptr<SparseContainer> sparse_container;
+  ASSERT_EQ(SparseContainer::CreateExisting(sparse_path, &sparse_container), ZX_OK);
+
+  fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
+  ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(sparse_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
+  ASSERT_NE(sparse_container->Pave(std::move(wrapper), 0, 0), ZX_OK);
+  ASSERT_EQ(sparse_container->MaximumDiskSize(), kMaxSize);
+  ASSERT_TRUE(DestroySparse(0));
+  END_TEST;
+}
+
+bool TestCreatePreallocatedSparseImageExceedMaxSize() {
+  BEGIN_TEST;
+  constexpr uint64_t kMaxSize = sizeof(fvm::Header);
+  ASSERT_FALSE(CreateSparse(0, DEFAULT_SLICE_SIZE, true, true, kMaxSize));
+  ASSERT_TRUE(DestroySparse(0));
+  END_TEST;
+}
+
 bool GeneratePartitionPath(fs_type_t fs_type, guid_type_t guid_type) {
   BEGIN_HELPER;
   ASSERT_LT(partition_count, MAX_PARTITIONS);
@@ -1034,6 +1061,9 @@ RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 100, 10, 300 * 1024 * 1024)
 
 // Limitless capacity for 10k inodes and 10k bytes of data
 RUN_RESERVATION_TEST_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE, true, 10000, 1024 * 10, 0)
+
+RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImage)
+RUN_TEST_MEDIUM(TestCreatePreallocatedSparseImageExceedMaxSize)
 
 END_TEST_CASE(fvm_host_tests)
 

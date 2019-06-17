@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <safemath/checked_math.h>
+
 #include <utility>
+
+#include <safemath/checked_math.h>
 
 #include "fvm-host/container.h"
 
@@ -71,13 +73,18 @@ zx_status_t CompressionContext::Finish() {
 
 zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint32_t flags,
                                        fbl::unique_ptr<SparseContainer>* out) {
-  fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, slice_size, flags));
+  return CreateNew(path, slice_size, flags, 0, out);
+}
 
+zx_status_t SparseContainer::CreateNew(const char* path, size_t slice_size, uint32_t flags,
+                                       uint64_t max_disk_size,
+                                       fbl::unique_ptr<SparseContainer>* out) {
+  fbl::unique_ptr<SparseContainer> sparseContainer(new SparseContainer(path, slice_size, flags));
   zx_status_t status;
   if ((status = sparseContainer->InitNew()) != ZX_OK) {
     return status;
   }
-
+  sparseContainer->image_.maximum_disk_size = max_disk_size;
   *out = std::move(sparseContainer);
   return ZX_OK;
 }
@@ -117,6 +124,7 @@ zx_status_t SparseContainer::InitNew() {
   image_.version = fvm::kSparseFormatVersion;
   image_.slice_size = slice_size_;
   image_.partition_count = 0;
+  image_.maximum_disk_size = 0;
   image_.header_length = sizeof(fvm::sparse_image_t);
   image_.flags = flags_;
   partitions_.reset();
@@ -433,6 +441,11 @@ zx_status_t SparseContainer::Commit() {
   }
 
   disk_size_ = s.st_size;
+  if (image_.maximum_disk_size > 0 && disk_size_ > image_.maximum_disk_size) {
+    fprintf(stderr, "FVM image disk_size exceeds maximum allowed size.");
+    return ZX_ERR_NO_SPACE;
+  }
+
   xprintf("Successfully wrote sparse data to disk.\n");
   return ZX_OK;
 }
@@ -659,4 +672,8 @@ void SparseContainer::CheckValid() const {
     fprintf(stderr, "Error: Sparse container is invalid\n");
     exit(-1);
   }
+}
+
+uint64_t SparseContainer::MaximumDiskSize() const {
+  return (image_.maximum_disk_size == 0) ? disk_size_ : image_.maximum_disk_size;
 }
