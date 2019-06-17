@@ -41,6 +41,7 @@ executable("svchost") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/kernel-debug",
+    "$zx/system/ulib/kernel-mexec",
     "$zx/system/ulib/logger",
     "$zx/system/ulib/process-launcher",
     "$zx/system/ulib/profile",

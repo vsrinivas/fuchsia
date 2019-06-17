@@ -956,77 +956,9 @@ zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const c
     return ZX_OK;
 }
 
-
 zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
-    zx_status_t st;
-    constexpr size_t kBootdataExtraSz = PAGE_SIZE * 4;
-
-    zx::vmo kernel(raw_kernel);
-    zx::vmo original_bootdata(raw_bootdata);
-    zx::vmo bootdata;
-
-    zx::vmar root_vmar(zx_vmar_root_self());
-    fzl::OwnedVmoMapper mapper;
-
-    uint8_t* buffer = new uint8_t[kBootdataExtraSz];
-    memset(buffer, 0, kBootdataExtraSz);
-    fbl::unique_ptr<uint8_t[]> deleter;
-    deleter.reset(buffer);
-
-    size_t original_size;
-    st = original_bootdata.get_size(&original_size);
-    if (st != ZX_OK) {
-        log(ERROR, "dm_mexec: could not get bootdata vmo size, st = %d\n", st);
-        return st;
-    }
-
-    st = original_bootdata.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0,
-                                        original_size + PAGE_SIZE * 4, &bootdata);
-    if (st != ZX_OK) {
-        log(ERROR, "dm_mexec: failed to clone bootdata st = %d\n", st);
-        return st;
-    }
-
-    size_t vmo_size;
-    st = bootdata.get_size(&vmo_size);
-    if (st != ZX_OK) {
-        log(ERROR, "dm_mexec: failed to get new bootdata size, st = %d\n", st);
-        return st;
-    }
-
-    auto dev = static_cast<Device*>(ctx);
-    st = zx_system_mexec_payload_get(dev->coordinator->root_resource().get(), buffer,
-                                     kBootdataExtraSz);
-    if (st != ZX_OK) {
-        log(ERROR, "dm_mexec: mexec get payload returned %d\n", st);
-        return st;
-    }
-
-    zx::vmo mapped_bootdata;
-    st = bootdata.duplicate(ZX_RIGHT_SAME_RIGHTS, &mapped_bootdata);
-    if (st != ZX_OK) {
-        log(ERROR, "dm_mexec: failed to duplicate bootdata handle, st = %d\n", st);
-        return st;
-    }
-
-    st = mapper.Map(std::move(mapped_bootdata));
-    if (st != ZX_OK) {
-        log(ERROR, "dm_mexec: failed to map bootdata vmo, st = %d\n", st);
-        return st;
-    }
-
-    void* bootdata_ptr = mapper.start();
-    zbi::Zbi bootdata_zbi(static_cast<uint8_t*>(bootdata_ptr), vmo_size);
-    zbi::Zbi mexec_payload_zbi(buffer);
-
-    zbi_result_t zbi_st = bootdata_zbi.Extend(mexec_payload_zbi);
-    if (zbi_st != ZBI_RESULT_OK) {
-        log(ERROR, "dm_mexec: failed to extend bootdata zbi, st = %d\n", zbi_st);
-        return ZX_ERR_INTERNAL;
-    }
-
-    dev->coordinator->DmMexec(std::move(kernel), std::move(bootdata));
-    return ZX_OK;
+    // TODO(edcoyne): Delete Me.
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options,
@@ -1226,7 +1158,11 @@ static int suspend_timeout_thread(void* arg) {
     return 0;
 }
 
-void Coordinator::Suspend(SuspendContext ctx) {
+void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback) {
+    if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+        vfs_exit(fshost_event());
+    }
+
     // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
     // cannot go to suspend.
     if (!sys_device_->proxy()) {
@@ -1238,7 +1174,7 @@ void Coordinator::Suspend(SuspendContext ctx) {
 
     suspend_context() = std::move(ctx);
 
-    auto completion = [this](zx_status_t status) {
+    auto completion = [this, callback](zx_status_t status) {
         auto& ctx = suspend_context();
         if (status != ZX_OK) {
             // TODO: unroll suspend
@@ -1249,12 +1185,11 @@ void Coordinator::Suspend(SuspendContext ctx) {
                 ctx.kernel().signal(0, ZX_USER_SIGNAL_0);
             }
             ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
+            callback(status);
             return;
         }
 
-        if (ctx.sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
-            zx_system_mexec(root_resource().get(), ctx.kernel().get(), ctx.bootdata().get());
-        } else {
+        if (ctx.sflags() != DEVICE_SUSPEND_FLAG_MEXEC) {
             // should never get here on x86
             // on arm, if the platform driver does not implement
             // suspend go to the kernel fallback
@@ -1262,6 +1197,7 @@ void Coordinator::Suspend(SuspendContext ctx) {
             // if we get here the system did not suspend successfully
             ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
         }
+        callback(status);
     };
 
     // We don't need to suspend anything except sys_device and it's children,
@@ -1282,16 +1218,7 @@ void Coordinator::Suspend(SuspendContext ctx) {
 }
 
 void Coordinator::Suspend(uint32_t flags) {
-    if ((flags & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
-        vfs_exit(fshost_event());
-    }
-
-    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags));
-}
-
-void Coordinator::DmMexec(zx::vmo kernel, zx::vmo bootdata) {
-    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
-                           std::move(kernel), std::move(bootdata)));
+    Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags), [](zx_status_t){});
 }
 
 fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv) {
@@ -1569,8 +1496,15 @@ void Coordinator::InitOutgoingServices() {
 
         static constexpr fuchsia_device_manager_Administrator_ops_t kOps = {
             .Suspend = [](void* ctx, uint32_t flags, fidl_txn_t* txn) {
-                static_cast<Coordinator*>(ctx)->Suspend(flags);
-                return fuchsia_device_manager_AdministratorSuspend_reply(txn, ZX_OK);
+                auto* async_txn = fidl_async_txn_create(txn);
+                static_cast<Coordinator*>(ctx)->Suspend(
+                    SuspendContext(SuspendContext::Flags::kSuspend, flags),
+                    [async_txn](zx_status_t status) {
+                          fuchsia_device_manager_AdministratorSuspend_reply(
+                              fidl_async_txn_borrow(async_txn), status);
+                          fidl_async_txn_complete(async_txn, true);
+                    });
+                return ZX_ERR_ASYNC;
             },
         };
 

@@ -8,6 +8,7 @@
 #include <fbl/vector.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <threads.h>
 #include <zircon/fidl.h>
@@ -477,6 +478,7 @@ public:
     bool DeviceHasPendingMessages(const zx::channel& remote);
 
     void DoSuspend(uint32_t flags);
+    void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
 protected:
     void SetUp() override {
         ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
@@ -526,11 +528,9 @@ protected:
         devhost_.devices().clear();
     }
 
-    async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
-    devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher())};
-
     // The fake devhost that the platform bus is put into
     devmgr::Devhost devhost_;
+
     // The remote end of the channel that the coordinator uses to talk to the
     // devhost
     zx::channel devhost_remote_;
@@ -542,6 +542,11 @@ protected:
     // The device object representing the platform bus driver (child of the
     // sys proxy)
     DeviceState platform_bus_;
+
+    // These should be listed after devhost/sys_proxy as it needs to be
+    // destroyed before them.
+    async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+    devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher())};
 
     // A list of all devices that were added during this test, and their
     // channels.  These exist to keep them alive until the test is over.
@@ -582,7 +587,8 @@ bool MultipleDeviceTestCase::DeviceHasPendingMessages(size_t device_index) {
     return DeviceHasPendingMessages(devices_[device_index].remote);
 }
 
-void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
+void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
+                                       fit::function<void(uint32_t flags)> suspend_cb) {
     const bool vfs_exit_expected = (flags != DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
     if (vfs_exit_expected) {
         zx::unowned_event event(coordinator()->fshost_event());
@@ -599,7 +605,7 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
         thrd_t fshost_thrd;
         ASSERT_EQ(thrd_create(&fshost_thrd, thrd_func, &event), thrd_success);
 
-        coordinator()->Suspend(flags);
+        suspend_cb(flags);
         loop()->RunUntilIdle();
 
         int thread_status;
@@ -610,7 +616,7 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
         ASSERT_OK(coordinator()->fshost_event().wait_one(FSHOST_SIGNAL_EXIT_DONE, zx::time(0),
                                                          nullptr));
     } else {
-        coordinator()->Suspend(flags);
+        suspend_cb(flags);
         loop()->RunUntilIdle();
 
         // Make sure that vfs_exit() didn't happen.
@@ -619,6 +625,12 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
                                                        zx::time(0), nullptr),
                 ZX_ERR_TIMED_OUT);
     }
+}
+
+void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {
+    DoSuspend(flags, [this](uint32_t flags) {
+        coordinator()->Suspend(flags);
+    });
 }
 
 class SuspendTestCase : public MultipleDeviceTestCase {
@@ -1036,6 +1048,47 @@ TEST_F(CompositeTestCase, Topology) {
     char path_buf[PATH_MAX];
     ASSERT_OK(coordinator()->GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));
     ASSERT_STR_EQ(path_buf, "/dev/composite-dev");
+}
+
+TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
+    ASSERT_OK(loop()->StartThread("DevCoordTestLoop"));
+
+    async::Wait suspend_task_pbus(
+        platform_bus_remote().get(), ZX_CHANNEL_READABLE,
+        [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+          CheckSuspendReceived(platform_bus_remote(), DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
+        });
+    ASSERT_OK(suspend_task_pbus.Begin(loop()->dispatcher()));
+
+    async::Wait suspend_task_sys(
+        sys_proxy_remote_.get(), ZX_CHANNEL_READABLE,
+        [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+            CheckSuspendReceived(sys_proxy_remote_, DEVICE_SUSPEND_FLAG_MEXEC, ZX_OK);
+        });
+    ASSERT_OK(suspend_task_sys.Begin(loop()->dispatcher()));
+
+    zx::channel services, services_remote;
+    ASSERT_OK(zx::channel::create(0, &services, &services_remote));
+
+    ASSERT_OK(coordinator()->BindOutgoingServices(std::move(services_remote)));
+
+    zx::channel channel, channel_remote;
+    ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
+
+    const char* service = "public/" fuchsia_device_manager_Administrator_Name;
+    ASSERT_OK(fdio_service_connect_at(services.get(), service, channel_remote.release()));
+
+    bool callback_executed = false;
+    DoSuspend(DEVICE_SUSPEND_FLAG_MEXEC, [&](uint32_t flags) {
+        zx_status_t call_status = ZX_OK;
+        ASSERT_OK(fuchsia_device_manager_AdministratorSuspend(channel.get(), flags, &call_status));
+        ASSERT_OK(call_status);
+        callback_executed = true;
+    });
+
+    ASSERT_TRUE(callback_executed);
+    ASSERT_FALSE(suspend_task_pbus.is_pending());
+    ASSERT_FALSE(suspend_task_sys.is_pending());
 }
 
 } // namespace
