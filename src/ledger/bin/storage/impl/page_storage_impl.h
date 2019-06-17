@@ -45,11 +45,6 @@ class PageStorageImpl : public PageStorage {
   // database and adding the default page head if the page is empty.
   void Init(fit::function<void(Status)> callback);
 
-  // Adds the given locally created |commit| in this |PageStorage|.
-  void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
-                          std::vector<ObjectIdentifier> new_objects,
-                          fit::function<void(Status)> callback);
-
   // Checks whether the given |object_identifier| is untracked, i.e. has been
   // created using |AddObjectFromLocal()|, but is not yet part of any commit.
   // Untracked objects are invalid after the PageStorageImpl object is
@@ -223,6 +218,7 @@ class PageStorageImpl : public PageStorage {
   SynchronousGetCommit(coroutine::CoroutineHandler* handler, CommitId commit_id,
                        std::unique_ptr<const Commit>* commit);
 
+  // Adds the given locally created |commit| in this |PageStorage|.
   FXL_WARN_UNUSED_RESULT Status
   SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
                                 std::unique_ptr<const Commit> commit,

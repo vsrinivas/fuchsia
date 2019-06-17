@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
@@ -311,15 +312,18 @@ StorageTest::~StorageTest() {}
     const ObjectIdentifier& base_node_identifier,
     const std::vector<EntryChange>& entries,
     ObjectIdentifier* new_root_identifier) {
-  bool called;
+  bool called = false;
   Status status;
   std::set<ObjectIdentifier> new_nodes;
-  btree::ApplyChanges(
-      environment_.coroutine_service(), GetStorage(), base_node_identifier,
-      entries,
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        new_root_identifier, &new_nodes),
-      &kTestNodeLevelCalculator);
+  coroutine::CoroutineManager coroutine_manager(
+      environment_.coroutine_service());
+
+  coroutine_manager.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    status = btree::ApplyChanges(handler, GetStorage(), base_node_identifier,
+                                 entries, new_root_identifier, &new_nodes,
+                                 &kTestNodeLevelCalculator);
+    called = true;
+  });
   RunLoopFor(kSufficientDelay);
   if (!called) {
     return ::testing::AssertionFailure()

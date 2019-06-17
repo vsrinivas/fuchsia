@@ -168,21 +168,6 @@ void PageStorageImpl::GetCommit(
       });
 }
 
-void PageStorageImpl::AddCommitFromLocal(
-    std::unique_ptr<const Commit> commit,
-    std::vector<ObjectIdentifier> new_objects,
-    fit::function<void(Status)> callback) {
-  FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest()));
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, commit = std::move(commit), new_objects = std::move(new_objects)](
-          CoroutineHandler* handler,
-          fit::function<void(Status)> callback) mutable {
-        callback(SynchronousAddCommitFromLocal(handler, std::move(commit),
-                                               std::move(new_objects)));
-      });
-}
-
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
     fit::function<void(Status, std::vector<CommitId>)> callback) {
@@ -214,15 +199,31 @@ void PageStorageImpl::CommitJournal(
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   FXL_DCHECK(journal);
 
-  auto managed_journal = managed_container_.Manage(std::move(journal));
-  JournalImpl* journal_ptr = static_cast<JournalImpl*>(managed_journal->get());
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this, journal = std::move(journal)](
+          CoroutineHandler* handler,
+          fit::function<void(Status, std::unique_ptr<const Commit>)>
+              callback) mutable {
+        JournalImpl* journal_ptr = static_cast<JournalImpl*>(journal.get());
 
-  // |managed_journal| needs to be kept in memory until |Commit| has finished
-  // execution.
-  journal_ptr->Commit(
-      [managed_journal = std::move(managed_journal),
-       callback = std::move(callback)](
-          Status status, std::unique_ptr<const Commit> commit) mutable {
+        std::unique_ptr<const Commit> commit;
+        std::vector<ObjectIdentifier> objects_to_sync;
+        Status status = journal_ptr->Commit(handler, &commit, &objects_to_sync);
+        if (status != Status::OK || !commit) {
+          // There is an error, or the commit is empty (no change).
+          callback(status, nullptr);
+          return;
+        }
+
+        status = SynchronousAddCommitFromLocal(handler, commit->Clone(),
+                                               std::move(objects_to_sync));
+
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+
         callback(status, std::move(commit));
       });
 }
@@ -1176,6 +1177,7 @@ Status PageStorageImpl::SynchronousGetCommit(
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
     CoroutineHandler* handler, std::unique_ptr<const Commit> commit,
     std::vector<ObjectIdentifier> new_objects) {
+  FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest()));
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
   commits.push_back(std::move(commit));
@@ -1473,7 +1475,6 @@ Status PageStorageImpl::SynchronousAddCommits(
   }
 
   s = batch->Execute(handler);
-
   if (s != Status::OK) {
     return s;
   }

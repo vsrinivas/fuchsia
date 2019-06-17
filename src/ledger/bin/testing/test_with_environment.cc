@@ -38,11 +38,14 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
   }
 
   // Re-enters the coroutine body if the handler delayed the call.
-  void ResumeIfNeeded() {
+  // Returns true if the coroutine was indeed resumed, false otherwise.
+  bool ResumeIfNeeded() {
     if (need_to_continue_) {
       need_to_continue_ = false;
       delegate_->Resume(coroutine::ContinuationStatus::OK);
+      return true;
     }
+    return false;
   }
 
  private:
@@ -66,8 +69,9 @@ TestWithEnvironment::TestWithEnvironment()
                   test_loop().initial_state()))
               .Build()) {}
 
-void TestWithEnvironment::RunInCoroutine(
-    fit::function<void(coroutine::CoroutineHandler*)> run_test) {
+::testing::AssertionResult TestWithEnvironment::RunInCoroutine(
+    fit::function<void(coroutine::CoroutineHandler*)> run_test,
+    zx::duration delay) {
   std::unique_ptr<TestCoroutineHandler> test_handler;
   volatile bool ended = false;
   environment_.coroutine_service()->StartCoroutine(
@@ -78,9 +82,14 @@ void TestWithEnvironment::RunInCoroutine(
         ended = true;
       });
   while (!ended) {
-    test_handler->ResumeIfNeeded();
-    RunLoopUntilIdle();
+    bool has_resumed = test_handler->ResumeIfNeeded();
+    bool tasks_executed = RunLoopFor(delay);
+    if (!has_resumed && !tasks_executed) {
+      return ::testing::AssertionFailure()
+             << "Coroutine stopped executing but did not end.";
+    }
   }
+  return ::testing::AssertionSuccess();
 }
 
 }  // namespace ledger

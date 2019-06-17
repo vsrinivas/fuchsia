@@ -20,8 +20,9 @@ class TestWithEnvironment : public gtest::TestLoopFixture {
 
  protected:
   // Runs the given test code in a coroutine.
-  void RunInCoroutine(
-      fit::function<void(coroutine::CoroutineHandler*)> run_test);
+  ::testing::AssertionResult RunInCoroutine(
+      fit::function<void(coroutine::CoroutineHandler*)> run_test,
+      zx::duration delay = zx::sec(0));
 
   sys::testing::ComponentContextProvider component_context_provider_;
   Environment environment_;

@@ -613,44 +613,24 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator() {
   return &kDefaultNodeLevelCalculator;
 }
 
-void ApplyChanges(
-    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
-    fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
-        callback,
-    const NodeLevelCalculator* node_level_calculator) {
+Status ApplyChanges(coroutine::CoroutineHandler* handler,
+                    PageStorage* page_storage, ObjectIdentifier root_identifier,
+                    std::vector<EntryChange> changes,
+                    ObjectIdentifier* new_root_identifier,
+                    std::set<ObjectIdentifier>* new_identifiers,
+                    const NodeLevelCalculator* node_level_calculator) {
   FXL_DCHECK(storage::IsDigestValid(root_identifier.object_digest()));
-  coroutine_service->StartCoroutine(
-      [page_storage, root_identifier = std::move(root_identifier),
-       changes = std::move(changes), callback = std::move(callback),
-       node_level_calculator](coroutine::CoroutineHandler* handler) mutable {
-        SynchronousStorage storage(page_storage, handler);
+  SynchronousStorage storage(page_storage, handler);
+  new_identifiers->clear();
+  NodeBuilder root;
+  RETURN_ON_ERROR(
+      NodeBuilder::FromIdentifier(&storage, std::move(root_identifier), &root));
+  RETURN_ON_ERROR(ApplyChangesOnRoot(node_level_calculator, &storage,
+                                     std::move(root), std::move(changes),
+                                     new_root_identifier, new_identifiers));
 
-        NodeBuilder root;
-        Status status = NodeBuilder::FromIdentifier(
-            &storage, std::move(root_identifier), &root);
-        if (status != Status::OK) {
-          callback(status, {}, {});
-          return;
-        }
-        ObjectIdentifier object_identifier;
-        std::set<ObjectIdentifier> new_identifiers;
-        status = ApplyChangesOnRoot(node_level_calculator, &storage,
-                                    std::move(root), std::move(changes),
-                                    &object_identifier, &new_identifiers);
-        if (status != Status::OK) {
-          callback(status, {}, {});
-          return;
-        }
-
-        // NOTE(etiennej): We used to handle the case where the object_digest
-        // returned by |ApplyChangesOnRoot| is invalid, with |ApplyChangeOnRoot|
-        // still returning Status::OK. We believe we no longer need to. If you
-        // see a crash here, though, please let us know!
-        FXL_CHECK(object_identifier.object_digest().IsValid());
-        callback(Status::OK, std::move(object_identifier),
-                 std::move(new_identifiers));
-      });
+  FXL_CHECK(new_root_identifier->object_digest().IsValid());
+  return Status::OK;
 }
 
 }  // namespace btree

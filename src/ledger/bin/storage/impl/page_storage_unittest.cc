@@ -157,22 +157,6 @@ class FakeSyncDelegate : public DelayingFakeSyncDelegate {
       : DelayingFakeSyncDelegate([](fit::closure callback) { callback(); }) {}
 };
 
-// Implements |Init()|, |CreateJournalId() and |StartBatch()| and fails with a
-// |NOT_IMPLEMENTED| error in all other cases.
-class FakePageDbImpl : public PageDbEmptyImpl {
- public:
-  FakePageDbImpl(rng::Random* random) : random_(random) {}
-
-  Status StartBatch(CoroutineHandler* /*handler*/,
-                    std::unique_ptr<PageDb::Batch>* batch) override {
-    *batch = std::make_unique<FakePageDbImpl>(random_);
-    return Status::OK;
-  }
-
- private:
-  rng::Random* const random_;
-};
-
 // Shim for LevelDB that allows to selectively fail some calls.
 class ControlledLevelDb : public Db {
  public:
@@ -696,98 +680,149 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
   EXPECT_FALSE(lookup_commit);
 
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
   CommitId id = commit->GetId();
-  ObjectIdentifier root_node = commit->GetRootIdentifier();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
   // Search for a commit that exists and check the content.
-  storage_->AddCommitFromLocal(
-      std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
-
   std::unique_ptr<const Commit> found = GetCommit(id);
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
 }
 
 TEST_F(PageStorageTest, AddLocalCommitsReferences) {
-  // Create two commits pointing to the same object identifier and check that
-  // both are stored as inbound references of said object.
-  ObjectIdentifier root_node = RandomObjectIdentifier(environment_.random());
-
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_node, std::move(parent));
-  CommitId id1 = commit1->GetId();
+  // Create two commits pointing to the same object identifier by creating two
+  // identical journals and commiting them. We then check that both commits are
+  // stored as inbound references of said object.
+  std::unique_ptr<const Commit> base = GetFirstHead();
+  ObjectIdentifier object_id = RandomObjectIdentifier(environment_.random());
+  std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
+  journal->Put("key", object_id, KeyPriority::EAGER);
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      std::move(commit1), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  std::unique_ptr<const Commit> commit1;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  parent.clear();
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_node, std::move(parent));
+  // Advance the clock a bit.
+  RunLoopFor(zx::sec(1));
+
+  ObjectIdentifier root_node1 = commit1->GetRootIdentifier();
+
+  journal = storage_->StartCommit(std::move(base));
+  journal->Put("key", object_id, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit2;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  ObjectIdentifier root_node2 = commit2->GetRootIdentifier();
+
+  CommitId id1 = commit1->GetId();
   CommitId id2 = commit2->GetId();
-  storage_->AddCommitFromLocal(
-      std::move(commit2), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_NE(id1, id2);
+  EXPECT_EQ(root_node1, root_node2);
 
-  RunInCoroutine([this, root_node, id1, id2](CoroutineHandler* handler) {
-    CheckInboundCommitReferences(handler, root_node, {id1, id2});
+  RunInCoroutine([this, root_node1, id1, id2](CoroutineHandler* handler) {
+    CheckInboundCommitReferences(handler, root_node1, {id1, id2});
   });
 }
 
 TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
-  CommitId id = commit->GetId();
-  std::string storage_bytes = commit->GetStorageBytes().ToString();
-
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      commit->Clone(), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+
+  // Create a conflict.
+  std::unique_ptr<const Commit> base = GetFirstHead();
+
+  std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit1;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
+
+  CommitId id1 = commit1->GetId();
+  storage_->MarkCommitSynced(
+      id1, callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  journal = storage_->StartCommit(base->Clone());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit2;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  CommitId id2 = commit2->GetId();
+  storage_->MarkCommitSynced(
+      id2, callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  // Make a merge commit. Merge commits only depend on their parents and
+  // contents, so we can reproduce them.
+  storage::ObjectIdentifier merged_object_id =
+      RandomObjectIdentifier(environment_.random());
+  journal = storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
+  journal->Put("key", merged_object_id, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_merged1;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &commit_merged1));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  CommitId merged_id1 = commit_merged1->GetId();
 
   auto commits = GetUnsyncedCommits();
   EXPECT_EQ(1u, commits.size());
-  EXPECT_EQ(id, commits[0]->GetId());
+  EXPECT_EQ(merged_id1, commits[0]->GetId());
 
   storage_->MarkCommitSynced(
-      id, callback::Capture(callback::SetWhenCalled(&called), &status));
+      merged_id1, callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   // Add the commit again.
-  storage_->AddCommitFromLocal(
-      commit->Clone(), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  journal = storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
+  journal->Put("key", merged_object_id, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_merged2;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &commit_merged2));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
+  CommitId merged_id2 = commit_merged2->GetId();
 
   // Check that the commit is not marked unsynced.
   commits = GetUnsyncedCommits();
@@ -799,17 +834,24 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   std::vector<std::unique_ptr<const Commit>> parent;
   parent.emplace_back(
       std::make_unique<CommitRandomImpl>(environment_.random()));
+  ObjectIdentifier empty_object_id;
+  GetEmptyNodeIdentifier(&empty_object_id);
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
+      environment_.clock(), empty_object_id, std::move(parent));
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  std::vector<CommitId> commit_ids;
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+  commits_and_bytes.emplace_back(commit->GetId(),
+                                 commit->GetStorageBytes().ToString());
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes), ChangeSource::CLOUD,
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &commit_ids));
+
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
 }
 
@@ -930,38 +972,21 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
 
-  std::unique_ptr<const btree::TreeNode> node;
-  ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
-  ObjectIdentifier root_identifier = node->GetIdentifier();
-
-  std::unique_ptr<const Object> root_object =
-      TryGetObject(root_identifier, PageStorage::Location::NETWORK);
-
-  fxl::StringView root_data;
-  ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-  sync.AddObject(root_identifier, root_data.ToString());
-
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_identifier, std::move(parent));
-  CommitId id = commit->GetId();
-
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
+  CommitId id = commit->GetId();
 
   EXPECT_EQ(1u, GetUnsyncedCommits().size());
-  storage_->GetCommit(id, callback::Capture(callback::SetWhenCalled(&called),
-                                            &status, &commit));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_EQ(Status::OK, status);
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(),
@@ -983,31 +1008,27 @@ TEST_F(PageStorageTest, SyncCommits) {
   // Initially there should be no unsynced commits.
   EXPECT_TRUE(commits.empty());
 
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  // After adding a commit it should marked as unsynced.
-  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
-  CommitId id = commit->GetId();
-  std::string storage_bytes = commit->GetStorageBytes().ToString();
-
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   commits = GetUnsyncedCommits();
   EXPECT_EQ(1u, commits.size());
-  EXPECT_EQ(storage_bytes, commits[0]->GetStorageBytes());
+  EXPECT_EQ(commit->GetStorageBytes(), commits[0]->GetStorageBytes());
 
   // Mark it as synced.
   storage_->MarkCommitSynced(
-      id, callback::Capture(callback::SetWhenCalled(&called), &status));
+      commit->GetId(),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -1021,27 +1042,24 @@ TEST_F(PageStorageTest, HeadCommits) {
   std::vector<std::unique_ptr<const Commit>> heads = GetHeads();
   EXPECT_EQ(1u, heads.size());
 
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
-  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
-  CommitId id = commit->GetId();
-
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   heads = GetHeads();
   ASSERT_EQ(1u, heads.size());
-  EXPECT_EQ(id, heads[0]->GetId());
+  EXPECT_EQ(commit->GetId(), heads[0]->GetId());
 }
 
 TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
@@ -1053,45 +1071,56 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
                 [this] { return environment_.random()->Draw<zx::time_utc>(); });
   timestamps.insert(timestamps.end(), {zx::time_utc(1000), zx::time_utc(1000),
                                        zx::time_utc(1000)});
+  std::shuffle(timestamps.begin(), timestamps.end(),
+               environment_.random()->NewBitGenerator<size_t>());
+
+  std::vector<ObjectIdentifier> object_identifiers;
+  object_identifiers.resize(timestamps.size());
+  for (size_t i = 0; i < timestamps.size(); ++i) {
+    ObjectData value("value" + std::to_string(i), InlineBehavior::ALLOW);
+    std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
+                                        value.object_identifier,
+                                        KeyPriority::EAGER}};
+    std::unique_ptr<const btree::TreeNode> node;
+    ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
+    object_identifiers[i] = node->GetIdentifier();
+  }
+
+  std::unique_ptr<const Commit> base = GetFirstHead();
 
   // We first generate the commits. The will be shuffled at a later time.
-  std::vector<std::unique_ptr<const Commit>> commits;
+  std::vector<PageStorage::CommitIdAndBytes> commits;
   std::vector<std::pair<zx::time_utc, CommitId>> sorted_commits;
-
   for (size_t i = 0; i < timestamps.size(); i++) {
-    std::vector<std::unique_ptr<const Commit>> parent;
-    parent.emplace_back(GetFirstHead());
-
     test_clock.Set(timestamps[i]);
-    // Adding a new commit with the previous head as its parent should replace
-    // the old head.
+    std::vector<std::unique_ptr<const Commit>> parent;
+    parent.push_back(base->Clone());
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        &test_clock, RandomObjectIdentifier(environment_.random()),
-        std::move(parent));
+        &test_clock, object_identifiers[i], std::move(parent));
 
+    commits.emplace_back(commit->GetId(), commit->GetStorageBytes().ToString());
     sorted_commits.emplace_back(timestamps[i], commit->GetId());
-    commits.push_back(std::move(commit));
   }
 
-  // Insert the commits in a random order.
   auto rng = environment_.random()->NewBitGenerator<uint64_t>();
   std::shuffle(commits.begin(), commits.end(), rng);
-  for (size_t i = 0; i < commits.size(); i++) {
-    bool called;
-    Status status;
-    storage_->AddCommitFromLocal(
-        std::move(commits[i]), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
-    RunLoopUntilIdle();
-    ASSERT_TRUE(called);
-    EXPECT_EQ(Status::OK, status);
-  }
+  bool called;
+  Status status;
+  std::vector<CommitId> missing_ids;
+  storage_->AddCommitsFromSync(
+      std::move(commits), ChangeSource::CLOUD,
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &missing_ids));
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
 
   // Check that GetHeadCommitIds returns sorted commits.
   std::vector<std::unique_ptr<const Commit>> heads;
-  Status status = storage_->GetHeadCommits(&heads);
+  status = storage_->GetHeadCommits(&heads);
   EXPECT_EQ(Status::OK, status);
   std::sort(sorted_commits.begin(), sorted_commits.end());
+  ASSERT_EQ(sorted_commits.size(), heads.size());
   for (size_t i = 0; i < sorted_commits.size(); ++i) {
     EXPECT_EQ(sorted_commits[i].second, heads[i]->GetId());
   }
@@ -2307,43 +2336,35 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
 }
 
 TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-
-  std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
-  CommitId id1 = commit1->GetId();
-
-  parent.clear();
-  parent.emplace_back(commit1->Clone());
-
-  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      environment_.clock(), RandomObjectIdentifier(environment_.random()),
-      std::move(parent));
-  CommitId id2 = commit2->GetId();
-
   FakeCommitWatcher watcher;
   storage_->AddCommitWatcher(&watcher);
 
   bool called;
   Status status;
-  storage_->AddCommitFromLocal(
-      std::move(commit1), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit1;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
-  storage_->AddCommitFromLocal(
-      std::move(commit2), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  journal = storage_->StartCommit(std::move(commit1));
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit2;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   EXPECT_EQ(2, watcher.commit_count);
-  EXPECT_EQ(id2, watcher.last_commit_id);
+  EXPECT_EQ(commit2->GetId(), watcher.last_commit_id);
 }
 
 TEST_F(PageStorageTest, NoOpCommit) {
@@ -2373,45 +2394,114 @@ TEST_F(PageStorageTest, NoOpCommit) {
   ASSERT_FALSE(commit);
 }
 
-// Check that receiving a remote commit and commiting locally at the same time
-// do not prevent the commit to be marked as unsynced.
+// Check that receiving a remote commit and commiting the same commit locally at
+// the same time do not prevent the commit to be marked as unsynced.
 TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
-  bool sync_delegate_called;
-  fit::closure sync_delegate_call;
-  DelayingFakeSyncDelegate sync(callback::Capture(
-      callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+  // We need a commit that we can add both "from sync" and locally. For this
+  // purpose, we use a merge commit: we create a conflict, then a merge. We
+  // propagate the conflicting commits through synchronization, and then both
+  // add the merge and create it locally.
+  bool called;
+  Status status;
+  std::unique_ptr<const Commit> base_commit = GetFirstHead();
+  ObjectData value_1("data1", InlineBehavior::ALLOW);
+  ObjectData value_2("data2", InlineBehavior::ALLOW);
+  ObjectData value_3("data3", InlineBehavior::ALLOW);
+
+  std::unique_ptr<Journal> journal1 =
+      storage_->StartCommit(base_commit->Clone());
+  journal1->Put("key", value_1.object_identifier, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit1;
+  storage_->CommitJournal(
+      std::move(journal1),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  RunLoopFor(zx::sec(1));
+
+  std::unique_ptr<Journal> journal2 =
+      storage_->StartCommit(base_commit->Clone());
+  journal2->Put("key", value_2.object_identifier, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit2;
+  storage_->CommitJournal(
+      std::move(journal2),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  // Create a merge.
+  std::unique_ptr<Journal> journal3 =
+      storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
+  journal3->Put("key", value_3.object_identifier, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit3;
+  storage_->CommitJournal(
+      std::move(journal3),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  CommitId id3 = commit3->GetId();
+  std::map<ObjectIdentifier, std::string> object_data_base;
+  object_data_base[commit1->GetRootIdentifier()] =
+      TryGetPiece(commit1->GetRootIdentifier())->GetData().ToString();
+  object_data_base[commit2->GetRootIdentifier()] =
+      TryGetPiece(commit2->GetRootIdentifier())->GetData().ToString();
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes_base;
+  commits_and_bytes_base.emplace_back(commit1->GetId(),
+                                      commit1->GetStorageBytes().ToString());
+  commits_and_bytes_base.emplace_back(commit2->GetId(),
+                                      commit2->GetStorageBytes().ToString());
+
+  std::map<ObjectIdentifier, std::string> object_data_merge;
+  object_data_merge[commit3->GetRootIdentifier()] =
+      TryGetPiece(commit3->GetRootIdentifier())->GetData().ToString();
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes_merge;
+  commits_and_bytes_merge.emplace_back(commit3->GetId(),
+                                       commit3->GetStorageBytes().ToString());
+
+  // We have extracted the commit and object data. We now reset the state of
+  // PageStorage so we can add them again (in a controlled manner).
+  commit1.reset();
+  commit2.reset();
+  commit3.reset();
+  ResetStorage();
+
+  FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
-
-  // We need to create new nodes for the storage to be asynchronous. The empty
-  // node is already there, so we create two (child, which is empty, and root,
-  // which contains child).
-  std::string child_data = btree::EncodeNode(0u, std::vector<Entry>(), {});
-  ObjectIdentifier child_identifier = encryption_service_.MakeObjectIdentifier(
-      ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, child_data));
-  sync.AddObject(child_identifier, child_data);
-
-  std::string root_data =
-      btree::EncodeNode(0u, std::vector<Entry>(), {{0u, child_identifier}});
-  ObjectIdentifier root_identifier = encryption_service_.MakeObjectIdentifier(
-      ComputeObjectDigest(PieceType::CHUNK, ObjectType::TREE_NODE, root_data));
-  sync.AddObject(root_identifier, root_data);
-
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-
-  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_identifier, std::move(parent));
-  CommitId id = commit->GetId();
+  for (const auto& data : object_data_base) {
+    sync.AddObject(data.first, data.second);
+  }
 
   // Start adding the remote commit.
   bool commits_from_sync_called;
   Status commits_from_sync_status;
-  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit->GetId(),
-                                 commit->GetStorageBytes().ToString());
   std::vector<CommitId> missing_ids;
   storage_->AddCommitsFromSync(
-      std::move(commits_and_bytes), ChangeSource::CLOUD,
+      std::move(commits_and_bytes_base), ChangeSource::CLOUD,
+      callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
+                        &commits_from_sync_status, &missing_ids));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(commits_from_sync_called);
+  EXPECT_EQ(Status::OK, commits_from_sync_status);
+  EXPECT_EQ(0u, missing_ids.size());
+  ASSERT_EQ(2u, GetHeads().size());
+
+  bool sync_delegate_called;
+  fit::closure sync_delegate_call;
+  DelayingFakeSyncDelegate sync2(callback::Capture(
+      callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+  storage_->SetSyncDelegate(&sync2);
+
+  for (const auto& data : object_data_merge) {
+    sync2.AddObject(data.first, data.second);
+  }
+
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes_merge), ChangeSource::CLOUD,
       callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
                         &commits_from_sync_status, &missing_ids));
 
@@ -2422,32 +2512,36 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   EXPECT_FALSE(commits_from_sync_called);
 
   // Add the local commit.
-  bool commits_from_local_called;
+  auto heads = GetHeads();
   Status commits_from_local_status;
-  storage_->AddCommitFromLocal(
-      std::move(commit), {},
-      callback::Capture(callback::SetWhenCalled(&commits_from_local_called),
-                        &commits_from_local_status));
-
+  std::unique_ptr<Journal> journal =
+      storage_->StartMergeCommit(std::move(heads[0]), std::move(heads[1]));
+  journal->Put("key", value_3.object_identifier, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called),
+                        &commits_from_local_status, &commit));
   RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, commits_from_local_status);
   EXPECT_FALSE(commits_from_sync_called);
+
+  EXPECT_EQ(id3, commit->GetId());
+
   // The local commit should be commited.
-  EXPECT_TRUE(commits_from_local_called);
   ASSERT_TRUE(sync_delegate_call);
   sync_delegate_call();
 
   // Let the two AddCommit finish.
   RunLoopUntilIdle();
   EXPECT_TRUE(commits_from_sync_called);
-  EXPECT_TRUE(commits_from_local_called);
   EXPECT_EQ(Status::OK, commits_from_sync_status);
   EXPECT_EQ(Status::OK, commits_from_local_status);
 
   // Verify that the commit is added correctly.
-  bool called;
-  Status status;
-  storage_->GetCommit(id, callback::Capture(callback::SetWhenCalled(&called),
-                                            &status, &commit));
+  storage_->GetCommit(id3, callback::Capture(callback::SetWhenCalled(&called),
+                                             &status, &commit));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -2594,6 +2688,26 @@ TEST_F(PageStorageTest, GetMergeCommitIdsNonEmpty) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_THAT(merges, ElementsAre(merge->GetId()));
+}
+
+TEST_F(PageStorageTest, AddLocalCommitsInterrupted) {
+  // Destroy PageStorage while a local commit is in progress.
+  bool called;
+  Status status;
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(environment_.random()),
+               KeyPriority::EAGER);
+
+  // Destroy the PageStorageImpl object during the first async operation of
+  // CommitJournal.
+  async::PostTask(dispatcher(), [this]() { storage_.reset(); });
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(
+      std::move(journal),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+  EXPECT_TRUE(RunLoopUntilIdle());
+  // The callback is eaten by the destruction of |storage_|, so we are not
+  // expecting to be called. However, we do not crash.
 }
 
 }  // namespace

@@ -29,15 +29,16 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 
 // Applies changes provided by |changes| to the B-Tree starting at
 // |root_identifier|. |changes| must provide |EntryChange| objects sorted by
-// their key. The callback will provide the status of the operation, the id of
-// the new root and the list of ids of all new nodes created after the changes.
-void ApplyChanges(
-    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
-    fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
-        callback,
-    const NodeLevelCalculator* node_level_calculator =
-        GetDefaultNodeLevelCalculator());
+// their key. |new_root_identifier| will contain the id of the new root and
+// |new_identifiers| the list of ids of all new nodes created after the changes.
+// Existing elements inside |new_identifiers| will be deleted.
+Status ApplyChanges(coroutine::CoroutineHandler* coroutine_handler,
+                    PageStorage* page_storage, ObjectIdentifier root_identifier,
+                    std::vector<EntryChange> changes,
+                    ObjectIdentifier* new_root_identifier,
+                    std::set<ObjectIdentifier>* new_identifiers,
+                    const NodeLevelCalculator* node_level_calculator =
+                        GetDefaultNodeLevelCalculator());
 
 }  // namespace btree
 }  // namespace storage
