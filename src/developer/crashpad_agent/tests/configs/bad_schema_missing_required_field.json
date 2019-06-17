@@ -1,3 +1,5 @@
 {
-    "crashpad_database_path": "/foo/crashes"
+    "crashpad_database": {
+        "path": "/foo/crashes"
+    }
 }

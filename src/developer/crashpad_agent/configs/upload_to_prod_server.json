@@ -1,7 +1,11 @@
 {
-    "crashpad_database_path": "/tmp/crashes",
-    "crashpad_database_max_size_in_kb": 1024,
-    "enable_upload_to_crash_server": true,
-    "crash_server_url": "https://clients2.google.com/cr/report",
+    "crashpad_database" : {
+        "path": "/tmp/crashes",
+        "max_size_in_kb": 1024
+    },
+    "crash_server" : {
+        "enable_upload": true,
+        "url": "https://clients2.google.com/cr/report"
+    },
     "feedback_data_collection_timeout_in_milliseconds": 10000
 }

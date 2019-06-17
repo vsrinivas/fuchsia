@@ -14,23 +14,32 @@
 namespace fuchsia {
 namespace crash {
 
-// Crash analysis configuration.
-struct Config {
+struct CrashpadDatabaseConfig {
   // Directory path under which to store the Crashpad database.
-  std::string crashpad_database_path;
+  std::string path;
 
   // Maximum size (in kilobytes) that the Crashpad database should grow
   // to, excluding current reports being generated.
-  uint64_t crashpad_database_max_size_in_kb;
+  uint64_t max_size_in_kb;
+};
 
+struct CrashServerConfig {
   // Whether to upload the crash report to a remote crash server or leave it
   // locally.
-  bool enable_upload_to_crash_server = false;
+  bool enable_upload = false;
 
   // URL of the remote crash server.
+  //
   // We use a std::unique_ptr to set it only when relevant, i.e. when
-  // |enable_upload_to_crash_server| is set.
-  std::unique_ptr<std::string> crash_server_url;
+  // |enable_upload| is set.
+  std::unique_ptr<std::string> url;
+};
+
+// Crash analysis configuration.
+struct Config {
+  CrashpadDatabaseConfig crashpad_database;
+
+  CrashServerConfig crash_server;
 
   // Maximum time (in milliseconds) spent collecting feedback data to attach to
   // crash reports.

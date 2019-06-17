@@ -63,28 +63,33 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
   void SetUp() override {
     // The underlying agent is initialized with a default config, but can
     // be reset via ResetAgent() if a different config is necessary.
-    ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
-                      /*crashpad_database_max_size_in_kb=*/
-                      kMaxTotalReportSizeInKb,
-                      /*enable_upload_to_crash_server=*/true,
-                      /*crash_server_url=*/
-                      std::make_unique<std::string>(kStubCrashServerUrl),
-                      /*feedback_data_collection_timeout_in_milliseconds=*/
-                      kFeedbackDataCollectionTimeoutInMillisecondsKey},
-               std::make_unique<StubCrashServer>(alwaysReturnSuccess));
+    ResetAgent(
+        Config{/*crashpad_database=*/
+               {
+                   /*path=*/database_path_.path(),
+                   /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+               },
+               /*crash_server=*/
+               {
+                   /*enable_upload=*/true,
+                   /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+               },
+               /*feedback_data_collection_timeout_in_milliseconds=*/
+               kFeedbackDataCollectionTimeoutInMillisecondsKey},
+        std::make_unique<StubCrashServer>(alwaysReturnSuccess));
   }
 
  protected:
   // Resets the underlying agent using the given |config| and |crash_server|.
   void ResetAgent(Config config,
                   std::unique_ptr<StubCrashServer> crash_server) {
-    FXL_CHECK(config.enable_upload_to_crash_server ^ !crash_server);
+    FXL_CHECK(config.crash_server.enable_upload ^ !crash_server);
     crash_server_ = std::move(crash_server);
 
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ =
-        files::JoinPath(config.crashpad_database_path, "attachments");
+        files::JoinPath(config.crashpad_database.path, "attachments");
     agent_ = CrashpadAgent::TryCreate(
         dispatcher(), service_directory_provider_.service_directory(),
         std::move(config), std::move(crash_server_));
@@ -93,7 +98,7 @@ class CrashpadAgentTest : public gtest::RealLoopFixture {
 
   // Resets the underlying agent using the given |config|.
   void ResetAgent(Config config) {
-    FXL_CHECK(!config.enable_upload_to_crash_server);
+    FXL_CHECK(!config.crash_server.enable_upload);
     return ResetAgent(std::move(config), /*crash_server=*/nullptr);
   }
 
@@ -355,10 +360,16 @@ TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   // We reset the agent with a max database size of 0, meaning reports will
   // get cleaned up before the end of the |agent_| call.
-  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
-                    /*crashpad_database_max_size_in_kb=*/0u,
-                    /*enable_upload_to_crash_server=*/false,
-                    /*crash_server_url=*/nullptr,
+  ResetAgent(Config{/*crashpad_database=*/
+                    {
+                        /*path=*/database_path_.path(),
+                        /*max_size_in_kb=*/0u,
+                    },
+                    /*crash_server=*/
+                    {
+                        /*enable_upload=*/false,
+                        /*url=*/nullptr,
+                    },
                     /*feedback_data_collection_timeout_in_milliseconds=*/
                     kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
@@ -383,14 +394,19 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   // size of a report plus the value of an especially large attachment.
   const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
   const std::string large_string = GenerateString(crash_log_size_in_kb);
-  ResetAgent(
-      Config{/*crashpad_database_path=*/database_path_.path(),
-             /*crashpad_database_max_size_in_kb=*/kMaxTotalReportSizeInKb +
-                 crash_log_size_in_kb,
-             /*enable_upload_to_crash_server=*/false,
-             /*crash_server_url=*/nullptr,
-             /*feedback_data_collection_timeout_in_milliseconds=*/
-             kFeedbackDataCollectionTimeoutInMillisecondsKey});
+  ResetAgent(Config{
+      /*crashpad_database=*/
+      {
+          /*path=*/database_path_.path(),
+          /*max_size_in_kb=*/kMaxTotalReportSizeInKb + crash_log_size_in_kb,
+      },
+      /*crash_server=*/
+      {
+          /*enable_upload=*/false,
+          /*url=*/nullptr,
+      },
+      /*feedback_data_collection_timeout_in_milliseconds=*/
+      kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
   // We generate a first crash report.
   EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
@@ -419,26 +435,36 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
 
 TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
-                    /*crashpad_database_max_size_in_kb=*/
-                    kMaxTotalReportSizeInKb,
-                    /*enable_upload_to_crash_server=*/true,
-                    /*crash_server_url=*/
-                    std::make_unique<std::string>(kStubCrashServerUrl),
-                    /*feedback_data_collection_timeout_in_milliseconds=*/
-                    kFeedbackDataCollectionTimeoutInMillisecondsKey},
-             std::make_unique<StubCrashServer>(alwaysReturnFailure));
+  ResetAgent(
+      Config{/*crashpad_database=*/
+             {
+                 /*path=*/database_path_.path(),
+                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+             },
+             /*crash_server=*/
+             {
+                 /*enable_upload=*/true,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             },
+             /*feedback_data_collection_timeout_in_milliseconds=*/
+             kFeedbackDataCollectionTimeoutInMillisecondsKey},
+      std::make_unique<StubCrashServer>(alwaysReturnFailure));
 
   EXPECT_TRUE(RunOneCrashAnalysis().is_err());
 }
 
 TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
-                    /*crashpad_database_max_size_in_kb=*/
-                    kMaxTotalReportSizeInKb,
-                    /*enable_upload_to_crash_server=*/false,
-                    /*crash_server_url=*/nullptr,
+  ResetAgent(Config{/*crashpad_database=*/
+                    {
+                        /*path=*/database_path_.path(),
+                        /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+                    },
+                    /*crash_server=*/
+                    {
+                        /*enable_upload=*/false,
+                        /*url=*/nullptr,
+                    },
                     /*feedback_data_collection_timeout_in_milliseconds=*/
                     kFeedbackDataCollectionTimeoutInMillisecondsKey});
 
@@ -484,15 +510,19 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnFeedbackDataProviderTakingTooLong) {
       std::make_unique<StubFeedbackDataProviderNeverReturning>());
   // We use a timeout of 1ms for the feedback data collection as the test will
   // need to wait that long before skipping feedback data collection.
-  ResetAgent(Config{/*crashpad_database_path=*/database_path_.path(),
-                    /*crashpad_database_max_size_in_kb=*/
-                    kMaxTotalReportSizeInKb,
-                    /*enable_upload_to_crash_server=*/true,
-                    /*crash_server_url=*/
-                    std::make_unique<std::string>(kStubCrashServerUrl),
-                    /*feedback_data_collection_timeout_in_milliseconds=*/
-                    1u},
-             std::make_unique<StubCrashServer>(alwaysReturnSuccess));
+  ResetAgent(
+      Config{/*crashpad_database=*/
+             {
+                 /*path=*/database_path_.path(),
+                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
+             },
+             /*crash_server=*/
+             {
+                 /*enable_upload=*/true,
+                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
+             },
+             /*feedback_data_collection_timeout_in_milliseconds=*/1u},
+      std::make_unique<StubCrashServer>(alwaysReturnSuccess));
 
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
   // The only attachment should be the one from the crash analysis as no

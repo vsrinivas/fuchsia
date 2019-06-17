@@ -92,8 +92,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services, Config config) {
   std::unique_ptr<CrashServer> crash_server;
-  if (config.enable_upload_to_crash_server && config.crash_server_url) {
-    crash_server = std::make_unique<CrashServer>(*config.crash_server_url);
+  if (config.crash_server.enable_upload && config.crash_server.url) {
+    crash_server = std::make_unique<CrashServer>(*config.crash_server.url);
   }
   return CrashpadAgent::TryCreate(dispatcher, std::move(services),
                                   std::move(config), std::move(crash_server));
@@ -103,24 +103,23 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher,
     std::shared_ptr<::sys::ServiceDirectory> services, Config config,
     std::unique_ptr<CrashServer> crash_server) {
-  if (!files::IsDirectory(config.crashpad_database_path)) {
-    files::CreateDirectory(config.crashpad_database_path);
+  if (!files::IsDirectory(config.crashpad_database.path)) {
+    files::CreateDirectory(config.crashpad_database.path);
   }
 
   std::unique_ptr<crashpad::CrashReportDatabase> database(
       crashpad::CrashReportDatabase::Initialize(
-          base::FilePath(config.crashpad_database_path)));
+          base::FilePath(config.crashpad_database.path)));
   if (!database) {
     FX_LOGS(ERROR) << "error initializing local crash report database at "
-                   << config.crashpad_database_path;
+                   << config.crashpad_database.path;
     FX_LOGS(FATAL) << "failed to set up crash analyzer";
     return nullptr;
   }
 
   // Today we enable uploads here. In the future, this will most likely be set
   // in some external settings.
-  database->GetSettings()->SetUploadsEnabled(
-      config.enable_upload_to_crash_server);
+  database->GetSettings()->SetUploadsEnabled(config.crash_server.enable_upload);
 
   return std::unique_ptr<CrashpadAgent>(
       new CrashpadAgent(dispatcher, std::move(services), std::move(config),
@@ -141,7 +140,7 @@ CrashpadAgent::CrashpadAgent(
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(database_);
-  if (config.enable_upload_to_crash_server) {
+  if (config.crash_server.enable_upload) {
     FXL_DCHECK(crash_server_);
   }
 }
@@ -420,7 +419,7 @@ bool CrashpadAgent::UploadReport(
     FX_LOGS(INFO)
         << "upload to remote crash server disabled. Local crash report, ID "
         << local_report_id.ToString() << ", available under "
-        << config_.crashpad_database_path;
+        << config_.crashpad_database.path;
     database_->SkipReportUpload(
         local_report_id,
         crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
@@ -512,7 +511,7 @@ void CrashpadAgent::PruneDatabase() {
   // database and we want to reset that cumulated total size every time we
   // prune.
   crashpad::DatabaseSizePruneCondition pruning_condition(
-      config_.crashpad_database_max_size_in_kb);
+      config_.crashpad_database.max_size_in_kb);
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
 }
 
