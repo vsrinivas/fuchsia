@@ -34,13 +34,7 @@ impl State {
     pub fn initiate(self, update_sink: &mut UpdateSink, krc: u64) -> Self {
         match self {
             State::Idle { cfg, pmk } => {
-                let anonce = match cfg.nonce_rdr.next() {
-                    Ok(nonce) => nonce,
-                    Err(e) => {
-                        error!("error generating anonce: {}", e);
-                        return State::Idle { cfg, pmk };
-                    }
-                };
+                let anonce = cfg.nonce_rdr.next();
                 match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
                     Ok(()) => State::AwaitingMsg2 { anonce, cfg, pmk, last_krc: krc + 1 },
                     Err(e) => {

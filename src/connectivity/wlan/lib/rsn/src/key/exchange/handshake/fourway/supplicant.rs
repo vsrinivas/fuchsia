@@ -183,13 +183,7 @@ impl State {
         match self {
             State::AwaitingMsg1 { pmk, cfg } => match frame.message_number() {
                 fourway::MessageNumber::Message1 => {
-                    let snonce = match cfg.nonce_rdr.next() {
-                        Ok(nonce) => nonce,
-                        Err(e) => {
-                            error!("error: {}", e);
-                            return State::AwaitingMsg1 { pmk, cfg };
-                        }
-                    };
+                    let snonce = cfg.nonce_rdr.next();
                     match handle_message_1(&cfg, &pmk[..], &snonce[..], frame) {
                         Err(e) => {
                             error!("error: {}", e);

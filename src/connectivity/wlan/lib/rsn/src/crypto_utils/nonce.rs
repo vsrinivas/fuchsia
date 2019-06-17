@@ -4,10 +4,11 @@
 
 use crate::crypto_utils::prf;
 use bytes::{BufMut, BytesMut};
-use failure::{self, bail};
+use failure;
 use num::bigint::{BigUint, RandBigInt};
+use parking_lot::Mutex;
 use rand::OsRng;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use time;
 
 pub type Nonce = [u8; 32];
@@ -36,20 +37,16 @@ impl NonceReader {
         Ok(Arc::new(NonceReader { key_counter: Mutex::new(BigUint::from_bytes_le(&init[..])) }))
     }
 
-    pub fn next(&self) -> Result<Nonce, failure::Error> {
-        match self.key_counter.lock() {
-            Err(_) => bail!("NonceReader's lock is poisoned"),
-            Ok(mut counter) => {
-                *counter += 1u8;
+    pub fn next(&self) -> Nonce {
+        let mut counter = self.key_counter.lock();
+        *counter += 1u8;
 
-                // Expand nonce if it's less than 32 bytes.
-                let mut result = (*counter).to_bytes_le();
-                result.resize(32, 0);
-                let mut nonce = Nonce::default();
-                nonce.copy_from_slice(&result[..]);
-                Ok(nonce)
-            }
-        }
+        // Expand nonce if it's less than 32 bytes.
+        let mut result = (*counter).to_bytes_le();
+        result.resize(32, 0);
+        let mut nonce = Nonce::default();
+        nonce.copy_from_slice(&result[..]);
+        nonce
     }
 }
 
@@ -61,9 +58,9 @@ mod tests {
     fn test_next_nonce() {
         let addr: [u8; 6] = [1, 2, 3, 4, 5, 6];
         let rdr = NonceReader::new(&addr[..]).expect("error creating NonceReader");
-        let mut previous_nonce = rdr.next().expect("error generating nonce");
+        let mut previous_nonce = rdr.next();
         for _ in 0..300 {
-            let nonce = rdr.next().expect("error generating nonce");
+            let nonce = rdr.next();
             let nonce_int = BigUint::from_bytes_le(&nonce[..]);
             let previous_nonce_int = BigUint::from_bytes_le(&previous_nonce[..]);
             assert_eq!(nonce_int.gt(&previous_nonce_int), true);
