@@ -227,7 +227,8 @@ bool run_single_threaded_move_only_result() {
 BEGIN_TEST_CASE(single_threaded_executor_tests)
 RUN_TEST(running_tasks)
 RUN_TEST(suspending_and_resuming_tasks)
-RUN_TEST(abandoning_tasks)
+// Test disabled due to flakiness.  See FLK-260.
+// RUN_TEST(abandoning_tasks)
 RUN_TEST(run_single_threaded)
 RUN_TEST(run_single_threaded_move_only_result)
 END_TEST_CASE(single_threaded_executor_tests)
