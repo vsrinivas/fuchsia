@@ -22,8 +22,8 @@ template("trace_provider_library") {
       sdk_headers = []
     }
     sdk_headers += [
-      "trace-provider/handler.h",
-      "trace-provider/provider.h",
+      "lib/trace-provider/handler.h",
+      "lib/trace-provider/provider.h",
     ]
 
     # Header dependencies, not including the trace engine.
@@ -82,7 +82,7 @@ trace_provider_fdio_connect_source_deps = [
   "$zx/system/ulib/zx",
 ]
 
-trace_provider_fdio_connect_headers = [ "trace-provider/fdio_connect.h" ]
+trace_provider_fdio_connect_headers = [ "lib/trace-provider/fdio_connect.h" ]
 
 # The default version for the normal case.
 trace_provider_library("trace-provider") {
@@ -140,7 +140,7 @@ trace_provider_library("trace-provider-driver") {
 library("trace-handler") {
   sdk = "static"
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  sdk_headers = [ "trace-provider/handler.h" ]
+  sdk_headers = [ "lib/trace-provider/handler.h", ]
   public_deps = [
     # It is up to the client to choose which engine (shared, static),
     # just reference the headers here.

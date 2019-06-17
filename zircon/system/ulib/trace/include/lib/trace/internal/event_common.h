@@ -4,11 +4,11 @@
 
 // This file contains definitions common to userspace and DDK tracing.
 
-#ifndef ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_COMMON_H_
-#define ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_COMMON_H_
+#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_COMMON_H_
+#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_COMMON_H_
 
-#include <trace/event_args.h>
-#include <trace/internal/event_internal.h>
+#include <lib/trace/event_args.h>
+#include <lib/trace/internal/event_internal.h>
 
 // Returns true if tracing is enabled.
 //
@@ -366,4 +366,4 @@
 #define TRACE_BLOB(type, name, blob, blob_size) \
     TRACE_INTERNAL_BLOB((type), (name), (blob), (blob_size))
 
-#endif // ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_COMMON_H_
+#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_COMMON_H_

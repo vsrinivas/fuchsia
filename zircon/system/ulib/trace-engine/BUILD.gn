@@ -13,11 +13,11 @@
 
 trace_engine_headers = [
   # buffer_internal.h is not here on purpose.
-  "trace-engine/context.h",
-  "trace-engine/fields.h",
-  "trace-engine/handler.h",
-  "trace-engine/instrumentation.h",
-  "trace-engine/types.h",
+  "lib/trace-engine/context.h",
+  "lib/trace-engine/fields.h",
+  "lib/trace-engine/handler.h",
+  "lib/trace-engine/instrumentation.h",
+  "lib/trace-engine/types.h",
 ]
 
 trace_engine_header_deps = [
@@ -98,8 +98,8 @@ library("trace-engine-headers-for-reader") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   host = true
   sdk_headers = [
-    "trace-engine/fields.h",
-    "trace-engine/types.h",
+    "lib/trace-engine/fields.h",
+    "lib/trace-engine/types.h",
   ]
   sources = []
 }

@@ -78,8 +78,8 @@
 #include <inttypes.h>
 
 #include <fbl/auto_lock.h>
-#include <trace-engine/fields.h>
-#include <trace-engine/handler.h>
+#include <lib/trace-engine/fields.h>
+#include <lib/trace-engine/handler.h>
 
 #include <atomic>
 

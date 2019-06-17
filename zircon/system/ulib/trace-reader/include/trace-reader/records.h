@@ -18,7 +18,7 @@
 #include <fbl/macros.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <trace-engine/types.h>
+#include <lib/trace-engine/types.h>
 
 namespace trace {
 

@@ -10,10 +10,10 @@
 #include <zircon/assert.h>
 
 #include <fbl/mutex.h>
+#include <lib/trace-engine/buffer_internal.h>
+#include <lib/trace-engine/context.h>
+#include <lib/trace-engine/handler.h>
 #include <lib/zx/event.h>
-#include <trace-engine/buffer_internal.h>
-#include <trace-engine/context.h>
-#include <trace-engine/handler.h>
 
 // Two preprocessor symbols control what symbols we export in a .so:
 // EXPORT and EXPORT_NO_DDK:

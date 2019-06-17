@@ -1,12 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 //
-// The API for instrumenting drivers with trace events.
+// The API for instrumenting C and C++ programs with trace events.
 //
 // This header defines macros which are used to record trace information during
-// driver execution when tracing is enabled.  Each trace event macro records
+// program execution when tracing is enabled.  Each trace event macro records
 // an event of a given type together with the current time, a category, name,
 // and named arguments containing additional information about the event.
 //
@@ -20,10 +20,10 @@
 // For more control over how trace events are written, see <trace-engine/context.h>.
 //
 
-#ifndef DDK_TRACE_EVENT_H_
-#define DDK_TRACE_EVENT_H_
+#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_H_
+#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_H_
 
 // For now userspace and DDK tracing share the same API and implementation.
 #include <lib/trace/internal/event_common.h>
 
-#endif // DDK_TRACE_EVENT_H_
+#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_EVENT_H_

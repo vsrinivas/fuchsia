@@ -4,12 +4,12 @@
 
 #include <stdio.h>
 
-#include <lib/zx/process.h>
-#include <trace-provider/fdio_connect.h>
-#include <trace-provider/provider.h>
-
 #include <zircon/assert.h>
 #include <zircon/status.h>
+
+#include <lib/trace-provider/fdio_connect.h>
+#include <lib/trace-provider/provider.h>
+#include <lib/zx/process.h>
 
 trace_provider_t* trace_provider_create_with_name_fdio(
         async_dispatcher_t* dispatcher, const char* name) {

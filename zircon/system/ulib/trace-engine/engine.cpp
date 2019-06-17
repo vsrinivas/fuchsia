@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-engine/handler.h>
-
 #include <atomic>
 #include <stdio.h>
 #include <string.h>
@@ -16,8 +14,9 @@
 #include <fbl/mutex.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/trace-engine/handler.h>
+#include <lib/trace-engine/instrumentation.h>
 #include <lib/zx/event.h>
-#include <trace-engine/instrumentation.h>
 
 #include "context_impl.h"
 

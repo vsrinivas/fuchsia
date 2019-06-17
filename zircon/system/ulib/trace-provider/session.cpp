@@ -11,8 +11,8 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/vmar.h>
-#include <trace-provider/provider.h>
 
 #include <utility>
 

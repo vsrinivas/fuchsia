@@ -7,8 +7,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/trace-provider/fdio_connect.h>
 #include <lib/zx/channel.h>
-#include <trace-provider/fdio_connect.h>
 
 const char kServicePath[] = "/svc/fuchsia.tracing.provider.Registry";
 

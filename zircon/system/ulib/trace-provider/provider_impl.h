@@ -9,13 +9,13 @@
 #include <vector>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/trace-engine/handler.h>
+#include <lib/trace-engine/types.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#include <trace-engine/handler.h>
-#include <trace-engine/types.h>
-#include <trace-provider/provider.h>
 
 // Provide a definition for the opaque type declared in provider.h.
 struct trace_provider {};

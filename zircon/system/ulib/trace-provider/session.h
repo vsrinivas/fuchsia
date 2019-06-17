@@ -10,10 +10,10 @@
 #include <vector>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/trace-provider/handler.h>
+#include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <trace-provider/handler.h>
-#include <trace-provider/provider.h>
 
 // clang-format off
 // TODO(DX-1043): These are for the is-category-enabled lookup.

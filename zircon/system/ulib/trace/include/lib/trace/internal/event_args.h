@@ -5,16 +5,16 @@
 // Internal implementation of <trace/event_args.h>.
 // This is not part of the public API: use <trace/event_args.h> instead.
 
-#ifndef ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_ARGS_H_
-#define ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_ARGS_H_
 
 #include <assert.h>
 
 #include <zircon/compiler.h>
 
-#include <trace-engine/context.h>
-#include <trace-engine/types.h>
-#include <trace/internal/pairs_internal.h>
+#include <lib/trace-engine/context.h>
+#include <lib/trace-engine/types.h>
+#include <lib/trace/internal/pairs_internal.h>
 
 #define TRACE_INTERNAL_NUM_ARGS(variable_name) \
     (sizeof(variable_name) / sizeof((variable_name)[0]))
@@ -233,4 +233,4 @@ trace_arg_value_t MakeArgumentValue(const T& value) {
 
 #endif // __cplusplus
 
-#endif // ZIRCON_SYSTEM_ULIB_TRACE_INTERNAL_EVENT_ARGS_H_
+#endif // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_ARGS_H_

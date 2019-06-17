@@ -9,13 +9,13 @@ template("trace_library") {
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
 
     sdk_headers = [
-      "trace/internal/event_args.h",
-      "trace/internal/event_common.h",
-      "trace/internal/event_internal.h",
-      "trace/internal/pairs_internal.h",
-      "trace/event.h",
-      "trace/event_args.h",
-      "trace/observer.h",
+      "lib/trace/internal/event_args.h",
+      "lib/trace/internal/event_common.h",
+      "lib/trace/internal/event_internal.h",
+      "lib/trace/internal/pairs_internal.h",
+      "lib/trace/event.h",
+      "lib/trace/event_args.h",
+      "lib/trace/observer.h",
     ]
 
     # Header dependencies, not including the trace engine.
