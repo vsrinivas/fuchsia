@@ -64,6 +64,7 @@ sdk://pkg/async-cpp
 sdk://pkg/async-default
 sdk://pkg/async-loop
 sdk://pkg/async-loop-cpp
+sdk://pkg/async-testing
 sdk://pkg/fdio
 sdk://pkg/fidl
 sdk://pkg/fidl-async

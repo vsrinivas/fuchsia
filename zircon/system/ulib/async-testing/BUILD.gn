@@ -4,6 +4,7 @@
 
 library("async-testing") {
   sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/async-testing/dispatcher_stub.h",
     "lib/async-testing/test_loop.h",
