@@ -106,7 +106,7 @@ int zxc_ls(int argc, char** argv) {
         printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, dirn);
         return 0;
     }
-    while((de = readdir(dir)) != NULL) {
+    while((errno = 0, de = readdir(dir)) != NULL) {
         memset(&s, 0, sizeof(struct stat));
         if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
             snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
@@ -114,6 +114,9 @@ int zxc_ls(int argc, char** argv) {
         }
         printf("%s %2ju %8jd %s\n", modestr(s.st_mode), s.st_nlink,
                (intmax_t)s.st_size, de->d_name);
+    }
+    if (errno != 0) {
+        perror("readdir");
     }
     closedir(dir);
     return 0;
