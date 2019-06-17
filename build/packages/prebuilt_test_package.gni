@@ -49,11 +49,8 @@ template("prebuilt_test_package") {
         "fuchsia-pkg://fuchsia.com/${invoker.package}#meta/${test.component_name}.cmx",
       ]
 
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "environments",
-                             ])
+      forward_variables_from(invoker, [ "deps" ])
+      forward_variables_from(test, [ "environments" ])
     }
     _spec_labels += [ ":${_spec_name}" ]
   }
