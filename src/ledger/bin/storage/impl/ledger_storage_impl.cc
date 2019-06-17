@@ -11,8 +11,8 @@
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
 
-#include <algorithm>
 #include <iterator>
+#include <set>
 #include <string>
 
 #include "peridot/lib/base64url/base64url.h"
@@ -67,6 +67,21 @@ Status LedgerStorageImpl::Init() {
     return Status::INTERNAL_ERROR;
   }
   return Status::OK;
+}
+
+void LedgerStorageImpl::ListPages(
+    fit::function<void(Status, std::set<PageId>)> callback) {
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
+                                       "ledger_storage_list_pages");
+  std::set<PageId> page_ids;
+  ledger::GetDirectoryEntries(storage_dir_,
+                              [&page_ids](fxl::StringView encoded_page_id) {
+                                if (encoded_page_id != kStagingDirName) {
+                                  page_ids.insert(GetId(encoded_page_id));
+                                }
+                                return true;
+                              });
+  timed_callback(Status::OK, std::move(page_ids));
 }
 
 void LedgerStorageImpl::CreatePageStorage(
@@ -136,16 +151,6 @@ void LedgerStorageImpl::DeletePageStorage(
         }
         callback(Status::OK);
       });
-}
-
-std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
-  std::vector<PageId> local_pages;
-  ledger::GetDirectoryEntries(
-      storage_dir_, [&local_pages](fxl::StringView encoded_page_id) {
-        local_pages.emplace_back(GetId(encoded_page_id));
-        return true;
-      });
-  return local_pages;
 }
 
 void LedgerStorageImpl::InitializePageStorage(

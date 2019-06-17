@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include <memory>
+#include <set>
 
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -20,6 +21,10 @@ class LedgerStorage {
  public:
   LedgerStorage() {}
   virtual ~LedgerStorage() {}
+
+  // Finds the PageIds of pages that occupy storage on disk.
+  virtual void ListPages(
+      fit::function<void(Status, std::set<PageId>)> callback) = 0;
 
   // Creates a new |PageStorage| for the Page with the given |page_id|.
   virtual void CreatePageStorage(

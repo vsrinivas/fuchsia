@@ -8,6 +8,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
+#include <set>
+
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
@@ -32,6 +34,8 @@ class LedgerStorageImpl : public LedgerStorage {
   Status Init();
 
   // LedgerStorage:
+  void ListPages(
+      fit::function<void(Status, std::set<PageId>)> callback) override;
   void CreatePageStorage(
       PageId page_id,
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback)
@@ -43,9 +47,6 @@ class LedgerStorageImpl : public LedgerStorage {
 
   void DeletePageStorage(PageIdView page_id,
                          fit::function<void(Status)> callback) override;
-
-  // For debugging only.
-  std::vector<PageId> ListLocalPages();
 
  private:
   // Creates and returns through the callback, an initialized |PageStorageImpl|

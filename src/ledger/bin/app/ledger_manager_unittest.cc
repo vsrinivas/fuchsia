@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -93,6 +94,11 @@ class FakeLedgerStorage : public storage::LedgerStorage,
   explicit FakeLedgerStorage(Environment* environment)
       : environment_(environment) {}
   ~FakeLedgerStorage() override {}
+
+  void ListPages(fit::function<void(storage::Status, std::set<storage::PageId>)>
+                     callback) override {
+    FXL_NOTREACHED() << "Maybe implement this later on if needed?";
+  }
 
   void CreatePageStorage(
       storage::PageId page_id,
