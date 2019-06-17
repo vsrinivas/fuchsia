@@ -399,11 +399,11 @@ The simple loader service maps requests into filesystem access:
    published becomes a file in that subdirectory with the VMO's object name
  * *object* names are searched for as files in system `lib/` directories.
  * *load configuration* strings are taken as a subdirectory name,
-   optionally preceded by a `!` character.  Subdirectories by that name in
+   optionally followed by a `!` character.  Subdirectories by that name in
    system `lib/` directories searched are searched before `lib/` itself.
-   If there was a `!` prefix, *only* those subdirectories are searched.
+   If there was a `!` suffix, *only* those subdirectories are searched.
    For example, sanitizer runtimes use `asan` because that instrumentation
-   is compatible with uninstrumented library code, but `!dfsan` because
+   is compatible with uninstrumented library code, but `dfsan!` because
    that instrumentation requires that all code in the process be
    instrumented.
 
