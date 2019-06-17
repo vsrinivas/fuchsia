@@ -112,6 +112,7 @@ void DirectoryConnection::Link(::std::string src, zx::handle dst_parent_token,
 void DirectoryConnection::Watch(uint32_t mask, uint32_t options,
                                 zx::channel watcher, WatchCallback callback) {
   // TODO: Implement watch.
+  callback(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DirectoryConnection::SendOnOpenEvent(zx_status_t status) {

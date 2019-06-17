@@ -283,6 +283,16 @@ TEST_F(PseudoDirConnection, ReadDirSimple) {
   AssertReadDirents(ptr, kCommonCapacity, expected_dirents);
 }
 
+TEST_F(PseudoDirConnection, WatchDirNotSupported) {
+  auto ptr = dir_.Serve();
+
+  zx::channel t1, t2;
+  zx::channel::create(0, &t1, &t2);
+  zx_status_t status = 0;
+  ptr->Watch(0, 0, std::move(t2), &status);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+}
+
 TEST_F(PseudoDirConnection, ReadDirOnEmptyDirectory) {
   auto ptr = dir_.Serve();
 
