@@ -48,7 +48,7 @@ sleep 3
   # Each tap will be 33.5ms apart, drifting 0.166ms against regular 60 fps
   # vsync interval. 100 taps span the entire vsync interval 1 time at 100
   # equidistant points.
-  /bin/input --tap_event_count=100 --duration=3350 tap 500 500
+  /bin/input tap 500 500 --tap_event_count=100 --duration=3350
 ) &
 
 # Start tracing.
