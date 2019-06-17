@@ -121,19 +121,19 @@
                          "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
 
 #define ASSERT_OK(val1, ...)                                                                       \
-    _ASSERT_VAR_STATUS(_EQ, val1, ZX_OK, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
+    _ASSERT_VAR_STATUS(_EQ, ZX_OK, val1, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
                        ##__VA_ARGS__)
 
 #define EXPECT_OK(val1, ...)                                                                       \
-    _ASSERT_VAR_STATUS(_EQ, val1, ZX_OK, false, __FILE__, __LINE__,                                \
+    _ASSERT_VAR_STATUS(_EQ, ZX_OK, val1, false, __FILE__, __LINE__,                                \
                        "Expected " #val1 " is ZX_OK.", ##__VA_ARGS__)
 
 #define ASSERT_NOT_OK(val1, ...)                                                                   \
-    _ASSERT_VAR_STATUS(_NE, val1, ZX_OK, true, __FILE__, __LINE__,                                 \
+    _ASSERT_VAR_STATUS(_NE, ZX_OK, val1, true, __FILE__, __LINE__,                                 \
                        "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
 
 #define EXPECT_NOT_OK(val1, ...)                                                                   \
-    _ASSERT_VAR_STATUS(_NE, val1, ZX_OK, false, __FILE__, __LINE__,                                \
+    _ASSERT_VAR_STATUS(_NE, ZX_OK, val1, false, __FILE__, __LINE__,                                \
                        "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
 
 #define ASSERT_BYTES_EQ(val1, val2, size, ...)                                                     \
