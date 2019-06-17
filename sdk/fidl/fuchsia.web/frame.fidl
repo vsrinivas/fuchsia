@@ -6,7 +6,9 @@ library fuchsia.web;
 
 using fuchsia.media.sessions;
 using fuchsia.mem;
+using fuchsia.net.http;
 using fuchsia.ui.views;
+using zx;
 
 using Url = string;
 
@@ -152,6 +154,22 @@ protocol Frame {
     /// (e.g. keyboard, mouse, touch) on a Frame.
     /// Input is enabled by default.
     SetEnableInput(bool enable_input);
+
+    /// Sets additional headers on every subsequent network request, with the
+    /// exception of the first request started via the LoadUrl() method in the
+    /// NavigationController protocol.
+    /// Must be called before a page is loaded on the Frame. Calling this
+    /// method after a page is loaded is invalid behavior and will close the
+    /// Frame channel.
+    [Transitional]
+    SetAdditionalHeadersProvider(AdditionalHeadersProvider? provider);
+};
+
+protocol AdditionalHeadersProvider {
+    /// Returns a set of |headers| that will stay valid until |expiry|. Will be
+    /// called when the first network request is started and again every time
+    /// |expiry| elapses.
+    GetHeaders() -> (vector<fuchsia.net.http.Header> headers, zx.time expiry);
 };
 
 table WebMessage {
