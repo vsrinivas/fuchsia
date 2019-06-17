@@ -36,7 +36,7 @@
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
-#include "garnet/lib/ui/yuv/yuv.h"
+#include "src/ui/lib/yuv/yuv.h"
 
 namespace {
 

@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-#include "garnet/lib/ui/yuv/yuv.h"
+#include "src/ui/lib/yuv/yuv.h"
 
 namespace yuv_to_image_pipe {
 

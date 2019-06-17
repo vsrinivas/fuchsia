@@ -7,6 +7,7 @@ source_set("yuv") {
     "yuv.cc",
     "yuv.h",
   ]
+
   cflags = [
     # Always optimize regardless of --release or debug.
     "-O3",

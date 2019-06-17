@@ -17,7 +17,6 @@ executable("yuv_to_image_pipe") {
   ]
 
   deps = [
-    "//garnet/lib/ui/yuv",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
@@ -25,6 +24,7 @@ executable("yuv_to_image_pipe") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/images/cpp",
+    "//src/ui/lib/yuv",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",

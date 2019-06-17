@@ -4,9 +4,10 @@
 
 #include "lib/ui/gfx/util/image_formats.h"
 
-#include "garnet/lib/ui/yuv/yuv.h"
-#include "lib/images/cpp/images.h"
+#include <lib/images/cpp/images.h>
+
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/yuv/yuv.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -123,7 +124,8 @@ void ConvertYv12ToBgra(uint8_t* out_ptr, const uint8_t* in_ptr, uint32_t width,
   // in_stride / 2 (at least until we encounter any "YV12" where that doesn't
   // work).
   const uint8_t* y_base = in_ptr;
-  const uint8_t* u_base = in_ptr + height * in_stride + height / 2 * in_stride / 2;
+  const uint8_t* u_base =
+      in_ptr + height * in_stride + height / 2 * in_stride / 2;
   const uint8_t* v_base = in_ptr + height * in_stride;
 
   for (uint32_t y = 0; y < height; y += 2) {
@@ -181,8 +183,8 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
       if (image_info.transform == fuchsia::images::Transform::FLIP_HORIZONTAL) {
         return [](void* out, const void* in, uint32_t width, uint32_t height) {
           ConvertYuy2ToBgraAndMirror(reinterpret_cast<uint8_t*>(out),
-                                     reinterpret_cast<const uint8_t*>(in), width,
-                                     height);
+                                     reinterpret_cast<const uint8_t*>(in),
+                                     width, height);
         };
       } else {
         FXL_DCHECK(bits_per_pixel % 8 == 0);

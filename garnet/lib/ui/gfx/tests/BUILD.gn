@@ -135,7 +135,6 @@ executable("pixeltests") {
   include_dirs = [ "//src/ui/lib/escher" ]
   deps = [
     ":testing_deps",
-    "//garnet/lib/ui/yuv:yuv",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//garnet/testing/views",
@@ -150,6 +149,7 @@ executable("pixeltests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/lib/yuv",
     "//zircon/public/lib/async-cpp",
   ]
 }

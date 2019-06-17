@@ -58,8 +58,8 @@ source_set("gfx_always_optimized") {
     "//src/ui/lib/escher",
   ]
   deps = [
-    "//garnet/lib/ui/yuv",
     "//sdk/lib/images/cpp",
+    "//src/ui/lib/yuv",
   ]
 }
 
