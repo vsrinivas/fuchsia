@@ -105,6 +105,14 @@ protocol Engine {
 };
 
 protocol EditTransaction {
+    /// Return an iterator over all dynamic (editable) rewrite rules. The
+    /// iterator will reflect any changes made to the rewrite rules so far in
+    /// this transaction.
+    ///
+    /// Arguments:
+    /// |iterator| is a request for an iterator.
+    ListDynamic(request<RuleIterator> iterator);
+
     /// Removes all dynamically configured rewrite rules, leaving only any
     /// statically configured rules.
     ResetAll();

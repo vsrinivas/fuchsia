@@ -14,6 +14,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    fuchsia_url_rewrite::Rule,
     fuchsia_zircon::Status,
     futures::prelude::*,
     parking_lot::RwLock,
@@ -59,21 +60,10 @@ where
         Ok(())
     }
 
-    pub(self) fn serve_list(&mut self, mut stream: RuleIteratorRequestStream) {
-        let mut rules: Vec<_> = self.state.read().list().map(|rule| rule.clone().into()).collect();
+    pub(self) fn serve_list(&mut self, stream: RuleIteratorRequestStream) {
+        let rules = self.state.read().list().cloned().collect();
 
-        fasync::spawn(
-            async move {
-                let mut iter = rules.iter_mut();
-                while let Some(request) = await!(stream.try_next())? {
-                    let RuleIteratorRequest::Next { responder } = request;
-
-                    responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
-                }
-                Ok(())
-            }
-                .unwrap_or_else(|e: Error| fx_log_err!("while serving rewrite rule list: {:?}", e)),
-        )
+        Self::serve_rule_iterator(rules, stream);
     }
 
     pub(self) fn serve_edit_transaction(&mut self, mut stream: EditTransactionRequestStream) {
@@ -85,6 +75,14 @@ where
             async move {
                 while let Some(request) = await!(stream.try_next())? {
                     match request {
+                        EditTransactionRequest::ListDynamic {
+                            iterator,
+                            control_handle: _control_handle,
+                        } => {
+                            let rules = transaction.list_dynamic().cloned().collect();
+                            let iterator = iterator.into_stream()?;
+                            Self::serve_rule_iterator(rules, iterator);
+                        }
                         EditTransactionRequest::ResetAll { control_handle: _control_handle } => {
                             transaction.reset_all();
                         }
@@ -143,6 +141,25 @@ where
                 }),
         )
     }
+
+    fn serve_rule_iterator(rules: Vec<Rule>, mut stream: RuleIteratorRequestStream) {
+        let mut rules = rules.into_iter().map(|rule| rule.into()).collect::<Vec<_>>();
+
+        fasync::spawn(
+            async move {
+                let mut iter = rules.iter_mut();
+                while let Some(request) = await!(stream.try_next())? {
+                    let RuleIteratorRequest::Next { responder } = request;
+
+                    responder.send(&mut iter.by_ref().take(LIST_CHUNK_SIZE))?;
+                }
+                Ok(())
+            }
+                .unwrap_or_else(|e: fidl::Error| {
+                    fx_log_err!("while serving rewrite rule iterator: {:?}", e)
+                }),
+        );
+    }
 }
 
 #[cfg(test)]
@@ -150,8 +167,10 @@ mod tests {
     use {
         super::*,
         crate::rewrite_manager::{tests::make_rule_config, RewriteManagerBuilder, Transaction},
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_pkg_rewrite::{EditTransactionMarker, RuleIteratorMarker},
+        fidl::endpoints::{create_proxy, create_proxy_and_stream},
+        fidl_fuchsia_pkg_rewrite::{
+            EditTransactionMarker, EditTransactionProxy, RuleIteratorMarker,
+        },
         futures::future::BoxFuture,
         parking_lot::Mutex,
     };
@@ -205,28 +224,57 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Clone, Default)]
+    struct UnreachableAmberSourceSelector;
+
+    impl AmberSourceSelector for UnreachableAmberSourceSelector {
+        fn disable_all_sources(&self) -> BoxFuture<'_, ()> {
+            unreachable!();
+        }
+        fn enable_source_exclusive(&self, _id: &str) -> BoxFuture<'_, ()> {
+            unreachable!();
+        }
+    }
+
+    async fn collect_iterator<F, I>(mut next: impl FnMut() -> F) -> Vec<I>
+    where
+        F: Future<Output = Result<Vec<I>, fidl::Error>>,
+    {
+        let mut res = Vec::new();
+        loop {
+            let more = await!(next()).unwrap();
+            if more.is_empty() {
+                break;
+            }
+            res.extend(more);
+        }
+        assert!(await!(next()).unwrap().is_empty());
+        res
+    }
+
     async fn verify_list_call(
         state: Arc<RwLock<RewriteManager>>,
         expected: Vec<fidl_fuchsia_pkg_rewrite::Rule>,
     ) {
-        let (client, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
-        let mut amber = FakeAmberSourceSelector::default();
+        let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
+        RewriteService::new(state, UnreachableAmberSourceSelector).serve_list(request_stream);
 
-        RewriteService::new(state, amber.clone()).serve_list(request_stream);
-
-        let mut rules = Vec::new();
-        loop {
-            let mut more = await!(client.next()).unwrap();
-            if more.is_empty() {
-                break;
-            }
-            rules.append(&mut more);
-        }
-
+        let rules = await!(collect_iterator(|| iterator.next()));
         assert_eq!(rules, expected);
+    }
 
-        assert!(await!(client.next()).unwrap().is_empty());
-        assert_eq!(amber.take_events(), vec![]);
+    fn transaction_list_dynamic_rules(
+        client: &EditTransactionProxy,
+    ) -> impl Future<Output = Vec<Rule>> {
+        let (iterator, request_stream) = create_proxy::<RuleIteratorMarker>().unwrap();
+        client.list_dynamic(request_stream).unwrap();
+
+        async move {
+            await!(collect_iterator(|| iterator.next()))
+                .into_iter()
+                .map(|rule| rule.try_into().unwrap())
+                .collect::<Vec<Rule>>()
+        }
     }
 
     #[fasync::run_until_stalled(test)]
@@ -261,17 +309,53 @@ mod tests {
         let state = Arc::new(RwLock::new(
             RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
         ));
-        let mut amber = FakeAmberSourceSelector::default();
-        let mut service = RewriteService::new(state.clone(), amber.clone());
+        let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
         service.serve_edit_transaction(request_stream);
 
         client.reset_all().unwrap();
         assert_yields_status!(client.commit(), Status::OK);
-        assert_eq!(amber.take_events(), vec![]);
 
         assert_eq!(state.read().transaction(), Transaction::new(vec![], 1));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_transaction_list_dynamic() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let node = inspector.root().create_child("rewrite-manager");
+        let dynamic_rules = vec![
+            rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
+            rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
+        ];
+        let dynamic_config = make_rule_config(dynamic_rules.clone());
+        let static_rules = vec![rule!("fuchsia.com" => "static.fuchsia.com", "/" => "/")];
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config)
+                .unwrap()
+                .static_rules(static_rules)
+                .build(),
+        ));
+        let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+
+        let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
+        service.serve_edit_transaction(request_stream);
+
+        // The transaction should list all dynamic rules.
+        assert_eq!(await!(transaction_list_dynamic_rules(&client)), dynamic_rules.clone());
+
+        // Start a list call, but don't drain it yet.
+        let pending_list = transaction_list_dynamic_rules(&client);
+
+        // Remove all dynamic rules and ensure the transaction lists no rules.
+        client.reset_all().unwrap();
+        assert_eq!(await!(transaction_list_dynamic_rules(&client)), vec![]);
+
+        assert_yields_status!(client.commit(), Status::OK);
+
+        // Ensure the list call from earlier lists the dynamic rules available at the time the
+        // iterator was created.
+        assert_eq!(await!(pending_list), dynamic_rules);
     }
 
     #[fasync::run_until_stalled(test)]

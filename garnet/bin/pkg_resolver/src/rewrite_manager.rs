@@ -170,8 +170,9 @@ impl Transaction {
         self.dynamic_rules.push_front(rule);
     }
 
-    #[cfg(test)]
-    fn list_dynamic<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
+    /// Return an iterator through all dynamic rewrite rules in the order they should be applied to
+    /// incoming `fuchsia-pkg://` URLs.
+    pub fn list_dynamic<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
         self.dynamic_rules.iter()
     }
 }
