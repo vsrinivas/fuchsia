@@ -51,10 +51,10 @@ library("trace-vthread-with-static-engine") {
   sources = []
   public_deps = [
     # <trace-vthread/internal/event_vthread.h> has #include <trace/event_args.h>.
-    "$zx/system/ulib/trace:headers",
+    "$zx/system/ulib/trace:trace-with-static-engine.headers",
 
     # <trace-vthread/internal/event_vthread.h> has #include <trace-engine/instrumentation.h>.
-    "$zx/system/ulib/trace-engine:headers",
+    "$zx/system/ulib/trace-engine:trace-engine-static.headers",
   ]
   deps = [
     ":common",
