@@ -445,7 +445,7 @@ fn impl_block<D: DataExt>(
     //     }
     //
     //
-    //     error[E0283]: type annotations required: cannot resolve `std::marker::PhantomData<&'a u8>: zerocopy::Unaligned`
+    //     error[E0283]: type annotations required: cannot resolve `core::marker::PhantomData<&'a u8>: zerocopy::Unaligned`
     //      --> src/main.rs:6:10
     //       |
     //     6 | #[derive(Unaligned)]
@@ -540,7 +540,7 @@ fn impl_block<D: DataExt>(
         let types = non_type_param_field_types.map(|ty| quote!(#implements_type_tokens<#ty>));
         quote!(
             // A type with a type parameter that must implement #trait_ident
-            struct #implements_type_ident<F: ?Sized + zerocopy::#trait_ident>(::std::marker::PhantomData<F>);
+            struct #implements_type_ident<F: ?Sized + zerocopy::#trait_ident>(::core::marker::PhantomData<F>);
             // For each field type, an instantiation that won't type check if
             // that type doesn't implement #trait_ident
             #(let _: #types;)*
@@ -551,7 +551,7 @@ fn impl_block<D: DataExt>(
 
     let size_check_body = if require_size_check && !field_types.is_empty() {
         quote!(
-            const HAS_PADDING: bool = std::mem::size_of::<#type_ident>() != #(std::mem::size_of::<#field_types>())+*;
+            const HAS_PADDING: bool = core::mem::size_of::<#type_ident>() != #(core::mem::size_of::<#field_types>())+*;
             let _: [(); 1/(1 - HAS_PADDING as usize)];
         )
     } else {

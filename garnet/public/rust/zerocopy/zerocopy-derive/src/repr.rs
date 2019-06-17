@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::{self, Display, Formatter};
+use core::fmt::{self, Display, Formatter};
 
 use proc_macro2::Span;
 use syn::{Attribute, DeriveInput, Error, Lit, Meta, NestedMeta};
@@ -115,19 +115,19 @@ macro_rules! define_kind_specific_repr {
         // Define a stable ordering so we can canonicalize lists of reprs. The
         // ordering itself doesn't matter so long as it's stable.
         impl PartialOrd for $repr_name {
-            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
                 Some(self.cmp(other))
             }
         }
 
         impl Ord for $repr_name {
-            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            fn cmp(&self, other: &Self) -> core::cmp::Ordering {
                 format!("{:?}", self).cmp(&format!("{:?}", other))
             }
         }
 
-        impl std::fmt::Display for $repr_name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        impl core::fmt::Display for $repr_name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 match self {
                     $($repr_name::$repr_variant => Repr::$repr_variant,)*
                     $repr_name::Align(u) => Repr::Align(*u),
