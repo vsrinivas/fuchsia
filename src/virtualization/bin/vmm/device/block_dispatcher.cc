@@ -260,7 +260,7 @@ void CreateVolatileWriteBlockDispatcher(
     size_t vmo_size, std::unique_ptr<BlockDispatcher> base,
     NestedBlockDispatcherCallback callback) {
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(vmo_size, ZX_VMO_NON_RESIZABLE, &vmo);
+  zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
   FXL_CHECK(status == ZX_OK) << "Failed to create VMO " << status;
 
   const char name[] = "volatile-block";

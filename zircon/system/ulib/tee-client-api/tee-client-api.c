@@ -658,7 +658,7 @@ TEEC_Result TEEC_AllocateSharedMemory(TEEC_Context* context, TEEC_SharedMemory* 
     size_t size = sharedMem->size;
 
     zx_handle_t vmo = ZX_HANDLE_INVALID;
-    zx_status_t status = zx_vmo_create(size, ZX_VMO_NON_RESIZABLE, &vmo);
+    zx_status_t status = zx_vmo_create(size, 0, &vmo);
     if (status != ZX_OK) {
         return convert_status_to_result(status);
     }

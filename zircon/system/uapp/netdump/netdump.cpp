@@ -476,7 +476,7 @@ int main(int argc, const char** argv) {
     unsigned count = fifos.rx_depth / 2;
     zx::vmo iovmo;
     // allocate shareable ethernet buffer data heap
-    if ((status = zx::vmo::create(count * BUFSIZE, ZX_VMO_NON_RESIZABLE, &iovmo)) < 0) {
+    if ((status = zx::vmo::create(count * BUFSIZE, 0, &iovmo)) < 0) {
         return -1;
     }
 

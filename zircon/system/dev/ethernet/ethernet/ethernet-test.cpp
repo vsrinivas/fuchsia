@@ -162,7 +162,7 @@ public:
         rx_fifo_depth_ = fifos.rx_depth;
         tx_fifo_depth_ = fifos.tx_depth;
         EXPECT_TRUE(rx_fifo_.is_valid());
-        ASSERT_OK(zx::vmo::create(2 * sizeof(ethmac_netbuf_t), ZX_VMO_NON_RESIZABLE, &buf_));
+        ASSERT_OK(zx::vmo::create(2 * sizeof(ethmac_netbuf_t), 0, &buf_));
         ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetIOBuffer(FidlChannel(),
                                                               buf_.get(), &out_status));
         ASSERT_OK(out_status);
@@ -303,7 +303,7 @@ TEST(EthernetTest, SetIOBufferTest) {
                                                             &out_status) != ZX_OK);
     EXPECT_TRUE(out_status != ZX_OK);
     zx::vmo buf;
-    ASSERT_OK(zx::vmo::create(2 * sizeof(ethmac_netbuf_t), ZX_VMO_NON_RESIZABLE, &buf));
+    ASSERT_OK(zx::vmo::create(2 * sizeof(ethmac_netbuf_t), 0, &buf));
     ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetIOBuffer(test.FidlChannel(),
                                                           buf.get(), &out_status));
     ASSERT_OK(out_status);

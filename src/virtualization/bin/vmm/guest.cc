@@ -76,7 +76,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
     zx::vmo vmo;
     switch (spec.policy) {
       case MemoryPolicy::GUEST_CACHED:
-        status = zx::vmo::create(spec.size, ZX_VMO_NON_RESIZABLE, &vmo);
+        status = zx::vmo::create(spec.size, 0, &vmo);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create VMO " << status;
           return status;

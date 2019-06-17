@@ -12,7 +12,7 @@ namespace {
 
 TEST(VirtioQueueTest, VirtioChainMove) {
   zx::vmo vmo;
-  ASSERT_EQ(zx::vmo::create(4 * PAGE_SIZE, ZX_VMO_NON_RESIZABLE, &vmo), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(4 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
   PhysMem phys_mem;
   ASSERT_EQ(phys_mem.Init(std::move(vmo)), ZX_OK);

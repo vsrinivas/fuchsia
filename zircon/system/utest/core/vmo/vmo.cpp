@@ -427,7 +427,7 @@ bool vmo_info_test() {
 
     // Create a non-resizeable VMO, query the INFO on it
     // and dump it.
-    status = zx::vmo::create(len, ZX_VMO_NON_RESIZABLE, &vmo);
+    status = zx::vmo::create(len, 0, &vmo);
     EXPECT_EQ(ZX_OK, status, "vm_info_test: vmo_create");
 
     status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);

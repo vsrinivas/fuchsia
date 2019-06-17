@@ -64,7 +64,7 @@ class FifoHolder {
     vmo_size_ = 2u * buf_config_.nbufs * buf_config_.buff_size;
 
     zx_status_t status =
-        zx::vmo::create(vmo_size_, ZX_VMO_NON_RESIZABLE, &buf_);
+        zx::vmo::create(vmo_size_, 0, &buf_);
     if (status != ZX_OK) {
       fprintf(stderr, "could not create a vmo of size %" PRIu64 ": %s\n",
               vmo_size_, zx_status_get_string(status));

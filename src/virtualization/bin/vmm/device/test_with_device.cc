@@ -52,7 +52,7 @@ zx_status_t TestWithDevice::LaunchDevice(
 
   // Setup guest physical memory.
   zx::vmo vmo;
-  status = zx::vmo::create(phys_mem_size, ZX_VMO_NON_RESIZABLE, &vmo);
+  status = zx::vmo::create(phys_mem_size, 0, &vmo);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create VMO " << status;
     return status;

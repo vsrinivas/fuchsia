@@ -1779,7 +1779,7 @@ bool no_pager_test() {
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
     zx::vmo vmo;
-    ASSERT_EQ(pager.create_vmo(ZX_VMO_NON_RESIZABLE, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+    ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
 
     zx::vmo uni_clone;
     ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, ZX_PAGE_SIZE, &uni_clone), ZX_OK);

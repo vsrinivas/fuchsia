@@ -117,7 +117,7 @@ class VirtioNetTest : public TestWithDevice,
         RunLoopWithTimeoutOrUntil([this] { return (rx_ && tx_); }, zx::sec(5)));
 
     size_t vmo_size = kVmoSize;
-    status = zx::vmo::create(vmo_size, ZX_VMO_NON_RESIZABLE, &vmo_);
+    status = zx::vmo::create(vmo_size, 0, &vmo_);
     ASSERT_EQ(status, ZX_OK);
 
     zx::vmo vmo_dup;

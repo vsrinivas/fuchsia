@@ -24,7 +24,7 @@ zx_status_t zx_pager_create_vmo(zx_handle_t pager,
 ## DESCRIPTION
 
 Creates a VMO owned by a pager object. *size* will be rounded up to the next page size
-boundary, and *options* must be zero or **ZX_VMO_NON_RESIZABLE**.
+boundary, and *options* must be zero or **ZX_VMO_RESIZABLE**.
 
 On success, the returned vmo has the same rights as a vmo created with [`zx_vmo_create()`], as well
 as having the same behavior with respect to **ZX_VMO_ZERO_CHILDREN**. Syscalls which operate on VMOs
@@ -78,7 +78,7 @@ If *pager* is closed, then no more packets will be delivered to *port* (includin
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS** *out* is an invalid pointer or NULL, or *options* is any value other than
-0 or **ZX_VMO_NON_RESIZABLE**.
+0 or **ZX_VMO_RESIZABLE**.
 
 **ZX_ERR_BAD_HANDLE** *pager* or *port* is not a valid handle.
 

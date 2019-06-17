@@ -48,7 +48,7 @@ void MockNetstack::AddEthernetDevice(
   rx_ = std::move(fifos->rx);
   tx_ = std::move(fifos->tx);
 
-  status = zx::vmo::create(kVmoSize, ZX_VMO_NON_RESIZABLE, &vmo_);
+  status = zx::vmo::create(kVmoSize, 0, &vmo_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create vmo: " << status;
     return;

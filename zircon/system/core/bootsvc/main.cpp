@@ -82,7 +82,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs, zx::
 
     // Copy boot arguments into VMO.
     zx::vmo args_vmo;
-    status = zx::vmo::create(buf.size(), ZX_VMO_NON_RESIZABLE, &args_vmo);
+    status = zx::vmo::create(buf.size(), 0, &args_vmo);
     if (status != ZX_OK) {
         return status;
     }

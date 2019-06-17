@@ -1825,7 +1825,7 @@ bool resize_nonresizable_vmo() {
 
     zx::vmo vmo;
 
-    ASSERT_EQ(pager.create_vmo(ZX_VMO_NON_RESIZABLE, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
+    ASSERT_EQ(pager.create_vmo(0, port, 0, ZX_PAGE_SIZE, &vmo), ZX_OK);
 
     ASSERT_EQ(vmo.set_size(2 * ZX_PAGE_SIZE), ZX_ERR_UNAVAILABLE);
 
