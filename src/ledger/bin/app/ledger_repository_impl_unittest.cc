@@ -294,5 +294,64 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
               HierarchyMatcher({first_ledger_name, second_ledger_name}));
 }
 
+// Verifies that closing a ledger repository closes the LedgerRepository
+// connections once all Ledger connections are themselves closed.
+TEST_F(LedgerRepositoryImplTest, Close) {
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr2;
+  ledger::LedgerPtr ledger_ptr;
+
+  repository_->BindRepository(ledger_repository_ptr1.NewRequest());
+  repository_->BindRepository(ledger_repository_ptr2.NewRequest());
+
+  bool on_empty_called;
+  repository_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  bool ptr1_closed;
+  zx_status_t ptr1_closed_status;
+  ledger_repository_ptr1.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+  bool ptr2_closed;
+  zx_status_t ptr2_closed_status;
+  ledger_repository_ptr2.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
+  bool ledger_closed;
+  zx_status_t ledger_closed_status;
+  ledger_ptr.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&ledger_closed), &ledger_closed_status));
+
+  ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"),
+                                    ledger_ptr.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(ptr1_closed);
+  EXPECT_FALSE(ptr2_closed);
+  EXPECT_FALSE(ledger_closed);
+
+  ledger_repository_ptr2->Close();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_called);
+  EXPECT_FALSE(ptr1_closed);
+  EXPECT_FALSE(ptr2_closed);
+  EXPECT_FALSE(ledger_closed);
+
+  ledger_ptr.Unbind();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(on_empty_called);
+  EXPECT_FALSE(ptr1_closed);
+  EXPECT_FALSE(ptr2_closed);
+
+  // Delete the repository, as it would be done by LedgerRepositoryFactory when
+  // the |on_empty| callback is called.
+  repository_.reset();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(ptr1_closed);
+  EXPECT_TRUE(ptr2_closed);
+
+  EXPECT_EQ(ZX_OK, ptr1_closed_status);
+  EXPECT_EQ(ZX_OK, ptr2_closed_status);
+}
+
 }  // namespace
 }  // namespace ledger

@@ -135,6 +135,20 @@ fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
   };
 }
 
+fit::function<void(fit::function<void()>)> ResetLedgerRepository(
+    fuchsia::ledger::internal::LedgerRepositoryPtr* const ledger_repository) {
+  return [ledger_repository](fit::function<void()> cont) {
+    ledger_repository->set_error_handler(
+        [cont = std::move(cont)](zx_status_t status) {
+          if (status != ZX_OK) {
+            FXL_LOG(ERROR) << "LedgerRepository disconnected with epitaph: "
+                           << zx_status_get_string(status) << std::endl;
+          }
+          cont();
+        });
+    (*ledger_repository)->Close();
+  };
+}
 }  // namespace
 
 class SessionmgrImpl::PresentationProviderImpl : public PresentationProvider {
@@ -363,7 +377,7 @@ void SessionmgrImpl::InitializeLedger(
                    << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
   });
-  AtEnd(Reset(&ledger_repository_));
+  AtEnd(ResetLedgerRepository(&ledger_repository_));
 
   ledger_client_ = std::make_unique<LedgerClient>(
       ledger_repository_.get(), kAppId, [this](zx_status_t status) {

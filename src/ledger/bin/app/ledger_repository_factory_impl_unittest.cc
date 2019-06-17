@@ -204,7 +204,9 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   EXPECT_THAT(top_hierarchy, third_inspection_top_level_match);
 }
 
-TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailable) {
+// Verifies that closing the filesystem closes the LedgerRepository connection.
+// There may be errors, but this test should not crash the binary.
+TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailableNoCrash) {
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs =
       std::make_unique<scoped_tmpfs::ScopedTmpFS>();
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
@@ -235,6 +237,57 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailable) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(channel_closed);
+}
+
+// Verifies that closing a ledger repository closes the LedgerRepository
+// connections once all Ledger connections are themselves closed. This test is
+// reproduced here due to the interaction between |LedgerRepositoryImpl| and
+// |LedgerRepositoryFactoryImpl|.
+TEST_F(LedgerRepositoryFactoryImplTest, CloseLedgerRepository) {
+  std::string repository_directory = "directory";
+  ASSERT_TRUE(CreateDirectory(repository_directory));
+
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
+  ASSERT_TRUE(CallGetRepository(repository_directory, &ledger_repository_ptr1));
+
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr2;
+  ASSERT_TRUE(CallGetRepository(repository_directory, &ledger_repository_ptr2));
+
+  ledger::LedgerPtr ledger_ptr;
+
+  bool ptr1_closed;
+  zx_status_t ptr1_closed_status;
+  ledger_repository_ptr1.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+  bool ptr2_closed;
+  zx_status_t ptr2_closed_status;
+  ledger_repository_ptr2.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
+  bool ledger_closed;
+  zx_status_t ledger_closed_status;
+  ledger_ptr.set_error_handler(callback::Capture(
+      callback::SetWhenCalled(&ledger_closed), &ledger_closed_status));
+
+  ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"),
+                                    ledger_ptr.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_FALSE(ptr1_closed);
+  EXPECT_FALSE(ptr2_closed);
+  EXPECT_FALSE(ledger_closed);
+
+  ledger_repository_ptr2->Close();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(ptr1_closed);
+  EXPECT_FALSE(ptr2_closed);
+  EXPECT_FALSE(ledger_closed);
+
+  ledger_ptr.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(ptr1_closed);
+  EXPECT_TRUE(ptr2_closed);
+
+  EXPECT_EQ(ZX_OK, ptr1_closed_status);
+  EXPECT_EQ(ZX_OK, ptr2_closed_status);
 }
 
 }  // namespace

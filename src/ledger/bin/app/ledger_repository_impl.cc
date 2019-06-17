@@ -14,6 +14,7 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
+#include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
@@ -53,7 +54,16 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
   children_manager_retainer_ = ledgers_inspect_node_.SetChildrenManager(this);
 }
 
-LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
+LedgerRepositoryImpl::~LedgerRepositoryImpl() {
+  for (auto& binding : bindings_) {
+    // |Close()| does not call |binding|'s |on_empty| callback, so |binding| is
+    // not destroyed after this call. This would be a memory leak if we were not
+    // in |LedgerRepositoryImpl| destructor: as we are in the destructor,
+    // |bindings| will be destroyed at the end of this method, and no leak will
+    // happen.
+    binding.Close(ZX_OK);
+  }
+}
 
 void LedgerRepositoryImpl::BindRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository>
@@ -203,6 +213,14 @@ void LedgerRepositoryImpl::GetLedger(
     fidl::InterfaceRequest<Ledger> ledger_request,
     fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
+
+  if (close_callback_) {
+    // Attempting to call a method on LedgerRepository while closing it is
+    // illegal.
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+
   if (ledger_name.empty()) {
     callback(Status::INVALID_ARGUMENT);
     return;
@@ -222,6 +240,13 @@ void LedgerRepositoryImpl::GetLedger(
 void LedgerRepositoryImpl::Duplicate(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
     fit::function<void(Status)> callback) {
+  if (close_callback_) {
+    // Attempting to call a method on LedgerRepository while closing it is
+    // illegal.
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+
   BindRepository(std::move(request));
   callback(Status::OK);
 }
@@ -229,20 +254,37 @@ void LedgerRepositoryImpl::Duplicate(
 void LedgerRepositoryImpl::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
     fit::function<void(Status)> callback) {
+  if (close_callback_) {
+    // Attempting to call a method on LedgerRepository while closing it is
+    // illegal.
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+
   watchers_->AddSyncWatcher(std::move(watcher));
   callback(Status::OK);
 }
 
 void LedgerRepositoryImpl::CheckEmpty() {
-  if (!on_empty_callback_)
-    return;
-  if (ledger_managers_.empty() && bindings_.empty() &&
+  if (ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
       disk_cleanup_manager_->IsEmpty()) {
-    on_empty_callback_();
+    if (close_callback_) {
+      close_callback_(Status::OK);
+    }
+    if (on_empty_callback_) {
+      on_empty_callback_();
+    }
   }
 }
 
 void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
+  if (close_callback_) {
+    // Attempting to call a method on LedgerRepository while closing it is
+    // illegal.
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+
   cleanup_callbacks_.push_back(std::move(callback));
   if (cleanup_callbacks_.size() > 1) {
     return;
@@ -261,6 +303,15 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
 DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
   FXL_DCHECK(!ledger_name.empty());
   return content_path_.SubPath(GetDirectoryName(ledger_name));
+}
+
+void LedgerRepositoryImpl::Close(fit::function<void(Status)> callback) {
+  if (close_callback_) {
+    // Closing the repository twice is force-terminating it.
+    callback(Status::ILLEGAL_STATE);
+    return;
+  }
+  close_callback_ = std::move(callback);
 }
 
 }  // namespace ledger

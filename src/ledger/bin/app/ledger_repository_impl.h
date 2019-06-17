@@ -80,6 +80,7 @@ class LedgerRepositoryImpl
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            fit::function<void(Status)> callback) override;
   void DiskCleanUp(fit::function<void(Status)> callback) override;
+  void Close(fit::function<void(Status)> callback) override;
 
   // inspect::ChildrenManager:
   void GetNames(
@@ -115,6 +116,9 @@ class LedgerRepositoryImpl
   fit::closure on_empty_callback_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
+
+  // Callback set when closing this repository.
+  fit::function<void(Status)> close_callback_;
 
   inspect::Node inspect_node_;
   inspect::UIntMetric requests_metric_;
