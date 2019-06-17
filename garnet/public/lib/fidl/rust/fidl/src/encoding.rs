@@ -1906,6 +1906,8 @@ where
     }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        let start_pos = encoder.offset;
+
         match self {
             Ok(val) => {
                 // Encode success tag
@@ -1916,6 +1918,10 @@ where
 
                 // Encode success value
                 fidl_encode!(val, encoder)?;
+
+                // Ok() and Err() branches may be of a different size. We need to make sure we
+                // always encode inline_size() bytes.
+                encoder.tail_padding(self, start_pos)?;
             }
             Err(val) => {
                 // Encode Error tag
@@ -1926,6 +1932,10 @@ where
 
                 // Encode Error value
                 fidl_encode!(val, encoder)?;
+
+                // Ok() and Err() branches may be of a different size. We need to make sure we
+                // always encode inline_size() bytes.
+                encoder.tail_padding(self, start_pos)?;
             }
         }
         Ok(())
@@ -1953,6 +1963,8 @@ where
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        let start_pos = decoder.inline_pos();
+
         let mut tag: u32 = 0;
         fidl_decode!(&mut tag, decoder)?;
         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
@@ -1964,6 +1976,7 @@ where
                     match self {
                         Ok(val) => {
                             fidl_decode!(val, decoder)?;
+                            decoder.skip_tail_padding(self, start_pos)?;
                             break;
                         }
                         Err(_) => {
@@ -1981,6 +1994,7 @@ where
                     match self {
                         Err(val) => {
                             fidl_decode!(val, decoder)?;
+                            decoder.skip_tail_padding(self, start_pos)?;
                             break;
                         }
                         Ok(_) => {
@@ -2777,6 +2791,107 @@ mod test {
         match &encode_decode(&mut test_result_err) {
             Err(err_code) if *err_code == 5 => {}
             x => panic!("unexpected decoded value {:?}", x),
+        }
+    }
+
+    #[test]
+    fn encode_decode_result_array() {
+        use std::result::Result;
+
+        {
+            let mut input: [Result<_, u32>; 2] = [Ok("a".to_string()), Ok("bcd".to_string())];
+            match encode_decode(&mut input) {
+                [Ok(ref ok1), Ok(ref ok2)]
+                    if *ok1 == "a".to_string() && *ok2 == "bcd".to_string() => {}
+                x => panic!("unexpected decoded value {:?}", x),
+            }
+        }
+
+        {
+            let mut input: [Result<String, u32>; 2] = [Err(7), Err(42)];
+            match encode_decode(&mut input) {
+                [Err(ref err1), Err(ref err2)] if *err1 == 7 && *err2 == 42 => {}
+                x => panic!("unexpected decoded value {:?}", x),
+            }
+        }
+
+        {
+            let mut input = [Ok("abc".to_string()), Err(42)];
+            match encode_decode(&mut input) {
+                [Ok(ref ok1), Err(ref err2)] if *ok1 == "abc".to_string() && *err2 == 42 => {}
+                x => panic!("unexpected decoded value {:?}", x),
+            }
+        }
+    }
+
+    #[test]
+    fn padding_errors_correct_offset() {
+        use std::result::Result;
+
+        // This kind of result uses more bytes for the Ok() branch than for the Err() branch, so we
+        // should have some padding in the Err() values.
+        let mut v: Result<String, u32> = Err(5);
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut v).expect("Encoding failed");
+
+        // Try to corrupt the second byte of padding after the Err() value content.
+        let break_pos = fidl_inline_align!(Result<String, u32>) + fidl_inline_size!(u32) + 1;
+        buf[break_pos] = 10;
+
+        let res =
+            Decoder::decode_into(buf, handle_buf, &mut v).expect_err("Decoded broken padding");
+        match res {
+            Error::NonZeroPadding { padding_start, non_zero_pos } => {
+                // This check is fragile, as it is trying to mimic what array encoders/decoders do.
+                // If this fails after you update the array encoding, please update the check as
+                // well.
+                assert_eq!(
+                    padding_start,
+                    fidl_inline_align!(Result<String, u32>) + fidl_inline_size!(u32)
+                );
+                assert_eq!(non_zero_pos, break_pos);
+            }
+            _ => panic!("decode_into failed with: {}", res),
+        }
+    }
+
+    #[test]
+    fn padding_errors_correct_offset_for_out_of_line_data() {
+        use std::result::Result;
+
+        // This kind of result uses more bytes for the Ok() branch than for the Err() branch, so we
+        // should have some padding in the Err() values.  Vec is expected to put the Result itself
+        // into the out_of_line area.
+        let mut v: Vec<Result<String, u32>> = vec![Err(5)];
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut v).expect("Encoding failed");
+
+        // Try to corrupt the second byte of padding after the Err() value content. The object
+        // itself is in the out_of_line area, which follows the inlnie size of the vector.
+        let break_pos = <Vec<Result<String, u32>> as Decodable>::inline_size()
+            + fidl_inline_align!(Result<String, u32>)
+            + fidl_inline_size!(u32)
+            + 1;
+        buf[break_pos] = 10;
+
+        let res =
+            Decoder::decode_into(buf, handle_buf, &mut v).expect_err("Decoded broken padding");
+        match res {
+            Error::NonZeroPadding { padding_start, non_zero_pos } => {
+                // This check is fragile, as it is trying to mimic what array encoders/decoders do.
+                // If this fails after you update the array encoding, please update the check as
+                // well.
+                assert_eq!(
+                    padding_start,
+                    <Vec<Result<String, u32>> as Decodable>::inline_size()
+                        + fidl_inline_align!(Result<String, u32>)
+                        + fidl_inline_size!(u32)
+                );
+                assert_eq!(non_zero_pos, break_pos);
+            }
+            _ => panic!("decode_into failed with: {}", res),
         }
     }
 
