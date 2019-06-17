@@ -345,11 +345,6 @@ TEST(ZxTestAssertionTest, AssertOk) {
 
     EXPECT_OK(status, "EXPECT_OK failed to identify ZX_OK.");
     ASSERT_OK(status, "ASSERT_OK failed to identify ZX_OK.");
-    // Lot of time there are overloaded return types, and we consider only negative numbers
-    // as errors.
-    EXPECT_OK(4, "EXPECT_OK failed to identify ZX_OK.");
-    ASSERT_OK(4, "ASSERT_OK failed to identify ZX_OK.");
-
     TEST_CHECKPOINT();
 }
 
@@ -366,6 +361,46 @@ TEST(ZxTestAssertionTest, AssertOkFatalFailure) {
     zx_status_t status = ZX_ERR_BAD_STATE;
 
     ASSERT_OK(status, "ASSERT_OK failed to identify error.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertOkWithOverloadedReturnTypeFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_OK aborted test execution.");
+
+    EXPECT_OK(4, "EXPECT_OK failed to identify error.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertOkWithOverloadedReturnTypeFatalFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_OK aborted test execution.");
+
+    ASSERT_OK(4, "ASSERT_OK failed to identify error.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNotOk) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
+                     "ASSERT/EXPECT_NOT_OK aborted test execution on success.");
+    zx_status_t status = ZX_ERR_BAD_STATE;
+
+    EXPECT_NOT_OK(status, "EXPECT_NOT_OK failed to identify ZX_NOT_OK.");
+    ASSERT_NOT_OK(status, "ASSERT_NOT_OK failed to identify ZX_NOT_OK.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNotOkFailure) {
+    TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_NOT_OK aborted test execution.");
+    zx_status_t status = ZX_OK;
+
+    EXPECT_NOT_OK(status, "EXPECT_NOT_OK failed to identify error.");
+    TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNotOkFatalFailure) {
+    TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS, "ASSERT_NOT_OK aborted test execution.");
+    zx_status_t status = ZX_OK;
+
+    ASSERT_NOT_OK(status, "ASSERT_NOT_OK failed to identify error.");
     TEST_CHECKPOINT();
 }
 

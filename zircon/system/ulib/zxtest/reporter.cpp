@@ -148,7 +148,7 @@ void Reporter::OnAssertion(const Assertion& assertion) {
             assertion.location().line_number, assertion.description().c_str());
 
     if (assertion.has_values()) {
-        fprintf(stderr, "Expected: %s\n", assertion.expected().c_str());
+        fprintf(stderr, "    Expected: %s\n", assertion.expected().c_str());
         // When it is not a literal.
         if (assertion.expected() != assertion.expected_eval()) {
             fprintf(stream_, "    Which is: %s\n", assertion.expected_eval().c_str());

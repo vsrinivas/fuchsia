@@ -11,6 +11,28 @@
 #include <zxtest/c/zxtest.h>
 #endif
 
+// This header provides all the available macros for C/C++.
+// Most of these macros are equivalent to gTest macros, with a few differences:
+//  * Custom messages are taken as arguments to the macro, not using stream operator.
+//    ASSERT_EQ(a, b, "a + b is %d", a + b);
+//    Where the first argument is a printf format string and must be a string literal.
+//  * Additional QoL macros for commom use case in Fuchsia platform:
+//    ASSERT/EXPECT_OK
+//    ASSERT/EXPECT_NOT_OK
+//    ASSERT/EXPECT_NULL
+//    ASSERT/EXPECT_NOT_NULL
+//    ASSERT/EXPECT_BYTES_EQ
+//    ASSERT/EXPECT_BYTES_NE
+//    ASSERT/EXPECT_STR_EQ
+//    ASSERT/EXPECT_STR_NE
+//  * There are no matchers allowed in this library.
+//  * All assertions must happen in the main thread, unless the user provides synchronization
+//    for accessing the library.
+//  * TEST supported in C and Cpp
+//  * TEST_F supported in Cpp with ::zxtest::Test being the base Fixture class.
+//
+//  For more detailed information check README.
+
 #define _ASSERT_PTR(op, expected, actual, fatal, file, line, desc, ...)                            \
     _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(actual), fatal, file, line,     \
                        desc, ##__VA_ARGS__)
@@ -99,20 +121,20 @@
                          "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
 
 #define ASSERT_OK(val1, ...)                                                                       \
-    _ASSERT_VAR_STATUS(_LE, val1, ZX_OK, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
+    _ASSERT_VAR_STATUS(_EQ, val1, ZX_OK, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
                        ##__VA_ARGS__)
 
 #define EXPECT_OK(val1, ...)                                                                       \
-    _ASSERT_VAR_STATUS(_LE, val1, ZX_OK, false, __FILE__, __LINE__,                                \
+    _ASSERT_VAR_STATUS(_EQ, val1, ZX_OK, false, __FILE__, __LINE__,                                \
                        "Expected " #val1 " is ZX_OK.", ##__VA_ARGS__)
 
 #define ASSERT_NOT_OK(val1, ...)                                                                   \
-    _ASSERT_VAR(_GT, val1, ZX_OK, true, __FILE__, __LINE__, "Expected " #val1 " is not ZX_OK.",    \
-                ##__VA_ARGS__)
+    _ASSERT_VAR_STATUS(_NE, val1, ZX_OK, true, __FILE__, __LINE__,                                 \
+                       "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
 
 #define EXPECT_NOT_OK(val1, ...)                                                                   \
-    _ASSERT_VAR(_GT, val1, ZX_OK, false, __FILE__, __LINE__, "Expected " #val1 " is not ZX_OK.",   \
-                ##__VA_ARGS__)
+    _ASSERT_VAR_STATUS(_NE, val1, ZX_OK, false, __FILE__, __LINE__,                                \
+                       "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
 
 #define ASSERT_BYTES_EQ(val1, val2, size, ...)                                                     \
     _ASSERT_VAR_BYTES(_BYTEEQ, val2, val1, size, true, __FILE__, __LINE__,                         \
