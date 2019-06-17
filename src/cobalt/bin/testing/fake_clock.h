@@ -22,6 +22,8 @@ class FakeSteadyClock : public SteadyClock {
     now_ += increment_seconds;
   }
 
+  void set_time(std::chrono::steady_clock::time_point t) { now_ = t; }
+
  private:
   std::chrono::steady_clock::time_point now_ = std::chrono::steady_clock::now();
 };

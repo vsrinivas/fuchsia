@@ -62,10 +62,14 @@ class SystemMetricsDaemon {
 
   void InitializeRootResourceHandle();
 
-  // Calls LogUpTimeAndLifeTimeEvents,
+  // Calls LogUpPingAndLifeTimeEvents,
   // and then uses the |dispatcher| passed to the constructor to
   // schedule the next round.
-  void RepeatedlyLogUpTimeAndLifeTimeEvents();
+  void RepeatedlyLogUpPingAndLifeTimeEvents();
+
+  // Calls LogFuchsiaUptime and then uses the |dispatcher| passed to the
+  // constructor to schedule the next round.
+  void RepeatedlyLogUptime();
 
   // Calls LogMemoryUsage,
   // then uses the |dispatcher| passed to the constructor to schedule
@@ -83,7 +87,7 @@ class SystemMetricsDaemon {
   // Calls LogFuchsiaUpPing and LogFuchsiaLifetimeEvents.
   //
   // Returns the amount of time before this method needs to be invoked again.
-  std::chrono::seconds LogUpTimeAndLifeTimeEvents();
+  std::chrono::seconds LogUpPingAndLifeTimeEvents();
 
   // Logs one or more UpPing events depending on how long the device has been
   // up.
@@ -107,6 +111,13 @@ class SystemMetricsDaemon {
   // Returns the amount of time before this method needs to be invoked again.
   // Currently returns std::chrono::seconds::max().
   std::chrono::seconds LogFuchsiaLifetimeEvents();
+
+  // Once per hour, rounds the current uptime down to the nearest number of
+  // hours and logs an event for the fuchsia_uptime metric.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  // This is the number of seconds until the uptime reaches the next full hour.
+  std::chrono::seconds LogFuchsiaUptime();
 
   // Logs several different measurements of system-wide memory usage.
   //

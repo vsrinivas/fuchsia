@@ -43,7 +43,16 @@ using fuchsia_system_metrics::
 using fuchsia_system_metrics::
     FuchsiaMemoryExperimentalMetricDimensionMemoryBreakdown;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
+using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::steady_clock;
+
+namespace {
+// Given a number of seconds, return the number of seconds before the next
+// multiple of 1 hour.
+std::chrono::seconds SecondsBeforeNextHour(std::chrono::seconds uptime) {
+  return std::chrono::seconds(3600 - (uptime.count() % 3600));
+}
+}  // namespace
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
@@ -74,16 +83,25 @@ SystemMetricsDaemon::SystemMetricsDaemon(
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
   // We keep gathering metrics until this process is terminated.
-  RepeatedlyLogUpTimeAndLifeTimeEvents();
+  RepeatedlyLogUpPingAndLifeTimeEvents();
+  RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
   RepeatedlyLogMemoryUsage();
 }
 
-void SystemMetricsDaemon::RepeatedlyLogUpTimeAndLifeTimeEvents() {
-  std::chrono::seconds seconds_to_sleep = LogUpTimeAndLifeTimeEvents();
+void SystemMetricsDaemon::RepeatedlyLogUpPingAndLifeTimeEvents() {
+  std::chrono::seconds seconds_to_sleep = LogUpPingAndLifeTimeEvents();
   async::PostDelayedTask(
-      dispatcher_, [this]() { RepeatedlyLogUpTimeAndLifeTimeEvents(); },
+      dispatcher_, [this]() { RepeatedlyLogUpPingAndLifeTimeEvents(); },
       zx::sec(seconds_to_sleep.count() + 5));
+  return;
+}
+
+void SystemMetricsDaemon::RepeatedlyLogUptime() {
+  std::chrono::seconds seconds_to_sleep = LogFuchsiaUptime();
+  async::PostDelayedTask(
+      dispatcher_, [this]() { RepeatedlyLogUptime(); },
+      zx::sec(seconds_to_sleep.count()));
   return;
 }
 
@@ -112,7 +130,7 @@ std::chrono::seconds SystemMetricsDaemon::GetUpTime() {
   return std::chrono::duration_cast<std::chrono::seconds>(now - start_time_);
 }
 
-std::chrono::seconds SystemMetricsDaemon::LogUpTimeAndLifeTimeEvents() {
+std::chrono::seconds SystemMetricsDaemon::LogUpPingAndLifeTimeEvents() {
   std::chrono::seconds uptime = GetUpTime();
   return std::min(LogFuchsiaUpPing(uptime), LogFuchsiaLifetimeEvents());
 }
@@ -245,6 +263,35 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   }
   // As above, come back in one hour.
   return std::chrono::hours(1);
+}
+
+std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUptime() {
+  std::chrono::seconds uptime = GetUpTime();
+  if (!logger_) {
+    FX_LOGS(ERROR)
+        << "Cobalt SystemMetricsDaemon: No logger present. Reconnecting...";
+    InitializeLogger();
+    // Something went wrong. Pause for 5 minutes.
+    return std::chrono::minutes(5);
+  }
+  auto up_hours =
+      std::chrono::duration_cast<std::chrono::hours>(uptime).count();
+  uint32_t event_code =
+      (up_hours < 336)
+          ? FuchsiaUptimeMetricDimensionUptimeRange::LessThanTwoWeeks
+          : event_code =
+                FuchsiaUptimeMetricDimensionUptimeRange::TwoWeeksOrMore;
+
+  fuchsia::cobalt::Status status;
+  logger_->LogElapsedTime(fuchsia_system_metrics::kFuchsiaUptimeMetricId,
+                          event_code, "", up_hours, &status);
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR)
+        << "Cobalt SystemMetricsDaemon: LogCobaltEvent() returned status="
+        << StatusToString(status);
+  }
+  // Schedule a call of this function for the next multiple of an hour.
+  return SecondsBeforeNextHour(uptime);
 }
 
 std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {

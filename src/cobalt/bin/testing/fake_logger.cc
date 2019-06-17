@@ -43,6 +43,7 @@ zx_status_t FakeLogger_Sync::LogElapsedTime(uint32_t metric_id,
   last_log_method_invoked_ = kLogElapsedTime;
   last_metric_id_ = metric_id;
   last_event_code_ = event_code;
+  last_elapsed_time_ = elapsed_micros;
   *out_status = Status::OK;
   return ZX_OK;
 }
