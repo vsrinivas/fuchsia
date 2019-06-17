@@ -6,13 +6,34 @@ package templates
 
 const Bits = `
 {{- define "BitsForwardDeclaration" }}
-enum class {{ .Name }} : {{ .Type }} {
+class {{ .Name }} final {
+public:
+  constexpr {{ .Name }}() : value_(0u) {}
+  explicit constexpr {{ .Name }}({{ .Type }} value) : value_(value) {}
+
   {{- range .Members }}
-  {{ .Name }} = {{ .Value }},
+  const static {{ $.Name }} {{ .Name }};
   {{- end }}
+  const static {{ .Name }} mask;
+
+  explicit constexpr inline operator {{ .Type }}() const { return value_; }
+  constexpr inline operator bool() const { return value_; }
+  constexpr inline {{ .Name }} operator~() const;
+  constexpr inline {{ .Name }} operator|(const {{ .Name }}& other) const;
+  constexpr inline {{ .Name }} operator&(const {{ .Name }}& other) const;
+  constexpr inline {{ .Name }} operator^(const {{ .Name }}& other) const;
+  constexpr inline void operator|=(const {{ .Name }}& other);
+  constexpr inline void operator&=(const {{ .Name }}& other);
+  constexpr inline void operator^=(const {{ .Name }}& other);
+
+private:
+  {{ .Type }} value_;
 };
 
-const static {{ .Name }} {{ .MaskName }} = static_cast<{{ .Name }}>({{ .Mask }}u);
+{{- range $member := .Members }}
+constexpr const {{ $.Namespace }}::{{ $.Name }} {{ $.Name }}::{{ $member.Name }} = {{ $.Namespace }}::{{ $.Name }}({{ $member.Value }});
+{{- end }}
+constexpr const {{ .Namespace }}::{{ .Name }} {{ .Name }}::mask = {{ $.Namespace }}::{{ $.Name }}({{ .Mask }}u);
 
 inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
                          {{ .Namespace }}::{{ .Name }}* result) {
@@ -20,45 +41,38 @@ inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
   return ZX_OK;
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator|({{ .Namespace }}::{{ .Name }} _lhs,
-                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) | static_cast<{{ .Type }}>(_rhs));
+constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator~() const {
+  return {{ $.Namespace }}::{{ $.Name }}(~this->value_ & static_cast<{{ .Type }}>(mask));
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }}& operator|=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
-  _lhs = _lhs | _rhs;
-  return _lhs;
+constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator|(
+    const {{ .Namespace }}::{{ .Name }}& other) const {
+  return {{ $.Namespace }}::{{ $.Name }}(this->value_ | other.value_);
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator&({{ .Namespace }}::{{ .Name }} _lhs,
-                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) & static_cast<{{ .Type }}>(_rhs));
+constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator&(
+    const {{ .Namespace }}::{{ .Name }}& other) const {
+  return {{ $.Namespace }}::{{ $.Name }}(this->value_ & other.value_);
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }}& operator&=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
-  _lhs = _lhs & _rhs;
-  return _lhs;
+constexpr inline {{ .Namespace }}::{{ .Name }} {{ .Name }}::operator^(
+    const {{ .Namespace }}::{{ .Name }}& other) const {
+  return {{ $.Namespace }}::{{ $.Name }}(this->value_ ^ other.value_);
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator^({{ .Namespace }}::{{ .Name }} _lhs,
-                                                         {{ .Namespace }}::{{ .Name }} _rhs) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    static_cast<{{ .Type }}>(_lhs) ^ static_cast<{{ .Type }}>(_rhs));
+constexpr inline void {{ .Name }}::operator|=(
+    const {{ .Namespace }}::{{ .Name }}& other) {
+  this->value_ |= other.value_;
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }}& operator^=({{ .Namespace }}::{{ .Name }}& _lhs,
-                                                           {{ .Namespace }}::{{ .Name }} _rhs) {
-  _lhs = _lhs ^ _rhs;
-  return _lhs;
+constexpr inline void {{ .Name }}::operator&=(
+    const {{ .Namespace }}::{{ .Name }}& other) {
+  this->value_ &= other.value_;
 }
 
-constexpr inline {{ .Namespace }}::{{ .Name }} operator~({{ .Namespace }}::{{ .Name }} _value) {
-  return static_cast<{{ .Namespace }}::{{ .Name }}>(
-    ~static_cast<{{ .Type }}>(_value) & static_cast<{{ .Type }}>({{ .MaskName }}));
+constexpr inline void {{ .Name }}::operator^=(
+    const {{ .Namespace }}::{{ .Name }}& other) {
+  this->value_ ^= other.value_;
 }
 {{ end }}
 
@@ -73,7 +87,7 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}> {
   static void Decode(Decoder* decoder, {{ .Namespace }}::{{ .Name }}* value, size_t offset) {
     {{ .Type }} underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<{{ .Namespace }}::{{ .Name }}>(underlying);
+    *value = {{ $.Namespace }}::{{ $.Name }}(underlying);
   }
 };
 

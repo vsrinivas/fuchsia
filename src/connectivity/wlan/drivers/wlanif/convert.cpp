@@ -991,50 +991,50 @@ uint32_t ConvertMgmtCaptureFlags(wlan_mlme::MgmtFrameCaptureFlags fidl_flags) {
 }
 
 wlan_mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags) {
-    uint32_t ret_flags = 0;
+    wlan_mlme::MgmtFrameCaptureFlags ret_flags;
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_ASSOC_REQ) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::ASSOC_REQ);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::ASSOC_REQ;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_ASSOC_RESP) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::ASSOC_RESP);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::ASSOC_RESP;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_REASSOC_REQ) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::REASSOC_REQ);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::REASSOC_REQ;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_REASSOC_RESP) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::REASSOC_RESP);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::REASSOC_RESP;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_PROBE_REQ) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::PROBE_REQ);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::PROBE_REQ;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_PROBE_RESP) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::PROBE_RESP);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::PROBE_RESP;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_TIMING_AD) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::TIMING_AD);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::TIMING_AD;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_BEACON) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::BEACON);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::BEACON;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_ATIM) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::ATIM);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::ATIM;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_DISASSOC) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::DISASSOC);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::DISASSOC;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_AUTH) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::AUTH);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::AUTH;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_DEAUTH) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::DEAUTH);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::DEAUTH;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_ACTION) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::ACTION);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::ACTION;
     }
     if ((ddk_flags & WLAN_MGMT_CAPTURE_FLAG_ACTION_NO_ACK) != 0) {
-        ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::ACTION_NO_ACK);
+        ret_flags |= wlan_mlme::MgmtFrameCaptureFlags::ACTION_NO_ACK;
     }
-    return static_cast<wlan_mlme::MgmtFrameCaptureFlags>(ret_flags);
+    return ret_flags;
 }
 
 }  // namespace wlanif

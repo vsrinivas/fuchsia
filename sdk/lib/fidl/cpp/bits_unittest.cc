@@ -60,7 +60,19 @@ TEST(Bits, BitwiseAssignOperators) {
 
 TEST(Bits, IsConstexpr) {
     static constexpr auto this_should_compile = SampleBits::B | SampleBits::D | SampleBits::E;
-    EXPECT_EQ(this_should_compile, SampleBitsMask);
+    EXPECT_EQ(this_should_compile, SampleBits::mask);
+}
+
+TEST(Bits, CanConvertToNumberButMustBeExplicit) {
+    uint8_t r8 = static_cast<uint32_t>(SampleBits::B);
+    EXPECT_EQ(r8, 2u);
+    uint16_t r16 = static_cast<uint32_t>(SampleBits::B);
+    EXPECT_EQ(r16, 2u);
+}
+
+TEST(Bits, CanConvertToBool) {
+    bool result = SampleBits::B;
+    EXPECT_TRUE(result);
 }
 
 }  // namespace
