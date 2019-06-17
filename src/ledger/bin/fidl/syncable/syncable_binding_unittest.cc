@@ -276,5 +276,14 @@ TEST_F(SyncableTest, OnEmptyWithRunningOperation) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(SyncableTest, OnEmptyAfterError) {
+  impl_.status_to_return() = Status::IO_ERROR;
+  bool called;
+  binding_.set_on_empty(callback::SetWhenCalled(&called));
+  ptr_->NoResponse();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+}
+
 }  // namespace
 }  // namespace ledger
