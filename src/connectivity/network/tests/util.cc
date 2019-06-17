@@ -23,8 +23,8 @@ void NotifyFail(int ntfyfd) {
 
 bool WaitSuccess(int ntfyfd, int timeout) {
   struct pollfd fds = {ntfyfd, POLLIN, 0};
-  int nfds = poll(&fds, 1, timeout);
-  EXPECT_GE(nfds, 0) << "poll failed: " << errno;
+  int nfds;
+  EXPECT_GE(nfds = poll(&fds, 1, timeout), 0) << strerror(errno);
   if (nfds == 1) {
     uint8_t c = kNotifyFail;
     EXPECT_EQ(1, read(ntfyfd, &c, 1));
@@ -36,8 +36,8 @@ bool WaitSuccess(int ntfyfd, int timeout) {
 }
 
 void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd) {
-  int connfd = accept(acptfd, nullptr, nullptr);
-  EXPECT_GE(connfd, 0) << "accept failed: " << errno;
+  int connfd;
+  EXPECT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
   if (connfd < 0) {
     NotifyFail(ntfyfd);
     return;
@@ -61,8 +61,10 @@ void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd) {
     return;
   }
 
-  int ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr));
-  EXPECT_EQ(0, ret) << strerror(errno);
+  int ret;
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)),
+            0)
+      << strerror(errno);
   if (ret != 0) {
     NotifyFail(ntfyfd);
     return;
@@ -79,8 +81,8 @@ void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd) {
 }
 
 void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
-  int connfd = accept(acptfd, nullptr, nullptr);
-  EXPECT_GE(connfd, 0) << "accept failed: " << errno;
+  int connfd;
+  EXPECT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
   if (connfd < 0) {
     NotifyFail(ntfyfd);
     return;
@@ -97,8 +99,10 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
   int connfd = socket(AF_INET, SOCK_STREAM, 0);
   ASSERT_GE(connfd, 0);
 
-  int ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr));
-  EXPECT_EQ(0, ret) << "connect failed: " << errno;
+  int ret;
+  EXPECT_EQ(ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr)),
+            0)
+      << strerror(errno);
   if (ret != 0) {
     NotifyFail(ntfyfd);
     return;
@@ -106,8 +110,8 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
 
   struct pollfd fds = {connfd, events, 0};
 
-  int n = poll(&fds, 1, kTimeout);
-  EXPECT_GT(n, 0) << "poll failed: " << errno;
+  int n;
+  EXPECT_GT(n = poll(&fds, 1, kTimeout), 0) << strerror(errno);
   if (n <= 0) {
     NotifyFail(ntfyfd);
     return;
@@ -121,17 +125,19 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
 void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr,
                   socklen_t* addrlen, int ntfyfd, int timeout) {
   struct pollfd fds = {recvfd, POLLIN, 0};
-  int nfds = poll(&fds, 1, timeout);
-  EXPECT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << errno;
+  int nfds;
+  EXPECT_EQ(nfds = poll(&fds, 1, timeout), 1) << strerror(errno);
   if (nfds != 1) {
     NotifyFail(ntfyfd);
     return;
   }
 
   char buf[4096];
-  int nbytes =
-      recvfrom(recvfd, buf, sizeof(buf), 0, (struct sockaddr*)addr, addrlen);
-  EXPECT_GT(nbytes, 0) << "recvfrom failed: " << errno;
+  int nbytes;
+  EXPECT_GT(nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
+                              (struct sockaddr*)addr, addrlen),
+            0)
+      << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
@@ -143,8 +149,8 @@ void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr,
 
 void DatagramReadWrite(int recvfd, int ntfyfd) {
   struct pollfd fds = {recvfd, POLLIN, 0};
-  int nfds = poll(&fds, 1, kTimeout);
-  EXPECT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << errno;
+  int nfds;
+  EXPECT_EQ(nfds = poll(&fds, 1, kTimeout), 1) << strerror(errno);
   if (nfds != 1) {
     NotifyFail(ntfyfd);
     return;
@@ -153,9 +159,12 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
   char buf[32];
   struct sockaddr_in peer;
   socklen_t peerlen = sizeof(peer);
-  int nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
-                        reinterpret_cast<struct sockaddr*>(&peer), &peerlen);
-  EXPECT_GE(nbytes, 0) << "recvfrom failed: " << errno;
+  int nbytes;
+  EXPECT_GE(
+      nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
+                        reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      0)
+      << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
@@ -168,9 +177,10 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
   printf("peerlen: %d\n", peerlen);
 #endif
 
-  nbytes = sendto(recvfd, buf, nbytes, 0,
-                  reinterpret_cast<struct sockaddr*>(&peer), peerlen);
-  EXPECT_GE(nbytes, 0) << "sendto failed: " << errno;
+  EXPECT_GE(nbytes = sendto(recvfd, buf, nbytes, 0,
+                            reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+            0)
+      << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
@@ -181,8 +191,8 @@ void DatagramReadWrite(int recvfd, int ntfyfd) {
 
 void DatagramReadWriteV6(int recvfd, int ntfyfd) {
   struct pollfd fds = {recvfd, POLLIN, 0};
-  int nfds = poll(&fds, 1, kTimeout);
-  EXPECT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << errno;
+  int nfds;
+  EXPECT_EQ(nfds = poll(&fds, 1, kTimeout), 1) << strerror(errno);
   if (nfds != 1) {
     NotifyFail(ntfyfd);
     return;
@@ -191,9 +201,12 @@ void DatagramReadWriteV6(int recvfd, int ntfyfd) {
   char buf[32];
   struct sockaddr_in6 peer;
   socklen_t peerlen = sizeof(peer);
-  int nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
-                        reinterpret_cast<struct sockaddr*>(&peer), &peerlen);
-  EXPECT_GE(nbytes, 0) << "recvfrom failed: " << errno;
+  int nbytes;
+  EXPECT_GE(
+      nbytes = recvfrom(recvfd, buf, sizeof(buf), 0,
+                        reinterpret_cast<struct sockaddr*>(&peer), &peerlen),
+      0)
+      << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
@@ -206,9 +219,10 @@ void DatagramReadWriteV6(int recvfd, int ntfyfd) {
   printf("peerlen: %d\n", peerlen);
 #endif
 
-  nbytes = sendto(recvfd, buf, nbytes, 0,
-                  reinterpret_cast<struct sockaddr*>(&peer), peerlen);
-  EXPECT_GE(nbytes, 0) << "sendto failed: " << errno;
+  EXPECT_GE(nbytes = sendto(recvfd, buf, nbytes, 0,
+                            reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+            0)
+      << strerror(errno);
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
     return;
