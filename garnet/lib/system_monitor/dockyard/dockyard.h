@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <atomic>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -126,7 +127,7 @@ struct StreamSetsRequest {
 
   enum StreamSetsRequestFlags {
     // Frame (or scale) the data set aesthetically. E.g. if the graph has little
-    // variance, zoom in to show that detail, rather then just having a flat
+    // variance, zoom in to show that detail, rather than just having a flat
     // vertical line in the graph. In some cases (like comparing graphs) this
     // will be undesired. The values in the response will be in the range
     // [0 to NORMALIZATION_RANGE].
