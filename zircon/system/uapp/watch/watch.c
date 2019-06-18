@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <lib/fdio/watcher.h>
 
@@ -18,7 +18,7 @@ zx_status_t callback(int dirfd, int event, const char* fn, void* cookie) {
     case WATCH_EVENT_REMOVE_FILE:
         fprintf(stderr, "watch: removed '%s/%s'\n", path, fn);
         break;
-    case WATCH_EVENT_IDLE:
+    case WATCH_EVENT_WAITING:
         fprintf(stderr, "watch: waiting...\n");
         break;
     }

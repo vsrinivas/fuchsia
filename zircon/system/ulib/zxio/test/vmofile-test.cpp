@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zxio/inception.h>
-#include <lib/zxio/zxio.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+#include <lib/zxio/inception.h>
+#include <lib/zxio/zxio.h>
 
 #include <unittest/unittest.h>
 
@@ -53,7 +53,7 @@ bool vmofile_basic_test(void) {
     ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write(io, buffer, sizeof(buffer), &actual));
     ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(io, 0u, buffer, sizeof(buffer), &actual));
     size_t offset = 2u;
-    ASSERT_EQ(ZX_OK, zxio_seek(io, 2u, fuchsia_io_SeekOrigin_START, &offset));
+    ASSERT_EQ(ZX_OK, zxio_seek(io, 2u, fuchsia::io::SeekOrigin::START, &offset));
     EXPECT_EQ(offset, 2u);
     memset(buffer, 0, sizeof(buffer));
     actual = 0u;

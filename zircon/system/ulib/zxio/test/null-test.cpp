@@ -38,8 +38,8 @@ bool null_basic_test(void) {
     EXPECT_EQ(sizeof(buffer), actual);
     ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(&io, 0u, buffer, sizeof(buffer), &actual));
     size_t offset = 0u;
-    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_seek(&io, 0u, fuchsia_io_SeekOrigin_START,
-                                              &offset));
+    ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_seek(&io, 0u, fuchsia::io::SeekOrigin::START,
+                                           &offset));
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_truncate(&io, 0u));
     uint32_t flags = 0u;
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(&io, &flags));

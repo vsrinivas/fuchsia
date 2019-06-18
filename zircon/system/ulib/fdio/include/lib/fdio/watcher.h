@@ -5,8 +5,8 @@
 #ifndef LIB_FDIO_WATCHER_H_
 #define LIB_FDIO_WATCHER_H_
 
-#include <zircon/compiler.h>
 #include <lib/fdio/io.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -20,7 +20,7 @@ typedef zx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, voi
 // This event occurs, once, when fdio_watch_directory() runs
 // out of existing files and has to start waiting for new
 // files to be added.
-#define WATCH_EVENT_IDLE 3
+#define WATCH_EVENT_WAITING 3
 
 // Call the provided callback (cb) for each file in directory
 // and each time a new file is added to the directory.
@@ -40,7 +40,6 @@ typedef zx_status_t (*watchdir_func_t)(int dirfd, int event, const char* fn, voi
 
 zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void* cookie);
 
-
 __END_CDECLS
 
-#endif  // LIB_FDIO_WATCHER_H_
+#endif // LIB_FDIO_WATCHER_H_

@@ -11,9 +11,9 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
@@ -32,7 +32,7 @@
 #define SZ_EFI_PART (32 * ((uint64_t)1) << 20)
 #define SZ_KERN_PART (16 * ((uint64_t)1) << 20)
 #define SZ_FVM_PART (8 * ((uint64_t)1) << 30)
-#define SZ_SYSCFG_PART (1<<20)
+#define SZ_SYSCFG_PART (1 << 20)
 
 namespace {
 
@@ -79,7 +79,7 @@ static zx_status_t mock_write_at(zxio_t* io, size_t offset, const void* buffer,
 }
 
 static zx_status_t mock_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset) {
-    if (start != fuchsia_io_SeekOrigin_START) {
+    if (start != fuchsia::io::SeekOrigin::START) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     *out_offset = offset;
@@ -100,7 +100,8 @@ class TestState {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(TestState);
 
-    TestState(fuchsia_hardware_block_BlockInfo info = kDefaultBlockInfo) : device_(nullptr) {
+    TestState(fuchsia_hardware_block_BlockInfo info = kDefaultBlockInfo)
+        : device_(nullptr) {
         Initialize(info);
     }
 
@@ -187,7 +188,7 @@ typedef struct {
     uint64_t len;
 } partition_t;
 
-bool part_size_gte(const gpt_partition_t *part, uint64_t size,
+bool part_size_gte(const gpt_partition_t* part, uint64_t size,
                    uint64_t block_size) {
     if (part == NULL) {
         return false;
@@ -205,8 +206,8 @@ gpt_partition_t* find_by_type_and_name(const GptDevice* gpt,
             continue;
         }
         char buf[GPT_NAME_LEN] = {0};
-        utf16_to_cstring(&buf[0], (const uint16_t*)p->name, GPT_NAME_LEN/2);
-        if(!strncmp(buf, name, GPT_NAME_LEN)) {
+        utf16_to_cstring(&buf[0], (const uint16_t*)p->name, GPT_NAME_LEN / 2);
+        if (!strncmp(buf, name, GPT_NAME_LEN)) {
             return p;
         }
     }
@@ -427,7 +428,7 @@ bool TestAlreadyConfigured(void) {
     resize_rootc_from_state(&test, dev->GetPartition(6), dev->GetPartition(0));
 
     ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
-                "Device SHOULD NOT be ready to pave.");
+                 "Device SHOULD NOT be ready to pave.");
 
     // TODO verify that nothing changed
     ASSERT_EQ(config_cros_for_fuchsia(dev, test.Info(), SZ_ZX_PART),
@@ -541,7 +542,8 @@ bool TestDiskTooSmall(void) {
     // this is the size we need the STATE partition to be if we are to resize
     // it to make room for the partitions we want to add and expand
     uint64_t needed_blks = howmany(SZ_ZX_PART + MIN_SZ_STATE,
-                                   test.BlockSize()) + reserved;
+                                   test.BlockSize()) +
+                           reserved;
     // now remove a few blocks so we can't satisfy all constraints
     needed_blks--;
 

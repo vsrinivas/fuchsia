@@ -3,35 +3,36 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/namespace.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
 
+namespace fio = fuchsia::io;
+
 #define ZXDEBUG 0
 
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
 // ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
 // a zx_signals_t, if they are desired.
-#define POLL_SHIFT  24
-#define POLL_MASK   0x1F
+#define POLL_SHIFT 24
+#define POLL_MASK 0x1F
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX,
               "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
-static_assert(fuchsia_io_VMO_FLAG_READ == ZX_VM_PERM_READ,
+static_assert(fio::VMO_FLAG_READ == ZX_VM_PERM_READ,
               "Vmar / Vmo flags should be aligned");
-static_assert(fuchsia_io_VMO_FLAG_WRITE == ZX_VM_PERM_WRITE,
+static_assert(fio::VMO_FLAG_WRITE == ZX_VM_PERM_WRITE,
               "Vmar / Vmo flags should be aligned");
-static_assert(fuchsia_io_VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE,
+static_assert(fio::VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE,
               "Vmar / Vmo flags should be aligned");
 
 static_assert(ZX_USER_SIGNAL_0 == (1 << POLL_SHIFT), "");
@@ -81,11 +82,11 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
         return ZX_ERR_UNAVAILABLE;
     }
     uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-    return fuchsia::io::Directory::Call::Open(zx::unowned_channel(dir),
-                                              flags,
-                                              FDIO_CONNECT_MODE,
-                                              fidl::StringView(length, path),
-                                              std::move(request));
+    return fio::Directory::Call::Open(zx::unowned_channel(dir),
+                                      flags,
+                                      FDIO_CONNECT_MODE,
+                                      fidl::StringView(length, path),
+                                      std::move(request));
 }
 
 __EXPORT
@@ -113,11 +114,11 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    return fuchsia::io::Directory::Call::Open(zx::unowned_channel(dir),
-                                              flags,
-                                              FDIO_CONNECT_MODE,
-                                              fidl::StringView(length, path),
-                                              std::move(request));
+    return fio::Directory::Call::Open(zx::unowned_channel(dir),
+                                      flags,
+                                      FDIO_CONNECT_MODE,
+                                      fidl::StringView(length, path),
+                                      std::move(request));
 }
 
 __EXPORT
@@ -131,7 +132,7 @@ zx_handle_t fdio_service_clone(zx_handle_t handle) {
         return ZX_HANDLE_INVALID;
     }
     uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-    status = fuchsia::io::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
+    status = fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
     if (status != ZX_OK) {
         return ZX_HANDLE_INVALID;
     }
@@ -145,7 +146,7 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
         return ZX_ERR_INVALID_ARGS;
     }
     uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-    return fuchsia::io::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
+    return fio::Node::Call::Clone(zx::unowned_channel(handle), flags, std::move(request));
 }
 
 // Creates an |fdio_t| from a Zircon socket object.
@@ -195,7 +196,7 @@ static zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
 //
 // Upon failure, consumes all handles.
 static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
-                                       fuchsia::io::NodeInfo info,
+                                       fio::NodeInfo info,
                                        fdio_t** out_io) {
     zx::handle handle(raw_handle);
     fdio_t* io = nullptr;
@@ -205,25 +206,25 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
     }
 
     switch (info.which()) {
-    case fuchsia::io::NodeInfo::Tag::kDirectory:
+    case fio::NodeInfo::Tag::kDirectory:
         io = fdio_dir_create(handle.release());
         break;
-    case fuchsia::io::NodeInfo::Tag::kService:
+    case fio::NodeInfo::Tag::kService:
         io = fdio_remote_create(handle.release(), 0);
         break;
-    case fuchsia::io::NodeInfo::Tag::kFile:
+    case fio::NodeInfo::Tag::kFile:
         io = fdio_file_create(handle.release(), info.mutable_file().event.release());
         break;
-    case fuchsia::io::NodeInfo::Tag::kDevice:
+    case fio::NodeInfo::Tag::kDevice:
         io = fdio_remote_create(handle.release(), info.mutable_device().event.release());
         break;
-    case fuchsia::io::NodeInfo::Tag::kTty:
+    case fio::NodeInfo::Tag::kTty:
         io = fdio_remote_create(handle.release(), info.mutable_tty().event.release());
         break;
-    case fuchsia::io::NodeInfo::Tag::kVmofile: {
+    case fio::NodeInfo::Tag::kVmofile: {
         uint64_t seek = 0u;
-        zx_status_t io_status = fuchsia_io_FileSeek(
-            handle.get(), 0, fuchsia_io_SeekOrigin_START, &status, &seek);
+        zx_status_t io_status = fio::File::Call::Seek(
+            zx::unowned_channel(handle.get()), 0, fio::SeekOrigin::START, &status, &seek);
         if (io_status != ZX_OK) {
             status = io_status;
         }
@@ -237,7 +238,7 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
                                  seek);
         break;
     }
-    case fuchsia::io::NodeInfo::Tag::kPipe: {
+    case fio::NodeInfo::Tag::kPipe: {
         return fdio_from_socket(info.mutable_pipe().socket.release(), out_io);
     }
     default:
@@ -260,8 +261,8 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
 //
 // Always consumes |channel|.
 static zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io) {
-    fuchsia::io::NodeInfo info;
-    zx_status_t status = fuchsia::io::Node::Call::Describe(zx::unowned_channel(channel), &info);
+    fio::NodeInfo info;
+    zx_status_t status = fio::Node::Call::Describe(zx::unowned_channel(channel), &info);
     if (status != ZX_OK) {
         zx_handle_close(channel);
         return status;
@@ -278,20 +279,20 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
         return status;
     fdio_t* io = nullptr;
     switch (info.type) {
-        case ZX_OBJ_TYPE_CHANNEL:
-            return fdio_from_channel(handle, out_io);
-        case ZX_OBJ_TYPE_SOCKET:
-            return fdio_from_socket(handle, out_io);
-        case ZX_OBJ_TYPE_VMO:
-            io = fdio_vmo_create(handle, 0u);
-            break;
-        case ZX_OBJ_TYPE_LOG:
-            io = fdio_logger_create(handle);
-            break;
-        default: {
-            zx_handle_close(handle);
-            return ZX_ERR_INVALID_ARGS;
-        }
+    case ZX_OBJ_TYPE_CHANNEL:
+        return fdio_from_channel(handle, out_io);
+    case ZX_OBJ_TYPE_SOCKET:
+        return fdio_from_socket(handle, out_io);
+    case ZX_OBJ_TYPE_VMO:
+        io = fdio_vmo_create(handle, 0u);
+        break;
+    case ZX_OBJ_TYPE_LOG:
+        io = fdio_logger_create(handle);
+        break;
+    default: {
+        zx_handle_close(handle);
+        return ZX_ERR_INVALID_ARGS;
+    }
     }
     if (io == nullptr) {
         return ZX_ERR_NO_MEMORY;
@@ -314,32 +315,29 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
         return status;
     }
 
-    status = fuchsia::io::Directory::Call::Open(zx::unowned_channel(dir),
-                                                flags,
-                                                mode,
-                                                fidl::StringView(length, path),
-                                                std::move(request));
+    status = fio::Directory::Call::Open(zx::unowned_channel(dir),
+                                        flags,
+                                        mode,
+                                        fidl::StringView(length, path),
+                                        std::move(request));
     if (status != ZX_OK) {
         return status;
     }
 
     if (flags & ZX_FS_FLAG_DESCRIBE) {
-        fuchsia::io::NodeInfo node_info;
+        fio::NodeInfo node_info;
         zx_status_t on_open_status = ZX_OK;
-        status = fuchsia::io::Directory::Call::HandleEvents(zx::unowned_channel(handle),
-                                                            fuchsia::io::Directory::EventHandlers {
-            .on_open = [&node_info, &on_open_status](zx_status_t status,
-                                                     fuchsia::io::NodeInfo* info) {
-                on_open_status = status;
-                if (info) {
-                    node_info = std::move(*info);
-                }
-                return ZX_OK;
-            },
-            .unknown = [] {
-                return ZX_ERR_IO;
-            }
-        });
+        status = fio::Directory::Call::HandleEvents(
+            zx::unowned_channel(handle),
+            fio::Directory::EventHandlers{
+                .on_open = [&node_info, &on_open_status](zx_status_t status,
+                                                         fio::NodeInfo* info) {
+                    on_open_status = status;
+                    if (info) {
+                        node_info = std::move(*info);
+                    }
+                    return ZX_OK; },
+                .unknown = [] { return ZX_ERR_IO; }});
 
         if (status == ZX_ERR_PEER_CLOSED) {
             return status;

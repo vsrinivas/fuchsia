@@ -16,10 +16,10 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <lib/fdio/namespace.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
@@ -33,8 +33,8 @@ namespace {
 
 class DirentFiller {
 public:
-    explicit DirentFiller(void* buffer, size_t length) :
-        start_(buffer), buffer_(buffer), length_(length) {}
+    explicit DirentFiller(void* buffer, size_t length)
+        : start_(buffer), buffer_(buffer), length_(length) {}
 
     zx_status_t Add(const char* name, size_t len, uint32_t type) {
         size_t sz = sizeof(vdirent_t) + len;
@@ -43,7 +43,7 @@ public:
             return ZX_ERR_INVALID_ARGS;
         }
         vdirent_t* de = static_cast<vdirent_t*>(buffer_);
-        de->ino = fuchsia_io_INO_UNKNOWN;
+        de->ino = fuchsia::io::INO_UNKNOWN;
         de->size = static_cast<uint8_t>(len);
         de->type = static_cast<uint8_t>(type);
         memcpy(de->name, name, len);
@@ -88,7 +88,8 @@ zx_status_t ValidateName(const fbl::StringPiece& name) {
 
 } // namespace
 
-fdio_namespace::fdio_namespace() : root_(LocalVnode::Create(nullptr, zx::channel(), "")) {
+fdio_namespace::fdio_namespace()
+    : root_(LocalVnode::Create(nullptr, zx::channel(), "")) {
 }
 
 fdio_namespace::~fdio_namespace() {
@@ -446,7 +447,7 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
         flat->count = es.count;
         flat->handle = es.handle;
         flat->type = es.type;
-        flat->path = (const char* const*) es.path;
+        flat->path = (const char* const*)es.path;
         *out = flat;
     }
 

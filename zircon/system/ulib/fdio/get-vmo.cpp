@@ -5,7 +5,7 @@
 #include "private.h"
 #include "unistd.h"
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/process.h>
@@ -80,7 +80,8 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
             size_t chunk = size < MAX_WINDOW ? size : MAX_WINDOW;
             size_t window = (chunk + PAGE_SIZE - 1) & -PAGE_SIZE;
             uintptr_t start = 0;
-            status = zx_vmar_map(current_vmar_handle,
+            status = zx_vmar_map(
+                current_vmar_handle,
                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                 0, *out_vmo, offset, window, &start);
             if (status != ZX_OK) {
@@ -109,8 +110,9 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
 }
 
 static zx_status_t get_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
-    return fdio_get_ops(io)->get_vmo(io, fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE,
-                                     out_vmo);
+    return fdio_get_ops(io)->get_vmo(
+        io, fuchsia::io::VMO_FLAG_READ | fuchsia::io::VMO_FLAG_PRIVATE,
+        out_vmo);
 }
 
 static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
@@ -123,8 +125,7 @@ static zx_status_t copy_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
     if ((status = read_file_into_vmo(io, &vmo)) == ZX_OK) {
         status = zx_handle_replace(
             vmo,
-            ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY |
-            ZX_RIGHT_READ | ZX_RIGHT_MAP,
+            ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY | ZX_RIGHT_READ | ZX_RIGHT_MAP,
             out_vmo);
     }
     return status;
@@ -159,8 +160,10 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    zx_status_t status = fdio_get_ops(io)->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
-                                                   fuchsia_io_VMO_FLAG_EXACT, out_vmo);
+    zx_status_t status = fdio_get_ops(io)->get_vmo(
+        io,
+        fuchsia::io::VMO_FLAG_READ | fuchsia::io::VMO_FLAG_EXACT,
+        out_vmo);
     fdio_release(io);
     return status;
 }

@@ -5,7 +5,6 @@
 #ifndef LIB_ZXIO_ZXIO_H_
 #define LIB_ZXIO_ZXIO_H_
 
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zxio/types.h>
 #include <stdint.h>
@@ -15,7 +14,7 @@
 __BEGIN_CDECLS
 
 typedef fuchsia::io::NodeAttributes zxio_node_attr_t;
-typedef fuchsia_io_SeekOrigin zxio_seek_origin_t;
+typedef fuchsia::io::SeekOrigin zxio_seek_origin_t;
 
 // An IO object.
 //
@@ -158,7 +157,7 @@ zx_status_t zxio_flags_get(zxio_t* io, uint32_t* out_flags);
 //
 // This function can modify the following flags:
 //
-//  * |fuchsia_io_OPEN_FLAG_APPEND|.
+//  * |fuchsia::io::OPEN_FLAG_APPEND|.
 //
 // See io.fidl for the available |flags|.
 zx_status_t zxio_flags_set(zxio_t* io, uint32_t flags);
@@ -226,22 +225,22 @@ zx_status_t zxio_link(zxio_t* src_directory, const char* src_path,
 
 // An entry in a directory.
 typedef struct zxio_dirent {
-      // The inode number of the entry.
-      uint64_t inode;
+    // The inode number of the entry.
+    uint64_t inode;
 
-      // The length of the name of the entry.
-      uint8_t size;
+    // The length of the name of the entry.
+    uint8_t size;
 
-      // The type of the entry.
-      //
-      // Aligned with the POSIX d_type values.
-      uint8_t type;
+    // The type of the entry.
+    //
+    // Aligned with the POSIX d_type values.
+    uint8_t type;
 
-      // The name of the entry.
-      //
-      // This string is not null terminated. Instead, refer to |size| to
-      // determine the length of the string.
-      char name[0];
+    // The name of the entry.
+    //
+    // This string is not null terminated. Instead, refer to |size| to
+    // determine the length of the string.
+    char name[0];
 } zxio_dirent_t;
 
 // An iterator for |zxio_dirent_t| objects.

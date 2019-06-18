@@ -20,9 +20,9 @@
 #include <sys/statfs.h>
 #include <sys/statvfs.h>
 #include <sys/uio.h>
-#include <utime.h>
 #include <threads.h>
 #include <unistd.h>
+#include <utime.h>
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -35,18 +35,20 @@
 
 #include <fbl/auto_lock.h>
 
-#include <lib/zircon-internal/debug.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zircon-internal/debug.h>
 
 #include "private.h"
 #include "unistd.h"
+
+namespace fio = fuchsia::io;
 
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 
@@ -80,7 +82,7 @@ static constexpr fdio_state_t initialize_fdio_state() {
 }
 fdio_state_t __fdio_global_state = initialize_fdio_state();
 
-static bool fdio_is_reserved_or_null(fdio_t *io) {
+static bool fdio_is_reserved_or_null(fdio_t* io) {
     if (io == NULL || io == fdio_get_reserved_io()) {
         return true;
     }
@@ -103,9 +105,9 @@ int fdio_reserve_fd(int starting_fd) {
     return -1;
 }
 
-int fdio_assign_reserved(int fd, fdio_t *io) {
+int fdio_assign_reserved(int fd, fdio_t* io) {
     fbl::AutoLock lock(&fdio_lock);
-    fdio_t *res = fdio_fdtab[fd];
+    fdio_t* res = fdio_fdtab[fd];
     if (res != fdio_get_reserved_io()) {
         errno = EINVAL;
         return -1;
@@ -168,7 +170,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
             }
         }
 
-free_fd_found:
+    free_fd_found:
         fdio_dupcount_acquire(io);
         fdio_fdtab[fd] = io;
     }
@@ -261,7 +263,7 @@ static_assert(!(O_LARGEFILE & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS
 static_assert(!(O_NOATIME & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
 static_assert(!(O_TMPFILE & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
 
-#define ZX_FS_FLAGS_ALLOWED_WITH_O_PATH (ZX_FS_FLAG_VNODE_REF_ONLY | \
+#define ZX_FS_FLAGS_ALLOWED_WITH_O_PATH (ZX_FS_FLAG_VNODE_REF_ONLY |                       \
                                          ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOT_DIRECTORY | \
                                          ZX_FS_FLAG_DESCRIBE)
 
@@ -301,7 +303,6 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
     result |= (flags & ZXIO_FS_MASK);
     return result;
 }
-
 
 // Possibly return an owned fdio_t corresponding to either the root,
 // the cwd, or, for the ...at variants, dirfd. In the absolute path
@@ -360,7 +361,7 @@ zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
     }
 
     bool rooted = (in[0] == '/');
-    size_t in_index = 0; // Index of the next byte to read
+    size_t in_index = 0;  // Index of the next byte to read
     size_t out_index = 0; // Index of the next byte to write
 
     if (rooted) {
@@ -388,7 +389,9 @@ zx_status_t __fdio_cleanpath(const char* in, char* out, size_t* outlen, bool* is
                 // 3. Eliminate .. path elements (the parent directory) and the element that
                 // precedes them.
                 out_index--;
-                while (out_index > dotdot && out[out_index] != '/') { out_index--; }
+                while (out_index > dotdot && out[out_index] != '/') {
+                    out_index--;
+                }
             } else if (rooted) {
                 // 4. Eliminate .. elements that begin a rooted path, that is, replace /.. by / at
                 // the beginning of a path.
@@ -460,7 +463,7 @@ static zx_status_t __fdio_open_at_impl(fdio_t** io, int dirfd, const char* path,
     }
     flags |= (has_ending_slash ? O_DIRECTORY : 0);
 
-    uint32_t zx_flags = fdio_flags_to_zxio((uint32_t) flags);
+    uint32_t zx_flags = fdio_flags_to_zxio((uint32_t)flags);
 
     if (!(zx_flags & ZX_FS_FLAG_DIRECTORY)) {
         // At this point we're not sure if the path refers to a directory.
@@ -612,8 +615,8 @@ static zx_status_t __fdio_opendir_containing_at(fdio_t** io, int dirfd, const ch
         clean[1] = 0;
     }
 
-    zx_status_t r = fdio_get_ops(iodir)->open(iodir, clean,
-                                     fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0, io);
+    zx_status_t r = fdio_get_ops(iodir)->open(
+        iodir, clean, fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0, io);
     fdio_release(iodir);
     return r;
 }
@@ -629,13 +632,12 @@ static zx_status_t __fdio_opendir_containing(fdio_t** io, const char* path, char
 //
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/libc.h
-extern "C"
-__EXPORT
-void __libc_extensions_init(uint32_t handle_count,
-                            zx_handle_t handle[],
-                            uint32_t handle_info[],
-                            uint32_t name_count,
-                            char** names) {
+extern "C" __EXPORT void __libc_extensions_init(
+    uint32_t handle_count,
+    zx_handle_t handle[],
+    uint32_t handle_info[],
+    uint32_t name_count,
+    char** names) {
     zx_status_t status = fdio_ns_create(&fdio_root_ns);
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to create root namespace");
 
@@ -681,7 +683,7 @@ void __libc_extensions_init(uint32_t handle_count,
         // so check for a bit flag indicating that it should be duped
         // into 0/1/2 to become all of stdin/out/err
         if ((arg & FDIO_FLAG_USE_FOR_STDIO) && (arg_fd < FDIO_MAX_FD)) {
-          stdio_fd = arg_fd;
+            stdio_fd = arg_fd;
         }
     }
 
@@ -725,9 +727,7 @@ void __libc_extensions_init(uint32_t handle_count,
 //
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/libc.h
-extern "C"
-__EXPORT
-void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
+extern "C" __EXPORT void __libc_extensions_fini(void) __TA_ACQUIRE(&fdio_lock) {
     mtx_lock(&fdio_lock);
     for (int fd = 0; fd < FDIO_MAX_FD; fd++) {
         fdio_t* io = fdio_fdtab[fd];
@@ -798,7 +798,7 @@ zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* _pending, zx_time_t 
 }
 
 static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
-    fuchsia::io::NodeAttributes attr;
+    fio::NodeAttributes attr;
     zx_status_t status = fdio_get_ops(io)->get_attr(io, &attr);
     if (status != ZX_OK) {
         return status;
@@ -821,75 +821,135 @@ static zx_status_t fdio_stat(fdio_t* io, struct stat* s) {
 // TODO(ZX-974): determine complete correct mapping
 int fdio_status_to_errno(zx_status_t status) {
     switch (status) {
-    case ZX_ERR_NOT_FOUND: return ENOENT;
-    case ZX_ERR_NO_MEMORY: return ENOMEM;
-    case ZX_ERR_INVALID_ARGS: return EINVAL;
-    case ZX_ERR_BUFFER_TOO_SMALL: return EINVAL;
-    case ZX_ERR_TIMED_OUT: return ETIMEDOUT;
-    case ZX_ERR_UNAVAILABLE: return EBUSY;
-    case ZX_ERR_ALREADY_EXISTS: return EEXIST;
-    case ZX_ERR_PEER_CLOSED: return EPIPE;
-    case ZX_ERR_BAD_STATE: return EPIPE;
-    case ZX_ERR_BAD_PATH: return ENAMETOOLONG;
-    case ZX_ERR_IO: return EIO;
-    case ZX_ERR_NOT_FILE: return EISDIR;
-    case ZX_ERR_NOT_DIR: return ENOTDIR;
-    case ZX_ERR_NOT_SUPPORTED: return ENOTSUP;
-    case ZX_ERR_WRONG_TYPE: return ENOTSUP;
-    case ZX_ERR_OUT_OF_RANGE: return EINVAL;
-    case ZX_ERR_NO_RESOURCES: return ENOMEM;
-    case ZX_ERR_BAD_HANDLE: return EBADF;
-    case ZX_ERR_ACCESS_DENIED: return EACCES;
-    case ZX_ERR_SHOULD_WAIT: return EAGAIN;
-    case ZX_ERR_FILE_BIG: return EFBIG;
-    case ZX_ERR_NO_SPACE: return ENOSPC;
-    case ZX_ERR_NOT_EMPTY: return ENOTEMPTY;
-    case ZX_ERR_IO_REFUSED: return ECONNREFUSED;
-    case ZX_ERR_IO_INVALID: return EIO;
-    case ZX_ERR_CANCELED: return EBADF;
-    case ZX_ERR_PROTOCOL_NOT_SUPPORTED: return EPROTONOSUPPORT;
-    case ZX_ERR_ADDRESS_UNREACHABLE: return ENETUNREACH;
-    case ZX_ERR_ADDRESS_IN_USE: return EADDRINUSE;
-    case ZX_ERR_NOT_CONNECTED: return ENOTCONN;
-    case ZX_ERR_CONNECTION_REFUSED: return ECONNREFUSED;
-    case ZX_ERR_CONNECTION_RESET: return ECONNRESET;
-    case ZX_ERR_CONNECTION_ABORTED: return ECONNABORTED;
+    case ZX_ERR_NOT_FOUND:
+        return ENOENT;
+    case ZX_ERR_NO_MEMORY:
+        return ENOMEM;
+    case ZX_ERR_INVALID_ARGS:
+        return EINVAL;
+    case ZX_ERR_BUFFER_TOO_SMALL:
+        return EINVAL;
+    case ZX_ERR_TIMED_OUT:
+        return ETIMEDOUT;
+    case ZX_ERR_UNAVAILABLE:
+        return EBUSY;
+    case ZX_ERR_ALREADY_EXISTS:
+        return EEXIST;
+    case ZX_ERR_PEER_CLOSED:
+        return EPIPE;
+    case ZX_ERR_BAD_STATE:
+        return EPIPE;
+    case ZX_ERR_BAD_PATH:
+        return ENAMETOOLONG;
+    case ZX_ERR_IO:
+        return EIO;
+    case ZX_ERR_NOT_FILE:
+        return EISDIR;
+    case ZX_ERR_NOT_DIR:
+        return ENOTDIR;
+    case ZX_ERR_NOT_SUPPORTED:
+        return ENOTSUP;
+    case ZX_ERR_WRONG_TYPE:
+        return ENOTSUP;
+    case ZX_ERR_OUT_OF_RANGE:
+        return EINVAL;
+    case ZX_ERR_NO_RESOURCES:
+        return ENOMEM;
+    case ZX_ERR_BAD_HANDLE:
+        return EBADF;
+    case ZX_ERR_ACCESS_DENIED:
+        return EACCES;
+    case ZX_ERR_SHOULD_WAIT:
+        return EAGAIN;
+    case ZX_ERR_FILE_BIG:
+        return EFBIG;
+    case ZX_ERR_NO_SPACE:
+        return ENOSPC;
+    case ZX_ERR_NOT_EMPTY:
+        return ENOTEMPTY;
+    case ZX_ERR_IO_REFUSED:
+        return ECONNREFUSED;
+    case ZX_ERR_IO_INVALID:
+        return EIO;
+    case ZX_ERR_CANCELED:
+        return EBADF;
+    case ZX_ERR_PROTOCOL_NOT_SUPPORTED:
+        return EPROTONOSUPPORT;
+    case ZX_ERR_ADDRESS_UNREACHABLE:
+        return ENETUNREACH;
+    case ZX_ERR_ADDRESS_IN_USE:
+        return EADDRINUSE;
+    case ZX_ERR_NOT_CONNECTED:
+        return ENOTCONN;
+    case ZX_ERR_CONNECTION_REFUSED:
+        return ECONNREFUSED;
+    case ZX_ERR_CONNECTION_RESET:
+        return ECONNRESET;
+    case ZX_ERR_CONNECTION_ABORTED:
+        return ECONNABORTED;
 
     // No specific translation, so return a generic value.
-    default: return EIO;
+    default:
+        return EIO;
     }
 }
 
 zx_status_t errno_to_fdio_status(int16_t out_code) {
     switch (out_code) {
-        case EACCES: return ZX_ERR_ACCESS_DENIED;
-        case EADDRINUSE: return ZX_ERR_ADDRESS_IN_USE;
-        case EAGAIN: return ZX_ERR_SHOULD_WAIT;
-        case EBADF: return ZX_ERR_BAD_HANDLE;
-        case EBUSY: return ZX_ERR_UNAVAILABLE;
-        case ECONNABORTED: return ZX_ERR_CONNECTION_ABORTED;
-        case ECONNREFUSED: return ZX_ERR_IO_REFUSED;
-        case ECONNRESET: return ZX_ERR_CONNECTION_RESET;
-        case EEXIST: return ZX_ERR_ALREADY_EXISTS;
-        case EFBIG: return ZX_ERR_FILE_BIG;
-        case EINVAL: return ZX_ERR_INVALID_ARGS;
-        case EIO: return ZX_ERR_IO;
-        case EISDIR: return ZX_ERR_NOT_FILE;
-        case ENAMETOOLONG: return ZX_ERR_BAD_PATH;
-        case ENETUNREACH: return ZX_ERR_ADDRESS_UNREACHABLE;
-        case ENOENT: return ZX_ERR_NOT_FOUND;
-        case ENOMEM: return ZX_ERR_NO_MEMORY;
-        case ENOSPC: return ZX_ERR_NO_SPACE;
-        case ENOTCONN: return ZX_ERR_NOT_CONNECTED;
-        case ENOTDIR: return ZX_ERR_NOT_DIR;
-        case ENOTEMPTY: return ZX_ERR_NOT_EMPTY;
-        case ENOTSUP: return ZX_ERR_NOT_SUPPORTED;
-        case EPIPE: return ZX_ERR_PEER_CLOSED;
-        case EPROTONOSUPPORT: return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
-        case ETIMEDOUT: return ZX_ERR_TIMED_OUT;
+    case EACCES:
+        return ZX_ERR_ACCESS_DENIED;
+    case EADDRINUSE:
+        return ZX_ERR_ADDRESS_IN_USE;
+    case EAGAIN:
+        return ZX_ERR_SHOULD_WAIT;
+    case EBADF:
+        return ZX_ERR_BAD_HANDLE;
+    case EBUSY:
+        return ZX_ERR_UNAVAILABLE;
+    case ECONNABORTED:
+        return ZX_ERR_CONNECTION_ABORTED;
+    case ECONNREFUSED:
+        return ZX_ERR_IO_REFUSED;
+    case ECONNRESET:
+        return ZX_ERR_CONNECTION_RESET;
+    case EEXIST:
+        return ZX_ERR_ALREADY_EXISTS;
+    case EFBIG:
+        return ZX_ERR_FILE_BIG;
+    case EINVAL:
+        return ZX_ERR_INVALID_ARGS;
+    case EIO:
+        return ZX_ERR_IO;
+    case EISDIR:
+        return ZX_ERR_NOT_FILE;
+    case ENAMETOOLONG:
+        return ZX_ERR_BAD_PATH;
+    case ENETUNREACH:
+        return ZX_ERR_ADDRESS_UNREACHABLE;
+    case ENOENT:
+        return ZX_ERR_NOT_FOUND;
+    case ENOMEM:
+        return ZX_ERR_NO_MEMORY;
+    case ENOSPC:
+        return ZX_ERR_NO_SPACE;
+    case ENOTCONN:
+        return ZX_ERR_NOT_CONNECTED;
+    case ENOTDIR:
+        return ZX_ERR_NOT_DIR;
+    case ENOTEMPTY:
+        return ZX_ERR_NOT_EMPTY;
+    case ENOTSUP:
+        return ZX_ERR_NOT_SUPPORTED;
+    case EPIPE:
+        return ZX_ERR_PEER_CLOSED;
+    case EPROTONOSUPPORT:
+        return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+    case ETIMEDOUT:
+        return ZX_ERR_TIMED_OUT;
 
-        // No specific translation, so return a generic value.
-        default: return ZX_ERR_INTERNAL;
+    // No specific translation, so return a generic value.
+    default:
+        return ZX_ERR_INTERNAL;
     }
 }
 
@@ -940,16 +1000,19 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
 
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/stdio_impl.h
-extern "C"
-__EXPORT
-zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int flags, int fd,
-                       off_t fd_off, uintptr_t* out) {
+extern "C" __EXPORT zx_status_t _mmap_file(size_t offset,
+                                           size_t len,
+                                           zx_vm_option_t zx_options,
+                                           int flags,
+                                           int fd,
+                                           off_t fd_off,
+                                           uintptr_t* out) {
     fdio_t* io;
     if ((io = fd_to_io(fd)) == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    int vflags = zx_options | (flags & MAP_PRIVATE ? fuchsia_io_VMO_FLAG_PRIVATE : 0);
+    int vflags = zx_options | (flags & MAP_PRIVATE ? fio::VMO_FLAG_PRIVATE : 0);
     zx_handle_t vmo;
     zx_status_t r = fdio_get_ops(io)->get_vmo(io, vflags, &vmo);
     fdio_release(io);
@@ -1027,7 +1090,7 @@ ssize_t write(int fd, const void* buf, size_t count) {
     zx_status_t status;
     do {
         size_t actual = 0u;
-        status = zxio_write(fdio_get_zxio(io), (char *) buf + progress, count - progress, &actual);
+        status = zxio_write(fdio_get_zxio(io), (char*)buf + progress, count - progress, &actual);
         progress += actual;
         if (nonblocking) {
             break;
@@ -1315,9 +1378,9 @@ int fcntl(int fd, int cmd, ...) {
 #undef GET_INT_ARG
 }
 
-static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
-static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
-static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
+static_assert(SEEK_SET == int(fio::SeekOrigin::START), "");
+static_assert(SEEK_CUR == int(fio::SeekOrigin::CURRENT), "");
+static_assert(SEEK_END == int(fio::SeekOrigin::END), "");
 
 __EXPORT
 off_t lseek(int fd, off_t offset, int whence) {
@@ -1326,7 +1389,7 @@ off_t lseek(int fd, off_t offset, int whence) {
         return ERRNO(EBADF);
     }
     size_t result = 0u;
-    zx_status_t status = zxio_seek(fdio_get_zxio(io), offset, whence, &result);
+    zx_status_t status = zxio_seek(fdio_get_zxio(io), offset, zxio_seek_origin_t(whence), &result);
     if (status == ZX_ERR_WRONG_TYPE) {
         // Although 'ESPIPE' is a bit of a misnomer, it is the valid errno
         // for any fd which does not implement seeking (i.e., for pipes,
@@ -1339,7 +1402,7 @@ off_t lseek(int fd, off_t offset, int whence) {
     }
 }
 
-#define READDIR_CMD_NONE  0
+#define READDIR_CMD_NONE 0
 #define READDIR_CMD_RESET 1
 
 static int getdirents(int fd, void* ptr, size_t len, long cmd) {
@@ -1360,7 +1423,7 @@ static int getdirents(int fd, void* ptr, size_t len, long cmd) {
 
 done:
     fdio_release(io);
-    return status == ZX_OK ? (int) actual : ERROR(status);
+    return status == ZX_OK ? (int)actual : ERROR(status);
 }
 
 static int truncateat(int dirfd, const char* path, off_t len) {
@@ -1409,8 +1472,11 @@ int ftruncate(int fd, off_t len) {
 // Using zircon kernel primitives (cookies) to authenticate the vnode token, this
 // allows these multi-path operations to mix absolute / relative paths and cross
 // mount points with ease.
-static int two_path_op_at(uint32_t ordinal, int olddirfd, const char* oldpath,
-                          int newdirfd, const char* newpath) {
+static int two_path_op_at(int olddirfd,
+                          const char* oldpath,
+                          int newdirfd,
+                          const char* newpath,
+                          two_path_op fdio_ops::*op_getter) {
     char oldname[NAME_MAX + 1];
     fdio_t* io_oldparent;
     zx_status_t status = ZX_OK;
@@ -1429,20 +1495,9 @@ static int two_path_op_at(uint32_t ordinal, int olddirfd, const char* oldpath,
     if (status < 0) {
         goto newparent_open;
     }
+    status = (fdio_get_ops(io_oldparent)->*op_getter)(
+        io_oldparent, oldname, strlen(oldname), token, newname, strlen(newname));
 
-    if (ordinal == fuchsia_io_DirectoryRenameOrdinal ||
-        ordinal == fuchsia_io_DirectoryRenameGenOrdinal) {
-        status = fdio_get_ops(io_oldparent)->rename(io_oldparent, oldname,
-                                                    strlen(oldname), token, newname,
-                                                    strlen(newname));
-    } else if (ordinal == fuchsia_io_DirectoryLinkOrdinal ||
-               ordinal == fuchsia_io_DirectoryLinkGenOrdinal) {
-        status = fdio_get_ops(io_oldparent)->link(io_oldparent, oldname, strlen(oldname),
-                                                  token, newname, strlen(newname));
-    } else {
-        zx_handle_close(token);
-        status = ZX_ERR_NOT_SUPPORTED;
-    }
 newparent_open:
     fdio_get_ops(io_newparent)->close(io_newparent);
     fdio_release(io_newparent);
@@ -1454,17 +1509,17 @@ oldparent_open:
 
 __EXPORT
 int renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
-    return two_path_op_at(fuchsia_io_DirectoryRenameOrdinal, olddirfd, oldpath, newdirfd, newpath);
+    return two_path_op_at(olddirfd, oldpath, newdirfd, newpath, &fdio_ops::rename);
 }
 
 __EXPORT
 int rename(const char* oldpath, const char* newpath) {
-    return two_path_op_at(fuchsia_io_DirectoryRenameOrdinal, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+    return two_path_op_at(AT_FDCWD, oldpath, AT_FDCWD, newpath, &fdio_ops::rename);
 }
 
 __EXPORT
 int link(const char* oldpath, const char* newpath) {
-    return two_path_op_at(fuchsia_io_DirectoryLinkOrdinal, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+    return two_path_op_at(AT_FDCWD, oldpath, AT_FDCWD, newpath, &fdio_ops::link);
 }
 
 __EXPORT
@@ -1654,7 +1709,7 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
 
 static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
                               int flags) {
-    fuchsia::io::NodeAttributes attr;
+    fio::NodeAttributes attr;
     uint32_t mask = 0;
 
     // Extract modify time.
@@ -1671,7 +1726,7 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
         // For setattr, tell which fields are valid.
-        mask = fuchsia_io_NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
+        mask = fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME;
     }
 
     // set time(s) on underlying object
@@ -1679,8 +1734,7 @@ static zx_status_t zx_utimens(fdio_t* io, const struct timespec times[2],
 }
 
 __EXPORT
-int utimensat(int dirfd, const char *path,
-              const struct timespec times[2], int flags) {
+int utimensat(int dirfd, const char* path, const struct timespec times[2], int flags) {
     fdio_t* io;
     zx_status_t r;
 
@@ -1745,7 +1799,7 @@ int pipe(int pipefd[2]) {
 
 __EXPORT
 int socketpair(int domain, int type, int protocol, int fd[2]) {
-    if (type != SOCK_STREAM) {  // TODO(jamesr): SOCK_DGRAM
+    if (type != SOCK_STREAM) { // TODO(jamesr): SOCK_DGRAM
         errno = EPROTOTYPE;
         return -1;
     }
@@ -2208,8 +2262,7 @@ int select(int n, fd_set* __restrict rfds, fd_set* __restrict wfds, fd_set* __re
 
     int nfds = 0;
     if (r == ZX_OK && nvalid > 0) {
-        zx_time_t tmo = (tv == NULL) ? ZX_TIME_INFINITE :
-            zx_deadline_after(zx_duration_add_duration(ZX_SEC(tv->tv_sec), ZX_USEC(tv->tv_usec)));
+        zx_time_t tmo = (tv == NULL) ? ZX_TIME_INFINITE : zx_deadline_after(zx_duration_add_duration(ZX_SEC(tv->tv_sec), ZX_USEC(tv->tv_usec)));
         r = zx_object_wait_many(items, nvalid, tmo);
         // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
         if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {
@@ -2301,8 +2354,8 @@ ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct s
     }
     fdio_release(io);
     return status_or_count < 0
-        ? STATUS(static_cast<zx_status_t>(status_or_count))
-        : status_or_count;
+               ? STATUS(static_cast<zx_status_t>(status_or_count))
+               : status_or_count;
 }
 
 __EXPORT
@@ -2334,12 +2387,12 @@ ssize_t recvfrom(int fd,
     }
     fdio_release(io);
     return status_or_count < 0
-           ? STATUS(static_cast<zx_status_t>(status_or_count))
-           : status_or_count;
+               ? STATUS(static_cast<zx_status_t>(status_or_count))
+               : status_or_count;
 }
 
 __EXPORT
-ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
+ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -2359,8 +2412,8 @@ ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
     }
     fdio_release(io);
     return status_or_count < 0
-           ? STATUS(static_cast<zx_status_t>(status_or_count))
-           : status_or_count;
+               ? STATUS(static_cast<zx_status_t>(status_or_count))
+               : status_or_count;
 }
 
 __EXPORT
@@ -2384,8 +2437,8 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     }
     fdio_release(io);
     return status_or_count < 0
-           ? STATUS(static_cast<zx_status_t>(status_or_count))
-           : status_or_count;
+               ? STATUS(static_cast<zx_status_t>(status_or_count))
+               : status_or_count;
 }
 
 __EXPORT
@@ -2407,7 +2460,7 @@ int shutdown(int fd, int how) {
 
 // The common denominator between the Linux-y fstatfs and the POSIX
 // fstatvfs, which align on most fields. The fs version is more easily
-// computed from the fuchsia_io_FilesystemInfo, so this takes a struct
+// computed from the fio::FilesystemInfo, so this takes a struct
 // statfs.
 static int fs_stat(int fd, struct statfs* buf) {
     fdio_t* io;
@@ -2419,32 +2472,39 @@ static int fs_stat(int fd, struct statfs* buf) {
         fdio_release(io);
         return ERRNO(ENOTSUP);
     }
-    zx_status_t status;
-    fuchsia_io_FilesystemInfo info;
-    zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(handle, &status, &info);
+    uint8_t response_buffer[fidl::MaxSizeInChannel<fio::DirectoryAdmin::QueryFilesystemResponse>()];
+    fidl::DecodeResult result = fio::DirectoryAdmin::Call::QueryFilesystem(
+        zx::unowned_channel(handle),
+        fidl::BytePart::WrapEmpty(response_buffer));
     fdio_release(io);
-    if (io_status != ZX_OK) {
-        return ERRNO(fdio_status_to_errno(io_status));
-    } else if (status != ZX_OK) {
-        return ERRNO(fdio_status_to_errno(status));
+    if (result.status != ZX_OK) {
+        return ERROR(result.status);
+    }
+    fio::DirectoryAdmin::QueryFilesystemResponse* response = result.Unwrap();
+    if (response->s != ZX_OK) {
+        return ERROR(response->s);
+    }
+    fio::FilesystemInfo* info = response->info;
+    if (info == nullptr) {
+        return ERRNO(EIO);
     }
 
-    info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
+    info->name[fio::MAX_FS_NAME_BUFFER - 1] = '\0';
 
     struct statfs stats = {};
 
-    if (info.block_size) {
-        stats.f_bsize = info.block_size;
-        stats.f_blocks = info.total_bytes / stats.f_bsize;
-        stats.f_bfree = stats.f_blocks - info.used_bytes / stats.f_bsize;
+    if (info->block_size) {
+        stats.f_bsize = info->block_size;
+        stats.f_blocks = info->total_bytes / stats.f_bsize;
+        stats.f_bfree = stats.f_blocks - info->used_bytes / stats.f_bsize;
     }
     stats.f_bavail = stats.f_bfree;
-    stats.f_files = info.total_nodes;
-    stats.f_ffree = info.total_nodes - info.used_nodes;
-    stats.f_namelen = info.max_filename_size;
-    stats.f_type = info.fs_type;
-    stats.f_fsid.__val[0] = static_cast<int>(info.fs_id & 0xffffffff);
-    stats.f_fsid.__val[1] = static_cast<int>(info.fs_id >> 32u);
+    stats.f_files = info->total_nodes;
+    stats.f_ffree = info->total_nodes - info->used_nodes;
+    stats.f_namelen = info->max_filename_size;
+    stats.f_type = info->fs_type;
+    stats.f_fsid.__val[0] = static_cast<int>(info->fs_id & 0xffffffff);
+    stats.f_fsid.__val[1] = static_cast<int>(info->fs_id >> 32u);
 
     *buf = stats;
     return 0;
@@ -2523,8 +2583,6 @@ int statvfs(const char* path, struct statvfs* buf) {
 
 // extern "C" is required here, since the corresponding declaration is in an internal musl header:
 // zircon/third_party/ulib/musl/src/internal/libc.h
-extern "C"
-__EXPORT
-int _fd_open_max(void) {
+extern "C" __EXPORT int _fd_open_max(void) {
     return FDIO_MAX_FD;
 }

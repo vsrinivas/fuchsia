@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_
+#define ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_
 
 #include <errno.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
@@ -33,6 +33,9 @@ typedef struct fdio_namespace fdio_ns_t;
 //
 // The NULL protocol absorbs writes and is never readable.
 
+typedef zx_status_t (*two_path_op)(fdio_t* io, const char* src, size_t srclen,
+                                   zx_handle_t dst_token, const char* dst, size_t dstlen);
+
 typedef struct fdio_ops {
     zx_status_t (*close)(fdio_t* io);
     zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags,
@@ -53,10 +56,8 @@ typedef struct fdio_ops {
     zx_status_t (*rewind)(fdio_t* io);
     zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
     zx_status_t (*truncate)(fdio_t* io, off_t off);
-    zx_status_t (*rename)(fdio_t* io, const char* src, size_t srclen,
-                          zx_handle_t dst_token, const char* dst, size_t dstlen);
-    zx_status_t (*link)(fdio_t* io, const char* src, size_t srclen,
-                        zx_handle_t dst_token, const char* dst, size_t dstlen);
+    two_path_op rename;
+    two_path_op link;
     zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
     zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
     ssize_t (*recvfrom)(fdio_t* io, void* data, size_t len, int flags,
@@ -70,13 +71,13 @@ typedef struct fdio_ops {
 } fdio_ops_t;
 
 // fdio_t ioflag values
-#define IOFLAG_CLOEXEC              (1 << 0)
-#define IOFLAG_SOCKET               (1 << 1)
-#define IOFLAG_EPOLL                (1 << 2)
-#define IOFLAG_WAITABLE             (1 << 3)
-#define IOFLAG_SOCKET_CONNECTING    (1 << 4)
-#define IOFLAG_SOCKET_CONNECTED     (1 << 5)
-#define IOFLAG_NONBLOCK             (1 << 6)
+#define IOFLAG_CLOEXEC (1 << 0)
+#define IOFLAG_SOCKET (1 << 1)
+#define IOFLAG_EPOLL (1 << 2)
+#define IOFLAG_WAITABLE (1 << 3)
+#define IOFLAG_SOCKET_CONNECTING (1 << 4)
+#define IOFLAG_SOCKET_CONNECTED (1 << 5)
+#define IOFLAG_NONBLOCK (1 << 6)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
@@ -306,3 +307,5 @@ int fdio_assign_reserved(int fd, fdio_t* io);
 int fdio_release_reserved(int fd);
 
 __END_CDECLS
+
+#endif // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_

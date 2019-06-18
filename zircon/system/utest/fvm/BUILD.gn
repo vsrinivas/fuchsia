@@ -41,7 +41,9 @@ test("fvm") {
 }
 
 library("fvm-test-utils") {
-  sources = ["utils.cpp"]
+  sources = [
+    "utils.cpp",
+  ]
 
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
@@ -54,7 +56,6 @@ library("fvm-test-utils") {
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
@@ -71,13 +72,13 @@ library("fvm-test-utils") {
 
 test("fvm-integration") {
   sources = [
-    "resize-tests.cpp"
+    "resize-tests.cpp",
   ]
 
   deps = [
     ":fvm-test-utils",
-    "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/zxtest",
   ]
 }

@@ -21,6 +21,8 @@
 
 #include "private.h"
 
+namespace fio = fuchsia::io;
+
 static zx_status_t fdio_zxio_close(fdio_t* io) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_close(z);
@@ -77,12 +79,12 @@ static zx_status_t fdio_zxio_sync(fdio_t* io) {
     return zxio_sync(z);
 }
 
-static zx_status_t fdio_zxio_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* out) {
+static zx_status_t fdio_zxio_get_attr(fdio_t* io, fio::NodeAttributes* out) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_attr_get(z, out);
 }
 
-static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const fuchsia::io::NodeAttributes* attr) {
+static zx_status_t fdio_zxio_set_attr(fdio_t* io, uint32_t flags, const fio::NodeAttributes* attr) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_attr_set(z, flags, attr);
 }
@@ -178,8 +180,8 @@ fdio_t* fdio_null_create(void) {
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
 // ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
 // a zx_signals_t, if they are desired.
-#define POLL_SHIFT  24
-#define POLL_MASK   0x1F
+#define POLL_SHIFT 24
+#define POLL_MASK 0x1F
 
 static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) {
     return (zxio_remote_t*)fdio_get_zxio(io);
@@ -222,28 +224,49 @@ static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_handle_t hbuf[out_handle_count];
-    size_t out_handle_actual;
-    zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_NodeIoctl(h, op,
-                                          out_len, static_cast<const zx_handle_t*>(in_buf),
-                                          in_handle_count, static_cast<const uint8_t*>(in_buf),
-                                          in_len, &status, hbuf,
-                                          out_handle_count, &out_handle_actual,
-                                          static_cast<uint8_t*>(out_buf), out_len, out_actual)) != ZX_OK) {
-        return io_status;
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::Node::IoctlRequest>()];
+    zx::handle in_handle_buf[in_handle_count];
+    for (size_t i = 0; i < in_handle_count; i++) {
+        in_handle_buf[i] = zx::handle(static_cast<const zx_handle_t*>(in_buf)[i]);
     }
-
+    uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Node::IoctlResponse>()];
+    zx_status_t status;
+    fidl::VectorView<::zx::handle> handles;
+    fidl::VectorView<uint8_t> out;
+    fidl::DecodeResult result = fio::Node::Call::Ioctl(
+        zx::unowned_channel(h),
+        fidl::BytePart::WrapEmpty(request_buffer),
+        op,
+        out_len,
+        fidl::VectorView(in_handle_count, in_handle_buf),
+        fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
+        fidl::BytePart::WrapEmpty(response_buffer),
+        &status,
+        &handles,
+        &out);
+    if (result.status != ZX_OK) {
+        return result.status;
+    }
     if (status != ZX_OK) {
-        zx_handle_close_many(hbuf, out_handle_actual);
         return status;
     }
-    if (out_handle_actual != out_handle_count) {
-        zx_handle_close_many(hbuf, out_handle_actual);
+    if (handles.count() != out_handle_count) {
+        return ZX_ERR_IO;
+    }
+    if (out.count() != out_len) {
         return ZX_ERR_IO;
     }
 
-    memcpy(out_buf, hbuf, out_handle_count * sizeof(zx_handle_t));
+    if (out_handle_count) {
+        zx_handle_t* out_handle_buf = static_cast<zx_handle_t*>(out_buf);
+        for (zx::handle& handle : handles) {
+            *out_handle_buf++ = handle.release();
+        }
+    } else {
+        memcpy(out_buf, out.data(), out.count());
+    }
+    *out_actual = out.count();
+
     return ZX_OK;
 }
 
@@ -287,78 +310,116 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
 
 static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* out_vmo) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    fuchsia_mem_Buffer buffer;
-    memset(&buffer, 0, sizeof(buffer));
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_FileGetBuffer(rio->control, flags, &status, &buffer);
-    if (io_status != ZX_OK) {
-        return io_status;
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferRequest>()];
+    fidl::DecodedMessage<fio::File::GetBufferRequest> request(
+        fidl::BytePart::WrapFull(request_buffer));
+    uint8_t response_buffer[fidl::MaxSizeInChannel<fio::File::GetBufferResponse>()];
+    request.message()->flags = flags;
+    fidl::DecodeResult result = fio::File::Call::GetBuffer(
+        zx::unowned_channel(rio->control),
+        std::move(request),
+        fidl::BytePart::WrapEmpty(response_buffer));
+    if (result.status != ZX_OK) {
+        return result.status;
     }
-    if (status != ZX_OK) {
-        return status;
+    fio::File::GetBufferResponse* response = result.Unwrap();
+    if (response->s != ZX_OK) {
+        return response->s;
     }
-    if (buffer.vmo == ZX_HANDLE_INVALID) {
+    if (response->buffer == nullptr) {
         return ZX_ERR_IO;
     }
-    *out_vmo = buffer.vmo;
+    *out_vmo = response->buffer->vmo.release();
     return ZX_OK;
 }
 
 static zx_status_t fdio_zxio_remote_get_token(fdio_t* io, zx_handle_t* out_token) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryGetToken(rio->control, &status, out_token);
-    return io_status != ZX_OK ? io_status : status;
-}
-
-static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
-    zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    size_t actual = 0u;
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryReadDirents(rio->control, max, &status,
-                                                static_cast<uint8_t*>(ptr), max, &actual);
+    zx_status_t status;
+    zx::handle out_handle;
+    zx_status_t io_status = fio::Directory::Call::GetToken(
+        zx::unowned_channel(rio->control),
+        &status,
+        &out_handle);
     if (io_status != ZX_OK) {
         return io_status;
     }
     if (status != ZX_OK) {
         return status;
     }
-    if (actual > max) {
+    *out_token = out_handle.release();
+    return ZX_OK;
+}
+
+static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
+    zxio_remote_t* rio = fdio_get_zxio_remote(io);
+    uint8_t request_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsRequest>()];
+    fidl::DecodedMessage<fio::Directory::ReadDirentsRequest> request(
+        fidl::BytePart::WrapFull(request_buffer));
+    uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsResponse>()];
+    request.message()->max_bytes = max;
+    fidl::DecodeResult result = fio::Directory::Call::ReadDirents(
+        zx::unowned_channel(rio->control),
+        std::move(request),
+        fidl::BytePart::WrapEmpty(response_buffer));
+    if (result.status != ZX_OK) {
+        return result.status;
+    }
+    fio::Directory::ReadDirentsResponse* response = result.Unwrap();
+    if (response->s != ZX_OK) {
+        return response->s;
+    }
+    fidl::VectorView<uint8_t> dirents = response->dirents;
+    if (dirents.count() > max) {
         return ZX_ERR_IO;
     }
-    *out_actual = actual;
-    return status;
+    *out_actual = dirents.count();
+    memcpy(ptr, dirents.data(), dirents.count());
+    return ZX_OK;
 }
 
 static zx_status_t fdio_zxio_remote_rewind(fdio_t* io) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryRewind(rio->control, &status);
+    zx_status_t status;
+    zx_status_t io_status = fio::Directory::Call::Rewind(
+        zx::unowned_channel(rio->control),
+        &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
 static zx_status_t fdio_zxio_remote_unlink(fdio_t* io, const char* path, size_t len) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryUnlink(rio->control, path, len, &status);
+    zx_status_t status;
+    zx_status_t io_status = fio::Directory::Call::Unlink(
+        zx::unowned_channel(rio->control),
+        fidl::StringView(len, path),
+        &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
 static zx_status_t fdio_zxio_remote_rename(fdio_t* io, const char* src, size_t srclen,
                                            zx_handle_t dst_token, const char* dst, size_t dstlen) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryRename(rio->control, src, srclen, dst_token,
-                                           dst, dstlen, &status);
+    zx_status_t status;
+    zx_status_t io_status = fio::Directory::Call::Rename(
+        zx::unowned_channel(rio->control),
+        fidl::StringView(srclen, src),
+        zx::handle(dst_token),
+        fidl::StringView(dstlen, dst),
+        &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
 static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t srclen,
                                          zx_handle_t dst_token, const char* dst, size_t dstlen) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_DirectoryLink(rio->control, src, srclen, dst_token,
-                                         dst, dstlen, &status);
+    zx_status_t status;
+    zx_status_t io_status = fio::Directory::Call::Link(
+        zx::unowned_channel(rio->control),
+        fidl::StringView(srclen, src),
+        zx::handle(dst_token),
+        fidl::StringView(dstlen, dst),
+        &status);
     return io_status != ZX_OK ? io_status : status;
 }
 
@@ -507,7 +568,7 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
     }
 
     size_t length = file->end - file->off;
-    if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
+    if (flags & fio::VMO_FLAG_PRIVATE) {
         // Why don't we consider file->off in this branch? It seems like we
         // want to clone the part of the VMO from file->off to file->end rather
         // than length bytes at the start of the VMO.
@@ -518,11 +579,10 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
             length != vmo_length) {
             return ZX_ERR_NOT_FOUND;
         }
-        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
-                ZX_RIGHT_MAP;
-        rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-        rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-        rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_MAP;
+        rights |= (flags & fio::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+        rights |= (flags & fio::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+        rights |= (flags & fio::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
         return zx_handle_duplicate(file->vmo, rights, out_vmo);
     }
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
@@ -150,13 +150,14 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset,
     mtx_lock(&file->lock);
     zx_off_t at = 0u;
     switch (start) {
-    case fuchsia_io_SeekOrigin_START:
+    case fuchsia::io::SeekOrigin::START:
         at = offset;
         break;
-    case fuchsia_io_SeekOrigin_CURRENT:
+    case fuchsia::io::SeekOrigin::CURRENT:
         at = file->offset + offset;
         break;
-    case fuchsia_io_SeekOrigin_END:
+
+    case fuchsia::io::SeekOrigin::END:
         at = file->size + offset;
         break;
     default:

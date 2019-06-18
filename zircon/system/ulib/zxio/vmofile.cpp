@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
@@ -34,8 +34,12 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     mtx_unlock(&file->lock);
 
     zx_status_t io_status, status;
-    if ((io_status = fuchsia_io_FileSeek(control, seek, fuchsia_io_SeekOrigin_START,
-                                         &status, &seek)) != ZX_OK) {
+    if ((io_status = fuchsia::io::File::Call::Seek(
+             zx::unowned_channel(control),
+             seek,
+             fuchsia::io::SeekOrigin::START,
+             &status,
+             &seek)) != ZX_OK) {
         return ZX_ERR_BAD_STATE;
     }
     if (status != ZX_OK) {
@@ -59,11 +63,10 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
     if (status != ZX_OK) {
         return status;
     }
-    // TODO(yifeit): Switch to fuchsia_io_CLONE_FLAG_SAME_RIGHTS
-    // once all vfs implementations speak the hierarchical concepts.
-    uint32_t flags = fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE |
-                     fuchsia_io_CLONE_FLAG_SAME_RIGHTS;
-    status = fuchsia_io_NodeClone(file->control, flags, remote.release());
+    status = fuchsia::io::Node::Call::Clone(
+        zx::unowned_channel(file->control),
+        fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
+        std::move(remote));
     if (status != ZX_OK) {
         return status;
     }
@@ -130,13 +133,13 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset,
     mtx_lock(&file->lock);
     zx_off_t at = 0u;
     switch (start) {
-    case fuchsia_io_SeekOrigin_START:
+    case fuchsia::io::SeekOrigin::START:
         at = offset;
         break;
-    case fuchsia_io_SeekOrigin_CURRENT:
+    case fuchsia::io::SeekOrigin::CURRENT:
         at = (file->ptr - file->off) + offset;
         break;
-    case fuchsia_io_SeekOrigin_END:
+    case fuchsia::io::SeekOrigin::END:
         at = (file->end - file->off) + offset;
         break;
     default:

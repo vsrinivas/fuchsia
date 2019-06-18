@@ -32,22 +32,27 @@ pub struct NewIfaceDevice {
 
 pub fn watch_phy_devices() -> io::Result<impl Stream<Item = io::Result<NewPhyDevice>>> {
     Ok(watch_new_devices(PHY_PATH)?
-        .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_phy(&path))))))
+        .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_phy(&path), "phy")))))
 }
 
 #[deprecated(note = "function is obsolete once WLAN-927 landed")]
 pub fn watch_iface_devices() -> io::Result<impl Stream<Item = io::Result<NewIfaceDevice>>> {
     #[allow(deprecated)]
-    Ok(watch_new_devices(IFACE_PATH)?
-        .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_iface(&path))))))
+    Ok(watch_new_devices(IFACE_PATH)?.try_filter_map(|path| {
+        future::ready(Ok(handle_open_error(&path, new_iface(&path), "iface")))
+    }))
 }
 
-fn handle_open_error<T>(path: &PathBuf, r: Result<T, failure::Error>) -> Option<T> {
+fn handle_open_error<T>(
+    path: &PathBuf,
+    r: Result<T, failure::Error>,
+    context: &'static str,
+) -> Option<T> {
     if let Err(ref e) = &r {
         if let Some(&zx_Status::ALREADY_BOUND) = e.as_fail().downcast_ref::<zx_Status>() {
-            info!("iface {:?} already open, deferring", path.display())
+            info!("{} '{}' already open, deferring", context, path.display())
         } else {
-            error!("Error opening device '{}': {}", path.display(), e);
+            error!("Error opening {} '{}': {}", context, path.display(), e)
         }
     }
     r.ok()
