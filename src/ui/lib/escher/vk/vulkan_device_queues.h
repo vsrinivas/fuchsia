@@ -10,6 +10,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/ui/lib/escher/util/debug_print.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
@@ -25,7 +26,8 @@ class VulkanDeviceQueues
  public:
   // Parameters used to construct a new Vulkan Device and Queues.
   struct Params {
-    std::set<std::string> extension_names;
+    std::set<std::string> required_extension_names;
+    std::set<std::string> desired_extension_names;
     vk::SurfaceKHR surface;
 
     enum FlagBits {
@@ -41,14 +43,22 @@ class VulkanDeviceQueues
   struct Caps {
     uint32_t max_image_width = 0;
     uint32_t max_image_height = 0;
-    Caps() {}
-    Caps(vk::PhysicalDeviceProperties props);
+    std::set<vk::Format> depth_stencil_formats;
+    std::set<std::string> extensions;
+
+    vk::PhysicalDeviceFeatures enabled_features;
+
+    // Return the first matching depth-stencil format.  CHECKs that there is
+    // a match.
+    vk::Format GetMatchingDepthStencilFormat(
+        std::vector<vk::Format> formats) const;
+
+    Caps() = default;
+    Caps(vk::PhysicalDevice device);
   };
 
   // Contains dynamically-obtained addresses of device-specific functions.
   struct ProcAddrs {
-    ProcAddrs(vk::Device device, const std::set<std::string>& extension_names);
-
     PFN_vkCreateSwapchainKHR CreateSwapchainKHR = nullptr;
     PFN_vkDestroySwapchainKHR DestroySwapchainKHR = nullptr;
     PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR = nullptr;
@@ -100,7 +110,7 @@ class VulkanDeviceQueues
   VulkanDeviceQueues(vk::Device device, vk::PhysicalDevice physical_device,
                      vk::Queue main_queue, uint32_t main_queue_family,
                      vk::Queue transfer_queue, uint32_t transfer_queue_family,
-                     VulkanInstancePtr instance, Params params);
+                     VulkanInstancePtr instance, Params params, Caps caps);
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
@@ -115,6 +125,8 @@ class VulkanDeviceQueues
   Caps caps_;
   ProcAddrs proc_addrs_;
 };
+
+ESCHER_DEBUG_PRINTABLE(VulkanDeviceQueues::Caps);
 
 };  // namespace escher
 

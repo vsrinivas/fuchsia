@@ -50,6 +50,10 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
   renderer_config_.msaa_sample_count = 2;
   renderer_config_.num_depth_buffers =
       harness->GetVulkanSwapchain().images.size();
+  renderer_config_.depth_stencil_format =
+      escher()->device()->caps().GetMatchingDepthStencilFormat(
+          {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+
   renderer_->SetConfig(renderer_config_);
 
   InitializePaperScene(harness->GetWindowParams());

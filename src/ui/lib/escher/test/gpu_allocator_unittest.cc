@@ -22,6 +22,7 @@ VulkanDeviceQueuesPtr CreateVulkanDeviceQueues() {
   return VulkanDeviceQueues::New(
       vulkan_instance,
       {{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME},
+       {},
        vk::SurfaceKHR(),
        VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
 }

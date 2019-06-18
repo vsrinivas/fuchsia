@@ -18,7 +18,8 @@ class Camera;
 // EngineRenderer knows how to render Scenic layers using escher::PaperRenderer.
 class EngineRenderer {
  public:
-  explicit EngineRenderer(escher::EscherWeakPtr weak_escher);
+  explicit EngineRenderer(escher::EscherWeakPtr weak_escher,
+                          vk::Format depth_stencil_format);
   ~EngineRenderer();
 
   // Use GPU to render all layers into separate images, and compose them all
@@ -35,11 +36,11 @@ class EngineRenderer {
                  const escher::Model& overlay_model);
 
   void DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
-                                   zx_time_t target_presentation_time,
-                                   Layer* layer,
-                                   escher::PaperRendererShadowType shadow_type,
-                                   const escher::ImagePtr& output_image,
-                                   const escher::Model& overlay_model);
+                                  zx_time_t target_presentation_time,
+                                  Layer* layer,
+                                  escher::PaperRendererShadowType shadow_type,
+                                  const escher::ImagePtr& output_image,
+                                  const escher::Model& overlay_model);
 
   escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
 
@@ -51,6 +52,7 @@ class EngineRenderer {
   escher::PaperRendererPtr paper_renderer_;
   std::unique_ptr<escher::hmd::PoseBufferLatchingShader>
       pose_buffer_latching_shader_;
+  vk::Format depth_stencil_format_ = vk::Format::eUndefined;
 };
 
 }  // namespace gfx

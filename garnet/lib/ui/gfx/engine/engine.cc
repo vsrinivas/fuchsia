@@ -49,7 +49,10 @@ Engine::Engine(sys::ComponentContext* component_context,
                escher::EscherWeakPtr weak_escher, inspect::Node inspect_node)
     : display_manager_(display_manager),
       escher_(std::move(weak_escher)),
-      engine_renderer_(std::make_unique<EngineRenderer>(escher_)),
+      engine_renderer_(std::make_unique<EngineRenderer>(
+          escher_,
+          escher_->device()->caps().GetMatchingDepthStencilFormat(
+              {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}))),
       event_timestamper_(component_context),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(
           escher()->gpu_allocator(), escher()->resource_recycler())),

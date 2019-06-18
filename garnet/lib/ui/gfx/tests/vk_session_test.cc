@@ -26,6 +26,7 @@ VulkanDeviceQueuesPtr VkSessionTest::CreateVulkanDeviceQueues() {
                          VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                          VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
                          VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME},
+                         {},
                         vk::SurfaceKHR()});
 }
 

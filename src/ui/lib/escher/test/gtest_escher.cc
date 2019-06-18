@@ -28,10 +28,10 @@ void SetUpEscher() {
          {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
          false});
 
-    VulkanDeviceQueues::Params device_params({{}, vk::SurfaceKHR()});
+    VulkanDeviceQueues::Params device_params({{}, {}, vk::SurfaceKHR()});
 
 #ifdef OS_FUCHSIA
-    device_params.extension_names.insert(
+    device_params.required_extension_names.insert(
         VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
 

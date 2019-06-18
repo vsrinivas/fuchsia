@@ -5,6 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_CONFIG_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDERER_CONFIG_H_
 
+#include <vulkan/vulkan.hpp>
+
 #include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/util/debug_print.h"
 
@@ -43,6 +45,8 @@ struct PaperRendererConfig {
 
   // Blit the current frame number to the output image.
   bool debug_frame_number = false;
+
+  vk::Format depth_stencil_format = vk::Format::eD24UnormS8Uint;
 };
 
 ESCHER_DEBUG_PRINTABLE(PaperRendererConfig);

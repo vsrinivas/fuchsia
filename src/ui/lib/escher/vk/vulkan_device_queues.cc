@@ -11,6 +11,42 @@
 
 namespace escher {
 
+VulkanDeviceQueues::Caps::Caps(vk::PhysicalDevice device) {
+  {
+    vk::PhysicalDeviceProperties props = device.getProperties();
+    max_image_width = props.limits.maxImageDimension2D;
+    max_image_height = props.limits.maxImageDimension2D;
+  }
+
+  {
+    auto formats = impl::GetSupportedDepthFormats(
+        device, {
+                    vk::Format::eD16Unorm,
+                    vk::Format::eX8D24UnormPack32,
+                    vk::Format::eD32Sfloat,
+                    vk::Format::eS8Uint,
+                    vk::Format::eD16UnormS8Uint,
+                    vk::Format::eD24UnormS8Uint,
+                    vk::Format::eD32SfloatS8Uint,
+                });
+    depth_stencil_formats.insert(formats.begin(), formats.end());
+  }
+}
+
+vk::Format VulkanDeviceQueues::Caps::GetMatchingDepthStencilFormat(
+    std::vector<vk::Format> formats) const {
+  for (auto& fmt : formats) {
+    if (depth_stencil_formats.find(fmt) != depth_stencil_formats.end()) {
+      return fmt;
+    }
+  }
+  FXL_CHECK(false) << "no matching depth format found.";
+  return vk::Format::eUndefined;
+}
+
+namespace {
+
+// Helper for PopulateProcAddrs().
 template <typename FuncT>
 static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
@@ -18,26 +54,27 @@ static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   return func;
 }
 
+// Helper for VulkanDeviceQueues constructor.
+VulkanDeviceQueues::ProcAddrs PopulateProcAddrs(
+    vk::Device device, const VulkanDeviceQueues::Params& params) {
 #define GET_DEVICE_PROC_ADDR(XXX) \
-  XXX = GetDeviceProcAddr<PFN_vk##XXX>(device, "vk" #XXX)
+  result.XXX = GetDeviceProcAddr<PFN_vk##XXX>(device, "vk" #XXX)
 
-VulkanDeviceQueues::Caps::Caps(vk::PhysicalDeviceProperties props)
-    : max_image_width(props.limits.maxImageDimension2D),
-      max_image_height(props.limits.maxImageDimension2D) {}
-
-VulkanDeviceQueues::ProcAddrs::ProcAddrs(
-    vk::Device device, const std::set<std::string>& extension_names) {
-  if (extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
-      extension_names.end()) {
+  VulkanDeviceQueues::ProcAddrs result;
+  if (params.required_extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
+          params.required_extension_names.end() ||
+      params.desired_extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
+          params.desired_extension_names.end()) {
     GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(DestroySwapchainKHR);
     GET_DEVICE_PROC_ADDR(GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(QueuePresentKHR);
   }
-}
+  return result;
 
-namespace {
+#undef GET_DEVICE_PROC_ADDR
+}
 
 // Return value for FindSuitablePhysicalDeviceAndQueueFamilies(). Valid if and
 // only if device is non-null.  Otherwise, no suitable device was found.
@@ -67,7 +104,7 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
   for (auto& physical_device : physical_devices) {
     // Look for a physical device that has all required extensions.
     if (!VulkanDeviceQueues::ValidateExtensions(
-            physical_device, params.extension_names,
+            physical_device, params.required_extension_names,
             instance->params().layer_names)) {
       continue;
     }
@@ -120,25 +157,62 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
   return {vk::PhysicalDevice(), 0, 0};
 }
 
+// Helper for ValidateExtensions().
+bool ValidateExtension(
+    vk::PhysicalDevice device, const std::string name,
+    const std::vector<vk::ExtensionProperties>& base_extensions,
+    const std::set<std::string>& required_layer_names) {
+  auto found =
+      std::find_if(base_extensions.begin(), base_extensions.end(),
+                   [&name](const vk::ExtensionProperties& extension) {
+                     return !strncmp(extension.extensionName, name.c_str(),
+                                     VK_MAX_EXTENSION_NAME_SIZE);
+                   });
+  if (found != base_extensions.end())
+    return true;
+
+  // Didn't find the extension in the base list of extensions.  Perhaps it is
+  // implemented in a layer.
+  for (auto& layer_name : required_layer_names) {
+    auto layer_extensions = ESCHER_CHECKED_VK_RESULT(
+        device.enumerateDeviceExtensionProperties(layer_name));
+    FXL_LOG(INFO) << "Looking for Vulkan device extension: " << name
+                  << " in layer: " << layer_name;
+
+    auto found =
+        std::find_if(layer_extensions.begin(), layer_extensions.end(),
+                     [&name](vk::ExtensionProperties& extension) {
+                       return !strncmp(extension.extensionName, name.c_str(),
+                                       VK_MAX_EXTENSION_NAME_SIZE);
+                     });
+    if (found != layer_extensions.end())
+      return true;
+  }
+
+  return false;
+}
+
 }  // namespace
 
 fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     VulkanInstancePtr instance, Params params) {
   // Escher requires the memory_requirements_2 extension for the
   // vma_gpu_allocator to function.
-  params.extension_names.insert(
+  params.required_extension_names.insert(
       VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
 
   // If the params contain a surface, then ensure that the swapchain extension
   // is supported so that we can render to that surface.
   if (params.surface) {
-    params.extension_names.insert(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    params.required_extension_names.insert(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
   }
 
 #if defined(OS_FUCHSIA)
   // If we're running on Fuchsia, make sure we have our semaphore extensions.
-  params.extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
-  params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+  params.required_extension_names.insert(
+      VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+  params.required_extension_names.insert(
+      VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
 
   vk::PhysicalDevice physical_device;
@@ -154,6 +228,10 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     transfer_queue_family = result.transfer_queue_family;
   }
 
+  // Partially populate device capabilities from the physical device.
+  // Other stuff (e.g. which extensions are supported) will be added below.
+  VulkanDeviceQueues::Caps caps(physical_device);
+
   // Prepare to create the Device and Queues.
   vk::DeviceQueueCreateInfo queue_info[2];
   const float kQueuePriority = 0;
@@ -166,8 +244,26 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   queue_info[1].queueCount = 1;
   queue_info[1].pQueuePriorities = &kQueuePriority;
 
+  // Prepare the list of extension names that will be used to create the device.
+  {
+    // These extensions were already validated by
+    // FindSuitablePhysicalDeviceAndQueueFamilies();
+    caps.extensions = params.required_extension_names;
+
+    // Request as many of the desired (but optional) extensions as possible.
+    auto extensions = ESCHER_CHECKED_VK_RESULT(
+        physical_device.enumerateDeviceExtensionProperties());
+
+    std::set<std::string> available_desired_extensions;
+    for (auto& name : params.desired_extension_names) {
+      if (ValidateExtension(physical_device, name, extensions,
+                            instance->params().layer_names)) {
+        caps.extensions.insert(name);
+      }
+    }
+  }
   std::vector<const char*> extension_names;
-  for (auto& extension : params.extension_names) {
+  for (auto& extension : caps.extensions) {
     extension_names.push_back(extension.c_str());
   }
 
@@ -175,20 +271,19 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   // supported.
   // TODO(ES-111): instead of hard-coding the required features here, provide a
   // mechanism for Escher clients to specify additional required features.
-  vk::PhysicalDeviceFeatures required_device_features;
   vk::PhysicalDeviceFeatures supported_device_features;
   physical_device.getFeatures(&supported_device_features);
   bool device_has_all_required_features = true;
 
 #define ADD_DESIRED_FEATURE(X)                                              \
   if (supported_device_features.X) {                                        \
-    required_device_features.X = true;                                      \
+    caps.enabled_features.X = true;                                         \
   } else {                                                                  \
     FXL_LOG(INFO) << "Desired Vulkan Device feature not supported: " << #X; \
   }
 
 #define ADD_REQUIRED_FEATURE(X)                                               \
-  required_device_features.X = true;                                          \
+  caps.enabled_features.X = true;                                             \
   if (!supported_device_features.X) {                                         \
     FXL_LOG(ERROR) << "Required Vulkan Device feature not supported: " << #X; \
     device_has_all_required_features = false;                                 \
@@ -212,7 +307,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   device_info.pQueueCreateInfos = queue_info;
   device_info.enabledExtensionCount = extension_names.size();
   device_info.ppEnabledExtensionNames = extension_names.data();
-  device_info.pEnabledFeatures = &required_device_features;
+  device_info.pEnabledFeatures = &caps.enabled_features;
 
   // It's possible that the main queue and transfer queue are in the same
   // queue family.  Adjust the device-creation parameters to account for this.
@@ -248,13 +343,15 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
 
   return fxl::AdoptRef(new VulkanDeviceQueues(
       device, physical_device, main_queue, main_queue_family, transfer_queue,
-      transfer_queue_family, std::move(instance), std::move(params)));
+      transfer_queue_family, std::move(instance), std::move(params),
+      std::move(caps)));
 }
 
 VulkanDeviceQueues::VulkanDeviceQueues(
     vk::Device device, vk::PhysicalDevice physical_device, vk::Queue main_queue,
     uint32_t main_queue_family, vk::Queue transfer_queue,
-    uint32_t transfer_queue_family, VulkanInstancePtr instance, Params params)
+    uint32_t transfer_queue_family, VulkanInstancePtr instance, Params params,
+    Caps caps)
     : device_(device),
       physical_device_(physical_device),
       dispatch_loader_(instance->vk_instance(), device_),
@@ -264,45 +361,10 @@ VulkanDeviceQueues::VulkanDeviceQueues(
       transfer_queue_family_(transfer_queue_family),
       instance_(std::move(instance)),
       params_(std::move(params)),
-      caps_(physical_device.getProperties()),
-      proc_addrs_(device_, params_.extension_names) {}
+      caps_(std::move(caps)),
+      proc_addrs_(PopulateProcAddrs(device_, params_)) {}
 
 VulkanDeviceQueues::~VulkanDeviceQueues() { device_.destroy(); }
-
-// Helper for ValidateExtensions().
-static bool ValidateExtension(
-    vk::PhysicalDevice device, const std::string name,
-    const std::vector<vk::ExtensionProperties>& base_extensions,
-    const std::set<std::string>& required_layer_names) {
-  auto found =
-      std::find_if(base_extensions.begin(), base_extensions.end(),
-                   [&name](const vk::ExtensionProperties& extension) {
-                     return !strncmp(extension.extensionName, name.c_str(),
-                                     VK_MAX_EXTENSION_NAME_SIZE);
-                   });
-  if (found != base_extensions.end())
-    return true;
-
-  // Didn't find the extension in the base list of extensions.  Perhaps it is
-  // implemented in a layer.
-  for (auto& layer_name : required_layer_names) {
-    auto layer_extensions = ESCHER_CHECKED_VK_RESULT(
-        device.enumerateDeviceExtensionProperties(layer_name));
-    FXL_LOG(INFO) << "Looking for Vulkan device extension: " << name
-                  << " in layer: " << layer_name;
-
-    auto found =
-        std::find_if(layer_extensions.begin(), layer_extensions.end(),
-                     [&name](vk::ExtensionProperties& extension) {
-                       return !strncmp(extension.extensionName, name.c_str(),
-                                       VK_MAX_EXTENSION_NAME_SIZE);
-                     });
-    if (found != layer_extensions.end())
-      return true;
-  }
-
-  return false;
-}
 
 bool VulkanDeviceQueues::ValidateExtensions(
     vk::PhysicalDevice device,

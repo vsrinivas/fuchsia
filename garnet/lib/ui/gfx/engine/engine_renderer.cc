@@ -36,7 +36,8 @@ static_assert(
 namespace scenic_impl {
 namespace gfx {
 
-EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
+EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher,
+                               vk::Format depth_stencil_format)
     : escher_(std::move(weak_escher)),
       // We use two depth buffers so that we can render multiple Layers without
       // introducing a GPU stall.
@@ -44,7 +45,8 @@ EngineRenderer::EngineRenderer(escher::EscherWeakPtr weak_escher)
           escher_, {.shadow_type = escher::PaperRendererShadowType::kNone,
                     .num_depth_buffers = 2})),
       pose_buffer_latching_shader_(
-          std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)) {}
+          std::make_unique<escher::hmd::PoseBufferLatchingShader>(escher_)),
+      depth_stencil_format_(depth_stencil_format) {}
 
 EngineRenderer::~EngineRenderer() = default;
 
@@ -216,6 +218,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(
 
   paper_renderer_->SetConfig(escher::PaperRendererConfig {
     .shadow_type = shadow_type, .debug = renderer->enable_debugging(),
+    .depth_stencil_format = depth_stencil_format_,
 #if SCENIC_DISPLAY_FRAME_NUMBER
     .debug_frame_number = true,
 #endif

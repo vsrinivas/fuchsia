@@ -191,6 +191,14 @@ void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
     msaa_buffers_.clear();
   }
 
+  if (config.depth_stencil_format != config_.depth_stencil_format) {
+    FXL_VLOG(1) << "PaperRenderer: depth_stencil_format set to: "
+                << vk::to_string(config.depth_stencil_format)
+                << " (was: " << vk::to_string(config_.depth_stencil_format)
+                << ")";
+    depth_buffers_.clear();
+  }
+
   if (config.num_depth_buffers != config_.num_depth_buffers) {
     FXL_VLOG(1) << "PaperRenderer: num_depth_buffers set to: "
                 << config.num_depth_buffers
@@ -690,7 +698,7 @@ std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(
       TRACE_DURATION("gfx",
                      "PaperRenderer::ObtainDepthAndMsaaTextures (new depth)");
       depth_texture = escher()->NewAttachmentTexture(
-          vk::Format::eD24UnormS8Uint, info.width, info.height,
+          config_.depth_stencil_format, info.width, info.height,
           config_.msaa_sample_count, vk::Filter::eLinear);
     }
     // If the sample count is 1, there is no need for a MSAA buffer.
