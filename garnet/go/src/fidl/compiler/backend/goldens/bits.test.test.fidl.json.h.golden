@@ -8,30 +8,12 @@
 namespace test {
 namespace name {
 
-class MyBits final {
-public:
-  constexpr MyBits() : value_(0u) {}
-  explicit constexpr MyBits(uint32_t value) : value_(value) {}
-  const static MyBits MY_FIRST_BIT;
-  const static MyBits MY_OTHER_BIT;
-  const static MyBits mask;
-
-  explicit constexpr inline operator uint32_t() const { return value_; }
-  constexpr inline operator bool() const { return value_; }
-  constexpr inline MyBits operator~() const;
-  constexpr inline MyBits operator|(const MyBits& other) const;
-  constexpr inline MyBits operator&(const MyBits& other) const;
-  constexpr inline MyBits operator^(const MyBits& other) const;
-  constexpr inline void operator|=(const MyBits& other);
-  constexpr inline void operator&=(const MyBits& other);
-  constexpr inline void operator^=(const MyBits& other);
-
-private:
-  uint32_t value_;
+enum class MyBits : uint32_t {
+  MY_FIRST_BIT = 1u,
+  MY_OTHER_BIT = 2u,
 };
-constexpr const ::test::name::MyBits MyBits::MY_FIRST_BIT = ::test::name::MyBits(1u);
-constexpr const ::test::name::MyBits MyBits::MY_OTHER_BIT = ::test::name::MyBits(2u);
-constexpr const ::test::name::MyBits MyBits::mask = ::test::name::MyBits(3u);
+
+const static MyBits MyBitsMask = static_cast<MyBits>(3u);
 
 inline zx_status_t Clone(::test::name::MyBits value,
                          ::test::name::MyBits* result) {
@@ -39,38 +21,45 @@ inline zx_status_t Clone(::test::name::MyBits value,
   return ZX_OK;
 }
 
-constexpr inline ::test::name::MyBits MyBits::operator~() const {
-  return ::test::name::MyBits(~this->value_ & static_cast<uint32_t>(mask));
+constexpr inline ::test::name::MyBits operator|(::test::name::MyBits _lhs,
+                                                         ::test::name::MyBits _rhs) {
+  return static_cast<::test::name::MyBits>(
+    static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::name::MyBits MyBits::operator|(
-    const ::test::name::MyBits& other) const {
-  return ::test::name::MyBits(this->value_ | other.value_);
+constexpr inline ::test::name::MyBits& operator|=(::test::name::MyBits& _lhs,
+                                                           ::test::name::MyBits _rhs) {
+  _lhs = _lhs | _rhs;
+  return _lhs;
 }
 
-constexpr inline ::test::name::MyBits MyBits::operator&(
-    const ::test::name::MyBits& other) const {
-  return ::test::name::MyBits(this->value_ & other.value_);
+constexpr inline ::test::name::MyBits operator&(::test::name::MyBits _lhs,
+                                                         ::test::name::MyBits _rhs) {
+  return static_cast<::test::name::MyBits>(
+    static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::test::name::MyBits MyBits::operator^(
-    const ::test::name::MyBits& other) const {
-  return ::test::name::MyBits(this->value_ ^ other.value_);
+constexpr inline ::test::name::MyBits& operator&=(::test::name::MyBits& _lhs,
+                                                           ::test::name::MyBits _rhs) {
+  _lhs = _lhs & _rhs;
+  return _lhs;
 }
 
-constexpr inline void MyBits::operator|=(
-    const ::test::name::MyBits& other) {
-  this->value_ |= other.value_;
+constexpr inline ::test::name::MyBits operator^(::test::name::MyBits _lhs,
+                                                         ::test::name::MyBits _rhs) {
+  return static_cast<::test::name::MyBits>(
+    static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline void MyBits::operator&=(
-    const ::test::name::MyBits& other) {
-  this->value_ &= other.value_;
+constexpr inline ::test::name::MyBits& operator^=(::test::name::MyBits& _lhs,
+                                                           ::test::name::MyBits _rhs) {
+  _lhs = _lhs ^ _rhs;
+  return _lhs;
 }
 
-constexpr inline void MyBits::operator^=(
-    const ::test::name::MyBits& other) {
-  this->value_ ^= other.value_;
+constexpr inline ::test::name::MyBits operator~(::test::name::MyBits _value) {
+  return static_cast<::test::name::MyBits>(
+    ~static_cast<uint32_t>(_value) & static_cast<uint32_t>(MyBitsMask));
 }
 
 }  // namespace name
@@ -87,7 +76,7 @@ struct CodingTraits<::test::name::MyBits> {
   static void Decode(Decoder* decoder, ::test::name::MyBits* value, size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = ::test::name::MyBits(underlying);
+    *value = static_cast<::test::name::MyBits>(underlying);
   }
 };
 

@@ -176,17 +176,12 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- $type_name := .Name.Parts.Name }}
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
   using fidl::operator<<;
-  bool is_first = true;
+  switch (value) {
         {{- range .Members }}
-  if (value & {{ $type_name }}::{{ .Name }}) {
-    os << "{{ toFriendlyCase .Name }}";
-    if (is_first) {
-      is_first = false;
-    } else {
-      os << " | ";
-    }
-  }
+    case {{ $type_name }}::{{ .Name }}:
+      return os << "{{ toFriendlyCase .Name }}";
         {{- end }}
+  }
 
   return os;
 }
