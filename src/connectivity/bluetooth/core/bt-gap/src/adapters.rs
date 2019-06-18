@@ -8,7 +8,7 @@
 
 use {
     failure::Error,
-    fuchsia_bluetooth::host::BT_HOST_DIR,
+    fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
     fuchsia_syslog::fx_log_warn,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{Stream, TryStreamExt},
@@ -27,7 +27,7 @@ pub enum AdapterEvent {
 /// Watch the VFS for host adapter devices being added or removed, and produce
 /// a stream of AdapterEvent messages
 pub fn watch_hosts() -> impl Stream<Item = Result<AdapterEvent, Error>> {
-    let dev = File::open(&BT_HOST_DIR);
+    let dev = File::open(&HOST_DEVICE_DIR);
     let watcher = vfs_watcher::Watcher::new(&dev.unwrap())
         .expect("Cannot open vfs watcher for bt-host device path");
     watcher.try_filter_map(as_adapter_msg).map_err(|e| e.into())
@@ -36,7 +36,7 @@ pub fn watch_hosts() -> impl Stream<Item = Result<AdapterEvent, Error>> {
 async fn as_adapter_msg(msg: WatchMessage) -> Result<Option<AdapterEvent>, io::Error> {
     use self::AdapterEvent::*;
 
-    let path = Path::new(BT_HOST_DIR).join(&msg.filename);
+    let path = Path::new(HOST_DEVICE_DIR).join(&msg.filename);
     Ok(match msg.event {
         WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(AdapterAdded(path)),
         WatchEvent::REMOVE_FILE => Some(AdapterRemoved(path)),

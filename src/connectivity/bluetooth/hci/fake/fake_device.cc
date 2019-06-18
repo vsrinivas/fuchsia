@@ -16,21 +16,56 @@
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 
-using fuchsia::bluetooth::test::EmulatorSettings;
-using FidlFakePeer = fuchsia::bluetooth::test::FakePeer;
+namespace ftest = fuchsia::bluetooth::test;
+
 using bt::DeviceAddress;
 using bt::testing::FakeController;
 using bt::testing::FakePeer;
-using fuchsia::bluetooth::test::EmulatorError;
-using fuchsia::bluetooth::test::HciEmulator_Publish_Result;
 
 namespace bthci_fake {
+namespace {
 
 const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
                               "00:00:00:00:00:01");
 const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, "00:00:00:00:00:02");
 const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic,
                               "00:00:00:00:00:03");
+
+FakeController::Settings SettingsFromFidl(
+    const ftest::EmulatorSettings& input) {
+  FakeController::Settings settings;
+  if (input.has_hci_config() &&
+      input.hci_config() == ftest::HciConfig::LE_ONLY) {
+    settings.ApplyLEOnlyDefaults();
+  } else {
+    settings.ApplyDualModeDefaults();
+  }
+
+  if (input.has_address()) {
+    settings.bd_addr =
+        DeviceAddress(DeviceAddress::Type::kBREDR, input.address().bytes);
+  }
+
+  // TODO(armansito): Don't ignore "extended_advertising" setting when
+  // supported.
+  if (input.has_acl_buffer_settings()) {
+    settings.acl_data_packet_length =
+        input.acl_buffer_settings().data_packet_length;
+    settings.total_num_acl_data_packets =
+        input.acl_buffer_settings().total_num_data_packets;
+  }
+
+  if (input.has_le_acl_buffer_settings()) {
+    settings.le_acl_data_packet_length =
+        input.le_acl_buffer_settings().data_packet_length;
+    settings.le_total_num_acl_data_packets =
+        input.le_acl_buffer_settings().total_num_data_packets;
+  }
+
+  return settings;
+}
+
+}  // namespace
 
 Device::Device(zx_device_t* device)
     : loop_(&kAsyncLoopConfigNoAttachToThread),
@@ -52,6 +87,10 @@ static zx_protocol_device_t bt_emulator_device_ops = {
           return DEV(ctx)->EmulatorMessage(msg, txn);
         }};
 
+// NOTE: We do not implement unbind and release. The lifecycle of the bt-hci
+// device is strictly tied to the bt-emulator device (i.e. it can never out-live
+// bt-emulator). We handle its destruction in the bt_emulator_device_ops
+// messages.
 static zx_protocol_device_t bt_hci_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto)
@@ -78,45 +117,22 @@ zx_status_t Device::Bind() {
 
   std::lock_guard<std::mutex> lock(device_lock_);
 
-  // TODO(BT-229): Don't publish a bt-hci device until receiving a
-  // HciEmulator.Publish message.
-  device_add_args_t hci_args = {
+  device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_hci_fake",
-      .ctx = this,
-      .ops = &bt_hci_device_ops,
-      .proto_id = ZX_PROTOCOL_BT_HCI,
-  };
-
-  zx_status_t status = device_add(parent_, &hci_args, &hci_dev_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "bt-hci-fake: could not add device: %d\n", status);
-    return status;
-  }
-
-  // Publish the bt-emulator device as a child of the bt-hci device. This
-  // provides a control channel to manipulate behavior.
-  device_add_args_t emul_args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_hci_fake",
+      .name = "bt_hci_fake_emulator",
       .ctx = this,
       .ops = &bt_emulator_device_ops,
-      .flags = DEVICE_ADD_NON_BINDABLE,
       .proto_id = ZX_PROTOCOL_BT_EMULATOR,
+      .flags = DEVICE_ADD_NON_BINDABLE,
   };
-  status = device_add(parent_, &emul_args, &emulator_dev_);
+  zx_status_t status = device_add(parent_, &args, &emulator_dev_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "bt-hci-fake: could not add bt-emulator device: %d\n",
            status);
-    device_remove(hci_dev_);
     return status;
   }
 
-  // TODO(BT-229): Apply settings in Publish().
-  FakeController::Settings settings;
-  settings.ApplyDualModeDefaults();
   fake_device_ = fbl::AdoptRef(new FakeController());
-  fake_device_->set_settings(settings);
 
   // A Sample LE remote peer for le-scan to pick up.
   // TODO(BT-229): add tooling for adding/removing fake devices
@@ -159,6 +175,8 @@ void Device::Release() {
 
 void Device::Unbind() {
   zxlogf(TRACE, "bt-fake-hci: unbind\n");
+
+  bool remove_hci_dev = false;
   {
     std::lock_guard<std::mutex> lock(device_lock_);
 
@@ -176,10 +194,18 @@ void Device::Unbind() {
     loop_.JoinThreads();
 
     zxlogf(TRACE, "bt-fake-hci: emulator dispatcher shut down\n");
+
+    remove_hci_dev = (hci_dev_ != nullptr);
+
+    // Destroy the FakeController here. Since |loop_| has been shutdown, we
+    // don't expect it to be dereferenced again.
+    fake_device_ = nullptr;
   }
 
-  device_remove(hci_dev_);
-  hci_dev_ = nullptr;
+  if (remove_hci_dev) {
+    device_remove(hci_dev_);
+    hci_dev_ = nullptr;
+  }
 
   device_remove(emulator_dev_);
   emulator_dev_ = nullptr;
@@ -243,18 +269,52 @@ void Device::StartEmulatorInterface(zx::channel chan) {
   // TODO(BT-229): Remove the bt-hci device if the channel gets closed and close
   // the FakeController's HCI channels.
   binding_.Bind(std::move(chan), loop_.dispatcher());
+  binding_.set_error_handler([this](zx_status_t status) {
+    zxlogf(
+        TRACE,
+        "bt-fake-hci: emulator channel closed (status: %s); unpublish device\n",
+        zx_status_get_string(status));
+
+    std::lock_guard<std::mutex> lock(device_lock_);
+    fake_device_->Stop();
+  });
 }
 
-void Device::Publish(EmulatorSettings settings, PublishCallback callback) {
+void Device::Publish(ftest::EmulatorSettings in_settings,
+                     PublishCallback callback) {
   zxlogf(TRACE, "bt-fake-hci: HciEmulator.Publish\n");
 
-  // TODO(BT-229): Implement. This logic is placeholder for basic verification.
-  HciEmulator_Publish_Result result;
-  result.set_err(EmulatorError::HCI_ALREADY_PUBLISHED);
+  std::lock_guard<std::mutex> lock(device_lock_);
+
+  ftest::HciEmulator_Publish_Result result;
+  if (hci_dev_) {
+    result.set_err(ftest::EmulatorError::HCI_ALREADY_PUBLISHED);
+    callback(std::move(result));
+    return;
+  }
+
+  FakeController::Settings settings = SettingsFromFidl(in_settings);
+  fake_device_->set_settings(settings);
+
+  // Publish the bt-hci device.
+  device_add_args_t args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "bt_hci_fake",
+      .ctx = this,
+      .ops = &bt_hci_device_ops,
+      .proto_id = ZX_PROTOCOL_BT_HCI,
+  };
+  zx_status_t status = device_add(parent_, &args, &hci_dev_);
+  if (status != ZX_OK) {
+    result.set_err(ftest::EmulatorError::FAILED);
+  } else {
+    result.set_response(ftest::HciEmulator_Publish_Response{});
+  }
+
   callback(std::move(result));
 }
 
-void Device::AddPeer(FidlFakePeer peer, AddPeerCallback callback) {
+void Device::AddPeer(ftest::FakePeer peer, AddPeerCallback callback) {
   // TODO(BT-229): Implement
 }
 

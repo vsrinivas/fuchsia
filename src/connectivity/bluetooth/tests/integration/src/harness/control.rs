@@ -165,7 +165,7 @@ impl ActivatedFakeHost {
         let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
         let initial_hosts_ = initial_hosts.clone();
 
-        let hci = await!(Emulator::new(name))?;
+        let hci = await!(Emulator::create_and_publish(name))?;
 
         let control_state = await!(control.when_satisfied(
             Predicate::<ControlState>::new(

@@ -5,6 +5,7 @@
 #![allow(missing_docs)]
 
 use {
+    crate::constants::EMULATOR_DRIVER_PATH,
     failure::{bail, format_err, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_device_test::{
@@ -19,7 +20,6 @@ use {
 };
 
 pub const DEV_TEST: &str = CONTROL_DEVICE;
-pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bt-hci-fake.so";
 
 // TODO(BT-229): Remove this function and all of its helpers from this file once the bt-fake-hci
 // tool uses hci_emulator::Emulator from this library.
@@ -61,7 +61,7 @@ fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Error> 
 fn bind_fake_device(device: &File) -> Result<(), Error> {
     let channel = fdio::clone_channel(device)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
-    let status = interface.bind(BTHCI_DRIVER_NAME, zx::Time::INFINITE)?;
+    let status = interface.bind(EMULATOR_DRIVER_PATH, zx::Time::INFINITE)?;
     zx::Status::ok(status)?;
     Ok(())
 }

@@ -6,6 +6,8 @@
 
 //! Utilities for Bluetooth development.
 
+pub mod constants;
+
 /// Lists of Bluetooth SIG assigned numbers and conversion functions
 pub mod assigned_numbers;
 /// Bluetooth Error type

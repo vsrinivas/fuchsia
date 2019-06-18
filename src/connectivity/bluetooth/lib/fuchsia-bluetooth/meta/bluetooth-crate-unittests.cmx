@@ -5,6 +5,7 @@
     "sandbox": {
         "dev": [
             "class/bt-emulator",
+            "class/bt-hci",
             "test/test"
         ],
         "system": [
