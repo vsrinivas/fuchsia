@@ -4,7 +4,7 @@
 
 library fuchsia.mem;
 
-/// A Buffer for data whose size is not necessarily a multiple of the page
+/// A buffer for data whose size is not necessarily a multiple of the page
 /// size.
 ///
 /// VMO objects have a physical size that is always a multiple of the page
@@ -12,10 +12,29 @@ library fuchsia.mem;
 /// data. |fuchsia.mem.Buffer| is a standard struct that aggregate the VMO
 /// and its size.
 struct Buffer {
-    /// The vmo.
+    /// The vmo that contains the buffer.
     handle<vmo> vmo;
 
-    /// The size of the data in the vmo in bytes. This size must be smaller
-    /// than the physical size of the vmo.
+    /// The number of bytes in the buffer.
+    ///
+    /// The content of the buffer begin at the start of the VMO and continue
+    /// for |size| bytes. To specify a range of bytes that do not start at
+    /// the beginning of the VMO, use |Range| rather than buffer.
+    ///
+    /// This size must not be greater than the physical size of the VMO.
     uint64 size;
+};
+
+/// Binary data that might be stored inline or in a VMO.
+///
+/// Useful for performance-sensitive protocols that sometimes receive small
+/// amounts of binary data (i.e., which is more efficient to provide using
+/// |bytes|) but also need to support arbitrary amounts of data (i.e., which
+/// need to be provided out-of-line in a |Buffer|).
+xunion Data {
+    /// The binary data provided inline in the message.
+    bytes bytes;
+
+    /// The binary data provided out-of-line in a |Buffer|.
+    Buffer buffer;
 };

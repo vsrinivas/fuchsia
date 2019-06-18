@@ -1,0 +1,27 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mem;
+
+/// A range of bytes within a VMO.
+struct Range {
+    /// The vmo that contains the bytes.
+    handle<vmo> vmo;
+
+    /// The offset of the first byte within the range relative to the start of
+    /// the VMO.
+    ///
+    /// For example, if |offset| is zero, then the first byte in the range is
+    /// the first byte in the VMO.
+    uint64 offset;
+
+    /// The number of bytes in the range.
+    ///
+    /// For example, if the offset is 3 and the size is 2, and the VMO starts
+    /// with "abcdefg...", then the range contains "de".
+    ///
+    /// The sum of the offset and the size must not be greater than the
+    /// physical size of the VMO.
+    uint64 size;
+};

@@ -8,5 +8,6 @@ fidl_library("fuchsia-mem") {
   sdk = true
   sources = [
     "buffer.fidl",
+    "range.fidl",
   ]
 }
