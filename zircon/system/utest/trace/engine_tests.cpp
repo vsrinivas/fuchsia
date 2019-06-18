@@ -12,10 +12,10 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <lib/zx/event.h>
-#include <trace/event.h>
 #include <trace-engine/handler.h>
 #include <trace-test-utils/fixture.h>
 #include <trace-test-utils/squelch.h>
+#include <trace/event.h>
 
 #include "fixture_macros.h"
 
@@ -665,8 +665,9 @@ bool TestStreamingMode() {
     EXPECT_EQ(header.total_size, kBufferSize);
     EXPECT_NE(header.durable_buffer_size, 0);
     EXPECT_NE(header.rolling_buffer_size, 0);
-    EXPECT_EQ(sizeof(header) + header.durable_buffer_size + 
-              2 * header.rolling_buffer_size, kBufferSize);
+    EXPECT_EQ(sizeof(header) + header.durable_buffer_size +
+                  2 * header.rolling_buffer_size,
+              kBufferSize);
     EXPECT_NE(header.durable_data_end, 0);
     EXPECT_LE(header.durable_data_end, header.durable_buffer_size);
     EXPECT_NE(header.rolling_data_end[0], 0);

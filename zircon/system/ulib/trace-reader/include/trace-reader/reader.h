@@ -191,4 +191,4 @@ private:
 
 } // namespace trace
 
-#endif  // TRACE_READER_READER_H_
+#endif // TRACE_READER_READER_H_

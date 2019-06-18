@@ -744,4 +744,4 @@ private:
 
 } // namespace trace
 
-#endif  // TRACE_READER_RECORDS_H_
+#endif // TRACE_READER_RECORDS_H_

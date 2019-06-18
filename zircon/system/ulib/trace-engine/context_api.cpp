@@ -285,8 +285,8 @@ public:
 
     explicit Payload(trace_context_t* context, bool rqst_durable, size_t num_bytes)
         : ptr_(rqst_durable && context->UsingDurableBuffer()
-               ? context->AllocDurableRecord(num_bytes)
-               : context->AllocRecord(num_bytes)) {}
+                   ? context->AllocDurableRecord(num_bytes)
+                   : context->AllocRecord(num_bytes)) {}
 
     explicit operator bool() const {
         return ptr_ != nullptr;
@@ -733,7 +733,7 @@ EXPORT void* trace_context_begin_write_blob_record(
     const size_t padded_blob_size = trace::Pad(blob_size);
     const size_t max_record_size = trace::RecordFields::kMaxRecordSizeBytes;
     if (record_size_less_blob > max_record_size ||
-            padded_blob_size > max_record_size - record_size_less_blob) {
+        padded_blob_size > max_record_size - record_size_less_blob) {
         return nullptr;
     }
     const size_t record_size = record_size_less_blob + padded_blob_size;

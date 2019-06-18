@@ -4,9 +4,9 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
-#include <trace/event.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-test-utils/fixture.h>
+#include <trace/event.h>
 #include <zircon/syscalls.h>
 
 #include "fixture_macros.h"
