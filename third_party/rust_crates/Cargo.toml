@@ -10,12 +10,14 @@ authors = ["cramertj <cramertj@google.com>"]
 [dependencies]
 # Keep this sorted alphabetically, please.
 bitfield = "0.13"
+byteorder = { version = "1", features = ["i128"] }
 clap = "2.33"
 criterion = { version = "0.2", default-features = false }
 failure = "0.1.1"
 heck = "0.3.1"
 json5 = "0.2.4"
 lazy_static = "1"
+libc = "0.2"
 log = { version = "0.4.4", features = ["std"] }
 parking_lot = "0.7.1"
 pest = "2.1"
@@ -44,7 +46,6 @@ unic-ucd-block = "0.9"
 base64 = "0.9"
 bincode = "1"
 bitflags = "1"
-byteorder = { version = "1", features = ["i128"] }
 bytes = "0.4.7"
 chrono = "0.4.2"
 crossbeam = "0.5"
@@ -66,7 +67,6 @@ hyper = { version = "0.12.13", default-features = false }
 hyper-rustls = { version = "0.16.1", default-features = false }
 itertools = "0.8"
 itoa = "0.4"
-libc = "0.2"
 maplit = "1.0"
 memchr = "2.0"
 net2 = "0.2"

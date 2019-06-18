@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -53,5 +54,14 @@ test_package("odu_tests") {
       dest = "odu_bin_test"
       environments = basic_envs
     },
+  ]
+}
+
+install_host_tools("odu_host") {
+  deps = [
+    ":bin($host_toolchain)",
+  ]
+  outputs = [
+    "odu",
   ]
 }
