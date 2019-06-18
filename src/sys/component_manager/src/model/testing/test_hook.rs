@@ -103,6 +103,7 @@ impl TestHook {
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
+        _route_fn_factory: RoutingFnFactory,
     ) -> Result<(), ModelError> {
         await!(self.create_instance_if_necessary(realm.abs_moniker.clone()))?;
         for child_realm in
@@ -150,8 +151,9 @@ impl Hook for TestHook {
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
+        route_fn_factory: RoutingFnFactory,
     ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_bind_instance_async(realm, &realm_state))
+        Box::pin(self.on_bind_instance_async(realm, &realm_state, route_fn_factory))
     }
 
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {

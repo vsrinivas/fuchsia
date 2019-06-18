@@ -3,6 +3,7 @@
 {
     "program": {
         "binary": "bin/echo_client",
+        "args": ["Hippos", "rule!"],
     },
     "use": [
         {
