@@ -1,0 +1,13 @@
+{
+  "program": { "binary": "bin/devcoordinator" },
+  "use": [
+    { "directory": "/boot" },
+    // TODO: Update to use /svc once this won't conflict with svchost's /svc
+    { "service": "/bootsvc/fuchsia.boot.RootResource" },
+    { "service": "/bootsvc/fuchsia.boot.RootJob" },
+    { "service": "/bootsvc/fuchsia.boot.Arguments" },
+    { "service": "/bootsvc/fuchsia.boot.Items" },
+    { "service": "/bootsvc/fuchsia.boot.Log" },
+    { "service": "/builtin/fuchsia.process.Launcher" },
+  ],
+}
