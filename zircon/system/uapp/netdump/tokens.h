@@ -166,14 +166,16 @@ private:
 public:
     // List of keywords organized by category.
 
-    // Logical and comparison operations, no `tag`.
+    // Logical operations, no `tag`.
     const TokenPtr L_PARENS = keyword("(");
     const TokenPtr R_PARENS = keyword(")");
     const TokenPtr NOT = keyword("not", "!");
     const TokenPtr AND = keyword("and", "&&");
     const TokenPtr OR = keyword("or", "^^");
-    const TokenPtr GREATER = keyword("greater");
-    const TokenPtr LESS = keyword("less");
+
+    // Length comparison operations, `tag` is one of LengthComparator.
+    const TokenPtr GREATER = keyword("greater", LengthComparator::GEQ);
+    const TokenPtr LESS = keyword("less", LengthComparator::LEQ);
 
     // Fields that can be matched against. `tag` is type of field, if different types exist.
     const TokenPtr ETHER = keyword("ether");

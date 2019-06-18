@@ -12,9 +12,10 @@
 namespace netdump::test {
 
 // Canonical packet data.
+static uint16_t frame_length = 2000; // bytes
 static uint8_t src_mac[] = {0xde, 0xad, 0xbe, 0xef, 0xd0, 0x0d};
 static uint8_t dst_mac[] = {0xab, 0xcd, 0xef, 0xab, 0xcd, 0xef};
-static uint16_t length = htons(1842);
+static uint16_t ip_pkt_length = htons(1842); //bytes
 static uint8_t protocol = 0xab;
 static uint32_t ip4addr_src = 0xc0a80a04;
 static uint32_t ip4addr_dst = 0xfffefdfc;
@@ -34,6 +35,7 @@ static struct udphdr test_udp;
 
 static Headers SetupEth(uint16_t ethtype) {
     Headers headers;
+    headers.frame_length = frame_length;
     test_frame.h_proto = ethtype;
     std::copy(src_mac, src_mac + ETH_ALEN, test_frame.h_source);
     std::copy(dst_mac, dst_mac + ETH_ALEN, test_frame.h_dest);
@@ -43,7 +45,7 @@ static Headers SetupEth(uint16_t ethtype) {
 
 static void SetupIPv4(Headers* headers) {
     test_ipv4.version = 4;
-    test_ipv4.tot_len = length;
+    test_ipv4.tot_len = ip_pkt_length;
     test_ipv4.protocol = protocol;
     test_ipv4.saddr = ip4addr_src;
     test_ipv4.daddr = ip4addr_dst;
@@ -52,7 +54,7 @@ static void SetupIPv4(Headers* headers) {
 
 static void SetupIPv6(Headers* headers) {
     reinterpret_cast<struct iphdr*>(&test_ipv6)->version = 6; // Version is set through ip4 pointer.
-    test_ipv6.length = length;
+    test_ipv6.length = ip_pkt_length;
     test_ipv6.next_header = protocol;
     std::copy(ip6addr_src, ip6addr_src + IP6_ADDR_LEN, test_ipv6.src.u8);
     std::copy(ip6addr_dst, ip6addr_dst + IP6_ADDR_LEN, test_ipv6.dst.u8);
@@ -73,6 +75,16 @@ static void SetupUDP(Headers* headers) {
     test_ipv4.protocol = IPPROTO_UDP;
     test_ipv6.next_header = IPPROTO_UDP;
     headers->tcp = &test_tcp;
+}
+
+TEST(NetdumpFilterTests, FrameLengthTest) {
+    Headers headers = SetupEth(htons(ETH_P_IP));
+    EXPECT_FALSE(FrameLengthFilter(htons(1842), LengthComparator::LEQ).match(headers));
+    EXPECT_TRUE(FrameLengthFilter(htons(1842), LengthComparator::GEQ).match(headers));
+    EXPECT_TRUE(FrameLengthFilter(htons(2000), LengthComparator::LEQ).match(headers));
+    EXPECT_TRUE(FrameLengthFilter(htons(2000), LengthComparator::GEQ).match(headers));
+    EXPECT_TRUE(FrameLengthFilter(htons(5555), LengthComparator::LEQ).match(headers));
+    EXPECT_FALSE(FrameLengthFilter(htons(5555), LengthComparator::GEQ).match(headers));
 }
 
 TEST(NetdumpFilterTests, EthtypeTest) {
@@ -126,37 +138,23 @@ TEST(NetdumpFilterTests, VersionTest) {
 }
 
 TEST(NetdumpFilterTests, LengthTest) {
-    IpFilter ip4_let = IpFilter(4, htons(40), LengthComparator::LEQ);
-    IpFilter ip4_lef = IpFilter(4, htons(40), LengthComparator::GEQ);
-    IpFilter ip4_eqt = IpFilter(4, htons(1842), LengthComparator::LEQ);
-    IpFilter ip4_eqf = IpFilter(4, htons(1842), LengthComparator::GEQ);
-    IpFilter ip4_gtt = IpFilter(4, htons(4444), LengthComparator::LEQ);
-    IpFilter ip4_gtf = IpFilter(4, htons(4444), LengthComparator::GEQ);
-
-    IpFilter ip6_let = IpFilter(6, htons(60), LengthComparator::LEQ);
-    IpFilter ip6_lef = IpFilter(6, htons(60), LengthComparator::GEQ);
-    IpFilter ip6_eqt = IpFilter(6, htons(1842), LengthComparator::LEQ);
-    IpFilter ip6_eqf = IpFilter(6, htons(1842), LengthComparator::GEQ);
-    IpFilter ip6_gtt = IpFilter(6, htons(6666), LengthComparator::LEQ);
-    IpFilter ip6_gtf = IpFilter(6, htons(6666), LengthComparator::GEQ);
-
     Headers headers = SetupEth(htons(ETH_P_IP));
     SetupIPv4(&headers);
-    EXPECT_FALSE(ip4_let.match(headers));
-    EXPECT_TRUE(ip4_lef.match(headers));
-    EXPECT_TRUE(ip4_eqt.match(headers));
-    EXPECT_TRUE(ip4_eqf.match(headers));
-    EXPECT_TRUE(ip4_gtt.match(headers));
-    EXPECT_FALSE(ip4_gtf.match(headers));
+    EXPECT_FALSE(IpFilter(4, htons(40), LengthComparator::LEQ).match(headers));
+    EXPECT_TRUE(IpFilter(4, htons(40), LengthComparator::GEQ).match(headers));
+    EXPECT_TRUE(IpFilter(4, htons(1842), LengthComparator::LEQ).match(headers));
+    EXPECT_TRUE(IpFilter(4, htons(1842), LengthComparator::GEQ).match(headers));
+    EXPECT_TRUE(IpFilter(4, htons(4444), LengthComparator::LEQ).match(headers));
+    EXPECT_FALSE(IpFilter(4, htons(4444), LengthComparator::GEQ).match(headers));
 
     headers = SetupEth(htons(ETH_P_IPV6));
     SetupIPv6(&headers);
-    EXPECT_FALSE(ip6_let.match(headers));
-    EXPECT_TRUE(ip6_lef.match(headers));
-    EXPECT_TRUE(ip6_eqt.match(headers));
-    EXPECT_TRUE(ip6_eqf.match(headers));
-    EXPECT_TRUE(ip6_gtt.match(headers));
-    EXPECT_FALSE(ip6_gtf.match(headers));
+    EXPECT_FALSE(IpFilter(6, htons(60), LengthComparator::LEQ).match(headers));
+    EXPECT_TRUE(IpFilter(6, htons(60), LengthComparator::GEQ).match(headers));
+    EXPECT_TRUE(IpFilter(6, htons(1842), LengthComparator::LEQ).match(headers));
+    EXPECT_TRUE(IpFilter(6, htons(1842), LengthComparator::GEQ).match(headers));
+    EXPECT_TRUE(IpFilter(6, htons(6666), LengthComparator::LEQ).match(headers));
+    EXPECT_FALSE(IpFilter(6, htons(6666), LengthComparator::GEQ).match(headers));
 }
 
 TEST(NetdumpFilterTests, ProtocolTest) {

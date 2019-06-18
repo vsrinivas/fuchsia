@@ -35,6 +35,29 @@ static bool match_address(AddressFieldType type, size_t n, const uint8_t src[], 
     return (type & DST_ADDR) && (std::equal(dst, dst + n, spec));
 }
 
+FrameLengthFilter::FrameLengthFilter(uint16_t frame_len, LengthComparator comp) {
+    frame_len = ntohs(frame_len);
+    switch (comp) {
+    case LengthComparator::LEQ:
+        match_fn_ = [frame_len](const Headers& headers) {
+            return headers.frame_length <= frame_len;
+        };
+        break;
+    case LengthComparator::GEQ:
+        match_fn_ = [frame_len](const Headers& headers) {
+            return headers.frame_length >= frame_len;
+        };
+        break;
+    default:
+        ZX_DEBUG_ASSERT_MSG(false, "Unexpected comparator: %u", static_cast<uint8_t>(comp));
+        break;
+    }
+}
+
+bool FrameLengthFilter::match(const Headers& headers) {
+    return match_fn_(headers);
+}
+
 EthFilter::EthFilter(const uint8_t mac[ETH_ALEN], AddressFieldType type) {
     spec_ = Spec(std::in_place_type_t<Address>());
     Address* addr = std::get_if<Address>(&spec_);

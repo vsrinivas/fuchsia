@@ -36,6 +36,8 @@ namespace netdump {
 
 class Headers {
 public:
+    // `frame_len` is supplied by the client user of filter, so it is expected in host byte order.
+    uint16_t frame_length;
     const struct ethhdr* frame;
     union {
         const struct iphdr* ipv4;
@@ -81,6 +83,28 @@ protected:
     FilterBase() = default;
 };
 
+enum LengthComparator {
+    LEQ,
+    GEQ,
+};
+
+// Filter on length of frame, including frame headers.
+class FrameLengthFilter : public FilterBase {
+public:
+    // If `comp` is `LEQ`, the filter matches if frame length is less than or
+    // equal to `frame_len`. Otherwise the filter matches if it is greater than or
+    // equal.
+    explicit FrameLengthFilter(uint16_t frame_len, LengthComparator comp);
+
+    bool match(const Headers& headers) override;
+
+    FrameLengthFilter(const FrameLengthFilter& other) = delete;
+    FrameLengthFilter& operator=(const FrameLengthFilter& other) = delete;
+
+private:
+    std::function<bool(const Headers&)> match_fn_;
+};
+
 // Filter on Ethernet frames.
 class EthFilter : public FilterBase {
 public:
@@ -105,11 +129,6 @@ private:
     };
     using Spec = std::variant<EthType, Address>;
     Spec spec_;
-};
-
-enum class LengthComparator {
-    LEQ,
-    GEQ,
 };
 
 // Filter on IP headers. An IP version must be specified, which is always checked in the packet.
