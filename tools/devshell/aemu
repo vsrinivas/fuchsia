@@ -5,7 +5,7 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port>] [-e <directory>] [-w <size>] [--audio] [--headless] [--debugger]
+## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port>] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
@@ -15,6 +15,7 @@
 ##   -w <size> window size, default is 1280x800
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
+##   --software-gpu run without host GPU acceleration
 ##   --debugger pause on launch and wait for a debugger process to attach before resuming
 
 set -e
@@ -33,6 +34,8 @@ AEMU_DIR=""
 UPSCRIPT=no
 WINDOW_SIZE="1280x800"
 GRPC=0
+GPU="host"
+VULKAN=1
 
 while [[ $# -ge 1 ]]; do
   case "$1" in
@@ -75,6 +78,13 @@ while [[ $# -ge 1 ]]; do
     ;;
   --debugger)
     DEBUGGER=1
+    ;;
+  --software-gpu)
+    GPU="swiftshader_indirect"
+    # disable vulkan when using swiftshader.
+    # TODO: remove this when swiftshader supports external memory and
+    # can be used by fuchsia guests.
+    VULKAN=0
     ;;
   *)
     break
@@ -119,26 +129,34 @@ fi
 
 if [[ "$ACCEL" == "kvm" ]]; then
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
-  FEATURES+=",KVM,Vulkan,GLDirectMem"
+  FEATURES+=",KVM,GLDirectMem"
 elif [[ "$ACCEL" == "hvf" ]]; then
   ARGS+=("-enable-hvf" "-cpu" "Haswell")
-  FEATURES+=",HVF,Vulkan,GLDirectMem"
+  FEATURES+=",HVF,GLDirectMem"
 elif [[ "$ACCEL" == "hax" ]]; then
   ARGS+=("-enable-hax" "-cpu" "Haswell")
-  FEATURES+=",HAXM,Vulkan,GLDirectMem"
+  FEATURES+=",HAXM,GLDirectMem"
 elif [[ "$ACCEL" == "off" ]]; then
   ARGS+=("-cpu" "Haswell,+smap,-check,-fsgsbase")
+  FEATURES+=",-GLDirectMem"
   # disable vulkan as not useful without kvm,hvf,hax and support
   # for coherent host visible memory.
-  FEATURES+=",-Vulkan,-GLDirectMem"
+  VULKAN=0
 else
   fx-error Unsupported acceleration mode
   exit 1
 fi
 
+if (( $VULKAN )); then
+  FEATURES+=",Vulkan"
+else
+  FEATURES+=",-Vulkan"
+fi
+
 OPTIONS=()
 OPTIONS+=("-feature" "$FEATURES")
 OPTIONS+=("-window-size" "$WINDOW_SIZE")
+OPTIONS+=("-gpu" "$GPU")
 if (( $DEBUGGER )); then
     OPTIONS+=("-wait-for-debugger")
 fi
