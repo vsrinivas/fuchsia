@@ -24,6 +24,7 @@ dart_library("client") {
     "src/sl4f_client.dart",
     "src/storage.dart",
     "src/traceutil.dart",
+    "src/webdriver.dart",
   ]
 
   deps = [
@@ -31,6 +32,7 @@ dart_library("client") {
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/webdriver",
   ]
 }
 
@@ -43,6 +45,7 @@ dart_test("sl4f_client_tests") {
     "performance_test.dart",
     "scenic_test.dart",
     "storage_test.dart",
+    "webdriver_test.dart",
   ]
 
   deps = [
