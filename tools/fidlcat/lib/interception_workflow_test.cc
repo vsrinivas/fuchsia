@@ -4,7 +4,11 @@
 
 #include "interception_workflow.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <memory>
 #include <thread>
+#include <vector>
 #undef __TA_REQUIRES
 #include <zircon/fidl.h>
 
@@ -17,28 +21,110 @@
 
 namespace fidlcat {
 
-// This class encapsulates the data needed for the zx_channel tests.
-// TODO: This is obviously not extensible to more than one test.
-class DataForZxChannelTest {
+class SystemCallTest {
  public:
-  DataForZxChannelTest(debug_ipc::Arch arch) : arch_(arch) {
+  static std::unique_ptr<SystemCallTest> ZxChannelWrite(
+      int64_t result, zx_handle_t handle, uint32_t options,
+      const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+      uint32_t num_handles) {
+    auto value = std::make_unique<SystemCallTest>("zx_channel_write", result);
+    value->inputs_.push_back(handle);
+    value->inputs_.push_back(options);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
+    value->inputs_.push_back(num_bytes);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(handles));
+    value->inputs_.push_back(num_handles);
+    return value;
+  }
+
+  static std::unique_ptr<SystemCallTest> ZxChannelRead(
+      int64_t result, zx_handle_t handle, uint32_t options,
+      const uint8_t* bytes, const zx_handle_t* handles, uint32_t num_bytes,
+      uint32_t num_handles, uint32_t* actual_bytes, uint32_t* actual_handles) {
+    auto value = std::make_unique<SystemCallTest>("zx_channel_read", result);
+    value->inputs_.push_back(handle);
+    value->inputs_.push_back(options);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(handles));
+    value->inputs_.push_back(num_bytes);
+    value->inputs_.push_back(num_handles);
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_bytes));
+    value->inputs_.push_back(reinterpret_cast<uint64_t>(actual_handles));
+    return value;
+  }
+
+  SystemCallTest(const char* name, int64_t result)
+      : name_(name), result_(result) {}
+
+  const std::string& name() const { return name_; }
+  int64_t result() const { return result_; }
+  const std::vector<uint64_t>& inputs() const { return inputs_; }
+
+ private:
+  const std::string name_;
+  const int64_t result_;
+  std::vector<uint64_t> inputs_;
+};
+
+static debug_ipc::RegisterID aarch64_regs[] = {
+    debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
+    debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
+    debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
+    debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
+constexpr size_t aarch64_regs_count =
+    sizeof(aarch64_regs) / sizeof(debug_ipc::RegisterID);
+
+static debug_ipc::RegisterID amd64_regs[] = {
+    debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
+    debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
+    debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
+constexpr size_t amd64_regs_count =
+    sizeof(amd64_regs) / sizeof(debug_ipc::RegisterID);
+
+// Data for syscall tests.
+class DataForSyscallTest {
+ public:
+  DataForSyscallTest(debug_ipc::Arch arch) : arch_(arch) {
+    if (arch_ == debug_ipc::Arch::kArm64) {
+      param_regs_ = aarch64_regs;
+      param_regs_count_ = aarch64_regs_count;
+    } else {
+      param_regs_ = amd64_regs;
+      param_regs_count_ = amd64_regs_count;
+    }
     header_.txid = kTxId;
     header_.reserved0 = kReserved;
     header_.flags = kFlags;
     header_.ordinal = kOrdinal;
 
-    // Fill out the stack with the expected values for zx_channel_read (which
-    // will be ignored / irrelevant for zx_channel_write).
-    memset(stack_, 0, sizeof(stack_));
-    uint64_t* stack_ptr = reinterpret_cast<uint64_t*>(stack_);
-    stack_ptr[1] = kActualBytesPtr;
-    stack_ptr[2] = kActualHandlesPtr;
-
-    current_stack_ptr_ = kStackPointer;
+    sp_ = stack_ + kMaxStackSizeInWords;
     current_symbol_address_ = 0x0;
   }
 
-  const uint8_t* data() const {
+  const SystemCallTest* syscall() const { return syscall_.get(); }
+
+  void set_syscall(std::unique_ptr<SystemCallTest> syscall) {
+    syscall_ = std::move(syscall);
+    size_t argument_count = syscall_->inputs().size();
+    if (argument_count > param_regs_count_) {
+      argument_count -= param_regs_count_;
+      for (auto input = syscall_->inputs().crbegin();
+           (input != syscall_->inputs().crend()) && (argument_count > 0);
+           ++input, --argument_count) {
+        *(--sp_) = *input;
+      }
+    }
+    if (arch_ == debug_ipc::Arch::kX64) {
+      *(--sp_) = kReturnAddress;
+    }
+  }
+
+  uint64_t* sp() const { return sp_; }
+
+  void set_check_bytes() { check_bytes_ = true; }
+  void set_check_handles() { check_handles_ = true; }
+
+  const uint8_t* bytes() const {
     return reinterpret_cast<const uint8_t*>(&header_);
   }
 
@@ -48,37 +134,8 @@ class DataForZxChannelTest {
 
   size_t num_handles() const { return sizeof(handles_) / sizeof(handles_[0]); }
 
-  uint64_t current_stack_ptr() { return current_stack_ptr_; }
-
   void SetCurrentAddress(uint64_t address) {
     current_symbol_address_ = address;
-  }
-
-  int64_t zx_channel_read_result() const { return zx_channel_read_result_; }
-  void set_zx_channel_read_result(int64_t zx_channel_read_result) {
-    zx_channel_read_result_ = zx_channel_read_result;
-  }
-
-  // read_has_handles controls whether the zx_channel_read parameters
-  // passed NULL for actual_handles.
-  bool read_has_handles() { return read_has_handles_; }
-  void set_read_has_handles(int64_t read_has_handles) {
-    read_has_handles_ = read_has_handles;
-    if (!read_has_handles) {
-      uint64_t* stack_ptr = reinterpret_cast<uint64_t*>(stack_);
-      stack_ptr[2] = 0;
-    }
-  }
-
-  // read_has_bytes controls whether the zx_channel_read parameters
-  // passed NULL for actual_bytes.
-  bool read_has_bytes() { return read_has_bytes_; }
-  void set_read_has_bytes(int64_t read_has_bytes) {
-    read_has_bytes_ = read_has_bytes;
-    if (!read_has_bytes) {
-      uint64_t* stack_ptr = reinterpret_cast<uint64_t*>(stack_);
-      stack_ptr[1] = 0;
-    }
   }
 
   fxl::RefPtr<zxdb::SystemSymbols::ModuleRef> GetModuleRef(
@@ -87,13 +144,9 @@ class DataForZxChannelTest {
     std::unique_ptr<zxdb::MockModuleSymbols> module =
         std::make_unique<zxdb::MockModuleSymbols>("zx.so");
     module->AddSymbolLocations(
-        zx_channel_write_name_,
+        syscall_->name() + "@plt",
         {zxdb::Location(zxdb::Location::State::kSymbolized,
-                        kWriteElfSymbolAddress)});
-    module->AddSymbolLocations(
-        zx_channel_read_name_,
-        {zxdb::Location(zxdb::Location::State::kSymbolized,
-                        kReadElfSymbolAddress)});
+                        kSyscallSymbolAddress)});
 
     return session->system().GetSymbols()->InjectModuleForTesting(
         kElfSymbolBuildID, std::move(module));
@@ -113,55 +166,16 @@ class DataForZxChannelTest {
     block.address = address;
     block.size = size;
     block.valid = true;
-    switch (address) {
-      case kBytesAddress: {
-        const uint8_t* bytes = data();
-        std::copy(bytes, bytes + num_bytes(), std::back_inserter(block.data));
-        break;
-      }
-      case kHandlesAddress: {
-        const zx_handle_t* h = handles();
-        std::copy(reinterpret_cast<const uint8_t*>(h),
-                  reinterpret_cast<const uint8_t*>(h + num_handles()),
-                  std::back_inserter(block.data));
-        break;
-      }
-      case kStackPointer + sizeof(uint64_t): {
-        // Should only be requested for zx_channel_read.  Having this
-        // available for zx_channel_write should not affect behavior, though.
-        std::copy(stack_ + sizeof(uint64_t), stack_ + sizeof(stack_),
-                  std::back_inserter(block.data));
-        break;
-      }
-      case kActualBytesPtr: {
-        uint32_t byte_count = num_bytes();
-        uint8_t* num_bytes_ptr = reinterpret_cast<uint8_t*>(&byte_count);
-        std::copy(num_bytes_ptr, num_bytes_ptr + sizeof(byte_count),
-                  std::back_inserter(block.data));
-        break;
-      }
-      case kActualHandlesPtr: {
-        uint32_t handle_count = num_handles();
-        uint8_t* num_handles_ptr = reinterpret_cast<uint8_t*>(&handle_count);
-        std::copy(num_handles_ptr, num_handles_ptr + sizeof(handle_count),
-                  std::back_inserter(block.data));
-        break;
-      }
-      default:
-        FXL_NOTREACHED() << "Unknown memory address requested.";
-    }
+    std::copy(reinterpret_cast<uint8_t*>(address),
+              reinterpret_cast<uint8_t*>(address + size),
+              std::back_inserter(block.data));
     FXL_DCHECK(size == block.data.size())
         << "expected size: " << size
         << " and actual size: " << block.data.size();
   }
 
-  void Populate32BitRegister(debug_ipc::RegisterID register_id, uint32_t value,
-                             std::vector<debug_ipc::Register>* registers) {
-    Populate64BitRegister(register_id, value, registers);
-  }
-
-  void Populate64BitRegister(debug_ipc::RegisterID register_id, uint64_t value,
-                             std::vector<debug_ipc::Register>* registers) {
+  void PopulateRegister(debug_ipc::RegisterID register_id, uint64_t value,
+                        std::vector<debug_ipc::Register>* registers) {
     debug_ipc::Register& reg = registers->emplace_back();
     reg.id = register_id;
     for (int i = 0; i < 64; i += 8) {
@@ -169,187 +183,129 @@ class DataForZxChannelTest {
     }
   }
 
-  void PopulateRegisters(debug_ipc::RegisterCategory& category) {
-    category.type = debug_ipc::RegisterCategory::Type::kGeneral;
-    std::vector<debug_ipc::Register>& registers = category.registers;
-    if (current_symbol_address_ == kWriteElfSymbolAddress) {
-      if (arch_ == debug_ipc::Arch::kArm64) {
-        // zx_handle_t handle
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x0, 0xcefa1db0,
-                              &registers);
-        // uint32_t options
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x1, 0, &registers);
-        // bytes_address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x2, kBytesAddress,
-                              &registers);
-        // num_bytes
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x3, num_bytes(),
-                              &registers);
-        // handles_address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x4, kHandlesAddress,
-                              &registers);
-        // num_handles
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x5, num_handles(),
-                              &registers);
-        // stack pointer
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
-                              current_stack_ptr_, &registers);
-        // link register needs to be non-zero
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_lr, 0x1010101,
-                              &registers);
-      } else if (arch_ == debug_ipc::Arch::kX64) {
-        // zx_handle_t handle
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_rdi, 0xcefa1db0,
-                              &registers);
-        // uint32_t options
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_rsi, 0, &registers);
-        // bytes_address
-        Populate64BitRegister(debug_ipc::RegisterID::kX64_rdx, kBytesAddress,
-                              &registers);
-        // num_bytes
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_rcx, num_bytes(),
-                              &registers);
-        // handles_address
-        Populate64BitRegister(debug_ipc::RegisterID::kX64_r8, kHandlesAddress,
-                              &registers);
-        // num_handles
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_r9, num_handles(),
-                              &registers);
-        // stack pointer
-        Populate64BitRegister(debug_ipc::RegisterID::kX64_rsp,
-                              current_stack_ptr_, &registers);
-      }
-    } else if (current_symbol_address_ == kReadElfSymbolAddress) {
-      if (arch_ == debug_ipc::Arch::kArm64) {
-        if (first_register_read_) {
-          // zx_handle_t handle
-          Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x0, 0xcefa1db0,
-                                &registers);
-        } else {
-          // return value for zx_channel_read
-          Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x0,
-                                zx_channel_read_result_, &registers);
-        }
-        first_register_read_ = false;
-        // uint32_t options
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x1, 0, &registers);
-        // bytes_address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x2, kBytesAddress,
-                              &registers);
-        // handles_address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x3, kHandlesAddress,
-                              &registers);
-        // num_bytes
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x4, num_bytes(),
-                              &registers);
-        // num_handles
-        Populate32BitRegister(debug_ipc::RegisterID::kARMv8_x5, num_handles(),
-                              &registers);
-        // output num_bytes address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x6,
-                              read_has_bytes_ ? kActualBytesPtr : 0,
-                              &registers);
-        // output num_handles address
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_x7,
-                              read_has_handles_ ? kActualHandlesPtr : 0,
-                              &registers);
-        // stack pointer
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_sp,
-                              current_stack_ptr_, &registers);
-        // link register needs to be non-zero
-        Populate64BitRegister(debug_ipc::RegisterID::kARMv8_lr, 0x1010101,
-                              &registers);
-      } else if (arch_ == debug_ipc::Arch::kX64) {
-        if (!first_register_read_) {
-          // return value for zx_channel_read
-          Populate64BitRegister(debug_ipc::RegisterID::kX64_rax,
-                                zx_channel_read_result_, &registers);
-        }
-        first_register_read_ = false;
-        // zx_handle_t handle
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_rdi, 0xcefa1db0,
-                              &registers);
-        // uint32_t options
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_rsi, 0, &registers);
-        // bytes_address
-        Populate64BitRegister(debug_ipc::RegisterID::kX64_rdx, kBytesAddress,
-                              &registers);
-        // handles_address
-        Populate64BitRegister(debug_ipc::RegisterID::kX64_rcx, kHandlesAddress,
-                              &registers);
-        // num_bytes
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_r8, num_bytes(),
-                              &registers);
-        // num_handles
-        Populate32BitRegister(debug_ipc::RegisterID::kX64_r9, num_handles(),
-                              &registers);
-        // stack pointer
-        Populate64BitRegister(debug_ipc::RegisterID::kX64_rsp,
-                              current_stack_ptr_, &registers);
+  void PopulateRegisters(std::vector<debug_ipc::Register>* registers) {
+    if (first_register_read_) {
+      size_t count = std::min(param_regs_count_, syscall_->inputs().size());
+      for (size_t i = 0; i < count; ++i) {
+        PopulateRegister(param_regs_[i], syscall_->inputs()[i], registers);
       }
     } else {
-      FXL_NOTREACHED() << "do not know what the registers should be at this IP";
+      if (arch_ == debug_ipc::Arch::kArm64) {
+        PopulateRegister(debug_ipc::RegisterID::kARMv8_x0, syscall_->result(),
+                         registers);
+      } else {
+        PopulateRegister(debug_ipc::RegisterID::kX64_rax, syscall_->result(),
+                         registers);
+      }
     }
+
+    if (arch_ == debug_ipc::Arch::kArm64) {
+      // stack pointer
+      PopulateRegister(debug_ipc::RegisterID::kARMv8_sp,
+                       reinterpret_cast<uint64_t>(sp_), registers);
+      // link register
+      PopulateRegister(debug_ipc::RegisterID::kARMv8_lr, kReturnAddress,
+                       registers);
+    } else if (arch_ == debug_ipc::Arch::kX64) {
+      // stack pointer
+      PopulateRegister(debug_ipc::RegisterID::kX64_rsp,
+                       reinterpret_cast<uint64_t>(sp_), registers);
+    }
+  }
+
+  void PopulateRegisters(debug_ipc::RegisterCategory& category) {
+    category.type = debug_ipc::RegisterCategory::Type::kGeneral;
+    PopulateRegisters(&category.registers);
   }
 
   void Step() {
     // Increment the stack pointer to make it look as if we've stepped out of
     // the zx_channel function.
-    current_stack_ptr_ += 16;
+    sp_ = stack_ + kMaxStackSizeInWords;
+    first_register_read_ = false;
   }
 
-  static constexpr uint64_t kWriteElfSymbolAddress = 0x100060;
-  static constexpr uint64_t kReadElfSymbolAddress = 0x1000b0;
-  static constexpr uint64_t kStackPointer = 0x57accadde5500;
+  void CheckResult(const zxdb::Err& err, const ZxChannelParams& params) {
+    if (syscall()->result() != ZX_OK) {
+      ASSERT_EQ(zxdb::ErrType::kGeneral, err.type()) << "error expected";
+      std::string message = "aborted " + syscall()->name() +
+                            " (errno=" + std::to_string(syscall()->result()) +
+                            ")";
+      ASSERT_EQ(err.msg(), message);
+      return;
+    }
+    ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
+
+    if (check_bytes_) {
+      ASSERT_EQ(params.GetNumBytes(), num_bytes());
+      if (memcmp(params.GetBytes().get(), bytes(), num_bytes()) != 0) {
+        std::string result = "bytes not equivalent:\n";
+        AppendElements<uint8_t>(result, num_bytes(), params.GetBytes().get(),
+                                bytes());
+        FAIL() << result;
+      }
+    }
+
+    if (check_handles_) {
+      ASSERT_EQ(params.GetNumHandles(), num_handles());
+      if (memcmp(params.GetHandles().get(), handles(),
+                 num_handles() * sizeof(zx_handle_t)) != 0) {
+        std::string result = "handles not equivalent:\n";
+        AppendElements<zx_handle_t>(result, num_handles(),
+                                    params.GetHandles().get(), handles());
+        FAIL() << result;
+      }
+    }
+  }
+
+  template <typename T>
+  void AppendElements(std::string& result, size_t num, const T* a, const T* b) {
+    std::ostringstream os;
+    os << "actual      expected\n";
+    for (size_t i = 0; i < num; i++) {
+      os << std::left << std::setw(11) << static_cast<uint32_t>(a[i]);
+      os << " ";
+      os << std::left << std::setw(11) << static_cast<uint32_t>(b[i]);
+      os << std::endl;
+    }
+    result.append(os.str());
+  }
+
+  static constexpr uint64_t kSyscallSymbolAddress = 0x100060;
+  static constexpr uint64_t kReturnAddress = 0x123456798;
+  static constexpr uint64_t kMaxStackSizeInWords = 0x100;
+  static constexpr zx_txid_t kTxId = 0xaaaaaaaa;
+  static constexpr uint32_t kReserved = 0x0;
+  static constexpr uint32_t kFlags = 0x0;
+  static constexpr uint32_t kOrdinal = 2011483371;
+  static constexpr char kElfSymbolBuildID[] = "123412341234";
 
  private:
-  static const zx_txid_t kTxId = 0xaaaaaaaa;
-  static const uint32_t kReserved = 0x0;
-  static const uint32_t kFlags = 0x0;
-  static const uint32_t kOrdinal = 2011483371;
-  static constexpr char kElfSymbolBuildID[] = "123412341234";
-  static constexpr uint64_t kBytesAddress = 0x7e57ab1eba5eba11;
-  static constexpr uint64_t kHandlesAddress = 0xca11ab1e7e57;
-  static constexpr uint64_t kActualBytesPtr = 0x2000;
-  static constexpr uint64_t kActualHandlesPtr = 0x3000;
-  static const char* zx_channel_write_name_;
-  static const char* zx_channel_read_name_;
-
-  uint64_t current_stack_ptr_;
+  debug_ipc::RegisterID* param_regs_;
+  size_t param_regs_count_;
+  std::unique_ptr<SystemCallTest> syscall_;
+  uint64_t stack_[kMaxStackSizeInWords];
+  uint64_t* sp_;
   uint64_t current_symbol_address_;
+  bool check_bytes_ = false;
+  bool check_handles_ = false;
   fidl_message_header_t header_;
   zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
-  uint8_t stack_[3 * sizeof(uint64_t)];
   debug_ipc::Arch arch_;
-  bool read_has_bytes_ = true;
-  bool read_has_handles_ = true;
   bool first_register_read_ = true;
-  int64_t zx_channel_read_result_ = ZX_OK;
-};
-
-const char* DataForZxChannelTest::zx_channel_write_name_ =
-    InterceptionWorkflow::kZxChannelWriteName;
-const char* DataForZxChannelTest::zx_channel_read_name_ =
-    InterceptionWorkflow::kZxChannelReadName;
-
-struct BreakpointCmp {
-  bool operator()(const debug_ipc::BreakpointSettings& lhs,
-                  const debug_ipc::BreakpointSettings& rhs) const {
-    return lhs.id < rhs.id;
-  }
 };
 
 // Provides the infrastructure needed to provide the data above.
 class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
  public:
-  explicit InterceptionRemoteAPI(DataForZxChannelTest& data) : data_(data) {}
+  explicit InterceptionRemoteAPI(DataForSyscallTest& data) : data_(data) {}
 
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       std::function<void(const zxdb::Err&,
                          debug_ipc::AddOrChangeBreakpointReply)>
           cb) override {
-    breakpoints_.insert(request.breakpoint);
+    breakpoints_[request.breakpoint.id] = request.breakpoint;
     MockRemoteAPI::AddOrChangeBreakpoint(request, cb);
   }
 
@@ -395,10 +351,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
               std::function<void(const zxdb::Err&, debug_ipc::ResumeReply)> cb)
       override {
     debug_ipc::ResumeReply reply;
-    if (data_.current_stack_ptr() == DataForZxChannelTest::kStackPointer) {
-      // This means we need to step out of the zx_channel_read function.
-      data_.Step();
-    }
+    data_.Step();
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb, reply]() {
       cb(zxdb::Err(), reply);
       // This is so that the test can inject the next exception.
@@ -406,25 +359,20 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
     });
   }
 
-  const std::set<debug_ipc::BreakpointSettings, BreakpointCmp>& breakpoints()
-      const {
-    return breakpoints_;
-  }
-
   void PopulateBreakpointIds(uint64_t address,
                              debug_ipc::NotifyException& notification) {
     for (auto& breakpoint : breakpoints_) {
-      if (address == breakpoint.locations[0].address) {
+      if (address == breakpoint.second.locations[0].address) {
         notification.hit_breakpoints.emplace_back();
-        notification.hit_breakpoints.back().id = breakpoint.id;
+        notification.hit_breakpoints.back().id = breakpoint.first;
         data_.SetCurrentAddress(address);
       }
     }
   }
 
  private:
-  std::set<debug_ipc::BreakpointSettings, BreakpointCmp> breakpoints_;
-  DataForZxChannelTest& data_;
+  std::map<uint32_t, debug_ipc::BreakpointSettings> breakpoints_;
+  DataForSyscallTest& data_;
 };
 
 class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
@@ -440,16 +388,12 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
     return std::move(remote_api);
   }
 
-  DataForZxChannelTest& data() { return data_; }
+  DataForSyscallTest& data() { return data_; }
 
-  void WriteTest();
-
-  void ReadTest();
-
- protected:
-  DataForZxChannelTest data_;
+  void PerformTest(std::unique_ptr<SystemCallTest> syscall);
 
  private:
+  DataForSyscallTest data_;
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
 };
 
@@ -496,21 +440,6 @@ class ProcessController {
   zxdb::Target* target_;
 };
 
-namespace {
-
-template <typename T>
-void AppendElements(std::string& result, size_t num, const T* a, const T* b) {
-  std::ostringstream os;
-  os << "actual      expected\n";
-  for (size_t i = 0; i < num; i++) {
-    os << std::left << std::setw(11) << a[i];
-    os << " ";
-    os << std::left << std::setw(11) << b[i];
-    os << std::endl;
-  }
-  result.append(os.str());
-}
-
 class AlwaysQuit {
  public:
   AlwaysQuit(ProcessController* controller) : controller_(controller) {}
@@ -520,13 +449,10 @@ class AlwaysQuit {
   ProcessController* controller_;
 };
 
-}  // namespace
-
 ProcessController::ProcessController(InterceptionWorkflowTest* remote_api,
                                      zxdb::Session& session,
                                      debug_ipc::PlatformMessageLoop& loop)
     : workflow_(&session, &loop) {
-  zxdb::Err err;
   std::vector<std::string> blank;
   workflow_.Initialize(blank);
 
@@ -579,7 +505,10 @@ ProcessController::~ProcessController() {
 
 void ProcessController::Detach() { workflow_.Detach(); }
 
-void InterceptionWorkflowTest::WriteTest() {
+void InterceptionWorkflowTest::PerformTest(
+    std::unique_ptr<SystemCallTest> syscall) {
+  data_.set_syscall(std::move(syscall));
+
   ProcessController controller(this, session(), loop());
   bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
@@ -588,100 +517,20 @@ void InterceptionWorkflowTest::WriteTest() {
                                            const ZxChannelParams& params) {
         AlwaysQuit aq(&controller);
         hit_breakpoint = true;
-        ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
-
-        std::string result;
-
-        const uint8_t* data = data_.data();
-        uint32_t num_bytes = params.GetNumBytes();
-        ASSERT_EQ(num_bytes, data_.num_bytes());
-        if (memcmp(params.GetBytes().get(), data, num_bytes) != 0) {
-          result.append("bytes not equivalent");
-          AppendElements<uint8_t>(result, num_bytes, params.GetBytes().get(),
-                                  data);
-          FAIL() << result;
-        }
-
-        const zx_handle_t* handles = data_.handles();
-        uint32_t num_handles = params.GetNumHandles();
-        ASSERT_EQ(num_handles, data_.num_handles());
-        if (memcmp(params.GetHandles().get(), handles,
-                   num_handles * sizeof(zx_handle_t)) != 0) {
-          result.append("handles not equivalent\n");
-          AppendElements<zx_handle_t>(result, num_handles,
-                                      params.GetHandles().get(), handles);
-          FAIL() << result;
-        }
+        data_.CheckResult(err, params);
       });
 
-  // Trigger breakpoint.
-  debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kGeneral;
-  notification.thread.process_koid = ProcessController::kProcessKoid;
-  notification.thread.thread_koid = ProcessController::kThreadKoid;
-  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
-  mock_remote_api().PopulateBreakpointIds(
-      DataForZxChannelTest::kWriteElfSymbolAddress, notification);
-  InjectException(notification);
-
-  debug_ipc::MessageLoop::Current()->Run();
-
-  // At this point, the ZxChannelWrite callback should have been executed.
-  ASSERT_TRUE(hit_breakpoint);
-
-  // Making sure shutdown works.
-  debug_ipc::MessageLoop::Current()->Run();
-}
-
-TEST_F(InterceptionWorkflowTestX64, ZxChannelWrite) { WriteTest(); }
-
-TEST_F(InterceptionWorkflowTestArm, ZxChannelWrite) { WriteTest(); }
-
-void InterceptionWorkflowTest::ReadTest() {
-  ProcessController controller(this, session(), loop());
-  bool hit_breakpoint = false;
   // This will be executed when the zx_channel_read breakpoint is triggered.
   controller.workflow().SetZxChannelReadCallback(
       [this, &controller, &hit_breakpoint](const zxdb::Err& err,
                                            const ZxChannelParams& params) {
-        if (data().zx_channel_read_result() != ZX_OK) {
-          ASSERT_EQ(zxdb::ErrType::kGeneral, err.type()) << "error expected";
-          return;
-        }
         AlwaysQuit aq(&controller);
         hit_breakpoint = true;
-        ASSERT_EQ(zxdb::ErrType::kNone, err.type()) << err.msg();
-
-        std::string result;
-
-        if (data_.read_has_bytes()) {
-          const uint8_t* data = data_.data();
-          uint32_t num_bytes = params.GetNumBytes();
-          ASSERT_EQ(num_bytes, data_.num_bytes());
-          if (memcmp(params.GetBytes().get(), data, num_bytes) != 0) {
-            result.append("bytes not equivalent");
-            AppendElements<uint8_t>(result, num_bytes, params.GetBytes().get(),
-                                    data);
-            FAIL() << result;
-          }
-        }
-
-        if (data_.read_has_handles()) {
-          const zx_handle_t* handles = data_.handles();
-          uint32_t num_handles = params.GetNumHandles();
-          ASSERT_EQ(num_handles, data_.num_handles());
-          if (memcmp(params.GetHandles().get(), handles,
-                     num_handles * sizeof(zx_handle_t)) != 0) {
-            result.append("handles not equivalent\n");
-            AppendElements<zx_handle_t>(result, num_handles,
-                                        params.GetHandles().get(), handles);
-            FAIL() << result;
-          }
-        }
+        data_.CheckResult(err, params);
       });
 
   {
-    // Trigger initial breakpoint, on zx_channel_read
+    // Trigger breakpoint.
     debug_ipc::NotifyException notification;
     notification.type = debug_ipc::NotifyException::Type::kGeneral;
     notification.thread.process_koid = ProcessController::kProcessKoid;
@@ -689,55 +538,81 @@ void InterceptionWorkflowTest::ReadTest() {
     notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
     notification.thread.stack_amount =
         debug_ipc::ThreadRecord::StackAmount::kMinimal;
-    debug_ipc::StackFrame frame(1, 3);
+    debug_ipc::StackFrame frame(DataForSyscallTest::kSyscallSymbolAddress,
+                                reinterpret_cast<uint64_t>(data_.sp()));
+    data_.PopulateRegisters(&frame.regs);
     notification.thread.frames.push_back(frame);
     mock_remote_api().PopulateBreakpointIds(
-        DataForZxChannelTest::kReadElfSymbolAddress, notification);
+        DataForSyscallTest::kSyscallSymbolAddress, notification);
     InjectException(notification);
   }
 
   debug_ipc::MessageLoop::Current()->Run();
 
-  {
+  if (data_.syscall()->name() == "zx_channel_read") {
     // Trigger next breakpoint, when zx_channel_read has completed.
     debug_ipc::NotifyException notification;
     notification.type = debug_ipc::NotifyException::Type::kGeneral;
     notification.thread.process_koid = ProcessController::kProcessKoid;
     notification.thread.thread_koid = ProcessController::kThreadKoid;
     notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+    notification.thread.stack_amount =
+        debug_ipc::ThreadRecord::StackAmount::kMinimal;
+    debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
+                                reinterpret_cast<uint64_t>(data_.sp()));
+    data_.PopulateRegisters(&frame.regs);
+    notification.thread.frames.push_back(frame);
     InjectException(notification);
-  }
 
-  debug_ipc::MessageLoop::Current()->Run();
-
-  if (data().zx_channel_read_result() == ZX_OK) {
-    // At this point, the ZxChannelRead callback should have been executed.
-    ASSERT_TRUE(hit_breakpoint);
-
-    // Making sure shutdown works.
     debug_ipc::MessageLoop::Current()->Run();
   }
+
+  // At this point, the callback should have been executed.
+  ASSERT_TRUE(hit_breakpoint);
+
+  // Making sure shutdown works.
+  debug_ipc::MessageLoop::Current()->Run();
 }
 
-#define TEST_WITH_ARCH(arch)                                            \
-  TEST_F(InterceptionWorkflowTest##arch, ZxChannelRead) { ReadTest(); } \
-                                                                        \
-  TEST_F(InterceptionWorkflowTest##arch, ZxChannelReadFailed) {         \
-    data().set_zx_channel_read_result(ZX_ERR_SHOULD_WAIT);              \
-    ReadTest();                                                         \
-  }                                                                     \
-                                                                        \
-  TEST_F(InterceptionWorkflowTest##arch, ZxChannelReadNoHandles) {      \
-    data().set_read_has_handles(false);                                 \
-    ReadTest();                                                         \
-  }                                                                     \
-                                                                        \
-  TEST_F(InterceptionWorkflowTest##arch, ZxChannelReadNoBytes) {        \
-    data().set_read_has_bytes(false);                                   \
-    ReadTest();                                                         \
+#define WRITE_TEST_CONTENT(errno)                               \
+  data().set_check_bytes();                                     \
+  data().set_check_handles();                                   \
+  PerformTest(SystemCallTest::ZxChannelWrite(                   \
+      errno, 0xcefa1db0, 0, data().bytes(), data().num_bytes(), \
+      data().handles(), data().num_handles()))
+
+#define WRITE_TEST(name, errno)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { WRITE_TEST_CONTENT(errno); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { WRITE_TEST_CONTENT(errno); }
+
+WRITE_TEST(ZxChannelWrite, ZX_OK);
+
+#define READ_TEST_CONTENT(errno, check_bytes, check_handles)           \
+  if (check_bytes)                                                     \
+    data().set_check_bytes();                                          \
+  if (check_handles)                                                   \
+    data().set_check_handles();                                        \
+  uint32_t actual_bytes = data().num_bytes();                          \
+  uint32_t actual_handles = data().num_handles();                      \
+  PerformTest(SystemCallTest::ZxChannelRead(                           \
+      errno, 0xcefa1db0, 0, data().bytes(), data().handles(), 100, 64, \
+      check_bytes ? &actual_bytes : nullptr,                           \
+      check_handles ? &actual_handles : nullptr));
+
+#define READ_TEST(name, errno, check_bytes, check_handles) \
+  TEST_F(InterceptionWorkflowTestX64, name) {              \
+    READ_TEST_CONTENT(errno, check_bytes, check_handles);  \
+  }                                                        \
+  TEST_F(InterceptionWorkflowTestArm, name) {              \
+    READ_TEST_CONTENT(errno, check_bytes, check_handles);  \
   }
 
-TEST_WITH_ARCH(Arm)
-TEST_WITH_ARCH(X64)
+READ_TEST(ZxChannelRead, ZX_OK, true, true);
+
+READ_TEST(ZxChannelReadBufferTooSmall, ZX_ERR_BUFFER_TOO_SMALL, true, true);
+
+READ_TEST(ZxChannelReadNoBytes, ZX_OK, false, true);
+
+READ_TEST(ZxChannelReadNoHandles, ZX_OK, true, false);
 
 }  // namespace fidlcat
