@@ -676,7 +676,8 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 			Extern:     true,
 			Decorator:  "const",
 			Type: Type{
-				Decl: "char",
+				Decl:   "char",
+				LLDecl: "char",
 			},
 			Name:  c.compileCompoundIdentifier(val.Name, "[]", appendNamespace),
 			Value: c.compileConstant(val.Value, nil, val.Type, appendNamespace),
