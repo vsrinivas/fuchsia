@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/waterfall/scenes/scene.h"
+#include "src/ui/examples/escher/waterfall/scenes/scene.h"
 
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/scene/model.h"
@@ -23,8 +23,7 @@ void Scene::Init(escher::PaperScene* scene) {
 }
 
 void Scene::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
-                   escher::PaperScene* scene,
-                   escher::PaperRenderer* renderer) {
+                   escher::PaperScene* scene, escher::PaperRenderer* renderer) {
   const auto& box = scene->bounding_box;
   FXL_DCHECK(!box.is_empty());
 

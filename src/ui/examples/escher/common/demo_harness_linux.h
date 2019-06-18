@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
-#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
+#define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
 
-#include "garnet/examples/escher/common/demo_harness.h"
+#include "src/ui/examples/escher/common/demo_harness.h"
 
 class DemoHarnessLinux : public DemoHarness {
  public:
@@ -27,9 +27,8 @@ class DemoHarnessLinux : public DemoHarness {
   void AppendPlatformSpecificDeviceExtensionNames(
       std::set<std::string>* names) override;
 
-
   // Called by Shutdown().
   void ShutdownWindowSystem() override;
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_

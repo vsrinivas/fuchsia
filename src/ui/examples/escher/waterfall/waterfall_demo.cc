@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/waterfall/waterfall_demo.h"
+#include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 
-#include "garnet/examples/escher/waterfall/scenes/paper_demo_scene1.h"
+#include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"

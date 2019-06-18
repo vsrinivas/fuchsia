@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
-#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
+#define SRC_UI_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
 
+#include "src/ui/examples/escher/waterfall/scenes/scene.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
-
-#include "garnet/examples/escher/waterfall/scenes/scene.h"
 
 // Demo scene specifically designed to exercise the new PaperRenderer components
 // (e.g. PaperShapeCache and PaperRenderQueue).
@@ -84,4 +83,4 @@ class PaperDemoScene1 : public Scene {
   FXL_DISALLOW_COPY_AND_ASSIGN(PaperDemoScene1);
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_WATERFALL_SCENES_PAPER_DEMO_SCENE1_H_

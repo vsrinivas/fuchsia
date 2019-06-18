@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <stdlib.h>
+
 #include <cmath>
 
-#include "garnet/examples/escher/common/demo_harness.h"
-#include "garnet/examples/escher/waterfall/waterfall_demo.h"
+#include "src/ui/examples/escher/common/demo_harness.h"
+#include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 
 std::unique_ptr<DemoHarness> CreateHarnessDemo(std::string demo_name,
                                                uint32_t width, uint32_t height,

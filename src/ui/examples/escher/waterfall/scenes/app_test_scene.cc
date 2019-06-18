@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/waterfall/scenes/app_test_scene.h"
+#include "src/ui/examples/escher/waterfall/scenes/app_test_scene.h"
 
+#include "src/lib/fxl/arraysize.h"
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/gl/gles2/bindings.h"
 #include "src/ui/lib/escher/renderer.h"
-#include "src/lib/fxl/arraysize.h"
 
 using namespace escher;
 

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/common/demo_harness_linux.h"
+#include "src/ui/examples/escher/common/demo_harness_linux.h"
+
+#include <GLFW/glfw3.h>
 
 #include <chrono>
 #include <thread>
 
-#include <GLFW/glfw3.h>
-
-#include "garnet/examples/escher/common/demo.h"
-#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/examples/escher/common/demo.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 
 static DemoHarness* g_harness = nullptr;
 static GLFWwindow* g_window;
@@ -187,8 +187,7 @@ void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(
 }
 
 void DemoHarnessLinux::AppendPlatformSpecificDeviceExtensionNames(
-    std::set<std::string>* names) {
-}
+    std::set<std::string>* names) {}
 
 void DemoHarnessLinux::ShutdownWindowSystem() {
   FXL_CHECK(g_harness);

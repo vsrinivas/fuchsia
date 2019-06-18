@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "demo.h"
+#include "src/ui/examples/escher/common/demo.h"
 
 #include <array>
 #include <chrono>

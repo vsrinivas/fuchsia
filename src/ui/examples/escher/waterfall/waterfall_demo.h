@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
-#define GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
+#define SRC_UI_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
 
 #include <stdlib.h>
+
 #include <cmath>
 #include <iostream>
 
-#include "garnet/examples/escher/common/demo.h"
-#include "garnet/examples/escher/common/demo_harness.h"
-#include "garnet/examples/escher/waterfall/scenes/scene.h"
-
+#include "src/lib/fxl/logging.h"
+#include "src/ui/examples/escher/common/demo.h"
+#include "src/ui/examples/escher/common/demo_harness.h"
+#include "src/ui/examples/escher/waterfall/scenes/scene.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/util/stopwatch.h"
-#include "src/lib/fxl/logging.h"
 
 class WaterfallDemo : public Demo {
  public:
@@ -75,4 +75,4 @@ class WaterfallDemo : public Demo {
   bool show_debug_info_ = false;
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_

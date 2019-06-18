@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
-#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
+#define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
 
 #include <cstdint>
-
 #include <vulkan/vulkan.hpp>
 
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
@@ -160,4 +159,4 @@ class DemoHarness {
   bool shutdown_complete_ = false;
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_
-#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_H_
+#define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_H_
 
-#include "garnet/examples/escher/common/demo_harness.h"
+#include "src/ui/examples/escher/common/demo_harness.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/util/tracer.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
@@ -84,4 +84,4 @@ class Demo {
   bool run_offscreen_benchmark_ = false;
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_H_

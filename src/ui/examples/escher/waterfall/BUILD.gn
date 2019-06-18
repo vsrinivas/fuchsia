@@ -11,7 +11,7 @@ executable("waterfall") {
 
   deps = [
     ":scenes",
-    "//garnet/examples/escher/common",
+    "//src/ui/examples/escher/common",
     "//src/ui/lib/escher:vulkan",
   ]
 
@@ -37,6 +37,6 @@ source_set("scenes") {
   ]
 
   deps = [
-    "//garnet/examples/escher/common",
+    "//src/ui/examples/escher/common",
   ]
 }

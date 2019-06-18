@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
-#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
+#define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
-#include "garnet/examples/escher/common/demo_harness.h"
+#include "src/ui/examples/escher/common/demo_harness.h"
 
 class DemoHarnessFuchsia : public DemoHarness,
                            fuchsia::ui::input::InputDeviceRegistry {
@@ -65,4 +65,4 @@ class DemoHarnessFuchsia : public DemoHarness,
       input_devices_;
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_

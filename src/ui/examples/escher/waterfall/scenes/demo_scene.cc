@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/waterfall/scenes/demo_scene.h"
+#include "src/ui/examples/escher/waterfall/scenes/demo_scene.h"
 
 #include "src/ui/lib/escher/geometry/tessellation.h"
 #include "src/ui/lib/escher/geometry/transform.h"

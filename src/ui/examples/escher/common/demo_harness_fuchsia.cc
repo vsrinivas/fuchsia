@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/common/demo_harness_fuchsia.h"
+#include "src/ui/examples/escher/common/demo_harness_fuchsia.h"
 
 #include <hid/usages.h>
 #include <lib/async/cpp/task.h>
@@ -11,9 +11,9 @@
 
 #include <memory>
 
-#include "garnet/examples/escher/common/demo.h"
-#include "src/ui/lib/escher/util/trace_macros.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
+#include "src/ui/examples/escher/common/demo.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 
 namespace {
 

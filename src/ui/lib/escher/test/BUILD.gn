@@ -162,7 +162,7 @@ source_set("gtest_escher") {
 group("force_waterfall_to_build_on_host") {
   if (is_linux) {
     deps = [
-      "//garnet/examples/escher/waterfall($host_toolchain)",
+      "//src/ui/examples/escher/waterfall($host_toolchain)",
     ]
   }
 }

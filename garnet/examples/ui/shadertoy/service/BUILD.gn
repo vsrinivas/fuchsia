@@ -27,7 +27,6 @@ executable("service") {
 
   deps = [
     "services",
-    "//garnet/examples/escher/common",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/scenic/cpp",
@@ -35,6 +34,7 @@ executable("service") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/ui/examples/escher/common",
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/fit",

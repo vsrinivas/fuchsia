@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/escher/common/demo_harness.h"
+#include "src/ui/examples/escher/common/demo_harness.h"
 
-#include "garnet/examples/escher/common/demo.h"
+#include <iostream>
+#include <set>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-
-#include <iostream>
-#include <set>
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
