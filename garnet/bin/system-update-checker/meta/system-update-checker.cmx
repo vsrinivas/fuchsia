@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/system-update-checker"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.pkg.PackageResolver",
+            "fuchsia.sys.Launcher"
+        ],
+        "system": [
+            "meta"
+        ]
+    }
+}

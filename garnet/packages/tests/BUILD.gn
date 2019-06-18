@@ -430,6 +430,7 @@ group("all") {
     ":system_monitor_fuchsia",
     ":system_monitor_host",
     ":system_ota_tests",
+    ":system_update_checker",
     ":telephony",
     ":terminal",
     ":tiles",
@@ -994,6 +995,13 @@ group("pkg_resolver") {
   public_deps = [
     "//garnet/bin/pkg_resolver:pkg_resolver_tests",
     "//garnet/packages/prod:pkg_resolver",
+  ]
+}
+
+group("system_update_checker") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/system-update-checker:system-update-checker-tests",
   ]
 }
 

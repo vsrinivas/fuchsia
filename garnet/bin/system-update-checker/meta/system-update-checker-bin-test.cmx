@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/system-update-checker-bin-test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
