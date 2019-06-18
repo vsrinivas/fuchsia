@@ -30,6 +30,8 @@ const char kExcludeCheck[] = R"(  --exclude-check
       --exclude-check. Option order is ignored. Multiple check IDs can be
       excluded with:
         fidl-lint -e some-check -e another-check)";
+const char kFormat[] = R"(  --format=[text|json]
+   -f Lint output format (text or json))";
 const char kHelp[] = R"(  --help
    -h Print this help message.)";
 
@@ -55,6 +57,14 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                      &CommandLineOptions::included_checks);
     parser.AddSwitch("exclude-check", 'e', help::kExcludeCheck,
                      &CommandLineOptions::excluded_checks);
+    parser.AddSwitch(
+        "format", 'f', help::kFormat, &CommandLineOptions::format,
+        [](const std::string& format) -> cmdline::Status {
+            if (format == "text" || format == "json") {
+                return cmdline::Status::Ok();
+            }
+            return cmdline::Status::Error("Invalid value for --format: " + format);
+        });
 
     // Special --help switch which doesn't exist in the options structure.
     bool requested_help = false;
@@ -81,6 +91,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
             for (auto check : options->excluded_checks) {
                 current_options << "exclude-check: " << check << std::endl;
             }
+            current_options
+                << "format: " << options->format << std::endl;
             return cmdline::Status::Error(current_options.str());
         }
     }

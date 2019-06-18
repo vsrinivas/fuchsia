@@ -35,13 +35,13 @@ public:
     Suggestion(std::string description, std::string replacement)
         : description_(description), replacement_(replacement) {}
 
-    // Enables move construction and assignment
+    // Enable move construction and assignment
     Suggestion(Suggestion&& rhs) = default;
     Suggestion& operator=(Suggestion&&) = default;
 
-    // no copy or assign (move-only or pass by reference)
-    Suggestion(const Suggestion&) = delete;
-    Suggestion& operator=(const Suggestion&) = delete;
+    // Enable copy and assign
+    Suggestion(const Suggestion&) = default;
+    Suggestion& operator=(const Suggestion&) = default;
 
     // Describes the suggestion in human terms.
     inline const std::string& description() const { return description_; }

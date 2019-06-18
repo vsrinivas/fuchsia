@@ -15,6 +15,7 @@ namespace linter {
 struct CommandLineOptions {
     std::vector<std::string> included_checks;
     std::vector<std::string> excluded_checks;
+    std::string format = "text";
 };
 
 // Parses the given command line into options and params.

@@ -57,6 +57,7 @@ if (current_toolchain == default_toolchain) {
       "errors_tests.cpp",
       "flat_ast_tests.cpp",
       "formatter_tests.cpp",
+      "json_findings_tests.cpp",
       "json_generator_tests.cpp",
       "lint_findings_tests.cpp",
       "lint_tests.cpp",

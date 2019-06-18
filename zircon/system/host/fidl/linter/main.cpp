@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <cmdline/status.h>
+#include <fidl/findings_json.h>
 #include <fidl/lexer.h>
 #include <fidl/linter.h>
 #include <fidl/parser.h>
@@ -42,6 +43,7 @@ namespace {
 
 bool Lint(const fidl::linter::CommandLineOptions& options,
           const fidl::SourceFile& source_file,
+          fidl::Findings* findings,
           fidl::ErrorReporter* error_reporter, std::string& output) {
     fidl::Lexer lexer(source_file, error_reporter);
     fidl::Parser parser(&lexer, error_reporter);
@@ -49,7 +51,6 @@ bool Lint(const fidl::linter::CommandLineOptions& options,
     if (!parser.Ok()) {
         return false;
     }
-    fidl::Findings findings;
     fidl::linter::Linter linter;
 
     // The following Excludes can be opted in via command line option:
@@ -87,11 +88,9 @@ bool Lint(const fidl::linter::CommandLineOptions& options,
         linter.set_exclude_by_default(true);
     }
 
-    if (linter.Lint(ast, &findings)) {
+    if (linter.Lint(ast, findings)) {
         return true;
     }
-    fidl::utils::WriteFindingsToErrorReporter(
-        findings, error_reporter);
     return false;
 }
 
@@ -120,13 +119,21 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    fidl::Findings findings;
     fidl::ErrorReporter error_reporter;
     for (const auto& source_file : source_manager.sources()) {
         std::string output;
-        if (!Lint(options, *source_file, &error_reporter, output)) {
+        if (!Lint(options, *source_file, &findings, &error_reporter, output)) {
             // Some findings were produced but for now we will continue,
             // and print the results at the end.
         }
     }
-    error_reporter.PrintReports();
+    if (options.format == "text") {
+        fidl::utils::WriteFindingsToErrorReporter(
+            findings, &error_reporter);
+        error_reporter.PrintReports();
+    } else {
+        assert(options.format == "json"); // should never be false
+        std::cout << fidl::FindingsJson(findings).Produce().str();
+    }
 }
