@@ -9,6 +9,9 @@ using fuchsia.mem;
 // This file defines a cloud service that can be used by Ledger to power cloud
 // sync.
 
+// Constant for unbounded vectors.
+const uint32 NO_LINT = 4294967295;
+
 /// Response status for cloud provider operations.
 enum Status : int32 {
     OK = 0;
@@ -107,12 +110,12 @@ table Commit {
 
 /// A list of commits for serialization in CommitPack.
 struct Commits {
-    vector<Commit> commits;
+    vector<Commit>:NO_LINT commits;
 };
 
 /// A list of references for serialization in ReferencePack.
 struct References {
-    vector<bytes> references;
+    vector<bytes:NO_LINT>:NO_LINT references;
 };
 
 /// Contains a Buffer containing the FIDL serialization of References.

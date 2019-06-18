@@ -10,6 +10,9 @@ using zx;
 // This file contains definitions of interfaces and data structures to access
 // the Fuchsia Ledger.
 
+// Constant for vectors used in paginated queries.
+const uint32 NO_LINT = 65536;
+
 /// Type of the keys in a ledger Page.
 using Key = bytes:256;
 
@@ -264,13 +267,13 @@ protocol PageSnapshot {
     /// Missing |LAZY| values can be retrieved over the network using Fetch().
     /// The returned |entries| are sorted by |key|.
     GetEntries(Key key_start, Token? token)
-        -> (vector<Entry> entries, Token? next_token);
+        -> (vector<Entry>:NO_LINT entries, Token? next_token);
 
     /// Same as |GetEntries()|. The connection will be closed with a
     /// ZX_ERR_BAD_STATE epitaph if a value does not fit in a FIDL message.
     [Deprecated]
     GetEntriesInline(Key key_start, Token? token)
-        -> (vector<InlinedEntry> entries, Token? next_token);
+        -> (vector<InlinedEntry>:NO_LINT entries, Token? next_token);
 
     /// Returns the keys of all entries in the page which are greater or equal to
     /// |key_start| using the lexicographic order. If |key_start| is empty, all
@@ -282,7 +285,7 @@ protocol PageSnapshot {
     /// previous call. |next_token| will not be NULL as long as there are more
     /// results and NULL once finished.
     GetKeys(Key key_start, Token? token)
-        -> (vector<Key> keys, Token? next_token);
+        -> (vector<Key>:NO_LINT keys, Token? next_token);
 
     /// Returns the value of a given key.
     /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
@@ -326,9 +329,9 @@ struct PageChange {
     /// the |timestamp| of a follow up change is greater than this one's.
     zx.time timestamp;
     /// List of new and modified entries. |changed_entries| are sorted by |key|.
-    vector<Entry> changed_entries;
+    vector<Entry>:NO_LINT changed_entries;
     /// List of deleted keys, in sorted order.
-    vector<Key> deleted_keys;
+    vector<Key>:NO_LINT deleted_keys;
 };
 
 /// Interface to watch changes to a page. The client will receive changes made by
@@ -461,7 +464,7 @@ protocol MergeResultProvider {
     /// will have a non-NULL value, which can be used to retrieve the rest of
     /// the results by calling |GetFullDiff()| with that token.
     GetFullDiff(Token? token)
-        -> (vector<DiffEntry> changes, Token? next_token);
+        -> (vector<DiffEntry>:NO_LINT changes, Token? next_token);
 
     /// |GetConflictingDiff| returns the set of all key/value pairs that were
     /// modified on both sides to different values, or deleted on one side and
@@ -470,7 +473,7 @@ protocol MergeResultProvider {
     /// It behaves like |GetFullDiff| otherwise.
     [Deprecated]
     GetConflictingDiff(Token? token)
-        -> (vector<DiffEntry> changes, Token? next_token);
+        -> (vector<DiffEntry>:NO_LINT changes, Token? next_token);
 
     /// Once the result of the merge has been computed |Merge()| can be called with
     /// all changes that resolve this conflict. If the result does not fit in a
@@ -485,7 +488,7 @@ protocol MergeResultProvider {
     /// through |MergeNonConflictingEntries()| below), the left value will be
     /// used. It is thus not necessary to send a MergedValue with a |LEFT| value
     /// source, unless to overwrite a previous MergedValue.
-    Merge(vector<MergedValue> merge_changes);
+    Merge(vector<MergedValue>:NO_LINT merge_changes);
 
     /// Automatically merges all non conflicting entries (entries that are
     /// modified on one side only or identical on both sides). This is equivalent
