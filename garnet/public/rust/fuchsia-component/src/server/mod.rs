@@ -9,7 +9,7 @@ use {
     failure::{bail, Error, Fail, ResultExt},
     fidl::{
         encoding::OutOfLine,
-        endpoints::{Proxy as _, RequestStream, ServerEnd, ServiceMarker},
+        endpoints::{DiscoverableService, Proxy as _, RequestStream, ServerEnd},
     },
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileRequest,
@@ -235,11 +235,11 @@ fn add_entry<ServiceObjTy: ServiceObjTrait>(
 #[doc(hidden)]
 pub struct Proxy<S, O>(PhantomData<(S, fn() -> O)>);
 
-impl<S: ServiceMarker, O> Service for Proxy<S, O> {
+impl<S: DiscoverableService, O> Service for Proxy<S, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
         if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
-            eprintln!("failed to proxy request to {}: {:?}", S::NAME, e);
+            eprintln!("failed to proxy request to {}: {:?}", S::SERVICE_NAME, e);
         }
         None
     }
@@ -254,11 +254,11 @@ pub struct ProxyTo<S, O> {
     _phantom: PhantomData<(S, fn() -> O)>,
 }
 
-impl<S: ServiceMarker, O> Service for ProxyTo<S, O> {
+impl<S: DiscoverableService, O> Service for ProxyTo<S, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
-        if let Err(e) = fdio::service_connect_at(&self.directory_request, S::NAME, channel) {
-            eprintln!("failed to proxy request to {}: {:?}", S::NAME, e);
+        if let Err(e) = fdio::service_connect_at(&self.directory_request, S::SERVICE_NAME, channel) {
+            eprintln!("failed to proxy request to {}: {:?}", S::SERVICE_NAME, e);
         }
         None
     }
@@ -336,10 +336,11 @@ macro_rules! add_functions {
         where
             F: FnMut(RS) -> ServiceObjTy::Output,
             RS: RequestStream,
+            RS::Service: DiscoverableService,
             FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
             self.add_fidl_service_at(
-                RS::Service::NAME,
+                RS::Service::SERVICE_NAME,
                 service,
             )
         }
@@ -355,6 +356,7 @@ macro_rules! add_functions {
         where
             F: FnMut(RS) -> ServiceObjTy::Output,
             RS: RequestStream,
+            RS::Service: DiscoverableService,
             FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
             self.add_service_at(
@@ -367,13 +369,13 @@ macro_rules! add_functions {
         // NOTE: we'd like to be able to remove the type parameter `O` here,
         //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
         //  makes type checking angry.
-        pub fn add_proxy_service<S: ServiceMarker, O>(&mut self) -> &mut Self
+        pub fn add_proxy_service<S: DiscoverableService, O>(&mut self) -> &mut Self
         where
             ServiceObjTy: From<Proxy<S, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
             self.add_service_at(
-                S::NAME,
+                S::SERVICE_NAME,
                 Proxy::<S, ServiceObjTy::Output>(PhantomData),
             )
         }
@@ -382,13 +384,13 @@ macro_rules! add_functions {
         // NOTE: we'd like to be able to remove the type parameter `O` here,
         //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
         //  makes type checking angry.
-        pub fn add_proxy_service_to<S: ServiceMarker, O>(&mut self, directory_request: Arc<zx::Channel>) -> &mut Self
+        pub fn add_proxy_service_to<S: DiscoverableService, O>(&mut self, directory_request: Arc<zx::Channel>) -> &mut Self
         where
             ServiceObjTy: From<ProxyTo<S, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
             self.add_service_at(
-                S::NAME,
+                S::SERVICE_NAME,
                 ProxyTo::<S, ServiceObjTy::Output>{
                     directory_request, _phantom: PhantomData}
             )
@@ -645,7 +647,7 @@ impl NestedEnvironment {
 
     /// Connect to a service provided by this environment.
     #[inline]
-    pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
+    pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
         self.pass_to_service::<S>(server_channel)?;
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
@@ -653,11 +655,11 @@ impl NestedEnvironment {
 
     /// Connect to a service by passing a channel for the server.
     #[inline]
-    pub fn pass_to_service<S: ServiceMarker>(
+    pub fn pass_to_service<S: DiscoverableService>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        self.pass_to_named_service(S::NAME, server_channel)
+        self.pass_to_named_service(S::SERVICE_NAME, server_channel)
     }
 
     /// Connect to a service by name.

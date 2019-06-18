@@ -52,7 +52,7 @@ pub struct WithAndWithoutRequestResponseMarker;
 impl fidl::endpoints::ServiceMarker for WithAndWithoutRequestResponseMarker {
 	type Proxy = WithAndWithoutRequestResponseProxy;
 	type RequestStream = WithAndWithoutRequestResponseRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) WithAndWithoutRequestResponse";
 }
 
 pub trait WithAndWithoutRequestResponseProxyInterface: Send + Sync {
@@ -279,7 +279,7 @@ impl futures::Stream for WithAndWithoutRequestResponseEventStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -516,7 +516,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <WithAndWithoutRequestResponseMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
@@ -1166,7 +1166,7 @@ pub struct WithErrorSyntaxMarker;
 impl fidl::endpoints::ServiceMarker for WithErrorSyntaxMarker {
 	type Proxy = WithErrorSyntaxProxy;
 	type RequestStream = WithErrorSyntaxRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) WithErrorSyntax";
 }
 
 pub trait WithErrorSyntaxProxyInterface: Send + Sync {
@@ -1298,7 +1298,7 @@ impl futures::Stream for WithErrorSyntaxEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -1434,7 +1434,7 @@ impl futures::Stream for WithErrorSyntaxRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
@@ -1717,7 +1717,7 @@ pub struct OvernetInternalProtocolMarker;
 impl fidl::endpoints::ServiceMarker for OvernetInternalProtocolMarker {
 	type Proxy = OvernetInternalProtocolProxy;
 	type RequestStream = OvernetInternalProtocolRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) OvernetInternalProtocol";
 }
 
 pub trait OvernetInternalProtocolProxyInterface: Send + Sync {
@@ -1897,7 +1897,7 @@ impl futures::Stream for OvernetInternalProtocolEventStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -2077,7 +2077,7 @@ impl futures::Stream for OvernetInternalProtocolRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <OvernetInternalProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
@@ -2449,7 +2449,7 @@ pub struct SocketControlProtocolMarker;
 impl fidl::endpoints::ServiceMarker for SocketControlProtocolMarker {
 	type Proxy = SocketControlProtocolProxy;
 	type RequestStream = SocketControlProtocolRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) SocketControlProtocol";
 }
 
 pub trait SocketControlProtocolProxyInterface: Send + Sync {
@@ -2629,7 +2629,7 @@ impl futures::Stream for SocketControlProtocolEventStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <SocketControlProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <SocketControlProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -2809,7 +2809,7 @@ impl futures::Stream for SocketControlProtocolRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <SocketControlProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <SocketControlProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
@@ -3181,7 +3181,7 @@ pub struct ChannelProtocolMarker;
 impl fidl::endpoints::ServiceMarker for ChannelProtocolMarker {
 	type Proxy = ChannelProtocolProxy;
 	type RequestStream = ChannelProtocolRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) ChannelProtocol";
 }
 
 pub trait ChannelProtocolProxyInterface: Send + Sync {
@@ -3361,7 +3361,7 @@ impl futures::Stream for ChannelProtocolEventStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -3541,7 +3541,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <ChannelProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
@@ -3913,7 +3913,7 @@ pub struct KitchenSinkMarker;
 impl fidl::endpoints::ServiceMarker for KitchenSinkMarker {
 	type Proxy = KitchenSinkProxy;
 	type RequestStream = KitchenSinkRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) KitchenSink";
 }
 
 pub trait KitchenSinkProxyInterface: Send + Sync {
@@ -4093,7 +4093,7 @@ impl futures::Stream for KitchenSinkEventStream {
 			}
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <KitchenSinkMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <KitchenSinkMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -4273,7 +4273,7 @@ impl futures::Stream for KitchenSinkRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <KitchenSinkMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <KitchenSinkMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})

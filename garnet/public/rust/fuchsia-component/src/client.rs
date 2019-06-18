@@ -6,7 +6,7 @@
 
 use {
     failure::{Error, Fail, ResultExt},
-    fidl::endpoints::{Proxy, ServiceMarker},
+    fidl::endpoints::{DiscoverableService, Proxy},
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerProxy, FileDescriptor, FlatNamespace,
         LaunchInfo, LauncherMarker, LauncherProxy, TerminationReason,
@@ -23,23 +23,27 @@ use {
 };
 
 /// Connect to a FIDL service using the provided channel and namespace prefix.
-pub fn connect_channel_to_service_at<S: ServiceMarker>(
+pub fn connect_channel_to_service_at<S: DiscoverableService>(
     server_end: zx::Channel,
     service_prefix: &str,
 ) -> Result<(), Error> {
-    let service_path = format!("{}/{}", service_prefix, S::NAME);
+    let service_path = format!("{}/{}", service_prefix, S::SERVICE_NAME);
     fdio::service_connect(&service_path, server_end)
         .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
     Ok(())
 }
 
 /// Connect to a FIDL service using the provided channel.
-pub fn connect_channel_to_service<S: ServiceMarker>(server_end: zx::Channel) -> Result<(), Error> {
+pub fn connect_channel_to_service<S: DiscoverableService>(
+    server_end: zx::Channel,
+) -> Result<(), Error> {
     connect_channel_to_service_at::<S>(server_end, "/svc")
 }
 
 /// Connect to a FIDL service using the provided namespace prefix.
-pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str) -> Result<S::Proxy, Error> {
+pub fn connect_to_service_at<S: DiscoverableService>(
+    service_prefix: &str,
+) -> Result<S::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
     connect_channel_to_service_at::<S>(server, service_prefix)?;
     let proxy = fasync::Channel::from_channel(proxy)?;
@@ -47,7 +51,7 @@ pub fn connect_to_service_at<S: ServiceMarker>(service_prefix: &str) -> Result<S
 }
 
 /// Connect to a FIDL service using the application root namespace.
-pub fn connect_to_service<S: ServiceMarker>() -> Result<S::Proxy, Error> {
+pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
     connect_to_service_at::<S>("/svc")
 }
 
@@ -164,7 +168,7 @@ impl App {
 
     /// Connect to a service provided by the `App`.
     #[inline]
-    pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
+    pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
         self.pass_to_service::<S>(server_channel)?;
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
@@ -172,11 +176,11 @@ impl App {
 
     /// Connect to a service by passing a channel for the server.
     #[inline]
-    pub fn pass_to_service<S: ServiceMarker>(
+    pub fn pass_to_service<S: DiscoverableService>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        self.pass_to_named_service(S::NAME, server_channel)
+        self.pass_to_named_service(S::SERVICE_NAME, server_channel)
     }
 
     /// Connect to a service by name.

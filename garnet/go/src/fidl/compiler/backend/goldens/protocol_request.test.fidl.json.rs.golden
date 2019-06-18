@@ -28,7 +28,7 @@ pub struct ChildMarker;
 impl fidl::endpoints::ServiceMarker for ChildMarker {
 	type Proxy = ChildProxy;
 	type RequestStream = ChildRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) Child";
 }
 
 pub trait ChildProxyInterface: Send + Sync {
@@ -126,7 +126,7 @@ impl futures::Stream for ChildEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -234,7 +234,7 @@ impl futures::Stream for ChildRequestStream {
 			futures::Poll::Ready(Some(match header.ordinal {
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
@@ -283,7 +283,7 @@ pub struct ParentMarker;
 impl fidl::endpoints::ServiceMarker for ParentMarker {
 	type Proxy = ParentProxy;
 	type RequestStream = ParentRequestStream;
-	const NAME: &'static str = "";
+	const DEBUG_NAME: &'static str = "(anonymous) Parent";
 }
 
 pub trait ParentProxyInterface: Send + Sync {
@@ -453,7 +453,7 @@ impl futures::Stream for ParentEventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			_ => Err(fidl::Error::UnknownOrdinal {
 				ordinal: tx_header.ordinal,
-				service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::NAME,
+				service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 			})
 		}))
 	}
@@ -609,7 +609,7 @@ impl futures::Stream for ParentRequestStream {
 				}
 				_ => Err(fidl::Error::UnknownOrdinal {
 					ordinal: header.ordinal,
-					service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::NAME,
+					service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
 				}),
 			}))
 		})
