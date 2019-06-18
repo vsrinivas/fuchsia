@@ -5,6 +5,7 @@
 #ifndef LIB_ZXS_ZXS_H_
 #define LIB_ZXS_ZXS_H_
 
+#include <lib/zx/socket.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -25,29 +26,24 @@ typedef uint32_t zxs_flags_t;
 // A socket.
 typedef struct zxs_socket {
     // The underlying socket kernel object.
-    zx_handle_t socket;
+    zx::socket socket;
 
     // Flags that describe how the |zxs| library will interact with the kernel
     // socket object.
     zxs_flags_t flags;
 
     // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
-    zx_duration_t rcvtimeo;
+    zx::duration rcvtimeo;
 } zxs_socket_t;
-
-// Create a |zxs_socket_t|.
-//
-// Given a socket |socket| create a |zxs_socket_t|.
-zx_status_t zxs_socket(zx_handle_t socket, zxs_socket_t* out_socket);
 
 // Closes a |zxs_socket_t|.
 //
-// Gracefully closes the given socket. Closes the underlying |zx_handle_t| as
+// Gracefully closes the given socket. Closes the underlying |zx::socket| as
 // well, even if the socket provider returns an error.
 //
 // Returns the |zx_status_t| from the socket provider (rather than from the
 // kernel when closing the underlying |zx_handle_t|).
-zx_status_t zxs_close(const zxs_socket_t* socket);
+zx_status_t zxs_close(const zxs_socket_t socket);
 
 // Send the data in the given |buffer| over |socket|.
 zx_status_t zxs_send(const zxs_socket_t* socket, const void* buffer,

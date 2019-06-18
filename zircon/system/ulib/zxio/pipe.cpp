@@ -11,23 +11,23 @@
 
 static zx_status_t zxio_pipe_close(zxio_t* io) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    zx_handle_t socket = pipe->socket;
-    pipe->socket = ZX_HANDLE_INVALID;
-    zx_handle_close(socket);
+    pipe->socket.reset();
     return ZX_OK;
 }
 
 static zx_status_t zxio_pipe_release(zxio_t* io, zx_handle_t* out_handle) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    zx_handle_t socket = pipe->socket;
-    pipe->socket = ZX_HANDLE_INVALID;
-    *out_handle = socket;
+    *out_handle = pipe->socket.release();
     return ZX_OK;
 }
 
 static zx_status_t zxio_pipe_clone(zxio_t* io, zx_handle_t* out_handle) {
-    zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    return zx_handle_duplicate(pipe->socket, ZX_RIGHT_SAME_RIGHTS, out_handle);
+    zx::object<zx::socket> out_socket;
+    zx_status_t status = reinterpret_cast<zxio_pipe_t*>(io)->socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_socket);
+    if (status == ZX_OK) {
+        *out_handle = out_socket.release();
+    }
+    return status;
 }
 
 static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
@@ -40,7 +40,7 @@ static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
                                  zx_handle_t* out_handle,
                                  zx_signals_t* out_zx_signals) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    *out_handle = pipe->socket;
+    *out_handle = pipe->socket.get();
 
     zx_signals_t zx_signals = static_cast<zx_signals_t>(zxio_signals);
     if (zxio_signals & ZXIO_READ_DISABLED) {
@@ -62,8 +62,7 @@ static void zxio_pipe_wait_end(zxio_t* io, zx_signals_t zx_signals,
 static zx_status_t zxio_pipe_read(zxio_t* io, void* buffer, size_t capacity,
                                   size_t* out_actual) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    zx_status_t status = zx_socket_read(pipe->socket, 0, buffer, capacity,
-                                        out_actual);
+    zx_status_t status = pipe->socket.read(0, buffer, capacity, out_actual);
     // We've reached end-of-file, which is signaled by successfully reading zero
     // bytes.
     //
@@ -80,7 +79,7 @@ static zx_status_t zxio_pipe_read(zxio_t* io, void* buffer, size_t capacity,
 static zx_status_t zxio_pipe_write(zxio_t* io, const void* buffer,
                                    size_t capacity, size_t* out_actual) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(io);
-    return zx_socket_write(pipe->socket, 0, buffer, capacity, out_actual);
+    return pipe->socket.write(0, buffer, capacity, out_actual);
 }
 
 static constexpr zxio_ops_t zxio_pipe_ops = []() {
@@ -96,9 +95,9 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
     return ops;
 }();
 
-zx_status_t zxio_pipe_init(zxio_storage_t* storage, zx_handle_t socket) {
+zx_status_t zxio_pipe_init(zxio_storage_t* storage, zx::socket socket) {
     zxio_pipe_t* pipe = reinterpret_cast<zxio_pipe_t*>(storage);
     zxio_init(&pipe->io, &zxio_pipe_ops);
-    pipe->socket = socket;
+    pipe->socket = std::move(socket);
     return ZX_OK;
 }

@@ -12,31 +12,13 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/syscalls.h>
 
-zx_status_t zxs_socket(zx_handle_t socket, zxs_socket_t* out_socket) {
-    zx_info_socket_t info = {};
-    zx_status_t status = zx_object_get_info(socket, ZX_INFO_SOCKET, &info,
-                                            sizeof(info), NULL, NULL);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    out_socket->socket = socket;
-    out_socket->flags = 0;
-    if (info.options & ZX_SOCKET_DATAGRAM) {
-        out_socket->flags |= ZXS_FLAG_DATAGRAM;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t zxs_close(const zxs_socket_t* socket) {
+zx_status_t zxs_close(const zxs_socket_t socket) {
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlClose(
-        socket->socket, &out_code);
+        socket.socket.get(), &out_code);
     if (status != ZX_OK) {
         return status;
     }
-    zx_handle_close(socket->socket);
     if (out_code) {
         // TODO(tamird): we can't use errno_to_fdio_status because fdio
         //  depends on zxs.
@@ -47,13 +29,12 @@ zx_status_t zxs_close(const zxs_socket_t* socket) {
 
 static zx_status_t zxs_write(const zxs_socket_t* socket, const void* buffer,
                              size_t capacity, size_t* out_actual) {
-    return zx_socket_write(socket->socket, 0, buffer, capacity, out_actual);
+    return socket->socket.write(0, buffer, capacity, out_actual);
 }
 
 static zx_status_t zxs_read(const zxs_socket_t* socket, void* buffer,
                             size_t capacity, size_t* out_actual) {
-    zx_status_t status = zx_socket_read(socket->socket, 0, buffer, capacity,
-                                        out_actual);
+    zx_status_t status = socket->socket.read(0, buffer, capacity, out_actual);
     if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
         *out_actual = 0u;
         return ZX_OK;

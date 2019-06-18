@@ -171,12 +171,12 @@ fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event);
 // Creates a pipe backed by a socket.
 //
 // Takes ownership of |socket|.
-fdio_t* fdio_pipe_create(zx_handle_t socket);
+fdio_t* fdio_pipe_create(zx::socket socket);
 
 // Creates a socketpair backed by a socket.
 //
 // Takes ownership of |socket|.
-fdio_t* fdio_socketpair_create(zx_handle_t socket);
+fdio_t* fdio_socketpair_create(zx::socket socket);
 
 // Creates an |fdio_t| from a VMO.
 //
@@ -197,8 +197,8 @@ fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // Wraps a socket with an fdio_t using socket io.
-fdio_t* fdio_socket_create_stream(zx_handle_t s, int flags);
-fdio_t* fdio_socket_create_datagram(zx_handle_t s, int flags);
+fdio_t* fdio_socket_create_stream(zx::socket s, int flags);
+fdio_t* fdio_socket_create_datagram(zx::socket s, int flags);
 
 // creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);

@@ -86,7 +86,7 @@ int socket(int domain, int type, int protocol) {
     }
 
     int16_t out_code;
-    zx_handle_t socket;
+    zx::socket socket;
     // We're going to manage blocking on the client side, so always ask the
     // provider for a non-blocking socket.
     status = fuchsia_net_SocketProviderSocket(
@@ -95,7 +95,7 @@ int socket(int domain, int type, int protocol) {
         static_cast<int16_t>(type) | SOCK_NONBLOCK,
         static_cast<int16_t>(protocol),
         &out_code,
-        &socket);
+        socket.reset_and_get_address());
     if (status != ZX_OK) {
         return ERROR(status);
     }
@@ -103,17 +103,17 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(out_code);
     }
 
-    zxs_socket_t out_socket;
-    status = zxs_socket(socket, &out_socket);
+    zx_info_socket_t info;
+    status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
     if (status != ZX_OK) {
         return ERROR(status);
     }
 
     fdio_t* io;
-    if (out_socket.flags & ZXS_FLAG_DATAGRAM) {
-        io = fdio_socket_create_datagram(socket, 0);
+    if (info.options & ZX_SOCKET_DATAGRAM) {
+        io = fdio_socket_create_datagram(std::move(socket), 0);
     } else {
-        io = fdio_socket_create_stream(socket, 0);
+        io = fdio_socket_create_stream(std::move(socket), 0);
     }
     if (io == NULL) {
         return ERRNO(EIO);
@@ -138,7 +138,7 @@ int socket(int domain, int type, int protocol) {
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-    const zxs_socket_t* socket = NULL;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -146,7 +146,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlConnect(
-        socket->socket, (const uint8_t*)addr, len, &out_code);
+        socket->socket.get(), (const uint8_t*)addr, len, &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -158,16 +158,15 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
             *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTING;
         } else {
             zx_signals_t observed;
-            status = zx_object_wait_one(
-                socket->socket, ZXSIO_SIGNAL_OUTGOING, ZX_TIME_INFINITE,
-                &observed);
+            status = socket->socket.wait_one(ZXSIO_SIGNAL_OUTGOING, zx::time::infinite(),
+                                             &observed);
             if (status != ZX_OK) {
                 fdio_release(io);
                 return ERROR(status);
             }
             // Call Connect() again after blocking to find connect's result.
             status = fuchsia_net_SocketControlConnect(
-                socket->socket, (const uint8_t*)addr, len, &out_code);
+                socket->socket.get(), (const uint8_t*)addr, len, &out_code);
             if (status != ZX_OK) {
                 fdio_release(io);
                 return ERROR(status);
@@ -191,7 +190,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-    const zxs_socket_t* socket;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -199,7 +198,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
 
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlBind(
-        socket->socket, (const uint8_t*)(addr), len, &out_code);
+        socket->socket.get(), (const uint8_t*)(addr), len, &out_code);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -212,7 +211,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int listen(int fd, int backlog) {
-    const zxs_socket_t* socket;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -220,7 +219,7 @@ int listen(int fd, int backlog) {
 
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlListen(
-        socket->socket, static_cast<int16_t>(backlog), &out_code);
+        socket->socket.get(), static_cast<int16_t>(backlog), &out_code);
     if (status != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
@@ -244,7 +243,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         return ERRNO(EINVAL);
     }
 
-    const zxs_socket_t* socket = NULL;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -260,12 +259,12 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
 
     zx_status_t status;
     int16_t out_code;
-    zx_handle_t accepted;
+    zx::socket accepted;
     for (;;) {
         // We're going to manage blocking on the client side, so always ask the
         // provider for a non-blocking socket.
         status = fuchsia_net_SocketControlAccept(
-            socket->socket,
+            socket->socket.get(),
             static_cast<int16_t>(flags) | SOCK_NONBLOCK,
             &out_code);
         if (status != ZX_OK) {
@@ -277,10 +276,9 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         if (out_code == EWOULDBLOCK) {
             if (!nonblocking) {
                 zx_signals_t observed;
-                status = zx_object_wait_one(
-                    socket->socket,
+                status = socket->socket.wait_one(
                     ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
-                    ZX_TIME_INFINITE, &observed);
+                    zx::time::infinite(), &observed);
                 if (status != ZX_OK) {
                     break;
                 }
@@ -296,15 +294,14 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
             break;
         }
 
-        status = zx_socket_accept(socket->socket, &accepted);
+        status = socket->socket.accept(&accepted);
         if (status == ZX_ERR_SHOULD_WAIT) {
             // Someone got in before us. If we're a blocking socket, try again.
             if (!nonblocking) {
                 zx_signals_t observed;
-                status = zx_object_wait_one(
-                    socket->socket,
+                status = socket->socket.wait_one(
                     ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED,
-                    ZX_TIME_INFINITE, &observed);
+                    zx::time::infinite(), &observed);
                 if (status != ZX_OK) {
                     break;
                 }
@@ -333,14 +330,12 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         uint8_t buf[sizeof(struct sockaddr_storage)];
         size_t actual;
         zx_status_t status = fuchsia_net_SocketControlGetPeerName(
-            accepted, &out_code, buf, sizeof(buf), &actual);
+            accepted.get(), &out_code, buf, sizeof(buf), &actual);
         if (status != ZX_OK) {
-            zx_handle_close(accepted);
             fdio_release_reserved(nfd);
             return ERROR(status);
         }
         if (out_code) {
-            zx_handle_close(accepted);
             fdio_release_reserved(nfd);
             return ERRNO(out_code);
         }
@@ -348,9 +343,8 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         *len = static_cast<socklen_t>(actual);
     }
 
-    fdio_t* accepted_io = fdio_socket_create_stream(accepted, IOFLAG_SOCKET_CONNECTED);
+    fdio_t* accepted_io = fdio_socket_create_stream(std::move(accepted), IOFLAG_SOCKET_CONNECTED);
     if (accepted_io == NULL) {
-        zx_handle_close(accepted);
         fdio_release_reserved(nfd);
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
@@ -525,7 +519,7 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
         return ERRNO(EINVAL);
     }
 
-    const zxs_socket_t* socket = NULL;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -535,7 +529,7 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     uint8_t buf[sizeof(struct sockaddr_storage)];
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetSockName(
-        socket->socket, &out_code, buf, sizeof(buf), &actual);
+        socket->socket.get(), &out_code, buf, sizeof(buf), &actual);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -554,7 +548,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
         return ERRNO(EINVAL);
     }
 
-    const zxs_socket_t* socket = NULL;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -564,7 +558,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     uint8_t buf[sizeof(struct sockaddr_storage)];
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetPeerName(
-        socket->socket, &out_code, buf, sizeof(buf), &actual);
+        socket->socket.get(), &out_code, buf, sizeof(buf), &actual);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -580,7 +574,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* __restrict optval,
                socklen_t* __restrict optlen) {
-    const zxs_socket_t* socket = NULL;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -593,22 +587,20 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
         }
         *optlen = sizeof(struct timeval);
         struct timeval* duration_tv = static_cast<struct timeval*>(optval);
-        if (socket->rcvtimeo == ZX_TIME_INFINITE) {
-            duration_tv->tv_usec = 0;
+        if (socket->rcvtimeo == zx::duration::infinite()) {
             duration_tv->tv_sec = 0;
-            return 0;
+            duration_tv->tv_usec = 0;
+        } else {
+            duration_tv->tv_sec = socket->rcvtimeo.to_secs();
+            duration_tv->tv_usec = (socket->rcvtimeo - zx::sec(duration_tv->tv_sec)).to_usecs();
         }
-        int64_t nanos = zx_nsec_from_duration(socket->rcvtimeo);
-        int64_t micros = nanos / 1000;
-        duration_tv->tv_usec = micros % 1000000;
-        duration_tv->tv_sec = micros / 1000000;
         return 0;
     }
 
     int16_t out_code;
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetSockOpt(
-        socket->socket,
+        socket->socket.get(),
         static_cast<int16_t>(level),
         static_cast<int16_t>(optname),
         &out_code,
@@ -629,7 +621,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval,
                socklen_t optlen) {
-    const zxs_socket_t* socket = NULL;
+    zxs_socket_t* socket;
     fdio_t* io = fd_to_socket(fd, &socket);
     if (io == NULL) {
         return ERRNO(EBADF);
@@ -641,18 +633,17 @@ int setsockopt(int fd, int level, int optname, const void* optval,
             return ERRNO(EINVAL);
         }
         const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
-        zx_duration_t duration_zx = ZX_SEC(duration_tv->tv_sec);
-        duration_zx = zx_duration_add_duration(duration_zx, ZX_USEC(duration_tv->tv_usec));
-        if (duration_zx == 0) {
-            duration_zx = ZX_TIME_INFINITE;
+        if (duration_tv->tv_sec || duration_tv->tv_usec) {
+            socket->rcvtimeo = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
+        } else {
+            socket->rcvtimeo = zx::duration::infinite();
         }
-        const_cast<zxs_socket_t*>(socket)->rcvtimeo = duration_zx;
         return 0;
     }
 
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlSetSockOpt(
-        socket->socket,
+        socket->socket.get(),
         static_cast<int16_t>(level),
         static_cast<int16_t>(optname),
         static_cast<uint8_t*>(const_cast<void*>(optval)),

@@ -85,13 +85,13 @@ zx_status_t zxio_vmofile_init(zxio_storage_t* file, zx_handle_t control,
 // transition to the zxio backend.
 typedef struct zxio_pipe {
     zxio_t io;
-    zx_handle_t socket;
+    zx::socket socket;
 } zxio_pipe_t;
 
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx_handle_t socket);
+zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket);
 
 // socket ----------------------------------------------------------------------
 

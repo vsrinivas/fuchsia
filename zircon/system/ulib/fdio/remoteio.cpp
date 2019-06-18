@@ -155,17 +155,15 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
 // datagram socket.
 //
 // Always consumes |socket|.
-static zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
+static zx_status_t fdio_from_socket(zx::socket socket, fdio_t** out_io) {
     zx_info_socket_t info;
     memset(&info, 0, sizeof(info));
-    zx_status_t status = zx_object_get_info(socket,
-                                            ZX_INFO_SOCKET,
-                                            &info,
-                                            sizeof(info),
-                                            nullptr,
-                                            nullptr);
+    zx_status_t status = socket.get_info(ZX_INFO_SOCKET,
+                                         &info,
+                                         sizeof(info),
+                                         nullptr,
+                                         nullptr);
     if (status != ZX_OK) {
-        zx_handle_close(socket);
         return status;
     }
     fdio_t* io = nullptr;
@@ -173,13 +171,13 @@ static zx_status_t fdio_from_socket(zx_handle_t socket, fdio_t** out_io) {
         // If the socket has a control plane, then the socket is either
         // a stream or a datagram socket.
         if ((info.options & ZX_SOCKET_DATAGRAM) != 0) {
-            io = fdio_socket_create_datagram(socket, IOFLAG_SOCKET_CONNECTED);
+            io = fdio_socket_create_datagram(std::move(socket), IOFLAG_SOCKET_CONNECTED);
         } else {
-            io = fdio_socket_create_stream(socket, IOFLAG_SOCKET_CONNECTED);
+            io = fdio_socket_create_stream(std::move(socket), IOFLAG_SOCKET_CONNECTED);
         }
     } else {
         // Without a control plane, the socket is a pipe.
-        io = fdio_pipe_create(socket);
+        io = fdio_pipe_create(std::move(socket));
     }
     if (!io) {
         return ZX_ERR_NO_RESOURCES;
@@ -239,7 +237,7 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
         break;
     }
     case fio::NodeInfo::Tag::kPipe: {
-        return fdio_from_socket(info.mutable_pipe().socket.release(), out_io);
+        return fdio_from_socket(std::move(info.mutable_pipe().socket), out_io);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -282,7 +280,7 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
     case ZX_OBJ_TYPE_CHANNEL:
         return fdio_from_channel(handle, out_io);
     case ZX_OBJ_TYPE_SOCKET:
-        return fdio_from_socket(handle, out_io);
+        return fdio_from_socket(zx::socket(handle), out_io);
     case ZX_OBJ_TYPE_VMO:
         io = fdio_vmo_create(handle, 0u);
         break;

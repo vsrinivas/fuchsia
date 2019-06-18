@@ -7,6 +7,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
+#include <lib/zx/socket.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxs/protocol.h>
 #include <poll.h>
@@ -95,8 +96,14 @@ static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
     if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
         return ZX_ERR_BAD_STATE;
     }
-    zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    return zx_handle_duplicate(sio->socket.socket, ZX_RIGHT_SAME_RIGHTS, out_handle);
+    zx::socket out_socket;
+    zx_status_t status = fdio_get_zxio_socket(io)->socket.socket.duplicate(
+        ZX_RIGHT_SAME_RIGHTS, &out_socket);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_handle = out_socket.release();
+    return ZX_OK;
 }
 
 static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
@@ -105,21 +112,20 @@ static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
         return ZX_ERR_BAD_STATE;
     }
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    *out_handle = sio->socket.socket;
+    *out_handle = sio->socket.socket.get();
     return ZX_OK;
 }
 
 static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    *handle = sio->socket.socket;
+    *handle = sio->socket.socket.get();
     // TODO: locking for flags/state
     if (*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTING) {
         // check the connection state
         zx_signals_t observed;
-        zx_status_t r;
-        r = zx_object_wait_one(sio->socket.socket, ZXSIO_SIGNAL_CONNECTED, 0u,
-                               &observed);
-        if (r == ZX_OK || r == ZX_ERR_TIMED_OUT) {
+        zx_status_t status = sio->socket.socket.wait_one(
+            ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
+        if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
             if (observed & ZXSIO_SIGNAL_CONNECTED) {
                 *fdio_get_ioflag(io) &= ~IOFLAG_SOCKET_CONNECTING;
                 *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
@@ -192,9 +198,8 @@ static zx_status_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
     switch (req) {
     case FIONREAD: {
         zx_info_socket_t info;
-        memset(&info, 0, sizeof(info));
-        zx_status_t status = zx_object_get_info(sio->socket.socket, ZX_INFO_SOCKET,
-                                                &info, sizeof(info), NULL, NULL);
+        zx_status_t status = sio->socket.socket.get_info(
+            ZX_INFO_SOCKET, &info, sizeof(info), NULL, NULL);
         if (status != ZX_OK) {
             return status;
         }
@@ -242,7 +247,7 @@ static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int fla
 
 static void zxsio_wait_begin_dgram(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* _signals) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    *handle = sio->socket.socket;
+    *handle = sio->socket.socket.get();
     zx_signals_t signals = ZXSIO_SIGNAL_ERROR;
     if (events & POLLIN) {
         signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
@@ -275,7 +280,7 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
 
 static zx_status_t zxsio_close(fdio_t* io) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    return zxs_close(&sio->socket);
+    return zxs_close(std::move(sio->socket));
 }
 
 static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
@@ -284,7 +289,7 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
     int16_t out_code;
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlIoctl(
-        sio->socket.socket, static_cast<uint16_t>(op),
+        sio->socket.socket.get(), static_cast<uint16_t>(op),
         static_cast<const uint8_t*>(in_buf), in_len, &out_code,
         static_cast<uint8_t*>(out_buf), out_len, &actual);
     if (status != ZX_OK) {
@@ -313,11 +318,11 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
         options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
         break;
     }
-    return zx_socket_shutdown(sio->socket.socket, options);
+    return sio->socket.socket.shutdown(options);
 }
 
 static zx_duration_t fdio_socket_get_rcvtimeo(fdio_t* io) {
-    return fdio_get_zxio_socket(io)->socket.rcvtimeo;
+    return fdio_get_zxio_socket(io)->socket.rcvtimeo.get();
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {
@@ -378,35 +383,34 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
 };
 
-static fdio_t* fdio_socket_create(zx_handle_t socket, int flags,
+static fdio_t* fdio_socket_create(zx::socket socket, int flags,
                                   fdio_ops_t* ops) {
     fdio_t* io = fdio_alloc(ops);
     if (io == NULL) {
-        zx_handle_close(socket);
         return NULL;
     }
     *fdio_get_ioflag(io) = IOFLAG_SOCKET | flags;
     zxs_socket_t zs = {
-        .socket = socket,
+        .socket = std::move(socket),
         .flags = ops == &fdio_socket_dgram_ops ? ZXS_FLAG_DATAGRAM : 0u,
-        .rcvtimeo = ZX_TIME_INFINITE,
+        .rcvtimeo = zx::duration::infinite(),
     };
-    zx_status_t status = zxio_socket_init(fdio_get_zxio_storage(io), zs);
+    zx_status_t status = zxio_socket_init(fdio_get_zxio_storage(io), std::move(zs));
     if (status != ZX_OK) {
         return NULL;
     }
     return io;
 }
 
-fdio_t* fdio_socket_create_stream(zx_handle_t s, int flags) {
-    return fdio_socket_create(s, flags, &fdio_socket_stream_ops);
+fdio_t* fdio_socket_create_stream(zx::socket s, int flags) {
+    return fdio_socket_create(std::move(s), flags, &fdio_socket_stream_ops);
 }
 
-fdio_t* fdio_socket_create_datagram(zx_handle_t s, int flags) {
-    return fdio_socket_create(s, flags, &fdio_socket_dgram_ops);
+fdio_t* fdio_socket_create_datagram(zx::socket s, int flags) {
+    return fdio_socket_create(std::move(s), flags, &fdio_socket_dgram_ops);
 }
 
-fdio_t* fd_to_socket(int fd, const zxs_socket_t** out_socket) {
+fdio_t* fd_to_socket(int fd, zxs_socket_t** out_socket) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
         *out_socket = NULL;

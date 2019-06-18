@@ -9,21 +9,22 @@
 
 static zx_status_t zxio_socket_close(zxio_t* io) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
-    return zxs_close(&zs->socket);
+    return zxs_close(std::move(zs->socket));
 }
 
 static zx_status_t zxio_socket_release(zxio_t* io, zx_handle_t* out_handle) {
-    zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
-    zx_handle_t socket = zs->socket.socket;
-    zs->socket.socket = ZX_HANDLE_INVALID;
-    *out_handle = socket;
+    *out_handle = reinterpret_cast<zxio_socket_t*>(io)->socket.socket.release();
     return ZX_OK;
 }
 
 static zx_status_t zxio_socket_clone(zxio_t* io, zx_handle_t* out_handle) {
-    zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(io);
-    return zx_handle_duplicate(zs->socket.socket, ZX_RIGHT_SAME_RIGHTS,
-                               out_handle);
+    zx::object<zx::socket> out_channel;
+    zx_status_t status = reinterpret_cast<zxio_socket_t*>(io)->socket.socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_handle = out_channel.release();
+    return ZX_OK;
 }
 
 static zx_status_t zxio_socket_read(zxio_t* io, void* buffer, size_t capacity,
@@ -51,6 +52,6 @@ static constexpr zxio_ops_t zxio_socket_ops = []() {
 zx_status_t zxio_socket_init(zxio_storage_t* storage, zxs_socket_t socket) {
     zxio_socket_t* zs = reinterpret_cast<zxio_socket_t*>(storage);
     zxio_init(&zs->io, &zxio_socket_ops);
-    zs->socket = socket;
+    zs->socket = std::move(socket);
     return ZX_OK;
 }
