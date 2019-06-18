@@ -333,10 +333,10 @@ error_return:
 }
 
 static zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops;
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = usb_video_parse_descriptors;
-    return ops;
+  zx_driver_ops_t ops;
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = usb_video_parse_descriptors;
+  return ops;
 }();
 
 }  // namespace
@@ -348,4 +348,4 @@ ZIRCON_DRIVER_BEGIN(usb_video, driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_VIDEO_INTERFACE_COLLECTION),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
 ZIRCON_DRIVER_END(usb_video)
-// clang-format on
+    // clang-format on

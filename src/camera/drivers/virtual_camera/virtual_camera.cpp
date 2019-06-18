@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
-
-#include <ddk/debug.h>
 
 #include <memory>
 
@@ -31,15 +30,16 @@ static zx_status_t bind(void* ctx, zx_device_t* device) {
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = bind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = bind;
+  return ops;
 }();
 
 }  // namespace virtual_camera
 
 // clang-format: off
-ZIRCON_DRIVER_BEGIN(virtual_camera, virtual_camera::driver_ops, "fuchsia", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-ZIRCON_DRIVER_END(virtual_camera)
+ZIRCON_DRIVER_BEGIN(virtual_camera, virtual_camera::driver_ops, "fuchsia",
+                    "0.1", 1)
+BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
+    ZIRCON_DRIVER_END(virtual_camera)

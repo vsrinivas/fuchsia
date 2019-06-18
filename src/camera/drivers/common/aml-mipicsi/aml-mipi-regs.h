@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_COMMON_AML_MIPICSI_AML_MIPI_REGS_H_
+#define SRC_CAMERA_DRIVERS_COMMON_AML_MIPICSI_AML_MIPI_REGS_H_
 
 // clang-format off
 #define HI_CSI_PHY_CNTL0                    0x4C
@@ -122,3 +123,5 @@
 
 // CLK offsets.
 #define HHI_MIPI_CSI_PHY_CLK_CNTL (0xD0 << 2)
+
+#endif  // SRC_CAMERA_DRIVERS_COMMON_AML_MIPICSI_AML_MIPI_REGS_H_

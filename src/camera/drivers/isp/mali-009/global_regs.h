@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_GLOBAL_REGS_H_
+#define SRC_CAMERA_DRIVERS_ISP_MALI_009_GLOBAL_REGS_H_
 
 #include <hwreg/bitfields.h>
 #include <zircon/types.h>
@@ -1116,3 +1117,5 @@ class InputPortFrameStats_VblankNum
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MALI_009_GLOBAL_REGS_H_

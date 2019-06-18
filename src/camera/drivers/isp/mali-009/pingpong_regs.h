@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_PINGPONG_REGS_H_
+#define SRC_CAMERA_DRIVERS_ISP_MALI_009_PINGPONG_REGS_H_
 
 #include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
@@ -6250,3 +6251,5 @@ DEF_NAMESPACE_REG(MultiCtx_ConfigDone, ping, 0x1c310)
 DEF_NAMESPACE_REG(MultiCtx_ConfigDone, pong, 0x342d0)
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MALI_009_PINGPONG_REGS_H_

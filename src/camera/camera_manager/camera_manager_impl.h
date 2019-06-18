@@ -8,9 +8,9 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <fuchsia/camera/cpp/fidl.h>
-#include <src/camera/camera_manager/video_device_client.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/io/device_watcher.h>
+#include <src/camera/camera_manager/video_device_client.h>
 
 #include <list>
 

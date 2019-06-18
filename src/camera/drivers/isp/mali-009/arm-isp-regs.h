@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_REGS_H_
+#define SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_REGS_H_
 
 #include <hwreg/bitfields.h>
 #include <zircon/types.h>
@@ -26,3 +27,5 @@
 
 // Product ID
 #define PRODUCT_ID_DEFAULT (2658)
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_REGS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_SIMPLE_CAMERA_SIMPLE_CAMERA_SERVER_SIMPLE_CAMERA_SERVER_APP_H_
+#define SRC_CAMERA_SIMPLE_CAMERA_SIMPLE_CAMERA_SERVER_SIMPLE_CAMERA_SERVER_APP_H_
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
@@ -30,3 +31,5 @@ class SimpleCameraApp : public fuchsia::simplecamera::SimpleCamera {
 };
 
 }  // namespace simple_camera
+
+#endif  // SRC_CAMERA_SIMPLE_CAMERA_SIMPLE_CAMERA_SERVER_SIMPLE_CAMERA_SERVER_APP_H_

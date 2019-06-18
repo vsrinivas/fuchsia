@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_ISP_MODULES_DMA_MGR_H_
+#define SRC_CAMERA_DRIVERS_ISP_MODULES_DMA_MGR_H_
 
 #include <fuchsia/camera/common/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
@@ -94,3 +95,5 @@ class DmaManager {
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MODULES_DMA_MGR_H_

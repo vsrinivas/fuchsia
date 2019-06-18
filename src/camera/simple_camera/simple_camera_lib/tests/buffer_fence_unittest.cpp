@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/simple_camera/simple_camera_lib/buffer_fence.h"
+
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/camera/simple_camera/simple_camera_lib/buffer_fence.h"
 
 namespace simple_camera {
 namespace test {
@@ -20,8 +21,8 @@ TEST_F(BufferFenceTest, buffer_fence_smoketest) {
   zx::event release_fence;
   bf->DuplicateReleaseFence(&release_fence);
 
-  bf->SetReleaseFenceHandler([&signalled_index] (BufferFence* b) {
-                           signalled_index = b->index(); });
+  bf->SetReleaseFenceHandler(
+      [&signalled_index](BufferFence* b) { signalled_index = b->index(); });
 
   // signal the fence so we will get a callback
   release_fence.signal(0, ZX_EVENT_SIGNALED);

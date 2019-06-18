@@ -5,15 +5,15 @@
 #ifndef SRC_CAMERA_EXAMPLES_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
 #define SRC_CAMERA_EXAMPLES_VIDEO_DISPLAY_SIMPLE_CAMERA_VIEW_H_
 
-#include <deque>
-#include <list>
-
 #include <fbl/vector.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
+
+#include <deque>
+#include <list>
 
 namespace video_display {
 

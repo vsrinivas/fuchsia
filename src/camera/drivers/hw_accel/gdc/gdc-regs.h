@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_REGS_H_
+#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_REGS_H_
 
 #include <hwreg/bitfields.h>
 #include <zircon/types.h>
@@ -49,3 +50,5 @@ class ID : public hwreg::RegisterBase<ID, uint32_t> {
 };
 
 }  // namespace gdc
+
+#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_REGS_H_

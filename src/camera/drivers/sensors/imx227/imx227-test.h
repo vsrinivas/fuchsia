@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_TEST_H_
+#define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_TEST_H_
 
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
@@ -24,3 +25,5 @@ class Imx227DeviceTester : public zxtest::Test {
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_TEST_H_

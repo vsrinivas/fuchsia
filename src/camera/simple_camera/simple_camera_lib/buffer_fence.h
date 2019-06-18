@@ -83,4 +83,4 @@ class BufferFence {
 
 }  // namespace simple_camera
 
-#endif  // SRC_CAMERA_SIMPLE_CAMERA_SIMPLE_CAMERA_LIB_FENCED_BUFFER_H_
+#endif  // SRC_CAMERA_SIMPLE_CAMERA_SIMPLE_CAMERA_LIB_BUFFER_FENCE_H_

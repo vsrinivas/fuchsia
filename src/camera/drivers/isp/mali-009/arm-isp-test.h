@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_TEST_H_
+#define SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_TEST_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -82,3 +83,5 @@ class ArmIspDeviceTester : public IspDeviceTesterType,
 };
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_ISP_MALI_009_ARM_ISP_TEST_H_

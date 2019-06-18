@@ -3,6 +3,6 @@
         "binary": "test/simple_camera_unittests"
     },
     "sandbox": {
-        "services": [ ]
+        "services": []
     }
 }
