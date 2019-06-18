@@ -18,27 +18,13 @@ group("benchmarks") {
   ]
 }
 
-executable("modular_benchmarks_bin") {
+executable("story_benchmark") {
   testonly = true
 
-  output_name = "modular_benchmarks"
+  output_name = "story_benchmark"
 
   sources = [
-    "benchmarks.cc",
-  ]
-
-  deps = [
-    "//garnet/testing/benchmarking",
-  ]
-}
-
-executable("story_benchmark_test") {
-  testonly = true
-
-  output_name = "story_benchmark_test"
-
-  sources = [
-    "story_benchmark_test.cc",
+    "story_benchmark.cc",
   ]
 
   deps = [
@@ -56,31 +42,31 @@ executable("story_benchmark_test") {
   ]
 }
 
-test_package("modular_benchmarks") {
-  tests = [
-    {
-      name = "story_benchmark_test"
-      environments = basic_envs
-    },
+package("modular_benchmarks") {
+  testonly = true
+
+  deps = [
+    ":story_benchmark",
   ]
 
-  resources = [
+  meta = [
     {
-      path = rebase_path("story_benchmark_test.tspec")
-      dest = "story_benchmark_test.tspec"
+      dest = "story_benchmark.cmx"
+      path = rebase_path("meta/story_benchmark.cmx")
     },
   ]
 
   binaries = [
     {
-      name = "modular_benchmarks"
-      shell = true
+      name = "story_benchmark"
     },
   ]
 
-  deps = [
-    ":modular_benchmarks_bin",
-    ":story_benchmark_test",
+  resources = [
+    {
+      path = rebase_path("story_benchmark.tspec")
+      dest = "story_benchmark.tspec"
+    },
   ]
 }
 

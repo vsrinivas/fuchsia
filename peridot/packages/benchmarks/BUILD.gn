@@ -5,6 +5,15 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
+group("all") {
+  testonly = true
+  public_deps = [
+    ":ledger",
+    ":modular",
+    ":peridot",
+  ]
+}
+
 group("ledger") {
   testonly = true
   public_deps = [
@@ -13,31 +22,24 @@ group("ledger") {
   ]
 }
 
-group("all") {
+group("modular") {
   testonly = true
   public_deps = [
-    "//peridot/packages/benchmarks:ledger",
-    "//peridot/packages/benchmarks:modular",
-    "//peridot/packages/benchmarks:peridot",
+    "//peridot/packages/prod:modular",
+    "//src/modular/benchmarks",
   ]
 }
 
 group("peridot") {
   testonly = true
   public_deps = [
+    ":ledger",
+    ":modular",
     "//garnet/packages/benchmarks:buildbot",
-    "//peridot/packages/benchmarks:ledger",
+    "//garnet/packages/benchmarks:zircon",
+    "//garnet/packages/examples:benchmark",
+    "//garnet/tests/benchmarks:garnet_benchmarks",
+    "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//peridot/tests/benchmarks:fuchsia_benchmarks",
-  ]
-}
-
-group("modular") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/benchmarks:buildbot",
-    "//peridot/packages/prod:modular",
-    "//peridot/tests/benchmarks:modular_benchmarks",
-    "//peridot/tests/benchmarks/story:modular_benchmark_story_module",
-    "//peridot/tests/benchmarks/story:modular_benchmark_story_session_shell",
   ]
 }

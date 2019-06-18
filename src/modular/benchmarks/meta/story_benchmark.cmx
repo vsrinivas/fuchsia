@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/story_benchmark_test"
+        "binary": "bin/story_benchmark"
     },
     "sandbox": {
         "services": [
