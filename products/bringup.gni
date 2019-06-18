@@ -7,10 +7,6 @@ bootfs_only = true
 zircon_enable_kernel_debugging_features = true
 zircon_enable_netsvc_debugging_features = true
 
-# TODO(BLD-382): Once everything is moved over to using these product configs,
-# update the bootsvc default to this.
-kernel_cmdline_args = [ "bootsvc.next=bin/component_manager,fuchsia-boot:///boot#meta/root.cm,--use-builtin-process-launcher" ]
-
 meta_package_labels = [ "//build/images:config-data" ]
 
 base_package_labels = []
