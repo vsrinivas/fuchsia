@@ -270,10 +270,10 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off) {
 }
 
 // Create a new vc_t and add it to the console list.
-zx_status_t vc_create(vc_t** vc_out, bool special) {
+zx_status_t vc_create(vc_t** vc_out, const color_scheme_t* color_scheme) {
     zx_status_t status;
     vc_t* vc;
-    if ((status = vc_alloc(&vc, special)) < 0) {
+    if ((status = vc_alloc(&vc, color_scheme)) < 0) {
         return status;
     }
 

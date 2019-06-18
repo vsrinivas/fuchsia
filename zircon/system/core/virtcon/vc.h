@@ -16,6 +16,7 @@
 #include <threads.h>
 
 #include "textcon.h"
+#include "vc-colors.h"
 
 #define MAX_COLOR 0xf
 
@@ -106,7 +107,7 @@ typedef struct vc {
 #define VC_FLAG_FULLSCREEN  (1 << 1)
 
 const gfx_font* vc_get_font();
-zx_status_t vc_alloc(vc_t** out, bool special);
+zx_status_t vc_alloc(vc_t** out, const color_scheme* color_scheme);
 void vc_attach_gfx(vc_t* vc);
 void vc_free(vc_t* vc);
 void vc_flush(vc_t* vc);
@@ -161,7 +162,7 @@ extern int g_status_width;
 void handle_key_press(uint8_t keycode, int modifiers);
 void vc_toggle_framebuffer();
 
-zx_status_t vc_create(vc_t** out, bool special);
+zx_status_t vc_create(vc_t** out, const color_scheme_t* color_scheme);
 void vc_destroy(vc_t* vc);
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off);
 zx_status_t vc_set_active(int num, vc_t* vc);

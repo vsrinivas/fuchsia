@@ -415,16 +415,16 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
             } else if ((n == 1) && (tc->fg <= 7)) { // bold
                 tc->fg = (uint8_t)(tc->fg + 8);
             } else if (n == 0) { // reset
-                tc->fg = 0;
-                tc->bg = 15;
+                tc->fg = tc->init_fg;
+                tc->bg = tc->init_bg;
             } else if (n == 7) { // reverse
                 uint8_t temp = tc->fg;
                 tc->fg = tc->bg;
                 tc->bg = temp;
             } else if (n == 39) { // default fg
-                tc->fg = 0;
+                tc->fg = tc->init_fg;
             } else if (n == 49) { // default bg
-                tc->bg = 15;
+                tc->bg = tc->init_bg;
             }
         }
         break;
@@ -571,6 +571,8 @@ void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,
     tc->save_y = 0;
     tc->fg = fg;
     tc->bg = bg;
+    tc->init_fg = fg;
+    tc->init_bg = bg;
     tc->putc = putc_plain;
 }
 

@@ -50,8 +50,9 @@ void setparam_callback(void* cookie, int param, uint8_t* arg, size_t arglen) {
 // its own, outside of vc_t.
 class TextconHelper {
 public:
-    TextconHelper(uint32_t size_x, uint32_t size_y) : size_x(size_x),
-                                                      size_y(size_y) {
+    TextconHelper(uint32_t size_x, uint32_t size_y,
+                  const color_scheme_t* color_scheme = &color_schemes[kDefaultColorScheme])
+          : size_x(size_x), size_y(size_y) {
         // Create a textcon_t.
         textbuf = new vc_char_t[size_x * size_y];
         textcon.cookie = &textcon;
@@ -60,7 +61,7 @@ public:
         textcon.push_scrollback_line = push_scrollback_line_callback;
         textcon.copy_lines = copy_lines_callback;
         textcon.setparam = setparam_callback;
-        tc_init(&textcon, size_x, size_y, textbuf, 0, 0, 0, 0);
+        tc_init(&textcon, size_x, size_y, textbuf, color_scheme->front, color_scheme->back, 0, 0);
         // Initialize buffer contents, since this is currently done
         // outside of textcon.cpp in vc-device.cpp.
         for (size_t i = 0; i < size_x * size_y; ++i)
@@ -81,7 +82,7 @@ public:
         EXPECT_TRUE(vc_surface, "");
         // This takes ownership of vc_surface.
         EXPECT_EQ(vc_init_gfx(vc_surface), ZX_OK, "");
-        EXPECT_EQ(vc_alloc(&vc_dev, false), ZX_OK, "");
+        EXPECT_EQ(vc_alloc(&vc_dev, color_scheme), ZX_OK, "");
         EXPECT_EQ(vc_dev->columns, size_x, "");
         EXPECT_EQ(vc_rows(vc_dev), static_cast<int>(size_y), "");
         // Mark the console as active so that display updates get
@@ -256,6 +257,42 @@ bool test_display_update_comparison() {
         "|-----------|\n"
         "|-----------|\n"; // Bottom margin
     EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0, "");
+
+    END_TEST;
+}
+
+// This tests updating the display with all of the different colorschemes. This
+// catches that the tc and the vcs set their colorschemes correctly. If
+// something goes wrong, either all of the chars will appear to be changed or
+// none will be changed.
+bool test_display_color_schemes() {
+    BEGIN_TEST;
+
+    int colors[] = {kDarkColorScheme, kLightColorScheme, kSpecialColorScheme};
+    for (size_t c = 0; c < countof(colors); c++) {
+      TextconHelper tc(10, 3, &color_schemes[colors[c]]);
+      // Write some characters directly into the text buffer.
+      auto SetChar = [&](int x, int y, char ch) {
+        tc.vc_dev->text_buf[x + y * tc.size_x] =
+            vc_char_make(ch, tc.textcon.fg, tc.textcon.bg);
+      };
+      SetChar(2, 1, 'x');
+      SetChar(3, 1, 'y');
+      SetChar(6, 1, 'z');
+
+      // Check that these characters in the display are detected as not
+      // properly updated.
+      TextconHelper::DisplaySnapshot snapshot(&tc);
+      tc.InvalidateAllGraphics();
+      EXPECT_TRUE(snapshot.ChangedSinceSnapshot(), "");
+      const char *expected =
+          "|-----------|\n"  // Console status line
+          "|-----------|\n"  // Cursor at left was painted during tc init
+          "|--DD--D----|\n"  // Chars set by SetChar() above
+          "|-----------|\n"
+          "|-----------|\n"; // Bottom margin
+      EXPECT_EQ(strcmp(snapshot.ComparisonString().get(), expected), 0, "");
+    }
 
     END_TEST;
 }
@@ -719,6 +756,7 @@ bool test_scrollback_lines_contents() {
 BEGIN_TEST_CASE(gfxconsole_textbuf_tests)
 RUN_TEST(test_simple)
 RUN_TEST(test_display_update_comparison)
+RUN_TEST(test_display_color_schemes)
 RUN_TEST(test_wrapping)
 RUN_TEST(test_tabs)
 RUN_TEST(test_backspace_moves_cursor)

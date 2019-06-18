@@ -160,7 +160,8 @@ fail:
     return ZX_ERR_STOP;
 }
 
-static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool make_active, bool special) {
+static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool make_active,
+                                         const color_scheme_t* color_scheme) {
     // The ptmx device can start later than these threads
     int retry = 30;
     int raw_fd;
@@ -189,7 +190,7 @@ static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool m
     }
 
     vc_t* vc;
-    if (vc_create(&vc, special)) {
+    if (vc_create(&vc, color_scheme)) {
         return ZX_ERR_INTERNAL;
     }
     zx_status_t r;
@@ -220,14 +221,15 @@ static zx_status_t remote_session_create(vc_t** out, zx::channel session, bool m
     return ZX_OK;
 }
 
-static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
+static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active,
+                                  const color_scheme_t* color_scheme) {
     zx::channel device_channel, client_channel;
     zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = remote_session_create(out, std::move(device_channel), make_active, special);
+    status = remote_session_create(out, std::move(device_channel), make_active, color_scheme);
     if (status != ZX_OK) {
         return status;
     }
@@ -243,11 +245,11 @@ static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
     return ZX_OK;
 }
 
-static void start_shell(bool make_active, const char* cmd) {
+static void start_shell(bool make_active, const char* cmd, const color_scheme_t* color_scheme) {
     vc_t* vc = nullptr;
     int fd = 0;
 
-    if (session_create(&vc, &fd, make_active, cmd != NULL) < 0) {
+    if (session_create(&vc, &fd, make_active, color_scheme) < 0) {
         return;
     }
 
@@ -264,7 +266,8 @@ static zx_status_t new_vc_cb(void*, zx_handle_t session, fidl_txn_t* txn) {
     zx::channel session_channel(session);
 
     vc_t* vc = nullptr;
-    if (remote_session_create(&vc, std::move(session_channel), true, false) < 0) {
+    if (remote_session_create(&vc, std::move(session_channel), true,
+                              &color_schemes[kDefaultColorScheme]) < 0) {
         return ZX_OK;
     }
 
@@ -474,12 +477,18 @@ int main(int argc, char** argv) {
         argv++;
     }
 
+    char* colorvar = getenv("virtcon.colorscheme");
+    const color_scheme_t* color_scheme = string_to_color_scheme(colorvar);
+    if (cmd != NULL) {
+        color_scheme = &color_schemes[kSpecialColorScheme];
+    }
+
     if (port_init(&port) < 0) {
         return -1;
     }
 
     // create initial console for debug log
-    if (vc_create(&log_vc, false) != ZX_OK) {
+    if (vc_create(&log_vc, color_scheme) != ZX_OK) {
         return -1;
     }
     snprintf(log_vc->title, sizeof(log_vc->title), "debuglog");
@@ -517,9 +526,9 @@ int main(int argc, char** argv) {
 
     for (int i = 0; i < shells; ++i) {
         if (i == 0)
-            start_shell(!keep_log, cmd);
+            start_shell(!keep_log, cmd, color_scheme);
         else
-            start_shell(false, NULL);
+            start_shell(false, NULL, color_scheme);
     }
 
     zx_status_t r = port_dispatch(&port, ZX_TIME_INFINITE, false);

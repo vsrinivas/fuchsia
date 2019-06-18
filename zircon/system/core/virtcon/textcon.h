@@ -70,6 +70,9 @@ struct textcon {
     uint8_t fg;
     uint8_t bg;
 
+    uint8_t init_fg;
+    uint8_t init_bg;
+
     // Escape sequence parameter parsing
     // Numeric arguments
     int num;  // Argument currently being read

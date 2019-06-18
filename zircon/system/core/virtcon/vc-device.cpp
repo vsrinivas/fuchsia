@@ -16,33 +16,6 @@
 
 #include "vc.h"
 
-static uint32_t default_palette[] = {
-    // 0-7 Normal/dark versions of colors
-    0xff000000, // black
-    0xffaa0000, // red
-    0xff00aa00, // green
-    0xffaa5500, // brown
-    0xff0000aa, // blue
-    0xffaa00aa, // zircon
-    0xff00aaaa, // cyan
-    0xffaaaaaa, // grey
-    // 8-15 Bright/light versions of colors
-    0xff555555, // dark grey
-    0xffff5555, // bright red
-    0xff55ff55, // bright green
-    0xffffff55, // yellow
-    0xff5555ff, // bright blue
-    0xffff55ff, // bright zircon
-    0xff55ffff, // bright cyan
-    0xffffffff, // white
-};
-
-#define DEFAULT_FRONT_COLOR 0x0 // black
-#define DEFAULT_BACK_COLOR 0xf  // white
-
-#define SPECIAL_FRONT_COLOR 0xf // white
-#define SPECIAL_BACK_COLOR 0x4  // blue
-
 // Default height/width (in px) of console before any displays are
 // attached, since we need somewhere to put any data that is received.
 #define DEFAULT_WIDTH 1024
@@ -56,7 +29,7 @@ extern gfx_surface* vc_gfx;
 extern gfx_surface* vc_tb_gfx;
 extern const gfx_font* vc_font;
 
-static zx_status_t vc_setup(vc_t* vc, bool special) {
+static zx_status_t vc_setup(vc_t* vc, const color_scheme_t* color_scheme) {
     // calculate how many rows/columns we have
     vc->rows = DEFAULT_HEIGHT / vc->charh;
     vc->columns = DEFAULT_WIDTH / vc->charw;
@@ -80,13 +53,9 @@ static zx_status_t vc_setup(vc_t* vc, bool special) {
 
     // set up the default palette
     memcpy(&vc->palette, default_palette, sizeof(default_palette));
-    if (special) {
-        vc->front_color = SPECIAL_FRONT_COLOR;
-        vc->back_color = SPECIAL_BACK_COLOR;
-    } else {
-        vc->front_color = DEFAULT_FRONT_COLOR;
-        vc->back_color = DEFAULT_BACK_COLOR;
-    }
+
+    vc->front_color = color_scheme->front;
+    vc->back_color = color_scheme->back;
 
     return ZX_OK;
 }
@@ -550,7 +519,7 @@ void vc_attach_gfx(vc_t* vc) {
             vc->front_color, vc->back_color, vc->cursor_x, vc->cursor_y);
 }
 
-zx_status_t vc_alloc(vc_t** out, bool special) {
+zx_status_t vc_alloc(vc_t** out, const color_scheme_t* color_scheme) {
     vc_t* vc =
         reinterpret_cast<vc_t*>(calloc(1, sizeof(vc_t)));
     if (!vc) {
@@ -574,7 +543,7 @@ zx_status_t vc_alloc(vc_t** out, bool special) {
     vc->charw = vc->font->width;
     vc->charh = vc->font->height;
 
-    zx_status_t status = vc_setup(vc, special);
+    zx_status_t status = vc_setup(vc, color_scheme);
     if (status != ZX_OK) {
         free(vc);
         return status;
