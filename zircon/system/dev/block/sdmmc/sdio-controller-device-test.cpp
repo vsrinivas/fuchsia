@@ -87,8 +87,8 @@ public:
 
     void VerifyAll() { mock_sdio_do_rw_byte_.VerifyAndClear(); }
 
-    zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
-                             uint8_t* out_read_byte) override {
+    zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+                                   uint8_t* out_read_byte) override TA_REQ(lock_) {
         if (mock_sdio_do_rw_byte_.HasExpectations()) {
             std::tuple<zx_status_t, uint8_t> ret =
                 mock_sdio_do_rw_byte_.Call(write, fn_idx, addr, write_byte);
@@ -98,8 +98,8 @@ public:
 
             return std::get<0>(ret);
         } else {
-            return SdioControllerDevice::SdioDoRwByte(write, fn_idx, addr, write_byte,
-                                                      out_read_byte);
+            return SdioControllerDevice::SdioDoRwByteLocked(write, fn_idx, addr, write_byte,
+                                                            out_read_byte);
         }
     }
 
@@ -141,6 +141,24 @@ public:
 
         return ZX_OK;
     }
+
+    zx_status_t ProcessCccrLocked() TA_EXCL(lock_) {
+        fbl::AutoLock lock(&lock_);
+        return ProcessCccr();
+    }
+
+    zx_status_t ProcessCisLocked(uint8_t fn_idx) TA_EXCL(lock_) {
+        fbl::AutoLock lock(&lock_);
+        return ProcessCis(fn_idx);
+    }
+
+    zx_status_t ProcessFbrLocked(uint8_t fn_idx) TA_EXCL(lock_) {
+        fbl::AutoLock lock(&lock_);
+        return ProcessFbr(fn_idx);
+    }
+
+    const SdioFunction& func(uint8_t func) { return funcs_[func]; }
+    const sdio_device_hw_info_t& hw_info() { return hw_info_; }
 
 private:
     SdmmcDevice& sdmmc() override { return *mock_sdmmc_; }
@@ -361,6 +379,239 @@ TEST(SdioControllerDeviceTest, SdioIntrPending) {
 
     EXPECT_OK(dut.SdioIntrPending(3, &pending));
     EXPECT_TRUE(pending);
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
+}
+
+TEST(SdioControllerDeviceTest, EnableDisableFnIntr) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    dut.mock_SdioDoRwByte()
+        .ExpectCall({ZX_OK, 0b0000'0000}, false, 0, 0x04, 0b0000'0000)
+        .ExpectCall({ZX_OK, 0b0000'0000}, true, 0, 0x04, 0b0001'0001)
+        .ExpectCall({ZX_OK, 0b0001'0001}, false, 0, 0x04, 0b0000'0000)
+        .ExpectCall({ZX_OK, 0b0000'0000}, true, 0, 0x04, 0b1001'0001)
+        .ExpectCall({ZX_OK, 0b1001'0001}, false, 0, 0x04, 0b0000'0000)
+        .ExpectCall({ZX_OK, 0b0000'0000}, true, 0, 0x04, 0b1000'0001)
+        .ExpectCall({ZX_OK, 0b1000'0001}, false, 0, 0x04, 0b0000'0000)
+        .ExpectCall({ZX_OK, 0b0000'0000}, true, 0, 0x04, 0b0000'0000);
+
+    EXPECT_OK(dut.SdioEnableFnIntr(4));
+    EXPECT_OK(dut.SdioEnableFnIntr(7));
+    EXPECT_OK(dut.SdioEnableFnIntr(4));
+    EXPECT_OK(dut.SdioDisableFnIntr(4));
+    EXPECT_OK(dut.SdioDisableFnIntr(7));
+    EXPECT_NOT_OK(dut.SdioDisableFnIntr(7));
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
+}
+
+TEST(SdioControllerDeviceTest, ProcessCccr) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    dut.mock_SdioDoRwByte()
+        // CCCR/SDIO revision.
+        .ExpectCall({ZX_OK, 0x43}, false, 0, 0x00, 0)
+        // Card compatibility.
+        .ExpectCall({ZX_OK, 0xc2}, false, 0, 0x08, 0)
+        // Bus speed select.
+        .ExpectCall({ZX_OK, 0xa9}, false, 0, 0x13, 0)
+        // UHS-I support.
+        .ExpectCall({ZX_OK, 0x3f}, false, 0, 0x14, 0)
+        // Driver strength.
+        .ExpectCall({ZX_OK, 0xb7}, false, 0, 0x15, 0)
+        .ExpectCall({ZX_OK, 0x43}, false, 0, 0x00, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x08, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x13, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x14, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x15, 0)
+        .ExpectCall({ZX_OK, 0x41}, false, 0, 0x00, 0)
+        .ExpectCall({ZX_OK, 0x33}, false, 0, 0x00, 0);
+
+    EXPECT_OK(dut.ProcessCccrLocked());
+    EXPECT_EQ(dut.hw_info().caps, SDIO_CARD_MULTI_BLOCK |
+                                  SDIO_CARD_LOW_SPEED |
+                                  SDIO_CARD_FOUR_BIT_BUS |
+                                  SDIO_CARD_HIGH_SPEED |
+                                  SDIO_CARD_UHS_SDR50 |
+                                  SDIO_CARD_UHS_SDR104 |
+                                  SDIO_CARD_UHS_DDR50 |
+                                  SDIO_CARD_TYPE_A |
+                                  SDIO_CARD_TYPE_B |
+                                  SDIO_CARD_TYPE_D);
+
+    EXPECT_OK(dut.ProcessCccrLocked());
+    EXPECT_EQ(dut.hw_info().caps, 0);
+
+    EXPECT_NOT_OK(dut.ProcessCccrLocked());
+    EXPECT_NOT_OK(dut.ProcessCccrLocked());
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
+}
+
+TEST(SdioControllerDeviceTest, ProcessCis) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    dut.mock_SdioDoRwByte()
+        // CIS pointer.
+        .ExpectCall({ZX_OK, 0xa2}, false, 0, 0x00'05'09, 0)
+        .ExpectCall({ZX_OK, 0xc2}, false, 0, 0x00'05'0a, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'05'0b, 0)
+        // Manufacturer ID tuple.
+        .ExpectCall({ZX_OK, 0x20}, false, 0, 0x00'c2'a2, 0)
+        // Manufacturer ID tuple size.
+        .ExpectCall({ZX_OK, 0x04}, false, 0, 0x00'c2'a3, 0)
+        // Manufacturer code.
+        .ExpectCall({ZX_OK, 0x01}, false, 0, 0x00'c2'a4, 0)
+        .ExpectCall({ZX_OK, 0xc0}, false, 0, 0x00'c2'a5, 0)
+        // Manufacturer information (part number/revision).
+        .ExpectCall({ZX_OK, 0xce}, false, 0, 0x00'c2'a6, 0)
+        .ExpectCall({ZX_OK, 0xfa}, false, 0, 0x00'c2'a7, 0)
+        // Null tuple.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'a8, 0)
+        // Function extensions tuple.
+        .ExpectCall({ZX_OK, 0x22}, false, 0, 0x00'c2'a9, 0)
+        // Function extensions tuple size.
+        .ExpectCall({ZX_OK, 0x2a}, false, 0, 0x00'c2'aa, 0)
+        // Type of extended data.
+        .ExpectCall({ZX_OK, 0x01}, false, 0, 0x00'c2'ab, 0)
+        // Stuff we don't use.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'ac, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'ad, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'ae, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'af, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b0, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b1, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b2, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b3, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b4, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b5, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b6, 0)
+        // Function block size.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b7, 0)
+        .ExpectCall({ZX_OK, 0x01}, false, 0, 0x00'c2'b8, 0)
+        // More stuff we don't use.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'b9, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'ba, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'bb, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'bc, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'bd, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'be, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'bf, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c0, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c1, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c2, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c3, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c4, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c5, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c6, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c7, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c8, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'c9, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'ca, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'cb, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'cc, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'cd, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'ce, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'cf, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'd0, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'd1, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'd2, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'd3, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x00'c2'd4, 0)
+        // End-of-chain tuple.
+        .ExpectCall({ZX_OK, 0xff}, false, 0, 0x00'c2'd5, 0);
+
+    EXPECT_OK(dut.ProcessCisLocked(5));
+    EXPECT_EQ(dut.func(5).hw_info.max_blk_size, 256);
+    EXPECT_EQ(dut.func(5).hw_info.manufacturer_id, 0xc001);
+    EXPECT_EQ(dut.func(5).hw_info.product_id, 0xface);
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
+}
+
+TEST(SdioControllerDeviceTest, ProcessCisFunction0) {
+    MockSdmmcDevice mock_sdmmc({
+        .caps = 0,
+        .max_transfer_size = 1024,
+        .max_transfer_size_non_dma = 1024,
+        .prefs = 0
+    });
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    dut.mock_SdioDoRwByte()
+        // CIS pointer.
+        .ExpectCall({ZX_OK, 0xf5}, false, 0, 0x00'00'09, 0)
+        .ExpectCall({ZX_OK, 0x61}, false, 0, 0x00'00'0a, 0)
+        .ExpectCall({ZX_OK, 0x01}, false, 0, 0x00'00'0b, 0)
+        // Function extensions tuple.
+        .ExpectCall({ZX_OK, 0x22}, false, 0, 0x01'61'f5, 0)
+        // Function extensions tuple size.
+        .ExpectCall({ZX_OK, 0x04}, false, 0, 0x01'61'f6, 0)
+        // Type of extended data.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x01'61'f7, 0)
+        // Function 0 block size.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x01'61'f8, 0)
+        .ExpectCall({ZX_OK, 0x02}, false, 0, 0x01'61'f9, 0)
+        // Max transfer speed.
+        .ExpectCall({ZX_OK, 0x32}, false, 0, 0x01'61'fa, 0)
+        // Null tuple.
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x01'61'fb, 0)
+        // Manufacturer ID tuple.
+        .ExpectCall({ZX_OK, 0x20}, false, 0, 0x01'61'fc, 0)
+        // Manufacturer ID tuple size.
+        .ExpectCall({ZX_OK, 0x04}, false, 0, 0x01'61'fd, 0)
+        // Manufacturer code.
+        .ExpectCall({ZX_OK, 0xef}, false, 0, 0x01'61'fe, 0)
+        .ExpectCall({ZX_OK, 0xbe}, false, 0, 0x01'61'ff, 0)
+        // Manufacturer information (part number/revision).
+        .ExpectCall({ZX_OK, 0xfe}, false, 0, 0x01'62'00, 0)
+        .ExpectCall({ZX_OK, 0xca}, false, 0, 0x01'62'01, 0)
+        // End-of-chain tuple.
+        .ExpectCall({ZX_OK, 0xff}, false, 0, 0x01'62'02, 0);
+
+    EXPECT_OK(dut.ProcessCisLocked(0));
+    EXPECT_EQ(dut.func(0).hw_info.max_blk_size, 512);
+    EXPECT_EQ(dut.func(0).hw_info.max_tran_speed, 25000);
+    EXPECT_EQ(dut.func(0).hw_info.manufacturer_id, 0xbeef);
+    EXPECT_EQ(dut.func(0).hw_info.product_id, 0xcafe);
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
+}
+
+TEST(SdioControllerDeviceTest, ProcessFbr) {
+    MockSdmmcDevice mock_sdmmc({});
+    SdioControllerDeviceTest dut(&mock_sdmmc, {});
+
+    dut.mock_SdioDoRwByte()
+        .ExpectCall({ZX_OK, 0x83}, false, 0, 0x100, 0)
+        .ExpectCall({ZX_OK, 0x00}, false, 0, 0x500, 0)
+        .ExpectCall({ZX_OK, 0x4e}, false, 0, 0x700, 0)
+        .ExpectCall({ZX_OK, 0xcf}, false, 0, 0x600, 0)
+        .ExpectCall({ZX_OK, 0xab}, false, 0, 0x601, 0);
+
+    EXPECT_OK(dut.ProcessFbrLocked(1));
+    EXPECT_EQ(dut.func(1).hw_info.fn_intf_code, 0x03);
+
+    EXPECT_OK(dut.ProcessFbrLocked(5));
+    EXPECT_EQ(dut.func(5).hw_info.fn_intf_code, 0x00);
+
+    EXPECT_OK(dut.ProcessFbrLocked(7));
+    EXPECT_EQ(dut.func(7).hw_info.fn_intf_code, 0x0e);
+
+    EXPECT_OK(dut.ProcessFbrLocked(6));
+    EXPECT_EQ(dut.func(6).hw_info.fn_intf_code, 0xab);
+
+    dut.VerifyAll();
+    mock_sdmmc.VerifyAll();
 }
 
 }  // namespace sdmmc

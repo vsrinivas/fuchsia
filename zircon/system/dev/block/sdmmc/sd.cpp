@@ -12,6 +12,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/sdmmc.h>
+#include <lib/zx/time.h>
 
 namespace {
 
@@ -72,7 +73,7 @@ zx_status_t SdmmcBlockDevice::ProbeSd() {
             return ZX_ERR_TIMED_OUT;
         }
 
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+        zx::nanosleep(zx::deadline_after(zx::msec(5)));
     }
 
     st = sdmmc_.host().SetBusFreq(25000000);

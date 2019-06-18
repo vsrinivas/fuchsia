@@ -8,6 +8,7 @@
 
 #include <ddk/protocol/sdio.h>
 #include <ddktl/device.h>
+#include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -38,7 +39,11 @@ public:
     };
 
     SdioControllerDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
-        : SdioControllerDeviceType(parent), sdmmc_(sdmmc) {}
+        : SdioControllerDeviceType(parent), sdmmc_(sdmmc) {
+        for (size_t i = 0; i < fbl::count_of(funcs_); i++) {
+            funcs_[i] = {};
+        }
+    }
     virtual ~SdioControllerDevice() = default;
 
     static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
@@ -51,17 +56,17 @@ public:
     zx_status_t AddDevice();
 
     zx_status_t SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info);
-    zx_status_t SdioEnableFn(uint8_t fn_idx);
-    zx_status_t SdioDisableFn(uint8_t fn_idx);
-    zx_status_t SdioEnableFnIntr(uint8_t fn_idx);
-    zx_status_t SdioDisableFnIntr(uint8_t fn_idx);
-    zx_status_t SdioUpdateBlockSize(uint8_t fn_idx, uint16_t blk_sz, bool deflt);
+    zx_status_t SdioEnableFn(uint8_t fn_idx) TA_EXCL(lock_);
+    zx_status_t SdioDisableFn(uint8_t fn_idx) TA_EXCL(lock_);
+    zx_status_t SdioEnableFnIntr(uint8_t fn_idx) TA_EXCL(lock_);
+    zx_status_t SdioDisableFnIntr(uint8_t fn_idx) TA_EXCL(lock_);
+    zx_status_t SdioUpdateBlockSize(uint8_t fn_idx, uint16_t blk_sz, bool deflt) TA_EXCL(lock_);
     zx_status_t SdioGetBlockSize(uint8_t fn_idx, uint16_t* out_cur_blk_size);
-    zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn);
-    virtual zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
-                                     uint8_t* out_read_byte);
-    zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq);
-    zx_status_t SdioIoAbort(uint8_t fn_idx);
+    zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) TA_EXCL(lock_);
+    zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+                             uint8_t* out_read_byte) TA_EXCL(lock_);
+    zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq) TA_EXCL(lock_);
+    zx_status_t SdioIoAbort(uint8_t fn_idx) TA_EXCL(lock_);
     zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending);
     zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
                                           uint8_t* out_read_byte);
@@ -69,11 +74,24 @@ public:
     void InBandInterruptCallback();
 
     // Visible for testing.
+
+    // Reads the card common control registers (CCCR) to enumerate the card's capabilities.
+    zx_status_t ProcessCccr() TA_REQ(lock_);
+    // Reads the card information structure (CIS) for the given function to get the manufacturer
+    // identification and function extensions tuples.
+    zx_status_t ProcessCis(uint8_t fn_idx) TA_REQ(lock_);
+    // Reads the I/O function code and saves it in the given function's struct.
+    zx_status_t ProcessFbr(uint8_t fn_idx) TA_REQ(lock_);
+
     zx_status_t StartSdioIrqThread();
     void StopSdioIrqThread();
 
 protected:
     virtual SdmmcDevice& sdmmc() { return sdmmc_; }
+
+    virtual zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr,
+                                           uint8_t write_byte, uint8_t* out_read_byte)
+        TA_REQ(lock_);
 
     fbl::Mutex lock_;
     SdioFunction funcs_[SDIO_MAX_FUNCS] TA_GUARDED(lock_);
@@ -87,19 +105,12 @@ private:
     };
 
     zx_status_t SdioReset() TA_REQ(lock_);
-    // Reads the card common control registers (CCCR) to enumerate the card's capabilities.
-    zx_status_t ProcessCccr() TA_REQ(lock_);
-    // Reads the card information structure (CIS) for the given function to get the manufacturer
-    // identification and function extensions tuples.
-    zx_status_t ProcessCis(uint8_t fn_idx) TA_REQ(lock_);
     // Parses a tuple read from the CIS.
     zx_status_t ParseFnTuple(uint8_t fn_idx, const SdioFuncTuple& tup) TA_REQ(lock_);
     // Parses the manufacturer ID tuple and saves it in the given function's struct.
     zx_status_t ParseMfidTuple(uint8_t fn_idx, const SdioFuncTuple& tup) TA_REQ(lock_);
     // Parses the function extensions tuple and saves it in the given function's struct.
     zx_status_t ParseFuncExtTuple(uint8_t fn_idx, const SdioFuncTuple& tup) TA_REQ(lock_);
-    // Reads the I/O function code and saves it in the given function's struct.
-    zx_status_t ProcessFbr(uint8_t fn_idx) TA_REQ(lock_);
     // Popluates the given function's struct by calling the methods above. Also enables the
     // function and sets its default block size.
     zx_status_t InitFunc(uint8_t fn_idx) TA_REQ(lock_);
@@ -116,8 +127,6 @@ private:
     zx_status_t SdioEnableFnLocked(uint8_t fn_idx) TA_REQ(lock_);
     zx_status_t SdioUpdateBlockSizeLocked(uint8_t fn_idx, uint16_t blk_sz, bool deflt)
         TA_REQ(lock_);
-    zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
-                                   uint8_t* out_read_byte) TA_REQ(lock_);
 
     int SdioIrqThread();
 

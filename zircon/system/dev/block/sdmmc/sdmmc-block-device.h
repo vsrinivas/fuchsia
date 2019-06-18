@@ -31,6 +31,10 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
 public:
     using BlockOperation = block::UnownedOperation<>;
 
+    static constexpr size_t BlockOpSize() {
+        return BlockOperation::OperationSize(sizeof(block_op_t));
+    }
+
     SdmmcBlockDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
         : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
         block_info_.max_transfer_size = static_cast<uint32_t>(sdmmc_.host_info().max_transfer_size);

@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -281,21 +280,21 @@ zx_status_t SdioControllerDevice::SdioEnableFnLocked(uint8_t fn_idx) {
     if (func.enabled) {
         return ZX_OK;
     }
-    if ((st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) !=
+    if ((st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) !=
         ZX_OK) {
         zxlogf(ERROR, "sdio_enable_function: Error enabling func:%d status:%d\n", fn_idx, st);
         return st;
     }
 
     ioex_reg = static_cast<uint8_t>(ioex_reg | (1 << fn_idx));
-    st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, ioex_reg, nullptr);
+    st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, ioex_reg, nullptr);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio_enable_function: Error enabling func:%d status:%d\n", fn_idx, st);
         return st;
     }
     // wait for the device to enable the func.
-    usleep(10 * 1000);
-    if ((st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) !=
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    if ((st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) !=
         ZX_OK) {
         zxlogf(ERROR, "sdio_enable_function: Error enabling func:%d status:%d\n", fn_idx, st);
         return st;
@@ -328,7 +327,7 @@ zx_status_t SdioControllerDevice::SdioDisableFn(uint8_t fn_idx) {
         return ZX_ERR_IO;
     }
 
-    if ((st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) !=
+    if ((st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, 0, &ioex_reg)) !=
         ZX_OK) {
         zxlogf(ERROR, "sdio_disable_function: Error reading IOEx reg. func: %d status: %d\n",
                fn_idx, st);
@@ -336,7 +335,7 @@ zx_status_t SdioControllerDevice::SdioDisableFn(uint8_t fn_idx) {
     }
 
     ioex_reg = static_cast<uint8_t>(ioex_reg & ~(1 << fn_idx));
-    st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, ioex_reg, nullptr);
+    st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IOEx_EN_FUNC_ADDR, ioex_reg, nullptr);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio_disable_function: Error writing IOEx reg. func: %d status:%d\n", fn_idx,
                st);
@@ -363,7 +362,7 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
     }
 
     uint8_t intr_byte;
-    st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
+    st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio_enable_interrupt: Failed to enable interrupt for fn: %d status: %d\n",
                fn_idx, st);
@@ -375,7 +374,7 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
     // Enable master intr
     intr_byte = static_cast<uint8_t>(intr_byte | 1);
 
-    st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
+    st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio_enable_interrupt: Failed to enable interrupt for fn: %d status: %d\n",
                fn_idx, st);
@@ -403,7 +402,7 @@ zx_status_t SdioControllerDevice::SdioDisableFnIntr(uint8_t fn_idx) {
     }
 
     uint8_t intr_byte;
-    st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
+    st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
     if (st != ZX_OK) {
         zxlogf(ERROR,
                "sdio_disable_interrupt: Failed reading intr enable reg. func: %d status: %d\n",
@@ -417,7 +416,7 @@ zx_status_t SdioControllerDevice::SdioDisableFnIntr(uint8_t fn_idx) {
         intr_byte = 0;
     }
 
-    st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
+    st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
     if (st != ZX_OK) {
         zxlogf(ERROR,
                "sdio_disable_interrupt: Error writing to intr enable reg. func: %d status: %d\n",
@@ -671,14 +670,13 @@ zx_status_t SdioControllerDevice::SdioReset() {
     zx_status_t st = ZX_OK;
     uint8_t abort_byte;
 
-    st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, 0, &abort_byte);
+    st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, 0, &abort_byte);
     if (st != ZX_OK) {
         abort_byte = SDIO_CIA_CCCR_ASx_ABORT_SOFT_RESET;
     } else {
         abort_byte |= SDIO_CIA_CCCR_ASx_ABORT_SOFT_RESET;
     }
-    return sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, abort_byte,
-                                  nullptr);
+    return SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR, abort_byte, nullptr);
 }
 
 zx_status_t SdioControllerDevice::ProcessCccr() {
@@ -686,7 +684,7 @@ zx_status_t SdioControllerDevice::ProcessCccr() {
 
     // version info
     zx_status_t status =
-        sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR, 0, &vsn_info);
+        SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_CCCR_SDIO_VER_ADDR, 0, &vsn_info);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdio_process_cccr: Error reading CCCR reg: %d\n", status);
         return status;
@@ -700,7 +698,7 @@ zx_status_t SdioControllerDevice::ProcessCccr() {
     hw_info_.sdio_vsn = sdio_vsn;
 
     // card capabilities
-    status = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_CARD_CAPS_ADDR, 0, &card_caps);
+    status = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_CARD_CAPS_ADDR, 0, &card_caps);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdio_process_cccr: Error reading CAPS reg: %d\n", status);
         return status;
@@ -717,7 +715,7 @@ zx_status_t SdioControllerDevice::ProcessCccr() {
     }
 
     // speed
-    status = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &bus_speed);
+    status = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &bus_speed);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
         return status;
@@ -727,7 +725,7 @@ zx_status_t SdioControllerDevice::ProcessCccr() {
     }
 
     // Is UHS supported?
-    status = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_UHS_SUPPORT_ADDR, 0, &uhs_caps);
+    status = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_UHS_SUPPORT_ADDR, 0, &uhs_caps);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
         return status;
@@ -743,7 +741,7 @@ zx_status_t SdioControllerDevice::ProcessCccr() {
     }
 
     // drv_strength
-    status = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_DRV_STRENGTH_ADDR, 0, &drv_strength);
+    status = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_DRV_STRENGTH_ADDR, 0, &drv_strength);
     if (status != ZX_OK) {
         zxlogf(ERROR, "sdio_process_cccr: Error reading SPEED reg: %d\n", status);
         return status;
@@ -769,7 +767,7 @@ zx_status_t SdioControllerDevice::ProcessCis(uint8_t fn_idx) {
     uint32_t cis_ptr = 0;
     for (size_t i = 0; i < SDIO_CIS_ADDRESS_SIZE; i++) {
         uint8_t addr;
-        st = sdmmc().SdioIoRwDirect(
+        st = SdioDoRwByteLocked(
             false, 0,
             static_cast<uint32_t>(SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_CIS_ADDR + i), 0,
             &addr);
@@ -787,8 +785,7 @@ zx_status_t SdioControllerDevice::ProcessCis(uint8_t fn_idx) {
     while (true) {
         uint8_t tuple_code, tuple_link;
         SdioFuncTuple cur_tup;
-        st =
-            sdmmc().SdioIoRwDirect(false, 0, cis_ptr + SDIO_CIS_TPL_FRMT_TCODE_OFF, 0, &tuple_code);
+        st = SdioDoRwByteLocked(false, 0, cis_ptr + SDIO_CIS_TPL_FRMT_TCODE_OFF, 0, &tuple_code);
         if (st != ZX_OK) {
             zxlogf(ERROR, "sdio: Error reading tuple code for fn %d\n", fn_idx);
             break;
@@ -801,8 +798,7 @@ zx_status_t SdioControllerDevice::ProcessCis(uint8_t fn_idx) {
         if (tuple_code == SDIO_CIS_TPL_CODE_END) {
             break;
         }
-        st =
-            sdmmc().SdioIoRwDirect(false, 0, cis_ptr + SDIO_CIS_TPL_FRMT_TLINK_OFF, 0, &tuple_link);
+        st = SdioDoRwByteLocked(false, 0, cis_ptr + SDIO_CIS_TPL_FRMT_TLINK_OFF, 0, &tuple_link);
         if (st != ZX_OK) {
             zxlogf(ERROR, "sdio: Error reading tuple size for fn %d\n", fn_idx);
             break;
@@ -816,7 +812,7 @@ zx_status_t SdioControllerDevice::ProcessCis(uint8_t fn_idx) {
 
         cis_ptr += SDIO_CIS_TPL_FRMT_TBODY_OFF;
         for (size_t i = 0; i < tuple_link; i++, cis_ptr++) {
-            st = sdmmc().SdioIoRwDirect(false, 0, cis_ptr, 0, &cur_tup.tuple_body[i]);
+            st = SdioDoRwByteLocked(false, 0, cis_ptr, 0, &cur_tup.tuple_body[i]);
             if (st != ZX_OK) {
                 zxlogf(ERROR, "sdio: Error reading tuple body for fn %d\n", fn_idx);
                 return st;
@@ -887,16 +883,16 @@ zx_status_t SdioControllerDevice::ProcessFbr(uint8_t fn_idx) {
     uint8_t fbr, fn_intf_code;
 
     SdioFunction* func = &funcs_[fn_idx];
-    if ((st = sdmmc().SdioIoRwDirect(false, 0,
-                                     SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_STD_IF_CODE_ADDR,
-                                     0, &fbr)) != ZX_OK) {
+    if ((st = SdioDoRwByteLocked(false, 0,
+                                 SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_STD_IF_CODE_ADDR, 0,
+                                 &fbr)) != ZX_OK) {
         zxlogf(ERROR, "sdio: Error reading intf code: %d\n", st);
         return st;
     }
     fn_intf_code = GetBitsU8(fbr, SDIO_CIA_FBR_STD_IF_CODE_MASK, SDIO_CIA_FBR_STD_IF_CODE_LOC);
     if (fn_intf_code == SDIO_CIA_FBR_STD_IF_CODE_MASK) {
         // fn_code > 0Eh
-        if ((st = sdmmc().SdioIoRwDirect(
+        if ((st = SdioDoRwByteLocked(
                  false, 0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_STD_IF_CODE_EXT_ADDR, 0,
                  &fn_intf_code)) != ZX_OK) {
             zxlogf(ERROR, "sdio: Error while reading the extended intf code %d\n", st);
@@ -952,14 +948,14 @@ zx_status_t SdioControllerDevice::TrySwitchHs() {
         zxlogf(ERROR, "sdio: High speed not supported, retcode = %d\n", st);
         return ZX_ERR_NOT_SUPPORTED;
     }
-    st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &speed);
+    st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &speed);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio: Error while reading CCCR reg, retcode = %d\n", st);
         return st;
     }
     UpdateBitsU8(&speed, SDIO_CIA_CCCR_BUS_SPEED_BSS_MASK, SDIO_CIA_CCCR_BUS_SPEED_BSS_LOC,
                  SDIO_BUS_SPEED_EN_HS);
-    st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, speed, nullptr);
+    st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, speed, nullptr);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio: Error while writing to CCCR reg, retcode = %d\n", st);
         return st;
@@ -1000,7 +996,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
     uint8_t select_speed = SDIO_BUS_SPEED_SDR50;
     sdmmc_timing_t timing = SDMMC_TIMING_SDR50;
 
-    st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &speed);
+    st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, 0, &speed);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio: Error while reading CCCR reg, retcode = %d\n", st);
         return st;
@@ -1025,7 +1021,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
     UpdateBitsU8(&speed, SDIO_CIA_CCCR_BUS_SPEED_BSS_MASK, SDIO_CIA_CCCR_BUS_SPEED_BSS_LOC,
                  select_speed);
 
-    st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, speed, nullptr);
+    st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_BUS_SPEED_SEL_ADDR, speed, nullptr);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdio: Error while writing to CCCR reg, retcode = %d\n", st);
         return st;
@@ -1058,15 +1054,15 @@ zx_status_t SdioControllerDevice::Enable4BitBus() {
         return ZX_ERR_NOT_SUPPORTED;
     }
     uint8_t bus_ctrl_reg;
-    if ((st = sdmmc().SdioIoRwDirect(false, 0, SDIO_CIA_CCCR_BUS_INTF_CTRL_ADDR, 0,
-                                     &bus_ctrl_reg)) != ZX_OK) {
+    if ((st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_BUS_INTF_CTRL_ADDR, 0, &bus_ctrl_reg)) !=
+        ZX_OK) {
         zxlogf(INFO, "sdio: Error reading the current bus width\n");
         return st;
     }
     UpdateBitsU8(&bus_ctrl_reg, SDIO_CIA_CCCR_INTF_CTRL_BW_MASK, SDIO_CIA_CCCR_INTF_CTRL_BW_LOC,
                  SDIO_BW_4BIT);
-    if ((st = sdmmc().SdioIoRwDirect(true, 0, SDIO_CIA_CCCR_BUS_INTF_CTRL_ADDR, bus_ctrl_reg,
-                                     nullptr)) != ZX_OK) {
+    if ((st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_BUS_INTF_CTRL_ADDR, bus_ctrl_reg,
+                                 nullptr)) != ZX_OK) {
         zxlogf(ERROR, "sdio: Error while switching the bus width\n");
         return st;
     }

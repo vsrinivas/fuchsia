@@ -12,6 +12,29 @@
 
 #include "mock-sdmmc-device.h"
 
+namespace {
+
+std::optional<block::Operation<>> MakeBlockOp(uint32_t command, uint32_t length, uint64_t offset) {
+    std::optional<block::Operation<>> op =
+        block::Operation<>::Alloc(sdmmc::SdmmcBlockDevice::BlockOpSize());
+    if (op) {
+        *op->operation() = block_op_t{
+            .rw = {
+                .command = command,
+                .extra = 0,
+                .vmo = ZX_HANDLE_INVALID,
+                .length = length,
+                .offset_dev = offset,
+                .offset_vmo = 0
+            }
+        };
+    }
+
+    return op;
+}
+
+}  // namespace
+
 namespace sdmmc {
 
 class SdmmcBlockDeviceTest : public SdmmcBlockDevice {
@@ -66,29 +89,6 @@ public:
 
     zx_status_t WaitForTran() override { return ZX_OK; }
 
-    std::optional<block::Operation<>> MakeBlockOp(uint32_t command, uint32_t length,
-                                                  uint64_t offset) {
-        block_info_t block_info;
-        size_t op_size;
-        BlockImplQuery(&block_info, &op_size);
-
-        std::optional<block::Operation<>> op = block::Operation<>::Alloc(op_size);
-        if (op) {
-            *op->operation() = block_op_t{
-                .rw = {
-                    .command = command,
-                    .extra = 0,
-                    .vmo = ZX_HANDLE_INVALID,
-                    .length = length,
-                    .offset_dev = offset,
-                    .offset_vmo = 0
-                }
-            };
-        }
-
-        return op;
-    }
-
 private:
     SdmmcDevice& sdmmc() override { return *mock_sdmmc_; }
 
@@ -117,19 +117,19 @@ TEST(SdmmcBlockDeviceTest, BlockImplQueue) {
         .reserved = 0
     });
 
-    std::optional<block::Operation<>> op1 = dut.MakeBlockOp(BLOCK_OP_WRITE, 1, 0);
+    std::optional<block::Operation<>> op1 = MakeBlockOp(BLOCK_OP_WRITE, 1, 0);
     ASSERT_TRUE(op1.has_value());
 
-    std::optional<block::Operation<>> op2 = dut.MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000);
+    std::optional<block::Operation<>> op2 = MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000);
     ASSERT_TRUE(op2.has_value());
 
-    std::optional<block::Operation<>> op3 = dut.MakeBlockOp(BLOCK_OP_FLUSH, 0, 0);
+    std::optional<block::Operation<>> op3 = MakeBlockOp(BLOCK_OP_FLUSH, 0, 0);
     ASSERT_TRUE(op3.has_value());
 
-    std::optional<block::Operation<>> op4 = dut.MakeBlockOp(BLOCK_OP_READ, 1, 0x400);
+    std::optional<block::Operation<>> op4 = MakeBlockOp(BLOCK_OP_READ, 1, 0x400);
     ASSERT_TRUE(op4.has_value());
 
-    std::optional<block::Operation<>> op5 = dut.MakeBlockOp(BLOCK_OP_READ, 10, 0x2000);
+    std::optional<block::Operation<>> op5 = MakeBlockOp(BLOCK_OP_READ, 10, 0x2000);
     ASSERT_TRUE(op5.has_value());
 
     ASSERT_OK(dut.StartWorkerThread());
@@ -169,25 +169,25 @@ TEST(SdmmcBlockDeviceTest, BlockImplQueueOutOfRange) {
         .reserved = 0
     });
 
-    std::optional<block::Operation<>> op1 = dut.MakeBlockOp(BLOCK_OP_WRITE, 1, 0x1000);
+    std::optional<block::Operation<>> op1 = MakeBlockOp(BLOCK_OP_WRITE, 1, 0x1000);
     ASSERT_TRUE(op1.has_value());
 
-    std::optional<block::Operation<>> op2 = dut.MakeBlockOp(BLOCK_OP_READ, 10, 0x2000);
+    std::optional<block::Operation<>> op2 = MakeBlockOp(BLOCK_OP_READ, 10, 0x2000);
     ASSERT_TRUE(op2.has_value());
 
-    std::optional<block::Operation<>> op3 = dut.MakeBlockOp(BLOCK_OP_WRITE, 8, 0xff8);
+    std::optional<block::Operation<>> op3 = MakeBlockOp(BLOCK_OP_WRITE, 8, 0xff8);
     ASSERT_TRUE(op3.has_value());
 
-    std::optional<block::Operation<>> op4 = dut.MakeBlockOp(BLOCK_OP_READ, 9, 0xff8);
+    std::optional<block::Operation<>> op4 = MakeBlockOp(BLOCK_OP_READ, 9, 0xff8);
     ASSERT_TRUE(op4.has_value());
 
-    std::optional<block::Operation<>> op5 = dut.MakeBlockOp(BLOCK_OP_WRITE, 16, 0xff8);
+    std::optional<block::Operation<>> op5 = MakeBlockOp(BLOCK_OP_WRITE, 16, 0xff8);
     ASSERT_TRUE(op5.has_value());
 
-    std::optional<block::Operation<>> op6 = dut.MakeBlockOp(BLOCK_OP_READ, 0, 0x800);
+    std::optional<block::Operation<>> op6 = MakeBlockOp(BLOCK_OP_READ, 0, 0x800);
     ASSERT_TRUE(op6.has_value());
 
-    std::optional<block::Operation<>> op7 = dut.MakeBlockOp(BLOCK_OP_WRITE, 1, 0xfff);
+    std::optional<block::Operation<>> op7 = MakeBlockOp(BLOCK_OP_WRITE, 1, 0xfff);
     ASSERT_TRUE(op7.has_value());
 
     ASSERT_OK(dut.StartWorkerThread());
@@ -351,6 +351,60 @@ TEST(SdmmcBlockDeviceTest, DdkLifecycle) {
     EXPECT_TRUE(ddk.Ok());
 
     dut.StopWorkerThread();
+}
+
+TEST(SdmmcBlockDeviceTest, CompleteTransactions) {
+    MockSdmmcDevice mock_sdmmc({});
+
+    std::optional<block::Operation<>> op1 = MakeBlockOp(BLOCK_OP_WRITE, 1, 0);
+    ASSERT_TRUE(op1.has_value());
+    bool op1_completed = false;
+
+    std::optional<block::Operation<>> op2 = MakeBlockOp(BLOCK_OP_WRITE, 5, 0x8000);
+    ASSERT_TRUE(op2.has_value());
+    bool op2_completed = false;
+
+    std::optional<block::Operation<>> op3 = MakeBlockOp(BLOCK_OP_FLUSH, 0, 0);
+    ASSERT_TRUE(op3.has_value());
+    bool op3_completed = false;
+
+    std::optional<block::Operation<>> op4 = MakeBlockOp(BLOCK_OP_READ, 1, 0x400);
+    ASSERT_TRUE(op4.has_value());
+    bool op4_completed = false;
+
+    std::optional<block::Operation<>> op5 = MakeBlockOp(BLOCK_OP_READ, 10, 0x2000);
+    ASSERT_TRUE(op5.has_value());
+    bool op5_completed = false;
+
+    auto noop_callback = [](void* ctx, zx_status_t status, block_op_t* op) {
+        *reinterpret_cast<bool*>(ctx) = true;
+    };
+
+    {
+        SdmmcBlockDeviceTest dut(&mock_sdmmc, {
+            .block_count = 0x10000,
+            .block_size = 512,
+            .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
+            .flags = 0,
+            .reserved = 0
+        });
+
+        dut.BlockImplQueue(op1->operation(), noop_callback, &op1_completed);
+        dut.BlockImplQueue(op2->operation(), noop_callback, &op2_completed);
+        dut.BlockImplQueue(op3->operation(), noop_callback, &op3_completed);
+        dut.BlockImplQueue(op4->operation(), noop_callback, &op4_completed);
+        dut.BlockImplQueue(op5->operation(), noop_callback, &op5_completed);
+
+        dut.VerifyAll();
+    }
+
+    EXPECT_TRUE(op1_completed);
+    EXPECT_TRUE(op2_completed);
+    EXPECT_TRUE(op3_completed);
+    EXPECT_TRUE(op4_completed);
+    EXPECT_TRUE(op5_completed);
+
+    mock_sdmmc.VerifyAll();
 }
 
 }  // namespace sdmmc

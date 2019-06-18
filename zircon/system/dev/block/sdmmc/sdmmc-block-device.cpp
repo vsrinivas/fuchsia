@@ -232,7 +232,7 @@ zx_off_t SdmmcBlockDevice::DdkGetSize() {
 
 void SdmmcBlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
     memcpy(info_out, &block_info_, sizeof(*info_out));
-    *block_op_size_out = BlockOperation::OperationSize(sizeof(block_op_t));
+    *block_op_size_out = BlockOpSize();
 }
 
 void SdmmcBlockDevice::BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb,
@@ -308,7 +308,7 @@ zx_status_t SdmmcBlockDevice::WaitForTran() {
             break;
         }
 
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+        zx::nanosleep(zx::deadline_after(zx::msec(10)));
     }
 
     if (attempt == kTranMaxAttempts) {

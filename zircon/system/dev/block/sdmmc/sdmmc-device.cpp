@@ -12,6 +12,7 @@
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/sdio.h>
+#include <lib/zx/time.h>
 #include <pretty/hexdump.h>
 
 #include "sdmmc-device.h"
@@ -36,7 +37,7 @@ zx_status_t SdmmcDevice::SdmmcRequestHelper(sdmmc_req_t* req, uint8_t retries,
     zx_status_t st;
     while (((st = host_.Request(req)) != ZX_OK) && retries > 0) {
         retries--;
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(wait_time)));
+        zx::nanosleep(zx::deadline_after(zx::msec(wait_time)));
     }
     return st;
 }
@@ -211,7 +212,7 @@ zx_status_t SdmmcDevice::SdSwitchUhsVoltage(uint32_t ocr) {
         zxlogf(TRACE, "sd: SD_VOLTAGE_SWITCH failed, retcode = %d\n", st);
         return st;
     }
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
+    zx::nanosleep(zx::deadline_after(zx::msec(20)));
     // TODO: clock gating while switching voltage
     st = host_.SetSignalVoltage(SDMMC_VOLTAGE_V180);
     if (st != ZX_OK) {
@@ -242,7 +243,7 @@ zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) {
             *rocr = req.response[0];
             break;
         }
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+        zx::nanosleep(zx::deadline_after(zx::msec(10)));
     }
     return st;
 }
@@ -362,7 +363,7 @@ zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {
             *rocr = req.response[0];
             break;
         }
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+        zx::nanosleep(zx::deadline_after(zx::msec(10)));
     }
     return st;
 }
