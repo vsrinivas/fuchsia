@@ -8,6 +8,7 @@ use crate::{
     common::{ProtocolState, UpdateCheckSchedule},
     protocol::Cohort,
 };
+use std::time::Duration;
 
 /// The Context provides the protocol context for a given update check operation.  This is
 /// information that's passed to the Policy to allow it to properly reason about what can and cannot
@@ -30,8 +31,7 @@ pub struct Response {
     pub app_responses: Vec<AppResponse>,
 
     /// If Omaha dictated that a longer poll interval be used, it will be reported here.
-    #[allow(dead_code)]
-    pub server_dictated_poll_interval: Option<u64>,
+    pub server_dictated_poll_interval: Option<Duration>,
 }
 
 /// For each application that had an update check performed, a new App (potentially with new Cohort

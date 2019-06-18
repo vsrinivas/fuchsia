@@ -22,7 +22,7 @@ use futures::{compat::Stream01CompatExt, prelude::*};
 use http::response::Parts;
 use log::{error, info, warn};
 use std::str::Utf8Error;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 pub mod update_check;
 
@@ -178,8 +178,10 @@ where
                     // Update check succeeded, update |last_update_time|.
                     context.schedule.last_update_time = clock::now();
 
+                    // Update the service dictated poll interval (which is an Option<>, so doesn't
+                    // need to be tested for existence here).
                     context.state.server_dictated_poll_interval =
-                        result.server_dictated_poll_interval.map(Duration::from_secs);
+                        result.server_dictated_poll_interval;
 
                     // Increment |consecutive_failed_update_attempts| if any app failed to install,
                     // otherwise reset it to 0.
