@@ -24,15 +24,23 @@ extern "C" {
 //
 //
 
+// Return true iff |n| is a power of 2.
+// REQUIRES: |n > 0|.
 bool
 is_pow2_u32(uint32_t n);
 
+// Return |n| rounded-up to the nearest power of 2.
+// REQUIRES: |n > 0 && n <= 0x80000000|.
 uint32_t
 pow2_ru_u32(uint32_t n);
 
+// Return |n| rounded-down to the nearest power of 2.
+// REQUIRES: |n > 0|.
 uint32_t
 pow2_rd_u32(uint32_t n);
 
+// Return the most-significant bit position for |n|.
+// REQUIRES: |n > 0|.
 uint32_t
 msb_idx_u32(uint32_t n);  // 0-based bit position
 

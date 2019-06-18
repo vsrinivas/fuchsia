@@ -5,6 +5,7 @@
 # These rules are only used by the Fuchsia platform build.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 import("build_settings.gni")
 
@@ -91,5 +92,45 @@ template("graphics_compute_vulkan_executable") {
         },
       ]
     }
+  }
+}
+
+# NOTE: DO NOT CALL DIRECTLY, use graphics_compute_unittest_package() instead.
+#
+# Accepts the same variables as graphics_compute_unittests_package()
+#
+template("graphics_compute_unittest_package_rule") {
+  _package_name = get_label_info(target_name, "name")
+
+  # Generate the binary test program that will end up in the package.
+  _package_binary = "bin_${_package_name}"
+  executable(_package_binary) {
+    testonly = true
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "tests",
+                             "target_name",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += invoker.tests
+    deps += [
+      # This version sets up logging appropriately for Fuchsia on startup.
+      "//src/lib/fxl/test:gtest_main",
+    ]
+  }
+
+  unittest_package(target_name) {
+    forward_variables_from(invoker, "*", [ "tests" ])
+    tests = [
+      {
+        name = _package_binary
+      },
+    ]
+    deps = [
+      ":${_package_binary}",
+    ]
   }
 }

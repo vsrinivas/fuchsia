@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("build_rules.gni")
+
+# Defines a source set that uses the GoogleTest library automatically.
+# Also sets |testonly| to true for you. This target can later be a
+# dependency of a graphics_compute_unittest_package() target.
+#
+template("graphics_compute_unittests") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    testonly = true
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//third_party/googletest:gtest" ]
+  }
+}
+
+# Defines a Fuchsia package or host executable that can run several
+# graphics_compute_unittests targets at the same time.
+#
+# Variables:
+#    tests: [required] A list of graphics_compute_unittests targets this
+#        package depends on.
+#
+template("graphics_compute_unittest_package") {
+  graphics_compute_unittest_package_rule(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}

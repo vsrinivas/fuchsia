@@ -49,3 +49,36 @@ template("graphics_compute_vulkan_executable") {
     deps += [ graphics_compute_vulkan_loader_target ]
   }
 }
+
+# Used to generate an executable that depends on GoogleTest and statically
+# links a gtest_main library appropriate for the host. DO NOT CALL DIRECTLY,
+# Use graphics_compute_unittest_package() instead.
+template("graphics_compute_unittest_package_rule") {
+  if (defined(invoker.package_name)) {
+    _package_name = invoker.package_name
+  } else {
+    _package_name = target_name
+  }
+  executable(_package_name) {
+    testonly = true
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "package_name",
+                             "target_name",
+                             "tests",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += invoker.tests
+    deps += [ "//third_party/googletest:gtest_main" ]
+  }
+  if (defined(invoker.package_name) && _package_name != target_name) {
+    group(target_name) {
+      deps = [
+        ":${_package_name}",
+      ]
+    }
+  }
+}
