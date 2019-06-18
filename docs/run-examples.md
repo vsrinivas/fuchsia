@@ -99,7 +99,7 @@ the application on Fuchsia as a [component](glossary.md#component). This is
 the proper way to create a Fuchsia package.
 
 You run a Fuchsia component by referencing its
-[Fuchsia package URl](glossary.md#fuchsia-pkg-url).
+[Fuchsia package URL](glossary.md#fuchsia_pkg-url).
 
 ## Set the build to include examples
 
