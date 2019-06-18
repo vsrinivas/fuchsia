@@ -62,7 +62,10 @@ constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
 constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
 
-// Tells VFS to exit by shutting down the fshost.
+// Tells VFS to exit by shutting down the fshost. Note that this is called from
+// multiple different locations; during suspension, and in a low-memory
+// situation. Currently, both of these calls happen on the same dispatcher
+// thread, but consider thread safety when refactoring.
 void vfs_exit(const zx::event& fshost_event) {
     zx_status_t status;
     if ((status = fshost_event.signal(0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
@@ -101,6 +104,12 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 Coordinator::Coordinator(CoordinatorConfig config)
     : config_(std::move(config)), outgoing_services_(config_.dispatcher) {
+    if (config_.lowmem_event) {
+        wait_on_oom_event_.set_object(config_.lowmem_event.get());
+        wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
+        wait_on_oom_event_.Begin(config_.dispatcher);
+    }
+
     InitOutgoingServices();
 }
 
@@ -1557,6 +1566,11 @@ void Coordinator::InitOutgoingServices() {
     };
     public_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
                          fbl::MakeRefCounted<fs::Service>(debug));
+}
+
+void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                             zx_status_t status, const zx_packet_signal_t* signal) {
+    vfs_exit(fshost_event());
 }
 
 zx_status_t Coordinator::BindOutgoingServices(zx::channel listen_on) {

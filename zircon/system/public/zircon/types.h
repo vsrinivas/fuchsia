@@ -366,6 +366,9 @@ typedef uint32_t zx_obj_type_t;
 // depends on having an upper bound for the number of object types.
 #define ZX_OBJ_TYPE_UPPER_BOUND     ((zx_obj_type_t)64u)
 
+typedef uint32_t zx_system_event_type_t;
+#define ZX_SYSTEM_EVENT_LOW_MEMORY  ((zx_system_event_type_t)1u)
+
 // Used in channel_read_etc.
 typedef struct zx_handle_info {
     zx_handle_t handle;

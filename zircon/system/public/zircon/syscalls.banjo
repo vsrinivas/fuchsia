@@ -127,6 +127,10 @@ protocol Api {
      argtype="features features"]
     system_get_features(uint32 kind) -> (zx.status status, uint32 features);
 
+    /// Retrieve a handle to a system event.
+    [rights="None."]
+    system_get_event(handle<job> root_job, uint32 kind) -> (zx.status status, handle<event> event);
+
     //
     //
     // Abstraction of machine operations
@@ -710,7 +714,7 @@ protocol Api {
                  array<voidptr>:buffer_size buffer, usize buffer_size) ->
         (zx.status status);
 
-    /// Shim for vmo_create_child
+    /// Shim for vmo_create_child.
     [rights="handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.",
      argtype="out handle_acquire",
      vdsocall]

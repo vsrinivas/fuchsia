@@ -45,6 +45,7 @@ unified_only = [
   "interrupt",
   "profile",
   "resource",
+  "system-event",
 ]
 
 group("core") {

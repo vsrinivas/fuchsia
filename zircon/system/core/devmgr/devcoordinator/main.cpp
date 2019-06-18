@@ -1022,6 +1022,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    zx_handle_t lowmem_event;
+    status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_LOW_MEMORY, &lowmem_event);
+    if (status != ZX_OK) {
+        fprintf(stderr, "devcoordinator: failed to get lowmem event, assuming test "
+                        "environment and continuing\n");
+    } else {
+        config.lowmem_event = zx::event(lowmem_event);
+    }
+
     devmgr::Coordinator coordinator(std::move(config));
     status = coordinator.InitializeCoreDevices(devmgr_args.sys_device_driver);
     if (status != ZX_OK) {

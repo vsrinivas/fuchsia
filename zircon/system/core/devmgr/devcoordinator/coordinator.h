@@ -104,6 +104,8 @@ struct CoordinatorConfig {
     zx::job devhost_job;
     // Event that controls the fshost.
     zx::event fshost_event;
+    // Event that is signaled by the kernel in OOM situation.
+    zx::event lowmem_event;
     // Async dispatcher for the coordinator.
     async_dispatcher_t* dispatcher;
     // Boot arguments from the Arguments service.
@@ -280,6 +282,10 @@ private:
     fbl::RefPtr<Device> test_device_;
 
     SuspendContext suspend_context_;
+
+    void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
+    async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
 
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
 

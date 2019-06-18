@@ -27,3 +27,5 @@ public:
 private:
     explicit EventDispatcher(uint32_t options);
 };
+
+fbl::RefPtr<EventDispatcher> GetLowMemEvent();

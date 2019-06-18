@@ -15,8 +15,11 @@
 #include <lib/debuglog.h>
 #include <libzbi/zbi-cpp.h>
 #include <mexec.h>
+#include <object/event_dispatcher.h>
+#include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
+#include <object/user_handles.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform.h>
 #include <platform/halt_helper.h>
@@ -32,6 +35,7 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/types.h>
 
+#include "priv.h"
 #include "system_priv.h"
 
 #define LOCAL_TRACE 0
@@ -361,4 +365,28 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
         return ZX_ERR_INVALID_ARGS;
     }
     return ZX_OK;
+}
+
+// zx_status_t zx_system_get_event
+zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_handle* out) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    if (kind != ZX_SYSTEM_EVENT_LOW_MEMORY) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::RefPtr<JobDispatcher> job;
+    zx_status_t status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Validate that the job is in fact the first usermode job (aka root job).
+    if (GetRootJobDispatcher() != job->parent()) {
+        return ZX_ERR_ACCESS_DENIED;
+    }
+
+    // Do not grant default event rights, as we don't want userspace to, for
+    // example, be able to signal this event.
+    return out->make(GetLowMemEvent(), ZX_DEFAULT_SYSTEM_EVENT_LOW_MEMORY_RIGHTS);
 }
