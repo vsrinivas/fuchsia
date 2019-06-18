@@ -33,7 +33,6 @@ class ViewClippingTest : public VkSessionTest {
   // the base VkSessionTest doesn't have.
   void TearDown() override {
     VkSessionTest::TearDown();
-
     view_linker_.reset();
   }
 
@@ -42,11 +41,6 @@ class ViewClippingTest : public VkSessionTest {
     auto session_context = VkSessionTest::CreateSessionContext();
 
     FXL_DCHECK(!view_linker_);
-    FXL_DCHECK(!rounded_rect_factory_);
-
-    rounded_rect_factory_ =
-        std::make_unique<escher::RoundedRectFactory>(escher()->GetWeakPtr());
-    session_context.escher_rounded_rect_factory = rounded_rect_factory_.get();
 
     view_linker_ = std::make_unique<ViewLinker>();
     session_context.view_linker = view_linker_.get();
@@ -56,7 +50,6 @@ class ViewClippingTest : public VkSessionTest {
 
  private:
   std::unique_ptr<ViewLinker> view_linker_;
-  std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
 };
 
 static constexpr float kNear = 1.f;
