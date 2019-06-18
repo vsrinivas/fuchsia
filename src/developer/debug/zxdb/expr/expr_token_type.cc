@@ -41,7 +41,8 @@ namespace {
 constexpr unsigned kLangAll = static_cast<unsigned>(ExprLanguage::kC) |
                               static_cast<unsigned>(ExprLanguage::kRust);
 constexpr unsigned kLangC = static_cast<unsigned>(ExprLanguage::kC);
-constexpr unsigned kLangRust = static_cast<unsigned>(ExprLanguage::kRust);
+// Currently unused:
+// constexpr unsigned kLangRust = static_cast<unsigned>(ExprLanguage::kRust);
 
 // Note that we allow a number of things like "sizeof" in Rust as well because
 // there are no good alternatives and these constructs can be useful. We may
