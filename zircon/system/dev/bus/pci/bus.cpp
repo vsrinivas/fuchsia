@@ -117,13 +117,12 @@ zx_status_t Bus::MapEcam(void) {
 
     pci_infof("ecam for segment %u mapped at %p (size: %#zx)\n", info_.segment_group,
               ecam_->get(), ecam_->get_size());
-    has_ecam_ = true;
     return ZX_OK;
 }
 
 zx_status_t Bus::MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* out_config) {
     zx_status_t status;
-    if (has_ecam_) {
+    if (ecam_) {
         status = MmioConfig::Create(bdf, &(*ecam_), info_.start_bus_num, info_.end_bus_num,
                                     out_config);
     } else {

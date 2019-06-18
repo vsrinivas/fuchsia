@@ -68,49 +68,43 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_paddr_t bdf_start = reinterpret_cast<zx_paddr_t>(ecam->get());
     // Find the offset into the ecam region for the given bdf address. Every bus
     // has 32 devices, every device has 8 functions, and each function has an
     // extended config space of 4096 bytes. The base address of the vmo provided
     // to the bus driver corresponds to the start_bus_num, so offset the bdf address
     // based on the bottom of our ecam.
-    bdf_start += (bdf.bus_id - start_bus) * PCIE_ECAM_BYTES_PER_BUS;
+    zx_vaddr_t bdf_start = (bdf.bus_id - start_bus) * PCIE_ECAM_BYTES_PER_BUS;
     bdf_start += bdf.device_id * PCI_MAX_FUNCTIONS_PER_DEVICE * PCIE_EXTENDED_CONFIG_SIZE;
     bdf_start += bdf.function_id * PCIE_EXTENDED_CONFIG_SIZE;
 
+    ddk::MmioView view = ecam->View(bdf_start, ZX_PAGE_SIZE);
     // Can't use std::make_unique because the constructor is private.
-    *config = std::unique_ptr<MmioConfig>(new MmioConfig(bdf, bdf_start));
+    *config = std::unique_ptr<MmioConfig>(new MmioConfig(bdf, std::move(view)));
     return ZX_OK;
 }
 
 uint8_t MmioConfig::Read(const PciReg8 addr) const {
-    auto reg = reinterpret_cast<const volatile uint8_t*>(base_ + addr.offset());
-    return *reg;
+    return view_.Read<uint8_t>(addr.offset());
 }
 
 uint16_t MmioConfig::Read(const PciReg16 addr) const {
-    auto reg = reinterpret_cast<const volatile uint16_t*>(base_ + addr.offset());
-    return htole16(*reg);
+    return view_.Read<uint16_t>(addr.offset());
 }
 
 uint32_t MmioConfig::Read(const PciReg32 addr) const {
-    auto reg = reinterpret_cast<const volatile uint32_t*>(base_ + addr.offset());
-    return htole32(*reg);
+    return view_.Read<uint32_t>(addr.offset());
 }
 
 void MmioConfig::Write(PciReg8 addr, uint8_t val) const {
-    auto reg = reinterpret_cast<volatile uint8_t*>(base_ + addr.offset());
-    *reg = val;
+    view_.Write(val, addr.offset());
 }
 
 void MmioConfig::Write(PciReg16 addr, uint16_t val) const {
-    auto reg = reinterpret_cast<volatile uint16_t*>(base_ + addr.offset());
-    *reg = htole16(val);
+    view_.Write(val, addr.offset());
 }
 
 void MmioConfig::Write(PciReg32 addr, uint32_t val) const {
-    auto reg = reinterpret_cast<volatile uint32_t*>(base_ + addr.offset());
-    *reg = htole32(val);
+    view_.Write(val, addr.offset());
 }
 
 const char* MmioConfig::type(void) const {

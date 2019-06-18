@@ -84,11 +84,11 @@ private:
     ddk::PcirootProtocolClient pciroot_;
     pci_platform_info_t info_;
     std::optional<ddk::MmioBuffer> ecam_;
-    bool has_ecam_;
     fbl::unique_ptr<PciRoot> root_;
     mutable fbl::Mutex dev_list_lock_;
 
-    // Devices are keyed by BDF so they should not experience any collisions.
+    // All devices downstream of this bus are held here. Devices are keyed by
+    // BDF so they will not experience any collisions.
     pci::DeviceList device_list_;
 };
 

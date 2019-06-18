@@ -163,9 +163,9 @@ public:
     const char* type(void) const final;
 
 private:
-    MmioConfig(pci_bdf_t bdf, zx_paddr_t base)
-        : Config(bdf), base_(base) {}
-    const zx_paddr_t base_;
+    MmioConfig(pci_bdf_t bdf, ddk::MmioView&& view)
+        : Config(bdf), view_(std::move(view)) {}
+    const ddk::MmioView view_;
 };
 
 // ProxyConfig is used with PCI buses that do not support MMIO config space,
