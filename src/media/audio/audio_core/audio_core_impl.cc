@@ -14,12 +14,25 @@
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 
 namespace media::audio {
+namespace {
+// All audio renderer buffers will need to fit within this VMAR. We want to
+// choose a size here large enough that will accomodate all the mappings
+// required by all clients while also being small enough to avoid unnecessary
+// page table fragmentation.
+constexpr size_t kAudioRendererVmarSize = 16ull * 1024 * 1024 * 1024;
+constexpr zx_vm_option_t kAudioRendererVmarFlags =
+    ZX_VM_COMPACT | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_1GB;
+}  // namespace
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
 AudioCoreImpl::AudioCoreImpl(
     std::unique_ptr<sys::ComponentContext> startup_context)
-    : device_manager_(this), ctx_(std::move(startup_context)) {
+    : device_manager_(this),
+      ctx_(std::move(startup_context)),
+      vmar_manager_(fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr,
+                                             kAudioRendererVmarFlags)) {
+  FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
   fxl::LogSettings settings;
 
 #ifdef NDEBUG

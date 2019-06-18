@@ -9,6 +9,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fzl/vmar-manager.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <mutex>
@@ -75,6 +76,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   float system_gain_db() const { return system_gain_db_; }
   bool system_muted() const { return system_muted_; }
 
+  fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
+
  private:
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;
@@ -111,6 +114,11 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   // Either way, Gain and Mute should remain fully independent.
   float system_gain_db_ = kDefaultSystemGainDb;
   bool system_muted_ = kDefaultSystemMuted;
+
+  // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these
+  // in a sub-vmar allows us to take advantage of ASLR while minimizing page
+  // table fragmentation.
+  fbl::RefPtr<fzl::VmarManager> vmar_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioCoreImpl);
 };
