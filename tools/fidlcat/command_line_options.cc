@@ -71,8 +71,8 @@ const char kPrettyPrintHelp[] = R"(  --pretty-print
 const char kColorsHelp[] = R"(  --colors=[never|auto|always]
       For pretty print, use colors:
       - never
-      - auto: only if running in a terminal
-      - always (default value))";
+      - auto: only if running in a terminal (default value)
+      - always)";
 
 const char kColumnsHelp[] = R"(  --columns=<size>
       For pretty print, width of the display. By default, on a terminal, use

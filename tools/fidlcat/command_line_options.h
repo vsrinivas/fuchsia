@@ -18,7 +18,7 @@ struct CommandLineOptions {
   std::vector<std::string> symbol_paths;
   std::vector<std::string> fidl_ir_paths;
   bool pretty_print = false;
-  std::string colors = "always";
+  std::string colors = "auto";
   int columns = 0;
 };
 
