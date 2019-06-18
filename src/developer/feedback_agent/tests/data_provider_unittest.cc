@@ -171,13 +171,7 @@ MATCHER_P2(MatchesAttachment, expected_key, expected_value,
 // class, without connecting through FIDL.
 class DataProviderImplTest : public gtest::RealLoopFixture {
  public:
-  void SetUp() override {
-    stub_logger_.reset(new StubLogger());
-    FXL_CHECK(service_directory_provider_.AddService(
-                  stub_logger_->GetHandler(dispatcher())) == ZX_OK);
-
-    ResetDataProvider(kDefaultConfig);
-  }
+  void SetUp() override { ResetDataProvider(kDefaultConfig); }
 
  protected:
   // Resets the underlying |data_provider_| using the given |config|.
@@ -193,6 +187,14 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
       FXL_CHECK(service_directory_provider_.AddService(
                     stub_scenic_->GetHandler()) == ZX_OK);
     }
+  }
+
+  // Resets the underlying |logger_| with the given log |messages|.
+  void ResetLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
+    stub_logger_.reset(new StubLogger());
+    stub_logger_->set_messages(messages);
+    FXL_CHECK(service_directory_provider_.AddService(
+                  stub_logger_->GetHandler(dispatcher())) == ZX_OK);
   }
 
   GetScreenshotResponse GetScreenshot() {
@@ -228,11 +230,6 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
   }
   const std::vector<TakeScreenshotResponse>& get_scenic_responses() const {
     return stub_scenic_->take_screenshot_responses();
-  }
-
-  void set_logger_messages(
-      const std::vector<fuchsia::logger::LogMessage>& messages) {
-    stub_logger_->set_messages(messages);
   }
 
   std::unique_ptr<DataProviderImpl> data_provider_;
@@ -388,9 +385,17 @@ TEST_F(DataProviderImplTest,
 }
 
 TEST_F(DataProviderImplTest, GetData_SmokeTest) {
+  DataProvider_GetData_Result result = GetData();
+
+  ASSERT_TRUE(result.is_response());
+  // There is nothing else we can assert here as no missing annotation nor
+  // attachment is fatal.
+}
+
+TEST_F(DataProviderImplTest, GetData_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log
   // message here to check that we are attaching the logs.
-  set_logger_messages({
+  ResetLogger({
       BuildLogMessage(FX_LOG_INFO, "log message",
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
@@ -398,15 +403,11 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   DataProvider_GetData_Result result = GetData();
 
   ASSERT_TRUE(result.is_response());
-  // As we control the system log attachment, we can expect it to be present and
-  // with a particular value.
   ASSERT_TRUE(result.response().data.has_attachments());
   EXPECT_THAT(result.response().data.attachments(),
               testing::Contains(MatchesAttachment(
                   "log.system.txt",
                   "[15604.000][07559][07687][foo] INFO: log message\n")));
-  // There is nothing else we can assert here as no missing annotation nor
-  // attachment is fatal.
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationWhitelist) {
