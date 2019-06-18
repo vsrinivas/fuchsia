@@ -2,15 +2,115 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/images/cpp/fidl_test_base.h>
-#include <gtest/gtest.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/zx/channel.h>
-#include <vulkan/vulkan.h>
+#include "garnet/lib/vulkan/src/swapchain/image_pipe_surface.h"
+#include "gtest/gtest.h"
+#include "vk_dispatch_table_helper.h"
+#include "vulkan/vk_layer.h"
 
-#include <set>
+class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
+ public:
+  MockImagePipeSurface() {}
+
+  bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
+                   VkFormat format, VkImageUsageFlags usage,
+                   VkSwapchainCreateFlagsKHR swapchain_flags,
+                   fuchsia::images::ImageInfo image_info, uint32_t image_count,
+                   const VkAllocationCallbacks* pAllocator,
+                   std::vector<ImageInfo>* image_info_out) override {
+    for (uint32_t i = 0; i < image_count; ++i) {
+      // Allocate a buffer.
+      uint32_t width = image_info.width;
+      uint32_t height = image_info.height;
+      VkImageCreateInfo create_info{
+          .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+          .pNext = nullptr,
+          .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+          .imageType = VK_IMAGE_TYPE_2D,
+          .format = format,
+          .extent = {.width = width, .height = height, .depth = 1},
+          .mipLevels = 1,
+          .arrayLayers = 1,
+          .samples = VK_SAMPLE_COUNT_1_BIT,
+          .tiling = VK_IMAGE_TILING_OPTIMAL,
+          .usage = usage,
+          .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+          .queueFamilyIndexCount = 0,
+          .pQueueFamilyIndices = nullptr,
+          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      };
+
+      VkImage image;
+      VkResult result =
+          pDisp->CreateImage(device, &create_info, pAllocator, &image);
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "VkCreateImage failed: %d", result);
+        return false;
+      }
+
+      VkMemoryRequirements memory_requirements;
+      pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
+
+      VkExportMemoryAllocateInfoKHR export_allocate_info = {
+          .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
+          .pNext = nullptr,
+          .handleTypes =
+              VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+
+      VkMemoryAllocateInfo alloc_info{
+          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+          .pNext = &export_allocate_info,
+          .allocationSize = memory_requirements.size,
+          .memoryTypeIndex = 0,
+      };
+      VkDeviceMemory memory;
+      result = pDisp->AllocateMemory(device, &alloc_info, pAllocator, &memory);
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "vkAllocMemory failed: %d", result);
+        return false;
+      }
+
+      result = pDisp->BindImageMemory(device, image, memory, 0);
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "vkBindImageMemory failed: %d", result);
+        return false;
+      }
+      zx::vmo vmo;
+      // Export the vkDeviceMemory to a VMO.
+      VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
+          VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA, nullptr,
+          memory, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
+
+      result = pDisp->GetMemoryZirconHandleFUCHSIA(device, &get_handle_info,
+                                                   vmo.reset_and_get_address());
+      if (result != VK_SUCCESS) {
+        fprintf(stderr, "GetMemoryZirconHandleFUCHSIA failed: %d", result);
+        return false;
+      }
+
+      ImageInfo info = {
+          .image = image,
+          .memory = memory,
+          .image_id = next_image_id(),
+      };
+      image_info_out->push_back(info);
+    }
+    return true;
+  }
+  void RemoveImage(uint32_t image_id) override {}
+  void PresentImage(uint32_t image_id, std::vector<zx::event> acquire_fences,
+                    std::vector<zx::event> release_fences) override {
+    presented_.push_back(
+        {image_id, std::move(acquire_fences), std::move(release_fences)});
+  }
+
+  struct Presented {
+    uint32_t image_id;
+    std::vector<zx::event> acquire_fences;
+    std::vector<zx::event> release_fences;
+  };
+
+  std::vector<Presented> presented_;
+};
 
 class TestSwapchain {
  public:
@@ -165,6 +265,64 @@ class TestSwapchain {
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
+  void AcquireNoSemaphore() {
+    ASSERT_TRUE(init_);
+
+    MockImagePipeSurface surface;
+    VkSwapchainKHR swapchain;
+
+    ASSERT_EQ(VK_SUCCESS,
+              CreateSwapchainHelper(reinterpret_cast<VkSurfaceKHR>(&surface),
+                                    &swapchain));
+
+    uint32_t image_index;
+    EXPECT_EQ(VK_SUCCESS,
+              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(0u, image_index);
+    EXPECT_EQ(VK_SUCCESS,
+              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(1u, image_index);
+    EXPECT_EQ(VK_SUCCESS,
+              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(2u, image_index);
+    EXPECT_EQ(VK_NOT_READY,
+              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE, &image_index));
+
+    VkQueue queue;
+    vkGetDeviceQueue(vk_device_, 0, 0, &queue);
+
+    uint32_t present_index = 0;
+    VkResult present_result;
+    VkPresentInfoKHR present_info = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 0,
+        .pWaitSemaphores = nullptr,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &present_index,
+        .pResults = &present_result,
+    };
+    EXPECT_EQ(VK_SUCCESS, queue_present_khr_(queue, &present_info));
+    EXPECT_EQ(1u, surface.presented_.size());
+    EXPECT_EQ(1u, surface.presented_[0].acquire_fences.size());
+    ASSERT_EQ(1u, surface.presented_[0].release_fences.size());
+    surface.presented_[0].release_fences[0].signal(0, ZX_EVENT_SIGNALED);
+    surface.presented_.erase(surface.presented_.begin());
+
+    EXPECT_EQ(VK_SUCCESS,
+              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(0u, image_index);
+    EXPECT_EQ(VK_NOT_READY,
+              acquire_next_image_khr_(vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                      VK_NULL_HANDLE, &image_index));
+  }
+
   VkInstance vk_instance_;
   VkDevice vk_device_;
   PFN_vkCreateSwapchainKHR create_swapchain_khr_;
@@ -176,150 +334,8 @@ class TestSwapchain {
   bool init_ = false;
 };
 
+TEST(Swapchain, AcquireNoSemaphore) { TestSwapchain().AcquireNoSemaphore(); }
+
 TEST(Swapchain, Surface) { TestSwapchain().Surface(); }
 
 TEST(Swapchain, Create) { TestSwapchain().CreateSwapchain(); }
-
-namespace {
-
-class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
- public:
-  FakeImagePipe(fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
-      : binding_(this, std::move(request)) {}
-
-  void NotImplemented_(const std::string& name) override {
-    printf("%s\n", name.c_str());
-  }
-
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                ::zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
-                fuchsia::images::MemoryType memory_type) override {
-    // Do nothing.
-  }
-
-  void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    ::std::vector<::zx::event> acquire_fences,
-                    ::std::vector<::zx::event> release_fences,
-                    PresentImageCallback callback) override {
-    presented_.push_back({image_id, std::move(acquire_fences),
-                          std::move(release_fences), std::move(callback)});
-  }
-
-  struct Presented {
-    uint32_t image_id;
-    std::vector<zx::event> acquire_fences;
-    std::vector<zx::event> release_fences;
-    PresentImageCallback callback;
-  };
-
-  std::vector<Presented> presented_;
-
- private:
-  fidl::Binding<fuchsia::images::ImagePipe> binding_;
-};
-
-uint64_t ZirconIdFromHandle(uint32_t handle) {
-  zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK)
-    return 0;
-  return info.koid;
-}
-
-}  // namespace
-
-class SwapchainFidlTest : public gtest::TestLoopFixture {
- public:
-  void SetUp() override { TestLoopFixture::SetUp(); }
-
-  std::unique_ptr<FakeImagePipe> imagepipe_;
-};
-
-TEST_F(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
-  TestSwapchain test;
-  ASSERT_TRUE(test.init_);
-
-  zx::channel local_endpoint, remote_endpoint;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &local_endpoint, &remote_endpoint));
-
-  imagepipe_ = std::make_unique<FakeImagePipe>(
-      fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
-          std::move(remote_endpoint)));
-
-  VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
-      .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
-      .imagePipeHandle = local_endpoint.release(),
-      .pNext = nullptr,
-  };
-  VkSurfaceKHR surface;
-  EXPECT_EQ(VK_SUCCESS,
-            vkCreateImagePipeSurfaceFUCHSIA(test.vk_instance_, &create_info,
-                                            nullptr, &surface));
-
-  VkSwapchainKHR swapchain;
-  ASSERT_EQ(VK_SUCCESS, test.CreateSwapchainHelper(surface, &swapchain));
-
-  VkQueue queue;
-  vkGetDeviceQueue(test.vk_device_, 0, 0, &queue);
-
-  uint32_t image_index;
-  // Acquire all initial images.
-  for (uint32_t i = 0; i < 3; i++) {
-    EXPECT_EQ(VK_SUCCESS, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                              VK_NULL_HANDLE, &image_index));
-    EXPECT_EQ(i, image_index);
-  }
-
-  EXPECT_EQ(VK_NOT_READY, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                              VK_NULL_HANDLE, &image_index));
-
-  uint32_t present_index;  // Initialized below.
-  VkResult present_result;
-  VkPresentInfoKHR present_info = {
-      .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-      .pNext = nullptr,
-      .waitSemaphoreCount = 0,
-      .pWaitSemaphores = nullptr,
-      .swapchainCount = 1,
-      .pSwapchains = &swapchain,
-      .pImageIndices = &present_index,
-      .pResults = &present_result,
-  };
-
-  std::set<uint64_t> acquire_fences;
-
-  for (uint32_t i = 0; i < 100; i++) {
-    present_index = i % 3;
-    ASSERT_EQ(VK_SUCCESS, test.queue_present_khr_(queue, &present_info));
-
-    RunLoopUntilIdle();
-
-    ASSERT_EQ(1u, imagepipe_->presented_.size());
-    EXPECT_EQ(1u, imagepipe_->presented_[0].acquire_fences.size());
-
-    // Validate no duplicate acquire fences.
-    acquire_fences.insert(
-        ZirconIdFromHandle(imagepipe_->presented_[0].acquire_fences[0].get()));
-    EXPECT_EQ(i + 1, acquire_fences.size());
-
-    ASSERT_EQ(1u, imagepipe_->presented_[0].release_fences.size());
-    imagepipe_->presented_[0].release_fences[0].signal(0, ZX_EVENT_SIGNALED);
-    imagepipe_->presented_[0].callback({0, 0});
-
-    imagepipe_->presented_.erase(imagepipe_->presented_.begin());
-
-    RunLoopUntilIdle();
-
-    EXPECT_EQ(VK_SUCCESS, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                              VK_NULL_HANDLE, &image_index));
-    EXPECT_EQ(present_index, image_index);
-
-    EXPECT_EQ(VK_NOT_READY, test.acquire_next_image_khr_(
-                                test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                VK_NULL_HANDLE, &image_index));
-  }
-}
