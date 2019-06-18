@@ -9,8 +9,9 @@ use {
     crate::directory::entry::EntryInfo,
     byteorder::{LittleEndian, WriteBytesExt},
     fidl_fuchsia_io::{
-        MAX_FILENAME, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        MAX_FILENAME, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -22,11 +23,7 @@ use {
 /// Compares flags provided for a new connection with the flags of a parent connection.  Returns
 /// adjusted flags for the new connection (cleaning up some ambiguities) or a fidl Status error, in
 /// case new new connection flags are not permitting the connection to be opened.
-pub fn new_connection_validate_flags(
-    parent_flags: u32,
-    mut flags: u32,
-    mode: u32,
-) -> Result<u32, Status> {
+pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
     // the target is a directory.
     if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_DIRECTORY != 0 {
@@ -39,16 +36,14 @@ pub fn new_connection_validate_flags(
 
     if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
         flags &= !OPEN_FLAG_NODE_REFERENCE;
-        flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
+        flags &= OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
     }
 
-    // For directories OPEN_FLAG_POSIX means that WRITABLE permission need to be inherited from the
-    // parent connection.  As this method is only used for directories, here it applies always.
+    // For directories OPEN_FLAG_POSIX means WRITABLE permission.  Parent connection must have
+    // already checked the flag, so if it is present it just measn WRITABLE.
     if flags & OPEN_FLAG_POSIX != 0 {
-        if parent_flags & OPEN_RIGHT_WRITABLE != 0 {
-            flags |= OPEN_RIGHT_WRITABLE;
-        }
         flags &= !OPEN_FLAG_POSIX;
+        flags |= OPEN_RIGHT_WRITABLE;
     }
 
     let allowed_flags =
@@ -56,10 +51,6 @@ pub fn new_connection_validate_flags(
 
     let prohibited_flags =
         OPEN_FLAG_APPEND | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_TRUNCATE;
-
-    if !stricter_or_same_rights(flags, parent_flags) {
-        return Err(Status::ACCESS_DENIED);
-    }
 
     // Pseudo directories do not allow mounting at this point.
     if flags & OPEN_RIGHT_ADMIN != 0 {
@@ -75,6 +66,24 @@ pub fn new_connection_validate_flags(
     }
 
     Ok(flags)
+}
+
+/// Directories need to make sure that connections to child entries do not receive more rights than
+/// the conneciton to the directory itself.  Plus there is special handling of the OPEN_FLAG_POSIX
+/// flag.  This function should be called before calling [`new_connection_validate_flags`] if both
+/// are needed.
+pub fn check_child_connection_flags(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
+    if parent_flags & OPEN_RIGHT_WRITABLE == 0 {
+        // OPEN_FLAG_POSIX is effectively OPEN_RIGHT_WRITABLE, but with "soft fail", when the
+        // target is a directory, so we need to remove it.
+        flags &= !OPEN_FLAG_POSIX;
+    }
+
+    if stricter_or_same_rights(parent_flags, flags) {
+        Ok(flags)
+    } else {
+        Err(Status::ACCESS_DENIED)
+    }
 }
 
 /// Splits a `path` string into components, also checking if it is in a canonical form, disallowing

@@ -4,15 +4,18 @@
 
 //! Implementation of a "lazy" pseudo directory.  See [`Lazy`] for details.
 
-use {
-    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
-    crate::directory::{
-        common::{encode_dirent, validate_and_split_path},
+use crate::{
+    common::{inherit_rights_for_clone, send_on_open_with_error},
+    directory::{
+        common::{check_child_connection_flags, encode_dirent, validate_and_split_path},
         connection::DirectoryConnection,
         entry::{DirectoryEntry, EntryInfo},
         watchers::{Watchers, WatchersAddError, WatchersSendError},
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
     },
+};
+
+use {
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -365,15 +368,9 @@ where
     GetEntry: FnMut(&str) -> Result<Box<DirectoryEntry + 'entries>, Status> + Send,
     WatcherEvents: Stream<Item = WatcherEvent> + FusedStream + Unpin + Send,
 {
-    fn add_connection(
-        &mut self,
-        parent_flags: u32,
-        flags: u32,
-        mode: u32,
-        server_end: ServerEnd<NodeMarker>,
-    ) {
+    fn add_connection(&mut self, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
         if let Some(connection) =
-            DirectoryConnection::<TraversalPosition>::connect(parent_flags, flags, mode, server_end)
+            DirectoryConnection::<TraversalPosition>::connect(flags, mode, server_end)
         {
             self.connections.push(connection);
         }
@@ -388,12 +385,7 @@ where
 
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                match try_inherit_rights_for_clone(connection.flags, flags) {
-                    Ok(clone_flags) => {
-                        self.add_connection(connection.flags, clone_flags, 0, object)
-                    }
-                    Err(status) => send_on_open_with_error(flags, object, status),
-                }
+                self.handle_clone(connection.flags, flags, 0, object);
             }
             DirectoryRequest::Close { responder } => {
                 responder.send(ZX_OK)?;
@@ -431,7 +423,7 @@ where
                 responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
             DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                self.handle_open(flags, mode, &path, object);
+                self.handle_open(connection.flags, flags, mode, &path, object);
                 // As we optimize our `Open` requests by navigating multiple path components at
                 // once, we may attach a connected to a child node.
                 may_affect_children = true;
@@ -474,8 +466,27 @@ where
         Ok(HandleRequestResult { connection_state: ConnectionState::Alive, may_affect_children })
     }
 
+    fn handle_clone(
+        &mut self,
+        parent_flags: u32,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        let flags = match inherit_rights_for_clone(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
+
+        self.add_connection(flags, mode, server_end);
+    }
+
     fn handle_open(
         &mut self,
+        parent_flags: u32,
         flags: u32,
         mut mode: u32,
         path: &str,
@@ -486,8 +497,8 @@ where
             return;
         }
 
-        if path == "." {
-            self.open(flags, mode, &mut iter::empty(), server_end);
+        if path == "." || path == "./" {
+            self.handle_clone(parent_flags, flags, mode, server_end);
             return;
         }
 
@@ -502,6 +513,14 @@ where
         if is_dir {
             mode |= MODE_TYPE_DIRECTORY;
         }
+
+        let flags = match check_child_connection_flags(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
 
         // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
         self.open(flags, mode, &mut names, server_end);
@@ -756,7 +775,7 @@ where
         let name = match path.next() {
             Some(name) => name,
             None => {
-                self.add_connection(!0, flags, mode, server_end);
+                self.add_connection(flags, mode, server_end);
                 return;
             }
         };

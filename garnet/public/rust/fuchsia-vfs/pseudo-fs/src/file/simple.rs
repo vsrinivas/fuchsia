@@ -32,14 +32,17 @@
 
 #![warn(missing_docs)]
 
-use {
-    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
-    crate::directory::entry::{DirectoryEntry, EntryInfo},
-    crate::file::{
+use crate::{
+    common::{inherit_rights_for_clone, send_on_open_with_error},
+    directory::entry::{DirectoryEntry, EntryInfo},
+    file::{
         connection::{ConnectionState, FileConnection},
         DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
         DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     },
+};
+
+use {
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -293,18 +296,11 @@ where
 
     /// Attaches a new connection, client end `server_end`, to this object.  Any error are reported
     /// as `OnOpen` events on the `server_end` itself.
-    fn add_connection(
-        &mut self,
-        parent_flags: u32,
-        flags: u32,
-        mode: u32,
-        server_end: ServerEnd<NodeMarker>,
-    ) {
+    fn add_connection(&mut self, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
         if let Some(conn) = FileConnection::connect(
-            parent_flags,
             flags,
-            self.protection_attributes,
             mode,
+            self.protection_attributes,
             server_end,
             self.on_read.is_some(),
             self.on_write.is_some(),
@@ -322,12 +318,7 @@ where
     ) -> Result<ConnectionState, Error> {
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
-                match try_inherit_rights_for_clone(connection.flags, flags) {
-                    Ok(clone_flags) => {
-                        self.add_connection(connection.flags, clone_flags, 0, object)
-                    }
-                    Err(status) => send_on_open_with_error(flags, object, status),
-                }
+                self.handle_clone(connection.flags, flags, object);
                 Ok(ConnectionState::Alive)
             }
             FileRequest::Close { responder } => {
@@ -360,6 +351,18 @@ where
                 }
             }
         }
+    }
+
+    fn handle_clone(&mut self, parent_flags: u32, flags: u32, server_end: ServerEnd<NodeMarker>) {
+        let flags = match inherit_rights_for_clone(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
+
+        self.add_connection(flags, 0, server_end);
     }
 
     fn handle_close<R>(
@@ -397,7 +400,7 @@ where
             return;
         }
 
-        self.add_connection(!0, flags, mode, server_end);
+        self.add_connection(flags, mode, server_end);
     }
 
     fn entry_info(&self) -> EntryInfo {

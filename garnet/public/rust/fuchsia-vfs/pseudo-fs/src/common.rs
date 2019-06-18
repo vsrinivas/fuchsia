@@ -21,28 +21,34 @@ pub(crate) type AsyncFnOnce<'a, ArgTy, OutputTy> =
 /// Set of known rights.
 const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN;
 
-/// Returns true if the rights flags in `flags_a` does not exceed those in `flags_b`.
-pub fn stricter_or_same_rights(flags_a: u32, flags_b: u32) -> bool {
-    let rights_a = flags_a & FS_RIGHTS;
-    let rights_b = flags_b & FS_RIGHTS;
-    return (rights_a & !rights_b) == 0;
+/// Returns true if the rights flags in `flags` do not exceed those in `parent_flags`.
+pub fn stricter_or_same_rights(parent_flags: u32, flags: u32) -> bool {
+    let parent_rights = parent_flags & FS_RIGHTS;
+    let rights = flags & FS_RIGHTS;
+    return (rights & !parent_rights) == 0;
 }
 
 /// Common logic for rights processing during cloning a node, shared by both file and directory
 /// implementations.
-pub fn try_inherit_rights_for_clone(source_flags: u32, mut flags: u32) -> Result<u32, Status> {
+pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
     if (flags & CLONE_FLAG_SAME_RIGHTS != 0) && (flags & FS_RIGHTS != 0) {
         return Err(Status::INVALID_ARGS);
     }
-    flags |= source_flags & (OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE);
+
+    // We preserve OPEN_FLAG_APPEND as this is what is the most convenient for the POSIX emulation.
+    //
+    // OPEN_FLAG_NODE_REFERENCE is enforced, according to our current FS permissions design.
+    flags |= parent_flags & (OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE);
+
     // If CLONE_FLAG_SAME_RIGHTS is requested, cloned connection will inherit the same rights
-    // as those from the originating connection.
+    // as those from the originating connection.  We have ensured that no FS_RIGHTS flags are set
+    // above.
     if flags & CLONE_FLAG_SAME_RIGHTS != 0 {
-        flags &= !FS_RIGHTS;
-        flags |= source_flags & FS_RIGHTS;
-        flags &= !CLONE_FLAG_SAME_RIGHTS
+        flags &= !CLONE_FLAG_SAME_RIGHTS;
+        flags |= parent_flags & FS_RIGHTS;
     }
-    if !stricter_or_same_rights(flags, source_flags) {
+
+    if !stricter_or_same_rights(parent_flags, flags) {
         return Err(Status::ACCESS_DENIED);
     }
 

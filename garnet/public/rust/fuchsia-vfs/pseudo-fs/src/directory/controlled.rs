@@ -116,7 +116,7 @@ enum Command<'entries> {
     },
 }
 
-/// This is a "remote control" for a [`DirectoryEntry`] that it also [`Controllable] wrapped in a
+/// This is a "remote control" for a [`DirectoryEntry`] that it also [`Controllable`] wrapped in a
 /// [`Controlled`].  An instance of this type is used to "remotely control" a directory entry,
 /// allowing addition and removal of entries while not owning the directory directly.  A directory
 /// entry is wrapped using a [`controlled()`] method.

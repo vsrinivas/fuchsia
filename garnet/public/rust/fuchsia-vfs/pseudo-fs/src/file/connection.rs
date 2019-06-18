@@ -4,9 +4,9 @@
 
 //! Implementation of an individual connection to a file.
 
+use crate::{common::send_on_open_with_error, file::common::new_connection_validate_flags};
+
 use {
-    crate::common::send_on_open_with_error,
-    crate::file::common::new_connection_validate_flags,
     failure::Error,
     fidl::{encoding::OutOfLine, endpoints::ServerEnd},
     fidl_fuchsia_io::{
@@ -96,10 +96,9 @@ impl FileConnection {
     /// `flags` value that might be adjusted for normalization.  Closue should return new buffer
     /// content and a "dirty" flag, or an error to send in `OnOpen`.
     pub fn connect<InitBuffer>(
-        parent_flags: u32,
         flags: u32,
-        protection_attributes: u32,
         mode: u32,
+        protection_attributes: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
@@ -109,14 +108,13 @@ impl FileConnection {
     where
         InitBuffer: FnOnce(u32) -> Result<(Vec<u8>, bool), Status>,
     {
-        let flags =
-            match new_connection_validate_flags(parent_flags, flags, mode, readable, writable) {
-                Ok(updated) => updated,
-                Err(status) => {
-                    send_on_open_with_error(flags, server_end, status);
-                    return None;
-                }
-            };
+        let flags = match new_connection_validate_flags(flags, mode, readable, writable) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return None;
+            }
+        };
 
         let (buffer, was_written) = match init_buffer(flags) {
             Ok((buffer, was_written)) => (buffer, was_written),
@@ -137,10 +135,9 @@ impl FileConnection {
     }
 
     pub fn connect_async<InitBuffer, OnReadRes>(
-        parent_flags: u32,
         flags: u32,
-        protection_attributes: u32,
         mode: u32,
+        protection_attributes: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
@@ -151,14 +148,13 @@ impl FileConnection {
         InitBuffer: FnOnce(u32) -> (BufferResult<OnReadRes>, bool),
         OnReadRes: Future<Output = Result<Vec<u8>, Status>> + Send,
     {
-        let flags =
-            match new_connection_validate_flags(parent_flags, flags, mode, readable, writable) {
-                Ok(updated) => updated,
-                Err(status) => {
-                    send_on_open_with_error(flags, server_end, status);
-                    return InitialConnectionState::Failed;
-                }
-            };
+        let flags = match new_connection_validate_flags(flags, mode, readable, writable) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return InitialConnectionState::Failed;
+            }
+        };
 
         let (maybe_buffer_future, was_written) = init_buffer(flags);
 

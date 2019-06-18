@@ -23,7 +23,6 @@ use {
 /// connections currently rely on it to reject unsupported functionality, such as attempting to read
 /// from a file when `on_read` is `None`.
 pub fn new_connection_validate_flags(
-    parent_flags: u32,
     mut flags: u32,
     mode: u32,
     readable: bool,
@@ -67,11 +66,11 @@ pub fn new_connection_validate_flags(
         // allowed_flags takes precedence over prohibited_flags.
         & !allowed_flags;
 
-    if flags & OPEN_RIGHT_READABLE != 0 && parent_flags & OPEN_RIGHT_READABLE == 0 {
+    if !readable && flags & OPEN_RIGHT_READABLE != 0 {
         return Err(Status::ACCESS_DENIED);
     }
 
-    if flags & OPEN_RIGHT_WRITABLE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
+    if !writable && flags & OPEN_RIGHT_WRITABLE != 0 {
         return Err(Status::ACCESS_DENIED);
     }
 

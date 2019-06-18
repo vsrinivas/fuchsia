@@ -4,10 +4,10 @@
 
 //! Implementation of a "simple" pseudo directory.  See [`Simple`] for details.
 
-use {
-    crate::common::{send_on_open_with_error, try_inherit_rights_for_clone},
-    crate::directory::{
-        common::{encode_dirent, validate_and_split_path},
+use crate::{
+    common::{inherit_rights_for_clone, send_on_open_with_error},
+    directory::{
+        common::{check_child_connection_flags, encode_dirent, validate_and_split_path},
         connection::DirectoryConnection,
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
@@ -15,6 +15,9 @@ use {
         watchers::{Watchers, WatchersAddError, WatchersSendError},
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
     },
+};
+
+use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
@@ -115,18 +118,10 @@ impl<'entries> Simple<'entries> {
         self.add_boxed_entry(name, Box::new(entry))
     }
 
-    /// Attaches a new connection, client end `server_end`, to this object.  Any error are reported
-    /// as `OnOpen` events on the `server_end` itself.
-    fn add_connection(
-        &mut self,
-        parent_flags: u32,
-        flags: u32,
-        mode: u32,
-        server_end: ServerEnd<NodeMarker>,
-    ) {
-        if let Some(conn) =
-            SimpleDirectoryConnection::connect(parent_flags, flags, mode, server_end)
-        {
+    /// Attaches a new connection (`server_end`) to this object.  Any error are reported as
+    /// `OnOpen` events on the `server_end` itself.
+    fn add_connection(&mut self, flags: u32, mode: u32, server_end: ServerEnd<NodeMarker>) {
+        if let Some(conn) = SimpleDirectoryConnection::connect(flags, mode, server_end) {
             self.connections.push(conn);
         }
     }
@@ -140,12 +135,7 @@ impl<'entries> Simple<'entries> {
 
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                match try_inherit_rights_for_clone(connection.flags, flags) {
-                    Ok(clone_flags) => {
-                        self.add_connection(connection.flags, clone_flags, 0, object)
-                    }
-                    Err(status) => send_on_open_with_error(flags, object, status),
-                }
+                self.handle_clone(connection.flags, flags, 0, object);
             }
             DirectoryRequest::Close { responder } => {
                 responder.send(ZX_OK)?;
@@ -183,7 +173,7 @@ impl<'entries> Simple<'entries> {
                 responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
             DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                self.handle_open(flags, mode, &path, object);
+                self.handle_open(connection.flags, flags, mode, &path, object);
                 // As we optimize our `Open` requests by navigating multiple path components at
                 // once, we may attach a connected to a child node.
                 may_affect_children = true;
@@ -236,8 +226,27 @@ impl<'entries> Simple<'entries> {
         Ok(HandleRequestResult { connection_state: ConnectionState::Alive, may_affect_children })
     }
 
+    fn handle_clone(
+        &mut self,
+        parent_flags: u32,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        let flags = match inherit_rights_for_clone(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
+
+        self.add_connection(flags, mode, server_end);
+    }
+
     fn handle_open(
         &mut self,
+        parent_flags: u32,
         flags: u32,
         mut mode: u32,
         path: &str,
@@ -248,8 +257,8 @@ impl<'entries> Simple<'entries> {
             return;
         }
 
-        if path == "." {
-            self.open(flags, mode, &mut iter::empty(), server_end);
+        if path == "." || path == "./" {
+            self.handle_clone(parent_flags, flags, mode, server_end);
             return;
         }
 
@@ -264,6 +273,14 @@ impl<'entries> Simple<'entries> {
         if is_dir {
             mode |= MODE_TYPE_DIRECTORY;
         }
+
+        let flags = match check_child_connection_flags(parent_flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
 
         // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
         self.open(flags, mode, &mut names, server_end);
@@ -417,7 +434,7 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
         let name = match path.next() {
             Some(name) => name,
             None => {
-                self.add_connection(!0, flags, mode, server_end);
+                self.add_connection(flags, mode, server_end);
                 return;
             }
         };
@@ -737,7 +754,7 @@ mod tests {
             "file" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(0, root, async move |first_proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
             async fn assert_read_file(root: &DirectoryProxy) {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
@@ -746,15 +763,15 @@ mod tests {
                 assert_close!(file);
             }
 
-            await!(assert_read_file(&first_proxy));
+            await!(assert_read_file(&root));
 
             clone_as_directory_assert_err!(
-                &first_proxy,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
                 Status::ACCESS_DENIED
             );
 
-            assert_close!(first_proxy);
+            assert_close!(root);
         });
     }
 
@@ -873,7 +890,7 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
             async fn open_read_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 path: &'a str,
@@ -893,7 +910,7 @@ mod tests {
             }
 
             {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
                 let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
                 await!(open_read_write_close(
@@ -935,7 +952,7 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, async move |root| {
             async fn open_write_close<'a>(
                 from_dir: &'a DirectoryProxy,
                 new_content: &'a str,
@@ -1138,26 +1155,42 @@ mod tests {
     }
 
     #[test]
-    fn directories_do_not_restrict_write_permission() {
+    fn directories_restrict_nested_read_permissions() {
         let root = pseudo_directory! {
-            "file" => read_write(
-                || Ok(b"Content".to_vec()),
-                20,
-                |content| {
-                    assert_eq!(*&content, b"New content");
-                    Ok(())
-                }),
+            "dir" => pseudo_directory! {
+                "file" => read_only(|| Ok(b"Content".to_vec())),
+            },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
-            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        run_server_client(0, root, async move |root| {
+            open_as_file_assert_err!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "dir/file",
+                Status::ACCESS_DENIED
+            );
 
-            assert_read!(file, "Content");
-            assert_seek!(file, 0, Start);
-            assert_write!(file, "New content");
+            assert_close!(root);
+        });
+    }
 
-            assert_close!(file);
+    #[test]
+    fn directories_restrict_nested_write_permissions() {
+        let root = pseudo_directory! {
+            "dir" => pseudo_directory! {
+                "file" => write_only(100, |_content| {
+                    panic!("Access permissions should not allow this file to be written");
+                }),
+            },
+        };
+
+        run_server_client(0, root, async move |root| {
+            open_as_file_assert_err!(
+                &root,
+                OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                "dir/file",
+                Status::ACCESS_DENIED
+            );
 
             assert_close!(root);
         });
@@ -1222,19 +1255,7 @@ mod tests {
             },
         };
 
-        #[allow(unreachable_code)]
         run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
-            // TODO This test is broken, as there is a bug in access check permissions.  We are
-            // not properly enforcing them.  The test was succeeding by accident and we have
-            // missed the issue.
-            //
-            // I will fix the permission checks in a separate change as it requires modifications
-            // to 7 other tests that are currently succeeding by acident as well.
-            //
-            // Do not forget to remove `#[allow(unreachable_code)]` above.
-            assert_close!(root);
-            return;
-
             let nested = open_get_directory_proxy_assert_ok!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
@@ -1437,13 +1458,12 @@ mod tests {
             OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
             root,
             async move |root| {
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
-
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
+                open_as_file_assert_err!(
+                    &root,
+                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                    "file",
+                    Status::ACCESS_DENIED
+                );
 
                 clone_as_directory_assert_err!(
                     &root,
@@ -1463,16 +1483,15 @@ mod tests {
         };
 
         run_server_client(
-            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_NODE_REFERENCE,
             root,
             async move |root| {
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
-
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
+                open_as_file_assert_err!(
+                    &root,
+                    OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                    "file",
+                    Status::ACCESS_DENIED
+                );
 
                 clone_as_directory_assert_err!(
                     &root,
@@ -1486,7 +1505,7 @@ mod tests {
     }
 
     #[test]
-    fn node_reference_allows_read_dirent() {
+    fn node_reference_allows_read_dirents() {
         let root = pseudo_directory! {
             "etc" => pseudo_directory! {
                 "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
@@ -1497,48 +1516,44 @@ mod tests {
             "files" => read_only(|| Ok(b"Content".to_vec())),
         };
 
-        run_server_client(
-            OPEN_RIGHT_READABLE | OPEN_FLAG_NODE_REFERENCE,
-            root,
-            async move |root| {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                        .add(DIRENT_TYPE_FILE, b"files");
+        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, async move |root| {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_FILE, b"files");
 
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
+                assert_read_dirents!(root, 1000, expected.into_vec());
+            }
 
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+            {
+                let flags = OPEN_FLAG_DESCRIBE;
+                let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_FILE, b"fstab")
-                        .add(DIRENT_TYPE_DIRECTORY, b"ssh");
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"fstab")
+                    .add(DIRENT_TYPE_DIRECTORY, b"ssh");
 
-                    assert_read_dirents!(etc_dir, 1000, expected.into_vec());
-                    assert_close!(etc_dir);
-                }
+                assert_read_dirents!(etc_dir, 1000, expected.into_vec());
+                assert_close!(etc_dir);
+            }
 
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+            {
+                let flags = OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
 
-                    assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
-                    assert_close!(ssh_dir);
-                }
+                assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
+                assert_close!(ssh_dir);
+            }
 
-                assert_close!(root);
-            },
-        );
+            assert_close!(root);
+        });
     }
 
     #[test]

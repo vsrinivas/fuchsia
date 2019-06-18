@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{common::send_on_open_with_error, directory::common::new_connection_validate_flags};
+
 use {
-    crate::common::send_on_open_with_error,
-    crate::directory::common::new_connection_validate_flags,
     fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -57,12 +57,11 @@ where
     /// necessary.  Returns a [`DirectoryConnection`] object as a [`StreamFuture`], or in case of
     /// an error, sends an appropriate `OnOpen` event (if requested) and returns `None`.
     pub fn connect(
-        parent_flags: u32,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) -> Option<StreamFuture<DirectoryConnection<TraversalPosition>>> {
-        let flags = match new_connection_validate_flags(parent_flags, flags, mode) {
+        let flags = match new_connection_validate_flags(flags, mode) {
             Ok(updated) => updated,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
