@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 //
+
 #include "bus.h"
 #include "bridge.h"
 #include "common.h"
@@ -13,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <list>
@@ -81,12 +81,7 @@ zx_status_t Bus::Initialize() {
     // them to the allocators provided by Pci(e)Root. The initial root is
     // created to manage the start of the bus id range given to use by the
     // pciroot protocol.
-    fbl::AllocChecker ac;
-    root_ = fbl::unique_ptr<PciRoot>(new (&ac) PciRoot(info_.start_bus_num, pciroot_));
-    if (!ac.check()) {
-        pci_errorf("failed to allocate root bookkeeping!\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+    root_ = std::unique_ptr<PciRoot>(new PciRoot(info_.start_bus_num, pciroot_));
 
     // Begin our bus scan starting at our root
     ScanDownstream();
@@ -126,7 +121,7 @@ zx_status_t Bus::MapEcam(void) {
     return ZX_OK;
 }
 
-zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* out_config) {
+zx_status_t Bus::MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* out_config) {
     zx_status_t status;
     if (has_ecam_) {
         status = MmioConfig::Create(bdf, &(*ecam_), info_.start_bus_num, info_.end_bus_num,
@@ -181,7 +176,7 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
     UpstreamNode* upstream = entry.upstream;
     for (uint8_t dev_id = _dev_id; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
         for (uint8_t func_id = _func_id; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
-            fbl::RefPtr<Config> config;
+            std::unique_ptr<Config> config;
             pci_bdf_t bdf = {static_cast<uint8_t>(bus_id), dev_id, func_id};
             zx_status_t status = MakeConfig(bdf, &config);
             if (status != ZX_OK) {

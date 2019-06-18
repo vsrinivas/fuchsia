@@ -36,7 +36,7 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
 }
 
 zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf) {
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
     zx_status_t st = MmioConfig::Create(bdf, &pciroot().ecam().get_mmio(), 0, 1, &cfg);
     if (st != ZX_OK) {
         return st;

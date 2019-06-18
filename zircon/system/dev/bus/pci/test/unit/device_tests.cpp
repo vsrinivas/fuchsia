@@ -11,7 +11,6 @@
 #include "../fakes/fake_upstream_node.h"
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/limits.h>
 #include <zxtest/zxtest.h>
@@ -47,7 +46,7 @@ private:
 };
 
 TEST_F(PciDeviceTests, CreationTest) {
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
 
     // This test creates a device, goes through its init sequence, links it into
     // the toplogy, and then has it linger. It will be cleaned up by TearDown()
@@ -92,7 +91,7 @@ TEST_F(PciDeviceTests, BasicCapabilityTest) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00};
     static_assert(sizeof(virtio_input) == 256);
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
 
     // Copy the config dump into a device entry in the ecam.
     memcpy(pciroot_proto().ecam().get(default_bdf()).config, virtio_input, sizeof(virtio_input));
@@ -142,7 +141,7 @@ TEST_F(PciDeviceTests, InvalidPtrCapabilityTest) {
     raw_cfg[kCap2] = static_cast<uint8_t>(Capability::Id::kMsiX);
     raw_cfg[kCap2 + 1] = kInvalidCap;
 
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
     ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().get_mmio(), 0, 1, &cfg));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
               Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
@@ -155,7 +154,7 @@ TEST_F(PciDeviceTests, InvalidPtrCapabilityTest) {
 // funding a pointer cycle while parsing capabilities.
 TEST_F(PciDeviceTests, PtrCycleCapabilityTest) {
     // Boilerplate to get a device corresponding to the default_bdf().
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
     auto& raw_cfg = pciroot_proto().ecam().get(default_bdf()).config;
     auto& fake_dev = pciroot_proto().ecam().get(default_bdf()).device;
 
@@ -189,7 +188,7 @@ TEST_F(PciDeviceTests, PtrCycleCapabilityTest) {
 // type that only one should exist of in a system.
 TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
     // Boilerplate to get a device corresponding to the default_bdf().
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
     auto& raw_cfg = pciroot_proto().ecam().get(default_bdf()).config;
     auto& fake_dev = pciroot_proto().ecam().get(default_bdf()).device;
 

@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <ddk/debug.h>
 #include <ddktl/protocol/pciroot.h>
-#include <fbl/alloc_checker.h>
 #include <inttypes.h>
 #include <pretty/hexdump.h>
 
@@ -61,7 +60,7 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf,
                                ddk::MmioBuffer* ecam,
                                uint8_t start_bus,
                                uint8_t end_bus,
-                               fbl::RefPtr<Config>* config) {
+                               std::unique_ptr<Config>* config) {
     if (bdf.bus_id < start_bus ||
         bdf.bus_id > end_bus ||
         bdf.device_id >= PCI_MAX_DEVICES_PER_BUS ||
@@ -79,13 +78,8 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf,
     bdf_start += bdf.device_id * PCI_MAX_FUNCTIONS_PER_DEVICE * PCIE_EXTENDED_CONFIG_SIZE;
     bdf_start += bdf.function_id * PCIE_EXTENDED_CONFIG_SIZE;
 
-    fbl::AllocChecker ac;
-    *config = AdoptRef(new (&ac) MmioConfig(bdf, bdf_start));
-    if (!ac.check()) {
-        zxlogf(ERROR, "failed to allocate memory for PciConfig!\n");
-        return ZX_ERR_NO_MEMORY;
-    }
-
+    // Can't use std::make_unique because the constructor is private.
+    *config = std::unique_ptr<MmioConfig>(new MmioConfig(bdf, bdf_start));
     return ZX_OK;
 }
 
@@ -126,14 +120,10 @@ const char* MmioConfig::type(void) const {
 // Proxy Config Implementation
 zx_status_t ProxyConfig::Create(pci_bdf_t bdf,
                                 ddk::PcirootProtocolClient* proto,
-                                fbl::RefPtr<Config>* config) {
-    fbl::AllocChecker ac;
-    *config = AdoptRef(new (&ac) ProxyConfig(bdf, proto));
-    if (!ac.check()) {
-        zxlogf(ERROR, "failed to allocate memory for PciConfig!\n");
-        return ZX_ERR_NO_MEMORY;
-    }
+                                std::unique_ptr<Config>* config) {
 
+    // Can't use std::make_unique because the constructor is private.
+    *config = std::unique_ptr<ProxyConfig>(new ProxyConfig(bdf, proto));
     return ZX_OK;
 }
 

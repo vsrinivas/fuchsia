@@ -24,7 +24,7 @@ namespace pci {
 
 // Bridges rely on most of the protected Device members when they can
 Bridge::Bridge(zx_device_t* parent,
-               fbl::RefPtr<Config>&& config,
+               std::unique_ptr<Config>&& config,
                UpstreamNode* upstream,
                BusLinkInterface* bli,
                uint8_t mbus_id)
@@ -32,7 +32,7 @@ Bridge::Bridge(zx_device_t* parent,
       UpstreamNode(UpstreamNode::Type::BRIDGE, mbus_id) {}
 
 zx_status_t Bridge::Create(zx_device_t* parent,
-                           fbl::RefPtr<Config>&& config,
+                           std::unique_ptr<Config>&& config,
                            UpstreamNode* upstream,
                            BusLinkInterface* bli,
                            uint8_t managed_bus_id,

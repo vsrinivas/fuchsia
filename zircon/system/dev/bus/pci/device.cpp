@@ -18,7 +18,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <inttypes.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -32,7 +31,7 @@ namespace { // anon namespace.  Externals do not need to know about DeviceImpl
 class DeviceImpl : public Device {
 public:
     static zx_status_t Create(zx_device_t* parent,
-                              fbl::RefPtr<Config>&& cfg,
+                              std::unique_ptr<Config>&& cfg,
                               UpstreamNode* upstream,
                               BusLinkInterface* bli);
 
@@ -44,14 +43,14 @@ public:
 
 protected:
     DeviceImpl(zx_device_t* parent,
-               fbl::RefPtr<Config>&& cfg,
+               std::unique_ptr<Config>&& cfg,
                UpstreamNode* upstream,
                BusLinkInterface* bli)
         : Device(parent, std::move(cfg), upstream, bli, false) {}
 };
 
 zx_status_t DeviceImpl::Create(zx_device_t* parent,
-                               fbl::RefPtr<Config>&& cfg,
+                               std::unique_ptr<Config>&& cfg,
                                UpstreamNode* upstream,
                                BusLinkInterface* bli) {
     fbl::AllocChecker ac;
@@ -113,7 +112,7 @@ zx_status_t Device::CreateProxy() {
 }
 
 zx_status_t Device::Create(zx_device_t* parent,
-                           fbl::RefPtr<Config>&& config,
+                           std::unique_ptr<Config>&& config,
                            UpstreamNode* upstream,
                            BusLinkInterface* bli) {
     return DeviceImpl::Create(parent, std::move(config), upstream, bli);

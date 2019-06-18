@@ -26,7 +26,7 @@ namespace pci {
 class Bridge : public pci::Device, public UpstreamNode {
 public:
     static zx_status_t Create(zx_device_t* parent,
-                              fbl::RefPtr<Config>&& config,
+                              std::unique_ptr<Config>&& config,
                               UpstreamNode* upstream,
                               BusLinkInterface* bli,
                               uint8_t mbus_id,
@@ -65,7 +65,7 @@ protected:
 
 private:
     Bridge(zx_device_t* parent,
-           fbl::RefPtr<Config>&&,
+           std::unique_ptr<Config>&&,
            UpstreamNode* upstream,
            BusLinkInterface* bli,
            uint8_t managed_bus_id);

@@ -8,9 +8,6 @@
 #include <ddk/mmio-buffer.h>
 #include <ddktl/protocol/pciroot.h>
 #include <endian.h>
-#include <fbl/intrusive_single_list.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <lib/mmio/mmio.h>
 #include <stdio.h>
 #include <zircon/hw/pci.h>
@@ -56,8 +53,7 @@ private:
 
 // Config supplies the factory for creating the appropriate pci config
 // object based on the address space of the pci device.
-class Config : public fbl::SinglyLinkedListable<fbl::RefPtr<Config>>,
-               public fbl::RefCounted<Config> {
+class Config {
 public:
     // Standard PCI configuration space values. Offsets from PCI Firmware Spec ch 6.
     static constexpr PciReg16 kVendorId = PciReg16(0x0);
@@ -157,7 +153,7 @@ public:
                               ddk::MmioBuffer* ecam_,
                               uint8_t start_bus,
                               uint8_t end_bus,
-                              fbl::RefPtr<Config>* config);
+                              std::unique_ptr<Config>* config);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
     uint32_t Read(const PciReg32 addr) const final;
@@ -184,7 +180,7 @@ class ProxyConfig final : public Config {
 public:
     static zx_status_t Create(pci_bdf_t bdf,
                               ddk::PcirootProtocolClient* proto,
-                              fbl::RefPtr<Config>* config);
+                              std::unique_ptr<Config>* config);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
     uint32_t Read(const PciReg32 addr) const final;

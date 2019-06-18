@@ -14,7 +14,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <list>
 
@@ -79,7 +78,7 @@ private:
     // Scan a specific bus
     void ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list);
     // Creates a Config object for accessing the config space of the device at |bdf|.
-    zx_status_t MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* config);
+    zx_status_t MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* config);
 
     // members
     ddk::PcirootProtocolClient pciroot_;

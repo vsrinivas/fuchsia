@@ -20,7 +20,6 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <hw/pci.h>
 #include <lib/zx/channel.h>
 #include <region-alloc/region-alloc.h>
@@ -84,7 +83,7 @@ public:
         bool is_prefetchable;
         uint32_t bar_id; // The bar index in the config space. If the bar is 64 bit
         // then this corresponds to the first half of the register pair
-        fbl::unique_ptr<PciAllocation> allocation;
+        std::unique_ptr<PciAllocation> allocation;
     };
 
     struct Capabilities {
@@ -112,7 +111,7 @@ public:
 
     // Create, but do not initialize, a device.
     static zx_status_t Create(zx_device_t* parent,
-                              fbl::RefPtr<Config>&& config,
+                              std::unique_ptr<Config>&& config,
                               UpstreamNode* upstream,
                               BusLinkInterface* bli);
     zx_status_t CreateProxy();
@@ -170,7 +169,7 @@ public:
     // Requests a device unplug itself from its UpstreamNode and the Bus list.
     virtual void Unplug() TA_EXCL(dev_lock_);
     // TODO(cja): port void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
-    const fbl::RefPtr<Config>& config() const { return cfg_; }
+    const std::unique_ptr<Config>& config() const { return cfg_; }
 
     bool plugged_in() const { return plugged_in_; }
     bool disabled() const { return disabled_; }
@@ -196,7 +195,7 @@ public:
     // traits facilitate that for us.
 protected:
     Device(zx_device_t* parent,
-           fbl::RefPtr<Config>&& config,
+           std::unique_ptr<Config>&& config,
            UpstreamNode* upstream,
            BusLinkInterface* bli,
            bool is_bridge)
@@ -236,7 +235,7 @@ protected:
 
     fbl::Mutex cmd_reg_lock_;       // Protection for access to the command register.
     const bool is_bridge_;          // True if this device is also a bridge
-    const fbl::RefPtr<Config> cfg_; // Pointer to the device's config interface.
+    const std::unique_ptr<Config> cfg_; // Pointer to the device's config interface.
     uint16_t vendor_id_;            // The device's vendor ID, as read from config
     uint16_t device_id_;            // The device's device ID, as read from config
     uint8_t class_id_;              // The device's class ID, as read from config.

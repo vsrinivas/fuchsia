@@ -7,8 +7,6 @@
 #include "../../config.h"
 #include "../fakes/fake_pciroot.h"
 #include <ddktl/protocol/pciroot.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <zircon/limits.h>
 #include <zxtest/zxtest.h>
 
@@ -196,7 +194,7 @@ void PciConfigTests::ConfigReadWriteImpl(Config* cfg) {
 }
 
 TEST_F(PciConfigTests, MmioIntegration) {
-    fbl::RefPtr<Config> cfg1, cfg2;
+    std::unique_ptr<Config> cfg1, cfg2;
     ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf1(), &pciroot_proto().ecam().get_mmio(), 0, 1,
                                         &cfg1));
     ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf2(), &pciroot_proto().ecam().get_mmio(), 0, 1,
@@ -205,21 +203,21 @@ TEST_F(PciConfigTests, MmioIntegration) {
 }
 
 TEST_F(PciConfigTests, MmioConfigReadWrite) {
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
     ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf1(), &pciroot_proto().ecam().get_mmio(), 0, 1,
                                         &cfg));
     ConfigReadWriteImpl(cfg.get());
 }
 
 TEST_F(PciConfigTests, ProxyIntegration) {
-    fbl::RefPtr<Config> cfg1, cfg2;
+    std::unique_ptr<Config> cfg1, cfg2;
     ASSERT_EQ(ZX_OK, ProxyConfig::Create(default_bdf1(), &pciroot_client(), &cfg1));
     ASSERT_EQ(ZX_OK, ProxyConfig::Create(default_bdf2(), &pciroot_client(), &cfg2));
     IntegrationTestImpl(cfg1.get(), cfg2.get());
 }
 
 TEST_F(PciConfigTests, ProxyConfigReadWrite) {
-    fbl::RefPtr<Config> cfg;
+    std::unique_ptr<Config> cfg;
     ASSERT_EQ(ZX_OK, ProxyConfig::Create(default_bdf1(), &pciroot_client(), &cfg));
     ConfigReadWriteImpl(cfg.get());
 }
