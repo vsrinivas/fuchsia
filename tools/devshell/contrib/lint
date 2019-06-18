@@ -14,17 +14,22 @@
 ##
 ##   --fix     If supported by the linter tool for the target language,
 ##             attempt to apply recommended fixes
-##   --dry-run Stops the program short of running the linters
+##   --dry-run Print the linter commands but don't run them
+##   --verbose Print the linter commands before running them
 ##   --all     Lints all code in the git repo under the current working
 ##             directory.
-##   --files   Allows the user to specify files.  Files are comma separated.
-##             Globs are dealt with by bash; fx lint "--files=foo/*" will
-##             work as expected.
+##   --files   Allows the user to specify files separated by commas or (with
+##             quotes) whitespace. Basic globs are supported, for example:
+##                 fx lint --files=foo/*
+##             Or for more advanced filename pattern matching, you can use
+##             double quotes with command substitution:
+##                 fx lint --files="$(find some/path -name '*.cc')"
 ##   --target  Allows the user to specify a gn target.
 ##   --git     The default; it uses `git diff` against the newest parent
-##             commit in the upstream branch (or against HEAD if no such commit
-##             is found).  Files that are locally modified, staged or touched by
-##             any commits introduced on the local branch are linted.
+##             commit in the upstream branch (or against HEAD if no such
+##             commit is found).  Files that are locally modified, staged
+##             or touched by any commits introduced on the local branch are
+##             linted.
 ##    -- [PATTERN...] -additional -args -for -linter
 ##             For --all or --git, passes along PATTERNs to `git ls-files`
 ##             to filter what files are affected. The first argument starting
@@ -36,7 +41,9 @@
 ##
 ## Examples:
 ##     fx lint -- "*.fidl" --include-check no-trailing-comment
-##     fx lint --files=sdk/fidl/fuchsia.sys/service_provider.fidl -- --exclude-check string-bounds-not-specified
+##     fx lint --files=sdk/fidl/fuchsia.sys/service_provider.fidl \
+##             -- --exclude-check string-bounds-not-specified
+##     fx lint --verbose --files="$(echo sdk/**/*.cc sdk/**/*.fidl)"
 
 set -e
 
@@ -60,33 +67,6 @@ function get-diff-base() {
     printf "HEAD"
   else
     git rev-parse "${local_commit}"^
-  fi
-}
-
-function lint-cmd() {
-  if [ -f "$1" ]; then
-    case "$1" in
-      *.c) printf "${CLANG_TIDY_CMD}" ;;
-      *.cc) printf "${CLANG_TIDY_CMD}" ;;
-      *.cmx) printf "${JSON_LINT_CMD}" ;;
-      *.cpp) printf "${CLANG_TIDY_CMD}" ;;
-      *.dart) printf "${DART_LINT_CMD}" ;;
-      *.fidl) printf "${FIDL_LINT_CMD}" ;;
-      *.go) printf "${GO_LINT_CMD}" ;;
-      *.h) printf "${CLANG_TIDY_CMD}" ;;
-      *.hh) printf "${CLANG_TIDY_CMD}" ;;
-      *.hpp) printf "${CLANG_TIDY_CMD}" ;;
-      *.ts) printf "${CLANG_TIDY_CMD}" ;;
-      *.rs) printf "${RUST_LINT_CMD}" ;;
-    esac
-
-    # Note: clang-tidy can produce errors on header files (*.h, *.hh, *.hpp)
-    # clang-tidy uses a compilation database that only contains implementation
-    # files, and so it makes a best-effort guess at what the relevant
-    # implementation file is based on the name. However, if you have a header
-    # with no implementation file or with a different name than the
-    # implementation file (e.g. "functions.h" and "function_a.cpp" that
-    # implements it), clang-tidy will return an error.
   fi
 }
 
@@ -132,14 +112,14 @@ while [ $# -gt 0 ]; do
       GET_FILES=:
       FILES=$(canonicalize "${FUCHSIA_DIR}" \
         $(fx-buildtool-run gn desc \
-            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
-        RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
-            $(fx rustfmt --print-sources ${ARG#--target=})) ;;
+            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources))
+      ;;
     --)
       shift
       break
       ;;
-    *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
+    --help) usage && exit 0 ;;
+    *) usage && fx-error "Unknown flag '${ARG}'\n" && exit 1 ;;
   esac
   shift
 done
@@ -169,10 +149,6 @@ get_all_files() {
 
 $GET_FILES
 
-if [[ -n "${VERBOSE}" ]]; then
-  printf "Files to be linted:\n%s\n" "${FILES}"
-fi
-
 declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
 declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 
@@ -180,7 +156,7 @@ declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 case $(uname -m) in
   x86_64) HOST_ARCH="x64" ;;
   aarch64) HOST_ARCH="arm64" ;;
-  *) echo "Unknown arch $(uname -m)" && exit 1 ;;
+  *) fx-error "Unknown arch $(uname -m)" && exit 1 ;;
 esac
 
 declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
@@ -204,7 +180,41 @@ declare GO_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/go<cmd?> <opt
 declare JSON_LINT_CMD= # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
 # TODO(fxb/TC-544): add command and args for Rust linter
 declare RUST_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
-declare RUST_ENTRY_POINT_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
+
+declare CLANG_TIDY_FILES=()
+declare DART_LINT_FILES=()
+declare FIDL_LINT_FILES=()
+declare GO_LINT_FILES=()
+declare JSON_LINT_FILES=()
+declare RUST_LINT_FILES=()
+
+function add_file_to_linter() {
+  local file="$1"
+  # Git reports deleted files, which we don't want to try to lint
+  if [ -f "${file}" ]; then
+    case "${file}" in
+      *.c) CLANG_TIDY_FILES+=(${file}) ;;
+      *.cc) CLANG_TIDY_FILES+=(${file}) ;;
+      *.cmx) JSON_LINT_FILES+=(${file}) ;;
+      *.cpp) CLANG_TIDY_FILES+=(${file}) ;;
+      *.dart) DART_LINT_FILES+=(${file}) ;;
+      *.fidl) FIDL_LINT_FILES+=(${file}) ;;
+      *.go) GO_LINT_FILES+=(${file}) ;;
+      *.h) CLANG_TIDY_FILES+=(${file}) ;;
+      *.hh) CLANG_TIDY_FILES+=(${file}) ;;
+      *.hpp) CLANG_TIDY_FILES+=(${file}) ;;
+      *.rs) RUST_LINT_FILES+=(${file}) ;;
+    esac
+
+    # Note: clang-tidy can produce errors on header files (*.h, *.hh, *.hpp)
+    # clang-tidy uses a compilation database that only contains implementation
+    # files, and so it makes a best-effort guess at what the relevant
+    # implementation file is based on the name. However, if you have a header
+    # with no implementation file or with a different name than the
+    # implementation file (e.g. "functions.h" and "function_a.cpp" that
+    # implements it), clang-tidy will return an error.
+  fi
+}
 
 fidl_lint_is_outdated() {
   local yes=0
@@ -227,41 +237,78 @@ fidl_lint_is_outdated() {
   return $no
 }
 
-if [[ -t 0 ]]; then  # only if interactive
-  # If there is a FIDL file to check, and we don't have an up-to-date
-  # copy of fidl-lint, generate one.
-  for file in ${FILES}; do
-    if [[ ${file} =~ .*\.fidl ]]; then
-      if fidl_lint_is_outdated; then
-        echo "fidl-lint is out of date or missing..."
-        read -p "OK to run 'fx build zircon/tools' to rebuild it? [Y/n] "
-        if [[ $REPLY == "" || $REPLY =~ Y|y ]]; then
-          fx-command-run build zircon/tools
+ensure_fidl_lint() {
+  if [[ -t 0 ]]; then  # only if interactive
+    # If there is a FIDL file to check, and we don't have an up-to-date
+    # copy of fidl-lint, generate one.
+    for file in ${FILES}; do
+      if [[ ${file} =~ .*\.fidl ]]; then
+        if fidl_lint_is_outdated; then
+          fx-warn "fidl-lint is out of date or missing..."
+          echo -n "OK to run 'fx build zircon/tools' to rebuild it? [Y/n] "
+          if [[ ! -t 1 ]]; then
+            echo  # flush the prompt
+          fi
+          read
+          if [[ $REPLY == "" || $REPLY =~ Y|y ]]; then
+            fx-command-run build zircon/tools || return $?
+          fi
         fi
+        break
       fi
-      break
-    fi
-  done
-fi
+    done
+  fi
+  return 0
+}
 
-[[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_LINT_CMD} "${RUST_ENTRY_POINT}"
+ensure_compile_commands() {
+  local compdb="${FUCHSIA_DIR}/compile_commands.json"
+  if [[ ! -f ${compdb} ]]; then
+    fx-error "Missing compdb file: ${compdb}"
+    echo "To generate or refresh the compdb, run: fx compdb"
+    echo "(Note that a valid 'fx set' configuration is required, and a"
+    echo "full build is recommended, prior to running 'fx compdb'.)"
+    return 1
+  fi
+  return 0
+}
+
+execute() {
+  if [[ -n "${VERBOSE}" || -n "${DRY_RUN}" ]]; then
+    echo "$@"
+    echo
+  fi
+
+  if [[ ! -n "${DRY_RUN}" ]]; then
+    "$@"
+  fi
+}
+
+call_linters() {
+  if [[ "${CLANG_TIDY_CMD}" != "" ]] && (( "${#CLANG_TIDY_FILES[@]}" > 0 )); then
+    execute ensure_compile_commands || return $?
+    execute "${CLANG_TIDY_CMD}" "${COMMAND_ARGS[@]}" "${CLANG_TIDY_FILES[@]}" || return $?
+  fi
+  if [[ "${DART_LINT_CMD}" != "" ]] && (( "${#DART_LINT_FILES[@]}" > 0 )); then
+    execute "${DART_LINT_CMD}" "${COMMAND_ARGS[@]}" "${DART_LINT_FILES[@]}" || return $?
+  fi
+  if [[ "${FIDL_LINT_CMD}" != "" ]] && (( "${#FIDL_LINT_FILES[@]}" > 0 )); then
+    execute ensure_fidl_lint || return $?
+    execute "${FIDL_LINT_CMD}" "${COMMAND_ARGS[@]}" "${FIDL_LINT_FILES[@]}" || return $?
+  fi
+  if [[ "${GO_LINT_CMD}" != "" ]] && (( "${#GO_LINT_FILES[@]}" > 0 )); then
+    execute "${GO_LINT_CMD}" "${COMMAND_ARGS[@]}" "${GO_LINT_FILES[@]}" || return $?
+  fi
+  if [[ "${JSON_LINT_CMD}" != "" ]] && (( "${#JSON_LINT_FILES[@]}" > 0 )); then
+    execute "${JSON_LINT_CMD}" "${COMMAND_ARGS[@]}" "${JSON_LINT_FILES[@]}" || return $?
+  fi
+  if [[ "${RUST_LINT_CMD}" != "" ]] && (( "${#RUST_LINT_FILES[@]}" > 0 )); then
+    execute "${RUST_LINT_CMD}" "${COMMAND_ARGS[@]}" "${RUST_LINT_FILES[@]}" || return $?
+  fi
+}
 
 for file in ${FILES}; do
-  # Git reports deleted files, which we don't want to try to lint
-  [[ ! -f "${file}" ]] && continue
-
-  # Lint the file
-  declare lcmd=$(lint-cmd ${file})
-  if [[ -n "${lcmd}" ]]; then
-    if [[ -n "${DRY_RUN}" ]]; then
-      echo "Dry run: ${lcmd} ${file}" "${COMMAND_ARGS[@]}"
-    else
-      ${lcmd} "${COMMAND_ARGS[@]}" "${file}"
-    fi
-  fi
+  add_file_to_linter ${file}
 done
 
-# "for" loop returns error status after done
-# "set -e" causes the script to return an error status when any command
-# returns a non-zero status.
-exit 0
+call_linters || exit $?
