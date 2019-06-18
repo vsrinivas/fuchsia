@@ -47,6 +47,10 @@ where
                     let iterator = iterator.into_stream()?;
                     self.serve_list(iterator);
                 }
+                EngineRequest::ListStatic { iterator, control_handle: _control_handle } => {
+                    let iterator = iterator.into_stream()?;
+                    self.serve_list_static(iterator);
+                }
                 EngineRequest::StartEditTransaction {
                     transaction,
                     control_handle: _control_handle,
@@ -62,6 +66,12 @@ where
 
     pub(self) fn serve_list(&mut self, stream: RuleIteratorRequestStream) {
         let rules = self.state.read().list().cloned().collect();
+
+        Self::serve_rule_iterator(rules, stream);
+    }
+
+    pub(self) fn serve_list_static(&mut self, stream: RuleIteratorRequestStream) {
+        let rules = self.state.read().list_static().cloned().collect();
 
         Self::serve_rule_iterator(rules, stream);
     }
@@ -236,9 +246,11 @@ mod tests {
         }
     }
 
-    async fn collect_iterator<F, I>(mut next: impl FnMut() -> F) -> Vec<I>
+    async fn collect_iterator<F, I, O>(mut next: impl FnMut() -> F) -> Vec<O>
     where
         F: Future<Output = Result<Vec<I>, fidl::Error>>,
+        I: TryInto<O>,
+        <I as TryInto<O>>::Error: std::fmt::Debug,
     {
         let mut res = Vec::new();
         loop {
@@ -246,21 +258,25 @@ mod tests {
             if more.is_empty() {
                 break;
             }
-            res.extend(more);
+            res.extend(more.into_iter().map(|item| item.try_into().unwrap()));
         }
         assert!(await!(next()).unwrap().is_empty());
         res
     }
 
-    async fn verify_list_call(
-        state: Arc<RwLock<RewriteManager>>,
-        expected: Vec<fidl_fuchsia_pkg_rewrite::Rule>,
-    ) {
+    fn list_rules(state: Arc<RwLock<RewriteManager>>) -> impl Future<Output = Vec<Rule>> {
         let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
         RewriteService::new(state, UnreachableAmberSourceSelector).serve_list(request_stream);
 
-        let rules = await!(collect_iterator(|| iterator.next()));
-        assert_eq!(rules, expected);
+        collect_iterator(move || iterator.next())
+    }
+
+    fn list_static_rules(state: Arc<RwLock<RewriteManager>>) -> impl Future<Output = Vec<Rule>> {
+        let (iterator, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
+        RewriteService::new(state, UnreachableAmberSourceSelector)
+            .serve_list_static(request_stream);
+
+        collect_iterator(move || iterator.next())
     }
 
     fn transaction_list_dynamic_rules(
@@ -269,32 +285,54 @@ mod tests {
         let (iterator, request_stream) = create_proxy::<RuleIteratorMarker>().unwrap();
         client.list_dynamic(request_stream).unwrap();
 
-        async move {
-            await!(collect_iterator(|| iterator.next()))
-                .into_iter()
-                .map(|rule| rule.try_into().unwrap())
-                .collect::<Vec<Rule>>()
-        }
+        collect_iterator(move || iterator.next())
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_list() {
         let inspector = fuchsia_inspect::Inspector::new();
         let node = inspector.root().create_child("rewrite-manager");
-        let rules = vec![
+        let dynamic_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
-        let dynamic_config = make_rule_config(rules.clone());
+        let dynamic_config = make_rule_config(dynamic_rules.clone());
+        let static_rules = vec![
+            rule!("fuchsia.com" => "static.fuchsia.com", "/3" => "/3"),
+            rule!("fuchsia.com" => "static.fuchsia.com", "/4" => "/4"),
+        ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+            RewriteManagerBuilder::new(node, &dynamic_config)
+                .unwrap()
+                .static_rules(static_rules.clone())
+                .build(),
         ));
 
-        let expected = vec![
-            rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice").into(),
-            rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/").into(),
+        let mut expected = dynamic_rules;
+        expected.extend(static_rules);
+        assert_eq!(await!(list_rules(state.clone())), expected);
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_list_static() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let node = inspector.root().create_child("rewrite-manager");
+        let dynamic_config = make_rule_config(vec![
+            rule!("fuchsia.com" => "dynamic.fuchsia.com", "/1" => "/1"),
+            rule!("fuchsia.com" => "dynamic.fuchsia.com", "/2" => "/2"),
+        ]);
+        let static_rules = vec![
+            rule!("fuchsia.com" => "static.fuchsia.com", "/3" => "/3"),
+            rule!("fuchsia.com" => "static.fuchsia.com", "/4" => "/4"),
         ];
-        await!(verify_list_call(state.clone(), expected));
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config)
+                .unwrap()
+                .static_rules(static_rules.clone())
+                .build(),
+        ));
+
+        assert_eq!(await!(list_static_rules(state.clone())), static_rules);
     }
 
     #[fasync::run_until_stalled(test)]
@@ -420,7 +458,7 @@ mod tests {
         let mut amber = FakeAmberSourceSelector::default();
         let mut service = RewriteService::new(state.clone(), amber.clone());
 
-        await!(verify_list_call(state.clone(), vec![]));
+        assert_eq!(await!(list_rules(state.clone())), vec![]);
 
         let edit_client = {
             let (client, request_stream) =
@@ -433,7 +471,7 @@ mod tests {
 
         assert_yields_status!(edit_client.add(&mut rule.clone().into()), Status::OK);
 
-        await!(verify_list_call(state.clone(), vec![]));
+        assert_eq!(await!(list_rules(state.clone())), vec![]);
 
         let long_list_call = {
             let (client, request_stream) = create_proxy_and_stream::<RuleIteratorMarker>().unwrap();
@@ -445,7 +483,7 @@ mod tests {
 
         assert_eq!(await!(long_list_call.next()).unwrap(), vec![]);
 
-        await!(verify_list_call(state.clone(), vec![rule.into()]));
+        assert_eq!(await!(list_rules(state.clone())), vec![rule]);
         assert_eq!(
             amber.take_events(),
             vec![AmberSourceEvent::EnableSource("devhost.fuchsia.com".to_owned())]

@@ -102,6 +102,14 @@ protocol Engine {
     /// Arguments:
     /// |iterator| is a request for an iterator.
     List(request<RuleIterator> iterator);
+
+    /// Return an iterator over all static (immutable) rewrite rules. These
+    /// rules are handled as lower priority than dynamic rules and cannot be
+    /// modified (although they can be overridden) by |EditTransaction|s.
+    ///
+    /// Arguments:
+    /// |iterator| is a request for an iterator.
+    ListStatic(request<RuleIterator> iterator);
 };
 
 protocol EditTransaction {

@@ -122,7 +122,13 @@ impl RewriteManager {
     /// Return an iterator through all rewrite rules in the order they should be applied to
     /// incoming `fuchsia-pkg://` URLs.
     pub fn list<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
-        self.dynamic_rules.iter().chain(self.static_rules.iter())
+        self.dynamic_rules.iter().chain(self.list_static())
+    }
+
+    /// Return an iterator through all static rewrite rules in the order they should be applied to
+    /// incoming `fuchsia-pkg://` URLs, after all dynamic rules have been considered.
+    pub fn list_static<'a>(&'a self) -> impl Iterator<Item = &'a Rule> {
+        self.static_rules.iter()
     }
 
     fn update_rule_inspect_states(
@@ -325,6 +331,7 @@ pub(crate) mod tests {
             .unwrap()
             .build();
 
+        assert_eq!(manager.list_static().cloned().collect::<Vec<_>>(), vec![]);
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
     }
 
@@ -342,6 +349,7 @@ pub(crate) mod tests {
             .unwrap()
             .build();
 
+        assert_eq!(manager.list_static().cloned().collect::<Vec<_>>(), rules);
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
     }
 
@@ -354,6 +362,7 @@ pub(crate) mod tests {
         let dynamic_config = make_rule_config(rules.clone());
         let manager = RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build();
 
+        assert_eq!(manager.list_static().cloned().collect::<Vec<_>>(), vec![]);
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
     }
 
@@ -379,6 +388,7 @@ pub(crate) mod tests {
             .unwrap_err();
         let manager = builder.build();
 
+        assert_eq!(manager.list_static().cloned().collect::<Vec<_>>(), vec![]);
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), rules);
     }
 
