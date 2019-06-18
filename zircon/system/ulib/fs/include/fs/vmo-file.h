@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_VMO_FILE_H_
+#define FS_VMO_FILE_H_
 
-#include <fbl/macros.h>
-#include <fbl/mutex.h>
+#include <mutex>
+
 #include <lib/zx/vmo.h>
 
 #include "vnode.h"
@@ -91,13 +92,16 @@ private:
     bool const writable_;
     VmoSharing const vmo_sharing_;
 
-    fbl::Mutex mutex_;
-
     // Clone of the portion of the VMO which contains the file's data.
     // In |CLONE_COW| mode, this is shared among read-only clients.
-    zx::vmo shared_clone_ __TA_GUARDED(mutex_);
+    struct {
+        std::once_flag once;
+        zx::vmo vmo;
+    } shared_clone_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmoFile);
 };
 
 } // namespace fs
+
+#endif // FS_VMO_FILE_H_

@@ -11,8 +11,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include <unittest/unittest.h>
 #include <lib/zx/vmo.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -451,7 +451,11 @@ bool TestGetNodeInfo() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
+        // There is non-trivial lazy initialization happening here - repeat it
+        // to make sure it's nice and deterministic.
+        for (int i = 0; i < 2; i++) {
+            EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
+        }
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));

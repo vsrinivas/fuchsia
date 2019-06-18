@@ -160,19 +160,16 @@ zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_
 
     if (!(rights & ZX_RIGHT_WRITE)) {
         // Use a shared clone for read-only content.
-        // TODO(ZX-1154): Replace the mutex with fbl::call_once() once that's implemented.
-        // The shared clone is only initialized at most once so using a mutex is excessive.
-        fbl::AutoLock lock(&mutex_);
-        zx_status_t status;
-        if (!shared_clone_) {
+        zx_status_t status = ZX_OK;
+        std::call_once(shared_clone_.once, [&]() {
             status = zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_COPY_ON_WRITE,
                                          clone_offset, clone_length,
-                                         shared_clone_.reset_and_get_address());
-            if (status != ZX_OK)
-                return status;
-        }
+                                         shared_clone_.vmo.reset_and_get_address());
+        });
+        if (status != ZX_OK)
+            return status;
 
-        status = shared_clone_.duplicate(rights, out_vmo);
+        status = shared_clone_.vmo.duplicate(rights, out_vmo);
         if (status != ZX_OK)
             return status;
     } else {
