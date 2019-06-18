@@ -87,13 +87,33 @@ Tests are now built as:
 ./scripts/run-zircon-x64 -c zircon.autorun.boot=/boot/test/sys/fidl-coding-tables-test
 ```
 
-### fidlgen
+### fidlgen (LLCPP, HLCPP, Rust, Go)
 
 Some example tests you can run:
 
 ```sh
 fx run-host-tests fidlgen_cpp_ir_test
 fx run-host-tests fidlgen_golang_ir_test
+```
+
+To regenerate the goldens:
+
+```sh
+fx exec garnet/go/src/fidl/compiler/backend/typestest/regen.sh
+```
+
+### fidlgen_dart
+
+Some example tests you can run:
+
+```sh
+fx run-host-tests fidlgen_dart_backend_ir_test
+```
+
+To regenerate the goldens:
+
+```sh
+fx exec topaz/bin/fidlgen_dart/regen.sh
 ```
 
 ### C runtime
