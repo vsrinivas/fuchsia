@@ -30,7 +30,7 @@ template("fidl_ir") {
   }
 }
 
-group("difl_test_fidl") {
+group("tests") {
   deps = [
     ":after",
     ":before",
@@ -52,21 +52,21 @@ action("run_difl_test") {
     before_ir,
   ]
   inputs = [
-    "../difl/__init__.py",
-    "../difl/__main__.py",
-    "../difl/abi.py",
-    "../difl/changes.py",
-    "../difl/comparator.py",
-    "../difl/enums.py",
-    "../difl/intersection.py",
-    "../difl/ir.py",
-    "../difl/library.py",
-    "../difl/protocol.py",
-    "../difl/struct.py",
-    "../difl/table.py",
-    "../difl/test.py",
-    "../difl/text_output.py",
-    "../difl/tricium_output.py",
+    "../__init__.py",
+    "../__main__.py",
+    "../abi.py",
+    "../changes.py",
+    "../comparator.py",
+    "../enums.py",
+    "../intersection.py",
+    "../ir.py",
+    "../library.py",
+    "../protocol.py",
+    "../struct.py",
+    "../table.py",
+    "../test.py",
+    "../text_output.py",
+    "../tricium_output.py",
   ]
   outputs = [
     stamp,
