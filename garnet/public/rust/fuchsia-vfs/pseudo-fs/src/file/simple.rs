@@ -513,6 +513,74 @@ mod tests {
     }
 
     #[test]
+    fn get_buffer_with_rw_file() {
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            read_write_str(
+                || Ok("Hello".to_string()),
+                100,
+                |_| panic!("file shouldn't be written to"),
+            ),
+            async move |proxy| {
+                assert_get_buffer_err!(proxy, OPEN_RIGHT_READABLE, Status::NOT_SUPPORTED);
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_buffer_writable_with_readonly_file() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            read_only(|| Ok(b"Get buffer test".to_vec())),
+            async move |proxy| {
+                assert_get_buffer_err!(proxy, OPEN_RIGHT_WRITABLE, Status::ACCESS_DENIED);
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_buffer_readable_with_writable_file() {
+        run_server_client(
+            OPEN_RIGHT_WRITABLE,
+            write_only_str(100, |_| panic!("file shouldn't be written to")),
+            async move |proxy| {
+                assert_get_buffer_err!(proxy, OPEN_RIGHT_READABLE, Status::NOT_SUPPORTED);
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_buffer_writable_with_writable_file() {
+        run_server_client(
+            OPEN_RIGHT_WRITABLE,
+            write_only_str(100, |_| panic!("file shouldn't be written to")),
+            async move |proxy| {
+                assert_get_buffer_err!(proxy, OPEN_RIGHT_WRITABLE, Status::NOT_SUPPORTED);
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
+    fn get_buffer_writable_with_rw_file() {
+        run_server_client(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            read_write_str(
+                || Ok("Hello".to_string()),
+                100,
+                |_| panic!("file shouldn't be written to"),
+            ),
+            async move |proxy| {
+                assert_get_buffer_err!(proxy, OPEN_RIGHT_WRITABLE, Status::NOT_SUPPORTED);
+                assert_close!(proxy);
+            },
+        );
+    }
+
+    #[test]
     fn read_only_ignore_posix_flag() {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,

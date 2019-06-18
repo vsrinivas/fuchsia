@@ -143,6 +143,19 @@ macro_rules! assert_get_buffer {
 
 // See comment at the top of the file for why this is a macro.
 #[macro_export]
+macro_rules! assert_get_buffer_err {
+    ($proxy:expr, $flags:expr, $expected_status: expr) => {{
+        use $crate::test_utils::reexport::*;
+
+        let (status, buffer) = await!($proxy.get_buffer($flags)).expect("get buffer failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+        assert!(buffer.is_none());
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
 macro_rules! assert_read_at {
     ($proxy:expr, $offset:expr, $expected:expr) => {{
         use $crate::test_utils::reexport::*;

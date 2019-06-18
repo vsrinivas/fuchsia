@@ -380,12 +380,18 @@ impl FileConnection {
     where
         R: FnOnce(Status, Option<fidl_fuchsia_mem::Buffer>) -> Result<(), fidl::Error>,
     {
-        if self.flags & OPEN_RIGHT_READABLE == 0 || flags & OPEN_RIGHT_READABLE == 0 {
-            return responder(Status::ACCESS_DENIED, None);
-        }
-        // Getting a writable or executable VMO is currently unsupported
-        if self.flags & OPEN_RIGHT_WRITABLE != 0 || flags & OPEN_RIGHT_WRITABLE != 0 {
-            return responder(Status::NOT_SUPPORTED, None);
+        match (
+            self.flags & OPEN_RIGHT_READABLE != 0, // This file is readable
+            self.flags & OPEN_RIGHT_WRITABLE != 0, // This file is writable
+            flags & OPEN_RIGHT_READABLE != 0,      // The requested buffer is readable
+            flags & OPEN_RIGHT_WRITABLE != 0,      // The requested buffer is writable
+        ) {
+            // Read-only buffers can be retrieved for read-only files
+            (true, false, true, false) => (),
+            // Accessing writable buffers is currently unsupported
+            (_, true, _, _) => return responder(Status::NOT_SUPPORTED, None),
+            // All other situations are not permitted
+            _ => return responder(Status::ACCESS_DENIED, None),
         }
 
         assert_eq_size!(usize, u64);
