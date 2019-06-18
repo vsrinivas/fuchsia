@@ -34,7 +34,7 @@ extern "C" {
 
 namespace netdump {
 
-class Headers {
+class Packet {
 public:
     // `frame_len` is supplied by the client user of filter, so it is expected in host byte order.
     uint16_t frame_length;
@@ -71,9 +71,9 @@ class FilterBase {
 public:
     // Returns `true` if the packet matches the internal filter specification.
     // The storage and type of that specification is up to the particular filter subclasses.
-    // If the a relevant pointer in `headers` is null, `false` is returned if the
+    // If the a relevant pointer in `packet` is null, `false` is returned if the
     // filter specifies a basic match on a header field.
-    virtual bool match(const Headers& headers) = 0;
+    virtual bool match(const Packet& packet) = 0;
 
     virtual ~FilterBase() = default;
     FilterBase(const FilterBase& other) = delete;
@@ -96,13 +96,13 @@ public:
     // equal.
     explicit FrameLengthFilter(uint16_t frame_len, LengthComparator comp);
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     FrameLengthFilter(const FrameLengthFilter& other) = delete;
     FrameLengthFilter& operator=(const FrameLengthFilter& other) = delete;
 
 private:
-    std::function<bool(const Headers&)> match_fn_;
+    std::function<bool(const Packet&)> match_fn_;
 };
 
 // Filter on Ethernet frames.
@@ -115,7 +115,7 @@ public:
     // A filter matching on MAC address.
     EthFilter(const uint8_t mac[ETH_ALEN], AddressFieldType type);
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     EthFilter(const EthFilter& other) = delete;
     EthFilter& operator=(const EthFilter& other) = delete;
@@ -153,14 +153,14 @@ public:
     // A filter matching on IPv6 address. `ipv6_addr` should be in network byte order.
     IpFilter(const uint8_t ipv6_addr[IP6_ADDR_LEN], AddressFieldType type);
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     IpFilter(const IpFilter& other) = delete;
     IpFilter& operator=(const IpFilter& other) = delete;
 
 private:
     const uint8_t version_;
-    std::function<bool(const Headers&)> match_fn_;
+    std::function<bool(const Packet&)> match_fn_;
 };
 
 // Filter on transport layer ports.
@@ -170,7 +170,7 @@ public:
     using PortRange = std::pair<uint16_t, uint16_t>;
     explicit PortFilter(std::vector<PortRange> ports, PortFieldType type);
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     PortFilter(const PortFilter& other) = delete;
     PortFilter& operator=(const PortFilter& other) = delete;
@@ -189,7 +189,7 @@ public:
     explicit NegFilter(FilterPtr filter)
         : filter_(std::move(filter)) {}
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     NegFilter(const NegFilter& other) = delete;
     NegFilter& operator=(const NegFilter& other) = delete;
@@ -204,7 +204,7 @@ public:
     ConjFilter(FilterPtr left, FilterPtr right)
         : left_(std::move(left)), right_(std::move(right)) {}
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     ConjFilter(const ConjFilter& other) = delete;
     ConjFilter& operator=(const ConjFilter& other) = delete;
@@ -220,7 +220,7 @@ public:
     DisjFilter(FilterPtr left, FilterPtr right)
         : left_(std::move(left)), right_(std::move(right)) {}
 
-    bool match(const Headers& headers) override;
+    bool match(const Packet& packet) override;
 
     DisjFilter(const DisjFilter& other) = delete;
     DisjFilter& operator=(const DisjFilter& other) = delete;

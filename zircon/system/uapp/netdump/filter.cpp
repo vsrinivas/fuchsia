@@ -39,13 +39,13 @@ FrameLengthFilter::FrameLengthFilter(uint16_t frame_len, LengthComparator comp) 
     frame_len = ntohs(frame_len);
     switch (comp) {
     case LengthComparator::LEQ:
-        match_fn_ = [frame_len](const Headers& headers) {
-            return headers.frame_length <= frame_len;
+        match_fn_ = [frame_len](const Packet& packet) {
+            return packet.frame_length <= frame_len;
         };
         break;
     case LengthComparator::GEQ:
-        match_fn_ = [frame_len](const Headers& headers) {
-            return headers.frame_length >= frame_len;
+        match_fn_ = [frame_len](const Packet& packet) {
+            return packet.frame_length >= frame_len;
         };
         break;
     default:
@@ -54,8 +54,8 @@ FrameLengthFilter::FrameLengthFilter(uint16_t frame_len, LengthComparator comp) 
     }
 }
 
-bool FrameLengthFilter::match(const Headers& headers) {
-    return match_fn_(headers);
+bool FrameLengthFilter::match(const Packet& packet) {
+    return match_fn_(packet);
 }
 
 EthFilter::EthFilter(const uint8_t mac[ETH_ALEN], AddressFieldType type) {
@@ -65,22 +65,22 @@ EthFilter::EthFilter(const uint8_t mac[ETH_ALEN], AddressFieldType type) {
     std::copy(mac, mac + ETH_ALEN, addr->mac);
 }
 
-bool EthFilter::match(const Headers& headers) {
-    if (headers.frame == nullptr) {
+bool EthFilter::match(const Packet& packet) {
+    if (packet.frame == nullptr) {
         return false;
     }
     if (auto addr = std::get_if<Address>(&spec_)) {
         return match_address(addr->type, ETH_ALEN,
-                             headers.frame->h_source, headers.frame->h_dest, addr->mac);
+                             packet.frame->h_source, packet.frame->h_dest, addr->mac);
     }
-    return std::get<EthType>(spec_) == headers.frame->h_proto;
+    return std::get<EthType>(spec_) == packet.frame->h_proto;
 }
 
 IpFilter::IpFilter(uint8_t version)
     : version_(version) {
     ZX_DEBUG_ASSERT_MSG(version == 4 || version == 6, "Unsupported IP version: %u", version);
     // The version in the packet itself is always checked in the `match` method.
-    match_fn_ = [](const Headers& /*headers*/) { return true; };
+    match_fn_ = [](const Packet& /*packet*/) { return true; };
 }
 
 IpFilter::IpFilter(uint8_t version, uint16_t ip_pkt_len, LengthComparator comp)
@@ -92,13 +92,13 @@ IpFilter::IpFilter(uint8_t version, uint16_t ip_pkt_len, LengthComparator comp)
     case 4:
         switch (comp) {
         case LengthComparator::LEQ:
-            match_fn_ = [ip_pkt_len](const Headers& headers) {
-                return ntohs(headers.ipv4->tot_len) <= ip_pkt_len;
+            match_fn_ = [ip_pkt_len](const Packet& packet) {
+                return ntohs(packet.ipv4->tot_len) <= ip_pkt_len;
             };
             break;
         case LengthComparator::GEQ:
-            match_fn_ = [ip_pkt_len](const Headers& headers) {
-                return ntohs(headers.ipv4->tot_len) >= ip_pkt_len;
+            match_fn_ = [ip_pkt_len](const Packet& packet) {
+                return ntohs(packet.ipv4->tot_len) >= ip_pkt_len;
             };
             break;
         default:
@@ -109,13 +109,13 @@ IpFilter::IpFilter(uint8_t version, uint16_t ip_pkt_len, LengthComparator comp)
     case 6:
         switch (comp) {
         case LengthComparator::LEQ:
-            match_fn_ = [ip_pkt_len](const Headers& headers) {
-                return ntohs(headers.ipv6->length) <= ip_pkt_len;
+            match_fn_ = [ip_pkt_len](const Packet& packet) {
+                return ntohs(packet.ipv6->length) <= ip_pkt_len;
             };
             break;
         case LengthComparator::GEQ:
-            match_fn_ = [ip_pkt_len](const Headers& headers) {
-                return ntohs(headers.ipv6->length) >= ip_pkt_len;
+            match_fn_ = [ip_pkt_len](const Packet& packet) {
+                return ntohs(packet.ipv6->length) >= ip_pkt_len;
             };
             break;
         default:
@@ -133,13 +133,13 @@ IpFilter::IpFilter(uint8_t version, uint8_t protocol)
     : version_(version) {
     switch (version) {
     case 4:
-        match_fn_ = [protocol](const Headers& headers) {
-            return headers.ipv4->protocol == protocol;
+        match_fn_ = [protocol](const Packet& packet) {
+            return packet.ipv4->protocol == protocol;
         };
         break;
     case 6:
-        match_fn_ = [protocol](const Headers& headers) {
-            return headers.ipv6->next_header == protocol;
+        match_fn_ = [protocol](const Packet& packet) {
+            return packet.ipv6->next_header == protocol;
         };
         break;
     default:
@@ -149,21 +149,21 @@ IpFilter::IpFilter(uint8_t version, uint8_t protocol)
 
 IpFilter::IpFilter(uint32_t ipv4_addr, AddressFieldType type)
     : version_(4) {
-    match_fn_ = [ipv4_addr, type](const Headers& headers) {
-        return match_address(type, headers.ipv4->saddr, headers.ipv4->daddr, ipv4_addr);
+    match_fn_ = [ipv4_addr, type](const Packet& packet) {
+        return match_address(type, packet.ipv4->saddr, packet.ipv4->daddr, ipv4_addr);
     };
 }
 
-class Ipv6AddrMatcher : public std::function<bool(const Headers& headers)> {
+class Ipv6AddrMatcher : public std::function<bool(const Packet& packet)> {
 public:
     Ipv6AddrMatcher(const uint8_t addr[IP6_ADDR_LEN], AddressFieldType type)
         : type_(type) {
         std::copy(addr, addr + IP6_ADDR_LEN, addr_);
     }
 
-    bool operator()(const Headers& headers) {
+    bool operator()(const Packet& packet) {
         return match_address(type_, IP6_ADDR_LEN,
-                             headers.ipv6->src.u8, headers.ipv6->dst.u8, addr_);
+                             packet.ipv6->src.u8, packet.ipv6->dst.u8, addr_);
     }
 
 private:
@@ -180,8 +180,8 @@ IpFilter::IpFilter(const uint8_t ipv6_addr[IP6_ADDR_LEN], AddressFieldType type)
 
 static constexpr uint16_t ETH_P_IP_NETWORK_BYTE_ORDER = 0x0008;
 static constexpr uint16_t ETH_P_IPV6_NETWORK_BYTE_ORDER = 0xDD86;
-bool IpFilter::match(const Headers& headers) {
-    if (headers.frame == nullptr || headers.ipv4 == nullptr) {
+bool IpFilter::match(const Packet& packet) {
+    if (packet.frame == nullptr || packet.ipv4 == nullptr) {
         return false;
     }
     switch (version_) {
@@ -189,14 +189,14 @@ bool IpFilter::match(const Headers& headers) {
         // Check that `h_proto` and `version` in IP header are consistent.
         // If they are not, this is a malformed packet and the filter should reject gracefully
         // by returning false.
-        if (headers.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && headers.ipv4->version == 4) {
-            return match_fn_(headers);
+        if (packet.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ipv4->version == 4) {
+            return match_fn_(packet);
         }
         break;
     case 6:
         // `version` for IPv6 packets is still accessed through the IPv4 header field.
-        if (headers.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && headers.ipv4->version == 6) {
-            return match_fn_(headers);
+        if (packet.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER && packet.ipv4->version == 6) {
+            return match_fn_(packet);
         }
         break;
     default:
@@ -229,39 +229,39 @@ bool PortFilter::match_ports(uint16_t src_port, uint16_t dst_port) {
     return false;
 }
 
-bool PortFilter::match(const Headers& headers) {
-    if (headers.frame == nullptr || headers.ipv4 == nullptr || headers.transport == nullptr) {
+bool PortFilter::match(const Packet& packet) {
+    if (packet.frame == nullptr || packet.ipv4 == nullptr || packet.transport == nullptr) {
         return false;
     }
     uint8_t transport_protocol = 0;
-    if (headers.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && headers.ipv4->version == 4) {
-        transport_protocol = headers.ipv4->protocol;
-    } else if (headers.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER &&
-               headers.ipv4->version == 6) {
-        transport_protocol = headers.ipv6->next_header;
+    if (packet.frame->h_proto == ETH_P_IP_NETWORK_BYTE_ORDER && packet.ipv4->version == 4) {
+        transport_protocol = packet.ipv4->protocol;
+    } else if (packet.frame->h_proto == ETH_P_IPV6_NETWORK_BYTE_ORDER &&
+               packet.ipv4->version == 6) {
+        transport_protocol = packet.ipv6->next_header;
     } else {
         return false; // Unhandled IP version
     }
     switch (transport_protocol) {
     case IPPROTO_TCP:
-        return match_ports(headers.tcp->source, headers.tcp->dest);
+        return match_ports(packet.tcp->source, packet.tcp->dest);
     case IPPROTO_UDP:
-        return match_ports(headers.udp->uh_sport, headers.udp->uh_dport);
+        return match_ports(packet.udp->uh_sport, packet.udp->uh_dport);
     default:
         return false; // Unhandled transport protocol
     }
 }
 
-bool NegFilter::match(const Headers& headers) {
-    return !(filter_->match(headers));
+bool NegFilter::match(const Packet& packet) {
+    return !(filter_->match(packet));
 }
 
-bool ConjFilter::match(const Headers& headers) {
-    return left_->match(headers) && right_->match(headers);
+bool ConjFilter::match(const Packet& packet) {
+    return left_->match(packet) && right_->match(packet);
 }
 
-bool DisjFilter::match(const Headers& headers) {
-    return left_->match(headers) || right_->match(headers);
+bool DisjFilter::match(const Packet& packet) {
+    return left_->match(packet) || right_->match(packet);
 }
 
 } // namespace netdump
