@@ -110,9 +110,16 @@ while [ $# -gt 0 ]; do
       ;;
     --target=*)
       GET_FILES=:
-      FILES=$(canonicalize "${FUCHSIA_DIR}" \
-        $(fx-buildtool-run gn desc \
-            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources))
+      >&2 echo "Looking up files for target ${ARG#--target=}..."
+      declare -i status=0
+      GN_OUTPUT=(
+         $(fx-buildtool-run gn desc "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)
+      ) || status=$?
+      if (( ${status} != 0 )); then
+        >&2 echo "${GN_OUTPUT[@]}"
+        exit ${status}
+      fi
+      FILES=$(canonicalize "${FUCHSIA_DIR}" "${GN_OUTPUT[@]}")
       ;;
     --)
       shift
@@ -171,15 +178,21 @@ declare RUN_CLANG_TIDY="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/share/clang/ru
 # linter warnings, many of which are questionable. The algorithm will be refined.
 declare FIDL_LINT="${ZIRCON_TOOLS_DIR}"/fidl-lint
 
-declare CLANG_TIDY_CMD="${RUN_CLANG_TIDY} -clang-tidy-binary ${CLANG_TIDY} -clang-apply-replacements-binary ${CLANG_APPLY_REPLACEMENTS} ${FIX_OPTION}"
-declare FIDL_LINT_CMD="${FIDL_LINT}"
-declare DART_LINT_CMD= # "${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"
+declare CLANG_TIDY_CMD=(
+  "${RUN_CLANG_TIDY}"
+  -clang-tidy-binary "${CLANG_TIDY}"
+  -clang-apply-replacements-binary "${CLANG_APPLY_REPLACEMENTS}"
+  "${FIX_OPTION}"
+)
+declare FIDL_LINT_CMD=( "${FIDL_LINT}" )
+# TODO(fxb/TC-559): add command and args for Dart linter
+declare DART_LINT_CMD=() # "${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dart<cmd?> <options?>"
 # TODO(fxb/TC-542): add command and args for Go linter
-declare GO_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/go<cmd?> <options?>"
+declare GO_LINT_CMD=() # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/go<cmd?> <options?>"
 # TODO(fxb/TC-543): add command and args for JSON linter
-declare JSON_LINT_CMD= # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
+declare JSON_LINT_CMD=() # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
 # TODO(fxb/TC-544): add command and args for Rust linter
-declare RUST_LINT_CMD= # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
+declare RUST_LINT_CMD=() # "${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rust<cmd?> <options?>"
 
 declare CLANG_TIDY_FILES=()
 declare DART_LINT_FILES=()
@@ -285,25 +298,25 @@ execute() {
 }
 
 call_linters() {
-  if [[ "${CLANG_TIDY_CMD}" != "" ]] && (( "${#CLANG_TIDY_FILES[@]}" > 0 )); then
+  if (( "${#CLANG_TIDY_CMD[@]}" > 0 && "${#CLANG_TIDY_FILES[@]}" > 0 )); then
     execute ensure_compile_commands || return $?
-    execute "${CLANG_TIDY_CMD}" "${COMMAND_ARGS[@]}" "${CLANG_TIDY_FILES[@]}" || return $?
+    execute "${CLANG_TIDY_CMD[@]}" "${COMMAND_ARGS[@]}" "${CLANG_TIDY_FILES[@]}" || return $?
   fi
-  if [[ "${DART_LINT_CMD}" != "" ]] && (( "${#DART_LINT_FILES[@]}" > 0 )); then
-    execute "${DART_LINT_CMD}" "${COMMAND_ARGS[@]}" "${DART_LINT_FILES[@]}" || return $?
+  if (( "${#DART_LINT_CMD[@]}" > 0 && "${#DART_LINT_FILES[@]}" > 0 )); then
+    execute "${DART_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${DART_LINT_FILES[@]}" || return $?
   fi
-  if [[ "${FIDL_LINT_CMD}" != "" ]] && (( "${#FIDL_LINT_FILES[@]}" > 0 )); then
+  if (( "${#FIDL_LINT_CMD[@]}" > 0 && "${#FIDL_LINT_FILES[@]}" > 0 )); then
     execute ensure_fidl_lint || return $?
-    execute "${FIDL_LINT_CMD}" "${COMMAND_ARGS[@]}" "${FIDL_LINT_FILES[@]}" || return $?
+    execute "${FIDL_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${FIDL_LINT_FILES[@]}" || return $?
   fi
-  if [[ "${GO_LINT_CMD}" != "" ]] && (( "${#GO_LINT_FILES[@]}" > 0 )); then
-    execute "${GO_LINT_CMD}" "${COMMAND_ARGS[@]}" "${GO_LINT_FILES[@]}" || return $?
+  if (( "${#GO_LINT_CMD[@]}" > 0 && "${#GO_LINT_FILES[@]}" > 0 )); then
+    execute "${GO_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${GO_LINT_FILES[@]}" || return $?
   fi
-  if [[ "${JSON_LINT_CMD}" != "" ]] && (( "${#JSON_LINT_FILES[@]}" > 0 )); then
-    execute "${JSON_LINT_CMD}" "${COMMAND_ARGS[@]}" "${JSON_LINT_FILES[@]}" || return $?
+  if (( "${#JSON_LINT_CMD[@]}" > 0 && "${#JSON_LINT_FILES[@]}" > 0 )); then
+    execute "${JSON_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${JSON_LINT_FILES[@]}" || return $?
   fi
-  if [[ "${RUST_LINT_CMD}" != "" ]] && (( "${#RUST_LINT_FILES[@]}" > 0 )); then
-    execute "${RUST_LINT_CMD}" "${COMMAND_ARGS[@]}" "${RUST_LINT_FILES[@]}" || return $?
+  if (( "${#RUST_LINT_CMD[@]}" > 0 && "${#RUST_LINT_FILES[@]}" > 0 )); then
+    execute "${RUST_LINT_CMD[@]}" "${COMMAND_ARGS[@]}" "${RUST_LINT_FILES[@]}" || return $?
   fi
 }
 

@@ -15,5 +15,5 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 
 echo "WARNING: 'fx clang-tidy' is deprecated. Redirecting to:"
 echo "  fx lint $@"
-fx-command-run lint "$@"
+fx-command-run contrib/lint "$@"
 exit $?
