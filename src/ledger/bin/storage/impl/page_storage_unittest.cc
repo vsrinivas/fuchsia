@@ -1495,7 +1495,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
                    PageStorage::Location::NETWORK, Status::NETWORK_ERROR);
 }
 
-TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
+TEST_F(PageStorageTest, DISABLED_GetHugeObjectPartFromSync) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
   int64_t offset = 28672;
   int64_t size = 128;
