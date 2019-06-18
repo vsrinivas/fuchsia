@@ -18,6 +18,12 @@ astro_env = {
   }
 }
 
+sherlock_env = {
+  dimensions = {
+    device_type = "Sherlock"
+  }
+}
+
 nuc_env = {
   dimensions = {
     device_type = "Intel NUC Kit NUC7i5DNHE"
