@@ -59,8 +59,13 @@ public:
 
     zx_status_t Queue(sata_txn_t* txn);
 
-    void Complete();
-    void ProcessQueued();
+    // Complete in-progress transactions.
+    // Returns true if there remain transactions in progress.
+    bool Complete();
+
+    // Process incoming transaction queue and run them.
+    // Returns true if transactions were added (are now in progress)
+    bool ProcessQueued();
 
     // Returns true if a transaction was handled.
     bool HandleIrq();

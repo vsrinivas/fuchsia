@@ -86,13 +86,10 @@ TEST(AhciTest, CreateBusConfigFailure) {
     bus->DoFailConfigure();
 
     std::unique_ptr<Controller> con;
+    // Expected to fail during bus configure.
     EXPECT_NOT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
 }
 
-// This test causes the test environment to crash on cleanup because the AHCI controller does
-// not properly shut down threads. The fix is for a subsequent CL.
-
-#if 0
 TEST(AhciTest, LaunchThreads) {
     zx_device_t* fake_parent = nullptr;
     std::unique_ptr<FakeBus> bus(new FakeBus());
@@ -101,7 +98,7 @@ TEST(AhciTest, LaunchThreads) {
     EXPECT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
 
     EXPECT_OK(con->LaunchThreads());
+    con->Shutdown();
 }
-#endif
 
 } // namespace ahci

@@ -28,6 +28,7 @@ public:
     virtual zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val) override;
 
     virtual zx_status_t InterruptWait() override;
+    virtual void InterruptCancel() override;
 
     virtual void* mmio() override { return mmio_->get(); }
 

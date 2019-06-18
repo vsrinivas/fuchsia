@@ -225,14 +225,15 @@ zx_status_t Port::Queue(sata_txn_t* txn) {
     return ZX_OK;
 }
 
-void Port::Complete() {
+bool Port::Complete() {
     fbl::AutoLock lock(&lock_);
     if (!is_valid()) {
-        return;
+        return false;
     }
 
     sata_txn_t* txn_complete[AHCI_MAX_COMMANDS];
     size_t complete_count = 0;
+    bool active_txns = false;
     while (completed_) {
         uint32_t slot = 32 - __builtin_clz(completed_) - 1;
         sata_txn_t* txn = commands_[slot];
@@ -246,6 +247,7 @@ void Port::Complete() {
             complete_count++;
         }
     }
+    if (running_ != 0) active_txns = true;
 
     sata_txn_t* sync_op = nullptr;
     // resume the port if paused for sync and no outstanding transactions
@@ -270,15 +272,17 @@ void Port::Complete() {
     if (sync_op != nullptr) {
         block_complete(sync_op, ZX_OK);
     }
+    return active_txns;
 }
 
-void Port::ProcessQueued() {
+bool Port::ProcessQueued() {
     lock_.Acquire();
     if ((!is_valid()) || is_paused()) {
         lock_.Release();
-        return;
+        return false;
     }
 
+    bool added_txns = false;
     for (;;) {
         sata_txn_t* txn = list_peek_head_type(&txn_list_, sata_txn_t, node);
         if (!txn) {
@@ -320,8 +324,10 @@ void Port::ProcessQueued() {
                 continue;
             }
         }
+        added_txns = true;
     }
     lock_.Release();
+    return added_txns;
 }
 
 void Port::TxnComplete(zx_status_t status) {

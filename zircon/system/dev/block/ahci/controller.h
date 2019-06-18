@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
-#include <fbl/unique_ptr.h>
-#include <hw/pci.h>
 #include <zircon/types.h>
 
 #include "ahci.h"
@@ -15,6 +16,30 @@
 #include "port.h"
 
 namespace ahci {
+
+struct ThreadWrapper {
+    thrd_t thread;
+    bool created = false;
+
+    ~ThreadWrapper() {
+        ZX_DEBUG_ASSERT(created == false);
+    }
+
+    zx_status_t CreateWithName(thrd_start_t entry, void* arg, const char* name) {
+        ZX_DEBUG_ASSERT(created == false);
+        if(thrd_create_with_name(&thread, entry, arg, name) == thrd_success) {
+            created = true;
+            return ZX_OK;
+        }
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    void Join() {
+        if (!created) return;
+        thrd_join(thread, nullptr);
+        created = false;
+    }
+};
 
 class Controller {
 public:
@@ -30,7 +55,7 @@ public:
     static zx_status_t CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> bus,
                                      std::unique_ptr<Controller>* con_out);
 
-    // Release call for device protocol. Deletes this Controller.
+    // Release call for device protocol. Calls Shutdown and deletes this Controller.
     static void Release(void* ctx);
 
     // Read or write a 32-bit AHCI controller reg. Endinaness is corrected.
@@ -61,6 +86,10 @@ public:
     // Create worker, irq, and watchdog threads.
     zx_status_t LaunchThreads();
 
+    // Release all resources.
+    // Not used in DDK lifecycle where Release() is called.
+    void Shutdown() __TA_EXCLUDES(lock_);
+
     void HbaReset();
     void AhciEnable();
 
@@ -85,13 +114,18 @@ private:
     int IrqLoop();
     int InitScan();
 
+    bool ShouldExit() __TA_EXCLUDES(lock_);
+
     zx_device_t* zxdev_ = nullptr;
     ahci_hba_t* regs_ = nullptr;
     uint32_t cap_ = 0;
 
-    thrd_t irq_thread_;
-    thrd_t worker_thread_;
-    thrd_t watchdog_thread_;
+    fbl::Mutex lock_;
+    bool threads_should_exit_ __TA_GUARDED(lock_) = false;
+
+    ThreadWrapper irq_thread_;
+    ThreadWrapper worker_thread_;
+    ThreadWrapper watchdog_thread_;
 
     sync_completion_t worker_completion_;
     sync_completion_t watchdog_completion_;

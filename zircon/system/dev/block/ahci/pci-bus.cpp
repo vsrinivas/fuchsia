@@ -129,5 +129,8 @@ zx_status_t PciBus::InterruptWait() {
     return irq_.wait(nullptr);
 }
 
+void PciBus::InterruptCancel() {
+    irq_.destroy();
+}
 
 } // namespace ahci

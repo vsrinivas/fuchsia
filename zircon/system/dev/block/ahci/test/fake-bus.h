@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <lib/sync/completion.h>
+
 #include "../bus.h"
 
 namespace ahci {
@@ -23,6 +25,7 @@ public:
     virtual zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val) override;
 
     virtual zx_status_t InterruptWait() override;
+    virtual void InterruptCancel() override;
 
     virtual void* mmio() override { return nullptr; }
 
@@ -34,6 +37,9 @@ public:
     void DoFailConfigure() { fail_configure_ = true; }
 
 private:
+    sync_completion_t irq_completion_;
+    bool interrupt_cancelled_ = false;
+
     bool fail_configure_ = false;
 };
 

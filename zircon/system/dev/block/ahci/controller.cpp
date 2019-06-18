@@ -19,6 +19,7 @@
 #include <ddk/protocol/pci.h>
 #include <lib/device-protocol/pci.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
@@ -119,15 +120,17 @@ void Controller::Queue(uint32_t portnr, sata_txn_t* txn) {
     }
 }
 
-Controller::~Controller() {
-    // TODO: Join threads.
-    // The current driver doesn't do this - it will be done in a following CL.
-}
+Controller::~Controller() {}
 
 void Controller::Release(void* ctx) {
-    // FIXME - join threads created by this driver
     Controller* controller = static_cast<Controller*>(ctx);
+    controller->Shutdown();
     delete controller;
+}
+
+bool Controller::ShouldExit() {
+    fbl::AutoLock lock(&lock_);
+    return threads_should_exit_;
 }
 
 // worker thread
@@ -136,14 +139,22 @@ int Controller::WorkerLoop() {
     Port* port;
     for (;;) {
         // iterate all the ports and run or complete commands
+        bool port_active = false;
         for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
             port = &ports_[i];
 
             // Complete commands first.
-            port->Complete();
+            bool txns_in_progress = port->Complete();
             // Process queued txns.
-            port->ProcessQueued();
+            bool txns_added = port->ProcessQueued();
+            port_active = txns_in_progress || txns_added;
         }
+
+        // Exit only when there are no more transactions in flight.
+        if ((!port_active) && ShouldExit()) {
+            return 0;
+        }
+
         // wait here until more commands are queued, or a port becomes idle
         sync_completion_wait(&worker_completion_, ZX_TIME_INFINITE);
         sync_completion_reset(&worker_completion_);
@@ -161,8 +172,11 @@ int Controller::WatchdogLoop() {
         // no need to run the watchdog if there are no active xfers
         sync_completion_wait(&watchdog_completion_, idle ? ZX_TIME_INFINITE : ZX_SEC(5));
         sync_completion_reset(&watchdog_completion_);
+
+        if (ShouldExit()) {
+            return 0;
+        }
     }
-    return 0;
 }
 
 // irq handler:
@@ -170,9 +184,11 @@ int Controller::WatchdogLoop() {
 int Controller::IrqLoop() {
     for (;;) {
         zx_status_t status = bus_->InterruptWait();
-        if (status) {
-            zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
-            continue;
+        if (status != ZX_OK) {
+            if (!ShouldExit()) {
+                zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
+            }
+            return 0;
         }
         // mask hba interrupts while interrupts are being handled
         uint32_t ghc = RegRead(&regs_->ghc);
@@ -294,22 +310,41 @@ zx_status_t Controller::CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> 
 }
 
 zx_status_t Controller::LaunchThreads() {
-    int ret = thrd_create_with_name(&irq_thread_, IrqThread, this, "ahci-irq");
-    if (ret != thrd_success) {
-        zxlogf(ERROR, "ahci: error %d creating irq thread\n", ret);
-        return ZX_ERR_NO_MEMORY;
+    zx_status_t status = irq_thread_.CreateWithName(IrqThread, this, "ahci-irq");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d creating irq thread\n", status);
+        return status;
     }
-    ret = thrd_create_with_name(&worker_thread_, WorkerThread, this, "ahci-worker");
-    if (ret != thrd_success) {
-        zxlogf(ERROR, "ahci: error %d creating worker thread\n", ret);
-        return ZX_ERR_NO_MEMORY;
+    status = worker_thread_.CreateWithName(WorkerThread, this, "ahci-worker");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d creating worker thread\n", status);
+        return status;
     }
-    ret = thrd_create_with_name(&watchdog_thread_, WatchdogThread, this, "ahci-watchdog");
-    if (ret != thrd_success) {
-        zxlogf(ERROR, "ahci: error %d creating watchdog thread\n", ret);
-        return ZX_ERR_NO_MEMORY;
+    status = watchdog_thread_.CreateWithName(WatchdogThread, this, "ahci-watchdog");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "ahci: error %d creating watchdog thread\n", status);
+        return status;
     }
     return ZX_OK;
+}
+
+void Controller::Shutdown() {
+    {
+        fbl::AutoLock lock(&lock_);
+        threads_should_exit_ = true;
+    }
+
+    // Signal the worker thread.
+    sync_completion_signal(&worker_completion_);
+    worker_thread_.Join();
+
+    // Signal watchdog.
+    sync_completion_signal(&watchdog_completion_);
+    watchdog_thread_.Join();
+
+    // Signal the interrupt thread to exit.
+    bus_->InterruptCancel();
+    irq_thread_.Join();
 }
 
 // implement driver object:

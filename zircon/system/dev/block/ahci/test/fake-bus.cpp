@@ -33,7 +33,15 @@ zx_status_t FakeBus::RegWrite(volatile uint32_t* reg, uint32_t val) {
 }
 
 zx_status_t FakeBus::InterruptWait() {
-    return ZX_ERR_IO_NOT_PRESENT;
+    sync_completion_wait(&irq_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&irq_completion_);
+    if (interrupt_cancelled_) return ZX_ERR_CANCELED;
+    return ZX_OK;
+}
+
+void FakeBus::InterruptCancel() {
+    interrupt_cancelled_ = true;
+    sync_completion_signal(&irq_completion_);
 }
 
 } // namespace ahci

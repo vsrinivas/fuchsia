@@ -41,6 +41,8 @@ public:
 
     // Wait on an interrupt from the bus's interrupt source.
     virtual zx_status_t InterruptWait() = 0;
+    // Cancel a pending interrupt wait.
+    virtual void InterruptCancel() = 0;
 
     // Get a pointer to the virtual mapping of the mmio region.
     // Ownership is retained by the bus, pointer is valid until bus is destroyed.
