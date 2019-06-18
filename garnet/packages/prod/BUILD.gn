@@ -454,14 +454,14 @@ group("guest_runner") {
 group("usb_video") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/usb_video",
+    "//src/camera/drivers/usb_video",
   ]
 }
 
 group("virtual_camera") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/virtual_camera",
+    "//src/camera/drivers/virtual_camera",
   ]
 }
 
@@ -611,13 +611,13 @@ group("crashpad_agent") {
 group("media") {
   testonly = true
   public_deps = [
-    "//garnet/bin/media/camera_manager:camera_manager",
-    "//garnet/lib/media/camera/simple_camera_server:simple_camera_server_cpp",
     "//garnet/packages/prod:media_audio",
     "//garnet/packages/prod:media_codec",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:tts",
+    "//src//camera/simple_camera/simple_camera_server:simple_camera_server_cpp",
+    "//src/camera/camera_manager",
   ]
 }
 

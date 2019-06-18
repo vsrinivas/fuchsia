@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
-#define GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
+#ifndef SRC_CAMERA_TEST_CAMERA_CLIENT_TEST_CAMERA_CLIENT_TEST_H_
+#define SRC_CAMERA_TEST_CAMERA_CLIENT_TEST_CAMERA_CLIENT_TEST_H_
 
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -46,4 +46,4 @@ class Client {
 
 }  // namespace camera
 
-#endif  // GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
+#endif  // SRC_CAMERA_TEST_CAMERA_CLIENT_TEST_CAMERA_CLIENT_TEST_H_

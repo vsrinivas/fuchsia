@@ -1,0 +1,66 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "camera_manager_impl.cpp",
+    "camera_manager_impl.h",
+    "video_device_client.cpp",
+    "video_device_client.h",
+  ]
+
+  deps = [
+    "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/public/lib/fzl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.camera:fuchsia.camera",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/media/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+executable("bin") {
+  output_name = "camera_manager"
+
+  sources = [
+    "camera_manager.cpp",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("camera_manager") {
+  deps = [
+    ":bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/camera_manager.cmx")
+      dest = "camera_manager.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "camera_manager"
+    },
+  ]
+}

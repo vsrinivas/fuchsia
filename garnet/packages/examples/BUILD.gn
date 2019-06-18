@@ -46,9 +46,9 @@ group("scenic") {
     "//garnet/examples/ui:spinning_square_view",
     "//garnet/examples/ui:standalone_app",
     "//garnet/examples/ui:tile_view",
-    "//garnet/examples/ui:video_display",
     "//garnet/examples/ui:yuv_to_image_pipe",
     "//garnet/packages/prod:scenic",
+    "//src/camera/examples/video_display",
   ]
 }
 

@@ -11,7 +11,6 @@ group("media") {
     ":codec_runner_sw_ffmpeg",
     ":codec_runner_sw_sbc",
     ":services",
-    "camera_manager",
     "codec_factory",
     "codecs",
   ]

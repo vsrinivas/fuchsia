@@ -20,7 +20,6 @@ group("ui") {
     "spinning_square",
     "standalone_app",
     "tile",
-    "video_display",
     "yuv_to_image_pipe",
   ]
 }
@@ -241,21 +240,6 @@ package("tile_view") {
     {
       path = rebase_path("meta/ui_example.cmx")
       dest = "tile_view.cmx"
-    },
-  ]
-}
-
-package("video_display") {
-  deps = [
-    "video_display",
-  ]
-
-  binary = "video_display"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "video_display.cmx"
     },
   ]
 }

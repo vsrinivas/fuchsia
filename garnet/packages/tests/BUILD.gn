@@ -843,7 +843,7 @@ group("fidl_compatibility_test") {
 group("camera_client") {
   testonly = true
   public_deps = [
-    "//garnet/lib/media/camera/simple_camera_lib:camera_tests",
+    "//src/camera/simple_camera/simple_camera_lib:camera_tests",
     "//src/camera/test/camera_client_test",
   ]
 }
@@ -1065,9 +1065,9 @@ group("runtime") {
     "//garnet/packages/prod:runtime",
     "//src/sys/component_manager:component_manager_tests",
     "//src/sys/component_manager/tests:elf_runner_test",
+    "//src/sys/component_manager/tests:hub_integration_test",
     "//src/sys/component_manager/tests:no_pkg_resolver_test",
     "//src/sys/component_manager/tests:routing_integration_test",
-    "//src/sys/component_manager/tests:hub_integration_test",
   ]
 }
 
