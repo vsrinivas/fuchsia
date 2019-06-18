@@ -195,22 +195,4 @@ void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
                                      &logger_simple_bindings_);
 }
 
-void LoggerFactoryImpl::CreateLoggerFromProjectId(
-    uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
-    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-    CreateLoggerFromProjectIdCallback callback) {
-  FX_LOGS(ERROR)
-      << "The method CreateLoggerFromProjectId() is no longer supported",
-      callback(Status::INVALID_ARGUMENTS);
-}
-
-void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
-    uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
-    fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-    CreateLoggerSimpleFromProjectIdCallback callback) {
-  FX_LOGS(ERROR)
-      << "The method CreateLoggerSimpleFromProjectId() is no longer supported",
-      callback(Status::INVALID_ARGUMENTS);
-}
-
 }  // namespace cobalt

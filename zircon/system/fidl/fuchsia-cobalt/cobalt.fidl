@@ -158,17 +158,6 @@ protocol LoggerFactory {
                                       ReleaseStage release_stage,
                                       request<LoggerSimple> logger)
         -> (Status status);
-
-    // Deprecated. Do not use.
-    CreateLoggerFromProjectId(uint32 project_id, ReleaseStage release_stage,
-                              request<Logger> logger)
-        -> (Status status);
-
-    // Deprecated. Do not use.
-    CreateLoggerSimpleFromProjectId(uint32 project_id,
-                                    ReleaseStage release_stage,
-                                    request<LoggerSimple> logger)
-        -> (Status status);
 };
 
 /////////////////////////////////////////////////////////////////////
