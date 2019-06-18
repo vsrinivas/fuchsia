@@ -84,7 +84,7 @@ ControllerPtr FindTiles() {
     fprintf(stderr, "Couldn't find entry in tile component\n");
     return {};
   }
-  std::string svc_name = tile_realm_entry + "/out/public";
+  std::string svc_name = tile_realm_entry + "/out/svc";
   fxl::UniqueFD tile_svc(openat(dirfd(tile_component_dir.get()),
                                 svc_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_svc.is_valid()) {
