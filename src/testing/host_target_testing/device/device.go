@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -105,10 +106,6 @@ func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	}
 
-	c.waitForDevicePath("/bin")
-	c.waitForDevicePath("/config")
-	c.waitForDevicePath("/config/build-info")
-
 	log.Printf("device up")
 }
 
@@ -116,6 +113,16 @@ func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 // client is disconnected.
 func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
 	c.sshClient.RegisterDisconnectListener(wg)
+}
+
+func (c *Client) GetSystemImageMerkle() (string, error) {
+	const systemImageMeta = "/system/meta"
+	merkle, err := c.ReadRemotePath(systemImageMeta)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(merkle)), nil
 }
 
 // GetBuildSnapshot fetch the device's current system version, as expressed by the file
@@ -152,7 +159,16 @@ func (c *Client) TriggerSystemOTA(t *testing.T) {
 func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.Run(fmt.Sprintf("/bin/cat %s", path), &stdout, &stderr)
+	err := c.Run(fmt.Sprintf(
+		`(
+		test -e "%s" &&
+		while IFS='' read f; do
+			echo "$f";
+		done < "%s" &&
+		if [ ! -z "$f" ];
+			then echo "$f";
+		fi
+		)`, path, path), &stdout, &stderr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q: %s: %s", path, err, string(stderr.Bytes()))
 	}
@@ -163,7 +179,7 @@ func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 // RemoteFileExists checks if a file exists on the remote device.
 func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
 	var stderr bytes.Buffer
-	err := c.Run(fmt.Sprintf("/bin/ls %s", path), ioutil.Discard, &stderr)
+	err := c.Run(fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, &stderr)
 	if err == nil {
 		return true
 	}
@@ -190,7 +206,7 @@ func (c *Client) RegisterPackageRepository(repo *packages.Server) error {
 func (c *Client) waitForDevicePath(path string) {
 	for {
 		log.Printf("waiting for %q to mount", path)
-		err := c.Run(fmt.Sprintf("/bin/ls %s", path), ioutil.Discard, ioutil.Discard)
+		err := c.Run(fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, ioutil.Discard)
 		if err == nil {
 			break
 		}

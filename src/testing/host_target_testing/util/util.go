@@ -6,13 +6,16 @@ package util
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // RunCommand executes a command on the host and returns the stdout and stderr
@@ -80,4 +83,22 @@ func Untar(dst string, src string) error {
 			f.Close()
 		}
 	}
+}
+
+func ParsePackageList(rd io.Reader) (map[string]string, error) {
+	scanner := bufio.NewScanner(rd)
+	packages := make(map[string]string)
+	for scanner.Scan() {
+		s := strings.TrimSpace(scanner.Text())
+		entry := strings.Split(s, "=")
+		if len(entry) != 2 {
+			return nil, fmt.Errorf("parser: entry format: %q", s)
+		}
+		packages[entry[0]] = entry[1]
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return packages, nil
 }

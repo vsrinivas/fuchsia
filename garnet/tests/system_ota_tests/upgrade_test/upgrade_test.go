@@ -5,14 +5,15 @@
 package upgrade
 
 import (
-	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"testing"
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/util"
 )
 
 var c *Config
@@ -62,12 +63,23 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	// Wait for the device to come online.
 	device.WaitForDeviceToBeUp(t)
 
-	// Extract the "data/snapshot" file from the "build-info" package.
-	p, err := repo.OpenPackage("build-info/0")
+	// Get the device's current /system/meta. Error out if it is the same
+	// version we are about to OTA to.
+	remoteSystemImageMerkle, err := device.GetSystemImageMerkle()
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedBuildSnapshot, err := p.ReadFile("data/snapshot")
+	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
+
+	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
+	if err != nil {
+		t.Fatalf("error extracting expected system image merkle: %s", err)
+	}
+	log.Printf("upgrading to system image merkle: %q", expectedSystemImageMerkle)
+
+	if expectedSystemImageMerkle == remoteSystemImageMerkle {
+		t.Fatalf("device already updated to the expected version:\n\n%q", expectedSystemImageMerkle)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,24 +99,46 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 
 	device.RegisterPackageRepository(server)
 
-	// Get the device's current /boot/config/demvgr. Error out if it is the
-	// same version we are about to OTA to.
-	remoteBuildSnapshot := device.GetBuildSnapshot(t)
-	if bytes.Equal(expectedBuildSnapshot, remoteBuildSnapshot) {
-		t.Fatalf("device already updated to the expected version:\n\n%s", expectedBuildSnapshot)
-	}
-
 	// Start the system OTA process.
 	log.Printf("starting system OTA")
 	device.TriggerSystemOTA(t)
 
 	// At the this point the system should have been updated to the target
 	// system version. Confirm the update by fetching the device's current
-	// /boot/config/demvgr, and making sure it is the correct version.
-	remoteBuildSnapshot = device.GetBuildSnapshot(t)
-	if !bytes.Equal(expectedBuildSnapshot, remoteBuildSnapshot) {
-		t.Fatalf("system version expected to be:\n\n%s\n\nbut instead got:\n\n%s", expectedBuildSnapshot, remoteBuildSnapshot)
+	// /system/meta, and making sure it is the correct version.
+	remoteSystemImageMerkle, err = device.GetSystemImageMerkle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
+
+	if expectedSystemImageMerkle != remoteSystemImageMerkle {
+		t.Fatalf("system version expected to be:\n\n%q\n\nbut instead got:\n\n%q", expectedSystemImageMerkle, remoteSystemImageMerkle)
 	}
 
 	log.Printf("system OTA successful")
+}
+
+func extractUpdateSystemImage(repo *packages.Repository) (string, error) {
+	// Extract the "packages" file from the "update" package.
+	p, err := repo.OpenPackage("update/0")
+	if err != nil {
+		return "", err
+	}
+	f, err := p.Open("packages")
+	if err != nil {
+		return "", err
+	}
+
+	packages, err := util.ParsePackageList(f)
+	if err != nil {
+		return "", err
+	}
+
+	merkle, ok := packages["system_image/0"]
+	if !ok {
+		return "", fmt.Errorf("could not find system_image/0 merkle")
+	}
+
+	return merkle, nil
 }
