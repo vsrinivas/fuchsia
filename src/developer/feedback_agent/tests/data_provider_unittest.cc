@@ -6,6 +6,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <lib/fostr/fidl/fuchsia/mem/formatting.h>
 #include <lib/fostr/indent.h>
@@ -15,6 +16,7 @@
 #include <lib/fsl/vmo/vector.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
@@ -34,6 +36,8 @@
 #include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -169,9 +173,23 @@ MATCHER_P2(MatchesAttachment, expected_key, expected_value,
 //
 // This does not test the environment service. It directly instantiates the
 // class, without connecting through FIDL.
-class DataProviderImplTest : public gtest::RealLoopFixture {
+class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
  public:
   void SetUp() override { ResetDataProvider(kDefaultConfig); }
+
+  void TearDown() override {
+    if (!controller_) {
+      return;
+    }
+    controller_->Kill();
+    bool done = false;
+    controller_.events().OnTerminated =
+        [&done](int64_t code, fuchsia::sys::TerminationReason reason) {
+          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+          done = true;
+        };
+    RunLoopUntil([&done] { return done; });
+  }
 
  protected:
   // Resets the underlying |data_provider_| using the given |config|.
@@ -195,6 +213,26 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
     stub_logger_->set_messages(messages);
     FXL_CHECK(service_directory_provider_.AddService(
                   stub_logger_->GetHandler(dispatcher())) == ZX_OK);
+  }
+
+  // Injects a test app that exposes some Inspect data in the test environment.
+  //
+  // Useful to guarantee there is a component within the environment that
+  // exposes Inspect data as we are excluding system_objects paths from the
+  // Inspect discovery and the test component itself only has a system_objects
+  // Inspect node.
+  void InjectInspectTestApp() {
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url =
+        "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/"
+        "inspect_test_app.cmx";
+    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment",
+                                                 CreateServices());
+    environment_->CreateComponent(std::move(launch_info),
+                                  controller_.NewRequest());
+    bool ready = false;
+    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    RunLoopUntil([&ready] { return ready; });
   }
 
   GetScreenshotResponse GetScreenshot() {
@@ -236,6 +274,8 @@ class DataProviderImplTest : public gtest::RealLoopFixture {
 
  private:
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  std::unique_ptr<::sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::sys::ComponentControllerPtr controller_;
 
   std::unique_ptr<StubScenic> stub_scenic_;
   std::unique_ptr<StubLogger> stub_logger_;
@@ -408,6 +448,85 @@ TEST_F(DataProviderImplTest, GetData_SysLog) {
               testing::Contains(MatchesAttachment(
                   "log.system.txt",
                   "[15604.000][07559][07687][foo] INFO: log message\n")));
+}
+
+constexpr char kInspectJsonSchema[] = R"({
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "contents": {
+        "type": "object"
+      }
+    },
+    "required": [
+      "path",
+      "contents"
+    ],
+    "additionalProperties": false
+  },
+  "uniqueItems": true
+})";
+
+TEST_F(DataProviderImplTest, GetData_Inspect) {
+  InjectInspectTestApp();
+
+  DataProvider_GetData_Result result = GetData();
+
+  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.response().data.has_attachments());
+
+  bool found_inspect_attachment = false;
+  for (const auto& attachment : result.response().data.attachments()) {
+    if (attachment.key.compare("inspect.json") != 0) {
+      continue;
+    }
+    found_inspect_attachment = true;
+
+    std::string inspect_str;
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_str));
+    ASSERT_FALSE(inspect_str.empty());
+
+    // JSON verification.
+    // We check that the output is a valid JSON and that it matches the schema.
+    rapidjson::Document inspect_json;
+    ASSERT_FALSE(inspect_json.Parse(inspect_str.c_str()).HasParseError());
+    rapidjson::Document inspect_schema_json;
+    ASSERT_FALSE(inspect_schema_json.Parse(kInspectJsonSchema).HasParseError());
+    rapidjson::SchemaDocument schema(inspect_schema_json);
+    rapidjson::SchemaValidator validator(schema);
+    EXPECT_TRUE(inspect_json.Accept(validator));
+
+    // We then check that we get the expected Inspect data for the injected test
+    // app.
+    bool has_entry_for_test_app = false;
+    for (const auto& obj : inspect_json.GetArray()) {
+      const std::string path = obj["path"].GetString();
+      if (path.find("inspect_test_app.cmx") != std::string::npos) {
+        has_entry_for_test_app = true;
+        const auto contents = obj["contents"].GetObject();
+        ASSERT_TRUE(contents.HasMember("root"));
+        const auto root = contents["root"].GetObject();
+        ASSERT_TRUE(root.HasMember("obj1"));
+        ASSERT_TRUE(root.HasMember("obj2"));
+        const auto obj1 = root["obj1"].GetObject();
+        const auto obj2 = root["obj2"].GetObject();
+        ASSERT_TRUE(obj1.HasMember("version"));
+        ASSERT_TRUE(obj2.HasMember("version"));
+        EXPECT_STREQ(obj1["version"].GetString(), "1.0");
+        EXPECT_STREQ(obj2["version"].GetString(), "1.0");
+        ASSERT_TRUE(obj1.HasMember("value"));
+        ASSERT_TRUE(obj2.HasMember("value"));
+        EXPECT_EQ(obj1["value"].GetUint(), 100u);
+        EXPECT_EQ(obj2["value"].GetUint(), 200u);
+      }
+    }
+    EXPECT_TRUE(has_entry_for_test_app);
+  }
+  EXPECT_TRUE(found_inspect_attachment);
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationWhitelist) {

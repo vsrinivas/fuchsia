@@ -11,6 +11,7 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -23,8 +24,6 @@
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace fuchsia {
 namespace feedback {
@@ -38,14 +37,53 @@ MATCHER_P(MatchesKey, expected_key,
 
 // Smoke-tests the real environment service for the
 // fuchsia.feedback.DataProvider FIDL interface, connecting through FIDL.
-class FeedbackAgentIntegrationTest : public gtest::RealLoopFixture {
+class FeedbackAgentIntegrationTest
+    : public ::sys::testing::TestWithEnvironment {
  public:
   void SetUp() override {
     environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace();
   }
 
+  void TearDown() override {
+    if (!controller_) {
+      return;
+    }
+    controller_->Kill();
+    bool done = false;
+    controller_.events().OnTerminated =
+        [&done](int64_t code, fuchsia::sys::TerminationReason reason) {
+          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+          done = true;
+        };
+    RunLoopUntil([&done] { return done; });
+  }
+
  protected:
+  // Injects a test app that exposes some Inspect data in the test environment.
+  //
+  // Useful to guarantee there is a component within the environment that
+  // exposes Inspect data as we are excluding system_objects paths from the
+  // Inspect discovery and the test component itself only has a system_objects
+  // Inspect node.
+  void InjectInspectTestApp() {
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url =
+        "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/"
+        "inspect_test_app.cmx";
+    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment",
+                                                 CreateServices());
+    environment_->CreateComponent(std::move(launch_info),
+                                  controller_.NewRequest());
+    bool ready = false;
+    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    RunLoopUntil([&ready] { return ready; });
+  }
+
   std::shared_ptr<::sys::ServiceDirectory> environment_services_;
+
+ private:
+  std::unique_ptr<::sys::testing::EnclosingEnvironment> environment_;
+  fuchsia::sys::ComponentControllerPtr controller_;
 };
 
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan
@@ -113,6 +151,10 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   LogListener log_listener(environment_services_);
   RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });
 
+  // We make sure there is at least one component in the test environment that
+  // exposes some Inspect data.
+  InjectInspectTestApp();
+
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
@@ -142,78 +184,6 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                   MatchesKey("log.system.txt"),
                   MatchesKey("inspect.json"),
               }));
-}
-
-constexpr char kInspectJsonSchema[] = R"({
-  "type": "array",
-  "items": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "contents": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "path",
-          "contents"
-        ],
-        "additionalProperties": false
-  },
-  "uniqueItems": true
-})";
-
-TEST_F(FeedbackAgentIntegrationTest, GetData_ValidInspectJson) {
-  DataProviderSyncPtr data_provider;
-  environment_services_->Connect(data_provider.NewRequest());
-
-  DataProvider_GetData_Result out_result;
-  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
-
-  ASSERT_TRUE(out_result.is_response());
-  ASSERT_TRUE(out_result.response().data.has_attachments());
-
-  bool found_inspect_attachment = false;
-  for (const auto& attachment : out_result.response().data.attachments()) {
-    if (attachment.key.compare("inspect.json") != 0) {
-      continue;
-    }
-    found_inspect_attachment = true;
-
-    std::string inspect_str;
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_str));
-    ASSERT_FALSE(inspect_str.empty());
-
-    // JSON verification.
-    // We check that the output is a valid JSON and that it matches the schema.
-    rapidjson::Document inspect_json;
-    ASSERT_FALSE(inspect_json.Parse(inspect_str.c_str()).HasParseError());
-    rapidjson::Document inspect_schema_json;
-    ASSERT_FALSE(inspect_schema_json.Parse(kInspectJsonSchema).HasParseError());
-    rapidjson::SchemaDocument schema(inspect_schema_json);
-    rapidjson::SchemaValidator validator(schema);
-    EXPECT_TRUE(inspect_json.Accept(validator));
-
-    // We check that we get some Inspect data for the two components that are
-    // guaranteed to be in the test environment: feedback_agent.cmx and
-    // feedback_agent_integration_test.cmx.
-    bool has_entry_for_feedback_agent = false;
-    bool has_entry_for_feedback_agent_integration_test = false;
-    for (const auto& obj : inspect_json.GetArray()) {
-      const std::string path = obj["path"].GetString();
-      if (path.find("feedback_agent.cmx") != std::string::npos) {
-        has_entry_for_feedback_agent = true;
-      } else if (path.find("feedback_agent_integration_test.cmx") !=
-                 std::string::npos) {
-        has_entry_for_feedback_agent_integration_test = true;
-      }
-    }
-    EXPECT_TRUE(has_entry_for_feedback_agent);
-    EXPECT_TRUE(has_entry_for_feedback_agent_integration_test);
-  }
-  EXPECT_TRUE(found_inspect_attachment);
 }
 
 // EXPECTs that there is a feedback_agent.cmx process running in a child job of

@@ -95,7 +95,10 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
       .and_then([](Locations& locations) {
         std::vector<fit::promise<::inspect::Source, std::string>> sources;
         for (auto location : locations) {
-          sources.push_back(::inspect::ReadLocation(std::move(location)));
+          if (location.directory_path.find("system_objects") ==
+              std::string::npos) {
+            sources.push_back(::inspect::ReadLocation(std::move(location)));
+          }
         }
 
         return fit::join_promise_vector(std::move(sources))
@@ -107,9 +110,14 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
                     if (source.is_ok()) {
                       ok_sources.emplace_back(source.take_value());
                     } else {
-                      FX_LOGS(ERROR) << "Failed to read one Inspect location: "
+                      FX_LOGS(ERROR) << "Failed to read one Inspect source: "
                                      << source.take_error();
                     }
+                  }
+
+                  if (ok_sources.empty()) {
+                    FX_LOGS(WARNING) << "No valid Inspect sources found";
+                    return fit::error();
                   }
 
                   fsl::SizedVmo vmo;
