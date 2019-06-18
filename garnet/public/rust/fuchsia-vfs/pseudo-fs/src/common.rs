@@ -11,7 +11,12 @@ use {
         OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
+    std::{future::Future, pin::Pin},
 };
+
+/// A dynamically-dispatched asynchronous function.
+pub(crate) type AsyncFnOnce<'a, ArgTy, OutputTy> =
+    Box<dyn FnOnce(ArgTy) -> Pin<Box<dyn Future<Output = OutputTy> + 'a>> + 'a>;
 
 /// Set of known rights.
 const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN;

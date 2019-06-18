@@ -22,7 +22,7 @@ pub mod reexport {
 }
 
 use {
-    crate::directory::entry::DirectoryEntry,
+    crate::{common::AsyncFnOnce, directory::entry::DirectoryEntry},
     byteorder::{LittleEndian, WriteBytesExt},
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_FILENAME},
@@ -96,13 +96,32 @@ pub fn run_server_client_with_executor<GetClientRes>(
 pub fn run_server_client_with_mode_and_executor<GetClientRes>(
     flags: u32,
     mode: u32,
-    mut exec: Executor,
-    mut server: impl DirectoryEntry,
+    exec: Executor,
+    server: impl DirectoryEntry,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
-    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+    executor: impl FnOnce(&mut dyn FnMut(bool)),
 ) where
     GetClientRes: Future<Output = ()>,
 {
+    run_server_client_with_mode_and_executor_dyn(
+        flags,
+        mode,
+        exec,
+        Box::new(server),
+        Box::new(|proxy| Box::pin(get_client(proxy))),
+        Box::new(executor),
+    )
+}
+
+// helper to prevent unnecessary monomorphization
+fn run_server_client_with_mode_and_executor_dyn<'a>(
+    flags: u32,
+    mode: u32,
+    mut exec: Executor,
+    mut server: Box<dyn DirectoryEntry + 'a>,
+    get_client: AsyncFnOnce<'a, DirectoryProxy, ()>,
+    executor: Box<dyn FnOnce(&mut dyn FnMut(bool)) + 'a>,
+) {
     let (client_proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
@@ -152,6 +171,9 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
 pub type OpenRequestArgs<'path> =
     (u32, u32, Box<Iterator<Item = &'path str>>, ServerEnd<DirectoryMarker>);
 
+/// The sender end of a channel to proxy open requests.
+pub type OpenRequestSender<'path> = mpsc::Sender<OpenRequestArgs<'path>>;
+
 /// Similar to [`run_server_client()`] but does not automatically connect the server and the client
 /// code.  Instead the client receives a sender end of an [`OpenRequestArgs`] queue, capable of
 /// receiving arguments for the `open()` calls on the server.  This way the client can control when
@@ -160,7 +182,7 @@ pub type OpenRequestArgs<'path> =
 /// server is to `clone()` the existing one, which might be undesirable for a particular test.
 pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
     server: impl DirectoryEntry,
-    get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs<'path>>) -> GetClientRes,
+    get_client: impl FnOnce(OpenRequestSender<'path>) -> GetClientRes,
 ) where
     GetClientRes: Future<Output = ()>,
 {
@@ -191,13 +213,28 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
 /// The server is wrapped in an async block that returns if it's `is_terminated` method returns
 /// true.
 pub fn run_server_client_with_open_requests_channel_and_executor<'path, GetClientRes>(
-    mut exec: Executor,
-    mut server: impl DirectoryEntry,
-    get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs<'path>>) -> GetClientRes,
-    executor: impl FnOnce(&mut FnMut(bool) -> ()),
+    exec: Executor,
+    server: impl DirectoryEntry,
+    get_client: impl FnOnce(OpenRequestSender<'path>) -> GetClientRes,
+    executor: impl FnOnce(&mut dyn FnMut(bool)),
 ) where
     GetClientRes: Future<Output = ()>,
 {
+    run_server_client_with_open_requests_channel_and_executor_dyn(
+        exec,
+        Box::new(server),
+        Box::new(|sender| Box::pin(get_client(sender))),
+        Box::new(executor),
+    )
+}
+
+// helper to prevent monomorphization
+fn run_server_client_with_open_requests_channel_and_executor_dyn<'a, 'path: 'a>(
+    mut exec: Executor,
+    mut server: Box<dyn DirectoryEntry + 'a>,
+    get_client: AsyncFnOnce<'a, OpenRequestSender<'path>, ()>,
+    executor: Box<dyn FnOnce(&mut dyn FnMut(bool)) + 'a>,
+) {
     let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs<'path>>(0);
 
     let server_wrapper = async move {
