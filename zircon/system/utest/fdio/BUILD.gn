@@ -8,6 +8,7 @@ test("fdio") {
     "fdio_directory.cpp",
     "fdio_fd.cpp",
     "fdio_fdio.cpp",
+    "fdio_get_vmo.cpp",
     "fdio_handle_fd.c",
     "fdio_io.cpp",
     "fdio_null_namespace.cpp",
@@ -23,8 +24,10 @@ test("fdio") {
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-process:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
