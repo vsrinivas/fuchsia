@@ -737,8 +737,6 @@ const x86_microarch_config_t* select_microarch_config(enum x86_microarch_list in
     case X86_MICROARCH_AMD_ZEN:
         return &zen_config;
     case X86_MICROARCH_UNKNOWN: {
-        printf("WARNING: Could not identify microarch.\n");
-        printf("Please file a bug with your boot log and description of hardware.\n");
         switch (x86_vendor) {
         case X86_VENDOR_INTEL:
             return &intel_default_config;
