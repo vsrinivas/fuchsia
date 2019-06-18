@@ -58,6 +58,4 @@ if (board_name == "pc") {
   ]
 } else if (board_name == "qemu-arm64") {
   basic_envs += [ qemu_env ]
-} else if (board_name == "vim2") {
-  basic_envs += [ vim2_env ]
 }
