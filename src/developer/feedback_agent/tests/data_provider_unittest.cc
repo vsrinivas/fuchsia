@@ -45,6 +45,7 @@ const std::set<std::string> kDefaultAnnotations = {
 };
 const std::set<std::string> kDefaultAttachments = {
     "build.snapshot.xml",
+    "inspect.json",
     "log.kernel.txt",
     "log.system.txt",
 };
@@ -377,9 +378,8 @@ TEST_F(DataProviderImplTest,
           feedback_responses.push_back({std::move(screenshot)});
         });
   }
-  RunLoopUntil([&feedback_responses] {
-    return feedback_responses.size() == num_calls;
-  });
+  RunLoopUntil(
+      [&feedback_responses] { return feedback_responses.size() == num_calls; });
 
   EXPECT_EQ(total_num_scenic_bindings(), num_calls);
   // The unbinding is asynchronous so we need to run the loop until all the
