@@ -90,7 +90,7 @@ class MediaApp {
   bool ParameterRangeChecks();
   void SetupPayloadCoefficients();
   void DisplayConfigurationSettings();
-  zx_status_t AcquireAudioRenderer(sys::ComponentContext* app_context);
+  void AcquireAudioRenderer(sys::ComponentContext* app_context);
   void SetStreamType();
 
   zx_status_t CreateMemoryMapping();

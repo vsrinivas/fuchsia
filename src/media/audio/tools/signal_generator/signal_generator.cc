@@ -10,7 +10,6 @@
 #include <math.h>
 #include <zircon/syscalls.h>
 
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media::tools {
@@ -29,12 +28,7 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
 
   SetupPayloadCoefficients();
   DisplayConfigurationSettings();
-
-  if (AcquireAudioRenderer(app_context) != ZX_OK) {
-    Shutdown();
-    return;
-  }
-
+  AcquireAudioRenderer(app_context);
   SetStreamType();
 
   if (CreateMemoryMapping() != ZX_OK) {
@@ -229,78 +223,46 @@ void MediaApp::DisplayConfigurationSettings() {
 
 // Use StartupContext to acquire AudioPtr; use that to acquire AudioRendererPtr
 // in turn. Set AudioRenderer error handler, in case of channel closure.
-zx_status_t MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
-  zx_status_t status = ZX_OK;
-
-  // The AudioCore interface is used to enable or disable the creation and
-  // update of device settings files. Use the synchronous proxy, for simplicity.
-  fuchsia::media::AudioCoreSyncPtr audio_core;
-  app_context->svc()->Connect(audio_core.NewRequest());
-
+void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   if (set_device_settings_) {
-    status = audio_core->EnableDeviceSettings(settings_enabled_);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "AudioCore::EnableDeviceSettings failed - " << status;
-      return status;
-    }
+    // The AudioCore interface is used to enable or disable the creation and
+    // update of device settings files.
+    fuchsia::media::AudioCorePtr audio_core;
+    app_context->svc()->Connect(audio_core.NewRequest());
+    audio_core->EnableDeviceSettings(settings_enabled_);
   }
 
   // The Audio interface is only needed to create AudioRenderer, set routing
-  // policy and set system gain/mute. Use the synchronous proxy, for simplicity.
-  fuchsia::media::AudioSyncPtr audio;
+  // policy and set system gain/mute.
+  fuchsia::media::AudioPtr audio;
   app_context->svc()->Connect(audio.NewRequest());
 
   if (set_system_gain_) {
-    status = audio->SetSystemGain(system_gain_db_);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Audio::SetSystemGain failed - " << status;
-      return status;
-    }
+    audio->SetSystemGain(system_gain_db_);
   }
 
   if (set_system_mute_) {
-    status = audio->SetSystemMute(system_mute_);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Audio::SetSystemMute failed - " << status;
-      return status;
-    }
+    audio->SetSystemMute(system_mute_);
   }
 
   if (set_policy_) {
-    status = audio->SetRoutingPolicy(audio_policy_);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Audio::SetRoutingPolicy failed - " << status;
-      return status;
-    }
+    audio->SetRoutingPolicy(audio_policy_);
   }
 
-  status = audio->CreateAudioRenderer(audio_renderer_.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Audio::CreateAudioRenderer failed - " << status;
-    return status;
-  }
-
+  audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR)
-        << "Client connection to fuchsia.media.AudioRenderer failed: "
-        << status;
+    FXL_PLOG(ERROR, status)
+        << "Client connection to fuchsia.media.AudioRenderer failed";
     Shutdown();
   });
 
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "AudioRenderer::BindGainControl failed - " << status;
-    return status;
-  }
-
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Client connection to fuchsia.media.GainControl failed: "
-                   << status;
+    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.GainControl failed";
     Shutdown();
   });
 
   // ... now just let the instances of audio and audio_core go out of scope.
-  return status;
 }
 
 // Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
