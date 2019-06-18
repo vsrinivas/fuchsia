@@ -22,7 +22,7 @@ universe_package_labels += [
   "//src/modular/bundles:tools",
 ]
 
-kernel_cmdline_args = [
+kernel_cmdline_args += [
   # hide the virtual console on boot
   "virtcon.hide-on-boot",
 ]
