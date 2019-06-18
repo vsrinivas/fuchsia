@@ -16,8 +16,12 @@ group("unittests") {
 }
 
 # This library has a run-time dependency on the `modular_test_harness` package.
-source_set("test_harness_fixture") {
+sdk_source_set("test_harness_fixture") {
   testonly = true
+
+  category = "partner"
+  sdk_name = "modular_testing_cpp"
+  include_base = "//sdk"
 
   public_configs = [ "//sdk/config" ]
 
@@ -34,8 +38,6 @@ source_set("test_harness_fixture") {
     "fake_story_shell.h",
     "test_harness_fixture.cc",
     "test_harness_fixture.h",
-    "test_harness_launcher.cc",
-    "test_harness_launcher.h",
   ]
 
   deps = [
@@ -45,6 +47,7 @@ source_set("test_harness_fixture") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -58,7 +61,6 @@ executable("test_harness_fixture_test_bin") {
   testonly = true
   sources = [
     "test_harness_fixture_test.cc",
-    "test_harness_launcher_test.cc",
   ]
   deps = [
     ":test.modular.test.harness",
