@@ -13,7 +13,7 @@ __fx_amber_package() {
 
 __fx_build_dir() {
   # build dirs are directories under out/ with an args.gn
-  compadd $(cd ${fuchsia_dir} >/dev/null 2>&1; echo out/*/args.gn(N:h))
+  compadd $(cd ${fuchsia_dir} >/dev/null 2>&1; echo out/^*.zircon/args.gn(N:h))
 }
 
 __fx_gn_target() {
