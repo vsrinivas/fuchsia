@@ -1,5 +1,13 @@
 {
     "program": {
         "binary": "test/inspect_query_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

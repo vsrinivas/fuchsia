@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/directory.h>
 #include <lib/inspect/inspect.h>
 #include <lib/inspect/query/source.h>
 #include <lib/vfs/cpp/vmo_file.h>
+#include <src/lib/files/file.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/substitute.h>
 
 #include "fixture.h"
 #include "fuchsia/io/cpp/fidl.h"
@@ -127,10 +130,65 @@ class SourceTestVmo : public TestFixture {
   fuchsia::io::FilePtr file_ptr_;
 };
 
+class SourceTestFile : public SourceTestVmo {
+ public:
+  fit::result<inspect::Source, std::string> MakeFromPath(std::string path,
+                                                         int depth = -1) {
+    fit::result<std::string, std::string> path_or = WriteFromVmo(path);
+    if (path_or.is_error()) {
+      return fit::error(path_or.error());
+    }
+
+    fuchsia::io::FilePtr file_backed_ptr;
+    zx_status_t status =
+        fdio_open(path_or.value().c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
+                  file_backed_ptr.NewRequest().TakeChannel().release());
+    ZX_ASSERT(status == ZX_OK && file_backed_ptr.is_bound());
+
+    fit::result<inspect::Source, std::string> result;
+    SchedulePromise(
+        inspect::Source::MakeFromVmo(
+            inspect::Location::Parse(path).take_value(),
+            std::move(file_backed_ptr), depth)
+            .then([&result](fit::result<inspect::Source, std::string>& res) {
+              result = std::move(res);
+            }));
+
+    RunLoopUntil([&result] { return !!result; });
+
+    return result;
+  }
+
+ protected:
+  // Writes the contents of the VMO backed by test data into a file at |path|.
+  // Returns the resulting file name, or a string error.
+  fit::result<std::string, std::string> WriteFromVmo(const std::string& path) {
+    const zx::vmo& vmo = tree_.GetVmo();
+    uint64_t vmo_size;
+    zx_status_t status = vmo.get_size(&vmo_size);
+    if (status != ZX_OK) {
+      return fit::error("could not get VMO size");
+    }
+    const fbl::Array<uint8_t> buf(new uint8_t[vmo_size], vmo_size);
+    status = vmo.read(buf.begin(), 0, vmo_size);
+    if (status != ZX_OK) {
+      return fit::error("could not read from VMO");
+    }
+    const char* f = reinterpret_cast<const char*>(buf.begin());  // Known safe.
+    if (!files::WriteFile(path, f, buf.size())) {
+      return fit::error(fxl::Substitute("Could not write: $0", path));
+    }
+    return fit::ok(path);
+  }
+
+  const std::string RootPath = "/tmp/file.inspect";
+};
+
 template <typename T>
 class SourceTest : public T {};
 
-using SourceTestTypes = ::testing::Types<SourceTestFidl, SourceTestVmo>;
+using SourceTestTypes =
+    ::testing::Types<SourceTestFidl, SourceTestVmo, SourceTestFile>;
 TYPED_TEST_SUITE(SourceTest, SourceTestTypes);
 
 TYPED_TEST(SourceTest, MakeDefault) {
@@ -177,7 +235,15 @@ TYPED_TEST(SourceTest, MakeWithPath) {
                                ChildrenMatch(::testing::SizeIs(1))));
 }
 
-TYPED_TEST(SourceTest, MakeError) {
+
+// These tests only apply to the test prototypes in SourceTestErrorTypes.
+template <typename T>
+class SourceTestError : public T {};
+
+using SourceTestErrorTypes = ::testing::Types<SourceTestFidl, SourceTestVmo>;
+TYPED_TEST_SUITE(SourceTestError, SourceTestErrorTypes);
+
+TYPED_TEST(SourceTestError, MakeError) {
   // TODO(FLK-186): Reenable this test.
   GTEST_SKIP();
   auto result = this->MakeFromPath(this->RootPath);

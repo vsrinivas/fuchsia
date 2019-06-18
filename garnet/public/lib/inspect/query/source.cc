@@ -4,8 +4,10 @@
 
 #include "source.h"
 
+#include <fbl/array.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <src/lib/files/file.h>
 #include <src/lib/fxl/strings/substitute.h>
 
 #include <stack>
@@ -25,11 +27,29 @@ fit::promise<inspect::ObjectReader> OpenPathInsideRoot(
 
   return reader.OpenChild(path_components[index])
       .and_then([reader = std::move(reader),
-                 path_components = std::move(path_components),
-                 index](inspect::ObjectReader& child) {
+                    path_components = std::move(path_components),
+                    index](inspect::ObjectReader& child) {
         return OpenPathInsideRoot(child, path_components, index + 1);
       });
 }
+
+// Finds the object hierarchy in a file-like object referenced by its
+// full |path|. |info| is passed by value as VMO read moves the vmo object from
+// inside it.
+fit::result<ObjectHierarchy> ReadFromFilePtr(const std::string& path,
+                                             fuchsia::io::NodeInfo info) {
+  if (info.is_file()) {
+    // The fbl::Array below will take ownership of buf.first.
+    std::pair<uint8_t*, intptr_t> buf = files::ReadFileToBytes(path);
+    if (buf.first == nullptr) {
+      return fit::error();
+    }
+    // fbl::Array takes ownership of buf.
+    return inspect::ReadFromBuffer(fbl::Array(buf.first, buf.second));
+  }
+  return inspect::ReadFromVmo(info.vmofile().vmo);
+}
+
 }  // namespace
 
 fit::promise<Source, std::string> Source::MakeFromFidl(
@@ -47,7 +67,7 @@ fit::promise<Source, std::string> Source::MakeFromFidl(
         return inspect::ReadFromFidl(reader.take_value(), depth);
       })
       .then([location = std::move(location)](
-                fit::result<inspect::ObjectHierarchy>& result)
+          fit::result<inspect::ObjectHierarchy>& result)
                 -> fit::result<Source, std::string> {
         if (!result.is_ok()) {
           return fit::error(
@@ -65,30 +85,29 @@ fit::promise<Source, std::string> Source::MakeFromVmo(
 
   return vmo_read_bridge.consumer.promise_or(fit::error())
       .then([depth, file_ptr = std::move(file_ptr),
-             root_location = std::move(root_location)](
-                fit::result<fuchsia::io::NodeInfo>& result)
+                root_location = std::move(root_location)](
+          fit::result<fuchsia::io::NodeInfo>& result)
                 -> fit::result<Source, std::string> {
         if (!result.is_ok()) {
-          return fit::error(fxl::Substitute("Failed to describe file at $0",
-                                            root_location.RelativeFilePath()));
-        }
-        auto info = result.take_value();
-        if (!info.is_vmofile()) {
-          return fit::error("File is not actually a vmofile");
+          return fit::error(fxl::Substitute("Failed to describe file: $0",
+                                            root_location.AbsoluteFilePath()));
         }
 
-        auto read_result = inspect::ReadFromVmo(std::move(info.vmofile().vmo));
+        fuchsia::io::NodeInfo info = result.take_value();
+        fit::result<ObjectHierarchy> read_result =
+            ReadFromFilePtr(root_location.AbsoluteFilePath(), std::move(info));
         if (!read_result.is_ok()) {
-          return fit::error("Failed reading the VMO as an Inspect VMO");
+          return fit::error(fxl::Substitute(
+              "Failed reading the VMO as an Inspect VMO or file: $0",
+              root_location.AbsoluteFilePath()));
         }
 
-        auto hierarchy_root = read_result.take_value();
-
-        auto* hierarchy = &hierarchy_root;
+        ObjectHierarchy hierarchy_root = read_result.take_value();
+        ObjectHierarchy* hierarchy = &hierarchy_root;
 
         // Navigate within the hierarchy to the correct location.
         for (const auto& path_component :
-             root_location.inspect_path_components) {
+            root_location.inspect_path_components) {
           auto child = std::find_if(
               hierarchy->children().begin(), hierarchy->children().end(),
               [&path_component](inspect::ObjectHierarchy& obj) {

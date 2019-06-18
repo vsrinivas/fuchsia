@@ -43,7 +43,7 @@ fit::promise<Source, std::string> ReadLocation(Location location, int depth) {
     }
     return Source::MakeFromFidl(
         std::move(location), inspect::ObjectReader(handle.take_value()), depth);
-  } else if (location.type == Location::Type::INSPECT_VMO) {
+  } else if (location.type == Location::Type::INSPECT_FILE_FORMAT) {
     fuchsia::io::FilePtr file_ptr;
     zx_status_t status = fdio_open(
         location.AbsoluteFilePath().c_str(), fuchsia::io::OPEN_RIGHT_READABLE,
@@ -51,9 +51,8 @@ fit::promise<Source, std::string> ReadLocation(Location location, int depth) {
     if (status != ZX_OK || !file_ptr.is_bound()) {
       return fit::make_promise([path = location.AbsoluteFilePath(),
                                 status]() -> fit::result<Source, std::string> {
-        return fit::error(
-            fxl::StringPrintf("Failed to fdio_open and bind %s %d\n",
-                              path.c_str(), status));
+        return fit::error(fxl::StringPrintf(
+            "Failed to fdio_open and bind %s %d\n", path.c_str(), status));
       });
     }
     return Source::MakeFromVmo(std::move(location), std::move(file_ptr), depth);

@@ -14,11 +14,12 @@
 
 namespace inspect {
 
-std::regex inspect_vmo_file_regex() { return std::regex("\\.inspect$"); }
+std::regex inspect_file_regex() { return std::regex("\\.inspect$"); }
 
 std::ostream& operator<<(std::ostream& os, const Location& location) {
-  auto type = std::string(
-      (location.type == Location::Type::INSPECT_VMO) ? "VMO" : "FIDL");
+  auto type = std::string((location.type == Location::Type::INSPECT_FILE_FORMAT)
+                              ? "FILE_FORMAT"
+                              : "FIDL");
   os << fxl::Substitute(
       "Location('$0', '$1', $2, [$3])", location.directory_path,
       location.file_name, type,
@@ -77,10 +78,10 @@ fit::result<Location, std::string> Location::Parse(const std::string& path) {
                                          fxl::kSplitWantAll);
   }
 
-  if (std::regex_search(parts[0], inspect_vmo_file_regex())) {
+  if (std::regex_search(parts[0], inspect_file_regex())) {
     // The file seems to be an inspect VMO.
     return fit::ok(
-        Location{.type = Location::Type::INSPECT_VMO,
+        Location{.type = Location::Type::INSPECT_FILE_FORMAT,
                  .directory_path = files::GetDirectoryName(parts[0]),
                  .file_name = files::GetBaseName(parts[0]),
                  .inspect_path_components = std::move(inspect_parts)});

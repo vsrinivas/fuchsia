@@ -536,6 +536,15 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo) {
   return ReadFromSnapshot(std::move(snapshot));
 }
 
+fit::result<ObjectHierarchy> ReadFromBuffer(fbl::Array<uint8_t> buffer) {
+  inspect::vmo::Snapshot snapshot;
+  if (inspect::vmo::Snapshot::Create(std::move(buffer), &snapshot) != ZX_OK) {
+    // TODO(CF-865): Best-effort read of invalid snapshots.
+    return fit::error();
+  }
+  return ReadFromSnapshot(std::move(snapshot));
+}
+
 ObjectHierarchy ReadFromFidlObject(fuchsia::inspect::Object object) {
   return ObjectHierarchy(FidlObjectToNode(std::move(object)), {});
 }

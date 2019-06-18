@@ -73,7 +73,7 @@ TEST_F(DiscoverTest, SyncFindPaths) {
 
   std::vector<inspect::Location> locations;
   SchedulePromise(
-      fit::make_promise([&] { locations = inspect::SyncFindPaths("/"); }));
+      fit::make_promise([&] { locations = inspect::SyncFindPaths("/test"); }));
 
   RunLoopUntil([&] { return !locations.empty(); });
 
@@ -87,19 +87,19 @@ TEST_F(DiscoverTest, SyncFindPaths) {
                              Location{
                                  .directory_path = "/test/other",
                                  .file_name = "root.inspect",
-                                 .type = Location::Type::INSPECT_VMO,
+                                 .type = Location::Type::INSPECT_FILE_FORMAT,
                                  .inspect_path_components = {},
                              },
                              Location{
                                  .directory_path = "/test/hub",
                                  .file_name = "root.inspect",
-                                 .type = Location::Type::INSPECT_VMO,
+                                 .type = Location::Type::INSPECT_FILE_FORMAT,
                                  .inspect_path_components = {},
                              },
                              Location{
                                  .directory_path = "/test/hub",
                                  .file_name = "test.inspect",
-                                 .type = Location::Type::INSPECT_VMO,
+                                 .type = Location::Type::INSPECT_FILE_FORMAT,
                                  .inspect_path_components = {},
                              },
                              Location{
@@ -133,7 +133,7 @@ TEST_F(DiscoverTest, SyncFindNestedPath) {
   EXPECT_THAT(locations2, ::testing::UnorderedElementsAre(Location{
                               .directory_path = "/test/hub",
                               .file_name = "root.inspect",
-                              .type = Location::Type::INSPECT_VMO,
+                              .type = Location::Type::INSPECT_FILE_FORMAT,
                               .inspect_path_components = {"child", "a"},
                           }));
 };
@@ -156,13 +156,13 @@ TEST_F(DiscoverTest, SyncFindGlobs) {
                              Location{
                                  .directory_path = "/test/hub",
                                  .file_name = "root.inspect",
-                                 .type = Location::Type::INSPECT_VMO,
+                                 .type = Location::Type::INSPECT_FILE_FORMAT,
                                  .inspect_path_components = {},
                              },
                              Location{
                                  .directory_path = "/test/hub",
                                  .file_name = "test.inspect",
-                                 .type = Location::Type::INSPECT_VMO,
+                                 .type = Location::Type::INSPECT_FILE_FORMAT,
                                  .inspect_path_components = {},
                              },
                              Location{

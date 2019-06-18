@@ -22,7 +22,7 @@ inspect::Source MakeSourceFromHierarchy(inspect::ObjectHierarchy hierarchy) {
       .directory_path = "./hub/",
       .file_name = "root.inspect",
       .inspect_path_components = {"child", "node"},
-      .type = inspect::Location::Type::INSPECT_VMO,
+      .type = inspect::Location::Type::INSPECT_FILE_FORMAT,
   };
 
   return inspect::Source(std::move(location), std::move(hierarchy));

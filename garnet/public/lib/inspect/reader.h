@@ -90,6 +90,10 @@ fit::result<ObjectHierarchy> ReadFromVmo(const zx::vmo& vmo);
 // given VMO Snapshot.
 fit::result<ObjectHierarchy> ReadFromSnapshot(vmo::Snapshot snapshot);
 
+// Construct a new object hierarchy by synchronously reading objects out of the
+// contents of the given immutable buffer.
+fit::result<ObjectHierarchy> ReadFromBuffer(fbl::Array<uint8_t> buffer);
+
 // TODO(crjohns, nathaniel): Needs to be asynchronous use of a ChildrenManager.
 // Construct a new object hierarchy by directly reading objects
 // from the given given inspect::Object. Will only read |depth| levels past the

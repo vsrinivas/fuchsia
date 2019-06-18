@@ -13,14 +13,18 @@
 
 namespace inspect {
 
-// Returns a regex that matches Inspect VMO file names.
-std::regex inspect_vmo_file_regex();
+// Returns a regex that matches Inspect file names.
+std::regex inspect_file_regex();
 
 // Description of how to reach a particular InspectHierarchy.
 struct Location {
+  // The file type that the Location contains.
   enum class Type {
-    INSPECT_FIDL,  // The wrapped file implements fuchsia.inspect.Inspect.
-    INSPECT_VMO,   // The wrapped file is an Inspect VMO file.
+    // The wrapped file implements fuchsia.inspect.Inspect.
+    INSPECT_FIDL,
+    // The wrapped file contains data stored in the Inspect File Format.
+    // This includes VMOs and actual files.
+    INSPECT_FILE_FORMAT,
   };
 
   // Parses a string path as a Location without consulting the file

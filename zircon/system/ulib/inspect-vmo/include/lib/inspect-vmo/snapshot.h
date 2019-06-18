@@ -60,6 +60,11 @@ public:
     static zx_status_t Create(const zx::vmo& vmo, Options options, ReadObserver read_observer,
                               Snapshot* out_snapshot);
 
+    // Create a new snapshot over the supplied immutable buffer.  If the buffer
+    // can not be interpreted as a snapshot, an error status is returned.
+    // There are no observers or writers involved.
+    static zx_status_t Create(fbl::Array<uint8_t> buffer, Snapshot* out_snapshot);
+
     Snapshot() = default;
     ~Snapshot() = default;
     Snapshot(Snapshot&&) = default;

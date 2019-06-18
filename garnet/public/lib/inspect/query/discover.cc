@@ -27,8 +27,8 @@ fit::result<Location> FileToLocation(std::string directory_path,
                             .directory_path = std::move(directory_path),
                             .file_name = std::move(file_name),
                             .inspect_path_components = {}});
-  } else if (std::regex_search(file_name, inspect_vmo_file_regex())) {
-    return fit::ok(Location{.type = Location::Type::INSPECT_VMO,
+  } else if (std::regex_search(file_name, inspect_file_regex())) {
+    return fit::ok(Location{.type = Location::Type::INSPECT_FILE_FORMAT,
                             .directory_path = std::move(directory_path),
                             .file_name = std::move(file_name),
                             .inspect_path_components = {}});

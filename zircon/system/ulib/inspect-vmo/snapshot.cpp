@@ -13,6 +13,23 @@ using internal::Block;
 Snapshot::Snapshot(fbl::Array<uint8_t> buffer)
     : buffer_(std::move(buffer)) {}
 
+zx_status_t Snapshot::Create(fbl::Array<uint8_t> buffer, Snapshot* out_snapshot) {
+    ZX_ASSERT(out_snapshot);
+    // A buffer does not have concurrent writers or observers, so we don't use
+    // this.
+    uint64_t unused;
+    // Verify that the buffer can, in fact, be parsed as a snapshot.
+    zx_status_t status = Snapshot::ParseHeader(buffer.begin(), &unused);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_snapshot = Snapshot(std::move(buffer));
+    if (!*out_snapshot) {
+        return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
+}
+
 zx_status_t Snapshot::Create(const zx::vmo& vmo, Snapshot* out_snapshot) {
     return Snapshot::Create(std::move(vmo), kDefaultOptions, out_snapshot);
 }
