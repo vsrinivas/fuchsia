@@ -31,3 +31,8 @@ group("terminal") {
   testonly = true
   public_deps = []
 }
+
+group("workstation") {
+  testonly = true
+  public_deps = []
+}
