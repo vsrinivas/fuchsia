@@ -42,7 +42,6 @@
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "p2p.h"
-#include "pcie.h"
 #include "pno.h"
 #include "proto.h"
 #include "workqueue.h"
@@ -1272,18 +1271,6 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
     return result;
 #endif // CONFIG_BRCMFMAC_SIM
 
-#if CONFIG_BRCMFMAC_PCIE
-    pci_protocol_t pdev;
-    result = device_get_protocol(device, ZX_PROTOCOL_PCI, &pdev);
-    if (result == ZX_OK) {
-        result = brcmf_pcie_register(device, &pdev);
-        if (result != ZX_OK) {
-            brcmf_err("PCIE driver registration failed, err=%d\n", result);
-        }
-        return result;
-    }
-#endif // CONFIG_BRCMFMAC_PCIE
-
 #if CONFIG_BRCMFMAC_USB
     usb_protocol_t udev;
     result = device_get_protocol(device, ZX_PROTOCOL_USB, &udev);
@@ -1318,9 +1305,6 @@ void brcmf_core_exit(void) {
 #endif
 #if CONFIG_BRCMFMAC_USB
     brcmf_usb_exit();
-#endif
-#if CONFIG_BRCMFMAC_PCIE
-    brcmf_pcie_exit();
 #endif
 #if CONFIG_BRCMFMAC_SIM
     brcmf_sim_exit();

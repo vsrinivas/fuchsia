@@ -22,7 +22,6 @@
 #include "core.h"
 #include "debug.h"
 #include "linuxisms.h"
-#include "msgbuf.h"
 
 zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
     struct brcmf_proto* proto;
@@ -36,16 +35,7 @@ zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
 
     drvr->proto = proto;
 
-    if (drvr->bus_if->proto_type == BRCMF_PROTO_BCDC) {
-        if (brcmf_proto_bcdc_attach(drvr)) {
-            goto fail;
-        }
-    } else if (drvr->bus_if->proto_type == BRCMF_PROTO_MSGBUF) {
-        if (brcmf_proto_msgbuf_attach(drvr)) {
-            goto fail;
-        }
-    } else {
-        brcmf_err("Unsupported proto type %d\n", drvr->bus_if->proto_type);
+    if (brcmf_proto_bcdc_attach(drvr)) {
         goto fail;
     }
     if (!proto->tx_queue_data || (proto->hdrpull == NULL) || (proto->query_dcmd == NULL) ||
@@ -66,11 +56,7 @@ void brcmf_proto_detach(struct brcmf_pub* drvr) {
     brcmf_dbg(TRACE, "Enter\n");
 
     if (drvr->proto) {
-        if (drvr->bus_if->proto_type == BRCMF_PROTO_BCDC) {
-            brcmf_proto_bcdc_detach(drvr);
-        } else if (drvr->bus_if->proto_type == BRCMF_PROTO_MSGBUF) {
-            brcmf_proto_msgbuf_detach(drvr);
-        }
+        brcmf_proto_bcdc_detach(drvr);
         free(drvr->proto);
         drvr->proto = NULL;
     }

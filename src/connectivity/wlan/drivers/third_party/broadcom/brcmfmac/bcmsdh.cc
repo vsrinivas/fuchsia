@@ -1012,7 +1012,6 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
     sdiodev->func1 = func1;
     sdiodev->func2 = func2;
     bus_if->bus_priv.sdio = sdiodev;
-    bus_if->proto_type = BRCMF_PROTO_BCDC;
     dev->bus = bus_if;
 
     sdiodev->manufacturer_id = devinfo.funcs_hw_info[SDIO_FN_1].manufacturer_id;

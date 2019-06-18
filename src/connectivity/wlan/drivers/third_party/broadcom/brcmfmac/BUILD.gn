@@ -44,8 +44,6 @@ brcmf_core_srcs = [
   "feature.h",
   "firmware.cc",
   "firmware.h",
-  "flowring.cc",
-  "flowring.h",
   "fweh.cc",
   "fweh.h",
   "fwil.cc",
@@ -55,15 +53,12 @@ brcmf_core_srcs = [
   "fwsignal.h",
   "linuxisms.cc",
   "linuxisms.h",
-  "msgbuf.cc",
-  "msgbuf.h",
   "netbuf.cc",
   "netbuf.h",
   "of.cc",
   "of.h",
   "p2p.cc",
   "p2p.h",
-  "pcie.h",
   "pno.cc",
   "pno.h",
   "proto.cc",
@@ -102,13 +97,11 @@ source_set("brcmfmac_drvr_srcs") {
   defines = [
     "CONFIG_BRCMFMAC_USB=1",
     "CONFIG_BRCMFMAC_SDIO=1",
-    "CONFIG_BRCMFMAC_PCIE=1",
     "CONFIG_BRCMFMAC_DBG=1",
   ]
 
   sources = brcmf_core_srcs + [
               "binding.cc",
-              "pcie.cc",
               "usb.cc",
             ]
 

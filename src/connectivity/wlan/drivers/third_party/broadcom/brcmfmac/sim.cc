@@ -52,7 +52,6 @@ zx_status_t brcmf_sim_register(zx_device_t* zxdev) {
     dev->zxdev = zxdev;
     simdev->bus_if = bus_if;
     bus_if->bus_priv.sim = simdev;
-    bus_if->proto_type = BRCMF_PROTO_BCDC;
     dev->bus = bus_if;
 
     status = brcmf_sim_probe(simdev);

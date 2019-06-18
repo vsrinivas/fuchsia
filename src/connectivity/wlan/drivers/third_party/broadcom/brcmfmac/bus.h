@@ -26,28 +26,11 @@
 #include "debug.h"
 #include "netbuf.h"
 
-// clang-format off
-/* IDs of the 6 default common rings of msgbuf protocol */
-#define BRCMF_H2D_MSGRING_CONTROL_SUBMIT    0
-#define BRCMF_H2D_MSGRING_RXPOST_SUBMIT     1
-#define BRCMF_H2D_MSGRING_FLOWRING_IDSTART  2
-#define BRCMF_D2H_MSGRING_CONTROL_COMPLETE  2
-#define BRCMF_D2H_MSGRING_TX_COMPLETE       3
-#define BRCMF_D2H_MSGRING_RX_COMPLETE       4
-
-#define BRCMF_NROF_H2D_COMMON_MSGRINGS      2
-#define BRCMF_NROF_D2H_COMMON_MSGRINGS      3
-#define BRCMF_NROF_COMMON_MSGRINGS (BRCMF_NROF_H2D_COMMON_MSGRINGS + BRCMF_NROF_D2H_COMMON_MSGRINGS)
-// clang-format on
-
 /* The level of bus communication with the dongle */
 enum brcmf_bus_state {
     BRCMF_BUS_DOWN, /* Not ready for frame transfers */
     BRCMF_BUS_UP    /* Ready for frame transfers */
 };
-
-/* The level of bus communication with the dongle */
-enum brcmf_bus_protocol_type { BRCMF_PROTO_BCDC, BRCMF_PROTO_MSGBUF };
 
 struct brcmf_mp_device;
 
@@ -104,27 +87,6 @@ struct brcmf_bus_ops {
 };
 
 /**
- * struct brcmf_bus_msgbuf - bus ringbuf if in case of msgbuf.
- *
- * @commonrings: commonrings which are always there.
- * @flowrings: commonrings which are dynamically created and destroyed for data.
- * @rx_dataoffset: if set then all rx data has this this offset.
- * @max_rxbufpost: maximum number of buffers to post for rx.
- * @max_flowrings: maximum number of tx flow rings supported.
- * @max_submissionrings: maximum number of submission rings(h2d) supported.
- * @max_completionrings: maximum number of completion rings(d2h) supported.
- */
-struct brcmf_bus_msgbuf {
-    struct brcmf_commonring* commonrings[BRCMF_NROF_COMMON_MSGRINGS];
-    struct brcmf_commonring** flowrings;
-    uint32_t rx_dataoffset;
-    uint32_t max_rxbufpost;
-    uint16_t max_flowrings;
-    uint16_t max_submissionrings;
-    uint16_t max_completionrings;
-};
-
-/**
  * struct brcmf_bus_stats - bus statistic counters.
  *
  * @pktcowed: packets cowed for extra headroom/unorphan.
@@ -139,7 +101,6 @@ struct brcmf_bus_stats {
  * struct brcmf_bus - interface structure between common and bus layer
  *
  * @bus_priv: pointer to private bus device.
- * @proto_type: protocol type, bcdc or msgbuf
  * @dev: device pointer of bus device.
  * @drvr: public driver information.
  * @state: operational state of the bus interface.
@@ -157,7 +118,6 @@ struct brcmf_bus {
         struct brcmf_pciedev* pcie;
         struct brcmf_simdev* sim;
     } bus_priv;
-    enum brcmf_bus_protocol_type proto_type;
     struct brcmf_device* dev;
     struct brcmf_pub* drvr;
     enum brcmf_bus_state state;
@@ -169,7 +129,6 @@ struct brcmf_bus {
     bool wowl_supported;
 
     const struct brcmf_bus_ops* ops;
-    struct brcmf_bus_msgbuf* msgbuf;
 };
 
 /*

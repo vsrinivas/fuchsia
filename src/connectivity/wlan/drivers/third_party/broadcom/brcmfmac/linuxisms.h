@@ -234,8 +234,6 @@ LINUX_FUNCVI(dma_unmap_single) // PCI only
 
 #define DEBUG                         // Turns on struct members that debug.c needs
 #define CONFIG_OF                     // Turns on functions that of.c needs
-#define CONFIG_BRCMFMAC_PROTO_MSGBUF  // turns on msgbuf.h
-#define CONFIG_BRCMFMAC_PROTO_BCDC    // Needed to see func defs in bcdc.h
 
 #define KBUILD_MODNAME "brcmfmac"
 
