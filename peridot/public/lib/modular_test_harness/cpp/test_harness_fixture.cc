@@ -8,10 +8,6 @@ namespace modular {
 namespace testing {
 namespace {
 
-const char kTestHarnessUrl[] =
-    "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/"
-    "modular_test_harness.cmx";
-
 std::string StringsToCSV(std::vector<std::string> strings) {
   std::stringstream csv;
   for (size_t i = 0; i < strings.size(); i++) {
@@ -235,34 +231,6 @@ void AddModToStory(
   // Add the initial module to the story
   story_master->Enqueue(std::move(cmds));
   story_master->Execute([&](fuchsia::modular::ExecuteResult result) {});
-}
-
-TestHarnessFixture::TestHarnessFixture() {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kTestHarnessUrl;
-  test_harness_svc_ =
-      sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-  launcher_ptr()->CreateComponent(std::move(launch_info),
-                                  test_harness_ctrl_.NewRequest());
-
-  test_harness_ =
-      test_harness_svc_->Connect<fuchsia::modular::testing::TestHarness>();
-}
-
-TestHarnessFixture::~TestHarnessFixture() {
-  if (!test_harness_ctrl_) {
-    return;
-  }
-
-  bool exited = false;
-  test_harness_ctrl_.events().OnTerminated =
-      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-        exited = true;
-      };
-  test_harness_ctrl_->Kill();
-
-  // Wait until the modular test harness binary has died.
-  RunLoopUntil([&] { return exited; });
 }
 
 }  // namespace testing
