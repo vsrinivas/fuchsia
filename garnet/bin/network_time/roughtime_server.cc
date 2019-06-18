@@ -4,21 +4,21 @@
 
 #include "garnet/bin/network_time/roughtime_server.h"
 
-#include <string>
-
 #include <client.h>
 #include <errno.h>
+#include <lib/fit/defer.h>
 #include <netdb.h>
 #include <openssl/rand.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-
-#include <lib/fit/defer.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include "src/lib/files/unique_fd.h"
+
+#include <string>
+
 #include "lib/syslog/cpp/logger.h"
+#include "src/lib/files/unique_fd.h"
 
 namespace time_server {
 
@@ -150,6 +150,7 @@ RoughTimeServer::GetTimeFromServer() const {
 
   // zx_time_t is nanoseconds, timestamp_us is microseconds.
   zx::time_utc timestamp{ZX_USEC(timestamp_us)};
+  FX_LOGS(INFO) << "time successfully fetched from " << address_;
   return {OK, timestamp - drift};
 }
 
