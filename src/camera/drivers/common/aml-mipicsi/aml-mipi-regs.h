@@ -4,6 +4,7 @@
 
 #pragma once
 
+// clang-format off
 #define HI_CSI_PHY_CNTL0                    0x4C
 #define HI_CSI_PHY_CNTL1                    0x50
 #define HI_CSI_PHY_CNTL2                    0x54
@@ -117,7 +118,7 @@
 #define MIPI_ADAPT_IRQ_PENDING0             0x184
 
 #define MISC_BASE                           0x00005000
+// clang-format on
 
 // CLK offsets.
 #define HHI_MIPI_CSI_PHY_CLK_CNTL (0xD0 << 2)
-

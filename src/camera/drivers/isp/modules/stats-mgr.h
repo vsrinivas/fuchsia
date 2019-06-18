@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sensor.h"
-#include <atomic>
 #include <fbl/unique_ptr.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
+
+#include <atomic>
+
+#include "sensor.h"
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #endif
@@ -21,29 +23,29 @@ namespace camera {
 // architecture.
 // Collects statistics from all the modules.
 class StatsManager {
-public:
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StatsManager);
-    StatsManager(fbl::unique_ptr<camera::Sensor> sensor,
-                 sync_completion_t frame_processing_signal)
-        : sensor_(std::move(sensor)),
-          frame_processing_signal_(frame_processing_signal) {}
+ public:
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StatsManager);
+  StatsManager(fbl::unique_ptr<camera::Sensor> sensor,
+               sync_completion_t frame_processing_signal)
+      : sensor_(std::move(sensor)),
+        frame_processing_signal_(frame_processing_signal) {}
 
-    static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio,
-                                                ddk::MmioView isp_mmio_local,
-                                                ddk::CameraSensorProtocolClient camera_sensor,
-                                                sync_completion_t frame_processing_signal);
-    ~StatsManager();
+  static fbl::unique_ptr<StatsManager> Create(
+      ddk::MmioView isp_mmio, ddk::MmioView isp_mmio_local,
+      ddk::CameraSensorProtocolClient camera_sensor,
+      sync_completion_t frame_processing_signal);
+  ~StatsManager();
 
-    void SensorStartStreaming() { sensor_->StartStreaming(); }
-    void SensorStopStreaming() { sensor_->StopStreaming(); }
+  void SensorStartStreaming() { sensor_->StartStreaming(); }
+  void SensorStopStreaming() { sensor_->StopStreaming(); }
 
-private:
-    int FrameProcessingThread();
+ private:
+  int FrameProcessingThread();
 
-    fbl::unique_ptr<camera::Sensor> sensor_;
-    sync_completion_t frame_processing_signal_;
-    thrd_t frame_processing_thread_;
-    std::atomic<bool> running_;
+  fbl::unique_ptr<camera::Sensor> sensor_;
+  sync_completion_t frame_processing_signal_;
+  thrd_t frame_processing_thread_;
+  std::atomic<bool> running_;
 };
 
-} // namespace camera
+}  // namespace camera

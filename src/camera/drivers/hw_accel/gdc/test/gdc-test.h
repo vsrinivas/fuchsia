@@ -4,21 +4,22 @@
 
 #pragma once
 
-#include <memory>
 #include <zxtest/zxtest.h>
+
+#include <memory>
 
 namespace gdc {
 // |GdcDeviceTester| is spawned by the driver in |gdc.cpp|
 class GdcDevice;
 
 class GdcDeviceTester : public zxtest::Test {
-public:
-    static zx_status_t RunTests(GdcDevice* device);
+ public:
+  static zx_status_t RunTests(GdcDevice* device);
 
-protected:
-    // Setup & TearDown
-    void SetUp();
-    void TearDown();
+ protected:
+  // Setup & TearDown
+  void SetUp();
+  void TearDown();
 };
 
-} // namespace gdc
+}  // namespace gdc

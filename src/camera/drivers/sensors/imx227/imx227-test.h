@@ -5,21 +5,22 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <memory>
 #include <zxtest/zxtest.h>
+
+#include <memory>
 
 namespace camera {
 // |Imx227Devicetester| is spawned by the driver in |imx227.cpp|
 class Imx227Device;
 
 class Imx227DeviceTester : public zxtest::Test {
-public:
-    static zx_status_t RunTests(Imx227Device* device);
+ public:
+  static zx_status_t RunTests(Imx227Device* device);
 
-protected:
-    // Setup & TearDown
-    void SetUp();
-    void TearDown();
+ protected:
+  // Setup & TearDown
+  void SetUp();
+  void TearDown();
 };
 
-} // namespace camera
+}  // namespace camera

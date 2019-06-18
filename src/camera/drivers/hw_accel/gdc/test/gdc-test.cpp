@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include "gdc-test.h"
-#include "../gdc-regs.h"
-#include "../gdc.h"
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
+
+#include "../gdc-regs.h"
+#include "../gdc.h"
 
 namespace gdc {
 
@@ -16,23 +17,22 @@ namespace {
 constexpr uint32_t kValidGdcRevisionId = 0xCC23BEBB;
 GdcDevice* g_gdc_device;
 
-} // namespace
+}  // namespace
 
-void GdcDeviceTester::SetUp() {
-}
+void GdcDeviceTester::SetUp() {}
 
-void GdcDeviceTester::TearDown() {
-}
+void GdcDeviceTester::TearDown() {}
 
 TEST(GdcDeviceTester, TestClkAndPower) {
-    EXPECT_EQ(kValidGdcRevisionId, ID::Get().ReadFrom(g_gdc_device->gdc_mmio()).id());
+  EXPECT_EQ(kValidGdcRevisionId,
+            ID::Get().ReadFrom(g_gdc_device->gdc_mmio()).id());
 }
 
 zx_status_t GdcDeviceTester::RunTests(GdcDevice* gdc) {
-    g_gdc_device = gdc;
-    const int kArgc = 1;
-    const char* argv[kArgc] = {"gdc-test"};
-    return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv));
+  g_gdc_device = gdc;
+  const int kArgc = 1;
+  const char* argv[kArgc] = {"gdc-test"};
+  return RUN_ALL_TESTS(kArgc, const_cast<char**>(argv));
 }
 
-} // namespace gdc
+}  // namespace gdc
