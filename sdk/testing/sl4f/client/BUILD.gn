@@ -31,6 +31,7 @@ dart_library("client") {
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/webdriver",
   ]
 }
