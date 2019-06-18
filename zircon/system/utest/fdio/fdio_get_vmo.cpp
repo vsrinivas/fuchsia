@@ -44,7 +44,7 @@ zx_status_t FileDescribe(void* ctx, fidl_txn_t* txn) {
     if (context->is_vmofile) {
         zx::vmo vmo;
         zx_status_t status = context->vmo.duplicate(
-            ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ, &vmo);
+            ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, &vmo);
         if (status != ZX_OK) {
             return status;
         }
