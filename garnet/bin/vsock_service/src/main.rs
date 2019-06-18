@@ -35,7 +35,7 @@ async fn main() -> Result<(), Error> {
 
     let service_clone = service.clone();
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn(
             service_clone
                 .clone()

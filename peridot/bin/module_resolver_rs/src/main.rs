@@ -13,7 +13,7 @@ use futures::prelude::*;
 mod local_resolver;
 
 // The directory name where the module resolver FIDL services are exposed.
-const SERVICE_DIRECTORY: &'static str = "public";
+const SERVICE_DIRECTORY: &'static str = "svc";
 
 /// Runs a module resolver server.
 ///

@@ -40,7 +40,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         let tmf_clone = Arc::clone(&token_manager_factory);
         fasync::spawn(async move { await!(tmf_clone.handle_requests_from_stream(stream)) });
     });

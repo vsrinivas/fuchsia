@@ -75,7 +75,7 @@ fn main() -> Result<(), Error> {
             let name = if opts.secure_mode { SecureStoreMarker::NAME } else { StoreMarker::NAME };
 
             let mut fs = ServiceFs::new();
-            fs.dir("public").add_fidl_service_at(name, |stream| {
+            fs.dir("svc").add_fidl_service_at(name, |stream| {
                 stash_server(store_manager.clone(), !opts.secure_mode, stream)
             });
             fs.take_and_serve_directory_handle()?;

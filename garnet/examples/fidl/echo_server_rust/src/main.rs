@@ -35,7 +35,7 @@ async fn main() -> Result<(), Error> {
     let quiet = std::env::args().any(|arg| arg == "-q");
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("public")
+    fs.dir("svc")
       .add_fidl_service(IncomingService::Echo);
 
     fs.take_and_serve_directory_handle()?;

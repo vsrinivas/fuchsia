@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
     let store = Arc::new(Mutex::new(registry::RegistryStore::default()));
 
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service_at(ui_shortcut::RegistryMarker::NAME, {
             // Capture a clone of store's Arc so the new client has a copy from
             // which to make new clones.

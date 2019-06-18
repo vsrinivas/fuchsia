@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let key_manager = Arc::new(KeyManager::new());
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(|stream| spawn(stream, Arc::clone(&key_manager)));
+    fs.dir("svc").add_fidl_service(|stream| spawn(stream, Arc::clone(&key_manager)));
     fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
     Ok(())

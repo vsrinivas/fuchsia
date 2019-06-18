@@ -247,7 +247,7 @@ impl App {
     fn start_services(app: &mut App) -> Result<impl Future<Output = ()>, Error> {
         let outgoing_services_names = app.assistant.as_ref().unwrap().outgoing_services_names();
         let mut fs = component::server::ServiceFs::new();
-        let mut public = fs.dir("public");
+        let mut public = fs.dir("svc");
         public.add_fidl_service(Self::spawn_view_provider_server);
 
         for name in outgoing_services_names {

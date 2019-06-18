@@ -63,7 +63,7 @@ async fn main() -> Result<(), Error> {
 
     fx_vlog!(1, "Adding FIDL services");
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(ProviderRequestStream::Stable)
         .add_fidl_service(ProviderRequestStream::Experimental);
     fs.take_and_serve_directory_handle()?;

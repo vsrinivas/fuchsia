@@ -252,7 +252,7 @@ type FusedServiceStream = Fuse<ServiceFs<ServiceObj<'static, SnoopRequestStream>
 /// Construct the Fused ServiceFs object to handle incoming service requests.
 fn setup_service_fs() -> Result<FusedServiceStream, Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(|stream: SnoopRequestStream| stream);
+    fs.dir("svc").add_fidl_service(|stream: SnoopRequestStream| stream);
     fs.take_and_serve_directory_handle()?;
     Ok(fs.fuse())
 }

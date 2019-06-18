@@ -154,7 +154,7 @@ fn main() -> Result<(), Error> {
         .unwrap_or_else(|e| fx_log_err!("Failed to watch new devices: {:?}", e));
 
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         fx_log_info!("Spawning Management Interface");
         fasync::spawn(
             start_service(mgr.clone(), stream)

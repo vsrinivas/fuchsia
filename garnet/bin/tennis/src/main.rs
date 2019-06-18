@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
         .context("Creating fuchsia_async executor for tennis service failed")?;
     let tennis = tennis_service::TennisService::new();
     let mut fs = ServiceFs::new_local();
-    fs.dir("public").add_fidl_service(|stream| tennis.bind(stream));
+    fs.dir("svc").add_fidl_service(|stream| tennis.bind(stream));
     fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
     Ok(())

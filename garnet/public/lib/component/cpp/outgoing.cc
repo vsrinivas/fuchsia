@@ -21,7 +21,7 @@ Outgoing::Outgoing()
       debug_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       ctrl_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       deprecated_outgoing_services_(public_dir_) {
-  root_dir_->AddEntry("public", public_dir_);
+  root_dir_->AddEntry("svc", public_dir_);
   root_dir_->AddEntry("debug", debug_dir_);
   root_dir_->AddEntry("ctrl", ctrl_dir_);
   auto objects = Object::Make("objects");

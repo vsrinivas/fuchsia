@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
     )?;
 
     let mut fs = server::ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_service_at(ControlMarker::NAME, |chan| Some((ControlMarker::NAME, chan)))
         .add_service_at(CentralMarker::NAME, |chan| Some((CentralMarker::NAME, chan)))
         .add_service_at(PeripheralMarker::NAME, |chan| Some((PeripheralMarker::NAME, chan)))

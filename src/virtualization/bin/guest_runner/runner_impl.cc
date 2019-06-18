@@ -34,7 +34,7 @@ void RunnerImpl::StartComponent(
   fuchsia::io::DirectoryPtr public_dir;
   launch_info.directory_request = public_dir.NewRequest().TakeChannel();
   dir->AddEntry(
-      "public",
+      "svc",
       fbl::AdoptRef(new fs::RemoteDir(public_dir.Unbind().TakeChannel())));
   vfs_.ServeDirectory(std::move(dir),
                       std::move(startup_info.launch_info.directory_request));

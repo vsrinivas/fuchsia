@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
     fx_log_info!("starting mock resolver");
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         let packages_to_mock = packages_to_mock.clone();
         fasync::spawn_local(async move {
             await!(run_resolver_service(stream, packages_to_mock))

@@ -20,7 +20,7 @@ pub struct FidlWorker;
 impl FidlWorker {
     pub fn spawn(self, event_chan: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
         let mut fs = ServiceFs::new_local();
-        fs.dir("public")
+        fs.dir("svc")
             .add_fidl_service(|rs: StackRequestStream| {
                 rs.map_ok(Event::FidlStackEvent).left_stream()
             })

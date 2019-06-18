@@ -185,7 +185,7 @@ async fn main() -> Result<(), Error> {
     let () = config_state(&mut state, opt)?;
     let state = Arc::new(Mutex::new(state));
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(move |stream| spawn_device_settings_server(state.clone(), stream));
     fs.take_and_serve_directory_handle()?;
     let () = await!(fs.collect());

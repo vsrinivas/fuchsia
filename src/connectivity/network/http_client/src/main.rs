@@ -178,7 +178,7 @@ fn spawn_old_server(stream: oldhttp::HttpServiceRequestStream) {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(spawn_old_server);
+    fs.dir("svc").add_fidl_service(spawn_old_server);
     fs.take_and_serve_directory_handle()?;
     let () = await!(fs.collect());
     Ok(())

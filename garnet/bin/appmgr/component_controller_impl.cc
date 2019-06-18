@@ -126,7 +126,7 @@ ComponentControllerBase::ComponentControllerBase(
   exported_dir_.Bind(std::move(exported_dir), async_get_default_dispatcher());
 
   if (client_request) {
-    fdio_service_connect_at(exported_dir_.channel().get(), "public",
+    fdio_service_connect_at(exported_dir_.channel().get(), "svc",
                             client_request.release());
   }
 

@@ -21,7 +21,7 @@ StartupContextForTest::StartupContextForTest(
       service_root_vfs_(async_get_default_dispatcher()),
       service_root_dir_(fbl::AdoptRef(new fs::PseudoDir())) {
   outgoing_public_services_.Bind(
-      ChannelConnectAt(directory_request_client.get(), "public"));
+      ChannelConnectAt(directory_request_client.get(), "svc"));
 
   // TODO(CP-57): simplify this
   zx_status_t status = controller_.AddService(

@@ -70,7 +70,7 @@ async fn main() -> Result<(), Error> {
 
     let dev_connection = device_list.pop().unwrap();
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_service_at(DeviceMarker::NAME, |channel| {
+    fs.dir("svc").add_service_at(DeviceMarker::NAME, |channel| {
         fasync::spawn(
             serve_passthrough(dev_connection.clone(), channel)
                 .unwrap_or_else(|e| fx_log_err!("{:?}", e)),

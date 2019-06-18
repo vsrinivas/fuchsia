@@ -41,7 +41,7 @@ mod suggestions_service;
 mod utils;
 
 // The directory name where the discovermgr FIDL services are exposed.
-static SERVICE_DIRECTORY: &str = "public";
+static SERVICE_DIRECTORY: &str = "svc";
 
 enum IncomingServices {
     DiscoverRegistry(DiscoverRegistryRequestStream),

@@ -50,7 +50,7 @@ enum IncomingServices {
 async fn main() -> Result<(), Error> {
     let cloud_factory = CloudFactory::new();
     let mut fs = ServiceFs::new_local();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(IncomingServices::CloudProvider)
         .add_fidl_service(IncomingServices::CloudControllerFactory);
 

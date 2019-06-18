@@ -112,7 +112,7 @@ fn main() -> Result<(), Error> {
         info!("Update config: {:?}", config);
 
         let mut fs = ServiceFs::new_local();
-        fs.dir("public")
+        fs.dir("svc")
             .add_fidl_service(IncomingServices::Manager)
             .add_fidl_service(IncomingServices::OmahaClientConfiguration);
         fs.take_and_serve_directory_handle()?;

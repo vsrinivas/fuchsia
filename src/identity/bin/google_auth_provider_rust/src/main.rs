@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         let auth_provider_factory = GoogleAuthProviderFactory::new();
         fasync::spawn(async move {
             await!(auth_provider_factory.handle_requests_from_stream(stream))

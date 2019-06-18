@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
         .context("Creating fuchsia_async executor for IME service failed")?;
     let ime_service = ime_service::ImeService::new();
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(|stream| ime_service.bind_ime_service(stream))
         .add_fidl_service(|stream| ime_service.bind_ime_visibility_service(stream))
         .add_fidl_service(|stream| ime_service.bind_text_input_context(stream));

@@ -72,7 +72,7 @@ func (od OutDirectory) AddObjects(name string, n Node) {
 }
 
 func (od OutDirectory) AddService(name string, service ServiceFn) {
-	od.getMapDirectory("public")[name] = service
+	od.getMapDirectory("svc")[name] = service
 }
 
 type Context struct {

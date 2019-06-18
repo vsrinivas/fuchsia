@@ -230,7 +230,7 @@ async fn main() -> Result<(), Error> {
     fx_log_info!("Launched component");
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("public").add_fidl_service(Service::Provider).add_fidl_service(Service::Manager);
+    fs.dir("svc").add_fidl_service(Service::Provider).add_fidl_service(Service::Manager);
     fs.take_and_serve_directory_handle()?;
     let fs = fs;
 

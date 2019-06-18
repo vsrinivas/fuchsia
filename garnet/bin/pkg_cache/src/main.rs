@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
     let pkgfs = connect_to_pkgfs_versions().context("error connecting to pkgfs")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         fx_log_info!("spawning package cache service");
         fasync::spawn(
             cache_service::serve(Clone::clone(&pkgfs), stream)

@@ -53,7 +53,7 @@ async fn main() -> Result<(), Error> {
     let index_vec: Vec<String> = index_string.lines().map(|l| l.to_string()).collect();
     let index = Arc::new(index_vec);
 
-    fs.dir("public").add_fidl_service(IncomingServices::ComponentIndex);
+    fs.dir("svc").add_fidl_service(IncomingServices::ComponentIndex);
     fs.take_and_serve_directory_handle()?;
 
     const MAX_CONCURRENT: usize = 10_000;

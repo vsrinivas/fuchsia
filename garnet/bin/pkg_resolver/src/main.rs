@@ -102,7 +102,7 @@ fn main() -> Result<(), Error> {
     };
 
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(resolver_cb)
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb);

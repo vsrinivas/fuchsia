@@ -12,7 +12,7 @@ namespace sys {
 
 OutgoingDirectory::OutgoingDirectory()
     : root_(std::make_unique<vfs::PseudoDir>()),
-      public_(GetOrCreateDirectory("public")),
+      svc_(GetOrCreateDirectory("svc")),
       debug_(GetOrCreateDirectory("debug")) {}
 
 OutgoingDirectory::~OutgoingDirectory() = default;
@@ -49,7 +49,7 @@ vfs::PseudoDir* OutgoingDirectory::AddNewEmptyDirectory(std::string name) {
 
 zx_status_t OutgoingDirectory::AddPublicService(
     std::unique_ptr<vfs::Service> service, std::string service_name) const {
-  return public_->AddEntry(std::move(service_name), std::move(service));
+  return svc_->AddEntry(std::move(service_name), std::move(service));
 }
 
 }  // namespace sys

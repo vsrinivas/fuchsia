@@ -23,7 +23,7 @@ ComponentContextProvider::ComponentContextProvider(
       outgoing_directory_ptr_.NewRequest(dispatcher).TakeChannel(), dispatcher);
 
   fdio_service_connect_at(
-      outgoing_directory_ptr_.channel().get(), "public",
+      outgoing_directory_ptr_.channel().get(), "svc",
       public_directory_ptr_.NewRequest().TakeChannel().release());
 }
 

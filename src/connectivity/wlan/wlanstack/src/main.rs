@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     let inspect_tree =
         Arc::new(inspect::WlanstackTree::new(&mut fs).expect("fail creating Inspect tree"));
-    fs.dir("public").add_fidl_service(IncomingServices::Device);
+    fs.dir("svc").add_fidl_service(IncomingServices::Device);
 
     let (phys, phy_events) = device::PhyMap::new();
     let (ifaces, iface_events) = device::IfaceMap::new();

@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
     let app = App::new()?;
 
     let mut fs = fuchsia_component::server::ServiceFs::new_local();
-    fs.dir("public").add_fidl_service(|stream| App::spawn_view_provider_server(&app, stream));
+    fs.dir("svc").add_fidl_service(|stream| App::spawn_view_provider_server(&app, stream));
     fs.take_and_serve_directory_handle()?;
 
     let () = executor.run_singlethreaded(fs.collect());

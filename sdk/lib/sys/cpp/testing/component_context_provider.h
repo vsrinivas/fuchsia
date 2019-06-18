@@ -41,7 +41,7 @@ class ComponentContextProvider {
     return outgoing_directory_ptr_;
   }
 
-  // Connects to public service which was published in "public" directory by
+  // Connects to public service which was published in "svc" directory by
   // code under test.
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToPublicService(
@@ -52,8 +52,8 @@ class ComponentContextProvider {
     return ptr;
   }
 
-  // Connects to public service which was published in "public" directory by
-  // code under test.
+  // Connects to public service which was published in "svc" directory by code
+  // under test.
   template <typename Interface>
   void ConnectToPublicService(
       fidl::InterfaceRequest<Interface> request,

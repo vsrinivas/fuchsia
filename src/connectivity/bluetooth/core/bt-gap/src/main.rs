@@ -82,7 +82,7 @@ fn run() -> Result<(), Error> {
     });
 
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(move |s| control_service(control_hd.clone(), s))
         .add_service_at(CentralMarker::NAME, move |chan| {
             if let Ok(chan) = fasync::Channel::from_channel(chan) {

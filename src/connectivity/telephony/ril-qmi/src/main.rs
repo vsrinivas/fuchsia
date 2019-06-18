@@ -200,7 +200,7 @@ async fn main() -> Result<(), Error> {
     let modem_setup = modem.clone();
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(move |stream| {
             fx_log_info!("New client connecting to the Fuchsia RIL");
             FrilService::spawn(modem.clone(), stream)

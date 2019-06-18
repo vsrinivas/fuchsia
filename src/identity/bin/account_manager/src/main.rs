@@ -95,7 +95,7 @@ fn main() -> Result<(), Error> {
         )?,
     );
 
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         let account_manager_clone = Arc::clone(&account_manager);
         fasync::spawn(async move {
             await!(account_manager_clone.handle_requests_from_stream(stream))

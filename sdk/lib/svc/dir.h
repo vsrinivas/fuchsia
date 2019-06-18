@@ -26,8 +26,8 @@ __EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher,
 // name matches the |type|. If |type| is NULL, the service will be published in
 // the root directory.
 //
-// The most commonly used values for |type| are "public", "debug", and "ctrl".
-// Services published under "public" are made available to clients via
+// The most commonly used values for |type| are "svc", "debug", and "ctrl".
+// Services published under "svc" are made available to clients via
 // |fuchsia.sys.Lancher#CreateComponent|. The "debug" serivices are exposed via
 // the hub. The "ctrl" services are used by the core platform to communicate
 // with your program.

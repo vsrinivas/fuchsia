@@ -192,7 +192,7 @@ fn main_ds() -> Result<(), Error> {
     fs::create_dir_all(DATA_DIR).context("creating directory")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         let mut d = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
             watchers: watchers.clone(),

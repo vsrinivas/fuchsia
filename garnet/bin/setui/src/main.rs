@@ -54,7 +54,7 @@ fn main() -> Result<(), Error> {
         Some(SettingData::Account(AccountSettings { mode: None })),
     )));
 
-    fs.dir("public").add_fidl_service(move |stream: SetUiServiceRequestStream| {
+    fs.dir("svc").add_fidl_service(move |stream: SetUiServiceRequestStream| {
         let handler_clone = handler.clone();
         fx_log_info!("Connecting to setui_service");
         fasync::spawn(async move {

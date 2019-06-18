@@ -29,7 +29,7 @@ async fn serve_fidl(
     ess_store: Arc<KnownEssStore>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(move |stream| {
         let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&ess_store))
             .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
         fasync::spawn(fut)

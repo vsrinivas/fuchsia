@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(AuthProviderFactory::spawn);
+    fs.dir("svc").add_fidl_service(AuthProviderFactory::spawn);
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());

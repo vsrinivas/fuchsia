@@ -155,7 +155,7 @@ TEST_F(TestHarnessFixtureTest,
 
   fuchsia::modular::LifecyclePtr lifecycle;
   ASSERT_EQ(ZX_OK, svc.Connect(lifecycle.NewRequest(),
-                               "public/fuchsia.modular.Lifecycle"));
+                               "svc/fuchsia.modular.Lifecycle"));
   lifecycle->Terminate();
   RunLoopUntil([&] { return !base_shell.is_running(); });
   EXPECT_FALSE(running);

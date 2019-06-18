@@ -26,7 +26,7 @@ fn echo_sibling_server(stream: EchoExposedBySiblingRequestStream) -> impl Future
 async fn main() -> Result<(), Error> {
     // Expose fuchsia.test.echos.EchoExposedBySibling FIDL service that multiplies all inputs by 2.
     let mut fs = ServiceFs::new();
-    fs.dir("public").add_fidl_service(|stream| stream);
+    fs.dir("svc").add_fidl_service(|stream| stream);
     fs.take_and_serve_directory_handle()?;
 
     // spawn server to respond to FIDL requests

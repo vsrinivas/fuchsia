@@ -384,7 +384,7 @@ fn main_wrapper() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     let shared_members_clone = shared_members.clone();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(move |stream| {
             let ls = LogManager { shared_members: shared_members.clone() };
             spawn_log_manager(ls, stream);

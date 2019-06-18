@@ -136,7 +136,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["component_test_runner"])?;
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("public").add_fidl_service(IncomingServices::Runner);
+    fs.dir("svc").add_fidl_service(IncomingServices::Runner);
 
     fs.take_and_serve_directory_handle()?;
 

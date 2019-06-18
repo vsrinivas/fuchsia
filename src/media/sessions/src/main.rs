@@ -74,7 +74,7 @@ async fn main() {
 
     let mut server = ServiceFs::new();
     server
-        .dir("public")
+        .dir("svc")
         .add_fidl_service(|request_stream| spawn_log_error(publisher.clone().serve(request_stream)))
         .add_fidl_service(|request_stream| spawn_log_error(registry.clone().serve(request_stream)));
     server.take_and_serve_directory_handle().expect("To serve Media Session services");

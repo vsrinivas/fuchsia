@@ -338,7 +338,7 @@ fn main() -> Result<(), failure::Error> {
     let interface_ids = interface_ids.clone();
 
     let mut fs = ServiceFs::new();
-    fs.dir("public")
+    fs.dir("svc")
         .add_fidl_service(move |stream| {
             dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), stream);
         })

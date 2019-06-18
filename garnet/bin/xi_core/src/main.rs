@@ -89,7 +89,7 @@ fn main_xi() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("unable to create executor")?;
 
     let mut server = ServiceFs::new();
-    server.dir("public").add_fidl_service(|stream| spawn_json_server(stream));
+    server.dir("svc").add_fidl_service(|stream| spawn_json_server(stream));
     server.take_and_serve_directory_handle()?;
 
     let n_threads = 2;
