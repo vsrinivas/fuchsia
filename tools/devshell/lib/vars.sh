@@ -206,11 +206,29 @@ function get-device-addr {
   echo "${device}"
 }
 
+function fx-find-command {
+  local -r cmd=$1
+
+  local command_path="${FUCHSIA_DIR}/tools/devshell/${cmd}"
+  if [[ -x "${command_path}" ]]; then
+    echo "${command_path}"
+    return 0
+  fi
+
+  local command_path="${FUCHSIA_DIR}/tools/devshell/contrib/${cmd}"
+  if [[ -x "${command_path}" ]]; then
+    echo "${command_path}"
+    return 0
+  fi
+
+  return 1
+}
+
 function fx-command-run {
   local -r command_name="$1"
-  local -r command_path="${FUCHSIA_DIR}/tools/devshell/${command_name}"
+  local -r command_path="$(fx-find-command ${command_name})"
 
-  if [[ ! -f "${command_path}" ]]; then
+  if [[ ${command_path} == "" ]]; then
     fx-error "Unknown command ${command_name}"
     exit 1
   fi
