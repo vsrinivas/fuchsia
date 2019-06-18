@@ -14,6 +14,12 @@
 
 namespace callback {
 
+// Given a function and a set a default arguments, ensures that the function
+// will always be called exactly once.
+// If the function is not called manually (by operator()) with specified
+// arguments, it will be called with the default arguments on destruction.
+// The function and its default arguments are destructed immediately after the
+// function is called.
 template <typename T, typename... ArgType>
 class EnsureCalled {
  public:
