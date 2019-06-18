@@ -6,11 +6,13 @@ Account Handler manages the state of a single Fuchsia account (and its personae)
 on a Fuchsia device. It also provides access to authentication tokens for the
 Service Provider accounts associated with the Fuchsia account.
 
-Account Handler component instances are launched by Account Manager and
+Account Handler component instances come in two variants, one for persistent,
+and one for ephemeral accounts. Both are launched by Account Manager and
 implement the fuchsia.auth.account.internal.AccountHandlerControl FIDL protocols
 so they may be controlled by Account Manager. Each Account Handler component
-instance is responsible for handling a single Fuchsia account and only accesses
-the persistent storage for that one account.
+instance is responsible for handling a single Fuchsia account. A persistent
+account handler only accesses the persistent storage for that one account.
+An ephemeral account handler has no persistent storage priveleges at all.
 
 Account Handler also implements the fuchsia.auth.account.Account and
 fuchsia.auth.account.Persona FIDL protocols. These protocols are not
@@ -22,6 +24,8 @@ Persona channels may only be obtained from an Account channel.
 
 * */identity/lib/account_common* - Account Handler uses error and identifier
   definitions from this crate
+* */identity/lib/identity_common* - Account Handler uses the TaskGroup type from
+  this crate
 * */identity/lib/token_manager* - Account Manager uses the TokenManager library
   to perform the authentication token management and implement the
   fuchsia.auth.TokenManager FIDL protocol
@@ -45,9 +49,16 @@ instance of the `Account` struct and uses this to serve subsequent
 AccountHandlerControl.GetAccount calls.
 
 `Account` implements the fuchsia.auth.account.Account FIDL protocol and stores
-an instance of the `Persona` struct representing the default Persona.
+an instance of the `Persona` struct representing the default Persona. When
+a persistent `Account` is constructed, it manages a database file using a
+`StoredAccount`. The `Account` also stores an instance of `TokenManager`,
+supplied with a path to the token database upon creation (if the account is
+persistent).
 
 `Persona` implements the fuchsia.auth.account.Persona FIDL protocol.
+
+`StoredAccount` implements JSON serialization and deserialization of account
+metadata.
 
 
 ## Future Work

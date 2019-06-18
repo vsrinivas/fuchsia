@@ -47,20 +47,28 @@ created lazily upon the first request pertaining to a particular account.
 
 `AccountHandlerConnection` launches, initializes, and maintains a connection to
 an instance of the Account Handler component.
+`AccountHandlerConnection` launches, initializes, and maintains a connection to
+an instance of the Account Handler component. Each component instance is
+launched in a separate environment based on the local account ID.
 
 `AccountHandlerContext` implements the
 fuchsia.auth.account.internal.AccountHandlerContext FIDL protocol, using a map
 from all configured auth_provider_type strings to an associated
 `AuthProviderConnection`.
 
+`AccountEventEmitter` serves clients implementing the
+fuchsia.auth.account.AccountListener FIDL protocol.
+
 
 ## Future Work
 
-The Account Manager is not yet fully complete. In particular the change listener
-protocols and local authentication state are not finished.
+The Account Manager is not yet fully complete. In particular, local
+authentication state is not finished.
 
 Currently the set of Auth Providers known to Account Manager is hard coded. In
 the near future this will move to a config file based configuration that will
 let different build configurations install different Auth Providers. In the
 longer term we will support dynamic addition of Auth Providers at runtime.
 
+When component framework V2 is available, the lifecycle of component instances
+launched by AccountManager is likely to be managed in a different way.
