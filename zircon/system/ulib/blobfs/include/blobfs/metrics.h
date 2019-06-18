@@ -10,10 +10,20 @@
 #error Fuchsia-only Header
 #endif
 
-#include <lib/zx/time.h>
+#include <cobalt-client/cpp/collector.h>
+#include <fs/metrics/cobalt-metrics.h>
+#include <fs/metrics/composite-latency-event.h>
+#include <fs/metrics/events.h>
+#include <fs/metrics/histograms.h>
 #include <fs/ticker.h>
+#include <lib/inspect-vmo/inspect.h>
+#include <lib/inspect-vmo/types.h>
+#include <lib/zx/time.h>
 
 namespace blobfs {
+
+// Alias for the LatencyEvent used in blobfs.
+using LatencyEvent = fs_metrics::CompositeLatencyEvent;
 
 class BlobfsMetrics {
 public:
@@ -23,15 +33,9 @@ public:
     // should be extracted from devices.
     void Dump() const;
 
-    void Collect() {
-        collecting_metrics_ = true;
-    }
-    bool Collecting() const {
-        return collecting_metrics_;
-    }
-    void Disable() {
-        collecting_metrics_ = false;
-    }
+    void Collect() { cobalt_metrics_.EnableMetrics(true); }
+    bool Collecting() const { return cobalt_metrics_.IsEnabled(); }
+    void Disable() { cobalt_metrics_.EnableMetrics(false); }
 
     // Updates aggregate information about the total number of created
     // blobs since mounting.
@@ -65,9 +69,17 @@ public:
     // since mounting.
     void UpdateMerkleVerify(uint64_t size_data, uint64_t size_merkle, const fs::Duration& duration);
 
-private:
+    // Returns a new Latency event for the given event. This requires the event to be backed up by
+    // an histogram in both cobalt metrics and Inspect.
+    LatencyEvent NewLatencyEvent(fs_metrics::Event event) {
+        return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_vnode_metrics());
+    }
 
-    bool collecting_metrics_ = false;
+    // Returns the underlying collector of cobalt metrics.
+    cobalt_client::Collector* mutable_collector() { return cobalt_metrics_.mutable_collector(); }
+
+private:
+    static cobalt_client::CollectorOptions GetBlobfsOptions();
 
     // ALLOCATION STATS
 
@@ -112,6 +124,15 @@ private:
 
     // FVM STATS
     // TODO(smklein)
+
+    // Inspect instrumentation data, with an initial size of the current histogram size.
+    inspect::vmo::Inspector inspector_ =
+        inspect::vmo::Inspector(fs_metrics::Histograms::Size(), 2 * fs_metrics::Histograms::Size());
+    inspect::vmo::Object root_ = inspector_.CreateObject("metrics");
+    fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
+
+    // Cobalt metrics.
+    fs_metrics::Metrics cobalt_metrics_ = fs_metrics::Metrics(GetBlobfsOptions(), false, "blobfs");
 };
 
 } // namespace blobfs

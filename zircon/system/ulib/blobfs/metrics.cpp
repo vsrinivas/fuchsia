@@ -18,16 +18,25 @@ size_t TicksToMs(const zx::ticks& ticks) {
 
 } // namespace
 
+cobalt_client::CollectorOptions BlobfsMetrics::GetBlobfsOptions() {
+    cobalt_client::CollectorOptions options =
+        cobalt_client::CollectorOptions::GeneralAvailability();
+    // Filesystems project name as defined in cobalt-analytics projects.yaml.
+    options.project_name = "local_storage";
+    options.initial_response_deadline = zx::usec(0);
+    options.response_deadline = zx::nsec(0);
+    return options;
+}
+
 void BlobfsMetrics::Dump() const {
-    if (!collecting_metrics_) {
+    if (!Collecting()) {
         return;
     }
     constexpr uint64_t mb = 1 << 20;
 
     FS_TRACE_INFO("Allocation Info:\n");
     FS_TRACE_INFO("  Allocated %zu blobs (%zu MB) in %zu ms\n", blobs_created_,
-                  blobs_created_total_size_ / mb,
-                  TicksToMs(total_allocation_time_ticks_));
+                  blobs_created_total_size_ / mb, TicksToMs(total_allocation_time_ticks_));
     FS_TRACE_INFO("Writeback Info:\n");
     FS_TRACE_INFO("  (Client) Wrote %zu MB of data and %zu MB of merkle trees\n",
                   data_bytes_written_ / mb, merkle_bytes_written_ / mb);
@@ -35,17 +44,13 @@ void BlobfsMetrics::Dump() const {
                   TicksToMs(total_write_enqueue_time_ticks_),
                   TicksToMs(total_merkle_generation_time_ticks_));
     FS_TRACE_INFO("  (Writeback Thread) Wrote %zu MB of data in %zu ms\n",
-                  total_writeback_bytes_written_ / mb,
-                  TicksToMs(total_writeback_time_ticks_));
+                  total_writeback_bytes_written_ / mb, TicksToMs(total_writeback_time_ticks_));
     FS_TRACE_INFO("Lookup Info:\n");
-    FS_TRACE_INFO("  Opened %zu blobs (%zu MB)\n", blobs_opened_,
-                  blobs_opened_total_size_ / mb);
-    FS_TRACE_INFO("  Verified %zu blobs (%zu MB data, %zu MB merkle)\n",
-                  blobs_verified_, blobs_verified_total_size_data_ / mb,
-                  blobs_verified_total_size_merkle_ / mb);
+    FS_TRACE_INFO("  Opened %zu blobs (%zu MB)\n", blobs_opened_, blobs_opened_total_size_ / mb);
+    FS_TRACE_INFO("  Verified %zu blobs (%zu MB data, %zu MB merkle)\n", blobs_verified_,
+                  blobs_verified_total_size_data_ / mb, blobs_verified_total_size_merkle_ / mb);
     FS_TRACE_INFO("  Spent %zu ms reading %zu MB from disk, %zu ms verifying\n",
-                  TicksToMs(total_read_from_disk_time_ticks_),
-                  bytes_read_from_disk_ / mb,
+                  TicksToMs(total_read_from_disk_time_ticks_), bytes_read_from_disk_ / mb,
                   TicksToMs(total_verification_time_ticks_));
 }
 
@@ -89,8 +94,7 @@ void BlobfsMetrics::UpdateMerkleDiskRead(uint64_t size, const fs::Duration& dura
     }
 }
 
-void BlobfsMetrics::UpdateMerkleDecompress(uint64_t size_compressed,
-                                           uint64_t size_uncompressed,
+void BlobfsMetrics::UpdateMerkleDecompress(uint64_t size_compressed, uint64_t size_uncompressed,
                                            const fs::Duration& read_duration,
                                            const fs::Duration& decompress_duration) {
     if (Collecting()) {

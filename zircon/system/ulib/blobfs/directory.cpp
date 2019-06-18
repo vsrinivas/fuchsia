@@ -6,11 +6,11 @@
 #include <string.h>
 
 #include <blobfs/blobfs.h>
-#include <blobfs/latency-event.h>
-#include <cobalt-client/cpp/timer.h>
+#include <blobfs/metrics.h>
 #include <digest/digest.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <fs/metrics/events.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -23,8 +23,7 @@
 
 namespace blobfs {
 
-Directory::Directory(Blobfs* bs)
-    : blobfs_(bs) {}
+Directory::Directory(Blobfs* bs) : blobfs_(bs) {}
 
 BlobCache& Directory::Cache() {
     return blobfs_->Cache();
@@ -63,7 +62,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
 
 zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
     TRACE_DURATION("blobfs", "Directory::Lookup", "name", name);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->look_up, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kLookUp);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
     if (name == ".") {
         // Special case: Accessing root directory via '.'
@@ -81,7 +80,7 @@ zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
         return status;
     }
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-    blobfs_->LocalMetrics().UpdateLookup(vnode->SizeData());
+    blobfs_->Metrics().UpdateLookup(vnode->SizeData());
     *out = std::move(vnode);
     return ZX_OK;
 }
@@ -101,7 +100,7 @@ zx_status_t Directory::Getattr(vnattr_t* a) {
 
 zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) {
     TRACE_DURATION("blobfs", "Directory::Create", "name", name, "mode", mode);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->create, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kCreate);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
 
     Digest digest;
@@ -147,7 +146,7 @@ zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* 
 
 zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
     TRACE_DURATION("blobfs", "Directory::Unlink", "name", name, "must_be_dir", must_be_dir);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->unlink, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kUnlink);
     assert(memchr(name.data(), '/', name.length()) == nullptr);
 
     zx_status_t status;
@@ -160,7 +159,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
         return status;
     }
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-    blobfs_->LocalMetrics().UpdateLookup(vnode->SizeData());
+    blobfs_->Metrics().UpdateLookup(vnode->SizeData());
     return vnode->QueueUnlink();
 }
 
@@ -186,12 +185,10 @@ public:
 
     DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
                         uint32_t flags)
-            : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
+        : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
 
 private:
-    Directory& GetDirectory() const {
-        return reinterpret_cast<Directory&>(GetVnode());
-    }
+    Directory& GetDirectory() const { return reinterpret_cast<Directory&>(GetVnode()); }
 
     zx_status_t GetAllocatedRegions(fidl_txn_t* txn) {
         return GetDirectory().GetAllocatedRegions(txn);
@@ -212,15 +209,15 @@ private:
 
 #ifdef __Fuchsia__
 zx_status_t Directory::Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) {
-    return vfs->ServeConnection(std::make_unique<DirectoryConnection>(
-        vfs, fbl::WrapRefPtr(this), std::move(channel), flags));
+    return vfs->ServeConnection(std::make_unique<DirectoryConnection>(vfs, fbl::WrapRefPtr(this),
+                                                                      std::move(channel), flags));
 }
 #endif
 
 zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
     zx::vmo vmo;
     zx_status_t status = ZX_OK;
-    fbl::Vector<BlockRegion> buffer =  blobfs_->GetAllocatedRegions();
+    fbl::Vector<BlockRegion> buffer = blobfs_->GetAllocatedRegions();
     uint64_t allocations = buffer.size();
     if (allocations != 0) {
         status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);
@@ -228,10 +225,9 @@ zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
             status = vmo.write(buffer.get(), 0, sizeof(BlockRegion) * allocations);
         }
     }
-    return fuchsia_blobfs_BlobfsGetAllocatedRegions_reply(txn, status,
-                                                          status == ZX_OK ? vmo.get() :
-                                                          ZX_HANDLE_INVALID,
-                                                          status == ZX_OK ? allocations : 0);
+    return fuchsia_blobfs_BlobfsGetAllocatedRegions_reply(
+        txn, status, status == ZX_OK ? vmo.get() : ZX_HANDLE_INVALID,
+        status == ZX_OK ? allocations : 0);
 }
 
 } // namespace blobfs

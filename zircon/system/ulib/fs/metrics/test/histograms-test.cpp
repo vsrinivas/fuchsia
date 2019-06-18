@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+
+#include <limits>
 #include <set>
+#include <vector>
 
 #include <fs/metrics/histograms.h>
 #include <lib/inspect-vmo/inspect.h>
@@ -11,6 +15,7 @@
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {
+namespace {
 
 class HistogramsTest : public zxtest::Test {
 public:
@@ -103,4 +108,10 @@ TEST_F(HistogramsTest, InvalidOptionsReturnsHistogramCount) {
               histograms.GetHistogramCount());
 }
 
+TEST_F(HistogramsTest, SizeIsMultipleOfPageSize) {
+    Histograms histograms = Histograms(&root_);
+    ASSERT_EQ(Histograms::Size() % PAGE_SIZE, 0);
+}
+
+} // namespace
 } // namespace fs_metrics

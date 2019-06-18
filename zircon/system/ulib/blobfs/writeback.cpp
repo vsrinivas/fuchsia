@@ -10,9 +10,8 @@
 namespace blobfs {
 
 zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
-                             TransactionManager* transaction_manager, Blob* vn,
-                             const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
-                             uint64_t nblocks) {
+                             TransactionManager* transaction_manager, Blob* vn, const zx::vmo& vmo,
+                             uint64_t relative_block, uint64_t absolute_block, uint64_t nblocks) {
     const size_t kMaxChunkBlocks = (3 * transaction_manager->WritebackCapacity()) / 4;
     uint64_t delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
     while (nblocks > 0) {
@@ -25,8 +24,8 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
             if (status != ZX_OK) {
                 return status;
             }
-            if ((status = transaction_manager->EnqueueWork(std::move(*work),
-                                                           EnqueueType::kData)) != ZX_OK) {
+            if ((status = transaction_manager->EnqueueWork(std::move(*work), EnqueueType::kData)) !=
+                ZX_OK) {
                 return status;
             }
             *work = std::move(tmp);
@@ -47,7 +46,7 @@ zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
         return ZX_OK;
     }
 
-    fs::Ticker ticker(transaction_manager->LocalMetrics().Collecting());
+    fs::Ticker ticker(transaction_manager->Metrics().Collecting());
 
     // Update all the outgoing transactions to be in disk blocks.
     std::vector<block_fifo_request_t> blk_reqs;
@@ -70,12 +69,12 @@ zx_status_t FlushWriteRequests(TransactionManager* transaction_manager,
     // Actually send the operations to the underlying block device.
     zx_status_t status = transaction_manager->Transaction(&blk_reqs[0], operations.size());
 
-    if (transaction_manager->LocalMetrics().Collecting()) {
+    if (transaction_manager->Metrics().Collecting()) {
         uint64_t sum = 0;
         for (const auto& operation : operations) {
             sum += operation.op.length * transaction_manager->FsBlockSize();
         }
-        transaction_manager->LocalMetrics().UpdateWriteback(sum, ticker.End());
+        transaction_manager->Metrics().UpdateWriteback(sum, ticker.End());
     }
 
     return status;

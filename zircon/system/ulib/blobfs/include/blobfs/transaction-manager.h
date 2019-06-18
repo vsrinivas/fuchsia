@@ -27,11 +27,10 @@ enum class EnqueueType {
 };
 
 // An interface which controls access to the underlying storage.
-class TransactionManager : public fs::TransactionHandler,
-                           public SpaceManager {
+class TransactionManager : public fs::TransactionHandler, public SpaceManager {
 public:
     virtual ~TransactionManager() = default;
-    virtual BlobfsMetrics& LocalMetrics() = 0;
+    virtual BlobfsMetrics& Metrics() = 0;
 
     // Returns the capacity of the writeback buffer in blocks.
     virtual size_t WritebackCapacity() const = 0;

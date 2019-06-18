@@ -128,7 +128,7 @@ public:
     // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
     // underlying storage (optionally through the journal).
 
-    BlobfsMetrics& LocalMetrics() final { return metrics_; }
+    BlobfsMetrics& Metrics() final { return metrics_; }
     size_t WritebackCapacity() const final;
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
     zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
@@ -159,15 +159,9 @@ public:
     static zx_status_t Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
                               std::unique_ptr<Blobfs>* out);
 
-    void CollectMetrics() {
-        collecting_metrics_ = true;
-        cobalt_metrics_.EnableMetrics(true);
-    }
-    bool CollectingMetrics() const { return cobalt_metrics_.IsEnabled(); }
-    void DisableMetrics() {
-        cobalt_metrics_.EnableMetrics(false);
-        collecting_metrics_ = false;
-    }
+    void CollectMetrics() { collecting_metrics_ = true; }
+    bool CollectingMetrics() const { return collecting_metrics_; }
+    void DisableMetrics() { collecting_metrics_ = false; }
     void DumpMetrics() const {
         if (collecting_metrics_) {
             metrics_.Dump();
@@ -220,10 +214,6 @@ public:
 
     // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
     void PersistBlocks(WritebackWork* wb, const ReservedExtent& extent);
-
-    fs_metrics::VnodeMetrics* GetMutableVnodeMetrics() {
-        return cobalt_metrics_.mutable_vnode_metrics();
-    }
 
     // Record the location and size of all non-free block regions.
     fbl::Vector<BlockRegion> GetAllocatedRegions() const {
@@ -291,8 +281,7 @@ private:
 
     fbl::Closure on_unmount_ = {};
 
-    // TODO(gevalentino): clean up old metrics and update this to inspect API.
-    fs_metrics::Metrics cobalt_metrics_;
+    // Loop for flushing the collector periodically.
     async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
 };
 

@@ -380,4 +380,13 @@ void Histograms::Record(uint64_t histogram_id, zx::duration duration) {
     histograms_[histogram_id].Insert(duration.to_nsecs());
 }
 
+uint64_t Histograms::Size() {
+    // An integer for each bucket + metadata
+    constexpr uint32_t kApproximateNameLength = 30;
+    return fbl::round_up(HistogramOffsets::End<EventInfo<Event::kUnlink>>() *
+                             ((kHistogramBuckets * sizeof(uint64_t) + kApproximateNameLength) +
+                              strlen(Histograms::kHistComponent)),
+                         static_cast<uint64_t>(PAGE_SIZE));
+}
+
 } // namespace fs_metrics

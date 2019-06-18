@@ -47,16 +47,6 @@ namespace {
 // Time between each Cobalt flush.
 constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 
-cobalt_client::CollectorOptions MakeCollectorOptions() {
-    cobalt_client::CollectorOptions options =
-        cobalt_client::CollectorOptions::GeneralAvailability();
-    // Filesystems project name as defined in cobalt-analytics projects.yaml.
-    options.project_name = "local_storage";
-    options.initial_response_deadline = zx::usec(0);
-    options.response_deadline = zx::nsec(0);
-    return options;
-}
-
 } // namespace
 
 zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
@@ -249,8 +239,8 @@ void Blobfs::WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_blo
 
     // Write back the block allocation bitmap
     wb->Transaction().Enqueue(allocator_->GetBlockMapVmo(), bbm_start_block,
-                              BlockMapStartBlock(info_) + bbm_start_block, bbm_end_block -
-                              bbm_start_block);
+                              BlockMapStartBlock(info_) + bbm_start_block,
+                              bbm_end_block - bbm_start_block);
 }
 
 void Blobfs::WriteNode(WritebackWork* wb, uint32_t map_index) {
@@ -470,8 +460,7 @@ void Blobfs::Sync(SyncCallback closure) {
 }
 
 Blobfs::Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info)
-    : block_device_(std::move(device)), metrics_(),
-      cobalt_metrics_(MakeCollectorOptions(), false, "blobfs") {
+    : block_device_(std::move(device)), metrics_() {
     memcpy(&info_, info, sizeof(Superblock));
 }
 
@@ -485,7 +474,7 @@ Blobfs::~Blobfs() {
 }
 
 void Blobfs::ScheduleMetricFlush() {
-    cobalt_metrics_.mutable_collector()->Flush();
+    metrics_.mutable_collector()->Flush();
     async::PostDelayedTask(
         flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
 }
@@ -534,8 +523,7 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
     fs->SetReadonly(options->writability != blobfs::Writability::Writable);
     fs->Cache().SetCachePolicy(options->cache_policy);
     if (options->metrics) {
-        fs->LocalMetrics().Collect();
-        fs->cobalt_metrics_.EnableMetrics(true);
+        fs->Metrics().Collect();
         // TODO(gevalentino): Once we have async llcpp bindings, instead pass a dispatcher for
         // handling collector IPCs.
         fs->flush_loop_.StartThread("blobfs-metric-flusher");
@@ -635,7 +623,7 @@ zx_status_t Blobfs::InitializeVnodes() {
                            node_index - 1);
             return status;
         }
-        LocalMetrics().UpdateLookup(vnode->SizeData());
+        Metrics().UpdateLookup(vnode->SizeData());
     }
 
     if (total_allocated != info_.alloc_inode_count) {

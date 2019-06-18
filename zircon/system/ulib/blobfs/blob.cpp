@@ -15,15 +15,14 @@
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/iterator/node-populator.h>
 #include <blobfs/iterator/vector-extent-iterator.h>
-#include <blobfs/latency-event.h>
+#include <blobfs/metrics.h>
 #include <blobfs/writeback.h>
-#include <cobalt-client/cpp/timer.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
-#include <fs/metrics/cobalt-metrics.h>
+#include <fs/metrics/events.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/sync/completion.h>
@@ -53,7 +52,7 @@ void FormatVmoName(const char* prefix, fbl::StringBuffer<ZX_MAX_NAME_LEN>* vmo_n
 
 zx_status_t Blob::Verify() const {
     TRACE_DURATION("blobfs", "Blobfs::Verify");
-    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
+    fs::Ticker ticker(blobfs_->Metrics().Collecting());
 
     const void* data = inode_.blob_size ? GetData() : nullptr;
     const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
@@ -66,7 +65,7 @@ zx_status_t Blob::Verify() const {
     Digest digest(GetKey());
     zx_status_t status =
         MerkleTree::Verify(data, data_size, tree, merkle_size, 0, data_size, digest);
-    blobfs_->LocalMetrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
+    blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
     if (status != ZX_OK) {
         char name[Digest::kLength * 2 + 1];
@@ -138,7 +137,7 @@ zx_status_t Blob::InitVmos() {
 zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
     TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
-    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
+    fs::Ticker ticker(blobfs_->Metrics().Collecting());
     fs::ReadTxn txn(blobfs_);
     uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
 
@@ -228,15 +227,15 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    blobfs_->LocalMetrics().UpdateMerkleDecompress(compressed_blocks * kBlobfsBlockSize,
-                                                   inode_.blob_size, read_time, ticker.End());
+    blobfs_->Metrics().UpdateMerkleDecompress(compressed_blocks * kBlobfsBlockSize,
+                                              inode_.blob_size, read_time, ticker.End());
     return ZX_OK;
 }
 
 zx_status_t Blob::InitUncompressed() {
     TRACE_DURATION("blobfs", "Blobfs::InitUncompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
-    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
+    fs::Ticker ticker(blobfs_->Metrics().Collecting());
     fs::ReadTxn txn(blobfs_);
     AllocatedExtentIterator extent_iter(blobfs_->GetAllocator(), GetMapIndex());
     BlockIterator block_iter(&extent_iter);
@@ -262,7 +261,7 @@ zx_status_t Blob::InitUncompressed() {
     if (status != ZX_OK) {
         return status;
     }
-    blobfs_->LocalMetrics().UpdateMerkleDiskRead(length * kBlobfsBlockSize, ticker.End());
+    blobfs_->Metrics().UpdateMerkleDiskRead(length * kBlobfsBlockSize, ticker.End());
     return status;
 }
 
@@ -292,7 +291,7 @@ void Blob::BlobCloseHandles() {
 
 zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
-    fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
+    fs::Ticker ticker(blobfs_->Metrics().Collecting());
 
     if (GetState() != kBlobStateEmpty) {
         return ZX_ERR_BAD_STATE;
@@ -375,7 +374,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     write_info_ = std::move(write_info);
 
     SetState(kBlobStateDataWrite);
-    blobfs_->LocalMetrics().UpdateAllocation(size_data, ticker.End());
+    blobfs_->Metrics().UpdateAllocation(size_data, ticker.End());
     return ZX_OK;
 }
 
@@ -549,7 +548,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
             void* merkle_data = GetMerkle();
             const void* blob_data = GetData();
             // Tracking generation time.
-            fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
+            fs::Ticker ticker(blobfs_->Metrics().Collecting());
 
             if ((status = MerkleTree::Create(blob_data, inode_.blob_size, merkle_data, merkle_size,
                                              &digest)) != ZX_OK) {
@@ -623,13 +622,12 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         }
 
         // No more data to write. Flush to disk.
-        fs::Ticker ticker(blobfs_->LocalMetrics().Collecting()); // Tracking enqueue time.
+        fs::Ticker ticker(blobfs_->Metrics().Collecting()); // Tracking enqueue time.
         if ((status = WriteMetadata()) != ZX_OK) {
             return status;
         }
 
-        blobfs_->LocalMetrics().UpdateClientWrite(to_write, merkle_size, ticker.End(),
-                                                  generation_time);
+        blobfs_->Metrics().UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
         set_error.cancel();
         return ZX_OK;
     }
@@ -824,19 +822,19 @@ zx_status_t Blob::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
     TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->read, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kRead);
 
     return ReadInternal(data, len, off, out_actual);
 }
 
 zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
     TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->write, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kWrite);
     return WriteInternal(data, len, out_actual);
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->append, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kAppend);
     zx_status_t status = WriteInternal(data, len, out_actual);
     if (GetState() == kBlobStateDataWrite) {
         ZX_DEBUG_ASSERT(write_info_ != nullptr);
@@ -848,7 +846,7 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
 }
 
 zx_status_t Blob::Getattr(vnattr_t* a) {
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->get_attr, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kGetAttr);
     memset(a, 0, sizeof(vnattr_t));
     a->mode = V_TYPE_FILE | V_IRUSR;
     a->inode = Ino();
@@ -863,7 +861,7 @@ zx_status_t Blob::Getattr(vnattr_t* a) {
 
 zx_status_t Blob::Truncate(size_t len) {
     TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->truncate, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kTruncate);
     return SpaceAllocate(len);
 }
 
@@ -913,7 +911,7 @@ zx_status_t Blob::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
 }
 
 void Blob::Sync(SyncCallback closure) {
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->sync, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kSync);
     if (atomic_load(&syncing_)) {
         blobfs_->Sync([this, evt = std::move(event), cb = std::move(closure)](zx_status_t status) {
             if (status != ZX_OK) {
@@ -954,7 +952,7 @@ zx_status_t Blob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
 }
 
 zx_status_t Blob::Close() {
-    LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->close, blobfs_->CollectingMetrics());
+    auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kClose);
     ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
     fd_count_--;
     // Attempt purge in case blob was unlinked prior to close

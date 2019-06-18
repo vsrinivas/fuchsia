@@ -104,6 +104,10 @@ class Histograms {
 public:
     static constexpr char kHistComponent[] = "histograms";
 
+    // Returns the number of bytes rounded up to the nearest page required to store
+    // all the hitograms in the collection.
+    static uint64_t Size();
+
     Histograms() = delete;
     explicit Histograms(inspect::vmo::Object* root);
     Histograms(const Histograms&) = delete;

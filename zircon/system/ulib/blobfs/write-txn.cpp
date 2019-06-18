@@ -65,12 +65,12 @@ void WriteTxn::SetBuffer(vmoid_t vmoid) {
 
 zx_status_t WriteTxn::Flush() {
     ZX_ASSERT(IsBuffered());
-    fs::Ticker ticker(transaction_manager_->LocalMetrics().Collecting());
+    fs::Ticker ticker(transaction_manager_->Metrics().Collecting());
 
     // Update all the outgoing transactions to be in disk blocks
     block_fifo_request_t blk_reqs[operations_.size()];
     const uint32_t kDiskBlocksPerBlobfsBlock =
-            kBlobfsBlockSize / transaction_manager_->DeviceBlockSize();
+        kBlobfsBlockSize / transaction_manager_->DeviceBlockSize();
     for (size_t i = 0; i < operations_.size(); i++) {
         blk_reqs[i].group = transaction_manager_->BlockGroupID();
         blk_reqs[i].vmoid = vmoid_;
@@ -87,12 +87,12 @@ zx_status_t WriteTxn::Flush() {
     // Actually send the operations to the underlying block device.
     zx_status_t status = transaction_manager_->Transaction(blk_reqs, operations_.size());
 
-    if (transaction_manager_->LocalMetrics().Collecting()) {
+    if (transaction_manager_->Metrics().Collecting()) {
         uint64_t sum = 0;
         for (const auto& blk_req : blk_reqs) {
             sum += blk_req.length * kBlobfsBlockSize;
         }
-        transaction_manager_->LocalMetrics().UpdateWriteback(sum, ticker.End());
+        transaction_manager_->Metrics().UpdateWriteback(sum, ticker.End());
     }
 
     operations_.reset();

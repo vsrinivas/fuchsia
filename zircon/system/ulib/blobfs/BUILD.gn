@@ -77,6 +77,8 @@ library("blobfs") {
 
       # <blobfs/writeback.h> has #include <lib/sync/completion.h>.
       "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",
+      "$zx/system/ulib/fs/metrics:metrics-inspect.headers",
+      "$zx/system/ulib/fs/metrics:metrics-composite-latency-event.headers",
       "$zx/system/ulib/sync:headers",
 
       # <blobfs/blobfs.h> has #include <.../fidl.h>
@@ -94,7 +96,7 @@ library("blobfs") {
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl-utils",
-      "$zx/system/ulib/fs/metrics:metrics-cobalt",
+      "$zx/system/ulib/fs/metrics:metrics",
       "$zx/system/ulib/fzl",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/trace",
