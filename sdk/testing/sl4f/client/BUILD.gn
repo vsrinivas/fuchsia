@@ -23,7 +23,6 @@ dart_library("client") {
     "src/setui.dart",
     "src/sl4f_client.dart",
     "src/storage.dart",
-    "src/traceutil.dart",
     "src/webdriver.dart",
   ]
 
