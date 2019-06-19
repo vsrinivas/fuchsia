@@ -6,7 +6,7 @@ fidlcat is a tool that allows users to monitor FIDL connections.  Currently, it
 can attach to or launch a process on a Fuchsia device, and will report its FIDL
 traffic.
 
-## Running it
+## Enabling it
 
 To run fidlcat in-tree, you first build it, which you can do the following way:
 
@@ -37,19 +37,46 @@ In a separate console, you need to ensure your target is able to fetch updates:
 fx serve
 ```
 
-You should then be able to use fidlcat to monitor FIDL messages from processes
-on the target.  If you run the `ps` command in the shell, you can get a pid you
-want to monitor, and run:
+## Running it
+
+When your environment is properly set up, and fidlcat is built, you should be
+able to use it to monitor FIDL messages from processes on the target.  There are several ways to do this.
+
+### Attaching to a running process
+
+If you run the `ps` command in the shell, you can get a pid you want to monitor,
+and run:
 
 ```sh
 fx fidlcat --remote-pid <pid>
 ```
+
+If your code is executed by a runner, you are likely to want to attach to the
+runner.  For Dart JIT-executed code, run `ps` on the target, and look for the process named `dart_jit_runner`:
+
+```sh
+host$ fx shell ps
+[...]
+        j:21102           17.6M   17.6M
+          p:21107         17.6M   17.6M     32k         dart_jit_runner.cmx
+```
+
+You can then attach directly to that process, and view all FIDL messages sent by
+Dart programs:
+
+```sh
+host$ fx fidlcat --remote-pid 21107
+```
+
+### Launching a component with fidlcat
 
 Alternatively, you can launch a component directly using its URL:
 
 ```sh
 fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_rust#meta/echo_client_rust.cmx
 ```
+
+### Attaching to a program on startup
 
 You can also attach to programs that have not started yet by passing a regex to
 match their names.  If you issue the following command, fidlcat will connect to
@@ -59,6 +86,8 @@ automatically attach to it.
 ```sh
 fx fidlcat --filter echo_client
 ```
+
+## Running without the fx tool
 
 Note that fidlcat needs two sources of information to work:
 
