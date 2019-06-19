@@ -9,7 +9,7 @@ use fidl_fuchsia_auth::{
     AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderFactoryProxy, AuthProviderMarker,
     AuthProviderStatus, Status,
 };
-use fuchsia_component::client::{App, launcher, launch};
+use fuchsia_component::client::{launch, launcher, App};
 use fuchsia_zircon as zx;
 use log::info;
 use parking_lot::Mutex;
@@ -75,7 +75,8 @@ impl AuthProviderConnection {
 
         // Launch the auth provider and connect to its factory interface.
         info!("Launching AuthProvider component: {}", self.component_url);
-        let launcher = launcher().context("Failed to start launcher")
+        let launcher = launcher()
+            .context("Failed to start launcher")
             .token_manager_status(Status::UnknownError)?;
         let app = launch(&launcher, self.component_url.clone(), self.params.clone())
             .context("Failed to launch AuthProviderFactory")
