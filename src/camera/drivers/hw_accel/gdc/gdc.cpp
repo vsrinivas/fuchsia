@@ -30,7 +30,7 @@ constexpr uint32_t kGdc = 1;
 
 void GdcDevice::InitClocks() {
   // First reset the clocks.
-  GDC_CLK_CNTL::Get()
+  GdcClkCntl::Get()
       .ReadFrom(&clock_mmio_)
       .reset_axi()
       .reset_core()
@@ -39,7 +39,7 @@ void GdcDevice::InitClocks() {
   // Set the clocks to 8Mhz
   // Source XTAL
   // Clock divisor = 3
-  GDC_CLK_CNTL::Get()
+  GdcClkCntl::Get()
       .ReadFrom(&clock_mmio_)
       .set_axi_clk_div(3)
       .set_axi_clk_en(1)
@@ -50,7 +50,7 @@ void GdcDevice::InitClocks() {
       .WriteTo(&clock_mmio_);
 
   // Enable GDC Power domain.
-  GDC_MEM_POWER_DOMAIN::Get()
+  GdcMemPowerDomain::Get()
       .ReadFrom(&clock_mmio_)
       .set_gdc_pd(0)
       .WriteTo(&clock_mmio_);
