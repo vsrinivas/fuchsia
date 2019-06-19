@@ -4,59 +4,16 @@
 
 use {
     crate::model::*,
-    cm_rust::{Capability, ComponentDecl},
+    cm_rust::ComponentDecl,
     failure::{format_err, Error},
-    fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_sys2 as fsys,
     futures::future::FutureObj,
     futures::lock::Mutex,
     futures::prelude::*,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
 };
-
-pub struct ProxyingRoutingFnFactory {
-    pub root_dir: DirectoryProxy,
-}
-
-impl ProxyingRoutingFnFactory {
-    pub fn new(root_dir: DirectoryProxy) -> Self {
-        ProxyingRoutingFnFactory { root_dir }
-    }
-}
-
-impl CapabilityRoutingFnFactory for ProxyingRoutingFnFactory {
-    fn create_route_fn(
-        &self,
-        _abs_moniker: &AbsoluteMoniker,
-        _capability: Capability,
-    ) -> Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send> {
-        // Create a DirectoryProxy for use by every route function we stamp out.
-        let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-        self.root_dir
-            .clone(flags, ServerEnd::<NodeMarker>::new(server_chan.into()))
-            .expect("Unable to clone root directory.");
-        let dir = ClientEnd::<DirectoryMarker>::new(client_chan)
-            .into_proxy()
-            .expect("failed to create directory proxy");
-        Box::new(
-            move |flags: u32,
-                  mode: u32,
-                  relative_path: String,
-                  server_end: ServerEnd<NodeMarker>| {
-                if !relative_path.is_empty() {
-                    dir.open(flags, mode, &relative_path, server_end)
-                        .expect("Unable to open 'dir'.");
-                } else {
-                    dir.clone(flags, server_end).expect("Unable to clone 'dir'.");
-                }
-            },
-        )
-    }
-}
 
 pub struct MockResolver {
     components: HashMap<String, ComponentDecl>,

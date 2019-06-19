@@ -12,8 +12,6 @@ use {
     void::Void,
 };
 
-pub type RoutingFn = Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>;
-
 // TODO(ZX-3606): move this into the pseudo dir fs crate.
 /// DirectoryBroker exists to hold a slot in a fuchsia_vfs_pseudo_fs directory and proxy open
 /// requests. A DirectoryBroker holds a closure provided at creation time, and whenever an open
@@ -25,13 +23,15 @@ pub struct DirectoryBroker {
     ///  mode: u32
     ///  relative_path: String
     ///  server_end: ServerEnd<NodeMarker>
-    route_open: RoutingFn,
+    route_open: Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>,
     entry_info: fvfs::directory::entry::EntryInfo,
 }
 
 impl DirectoryBroker {
     /// new will create a new DirectoryBroker to forward directory open requests.
-    pub fn new(route_open: RoutingFn) -> DirectoryBroker {
+    pub fn new(
+        route_open: Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>,
+    ) -> DirectoryBroker {
         return DirectoryBroker {
             route_open,
             entry_info: fvfs::directory::entry::EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_SERVICE),

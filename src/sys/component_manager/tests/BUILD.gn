@@ -11,7 +11,6 @@ rustc_binary("hub_integration_test_bin") {
   edition = "2018"
   source_root = "hub_integration_test.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/lib/rust/cm_rust",
     "//garnet/lib/rust/io_util",
@@ -38,8 +37,7 @@ test_package("hub_integration_test") {
   deps = [
     ":hub_integration_test_bin",
     ":mock_pkg_resolver_bin",
-    "//examples/components/routing/echo_client",
-    "//examples/components/routing/echo_server",
+    "//examples/components/basic:echo_args_bin",
   ]
 
   meta = [
@@ -48,16 +46,8 @@ test_package("hub_integration_test") {
       dest = "mock_pkg_resolver.cmx"
     },
     {
-      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("//examples/components/routing/meta/echo_client.cml")
-      dest = "echo_client.cm"
-    },
-    {
-      path = rebase_path("meta/echo_realm_for_hub_integration.cml")
-      dest = "echo_realm.cm"
+      path = rebase_path("//examples/components/basic/meta/echo_args.cml")
+      dest = "echo_args.cm"
     },
   ]
 
@@ -66,10 +56,7 @@ test_package("hub_integration_test") {
       name = "mock_pkg_resolver"
     },
     {
-      name = "echo_server"
-    },
-    {
-      name = "echo_client"
+      name = "echo_args"
     },
   ]
 

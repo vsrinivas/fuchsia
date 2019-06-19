@@ -29,7 +29,6 @@ pub trait Hook {
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
-        route_fn_factory: Arc<dyn CapabilityRoutingFnFactory + Send + Sync>,
     ) -> BoxFuture<Result<(), ModelError>>;
 
     // Called when a dynamic instance is added with `realm`.
@@ -218,9 +217,8 @@ impl Model {
     async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
         let mut state = await!(realm.state.lock());
         let eager_children = await!(self.populate_realm_state(&mut *state, realm.clone()))?;
-        let route_fn_factory = Arc::new(ModelCapabilityRoutingFnFactory::new(&self));
         for hook in self.hooks.iter() {
-            await!(hook.on_bind_instance(realm.clone(), &*state, route_fn_factory.clone()))?;
+            await!(hook.on_bind_instance(realm.clone(), &*state))?;
         }
 
         Ok(eager_children)
