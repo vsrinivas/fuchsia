@@ -14,7 +14,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"syscall/zx"
+	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	zxio "syscall/zx/io"
 
 	"app/context"
 	fuchsiaio "fidl/fuchsia/io"
@@ -38,6 +42,32 @@ func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 
 	context.ConnectToEnvService(req)
 	return pxy, nil
+}
+
+// CacheUpdatePackage caches the requested, possibly merkle-pinned, update
+// package URL and returns the pkgfs path to the package.
+func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverInterface) (string, error) {
+	dirPxy, err := resolvePackage(updateURL, resolver)
+	if err != nil {
+		return "", err
+	}
+	defer dirPxy.Close()
+
+	channelProxy := (*fidl.ChannelProxy)(dirPxy)
+	updateDir := fdio.Directory{fdio.Node{(*zxio.NodeInterface)(channelProxy)}}
+	path := "meta"
+	f, err := updateDir.Open(path, zxio.OpenRightReadable, zxio.ModeTypeFile)
+	if err != nil {
+		return "", err
+	}
+	file := os.NewFile(uintptr(syscall.OpenFDIO(f)), path)
+	defer file.Close()
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	merkle := string(b)
+	return "/pkgfs/versions/" + merkle, nil
 }
 
 func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, []string, error) {
@@ -102,7 +132,7 @@ func FetchPackages(pkgs []*Package, resolver *pkg.PackageResolverInterface) erro
 }
 
 func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
-	b, err := ioutil.ReadFile(filepath.Join("/pkgfs/packages", p.namever, "meta"))
+	b, err := ioutil.ReadFile(filepath.Join("/pkgfs/versions", p.merkle, "meta"))
 	if err == nil {
 		// package is already installed, skip
 		if string(b) == p.merkle {
@@ -110,25 +140,37 @@ func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
 		}
 	}
 
-	pkgUri := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", p.namever, p.merkle)
+	pkgURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", p.namever, p.merkle)
+	dirPxy, err := resolvePackage(pkgURL, resolver)
+	if dirPxy != nil {
+		dirPxy.Close()
+	}
+	return err
+}
+
+func resolvePackage(pkgURL string, resolver *pkg.PackageResolverInterface) (*fuchsiaio.DirectoryInterface, error) {
 	selectors := []string{}
 	updatePolicy := pkg.UpdatePolicy{}
 	dirReq, dirPxy, err := fuchsiaio.NewDirectoryInterfaceRequest()
-	defer dirPxy.Close()
-
-	syslog.Infof("requesting %s from update system", pkgUri)
-
-	status, err := resolver.Resolve(pkgUri, selectors, updatePolicy, dirReq)
 	if err != nil {
-		return fmt.Errorf("fetch: Resolve error: %s", err)
+		return nil, err
+	}
+
+	syslog.Infof("requesting %s from update system", pkgURL)
+
+	status, err := resolver.Resolve(pkgURL, selectors, updatePolicy, dirReq)
+	if err != nil {
+		dirPxy.Close()
+		return nil, fmt.Errorf("fetch: Resolve error: %s", err)
 	}
 
 	statusErr := zx.Status(status)
 	if statusErr != zx.ErrOk {
-		return fmt.Errorf("fetch: Resolve status: %s", statusErr)
+		dirPxy.Close()
+		return nil, fmt.Errorf("fetch: Resolve status: %s", statusErr)
 	}
 
-	return nil
+	return dirPxy, nil
 }
 
 var diskImagerPath = filepath.Join("/pkg", "bin", "install-disk-image")

@@ -10,7 +10,8 @@
             "isolated-persistent-storage"
         ],
         "pkgfs": [
-            "packages"
+            "packages",
+            "versions"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",

@@ -149,6 +149,7 @@ func (upMon *SystemUpdateMonitor) Check(initiator metrics.Initiator) error {
 					fmt.Sprintf("-start=%d", start.UnixNano()),
 					fmt.Sprintf("-source=%s", upMon.systemImageMerkle),
 					fmt.Sprintf("-target=%s", upMon.latestSystemImageMerkle),
+					fmt.Sprintf("-update=%s", makeUpdateURL(latestUpdateMerkle)),
 				},
 			}
 			if err := runProgram(launchDesc); err != nil {
@@ -372,4 +373,8 @@ func getUpdateVersion() (string, error) {
 func getCurrentVersion() (string, error) {
 	b, err := ioutil.ReadFile("/config/build-info/version")
 	return string(bytes.TrimSpace(b)), err
+}
+
+func makeUpdateURL(merkle string) string {
+	return fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s/%s?hash=%s", updateName, updateVersion, merkle)
 }

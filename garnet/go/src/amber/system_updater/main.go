@@ -26,6 +26,7 @@ var (
 	startTime     time.Time
 	sourceVersion string
 	targetVersion string
+	updateURL     string
 )
 
 func run() (err error) {
@@ -87,7 +88,16 @@ func run() (err error) {
 		}
 	}()
 
-	dataPath := filepath.Join("/pkgfs", "packages", "update", "0")
+	resolver, err := ConnectToPackageResolver()
+	if err != nil {
+		return fmt.Errorf("unable to connect to update service: %s", err)
+	}
+	defer resolver.Close()
+
+	dataPath, err := CacheUpdatePackage(updateURL, resolver)
+	if err != nil {
+		return fmt.Errorf("error caching update package! %s", err)
+	}
 
 	pFile, err := os.Open(filepath.Join(dataPath, "packages"))
 	if err != nil {
@@ -105,12 +115,6 @@ func run() (err error) {
 	if err != nil {
 		return fmt.Errorf("could not parse requirements: %s", err)
 	}
-
-	resolver, err := ConnectToPackageResolver()
-	if err != nil {
-		return fmt.Errorf("unable to connect to update service: %s", err)
-	}
-	defer resolver.Close()
 
 	phase = metrics.PhasePackageDownload
 	if err := FetchPackages(pkgs, resolver); err != nil {
@@ -220,6 +224,7 @@ func Main() {
 	start := flag.Int64("start", time.Now().UnixNano(), "start time of update attempt, as unix nanosecond timestamp")
 	flag.StringVar(&sourceVersion, "source", "", "current OS version")
 	flag.StringVar(&targetVersion, "target", "", "target OS version")
+	flag.StringVar(&updateURL, "update", "fuchsia-pkg://fuchsia.com/update", "update package URL")
 	flag.Parse()
 
 	startTime = time.Unix(0, *start)
