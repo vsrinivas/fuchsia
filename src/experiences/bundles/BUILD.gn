@@ -9,18 +9,11 @@ group("bundles") {
   ]
 }
 
-## packages required to run ermine
+## Temporary to support soft transition
 group("ermine") {
   testonly = true
   public_deps = [
-    ":ermine_config",
-    "//topaz/packages/prod:ermine",
+     "//src/experiences/session_shells:ermine",
   ]
 }
 
-group("ermine_config") {
-  testonly = true
-  public_deps = [
-    "//topaz/packages/config:ermine",
-  ]
-}

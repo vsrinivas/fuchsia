@@ -8,10 +8,6 @@ import("//build/package.gni")
 import("//peridot/build/modular_config/modular_config.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-## DO NOT RELY ON THESE FILES FOR BUILDING AS THEY WILL BREAK
-## THE WORKSTATION PRODUCT. WAIT UNTIL TRANSITION FROM TOPAZ
-## IS COMPLETE.
-
 flutter_app("ermine") {
   main_dart = "lib/main.dart"
 
