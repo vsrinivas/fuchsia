@@ -36,48 +36,8 @@ struct Parameter {
     Value value;
 };
 
-// FormatDetails
-//
-// The purpose of FormatDetails is to fill in additional details not
-// conveyed via other means.
-//
-// TODO(dustingreen): Where at all possible, definitions for the concepts
-// within FormatDetails should go in media_types.fidl or another location
-// that's widely shared.  Maybe some encoder settings could remain
-// codec-specific.
-//
-// For decoder input, the format details tend to be fairly sparse, since most
-// compressed formats tend to be mostly self-describing.
-//
-// For decoder output and encoder input, the format details need to include all
-// the out-of-band information regarding the uncompressed data, which tends not
-// to be self-describing.
-//
-// Settings that are completely redundant with the data in the format itself
-// should not be in a required field here. An encoder may set oob_bytes on its
-// output.
-//
-// This stuff should be limited to things we need to know to properly process the
-// data which we can't already determine from the data itself, and which isn't
-// already covered by a format's defined OOB binary config blob, which is
-// conveyed in oob_bytes.
-//
-// Most decoders can have FormatDetails.domain null.
-
-/// AudioCompressedFormat
-///
-/// Format details relevant to compressed audio, mostly for encoder settings,
-/// (but see TODO below).
-///
-/// Unless otherwise specified in a comment on a field in this structure,
-/// FormatDetails.domain is null for a decoder.  A sub-structure whose name
-/// ends in "Encoder" is for encoder output settings.
-///
-// TODO(dustingreen): Complete process of splitting encoder settings out.
 xunion AudioCompressedFormat {
-    // For an aac encoder, this field has settings the encoder needs which are
-    // specific to AAC encoding.
-    AudioCompressedFormatAacEncoder aac;
+    AudioCompressedFormatAac aac;
     AudioCompressedFormatSbc sbc;
 };
 
@@ -91,42 +51,7 @@ enum AudioBitrateMode {
     VBR = 2;
 };
 
-/// AudioCompressedFormatAacEncoder
-///
-/// Encoder settings for an AAC encoder.
-struct AudioCompressedFormatAacEncoder {
-    // In SetOutputConfig():
-    //
-    // If zero, an encoder should generate 256 kbps, and a consumer should not
-    // assume any particular bitrate.
-    //
-    // If not zero, the encoder should not exceed this bitrate.  In CBR the
-    // encoder should use the highest available bitrate that doesn't exceed this
-    // value, or if there is no such bitrate, the lowest available bitrate.  In
-    // VBR, the encoder should stay at or below this bitrate.
-    //
-    // In VBR it's left up to the encoder to choose a reasonable ratio between
-    // max bits per second and min bits per second, with the aim in VBR being
-    // constant perceived quality.
-    //
-    // In OnOutputConstraints():
-    //
-    // In CBR, the nominal bits per second.  In VBR, the nominal max bits per
-    // second.
-    uint32 bits_per_second;
-
-    // In SetOutputConfig():
-    //
-    // If UNSPECIFIED, up to the encoder.  If CBR or VBR, a hint to the encoder
-    // to use that mode.
-    //
-    // In OnOutputConstraints():
-    //
-    // Actual mode being used.  UNSPECIFIED means the source is not specifying
-    // which mode.
-    AudioBitrateMode bitrate_mode;
-
-    // TODO(dustingreen): AAC profile settings.
+struct AudioCompressedFormatAac {
 };
 
 struct AudioCompressedFormatSbc {
@@ -422,16 +347,85 @@ struct SbcEncoderSettings {
     uint64 bit_pool;
 };
 
+/// Raw AAC access units.
+struct AacTransportRaw {
+};
+
+xunion AacTransport {
+    AacTransportRaw raw;
+};
+
+enum AacChannelMode {
+    MONO = 0;
+    STEREO = 2;
+};
+
+struct AacConstantBitRate {
+    /// Bits per second
+    uint32 bit_rate;
+};
+
+/// Variable bit rate modes. The actual resulting bitrate
+/// varies based on input signal and other encoding settings.
+///
+/// See https://wiki.hydrogenaud.io/index.php?title=Fraunhofer_FDK_AAC#Bitrate_Modes
+enum AacVariableBitRate {
+    V1 = 1;
+    V2 = 2;
+    V3 = 3;
+    V4 = 4;
+    V5 = 5;
+};
+
+union AacBitRate {
+    AacConstantBitRate constant;
+    AacVariableBitRate variable;
+};
+
+enum AacAudioObjectType {
+    /// MPEG-2 Low Complexity
+    MPEG2_AAC_LC = 0;
+};
+
+struct AacEncoderSettings {
+    AacTransport transport;
+    AacChannelMode channel_mode;
+    AacBitRate bit_rate;
+    AacAudioObjectType aot;
+};
+
 /// Settings for encoders that tell them how to encode raw
 /// formats.
 xunion EncoderSettings {
     SbcEncoderSettings sbc;
+    AacEncoderSettings aac;
 };
 
 /// FormatDetails
 ///
 /// This describes/details the format on input or output of a StreamProcessor
 /// (separate instances for input vs. output).
+//
+// The purpose of FormatDetails is to fill in additional details not
+// conveyed via other means.
+//
+// For decoder input, the format details tend to be fairly sparse, since most
+// compressed formats tend to be mostly self-describing.
+//
+// For decoder output and encoder input, the format details need to include all
+// the out-of-band information regarding the uncompressed data, which tends not
+// to be self-describing.
+//
+// Settings that are completely redundant with the data in the format itself
+// should not be in a required field here. An encoder may set oob_bytes on its
+// output.
+//
+// This stuff should be limited to things we need to know to properly process the
+// data which we can't already determine from the data itself, and which isn't
+// already covered by a format's defined OOB binary config blob, which is
+// conveyed in oob_bytes.
+//
+// Most decoders can have FormatDetails.domain null.
 table FormatDetails {
     // Particular instances of FormatDetails will set this field to make it
     // easier for a receiver to determine if any part of the format has changed
