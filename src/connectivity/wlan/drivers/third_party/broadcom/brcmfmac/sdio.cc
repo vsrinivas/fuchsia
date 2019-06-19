@@ -547,11 +547,7 @@ static int qcount[NUMPRIO];
 /* Limit on rounding up frames */
 static const uint16_t max_roundup = 512;
 
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-#define ALIGNMENT 8
-#else
-#define ALIGNMENT 4
-#endif
+#define DMA_ALIGNMENT 4
 
 enum brcmf_sdio_frmtype {
     BRCMF_SDIO_FT_NORMAL,
@@ -3195,7 +3191,7 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
         /* otherwise, set txglomalign */
         value = sdiodev->settings->bus.sdio.sd_sgentry_align;
         /* SDIO ADMA requires at least 32 bit alignment */
-        value = std::max<uint32_t>(value, ALIGNMENT);
+        value = std::max<uint32_t>(value, DMA_ALIGNMENT);
         err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t), nullptr);
     }
 
@@ -3672,12 +3668,12 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     /* platform specific configuration:
      *   alignments must be at least 4 bytes for ADMA
      */
-    bus->head_align = ALIGNMENT;
-    bus->sgentry_align = ALIGNMENT;
-    if (sdiodev->settings->bus.sdio.sd_head_align > ALIGNMENT) {
+    bus->head_align = DMA_ALIGNMENT;
+    bus->sgentry_align = DMA_ALIGNMENT;
+    if (sdiodev->settings->bus.sdio.sd_head_align > DMA_ALIGNMENT) {
         bus->head_align = sdiodev->settings->bus.sdio.sd_head_align;
     }
-    if (sdiodev->settings->bus.sdio.sd_sgentry_align > ALIGNMENT) {
+    if (sdiodev->settings->bus.sdio.sd_sgentry_align > DMA_ALIGNMENT) {
         bus->sgentry_align = sdiodev->settings->bus.sdio.sd_sgentry_align;
     }
 
@@ -4058,7 +4054,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     if (bus->sdiodev->bus_if->maxctl) {
         bus->sdiodev->bus_if->maxctl += bus->roundup;
         bus->rxblen =
-            roundup((bus->sdiodev->bus_if->maxctl + SDPCM_HDRLEN), ALIGNMENT) + bus->head_align;
+            roundup((bus->sdiodev->bus_if->maxctl + SDPCM_HDRLEN), DMA_ALIGNMENT) + bus->head_align;
         bus->rxbuf = static_cast<decltype(bus->rxbuf)>(malloc(bus->rxblen));
         if (!(bus->rxbuf)) {
             brcmf_err("rxbuf allocation failed\n");

@@ -197,36 +197,6 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
     brcmf_configure_arp_nd_offload(ifp, !cmd_value);
 }
 
-#if IS_ENABLED(CONFIG_IPV6)
-static void _brcmf_update_ndtable(struct work_struct* work) {
-    struct brcmf_if* ifp;
-    int i;
-    zx_status_t ret;
-    int32_t fw_err = 0;
-
-    ifp = containerof(work, struct brcmf_if, ndoffload_work);
-
-    /* clear the table in firmware */
-    ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip_clear", NULL, 0, &fw_err);
-    if (ret != ZX_OK) {
-        brcmf_dbg(TRACE, "fail to clear nd ip table err: %s, fw err %s\n",
-                  zx_status_get_string(ret), brcmf_fil_get_errstr(fw_err));
-        return;
-    }
-
-    for (i = 0; i < ifp->ipv6addr_idx; i++) {
-        ret = brcmf_fil_iovar_data_set(ifp, "nd_hostip", &ifp->ipv6_addr_tbl[i],
-                                       sizeof(struct in6_addr), &fw_err);
-        if (ret != ZX_OK) {
-            brcmf_err("add nd ip err: %s, fw err %s\n", zx_status_get_string(ret),
-                      brcmf_fil_get_errstr(fw_err));
-        }
-    }
-}
-#else
-static void _brcmf_update_ndtable(struct work_struct* work) {}
-#endif
-
 zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* addr) {
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct sockaddr* sa = (struct sockaddr*)addr;
@@ -579,7 +549,6 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     ndev->needed_headroom += drvr->hdrlen;
 
     workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
-    workqueue_init_work(&ifp->ndoffload_work, _brcmf_update_ndtable);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -782,7 +751,6 @@ static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_lo
 
         if (ifp->ndev->initialized_for_ap) {
             workqueue_cancel_work(&ifp->multicast_work);
-            workqueue_cancel_work(&ifp->ndoffload_work);
         }
         brcmf_net_detach(ifp->ndev, rtnl_locked);
     }
@@ -812,159 +780,6 @@ static zx_status_t brcmf_psm_watchdog_notify(struct brcmf_if* ifp,
 
     return err;
 }
-
-#ifdef CONFIG_INET
-#define ARPOL_MAX_ENTRIES 8
-static int brcmf_inetaddr_changed(struct notifier_block* nb, unsigned long action, void* data) {
-    struct brcmf_pub* drvr = containerof(nb, struct brcmf_pub, inetaddr_notifier);
-    struct in_ifaddr* ifa = data;
-    struct net_device* ndev = ifa->ifa_dev->dev;
-    struct brcmf_if* ifp;
-    int idx, i;
-    zx_status_t ret;
-    int32_t fw_err = 0;
-    uint32_t val;
-    __be32 addr_table[ARPOL_MAX_ENTRIES] = {0};
-
-    /* Find out if the notification is meant for us */
-    for (idx = 0; idx < BRCMF_MAX_IFS; idx++) {
-        ifp = drvr->iflist[idx];
-        if (ifp && ifp->ndev == ndev) {
-            break;
-        }
-        if (idx == BRCMF_MAX_IFS - 1) {
-            return NOTIFY_DONE;
-        }
-    }
-
-    /* check if arp offload is supported */
-    ret = brcmf_fil_iovar_int_get(ifp, "arpoe", &val, nullptr);
-    if (ret != ZX_OK) {
-        return NOTIFY_OK;
-    }
-
-    /* old version only support primary index */
-    ret = brcmf_fil_iovar_int_get(ifp, "arp_version", &val, nullptr);
-    if (ret != ZX_OK) {
-        val = 1;
-    }
-    if (val == 1) {
-        ifp = drvr->iflist[0];
-    }
-
-    /* retrieve the table from firmware */
-    ret = brcmf_fil_iovar_data_get(ifp, "arp_hostip", addr_table, sizeof(addr_table), &fw_err);
-    if (ret != ZX_OK) {
-        brcmf_err("fail to get arp ip table err:%s, fw err %s\n", zx_status_get_string(ret),
-                  brcmf_fil_get_errstr(fw_err));
-        return NOTIFY_OK;
-    }
-
-    for (i = 0; i < ARPOL_MAX_ENTRIES; i++)
-        if (ifa->ifa_address == addr_table[i]) {
-            break;
-        }
-
-    switch (action) {
-    case NETDEV_UP:
-        if (i == ARPOL_MAX_ENTRIES) {
-            brcmf_dbg(TRACE, "add %pI4 to arp table\n", &ifa->ifa_address);
-            /* set it directly */
-            ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip", &ifa->ifa_address,
-                                           sizeof(ifa->ifa_address), &fw_err);
-            if (ret != ZX_OK) {
-                brcmf_err("add arp ip err: %s, fw err %s\n", zx_status_get_string(ret),
-                          brcmf_fil_get_errstr(fw_err));
-            }
-        }
-        break;
-    case NETDEV_DOWN:
-        if (i < ARPOL_MAX_ENTRIES) {
-            addr_table[i] = 0;
-            brcmf_dbg(TRACE, "remove %pI4 from arp table\n", &ifa->ifa_address);
-            /* clear the table in firmware */
-            ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip_clear", NULL, 0, &fw_err);
-            if (ret != ZX_OK) {
-                brcmf_err("fail to clear arp ip table err: %s, fw err %s\n",
-                          zx_status_get_string(ret), brcmf_fil_get_errstr(fw_err));
-;
-                return NOTIFY_OK;
-            }
-            for (i = 0; i < ARPOL_MAX_ENTRIES; i++) {
-                if (addr_table[i] == 0) {
-                    continue;
-                }
-                ret = brcmf_fil_iovar_data_set(ifp, "arp_hostip", &addr_table[i],
-                                               sizeof(addr_table[i]), &fw_err);
-                if (ret != ZX_OK) {
-                    brcmf_err("add arp ip err: %s, fw err %s\n", zx_status_get_string(ret),
-                              brcmf_fil_get_errstr(fw_err));
-                }
-            }
-        }
-        break;
-    default:
-        break;
-    }
-
-    return NOTIFY_OK;
-}
-#endif
-
-#if IS_ENABLED(CONFIG_IPV6)
-static int brcmf_inet6addr_changed(struct notifier_block* nb, unsigned long action, void* data) {
-    struct brcmf_pub* drvr = containerof(nb, struct brcmf_pub, inet6addr_notifier);
-    struct inet6_ifaddr* ifa = data;
-    struct brcmf_if* ifp;
-    int i;
-    struct in6_addr* table;
-
-    /* Only handle primary interface */
-    ifp = drvr->iflist[0];
-    if (!ifp) {
-        return NOTIFY_DONE;
-    }
-    if (ifp->ndev != ifa->idev->dev) {
-        return NOTIFY_DONE;
-    }
-
-    table = ifp->ipv6_addr_tbl;
-    for (i = 0; i < NDOL_MAX_ENTRIES; i++)
-        if (ipv6_addr_equal(&ifa->addr, &table[i])) {
-            break;
-        }
-
-    switch (action) {
-    case NETDEV_UP:
-        if (i == NDOL_MAX_ENTRIES) {
-            if (ifp->ipv6addr_idx < NDOL_MAX_ENTRIES) {
-                table[ifp->ipv6addr_idx++] = ifa->addr;
-            } else {
-                for (i = 0; i < NDOL_MAX_ENTRIES - 1; i++) {
-                    table[i] = table[i + 1];
-                }
-                table[NDOL_MAX_ENTRIES - 1] = ifa->addr;
-            }
-        }
-        break;
-    case NETDEV_DOWN:
-        if (i < NDOL_MAX_ENTRIES) {
-            for (; i < ifp->ipv6addr_idx - 1; i++) {
-                table[i] = table[i + 1];
-            }
-            memset(&table[i], 0, sizeof(table[i]));
-            ifp->ipv6addr_idx--;
-        }
-        break;
-    default:
-        break;
-    }
-
-    workqueue_schedule_default(&ifp->ndoffload_work);
-
-    return NOTIFY_OK;
-}
-#endif
 
 zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings) {
     struct brcmf_pub* drvr = NULL;
@@ -1107,23 +922,6 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
         goto fail;
     }
 
-#ifdef CONFIG_INET
-    drvr->inetaddr_notifier.notifier_call = brcmf_inetaddr_changed;
-    ret = register_inetaddr_notifier(&drvr->inetaddr_notifier);
-    if (ret != ZX_OK) {
-        goto fail;
-    }
-
-#if IS_ENABLED(CONFIG_IPV6)
-    drvr->inet6addr_notifier.notifier_call = brcmf_inet6addr_changed;
-    ret = register_inet6addr_notifier(&drvr->inet6addr_notifier);
-    if (ret != ZX_OK) {
-        unregister_inetaddr_notifier(&drvr->inetaddr_notifier);
-        goto fail;
-    }
-#endif
-#endif /* CONFIG_INET */
-
     return ZX_OK;
 
 fail:
@@ -1177,14 +975,6 @@ void brcmf_detach(struct brcmf_device* dev) {
     if (drvr == NULL) {
         return;
     }
-
-#ifdef CONFIG_INET
-    unregister_inetaddr_notifier(&drvr->inetaddr_notifier);
-#endif
-
-#if IS_ENABLED(CONFIG_IPV6)
-    unregister_inet6addr_notifier(&drvr->inet6addr_notifier);
-#endif
 
     /* stop firmware event handling */
     brcmf_fweh_detach(drvr);

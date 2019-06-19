@@ -233,7 +233,6 @@ LINUX_FUNCVI(dma_unmap_single) // PCI only
 #define for_each_set_bit(a, b, c) for (({brcmf_err("Calling for_each_set_bit"); a = 0;});1;)
 
 #define DEBUG                         // Turns on struct members that debug.c needs
-#define CONFIG_OF                     // Turns on functions that of.c needs
 
 #define KBUILD_MODNAME "brcmfmac"
 

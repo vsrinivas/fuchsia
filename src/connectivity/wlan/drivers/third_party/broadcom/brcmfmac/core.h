@@ -148,7 +148,6 @@ struct brcmf_pub {
 #endif
 
     struct notifier_block inetaddr_notifier;
-    struct notifier_block inet6addr_notifier;
     struct brcmf_mp_device* settings;
 
     uint8_t clmver[BRCMF_DCMD_SMLEN];
