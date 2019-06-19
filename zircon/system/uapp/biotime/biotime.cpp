@@ -276,6 +276,7 @@ void usage(void) {
                     "\n"
                     "args:  -bs <num>     transfer block size (multiple of 4K)\n"
                     "       -total-bytes-to-transfer <num>  total amount to read or write\n"
+                    "       -iter <num-iterations> total number of iterations (0 stands for infinite)\n"
                     "       -mo <num>     maximum outstanding ops (1..128)\n"
                     "       -read         test reading from the block device (default)\n"
                     "       -write        test writing to the block device\n"
@@ -301,12 +302,15 @@ int main(int argc, char** argv) {
 
     bool live_dangerously = false;
     bio_random_args_t a = {};
+    bool opt_write = false;
+    bool opt_linear = true;
+    int opt_max_pending = 128;
+    size_t opt_xfer_size = 32768;
+    uint64_t opt_num_iter = 1;
+    bool loop_forever = false;
+
     a.blk = &blk;
-    a.xfer = 32768;
     a.seed = 7891263897612ULL;
-    a.max_pending = 128;
-    a.write = false;
-    a.linear = true;
     const char* output_file = nullptr;
 
     size_t total = 0;
@@ -318,8 +322,8 @@ int main(int argc, char** argv) {
         }
         if (!strcmp(argv[0], "-bs")) {
             needparam();
-            a.xfer = number(argv[0]);
-            if ((a.xfer == 0) || (a.xfer % 4096)) {
+            opt_xfer_size = number(argv[0]);
+            if ((opt_xfer_size == 0) || (opt_xfer_size % 4096)) {
                 error("error: block size must be multiple of 4K\n");
             }
         } else if (!strcmp(argv[0], "-total-bytes-to-transfer")) {
@@ -331,23 +335,28 @@ int main(int argc, char** argv) {
             if ((n < 1) || (n > 128)) {
                 error("error: max pending must be between 1 and 128\n");
             }
-            a.max_pending = static_cast<int>(n);
+            opt_max_pending = static_cast<int>(n);
         } else if (!strcmp(argv[0], "-read")) {
-            a.write = false;
+            opt_write = false;
         } else if (!strcmp(argv[0], "-write")) {
-            a.write = true;
+            opt_write = true;
         } else if (!strcmp(argv[0], "-live-dangerously")) {
             live_dangerously = true;
         } else if (!strcmp(argv[0], "-linear")) {
-            a.linear = true;
+            opt_linear = true;
         } else if (!strcmp(argv[0], "-random")) {
-            a.linear = false;
+            opt_linear = false;
         } else if (!strcmp(argv[0], "-output-file")) {
             needparam();
             output_file = argv[0];
         } else if (!strcmp(argv[0], "-h")) {
             usage();
             return 0;
+        } else if (!strcmp(argv[0], "-iter")) {
+            needparam();
+            opt_num_iter = strtoull(argv[0], NULL, 10);
+            if (opt_num_iter == 0)
+                loop_forever = true;
         } else {
             error("error: unknown option: %s\n", argv[0]);
         }
@@ -365,44 +374,51 @@ int main(int argc, char** argv) {
     }
     const char* device_filename = argv[0];
 
-    int fd;
-    if ((fd = open(device_filename, O_RDONLY)) < 0) {
-        fprintf(stderr, "error: cannot open '%s'\n", device_filename);
-        return -1;
-    }
-    if (blkdev_open(fd, device_filename, 8*1024*1024, &blk) != ZX_OK) {
-        return -1;
-    }
-
-    size_t devtotal = blk.info.block_count * blk.info.block_size;
-
-    // default to entire device
-    if ((total == 0) || (total > devtotal)) {
-        total = devtotal;
-    }
-    a.count = total / a.xfer;
-
-    zx_duration_t res = 0;
-    total = 0;
-    if (bio_random(&a, &total, &res) != ZX_OK) {
-        return -1;
-    }
-
-    fprintf(stderr, "%zu bytes in %zu ns: ", total, res);
-    bytes_per_second(total, res);
-    fprintf(stderr, "%zu ops in %zu ns: ", a.count, res);
-    ops_per_second(a.count, res);
-
-    if (output_file) {
-        perftest::ResultsSet results;
-        auto* test_case = results.AddTestCase(
-            "fuchsia.zircon", "BlockDeviceThroughput", "bytes/second");
-        double time_in_seconds = static_cast<double>(res) / 1e9;
-        test_case->AppendValue(static_cast<double>(total) / time_in_seconds);
-        if (!results.WriteJSONFile(output_file)) {
-            return 1;
+    do {
+        int fd;
+        a.xfer = opt_xfer_size;
+        a.max_pending = opt_max_pending;
+        a.write = opt_write;
+        a.linear = opt_linear;
+        if ((fd = open(device_filename, O_RDONLY)) < 0) {
+            fprintf(stderr, "error: cannot open '%s'\n", device_filename);
+            return -1;
         }
-    }
+        if (blkdev_open(fd, device_filename, 8*1024*1024, &blk) != ZX_OK) {
+            return -1;
+        }
+
+        size_t devtotal = blk.info.block_count * blk.info.block_size;
+
+        // default to entire device
+        if ((total == 0) || (total > devtotal)) {
+            total = devtotal;
+        }
+        a.count = total / a.xfer;
+
+        zx_duration_t res = 0;
+        total = 0;
+        if (bio_random(&a, &total, &res) != ZX_OK) {
+            return -1;
+        }
+
+        fprintf(stderr, "%zu bytes in %zu ns: ", total, res);
+        bytes_per_second(total, res);
+        fprintf(stderr, "%zu ops in %zu ns: ", a.count, res);
+        ops_per_second(a.count, res);
+
+        if (output_file) {
+            perftest::ResultsSet results;
+            auto* test_case = results.AddTestCase(
+                "fuchsia.zircon", "BlockDeviceThroughput", "bytes/second");
+            double time_in_seconds = static_cast<double>(res) / 1e9;
+            test_case->AppendValue(static_cast<double>(total) / time_in_seconds);
+            if (!results.WriteJSONFile(output_file)) {
+                return 1;
+            }
+        }
+        blkdev_close(&blk);
+    } while (loop_forever || (--opt_num_iter > 0));
 
     return 0;
 }
