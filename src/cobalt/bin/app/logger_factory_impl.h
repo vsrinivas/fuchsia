@@ -23,12 +23,14 @@ namespace cobalt {
 
 class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
-  LoggerFactoryImpl(const std::string& global_cobalt_registry_bytes,
+  LoggerFactoryImpl(std::shared_ptr<cobalt::logger::ProjectContextFactory>
+                        global_project_context_factory,
                     encoder::ClientSecret client_secret,
                     TimerManager* timer_manager,
                     logger::Encoder* logger_encoder,
                     logger::ObservationWriter* observation_writer,
-                    logger::EventAggregator* event_aggregator);
+                    logger::EventAggregator* event_aggregator,
+                    logger::Logger* internal_logger);
 
  private:
   // Constructs a new LoggerImpl based on |project_context|, binds it to
@@ -93,15 +95,13 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                    std::unique_ptr<fuchsia::cobalt::LoggerSimple>>
       logger_simple_bindings_;
 
-  // Cobalt uses internal_logger_ to log events about Cobalt.
-  std::unique_ptr<logger::Logger> internal_logger_;
-
+  std::shared_ptr<cobalt::logger::ProjectContextFactory>
+      global_project_context_factory_;
   TimerManager* timer_manager_;                    // not owned
   logger::Encoder* logger_encoder_;                // not owned
   logger::ObservationWriter* observation_writer_;  // not owned
   logger::EventAggregator* event_aggregator_;      // not owned
-  std::shared_ptr<cobalt::logger::ProjectContextFactory>
-      global_project_context_factory_;
+  logger::Logger* internal_logger_;                // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

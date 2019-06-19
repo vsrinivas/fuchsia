@@ -31,6 +31,11 @@
 
 namespace cobalt {
 
+// Main app, which manages all of Cobalt's functionality.
+//
+// To test run:
+//    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
+//    fx run-test-component cobalt_testapp_no_network
 class CobaltApp {
  public:
   // |dispatcher| The async_t to be used for all asynchronous operations.
@@ -122,6 +127,9 @@ class CobaltApp {
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>
       system_data_updater_bindings_;
+
+  // Cobalt uses internal_logger_ to log events about Cobalt.
+  std::unique_ptr<logger::Logger> internal_logger_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };

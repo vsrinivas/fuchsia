@@ -5,6 +5,8 @@
 #include "src/cobalt/bin/app/cobalt_app.h"
 
 #include "lib/backoff/exponential_backoff.h"
+#include "logger/internal_metrics_config.cb.h"
+#include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
@@ -24,6 +26,7 @@ using encoder::MemoryObservationStore;
 using encoder::ObservationStore;
 using encoder::ShippingManager;
 using encoder::UploadScheduler;
+using logger::ProjectContextFactory;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
@@ -131,9 +134,28 @@ CobaltApp::CobaltApp(
       << "Could not read the Cobalt global metrics registry: "
       << kMetricsRegistryPath;
 
+  // Create the internal logger
+  auto global_project_context_factory =
+      std::make_shared<ProjectContextFactory>(global_metrics_registry_bytes);
+  auto internal_project_context =
+      global_project_context_factory->NewProjectContext(
+          logger::kCustomerName, logger::kProjectName, ReleaseStage::GA);
+  if (!internal_project_context) {
+    FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
+                      "include the expected internal metrics project. "
+                      "Cobalt-measuring-Cobalt will be disabled.";
+  }
+  // Help the compiler understand which of several constructor overloads we
+  // mean to be invoking here.
+  logger::LoggerInterface* null_logger = nullptr;
+  internal_logger_.reset(new logger::Logger(
+      std::move(internal_project_context), &logger_encoder_, &event_aggregator_,
+      &observation_writer_, null_logger));
+
   logger_factory_impl_.reset(new LoggerFactoryImpl(
-      global_metrics_registry_bytes, getClientSecret(), &timer_manager_,
-      &logger_encoder_, &observation_writer_, &event_aggregator_));
+      std::move(global_project_context_factory), getClientSecret(),
+      &timer_manager_, &logger_encoder_, &observation_writer_,
+      &event_aggregator_, internal_logger_.get()));
 
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

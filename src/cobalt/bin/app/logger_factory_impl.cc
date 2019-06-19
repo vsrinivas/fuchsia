@@ -17,10 +17,9 @@ using fuchsia::cobalt::ProjectProfile;
 using fuchsia::cobalt::Status;
 
 constexpr char kFuchsiaCustomerName[] = "fuchsia";
-constexpr char kCobaltInternalCustomerName[] = "cobalt_internal";
-constexpr char kCobaltInternalMetricsProjectName[] = "metrics";
 
 namespace {
+
 bool ExtractCobaltRegistryBytes(ProjectProfile profile,
                                 std::string* metrics_registry_bytes_out) {
   CHECK(metrics_registry_bytes_out);
@@ -59,35 +58,20 @@ ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {
 }  // namespace
 
 LoggerFactoryImpl::LoggerFactoryImpl(
-    const std::string& global_cobalt_registry_bytes,
+    std::shared_ptr<cobalt::logger::ProjectContextFactory>
+        global_project_context_factory,
     encoder::ClientSecret client_secret, TimerManager* timer_manager,
     logger::Encoder* logger_encoder,
     logger::ObservationWriter* observation_writer,
-    logger::EventAggregator* event_aggregator)
+    logger::EventAggregator* event_aggregator, logger::Logger* internal_logger)
     : client_secret_(std::move(client_secret)),
+      global_project_context_factory_(
+          std::move(global_project_context_factory)),
       timer_manager_(timer_manager),
       logger_encoder_(logger_encoder),
       observation_writer_(observation_writer),
       event_aggregator_(event_aggregator),
-      global_project_context_factory_(
-          new ProjectContextFactory(global_cobalt_registry_bytes)) {
-  auto internal_project_context =
-      global_project_context_factory_->NewProjectContext(
-          kCobaltInternalCustomerName, kCobaltInternalMetricsProjectName,
-          ReleaseStage::GA);
-  if (!internal_project_context) {
-    FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
-                      "include the expected internal metrics project. "
-                      "Cobalt-measuring-Cobalt will be disabled.";
-  }
-
-  // Help the compiler understand which of several constructor overloads we
-  // mean to be invoking here.
-  logger::LoggerInterface* null_logger = nullptr;
-  internal_logger_.reset(new logger::Logger(std::move(internal_project_context),
-                                            logger_encoder_, event_aggregator_,
-                                            observation_writer_, null_logger));
-}
+      internal_logger_(internal_logger) {}
 
 template <typename LoggerInterface>
 void LoggerFactoryImpl::BindNewLogger(
@@ -98,7 +82,7 @@ void LoggerFactoryImpl::BindNewLogger(
   binding_set->AddBinding(
       std::make_unique<LoggerImpl>(std::move(project_context), logger_encoder_,
                                    event_aggregator_, observation_writer_,
-                                   timer_manager_, internal_logger_.get()),
+                                   timer_manager_, internal_logger_),
       std::move(request));
 }
 
