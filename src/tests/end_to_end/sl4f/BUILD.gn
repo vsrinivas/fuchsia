@@ -13,6 +13,7 @@ dart_test("sl4f_test") {
 
   deps = [
     "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
 
@@ -31,17 +32,13 @@ dart_test("sl4f_test") {
       dimensions = {
         device_type = "Astro"
       }
-      tags = [
-        "e2e-terminal",
-      ]
+      tags = [ "e2e-terminal" ]
     },
     {
       dimensions = {
         device_type = "Astro"
       }
-      tags = [
-        "e2e-fyi",
-      ]
+      tags = [ "e2e-fyi" ]
     },
   ]
 }

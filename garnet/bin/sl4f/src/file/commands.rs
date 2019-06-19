@@ -14,6 +14,18 @@ pub async fn file_method_to_fidl(
     facade: Arc<FileFacade>,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
+        FileMethod::DeleteFile => {
+            let result = await!(facade.delete_file(args))?;
+            Ok(to_value(result)?)
+        }
+        FileMethod::MakeDir => {
+            let result = await!(facade.make_dir(args))?;
+            Ok(to_value(result)?)
+        }
+        FileMethod::ReadFile => {
+            let result = await!(facade.read_file(args))?;
+            Ok(to_value(result)?)
+        }
         FileMethod::WriteFile => {
             let result = await!(facade.write_file(args))?;
             Ok(to_value(result)?)
