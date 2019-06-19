@@ -54,19 +54,15 @@ function get-diff-base() {
 function format-cmd() {
   if [ -f "$1" ]; then
     case "$1" in
-      *.c) printf "${CLANG_CMD}" ;;
-      *.cc) printf "${CLANG_CMD}" ;;
+      *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
+        printf "${CLANG_CMD}" ;;
+
       *.cmx) printf "${JSON_FMT_CMD}" ;;
-      *.cpp) printf "${CLANG_CMD}" ;;
       *.dart) printf "${DART_CMD}" ;;
       *.fidl) printf "${FIDL_CMD}" ;;
       *.gn) printf "${GN_CMD}" ;;
       *.gni) printf "${GN_CMD}" ;;
       *.go) printf "${GO_CMD}" ;;
-      *.h) printf "${CLANG_CMD}" ;;
-      *.hh) printf "${CLANG_CMD}" ;;
-      *.hpp) printf "${CLANG_CMD}" ;;
-      *.ts) printf "${CLANG_CMD}" ;;
       *.rs) printf "${RUST_FMT_CMD}" ;;
     esac
   fi
