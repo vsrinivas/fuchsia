@@ -14,10 +14,8 @@
     },
     "program": {
         "args": [
-            "--skip_environment_test",
             "--test_for_prober",
-            "--override_prober_warning",
-            "--verbose=10"
+            "--override_prober_warning"
         ],
         "binary": "bin/cobalt_testapp"
     },
