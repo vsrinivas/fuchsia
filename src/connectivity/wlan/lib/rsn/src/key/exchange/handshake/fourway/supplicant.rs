@@ -165,13 +165,14 @@ fn create_message_4<B: ByteSlice>(
 
 #[derive(Debug, PartialEq)]
 pub enum State {
-    AwaitingMsg1 { pmk: Vec<u8>, cfg: Config },
-    AwaitingMsg3 { pmk: Vec<u8>, ptk: Ptk, anonce: Nonce, cfg: Config },
+    AwaitingMsg1 { pmk: Vec<u8>, cfg: Config, snonce: Nonce },
+    AwaitingMsg3 { pmk: Vec<u8>, ptk: Ptk, snonce: Nonce, anonce: Nonce, cfg: Config },
     KeysInstalled { pmk: Vec<u8>, ptk: Ptk, gtk: Gtk, cfg: Config },
 }
 
 pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
-    State::AwaitingMsg1 { pmk, cfg }
+    let snonce = cfg.nonce_rdr.next();
+    State::AwaitingMsg1 { pmk, cfg, snonce }
 }
 
 impl State {
@@ -181,30 +182,60 @@ impl State {
         frame: FourwayHandshakeFrame<B>,
     ) -> Self {
         match self {
-            State::AwaitingMsg1 { pmk, cfg } => match frame.message_number() {
+            State::AwaitingMsg1 { pmk, cfg, snonce } => match frame.message_number() {
                 fourway::MessageNumber::Message1 => {
-                    let snonce = cfg.nonce_rdr.next();
                     match handle_message_1(&cfg, &pmk[..], &snonce[..], frame) {
                         Err(e) => {
                             error!("error: {}", e);
-                            return State::AwaitingMsg1 { pmk, cfg };
+                            // Note: No need to generate a new SNonce as the received frame is
+                            // dropped.
+                            return State::AwaitingMsg1 { pmk, cfg, snonce };
                         }
                         Ok((msg2, ptk, anonce)) => {
                             update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
-                            State::AwaitingMsg3 { pmk, ptk, cfg, anonce }
+                            State::AwaitingMsg3 { pmk, ptk, cfg, snonce, anonce }
                         }
                     }
                 }
                 unexpected_msg => {
                     error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
-                    State::AwaitingMsg1 { pmk, cfg }
+                    // Note: No need to generate a new SNonce as the received frame is dropped.
+                    State::AwaitingMsg1 { pmk, cfg, snonce }
                 }
             },
-            State::AwaitingMsg3 { pmk, ptk, cfg, .. } => {
+            State::AwaitingMsg3 { pmk, ptk, cfg, snonce, anonce: expected_anonce, .. } => {
                 match frame.message_number() {
                     // Restart handshake if first message was received.
                     fourway::MessageNumber::Message1 => {
-                        State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
+                        // According to our understanding of IEEE 802.11-2016, 12.7.6.2 the
+                        // Authenticator and Supplicant should always generate a new nonce when
+                        // sending the first or second message of the 4-Way Handshake to its peer.
+                        // We encountered some routers in the wild which follow a different
+                        // interpretation of this chapter and are not generating a new nonce and
+                        // ignoring new nonces sent by its peer. Our security team reviewed this
+                        // behavior and decided that it's safe for the Supplicant to re-send its
+                        // SNonce and not generate a new one if the following requirements are met:
+                        // (1) The Authenticator re-used its ANonce (effectively replaying its
+                        //     original first message).
+                        // (2) No other message other than the first message of the handshake were
+                        //     exchanged and in particular, no key has been installed yet.
+                        // (3) The received message carries an increased Key Replay Counter.
+                        //
+                        // Fuchsia's ESSSA already drops message which violate (3).
+                        // (1) and (2) are verified in the Supplicant implementation:
+                        // If the third message of the handshake has ever been successfully
+                        // established the Supplicant will enter the "KeysInstalled" state which
+                        // rejects all messages but replays of the third one. Thus, (2) is met at
+                        // all times.
+                        // (1) is verified in the following check.
+                        let actual_anonce = frame.unsafe_get_raw().key_frame_fields.key_nonce;
+                        let snonce = if expected_anonce != actual_anonce {
+                            cfg.nonce_rdr.next()
+                        } else {
+                            snonce
+                        };
+                        State::AwaitingMsg1 { pmk, cfg, snonce }
+                            .on_eapol_key_frame(update_sink, frame)
                     }
                     // Third message of the handshake can be processed multiple times but PTK and
                     // GTK are only installed once.
@@ -212,7 +243,9 @@ impl State {
                         match handle_message_3(&cfg, ptk.kck(), ptk.kek(), frame) {
                             Err(e) => {
                                 error!("error: {}", e);
-                                State::AwaitingMsg1 { pmk, cfg }
+                                // Note: No need to generate a new SNonce as the received frame is
+                                // dropped.
+                                State::AwaitingMsg1 { pmk, cfg, snonce }
                             }
                             Ok((msg4, gtk)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
@@ -224,7 +257,8 @@ impl State {
                     }
                     unexpected_msg => {
                         error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
-                        State::AwaitingMsg1 { pmk, cfg }
+                        // Note: No need to generate a new SNonce as the received frame is dropped.
+                        State::AwaitingMsg1 { pmk, cfg, snonce }
                     }
                 }
             }

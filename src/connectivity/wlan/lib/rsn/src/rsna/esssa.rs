@@ -512,10 +512,12 @@ mod tests {
         supplicant.start().expect("Failed starting Supplicant");
 
         // Send first message of handshake.
-        let (result, _) = send_msg1(&mut supplicant, |msg1| {
+        let (result, updates) = send_msg1(&mut supplicant, |msg1| {
             msg1.key_frame_fields.key_replay_counter.set_from_native(1);
         });
         assert!(result.is_ok());
+        let first_msg2 = expect_eapol_resp(&updates[..]);
+        let first_fields = first_msg2.keyframe().key_frame_fields;
 
         // Replay first message which should restart the entire handshake.
         // Verify the second message of the handshake was received.
@@ -523,11 +525,12 @@ mod tests {
             msg1.key_frame_fields.key_replay_counter.set_from_native(3);
         });
         assert!(result.is_ok());
+        let second_msg2 = expect_eapol_resp(&updates[..]);
+        let second_fields = second_msg2.keyframe().key_frame_fields;
 
-        // Extract second message response and verify Supplicant responded to the replayed first
-        // message.
-        let msg2 = expect_eapol_resp(&updates[..]);
-        assert_eq!(msg2.keyframe().key_frame_fields.key_replay_counter.to_native(), 3);
+        // Verify Supplicant responded to the replayed first message and didn't change SNonce.
+        assert_eq!(second_fields.key_replay_counter.to_native(), 3);
+        assert_eq!(first_fields.key_nonce, second_fields.key_nonce);
     }
 
     #[test]
@@ -540,7 +543,8 @@ mod tests {
         });
         assert!(result.is_ok());
         let msg2 = expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2.keyframe());
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
@@ -567,7 +571,8 @@ mod tests {
         });
         assert!(result.is_ok());
         let msg2 = expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2.keyframe());
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(0);
@@ -585,7 +590,8 @@ mod tests {
         });
         assert!(result.is_ok());
         let msg2 = expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2.keyframe());
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(1);
@@ -603,7 +609,8 @@ mod tests {
         });
         assert!(result.is_ok());
         let msg2 = expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2.keyframe());
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
 
         let (result, _) = send_msg3(&mut supplicant, &ptk, |msg3| {
             msg3.key_frame_fields.key_replay_counter.set_from_native(2);
@@ -626,12 +633,12 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // Replays the first message of the 4-Way Handshake to verify that
+    // Replays the first message of the 4-Way Handshake with an altered ANonce to verify that
     // (1) the Supplicant discards the first derived PTK in favor of a new one, and
     // (2) the Supplicant is not reusing a nonce from its previous message,
     // (3) the Supplicant only reports a new PTK if the 4-Way Handshake was completed successfully.
     #[test]
-    fn test_replayed_msg1_ptk_installation() {
+    fn test_replayed_msg1_ptk_installation_different_anonces() {
         let mut supplicant = test_util::get_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
@@ -642,7 +649,56 @@ mod tests {
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
         let msg2 = expect_eapol_resp(&updates[..]);
         let msg2_frame = msg2.keyframe();
-        let first_ptk = derive_ptk(&msg2_frame);
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let first_ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
+        let first_nonce = msg2_frame.key_frame_fields.key_nonce;
+
+        // Send 1st message of 4-Way Handshake a second time and derive PTK.
+        // Use a different ANonce than initially used.
+        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(2);
+            msg1.key_frame_fields.key_nonce = [99; 32];
+        });
+        assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let msg2_frame = msg2.keyframe();
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let second_ptk = test_util::get_ptk(&[99; 32][..], &snonce[..]);
+        let second_nonce = msg2_frame.key_frame_fields.key_nonce;
+
+        // Send 3rd message of 4-Way Handshake.
+        // The Supplicant now finished the 4-Way Handshake and should report its PTK.
+        // Use the same ANonce which was used in the replayed 1st message.
+        let (_, updates) = send_msg3(&mut supplicant, &second_ptk, |msg3| {
+            msg3.key_frame_fields.key_replay_counter.set_from_native(3);
+            msg3.key_frame_fields.key_nonce = [99; 32];
+        });
+
+        let installed_ptk = test_util::expect_reported_ptk(&updates[..]);
+        assert_ne!(first_nonce, second_nonce);
+        assert_ne!(&first_ptk, &second_ptk);
+        assert_eq!(installed_ptk, second_ptk);
+    }
+
+    // Replays the first message of the 4-Way Handshake without altering its ANonce to verify that
+    // (1) the Supplicant derives the same PTK for the replayed message, and
+    // (2) the Supplicant is reusing the nonce from its previous message,
+    // (3) the Supplicant only reports a PTK if the 4-Way Handshake was completed successfully.
+    // Regression test for: WLAN-1095
+    #[test]
+    fn test_replayed_msg1_ptk_installation_same_anonces() {
+        let mut supplicant = test_util::get_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send 1st message of 4-Way Handshake for the first time and derive PTK.
+        let (_, updates) = send_msg1(&mut supplicant, |msg1| {
+            msg1.key_frame_fields.key_replay_counter.set_from_native(1);
+        });
+        assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
+        let msg2 = expect_eapol_resp(&updates[..]);
+        let msg2_frame = msg2.keyframe();
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let first_ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
         let first_nonce = msg2_frame.key_frame_fields.key_nonce;
 
         // Send 1st message of 4-Way Handshake a second time and derive PTK.
@@ -652,7 +708,8 @@ mod tests {
         assert_eq!(test_util::get_reported_ptk(&updates[..]), None);
         let msg2 = expect_eapol_resp(&updates[..]);
         let msg2_frame = msg2.keyframe();
-        let second_ptk = derive_ptk(&msg2_frame);
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let second_ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
         let second_nonce = msg2_frame.key_frame_fields.key_nonce;
 
         // Send 3rd message of 4-Way Handshake.
@@ -662,8 +719,8 @@ mod tests {
         });
 
         let installed_ptk = test_util::expect_reported_ptk(&updates[..]);
-        assert_ne!(first_nonce, second_nonce);
-        assert_ne!(&first_ptk, &second_ptk);
+        assert_eq!(first_nonce, second_nonce);
+        assert_eq!(&first_ptk, &second_ptk);
         assert_eq!(installed_ptk, second_ptk);
     }
 
@@ -701,7 +758,8 @@ mod tests {
         assert_eq!(&msg2.key_data[..], &s_rsne_data[..]);
 
         // Send 3rd message.
-        let ptk = derive_ptk(&msg2);
+        let snonce = msg2.key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
         let (result, updates) = send_msg3(&mut supplicant, &ptk, |_| {});
         assert!(result.is_ok());
 
@@ -785,7 +843,8 @@ mod tests {
         // Complete 4-Way Handshake.
         let updates = send_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2.keyframe());
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
         let _ = send_msg3(&mut supplicant, &ptk, |_| {});
 
         // Cause re-keying of GTK via Group-Key Handshake.
@@ -831,7 +890,8 @@ mod tests {
         // Complete 4-Way Handshake.
         let updates = send_msg1(&mut supplicant, |_| {}).1;
         let msg2 = test_util::expect_eapol_resp(&updates[..]);
-        let ptk = derive_ptk(&msg2.keyframe());
+        let snonce = msg2.keyframe().key_frame_fields.key_nonce;
+        let ptk = test_util::get_ptk(&ANONCE[..], &snonce[..]);
         let _ = send_msg3(&mut supplicant, &ptk, |_| {});
 
         // Cause re-keying of GTK via Group-Key Handshake.
@@ -860,11 +920,6 @@ mod tests {
     // Timeouts
     // Nonce reuse
     // (in)-compatible protocol and RSNE versions
-
-    fn derive_ptk<B: ByteSlice>(msg2: &eapol::KeyFrameRx<B>) -> Ptk {
-        let snonce = msg2.key_frame_fields.key_nonce;
-        test_util::get_ptk(&ANONCE[..], &snonce[..])
-    }
 
     fn send_msg1<F>(
         supplicant: &mut Supplicant,
