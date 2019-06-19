@@ -43,7 +43,7 @@
 #include <fbl/ref_ptr.h>
 #include <zircon/boot/netboot.h>
 
-#include "filter.h"
+#include "filter_constants.h"
 
 namespace netdump {
 
@@ -67,7 +67,7 @@ class FunctionalTokenVisitor : public TokenVisitor {
 public:
     FunctionalTokenVisitor(std::function<void(TokenPtr)> token_fn,
                            std::function<void(PortTokenPtr)> port_token_fn)
-        : token_fn_(token_fn), port_token_fn_(port_token_fn) {}
+        : token_fn_(std::move(token_fn)), port_token_fn_(std::move(port_token_fn)) {}
     void visit(TokenPtr token) override { token_fn_(token); }
     void visit(PortTokenPtr token) override { port_token_fn_(token); }
 
@@ -103,12 +103,12 @@ public:
     // Returns `true` if the token is a member of the given set.
     // Instead of writing `token == a || token == b || token == c`,
     // write `token->one_of(a, b, c)`.
-    inline bool one_of(TokenPtr other) {
+    [[nodiscard]] inline bool one_of(const TokenPtr& other) const {
         return fbl::RefPtr(this) == other;
     }
 
     template <typename... Ts>
-    inline bool one_of(TokenPtr other, Ts... ts) {
+    [[nodiscard]] inline bool one_of(const TokenPtr& other, Ts... ts) const {
         return fbl::RefPtr(this) == other || one_of(ts...);
     }
 

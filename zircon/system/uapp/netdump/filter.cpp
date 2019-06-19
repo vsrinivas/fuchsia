@@ -164,8 +164,6 @@ IpFilter::IpFilter(const IPv6Address& ipv6_addr, AddressFieldType type)
     };
 }
 
-static constexpr uint16_t ETH_P_IP_NETWORK_BYTE_ORDER = 0x0008;
-static constexpr uint16_t ETH_P_IPV6_NETWORK_BYTE_ORDER = 0xDD86;
 bool IpFilter::match(const Packet& packet) {
     if (packet.frame == nullptr || packet.ipv4 == nullptr) {
         return false;

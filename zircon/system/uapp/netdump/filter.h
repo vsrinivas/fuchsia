@@ -17,9 +17,6 @@
 
 #pragma once
 
-extern "C" {
-#include <inet6/inet6.h>
-}
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -27,10 +24,7 @@ extern "C" {
 #include <variant>
 #include <vector>
 
-#include <netinet/if_ether.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
+#include "filter_constants.h"
 
 namespace netdump {
 
@@ -50,20 +44,6 @@ public:
     };
 };
 
-// Specifies whether matching should occur on the src or dst fields.
-// TODO(xianglong): Extend to e.g. receiver, transmitter types when there is WLAN support.
-enum AddressFieldType {
-    SRC_ADDR = 0b01,
-    DST_ADDR = 0b10,
-    EITHER_ADDR = SRC_ADDR | DST_ADDR,
-};
-
-enum PortFieldType {
-    SRC_PORT = 0b01,
-    DST_PORT = 0b10,
-    EITHER_PORT = SRC_PORT | DST_PORT,
-};
-
 class FilterBase;
 using FilterPtr = std::unique_ptr<FilterBase>;
 
@@ -81,11 +61,6 @@ public:
 
 protected:
     FilterBase() = default;
-};
-
-enum LengthComparator {
-    LEQ,
-    GEQ,
 };
 
 // Filter on length of frame, including frame headers.
@@ -168,8 +143,6 @@ private:
 // Filter on transport layer ports.
 class PortFilter : public FilterBase {
 public:
-    // Port ranges are specified as pairs of (begin, end) port numbers.
-    using PortRange = std::pair<uint16_t, uint16_t>;
     explicit PortFilter(std::vector<PortRange> ports, PortFieldType type);
 
     bool match(const Packet& packet) override;

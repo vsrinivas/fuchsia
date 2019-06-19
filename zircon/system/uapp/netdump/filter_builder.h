@@ -56,8 +56,8 @@ public:
     // IPv6 address.
     virtual T ipv6_address(std::array<uint8_t, IP6_ADDR_LEN> address, TokenPtr addr_type) = 0;
 
-    // Port ranges as pairs of (begin, end) ports.
-    virtual T ports(std::vector<std::pair<uint16_t, uint16_t>> ranges, TokenPtr port_type) = 0;
+    // Port ranges.
+    virtual T ports(std::vector<PortRange> ranges, TokenPtr port_type) = 0;
 
     // Logical operations.
     // In general, if a filter operation uses another `T` filter as input, like the case here,

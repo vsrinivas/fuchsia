@@ -172,7 +172,6 @@ public:
         return token->get_term();
     }
 
-    using PortRange = PortFilter::PortRange;
     using PortRanges = std::vector<std::optional<PortRange>>;
     static void CheckPortVector(std::vector<TokenPtr> tokens, std::vector<std::string> terms,
                                 PortRanges ranges) {

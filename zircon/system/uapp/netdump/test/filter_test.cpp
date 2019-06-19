@@ -240,7 +240,6 @@ void PortsTest(uint8_t version) {
     }
     SetupTCP(&packet);
 
-    using PortRange = PortFilter::PortRange;
     PortFilter src1(std::vector<PortRange>{}, SRC_PORT);
     PortFilter dst1(std::vector<PortRange>{}, DST_PORT);
     PortFilter either1(std::vector<PortRange>{}, EITHER_PORT);
