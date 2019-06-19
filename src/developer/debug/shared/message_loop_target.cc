@@ -375,6 +375,40 @@ void MessageLoopTarget::HandleException(const ExceptionHandler& handler,
   }
 }
 
+void MessageLoopTarget::HandleChannelException(
+    const ChannelExceptionHandler& handler, zx::exception&& exception,
+    zx_exception_info_t exception_info) {
+  WatchInfo* watch_info = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = watches_.find(handler.watch_info_id());
+    FXL_DCHECK(it != watches_.end());
+    watch_info = &it->second;
+  }
+
+  if (watch_info->type != WatchType::kProcessExceptions &&
+      watch_info->type != WatchType::kJobExceptions) {
+    FXL_NOTREACHED() << "Should only receive exceptions.";
+    return;
+  }
+
+  // We should only receive exceptions here.
+  switch (watch_info->type) {
+    case WatchType::kTask:
+    case WatchType::kFdio:
+    case WatchType::kSocket:
+      FXL_NOTREACHED() << "Should only receive exceptions.";
+      return;
+    case WatchType::kProcessExceptions:
+    case WatchType::kJobExceptions:
+      break;
+  }
+
+  FXL_DCHECK(watch_info->exception_watcher);
+  watch_info->exception_watcher->OnException(std::move(exception),
+                                             exception_info);
+}
+
 uint64_t MessageLoopTarget::GetMonotonicNowNS() const {
   zx::time ret;
   zx::clock::get(&ret);

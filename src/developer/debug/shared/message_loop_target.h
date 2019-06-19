@@ -10,6 +10,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/exception.h>
 
 #include <vector>
 
@@ -133,8 +134,9 @@ class MessageLoopTarget final : public MessageLoop {
   void HandleException(const ExceptionHandler&, zx_port_packet_t packet);
 
   // Handlers exceptions channel.
-  void HandleExceptionChannel(const ChannelExceptionHandler&,
-                              zx::exception&& exception);
+  void HandleChannelException(const ChannelExceptionHandler&,
+                              zx::exception&& exception,
+                              zx_exception_info_t exception_info);
 
   // Handle an event of the given type.
   void OnFdioSignal(int watch_id, const WatchInfo& info, zx_signals_t observed);
@@ -200,6 +202,7 @@ class MessageLoopTarget final : public MessageLoop {
 
   friend class SignalHandler;
   friend class ExceptionHandler;
+  friend class ChannelExceptionHandler;
 };
 
 // EventHandlers need access to the WatchInfo implementation.

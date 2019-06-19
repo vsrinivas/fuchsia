@@ -7,6 +7,9 @@
 
 #include <zircon/types.h>
 
+#include <zircon/syscalls/exception.h>
+#include <lib/zx/exception.h>
+
 namespace debug_ipc {
 
 // Callbacks for exceptions from a process exception port.
@@ -20,6 +23,10 @@ class ZirconExceptionWatcher {
   virtual void OnThreadExiting(zx_koid_t process_koid, zx_koid_t thread_koid) {}
   virtual void OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
                            uint32_t type) {}
+
+  // New exception handling that uses the exception tokens.
+  virtual void OnException(zx::exception&& exception_token,
+                           zx_exception_info_t exception_info) {}
 };
 
 }  // namespace debug_ipc
