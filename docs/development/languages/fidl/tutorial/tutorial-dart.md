@@ -213,7 +213,7 @@ Future<void> main(List<String> args) async {
   /// this client component and the launched server component we're about to
   /// launch. This client component is looking for service under /in/svc/
   /// directory to connect to while the server exposes services others can
-  /// connect to under /out/public directory.
+  /// connect to under /out/svc directory.
   final dirProxy = DirectoryProxy();
 
   // Connect. The destination server is specified, and we request for it to be
