@@ -42,6 +42,7 @@ core_tests = [
 # These tests need get_root_resource(), which is only available in the
 # unified core-tests binary.
 unified_only = [
+  "bti",
   "interrupt",
   "profile",
   "resource",

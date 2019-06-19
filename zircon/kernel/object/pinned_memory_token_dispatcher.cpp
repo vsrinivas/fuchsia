@@ -32,11 +32,17 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
     LTRACE_ENTRY;
     DEBUG_ASSERT(IS_PAGE_ALIGNED(pinned_vmo.offset()) && IS_PAGE_ALIGNED(pinned_vmo.size()));
 
-    const size_t min_contig = bti->minimum_contiguity();
-    DEBUG_ASSERT(fbl::is_pow2(min_contig));
+    size_t num_addrs;
+    if (!pinned_vmo.vmo()->is_contiguous()) {
+        const size_t min_contig = bti->minimum_contiguity();
+        DEBUG_ASSERT(fbl::is_pow2(min_contig));
+
+        num_addrs = ROUNDUP(pinned_vmo.size(), min_contig) / min_contig;
+    } else {
+        num_addrs = 1;
+    }
 
     fbl::AllocChecker ac;
-    const size_t num_addrs = ROUNDUP(pinned_vmo.size(), min_contig) / min_contig;
     fbl::Array<dev_vaddr_t> addr_array(new (&ac) dev_vaddr_t[num_addrs], num_addrs);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -92,10 +98,8 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
         }
 
         DEBUG_ASSERT(vaddr % min_contig == 0);
+        DEBUG_ASSERT(mapped_addrs_.size() == 1);
         mapped_addrs_[0] = vaddr;
-        for (size_t i = 1; i < mapped_addrs_.size(); ++i) {
-            mapped_addrs_[i] = mapped_addrs_[i - 1] + min_contig;
-        }
         return ZX_OK;
     }
 
@@ -250,7 +254,8 @@ zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,
         if (num_pages != mapped_addrs_count) {
             return ZX_ERR_INVALID_ARGS;
         }
-        const size_t min_contig = bti_->minimum_contiguity();
+        const size_t min_contig = pinned_vmo_.vmo()->is_contiguous()
+                ? pinned_vmo_.size() : bti_->minimum_contiguity();
         size_t next_idx = 0;
         for (size_t i = 0; i < found_addrs; ++i) {
             dev_vaddr_t extent_base = pmo_addrs[i];
