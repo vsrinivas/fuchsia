@@ -1999,42 +1999,45 @@ static bool TestFailedWrite(BlobfsTest* blobfsTest) {
     END_TEST;
 }
 
-static bool TestLargeBlob() {
-    BEGIN_TEST;
+*/
 
-    BlobfsTest blobfsTest(FsTestType::kNormal);
+class LargeBlobTest : public BlobfsTest {
+  public:
+    LargeBlobTest() {
+        // Create blobfs with enough data blocks to ensure 2 block bitmap blocks.
+        // Any number above kBlobfsBlockBits should do, and the larger the
+        // number, the bigger the disk (and memory used for the test).
+        superblock_.flags = 0;
+        superblock_.inode_count = blobfs::kBlobfsDefaultInodeCount;
+        superblock_.journal_block_count = blobfs::kDefaultJournalBlocks;
+        superblock_.data_block_count = 12 * blobfs::kBlobfsBlockBits / 10;
 
-    // Create blobfs with enough data blocks to ensure 2 block bitmap blocks.
-    blobfs::Superblock superblock;
-    superblock.flags = 0;
-    superblock.inode_count = blobfs::kBlobfsDefaultInodeCount;
-    superblock.journal_block_count = blobfs::kDefaultJournalBlocks;
-    superblock.data_block_count = 2 * blobfs::kBlobfsBlockBits;
-    ASSERT_EQ(superblock.data_block_count % 2, 0);
+        const int kBlockSize = 512;
+        uint64_t blobfs_blocks = blobfs::TotalBlocks(superblock_);
+        uint64_t num_blocks = (blobfs_blocks * blobfs::kBlobfsBlockSize) / kBlockSize;
+        ramdisk_ = std::make_unique<RamDisk>(kBlockSize, num_blocks);
+        device_path_ = ramdisk_->path();
+    }
 
-    uint64_t blobfs_blocks = blobfs::TotalBlocks(superblock);
-    uint64_t ramdisk_blocks = (blobfs_blocks * blobfs::kBlobfsBlockSize)
-                              / blobfsTest.GetBlockSize();
-    blobfsTest.SetBlockCount(ramdisk_blocks);
+  protected:
+    blobfs::Superblock superblock_;
 
-    ASSERT_TRUE(blobfsTest.Init());
+  private:
+    std::unique_ptr<RamDisk> ramdisk_;
+};
 
+TEST_F(LargeBlobTest, UseSecondBitmap) {
     // Create (and delete) a blob large enough to overflow into the second bitmap block.
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    size_t blob_size = ((superblock.data_block_count / 2) + 1) * blobfs::kBlobfsBlockSize;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, blob_size, &info));
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    size_t blob_size = ((superblock_.data_block_count / 2) + 1) * blobfs::kBlobfsBlockSize;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blob_size, &info));
 
     fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
     ASSERT_EQ(syncfs(fd.get()), 0);
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown());
-    END_TEST;
 }
-
-*/
 
 }  // namespace
 
@@ -2081,7 +2084,6 @@ RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
 RUN_TEST_MEDIUM(TestCreateFailure)
 RUN_TEST_MEDIUM(TestExtendFailure)
-RUN_TEST_LARGE(TestLargeBlob)
 RUN_TESTS(SMALL, TestFailedWrite)
 END_TEST_CASE(blobfs_tests)
 
