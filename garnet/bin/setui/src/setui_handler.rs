@@ -31,7 +31,8 @@ impl SetUIHandler {
     }
 
     /// Adds (or replaces) any existing adapter. Setting type mapping is
-    /// determined from the adapter's reported type.
+    /// determined from the adapter's reported type. Each adapter is used for all requests by any
+    /// number of clients.
     pub fn register_adapter(&self, adapter: Box<dyn Adapter + Send + Sync>) {
         self.adapters.write().unwrap().insert(adapter.get_type(), Mutex::new(adapter));
     }
@@ -39,6 +40,8 @@ impl SetUIHandler {
     /// Asynchronous handling of the given stream. Note that we must consider the
     /// possibility of simultaneous active streams.
     pub async fn handle_stream(&self, mut stream: SetUiServiceRequestStream) -> Result<(), Error> {
+        // Map of the last setting sent per type through this connection. This map is shared by all
+        // watch calls per connection, and ends when the stream ends.
         let last_seen_settings = Arc::new(RwLock::new(HashMap::new()));
 
         while let Some(req) = await!(stream.try_next())? {
@@ -57,6 +60,8 @@ impl SetUIHandler {
         Ok(())
     }
 
+    /// Returns synchronously after registering a listener with the correct adapter and spawning
+    /// a thread to handle the next change.
     fn watch(
         &self,
         setting_type: SettingType,
@@ -69,13 +74,12 @@ impl SetUIHandler {
             .listen(setting_type, sender, last_seen_settings.read().unwrap().get(&setting_type))
             .is_ok()
         {
+            // Creates a new thread per watcher which waits for a change before calling the
+            // responder.
             fasync::spawn(async move {
                 await!(receiver.map(|data| {
                     if let Ok(data) = data {
-                        last_seen_settings
-                            .write()
-                            .unwrap()
-                            .insert(setting_type, data.clone());
+                        last_seen_settings.write().unwrap().insert(setting_type, data.clone());
                         responder
                             .send(&mut SettingsObject {
                                 setting_type: setting_type,
@@ -99,6 +103,8 @@ impl SetUIHandler {
         last_seen: Option<&SettingData>,
     ) -> Result<(), Error> {
         if let Some(adapter_lock) = self.adapters.read().unwrap().get(&setting_type) {
+            // The adapter is locked only for registering the listener. It will not block until the
+            // next change.
             if let Ok(adapter) = adapter_lock.lock() {
                 adapter.listen(sender, last_seen);
                 return Ok(());
@@ -108,7 +114,7 @@ impl SetUIHandler {
         return Err(format_err!("cannot listen. non-existent adapter"));
     }
 
-    /// Applies a mutation
+    /// Applies a mutation, blocking until the mutation completes.
     fn mutate(&self, setting_type: SettingType, mutation: Mutation) -> MutationResponse {
         if let Some(adapter_lock) = self.adapters.read().unwrap().get(&setting_type) {
             if let Ok(mut adapter) = adapter_lock.lock() {
