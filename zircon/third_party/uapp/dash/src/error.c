@@ -125,11 +125,7 @@ exvwarning2(const char *msg, va_list ap)
 		fmt = "%s: %d: %s: ";
 	outfmt(errs, fmt, name, errlinno, commandname);
 	doformat(errs, msg, ap);
-#if FLUSHERR
 	outc('\n', errs);
-#else
-	outcslow('\n', errs);
-#endif
 }
 
 #define exvwarning(a, b, c) exvwarning2(b, c)

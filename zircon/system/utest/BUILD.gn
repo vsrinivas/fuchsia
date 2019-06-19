@@ -150,6 +150,7 @@ if (current_cpu != "") {
       "core",
       "cprng",
       "ctor",
+      "dash",
       "debugger",
       "devfs",
       "device-enumeration",

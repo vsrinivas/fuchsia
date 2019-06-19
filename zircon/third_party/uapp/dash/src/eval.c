@@ -299,10 +299,10 @@ setstatus:
 		break;
 	}
 out:
+	dotrap();
+
 	if (checkexit & status)
 		goto exexit;
-
-	dotrap();
 
 	if (flags & EV_EXIT) {
 exexit:
@@ -801,7 +801,7 @@ evalcommand(union node *cmd, int flags)
 		sep = 0;
 		sep = eprintlist(out, varlist.list, sep);
 		eprintlist(out, arglist.list, sep);
-		outcslow('\n', out);
+		outc('\n', out);
 #ifdef FLUSHERR
 		flushout(out);
 #endif

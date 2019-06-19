@@ -151,7 +151,7 @@ main(int argc, char **argv)
 
 	login = procargs(argc, argv, ast_vmo != ZX_HANDLE_INVALID);
 
-        // Fuchsia: recognize if we have been invoked for the purpose of evaluating
+	// Fuchsia: recognize if we have been invoked for the purpose of evaluating
 	// an expression (i.e., node) and exiting immediately.
 	evalifsubshell(ast_vmo);
 
