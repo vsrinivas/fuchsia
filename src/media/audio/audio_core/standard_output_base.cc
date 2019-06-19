@@ -188,6 +188,7 @@ zx_status_t StandardOutputBase::InitializeSourceLink(
   return ZX_OK;
 }
 
+// Create our intermediate accumulation buffer.
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
   FXL_DCHECK(output_producer_->channels() > 0u);
   FXL_DCHECK(max_mix_frames > 0u);
@@ -376,6 +377,15 @@ bool StandardOutputBase::ProcessMix(
   // window edge of our filter centered at our first sampling point, then this
   // packet is entirely in the past and may be skipped.
   if (final_pts < (first_sample_ftf - mixer.neg_filter_width())) {
+    FXL_LOG(ERROR) << __func__ << " ("
+                   << reinterpret_cast<void*>(audio_renderer.get())
+                   << ") skipped entire packet ending at PTS " << std::hex
+                   << final_pts << "; missed packet start by "
+                   << static_cast<float>(first_sample_ftf -
+                                         mixer.neg_filter_width() -
+                                         packet->start_pts()) /
+                          (48.0 * Mixer::FRAC_ONE)
+                   << "ms";
     return true;
   }
 
@@ -408,6 +418,13 @@ bool StandardOutputBase::ProcessMix(
                                     first_sample_pos_window_edge - 1) +
         1;
     input_offset_64 += dest_to_src.Scale(output_offset_64);
+  }
+
+  if (output_offset_64) {
+    FXL_LOG(WARNING) << __func__ << " ("
+                     << reinterpret_cast<void*>(audio_renderer.get())
+                     << ") skipped " << std::dec << output_offset_64
+                     << " output frames";
   }
 
   FXL_DCHECK(output_offset_64 >= 0);
@@ -470,6 +487,12 @@ bool StandardOutputBase::ProcessMix(
       info->gain.Advance(output_offset - prev_output_offset,
                          cur_mix_job_.local_to_output->rate());
     }
+  } else {
+    consumed_source = true;
+    FXL_LOG(ERROR) << "Skipping packet (frac_input_offset " << std::hex
+                   << frac_input_offset << " < frac_frame_len "
+                   << static_cast<int32_t>(packet->frac_frame_len())
+                   << "); didn't catch this in earlier check";
   }
 
   if (consumed_source) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/test/virtual_audio_device_test.h"
+#include "src/media/audio/audio_core/test/device/virtual_audio_device_test.h"
 
 #include <fuchsia/media/cpp/fidl.h>
 

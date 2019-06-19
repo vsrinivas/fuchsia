@@ -14,6 +14,17 @@
 
 namespace media::audio {
 
+// If client does not specify a ref_time for Play, pad it by this amount
+constexpr int64_t kPaddingForUnspecifiedRefTime = ZX_MSEC(20);
+
+// Short-term workaround (until clients who timestamp are updated): if a client
+// specifies ref_time but uses PlayNoReply (thus doesn't want the callback
+// telling them what actual ref_time was), secretly pad by this amount.
+constexpr int64_t kPaddingForPlayNoReplyWithRefTime = ZX_MSEC(10);
+
+// Short-term workaround: pad our reported min_lead_time duration by this.
+constexpr int64_t kPaddingForMinLeadTimeReporting = ZX_MSEC(4);
+
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
         audio_renderer_request,
@@ -141,7 +152,7 @@ bool AudioRendererImpl::ValidateConfig() {
       pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps, 1));
 
   // Compute the PTS continuity threshold expressed in fractional input frames.
-  if (pts_continuity_threshold_set_) {
+  if (!pts_continuity_threshold_set_) {
     // The user has not explicitly set a continuity threshold. Default to 1/2
     // of a PTS tick expressed in fractional input frames, rounded up.
     pts_continuity_threshold_frac_frame_ =
@@ -498,8 +509,21 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   });
 
   // Invalidate any internal state which gets reset after a flush.
-  next_frac_frame_pts_ = 0;
+  // We set next_frac_frame_pts_ (ref_time specified in fractional PTS
+  // subframes, corresponding to when the next packet should play) to be NOW
+  // plus min_lead_time plus safety factor, then define PTS 0 as that value
+  // (because PTS is reset to 0 upon DiscardAllPackets, unless we are Paused).
   pts_to_frac_frames_valid_ = false;
+  auto ref_time_for_reset = zx_clock_get_monotonic() + min_clock_lead_nsec_ +
+                            kPaddingForUnspecifiedRefTime;
+  {
+    fbl::AutoLock lock(&ref_to_ff_lock_);
+    next_frac_frame_pts_ = ref_clock_to_frac_frames_.Apply(ref_time_for_reset);
+  }
+  ComputePtsToFracFrames(0);
+
+  // TODO(mpuryear): Validate Pause, DiscardAll, Play(NO_TIMESTAMP,NO_TIMESTAMP)
+  // specifically that we don't truncate any previously submitted data.
   pause_time_frac_frames_valid_ = false;
 }
 
@@ -536,9 +560,8 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time,
     // internal interconnect requirements, but in general, the impact should
     // usually be pretty small since internal requirements for lead times tend
     // to be small, (while external requirements can be huge).
-    constexpr int64_t lead_time_padding = ZX_MSEC(20);
-    reference_time =
-        zx_clock_get_monotonic() + lead_time_padding + min_clock_lead_nsec_;
+    reference_time = zx_clock_get_monotonic() + min_clock_lead_nsec_ +
+                     kPaddingForUnspecifiedRefTime;
   }
 
   // If the user did not specify a media time, use the media time of the first
@@ -598,6 +621,10 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time,
 
 void AudioRendererImpl::PlayNoReply(int64_t reference_time,
                                     int64_t media_time) {
+  if (reference_time != fuchsia::media::NO_TIMESTAMP) {
+    reference_time += kPaddingForPlayNoReplyWithRefTime;
+  }
+
   Play(reference_time, media_time, nullptr);
 }
 
@@ -733,17 +760,29 @@ void AudioRendererImpl::BindGainControl(
 
 void AudioRendererImpl::EnableMinLeadTimeEvents(bool enabled) {
   min_clock_lead_time_events_enabled_ = enabled;
-  ReportNewMinClockLeadTime();
+  if (enabled) {
+    ReportNewMinClockLeadTime();
+  }
 }
 
+// For now, we pad what we report for min lead time. We don't simply increase
+// the minleadtime by this amount -- we don't also need mixing to occur early.
 void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
-  callback(min_clock_lead_nsec_);
+  callback((min_clock_lead_nsec_ > 0)
+               ? (min_clock_lead_nsec_ + kPaddingForMinLeadTimeReporting)
+               : 0);
 }
 
+// For now, we pad what we report for min lead time. We don't simply increase
+// the minleadtime by this amount -- we don't also need mixing to occur early.
 void AudioRendererImpl::ReportNewMinClockLeadTime() {
   if (min_clock_lead_time_events_enabled_) {
     auto& lead_time_event = audio_renderer_binding_.events();
-    lead_time_event.OnMinLeadTimeChanged(min_clock_lead_nsec_);
+
+    lead_time_event.OnMinLeadTimeChanged(
+        (min_clock_lead_nsec_ > 0)
+            ? (min_clock_lead_nsec_ + kPaddingForMinLeadTimeReporting)
+            : 0);
   }
 }
 

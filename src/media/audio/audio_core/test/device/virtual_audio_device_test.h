@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_VIRTUAL_AUDIO_DEVICE_TEST_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_VIRTUAL_AUDIO_DEVICE_TEST_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_DEVICE_VIRTUAL_AUDIO_DEVICE_TEST_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_DEVICE_VIRTUAL_AUDIO_DEVICE_TEST_H_
 
-#include <fuchsia/virtualaudio/cpp/fidl.h>
-
-#include "src/media/audio/audio_core/test/audio_device_test.h"
+#include "src/media/audio/audio_core/test/device/audio_device_test.h"
 
 namespace media::audio::test {
 
@@ -93,4 +91,4 @@ class VirtualAudioDeviceTest : public AudioDeviceTest {
 
 }  // namespace media::audio::test
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_VIRTUAL_AUDIO_DEVICE_TEST_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_TEST_DEVICE_VIRTUAL_AUDIO_DEVICE_TEST_H_
