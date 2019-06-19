@@ -3,10 +3,12 @@
 #include <fuchsia/mem/llcpp/fidl.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace mem {
 
-auto ::fuchsia::mem::Data::which() const -> Tag {
+auto ::llcpp::fuchsia::mem::Data::which() const -> Tag {
   switch (ordinal_) {
   case Tag::kBytes:
   case Tag::kBuffer:
@@ -16,7 +18,7 @@ auto ::fuchsia::mem::Data::which() const -> Tag {
   }
 }
 
-void ::fuchsia::mem::Data::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fuchsia::mem::Data::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(Data) == sizeof(fidl_xunion_t));
   static_assert(offsetof(Data, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(Data, envelope_) == offsetof(fidl_xunion_t, envelope));
@@ -24,3 +26,4 @@ void ::fuchsia::mem::Data::SizeAndOffsetAssertionHelper() {
 
 }  // namespace mem
 }  // namespace fuchsia
+}  // namespace llcpp

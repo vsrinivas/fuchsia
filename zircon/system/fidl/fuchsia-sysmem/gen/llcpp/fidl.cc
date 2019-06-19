@@ -3,6 +3,8 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace sysmem {
 
@@ -1076,15 +1078,15 @@ bool Allocator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 }
 
 
-::fuchsia::sysmem::BufferSpec::BufferSpec() {
+::llcpp::fuchsia::sysmem::BufferSpec::BufferSpec() {
   tag_ = Tag::Invalid;
 }
 
-::fuchsia::sysmem::BufferSpec::~BufferSpec() {
+::llcpp::fuchsia::sysmem::BufferSpec::~BufferSpec() {
   Destroy();
 }
 
-void ::fuchsia::sysmem::BufferSpec::Destroy() {
+void ::llcpp::fuchsia::sysmem::BufferSpec::Destroy() {
   switch (which()) {
   case Tag::kImage:
     image_.~ImageSpec();
@@ -1095,7 +1097,7 @@ void ::fuchsia::sysmem::BufferSpec::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::fuchsia::sysmem::BufferSpec::MoveImpl_(BufferSpec&& other) {
+void ::llcpp::fuchsia::sysmem::BufferSpec::MoveImpl_(BufferSpec&& other) {
   switch (other.which()) {
   case Tag::kImage:
     mutable_image() = std::move(other.mutable_image());
@@ -1106,13 +1108,13 @@ void ::fuchsia::sysmem::BufferSpec::MoveImpl_(BufferSpec&& other) {
   other.Destroy();
 }
 
-void ::fuchsia::sysmem::BufferSpec::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::fuchsia::sysmem::BufferSpec, image_) == 8);
-  static_assert(sizeof(::fuchsia::sysmem::BufferSpec) == ::fuchsia::sysmem::BufferSpec::PrimarySize);
+void ::llcpp::fuchsia::sysmem::BufferSpec::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferSpec, image_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferSpec) == ::llcpp::fuchsia::sysmem::BufferSpec::PrimarySize);
 }
 
 
-ImageSpec& ::fuchsia::sysmem::BufferSpec::mutable_image() {
+ImageSpec& ::llcpp::fuchsia::sysmem::BufferSpec::mutable_image() {
   if (which() != Tag::kImage) {
     Destroy();
     new (&image_) ImageSpec;
@@ -1122,15 +1124,15 @@ ImageSpec& ::fuchsia::sysmem::BufferSpec::mutable_image() {
 }
 
 
-::fuchsia::sysmem::BufferFormat::BufferFormat() {
+::llcpp::fuchsia::sysmem::BufferFormat::BufferFormat() {
   tag_ = Tag::Invalid;
 }
 
-::fuchsia::sysmem::BufferFormat::~BufferFormat() {
+::llcpp::fuchsia::sysmem::BufferFormat::~BufferFormat() {
   Destroy();
 }
 
-void ::fuchsia::sysmem::BufferFormat::Destroy() {
+void ::llcpp::fuchsia::sysmem::BufferFormat::Destroy() {
   switch (which()) {
   case Tag::kImage:
     image_.~ImageFormat();
@@ -1141,7 +1143,7 @@ void ::fuchsia::sysmem::BufferFormat::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::fuchsia::sysmem::BufferFormat::MoveImpl_(BufferFormat&& other) {
+void ::llcpp::fuchsia::sysmem::BufferFormat::MoveImpl_(BufferFormat&& other) {
   switch (other.which()) {
   case Tag::kImage:
     mutable_image() = std::move(other.mutable_image());
@@ -1152,13 +1154,13 @@ void ::fuchsia::sysmem::BufferFormat::MoveImpl_(BufferFormat&& other) {
   other.Destroy();
 }
 
-void ::fuchsia::sysmem::BufferFormat::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::fuchsia::sysmem::BufferFormat, image_) == 8);
-  static_assert(sizeof(::fuchsia::sysmem::BufferFormat) == ::fuchsia::sysmem::BufferFormat::PrimarySize);
+void ::llcpp::fuchsia::sysmem::BufferFormat::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferFormat, image_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferFormat) == ::llcpp::fuchsia::sysmem::BufferFormat::PrimarySize);
 }
 
 
-ImageFormat& ::fuchsia::sysmem::BufferFormat::mutable_image() {
+ImageFormat& ::llcpp::fuchsia::sysmem::BufferFormat::mutable_image() {
   if (which() != Tag::kImage) {
     Destroy();
     new (&image_) ImageFormat;
@@ -2233,3 +2235,4 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
 
 }  // namespace sysmem
 }  // namespace fuchsia
+}  // namespace llcpp

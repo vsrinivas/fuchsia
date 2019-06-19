@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+namespace fio = ::llcpp::fuchsia::io;
+
 typedef struct zxio_vmo {
     // The |zxio_t| control structure for this object.
     zxio_t io;
@@ -150,14 +152,14 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset,
     mtx_lock(&file->lock);
     zx_off_t at = 0u;
     switch (start) {
-    case fuchsia::io::SeekOrigin::START:
+    case fio::SeekOrigin::START:
         at = offset;
         break;
-    case fuchsia::io::SeekOrigin::CURRENT:
+    case fio::SeekOrigin::CURRENT:
         at = file->offset + offset;
         break;
 
-    case fuchsia::io::SeekOrigin::END:
+    case fio::SeekOrigin::END:
         at = file->size + offset;
         break;
     default:

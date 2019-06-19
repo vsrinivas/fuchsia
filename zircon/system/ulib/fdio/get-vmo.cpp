@@ -11,6 +11,8 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 #define MIN_WINDOW (PAGE_SIZE * 4)
 #define MAX_WINDOW ((size_t)64 << 20)
 

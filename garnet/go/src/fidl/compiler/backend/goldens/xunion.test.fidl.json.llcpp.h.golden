@@ -12,6 +12,8 @@
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -133,15 +135,16 @@ struct NewerSimpleUnion {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test::name::OlderSimpleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::OlderSimpleUnion>);
+struct IsFidlType<::llcpp::test::name::OlderSimpleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::OlderSimpleUnion>);
 
 template <>
-struct IsFidlType<::test::name::NewerSimpleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::NewerSimpleUnion>);
+struct IsFidlType<::llcpp::test::name::NewerSimpleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::NewerSimpleUnion>);
 
 }  // namespace fidl

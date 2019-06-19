@@ -103,7 +103,7 @@ func (gen *generator) generateSource(wr io.Writer, tree ir.Root) error {
 // generateFidl generates all files required for the C++ bindings.
 func (gen generator) generateFidl(config config) error {
 	fidl := config.fidl
-	tree := ir.Compile(fidl)
+	tree := ir.CompileLL(fidl)
 	tree.PrimaryHeader = config.primaryHeaderPath
 
 	if err := os.MkdirAll(filepath.Dir(config.headerPath), os.ModePerm); err != nil {

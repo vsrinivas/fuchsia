@@ -29,7 +29,9 @@ const Header = `
 {{ end -}}
 {{ end -}}
 
-{{- range .Library }}
+{{- "" }}
+namespace llcpp {
+{{ range .Library }}
 namespace {{ . }} {
 {{- end }}
 {{ "" }}
@@ -56,6 +58,7 @@ namespace {{ . }} {
 {{- range .LibraryReversed }}
 }  // namespace {{ . }}
 {{- end }}
+}  // namespace llcpp
 
 namespace fidl {
 

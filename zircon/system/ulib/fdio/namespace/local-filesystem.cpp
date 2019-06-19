@@ -29,6 +29,8 @@
 #include "local-filesystem.h"
 #include "local-vnode.h"
 
+namespace fio = ::llcpp::fuchsia::io;
+
 namespace {
 
 class DirentFiller {
@@ -43,7 +45,7 @@ public:
             return ZX_ERR_INVALID_ARGS;
         }
         vdirent_t* de = static_cast<vdirent_t*>(buffer_);
-        de->ino = fuchsia::io::INO_UNKNOWN;
+        de->ino = fio::INO_UNKNOWN;
         de->size = static_cast<uint8_t>(len);
         de->type = static_cast<uint8_t>(type);
         memcpy(de->name, name, len);

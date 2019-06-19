@@ -13,6 +13,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -116,6 +118,7 @@ class SwitchingOrdinals final {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 

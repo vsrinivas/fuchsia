@@ -3,6 +3,8 @@
 #include <fuchsia/camera/common/llcpp/fidl.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace camera {
 namespace common {
@@ -269,7 +271,7 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 }
 
 
-auto ::fuchsia::camera::common::VirtualStreamConfig::which() const -> Tag {
+auto ::llcpp::fuchsia::camera::common::VirtualStreamConfig::which() const -> Tag {
   switch (ordinal_) {
   case Tag::kArtificialConfig:
   case Tag::kRealWorldConfig:
@@ -279,7 +281,7 @@ auto ::fuchsia::camera::common::VirtualStreamConfig::which() const -> Tag {
   }
 }
 
-void ::fuchsia::camera::common::VirtualStreamConfig::SizeAndOffsetAssertionHelper() {
+void ::llcpp::fuchsia::camera::common::VirtualStreamConfig::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(VirtualStreamConfig) == sizeof(fidl_xunion_t));
   static_assert(offsetof(VirtualStreamConfig, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(VirtualStreamConfig, envelope_) == offsetof(fidl_xunion_t, envelope));
@@ -393,3 +395,4 @@ bool VirtualCameraFactory::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tr
 }  // namespace common
 }  // namespace camera
 }  // namespace fuchsia
+}  // namespace llcpp

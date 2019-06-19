@@ -25,7 +25,7 @@
 #include "generated/fidl_llcpp_dirent.h"
 
 // Namespace shorthand for bindings generated code
-namespace gen = fidl::test::llcpp::dirent;
+namespace gen = ::llcpp::fidl::test::llcpp::dirent;
 
 // Toy test data
 namespace {

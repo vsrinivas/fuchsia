@@ -19,6 +19,7 @@
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 
+namespace llcpp {
 namespace fidl {
 namespace test {
 namespace compatibility {
@@ -234,7 +235,7 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
-  void EchoXunions(fidl::VectorView<AllTypesXunion> value,
+  void EchoXunions(::fidl::VectorView<AllTypesXunion> value,
                    ::fidl::StringView forward_to_server,
                    EchoXunionsCompleter::Sync completer) override {
     if (forward_to_server.empty()) {
@@ -243,7 +244,7 @@ class EchoConnection final : public Echo::Interface {
       std::vector<uint8_t> request_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       std::vector<uint8_t> response_buffer(ZX_CHANNEL_MAX_MSG_BYTES);
       EchoClientApp app(forward_to_server);
-      fidl::VectorView<AllTypesXunion> out_value;
+      ::fidl::VectorView<AllTypesXunion> out_value;
       auto result = app.EchoXunions(
           ::fidl::BytePart(&request_buffer[0],
                            static_cast<uint32_t>(request_buffer.size())),
@@ -264,21 +265,23 @@ class EchoConnection final : public Echo::Interface {
 }  // namespace compatibility
 }  // namespace test
 }  // namespace fidl
+}  // namespace llcpp
 
 int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  std::vector<std::unique_ptr<fidl::test::compatibility::EchoConnection>>
+  std::vector<std::unique_ptr<llcpp::fidl::test::compatibility::EchoConnection>>
       connections;
 
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([&](zx::channel request,
                                          async_dispatcher_t* dispatcher) {
-        auto conn = std::make_unique<fidl::test::compatibility::EchoConnection>(
-            zx::unowned_channel(request));
-        ZX_ASSERT(fidl::Bind(dispatcher, std::move(request), conn.get()) ==
+        auto conn =
+            std::make_unique<llcpp::fidl::test::compatibility::EchoConnection>(
+                zx::unowned_channel(request));
+        ZX_ASSERT(::fidl::Bind(dispatcher, std::move(request), conn.get()) ==
                   ZX_OK);
         connections.push_back(std::move(conn));
       }),

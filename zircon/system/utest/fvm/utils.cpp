@@ -24,6 +24,8 @@
 
 #include "utils.h"
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 namespace fvm {
 namespace {
 

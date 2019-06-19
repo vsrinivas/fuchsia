@@ -18,6 +18,8 @@
 
 #define DEV_SERIAL "/dev/class/serial"
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 static void serial_print(int fd, const char* str) {
     write(fd, str, strlen(str));
 }

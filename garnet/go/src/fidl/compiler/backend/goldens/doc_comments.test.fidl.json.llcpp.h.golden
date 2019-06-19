@@ -13,6 +13,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -220,17 +222,18 @@ constexpr int32_t C = 4u;
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test::name::Union> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::Union>);
+struct IsFidlType<::llcpp::test::name::Union> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
 
 template <>
-struct IsFidlType<::test::name::Struct> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::Struct>);
-static_assert(offsetof(::test::name::Struct, Field) == 0);
-static_assert(sizeof(::test::name::Struct) == ::test::name::Struct::PrimarySize);
+struct IsFidlType<::llcpp::test::name::Struct> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
+static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
+static_assert(sizeof(::llcpp::test::name::Struct) == ::llcpp::test::name::Struct::PrimarySize);
 
 }  // namespace fidl

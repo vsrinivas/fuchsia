@@ -48,7 +48,7 @@
 #include "private.h"
 #include "unistd.h"
 
-namespace fio = fuchsia::io;
+namespace fio = ::llcpp::fuchsia::io;
 
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 

@@ -14,6 +14,8 @@
 #include <lib/zx/socket.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -1585,295 +1587,296 @@ class WithErrorSyntax final {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
-static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, __reserved) == 0);
-static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Response) == ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response) == ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
 
 template <>
-struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsEnum_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
-static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsEnum_Response, __reserved) == 0);
-static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsEnum_Response) == ::test::name::WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response) == ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::test::name::KitchenSink::MethodARequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::KitchenSink::MethodARequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::KitchenSink::MethodARequest> : public std::true_type {};
-static_assert(sizeof(::test::name::KitchenSink::MethodARequest)
-    == ::test::name::KitchenSink::MethodARequest::PrimarySize);
-static_assert(offsetof(::test::name::KitchenSink::MethodARequest, a) == 16);
-static_assert(offsetof(::test::name::KitchenSink::MethodARequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::KitchenSink::MethodARequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::KitchenSink::MethodARequest)
+    == ::llcpp::test::name::KitchenSink::MethodARequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MethodARequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MethodARequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::KitchenSink::EventAResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::KitchenSink::EventAResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::KitchenSink::EventAResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::KitchenSink::EventAResponse)
-    == ::test::name::KitchenSink::EventAResponse::PrimarySize);
-static_assert(offsetof(::test::name::KitchenSink::EventAResponse, a) == 16);
-static_assert(offsetof(::test::name::KitchenSink::EventAResponse, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::KitchenSink::EventAResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::KitchenSink::EventAResponse)
+    == ::llcpp::test::name::KitchenSink::EventAResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::EventAResponse, a) == 16);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::EventAResponse, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::KitchenSink::MethodBRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::KitchenSink::MethodBRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::KitchenSink::MethodBRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::KitchenSink::MethodBRequest)
-    == ::test::name::KitchenSink::MethodBRequest::PrimarySize);
-static_assert(offsetof(::test::name::KitchenSink::MethodBRequest, a) == 16);
-static_assert(offsetof(::test::name::KitchenSink::MethodBRequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::KitchenSink::MethodBRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::KitchenSink::MethodBRequest)
+    == ::llcpp::test::name::KitchenSink::MethodBRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MethodBRequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MethodBRequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::KitchenSink::MethodBResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::KitchenSink::MethodBResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::KitchenSink::MethodBResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::KitchenSink::MethodBResponse)
-    == ::test::name::KitchenSink::MethodBResponse::PrimarySize);
-static_assert(offsetof(::test::name::KitchenSink::MethodBResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::KitchenSink::MethodBResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::KitchenSink::MethodBResponse)
+    == ::llcpp::test::name::KitchenSink::MethodBResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MethodBResponse, result) == 16);
 
 template <>
-struct IsFidlType<::test::name::KitchenSink::MutateSocketRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::KitchenSink::MutateSocketRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::KitchenSink::MutateSocketRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::KitchenSink::MutateSocketRequest)
-    == ::test::name::KitchenSink::MutateSocketRequest::PrimarySize);
-static_assert(offsetof(::test::name::KitchenSink::MutateSocketRequest, a) == 16);
+struct IsFidlMessage<::llcpp::test::name::KitchenSink::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::KitchenSink::MutateSocketRequest)
+    == ::llcpp::test::name::KitchenSink::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MutateSocketRequest, a) == 16);
 
 template <>
-struct IsFidlType<::test::name::KitchenSink::MutateSocketResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::KitchenSink::MutateSocketResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::KitchenSink::MutateSocketResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::KitchenSink::MutateSocketResponse)
-    == ::test::name::KitchenSink::MutateSocketResponse::PrimarySize);
-static_assert(offsetof(::test::name::KitchenSink::MutateSocketResponse, b) == 16);
+struct IsFidlMessage<::llcpp::test::name::KitchenSink::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::KitchenSink::MutateSocketResponse)
+    == ::llcpp::test::name::KitchenSink::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::KitchenSink::MutateSocketResponse, b) == 16);
 
 template <>
-struct IsFidlType<::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
-static_assert(sizeof(::test::name::ChannelProtocol::MethodARequest)
-    == ::test::name::ChannelProtocol::MethodARequest::PrimarySize);
-static_assert(offsetof(::test::name::ChannelProtocol::MethodARequest, a) == 16);
-static_assert(offsetof(::test::name::ChannelProtocol::MethodARequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodARequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MethodARequest)
+    == ::llcpp::test::name::ChannelProtocol::MethodARequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodARequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::ChannelProtocol::EventAResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::EventAResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::ChannelProtocol::EventAResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::ChannelProtocol::EventAResponse)
-    == ::test::name::ChannelProtocol::EventAResponse::PrimarySize);
-static_assert(offsetof(::test::name::ChannelProtocol::EventAResponse, a) == 16);
-static_assert(offsetof(::test::name::ChannelProtocol::EventAResponse, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::EventAResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::ChannelProtocol::EventAResponse)
+    == ::llcpp::test::name::ChannelProtocol::EventAResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse, a) == 16);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::EventAResponse, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::ChannelProtocol::MethodBRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::ChannelProtocol::MethodBRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::ChannelProtocol::MethodBRequest)
-    == ::test::name::ChannelProtocol::MethodBRequest::PrimarySize);
-static_assert(offsetof(::test::name::ChannelProtocol::MethodBRequest, a) == 16);
-static_assert(offsetof(::test::name::ChannelProtocol::MethodBRequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MethodBRequest)
+    == ::llcpp::test::name::ChannelProtocol::MethodBRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBRequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::ChannelProtocol::MethodBResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MethodBResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::ChannelProtocol::MethodBResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::ChannelProtocol::MethodBResponse)
-    == ::test::name::ChannelProtocol::MethodBResponse::PrimarySize);
-static_assert(offsetof(::test::name::ChannelProtocol::MethodBResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MethodBResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MethodBResponse)
+    == ::llcpp::test::name::ChannelProtocol::MethodBResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MethodBResponse, result) == 16);
 
 template <>
-struct IsFidlType<::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::ChannelProtocol::MutateSocketRequest)
-    == ::test::name::ChannelProtocol::MutateSocketRequest::PrimarySize);
-static_assert(offsetof(::test::name::ChannelProtocol::MutateSocketRequest, a) == 16);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest)
+    == ::llcpp::test::name::ChannelProtocol::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketRequest, a) == 16);
 
 template <>
-struct IsFidlType<::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::ChannelProtocol::MutateSocketResponse)
-    == ::test::name::ChannelProtocol::MutateSocketResponse::PrimarySize);
-static_assert(offsetof(::test::name::ChannelProtocol::MutateSocketResponse, b) == 16);
+struct IsFidlMessage<::llcpp::test::name::ChannelProtocol::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse)
+    == ::llcpp::test::name::ChannelProtocol::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::ChannelProtocol::MutateSocketResponse, b) == 16);
 
 template <>
-struct IsFidlType<::test::name::SocketControlProtocol::MethodARequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::SocketControlProtocol::MethodARequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::SocketControlProtocol::MethodARequest> : public std::true_type {};
-static_assert(sizeof(::test::name::SocketControlProtocol::MethodARequest)
-    == ::test::name::SocketControlProtocol::MethodARequest::PrimarySize);
-static_assert(offsetof(::test::name::SocketControlProtocol::MethodARequest, a) == 16);
-static_assert(offsetof(::test::name::SocketControlProtocol::MethodARequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::SocketControlProtocol::MethodARequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::SocketControlProtocol::MethodARequest)
+    == ::llcpp::test::name::SocketControlProtocol::MethodARequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MethodARequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MethodARequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::SocketControlProtocol::EventAResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::SocketControlProtocol::EventAResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::SocketControlProtocol::EventAResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::SocketControlProtocol::EventAResponse)
-    == ::test::name::SocketControlProtocol::EventAResponse::PrimarySize);
-static_assert(offsetof(::test::name::SocketControlProtocol::EventAResponse, a) == 16);
-static_assert(offsetof(::test::name::SocketControlProtocol::EventAResponse, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::SocketControlProtocol::EventAResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::SocketControlProtocol::EventAResponse)
+    == ::llcpp::test::name::SocketControlProtocol::EventAResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::EventAResponse, a) == 16);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::EventAResponse, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::SocketControlProtocol::MethodBRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::SocketControlProtocol::MethodBRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::SocketControlProtocol::MethodBRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::SocketControlProtocol::MethodBRequest)
-    == ::test::name::SocketControlProtocol::MethodBRequest::PrimarySize);
-static_assert(offsetof(::test::name::SocketControlProtocol::MethodBRequest, a) == 16);
-static_assert(offsetof(::test::name::SocketControlProtocol::MethodBRequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::SocketControlProtocol::MethodBRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::SocketControlProtocol::MethodBRequest)
+    == ::llcpp::test::name::SocketControlProtocol::MethodBRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MethodBRequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MethodBRequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::SocketControlProtocol::MethodBResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::SocketControlProtocol::MethodBResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::SocketControlProtocol::MethodBResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::SocketControlProtocol::MethodBResponse)
-    == ::test::name::SocketControlProtocol::MethodBResponse::PrimarySize);
-static_assert(offsetof(::test::name::SocketControlProtocol::MethodBResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::SocketControlProtocol::MethodBResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::SocketControlProtocol::MethodBResponse)
+    == ::llcpp::test::name::SocketControlProtocol::MethodBResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MethodBResponse, result) == 16);
 
 template <>
-struct IsFidlType<::test::name::SocketControlProtocol::MutateSocketRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::SocketControlProtocol::MutateSocketRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::SocketControlProtocol::MutateSocketRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::SocketControlProtocol::MutateSocketRequest)
-    == ::test::name::SocketControlProtocol::MutateSocketRequest::PrimarySize);
-static_assert(offsetof(::test::name::SocketControlProtocol::MutateSocketRequest, a) == 16);
+struct IsFidlMessage<::llcpp::test::name::SocketControlProtocol::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::SocketControlProtocol::MutateSocketRequest)
+    == ::llcpp::test::name::SocketControlProtocol::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MutateSocketRequest, a) == 16);
 
 template <>
-struct IsFidlType<::test::name::SocketControlProtocol::MutateSocketResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::SocketControlProtocol::MutateSocketResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::SocketControlProtocol::MutateSocketResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::SocketControlProtocol::MutateSocketResponse)
-    == ::test::name::SocketControlProtocol::MutateSocketResponse::PrimarySize);
-static_assert(offsetof(::test::name::SocketControlProtocol::MutateSocketResponse, b) == 16);
+struct IsFidlMessage<::llcpp::test::name::SocketControlProtocol::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::SocketControlProtocol::MutateSocketResponse)
+    == ::llcpp::test::name::SocketControlProtocol::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::SocketControlProtocol::MutateSocketResponse, b) == 16);
 
 template <>
-struct IsFidlType<::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodARequest)
-    == ::test::name::OvernetInternalProtocol::MethodARequest::PrimarySize);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodARequest, a) == 16);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodARequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::OvernetInternalProtocol::MethodARequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::OvernetInternalProtocol::MethodARequest)
+    == ::llcpp::test::name::OvernetInternalProtocol::MethodARequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MethodARequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MethodARequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::OvernetInternalProtocol::EventAResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::OvernetInternalProtocol::EventAResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetInternalProtocol::EventAResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetInternalProtocol::EventAResponse)
-    == ::test::name::OvernetInternalProtocol::EventAResponse::PrimarySize);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::EventAResponse, a) == 16);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::EventAResponse, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::OvernetInternalProtocol::EventAResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::OvernetInternalProtocol::EventAResponse)
+    == ::llcpp::test::name::OvernetInternalProtocol::EventAResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::EventAResponse, a) == 16);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::EventAResponse, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::OvernetInternalProtocol::MethodBRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::OvernetInternalProtocol::MethodBRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodBRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodBRequest)
-    == ::test::name::OvernetInternalProtocol::MethodBRequest::PrimarySize);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBRequest, a) == 16);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBRequest, b) == 24);
+struct IsFidlMessage<::llcpp::test::name::OvernetInternalProtocol::MethodBRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::OvernetInternalProtocol::MethodBRequest)
+    == ::llcpp::test::name::OvernetInternalProtocol::MethodBRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MethodBRequest, a) == 16);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MethodBRequest, b) == 24);
 
 template <>
-struct IsFidlType<::test::name::OvernetInternalProtocol::MethodBResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::OvernetInternalProtocol::MethodBResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetInternalProtocol::MethodBResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetInternalProtocol::MethodBResponse)
-    == ::test::name::OvernetInternalProtocol::MethodBResponse::PrimarySize);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MethodBResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::OvernetInternalProtocol::MethodBResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::OvernetInternalProtocol::MethodBResponse)
+    == ::llcpp::test::name::OvernetInternalProtocol::MethodBResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MethodBResponse, result) == 16);
 
 template <>
-struct IsFidlType<::test::name::OvernetInternalProtocol::MutateSocketRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::OvernetInternalProtocol::MutateSocketRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetInternalProtocol::MutateSocketRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetInternalProtocol::MutateSocketRequest)
-    == ::test::name::OvernetInternalProtocol::MutateSocketRequest::PrimarySize);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MutateSocketRequest, a) == 16);
+struct IsFidlMessage<::llcpp::test::name::OvernetInternalProtocol::MutateSocketRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::OvernetInternalProtocol::MutateSocketRequest)
+    == ::llcpp::test::name::OvernetInternalProtocol::MutateSocketRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MutateSocketRequest, a) == 16);
 
 template <>
-struct IsFidlType<::test::name::OvernetInternalProtocol::MutateSocketResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::OvernetInternalProtocol::MutateSocketResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::OvernetInternalProtocol::MutateSocketResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::OvernetInternalProtocol::MutateSocketResponse)
-    == ::test::name::OvernetInternalProtocol::MutateSocketResponse::PrimarySize);
-static_assert(offsetof(::test::name::OvernetInternalProtocol::MutateSocketResponse, b) == 16);
+struct IsFidlMessage<::llcpp::test::name::OvernetInternalProtocol::MutateSocketResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::OvernetInternalProtocol::MutateSocketResponse)
+    == ::llcpp::test::name::OvernetInternalProtocol::MutateSocketResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::OvernetInternalProtocol::MutateSocketResponse, b) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse)
-    == ::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse, ret) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse)
+    == ::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::NoRequestWithResponseResponse, ret) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest)
-    == ::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest)
+    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestNoResponseRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest)
-    == ::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest)
+    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest)
-    == ::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest)
+    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse)
-    == ::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse, ret) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse)
+    == ::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::WithRequestWithResponseResponse, ret) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse)
-    == ::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse, ret) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse)
+    == ::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse, ret) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsEnum_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
 
 template <>
-struct IsFidlType<::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse)
-    == ::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse)
+    == ::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse, result) == 16);
 
 template <>
-struct IsFidlType<::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::WithErrorSyntax::ErrorAsEnumResponse)
-    == ::test::name::WithErrorSyntax::ErrorAsEnumResponse::PrimarySize);
-static_assert(offsetof(::test::name::WithErrorSyntax::ErrorAsEnumResponse, result) == 16);
+struct IsFidlMessage<::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse)
+    == ::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::WithErrorSyntax::ErrorAsEnumResponse, result) == 16);
 
 }  // namespace fidl

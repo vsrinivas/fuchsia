@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+namespace fio = ::llcpp::fuchsia::io;
+
 static zx_status_t zxio_vmofile_close(zxio_t* io) {
     zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
     zx_handle_t control = file->control;
@@ -34,12 +36,11 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
     mtx_unlock(&file->lock);
 
     zx_status_t io_status, status;
-    if ((io_status = fuchsia::io::File::Call::Seek(
-             zx::unowned_channel(control),
-             seek,
-             fuchsia::io::SeekOrigin::START,
-             &status,
-             &seek)) != ZX_OK) {
+    if ((io_status = fio::File::Call::Seek(zx::unowned_channel(control),
+                                           seek,
+                                           fio::SeekOrigin::START,
+                                           &status,
+                                           &seek)) != ZX_OK) {
         return ZX_ERR_BAD_STATE;
     }
     if (status != ZX_OK) {
@@ -63,10 +64,9 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
     if (status != ZX_OK) {
         return status;
     }
-    status = fuchsia::io::Node::Call::Clone(
-        zx::unowned_channel(file->control),
-        fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
-        std::move(remote));
+    status = fio::Node::Call::Clone(zx::unowned_channel(file->control),
+                                    fio::CLONE_FLAG_SAME_RIGHTS,
+                                    std::move(remote));
     if (status != ZX_OK) {
         return status;
     }
@@ -133,13 +133,13 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset,
     mtx_lock(&file->lock);
     zx_off_t at = 0u;
     switch (start) {
-    case fuchsia::io::SeekOrigin::START:
+    case fio::SeekOrigin::START:
         at = offset;
         break;
-    case fuchsia::io::SeekOrigin::CURRENT:
+    case fio::SeekOrigin::CURRENT:
         at = (file->ptr - file->off) + offset;
         break;
-    case fuchsia::io::SeekOrigin::END:
+    case fio::SeekOrigin::END:
         at = (file->end - file->off) + offset;
         break;
     default:

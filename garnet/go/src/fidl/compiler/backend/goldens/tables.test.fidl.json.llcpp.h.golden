@@ -12,6 +12,8 @@
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -22,6 +24,7 @@ using EmptyTable = ::fidl::VectorView<fidl_envelope_t>;
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 

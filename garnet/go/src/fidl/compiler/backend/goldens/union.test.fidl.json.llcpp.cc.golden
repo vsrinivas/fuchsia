@@ -3,18 +3,20 @@
 #include <union.test.fidl.json.llcpp.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
-::test::name::Union::Union() {
+::llcpp::test::name::Union::Union() {
   tag_ = Tag::Invalid;
 }
 
-::test::name::Union::~Union() {
+::llcpp::test::name::Union::~Union() {
   Destroy();
 }
 
-void ::test::name::Union::Destroy() {
+void ::llcpp::test::name::Union::Destroy() {
   switch (which()) {
   default:
     break;
@@ -22,7 +24,7 @@ void ::test::name::Union::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::test::name::Union::MoveImpl_(Union&& other) {
+void ::llcpp::test::name::Union::MoveImpl_(Union&& other) {
   switch (other.which()) {
   case Tag::kPrimitive:
     mutable_Primitive() = std::move(other.mutable_Primitive());
@@ -39,15 +41,15 @@ void ::test::name::Union::MoveImpl_(Union&& other) {
   other.Destroy();
 }
 
-void ::test::name::Union::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::test::name::Union, Primitive_) == 8);
-  static_assert(offsetof(::test::name::Union, StringNeedsConstructor_) == 8);
-  static_assert(offsetof(::test::name::Union, VectorStringAlsoNeedsConstructor_) == 8);
-  static_assert(sizeof(::test::name::Union) == ::test::name::Union::PrimarySize);
+void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::name::Union, Primitive_) == 8);
+  static_assert(offsetof(::llcpp::test::name::Union, StringNeedsConstructor_) == 8);
+  static_assert(offsetof(::llcpp::test::name::Union, VectorStringAlsoNeedsConstructor_) == 8);
+  static_assert(sizeof(::llcpp::test::name::Union) == ::llcpp::test::name::Union::PrimarySize);
 }
 
 
-int32_t& ::test::name::Union::mutable_Primitive() {
+int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
   if (which() != Tag::kPrimitive) {
     Destroy();
     new (&Primitive_) int32_t;
@@ -56,7 +58,7 @@ int32_t& ::test::name::Union::mutable_Primitive() {
   return Primitive_;
 }
 
-::fidl::StringView& ::test::name::Union::mutable_StringNeedsConstructor() {
+::fidl::StringView& ::llcpp::test::name::Union::mutable_StringNeedsConstructor() {
   if (which() != Tag::kStringNeedsConstructor) {
     Destroy();
     new (&StringNeedsConstructor_) ::fidl::StringView;
@@ -65,7 +67,7 @@ int32_t& ::test::name::Union::mutable_Primitive() {
   return StringNeedsConstructor_;
 }
 
-::fidl::VectorView<::fidl::StringView>& ::test::name::Union::mutable_VectorStringAlsoNeedsConstructor() {
+::fidl::VectorView<::fidl::StringView>& ::llcpp::test::name::Union::mutable_VectorStringAlsoNeedsConstructor() {
   if (which() != Tag::kVectorStringAlsoNeedsConstructor) {
     Destroy();
     new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorView<::fidl::StringView>;
@@ -77,3 +79,4 @@ int32_t& ::test::name::Union::mutable_Primitive() {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp

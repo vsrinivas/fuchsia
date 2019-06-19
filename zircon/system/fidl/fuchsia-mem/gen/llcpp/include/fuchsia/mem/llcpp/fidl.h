@@ -13,6 +13,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace mem {
 
@@ -141,26 +143,27 @@ struct Data {
 
 }  // namespace mem
 }  // namespace fuchsia
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fuchsia::mem::Range> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::mem::Range>);
-static_assert(offsetof(::fuchsia::mem::Range, vmo) == 0);
-static_assert(offsetof(::fuchsia::mem::Range, offset) == 8);
-static_assert(offsetof(::fuchsia::mem::Range, size) == 16);
-static_assert(sizeof(::fuchsia::mem::Range) == ::fuchsia::mem::Range::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::mem::Range> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::mem::Range>);
+static_assert(offsetof(::llcpp::fuchsia::mem::Range, vmo) == 0);
+static_assert(offsetof(::llcpp::fuchsia::mem::Range, offset) == 8);
+static_assert(offsetof(::llcpp::fuchsia::mem::Range, size) == 16);
+static_assert(sizeof(::llcpp::fuchsia::mem::Range) == ::llcpp::fuchsia::mem::Range::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::mem::Buffer> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::mem::Buffer>);
-static_assert(offsetof(::fuchsia::mem::Buffer, vmo) == 0);
-static_assert(offsetof(::fuchsia::mem::Buffer, size) == 8);
-static_assert(sizeof(::fuchsia::mem::Buffer) == ::fuchsia::mem::Buffer::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::mem::Buffer> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::mem::Buffer>);
+static_assert(offsetof(::llcpp::fuchsia::mem::Buffer, vmo) == 0);
+static_assert(offsetof(::llcpp::fuchsia::mem::Buffer, size) == 8);
+static_assert(sizeof(::llcpp::fuchsia::mem::Buffer) == ::llcpp::fuchsia::mem::Buffer::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::mem::Data> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::mem::Data>);
+struct IsFidlType<::llcpp::fuchsia::mem::Data> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::mem::Data>);
 
 }  // namespace fidl

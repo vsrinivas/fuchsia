@@ -17,6 +17,8 @@
 
 namespace serial {
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 enum {
     WAIT_ITEM_SOCKET,
     WAIT_ITEM_EVENT,

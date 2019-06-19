@@ -3,6 +3,8 @@
 #include <fuchsia/hardware/camera/llcpp/fidl.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace hardware {
 namespace camera {
@@ -381,11 +383,11 @@ extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoRespo
 
 }  // namespace
 
-zx_status_t ControlV2::SyncClient::GetFormats(uint32_t index, ::fidl::Array<::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
+zx_status_t ControlV2::SyncClient::GetFormats(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
   return ControlV2::Call::GetFormats(zx::unowned_channel(this->channel_), std::move(index), out_formats, out_total_format_count, out_actual_format_count, out_status);
 }
 
-zx_status_t ControlV2::Call::GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
+zx_status_t ControlV2::Call::GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFormatsRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<GetFormatsRequest*>(_write_bytes);
@@ -418,11 +420,11 @@ zx_status_t ControlV2::Call::GetFormats(zx::unowned_channel _client_end, uint32_
   return ZX_OK;
 }
 
-::fidl::DecodeResult<ControlV2::GetFormatsResponse> ControlV2::SyncClient::GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
+::fidl::DecodeResult<ControlV2::GetFormatsResponse> ControlV2::SyncClient::GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
   return ControlV2::Call::GetFormats(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer), out_formats, out_total_format_count, out_actual_format_count, out_status);
 }
 
-::fidl::DecodeResult<ControlV2::GetFormatsResponse> ControlV2::Call::GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
+::fidl::DecodeResult<ControlV2::GetFormatsResponse> ControlV2::Call::GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status) {
   if (_request_buffer.capacity() < GetFormatsRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetFormatsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -478,11 +480,11 @@ zx_status_t ControlV2::Call::GetFormats(zx::unowned_channel _client_end, uint32_
 }
 
 
-zx_status_t ControlV2::SyncClient::CreateStream(::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t ControlV2::SyncClient::CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   return ControlV2::Call::CreateStream(zx::unowned_channel(this->channel_), std::move(buffer_collection), std::move(rate), std::move(stream), std::move(stream_token));
 }
 
-zx_status_t ControlV2::Call::CreateStream(zx::unowned_channel _client_end, ::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t ControlV2::Call::CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateStreamRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CreateStreamRequest*>(_write_bytes);
@@ -500,11 +502,11 @@ zx_status_t ControlV2::Call::CreateStream(zx::unowned_channel _client_end, ::fuc
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
-zx_status_t ControlV2::SyncClient::CreateStream(::fidl::BytePart _request_buffer, ::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t ControlV2::SyncClient::CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   return ControlV2::Call::CreateStream(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(buffer_collection), std::move(rate), std::move(stream), std::move(stream_token));
 }
 
-zx_status_t ControlV2::Call::CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t ControlV2::Call::CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   if (_request_buffer.capacity() < CreateStreamRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -685,7 +687,7 @@ bool ControlV2::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 }
 
 
-void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::Array<::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status) {
+void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFormatsResponse>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -699,7 +701,7 @@ void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::Array<::fuchsi
   CompleterBase::SendReply(::fidl::DecodedMessage<GetFormatsResponse>(std::move(_response_bytes)));
 }
 
-void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::Array<::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status) {
+void ControlV2::Interface::GetFormatsCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status) {
   if (_buffer.capacity() < GetFormatsResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -862,11 +864,11 @@ zx_status_t Control::Call::GetFormats(zx::unowned_channel _client_end, uint32_t 
 }
 
 
-zx_status_t Control::SyncClient::CreateStream(::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t Control::SyncClient::CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   return Control::Call::CreateStream(zx::unowned_channel(this->channel_), std::move(buffer_collection), std::move(rate), std::move(stream), std::move(stream_token));
 }
 
-zx_status_t Control::Call::CreateStream(zx::unowned_channel _client_end, ::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t Control::Call::CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateStreamRequest>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _request = *reinterpret_cast<CreateStreamRequest*>(_write_bytes);
@@ -884,11 +886,11 @@ zx_status_t Control::Call::CreateStream(zx::unowned_channel _client_end, ::fuchs
   return ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
 }
 
-zx_status_t Control::SyncClient::CreateStream(::fidl::BytePart _request_buffer, ::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t Control::SyncClient::CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   return Control::Call::CreateStream(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(buffer_collection), std::move(rate), std::move(stream), std::move(stream_token));
 }
 
-zx_status_t Control::Call::CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
+zx_status_t Control::Call::CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token) {
   if (_request_buffer.capacity() < CreateStreamRequest::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1137,3 +1139,4 @@ void Control::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMessag
 }  // namespace camera
 }  // namespace hardware
 }  // namespace fuchsia
+}  // namespace llcpp

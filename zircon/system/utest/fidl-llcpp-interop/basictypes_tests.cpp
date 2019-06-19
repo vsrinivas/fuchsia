@@ -22,6 +22,8 @@
 // Interface under test
 #include "generated/fidl_llcpp_basictypes.h"
 
+namespace basictypes = llcpp::fidl::test::llcpp::basictypes;
+
 // test utility functions
 namespace {
 
@@ -155,8 +157,8 @@ bool RawChannelCallStructTest() {
     fidl::BytePart bytes(&storage[0], sizeof(storage));
     // trivial linearization except to set message length
     bytes.set_actual(
-        sizeof(fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest));
-    fidl::DecodedMessage<fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest>
+        sizeof(basictypes::TestInterface::ConsumeSimpleStructRequest));
+    fidl::DecodedMessage<basictypes::TestInterface::ConsumeSimpleStructRequest>
         request(std::move(bytes));
     request.message()->_hdr.ordinal =
         fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructOrdinal;
@@ -215,8 +217,8 @@ bool RawChannelCallUnionTest() {
     fidl::BytePart bytes(&storage[0], sizeof(storage));
     // trivial linearization except to set message length
     bytes.set_actual(
-        sizeof(fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest));
-    fidl::DecodedMessage<fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest>
+        sizeof(basictypes::TestInterface::ConsumeSimpleUnionRequest));
+    fidl::DecodedMessage<basictypes::TestInterface::ConsumeSimpleUnionRequest>
         request(std::move(bytes));
     request.message()->_hdr.ordinal =
         fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionOrdinal;
@@ -249,11 +251,11 @@ bool SyncCallStructTest() {
     ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
-    fidl::test::llcpp::basictypes::TestInterface::SyncClient test(std::move(client));
+    basictypes::TestInterface::SyncClient test(std::move(client));
 
     int32_t out_status;
     int32_t out_field;
-    fidl::test::llcpp::basictypes::SimpleStruct simple_struct = {};
+    basictypes::SimpleStruct simple_struct = {};
     simple_struct.field = 123;
     // make sure array shape is as expected (5 by 4)
     constexpr size_t kNumRow = 5;
@@ -302,11 +304,11 @@ bool SyncCallerAllocateCallStructTest() {
     ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
-    fidl::test::llcpp::basictypes::TestInterface::SyncClient test(std::move(client));
+    basictypes::TestInterface::SyncClient test(std::move(client));
 
     int32_t out_status;
     int32_t out_field;
-    fidl::test::llcpp::basictypes::SimpleStruct simple_struct = {};
+    basictypes::SimpleStruct simple_struct = {};
     simple_struct.field = 123;
     // make sure array shape is as expected (5 by 4)
     constexpr size_t kNumRow = 5;
@@ -361,11 +363,11 @@ bool SyncCallUnionTest() {
     ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
-    fidl::test::llcpp::basictypes::TestInterface::SyncClient test(std::move(client));
+    basictypes::TestInterface::SyncClient test(std::move(client));
 
     uint32_t out_index;
     int32_t out_field;
-    fidl::test::llcpp::basictypes::SimpleUnion simple_union;
+    basictypes::SimpleUnion simple_union;
     simple_union.mutable_field_b() = 456;
 
     // perform call
@@ -389,11 +391,11 @@ bool SyncCallerAllocateCallUnionTest() {
     ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
-    fidl::test::llcpp::basictypes::TestInterface::SyncClient test(std::move(client));
+    basictypes::TestInterface::SyncClient test(std::move(client));
 
     uint32_t out_index;
     int32_t out_field;
-    fidl::test::llcpp::basictypes::SimpleUnion simple_union;
+    basictypes::SimpleUnion simple_union;
     simple_union.mutable_field_b() = 456;
 
     // perform call
@@ -418,7 +420,7 @@ bool SyncCallerAllocateCallUnionTest() {
 // LLCPP sync server tests: interop between C client and LLCPP server
 namespace {
 
-namespace gen = fidl::test::llcpp::basictypes;
+namespace gen = llcpp::fidl::test::llcpp::basictypes;
 
 class Server : public gen::TestInterface::Interface {
 public:

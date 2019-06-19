@@ -22,10 +22,10 @@
 struct ConnectRequestContext {
   bool quiet;
   async_dispatcher_t* dispatcher;
-  std::unique_ptr<fidl::examples::echo::Echo::Interface> server;
+  std::unique_ptr<llcpp::fidl::examples::echo::Echo::Interface> server;
 };
 
-class Server final : public fidl::examples::echo::Echo::Interface {
+class Server final : public llcpp::fidl::examples::echo::Echo::Interface {
  public:
   void EchoString(::fidl::StringView value,
                   EchoStringCompleter::Sync completer) override {

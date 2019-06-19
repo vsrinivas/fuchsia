@@ -12,6 +12,8 @@
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -31,13 +33,14 @@ struct Empty {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test::name::Empty> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::Empty>);
-static_assert(offsetof(::test::name::Empty, __reserved) == 0);
-static_assert(sizeof(::test::name::Empty) == ::test::name::Empty::PrimarySize);
+struct IsFidlType<::llcpp::test::name::Empty> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::Empty>);
+static_assert(offsetof(::llcpp::test::name::Empty, __reserved) == 0);
+static_assert(sizeof(::llcpp::test::name::Empty) == ::llcpp::test::name::Empty::PrimarySize);
 
 }  // namespace fidl

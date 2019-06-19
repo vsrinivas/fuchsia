@@ -79,7 +79,7 @@ static zx_status_t mock_write_at(zxio_t* io, size_t offset, const void* buffer,
 }
 
 static zx_status_t mock_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start, size_t* out_offset) {
-    if (start != fuchsia::io::SeekOrigin::START) {
+    if (start != zxio_seek_origin_t::START) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     *out_offset = offset;

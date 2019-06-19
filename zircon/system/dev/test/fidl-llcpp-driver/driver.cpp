@@ -16,6 +16,8 @@
 
 namespace fidl {
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
     fbl::AllocChecker ac;
     fbl::unique_ptr<DdkFidlDevice> serial_dev(new (&ac) DdkFidlDevice(dev));

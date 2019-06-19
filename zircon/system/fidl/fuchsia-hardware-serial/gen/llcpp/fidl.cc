@@ -3,6 +3,8 @@
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace hardware {
 namespace serial {
@@ -305,3 +307,4 @@ void Device::Interface::SetConfigCompleterBase::Reply(::fidl::DecodedMessage<Set
 }  // namespace serial
 }  // namespace hardware
 }  // namespace fuchsia
+}  // namespace llcpp

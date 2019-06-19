@@ -3,6 +3,8 @@
 #include <ordinal_switch.test.fidl.json.llcpp.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -208,3 +210,4 @@ zx_status_t SwitchingOrdinals::SendEventOnlyGeneratedOrdinalEvent(::zx::unowned_
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp

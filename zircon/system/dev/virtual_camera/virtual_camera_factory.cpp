@@ -11,6 +11,8 @@
 
 namespace virtual_camera {
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 zx_status_t VirtualCameraFactory::Create(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto manager = fbl::make_unique_checked<VirtualCameraFactory>(&ac, parent);

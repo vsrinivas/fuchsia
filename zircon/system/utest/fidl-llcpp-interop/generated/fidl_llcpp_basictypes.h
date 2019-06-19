@@ -14,6 +14,8 @@
 #include <lib/zx/eventpair.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace fidl {
 namespace test {
 namespace llcpp {
@@ -307,53 +309,54 @@ class TestInterface final {
 }  // namespace llcpp
 }  // namespace test
 }  // namespace fidl
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::SimpleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl::test::llcpp::basictypes::SimpleUnion>);
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::SimpleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::llcpp::basictypes::SimpleUnion>);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::SimpleStruct> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl::test::llcpp::basictypes::SimpleStruct>);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, field) == 0);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, ep) == 4);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, arr) == 8);
-static_assert(sizeof(::fidl::test::llcpp::basictypes::SimpleStruct) == ::fidl::test::llcpp::basictypes::SimpleStruct::PrimarySize);
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::SimpleStruct> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::llcpp::basictypes::SimpleStruct>);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct, field) == 0);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct, ep) == 4);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct, arr) == 8);
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::SimpleStruct) == ::llcpp::fidl::test::llcpp::basictypes::SimpleStruct::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest)
-    == ::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse)
-    == ::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, status) == 16);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, field) == 20);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, status) == 16);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleStructResponse, field) == 20);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest)
-    == ::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest, arg) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionRequest, arg) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse)
-    == ::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, index) == 16);
-static_assert(offsetof(::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, field) == 20);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse)
+    == ::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, index) == 16);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::basictypes::TestInterface::ConsumeSimpleUnionResponse, field) == 20);
 
 }  // namespace fidl

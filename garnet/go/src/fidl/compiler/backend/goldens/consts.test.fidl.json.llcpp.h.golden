@@ -12,6 +12,8 @@
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -38,6 +40,7 @@ constexpr uint16_t ANSWER = 42u;
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 

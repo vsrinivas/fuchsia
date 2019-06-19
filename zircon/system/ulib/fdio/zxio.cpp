@@ -21,7 +21,7 @@
 
 #include "private.h"
 
-namespace fio = fuchsia::io;
+namespace fio = ::llcpp::fuchsia::io;
 
 static zx_status_t fdio_zxio_close(fdio_t* io) {
     zxio_t* z = fdio_get_zxio(io);

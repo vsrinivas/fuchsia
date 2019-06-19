@@ -3,8 +3,11 @@
 #include <bits.test.test.fidl.json.llcpp.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp

@@ -424,6 +424,17 @@ func formatNamespace(library types.LibraryIdentifier, appendNamespace string) st
 	return ns
 }
 
+func formatLLNamespace(library types.LibraryIdentifier, appendNamespace string) string {
+	// Avoid user-defined llcpp library colliding with the llcpp namespace, by appending underscore.
+	if len(library) > 0 && library[0] == "llcpp" {
+		libraryRenamed := make([]types.Identifier, len(library))
+		copy(libraryRenamed, library)
+		libraryRenamed[0] = "llcpp_"
+		library = libraryRenamed
+	}
+	return "::llcpp" + formatNamespace(library, appendNamespace)
+}
+
 func formatLibraryPrefix(library types.LibraryIdentifier) string {
 	return formatLibrary(library, "_")
 }
@@ -438,11 +449,12 @@ func formatDestructor(eci types.EncodedCompoundIdentifier) string {
 }
 
 type compiler struct {
-	namespace    string
-	symbolPrefix string
-	decls        *types.DeclMap
-	library      types.LibraryIdentifier
-	handleTypes  map[types.HandleSubtype]bool
+	namespace          string
+	symbolPrefix       string
+	decls              *types.DeclMap
+	library            types.LibraryIdentifier
+	handleTypes        map[types.HandleSubtype]bool
+	namespaceFormatter func(types.LibraryIdentifier, string) string
 }
 
 func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -461,7 +473,7 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 	val := types.ParseCompoundIdentifier(eci)
 	strs := []string{}
 	if c.isInExternalLibrary(val) {
-		strs = append(strs, formatNamespace(val.Library, appendNamespace))
+		strs = append(strs, c.namespaceFormatter(val.Library, appendNamespace))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "::")
@@ -492,7 +504,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 			return val.Value
 		}
 		if typ.Kind == types.PrimitiveType &&
-			(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
+				(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
 			return val.Value
 		}
 
@@ -1005,7 +1017,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	return r
 }
 
-func Compile(r types.Root) Root {
+func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, string) string) Root {
 	root := Root{}
 	library := make(types.LibraryIdentifier, 0)
 	raw_library := make(types.LibraryIdentifier, 0)
@@ -1015,11 +1027,12 @@ func Compile(r types.Root) Root {
 		raw_library = append(raw_library, identifier)
 	}
 	c := compiler{
-		formatNamespace(library, ""),
+		namespaceFormatter(library, ""),
 		formatLibraryPrefix(raw_library),
 		&r.Decls,
 		types.ParseLibraryName(r.Name),
 		make(map[types.HandleSubtype]bool),
+		namespaceFormatter,
 	}
 
 	root.Library = library
@@ -1107,4 +1120,12 @@ func Compile(r types.Root) Root {
 	root.HandleTypes = handleTypes
 
 	return root
+}
+
+func Compile(r types.Root) Root {
+	return compile(r, formatNamespace)
+}
+
+func CompileLL(r types.Root) Root {
+	return compile(r, formatLLNamespace)
 }

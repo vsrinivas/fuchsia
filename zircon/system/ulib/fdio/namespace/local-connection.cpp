@@ -20,6 +20,8 @@
 namespace fdio_internal {
 namespace {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 // The directory represents a local directory (either / or
 // some directory between / and a mount point), so it has
 // to emulate directory behavior.
@@ -67,10 +69,10 @@ zx_status_t zxio_dir_open(fdio_t* io, const char* path, uint32_t flags,
     return dir->fs->Open(fbl::WrapRefPtr(dir->vn), path, flags, mode, out);
 }
 
-zx_status_t zxio_dir_get_attr(fdio_t* io, fuchsia::io::NodeAttributes* attr) {
+zx_status_t zxio_dir_get_attr(fdio_t* io, fio::NodeAttributes* attr) {
     *attr = {};
     attr->mode = V_TYPE_DIR | V_IRUSR;
-    attr->id = fuchsia::io::INO_UNKNOWN;
+    attr->id = fio::INO_UNKNOWN;
     attr->link_count = 1;
     return ZX_OK;
 }

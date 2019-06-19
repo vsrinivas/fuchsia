@@ -13,6 +13,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace hardware {
 namespace serial {
@@ -240,41 +242,42 @@ class Device final {
 }  // namespace serial
 }  // namespace hardware
 }  // namespace fuchsia
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fuchsia::hardware::serial::Config> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::hardware::serial::Config>);
-static_assert(offsetof(::fuchsia::hardware::serial::Config, character_width) == 0);
-static_assert(offsetof(::fuchsia::hardware::serial::Config, stop_width) == 1);
-static_assert(offsetof(::fuchsia::hardware::serial::Config, parity) == 2);
-static_assert(offsetof(::fuchsia::hardware::serial::Config, control_flow) == 3);
-static_assert(offsetof(::fuchsia::hardware::serial::Config, baud_rate) == 4);
-static_assert(sizeof(::fuchsia::hardware::serial::Config) == ::fuchsia::hardware::serial::Config::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::Config> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::serial::Config>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Config, character_width) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Config, stop_width) == 1);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Config, parity) == 2);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Config, control_flow) == 3);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Config, baud_rate) == 4);
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::Config) == ::llcpp::fuchsia::hardware::serial::Config::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::hardware::serial::Device::GetClassResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::Device::GetClassResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::hardware::serial::Device::GetClassResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::hardware::serial::Device::GetClassResponse)
-    == ::fuchsia::hardware::serial::Device::GetClassResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::hardware::serial::Device::GetClassResponse, device_class) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::Device::GetClassResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::Device::GetClassResponse)
+    == ::llcpp::fuchsia::hardware::serial::Device::GetClassResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Device::GetClassResponse, device_class) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::hardware::serial::Device::SetConfigRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::Device::SetConfigRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::hardware::serial::Device::SetConfigRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::hardware::serial::Device::SetConfigRequest)
-    == ::fuchsia::hardware::serial::Device::SetConfigRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::hardware::serial::Device::SetConfigRequest, config) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::Device::SetConfigRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::Device::SetConfigRequest)
+    == ::llcpp::fuchsia::hardware::serial::Device::SetConfigRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Device::SetConfigRequest, config) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::hardware::serial::Device::SetConfigResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::hardware::serial::Device::SetConfigResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::hardware::serial::Device::SetConfigResponse)
-    == ::fuchsia::hardware::serial::Device::SetConfigResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::hardware::serial::Device::SetConfigResponse, s) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse)
+    == ::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::serial::Device::SetConfigResponse, s) == 16);
 
 }  // namespace fidl

@@ -19,7 +19,7 @@ class VirtualCameraFactory;
 using VirtualCameraFactoryType = ddk::Device<VirtualCameraFactory, ddk::Unbindable>;
 
 class VirtualCameraFactory : public VirtualCameraFactoryType,
-                             public fuchsia::camera::common::VirtualCameraFactory::Interface,
+                             public llcpp::fuchsia::camera::common::VirtualCameraFactory::Interface,
                              public ddk::EmptyProtocol<ZX_PROTOCOL_VCAM_FACTORY> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VirtualCameraFactory);
@@ -36,8 +36,8 @@ public:
     void DdkUnbind();
 
     void CreateDevice(
-        fuchsia::camera::common::VirtualCameraConfig config,
-        fuchsia::camera::common::VirtualCameraFactory::Interface::CreateDeviceCompleter::Sync completer);
+        ::llcpp::fuchsia::camera::common::VirtualCameraConfig config,
+        ::llcpp::fuchsia::camera::common::VirtualCameraFactory::Interface::CreateDeviceCompleter::Sync completer);
 };
 
 } // namespace virtual_camera

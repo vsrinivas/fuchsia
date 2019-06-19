@@ -3,6 +3,8 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace io {
 
@@ -111,15 +113,15 @@ bool DirectoryWatcher::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
 }
 
 
-::fuchsia::io::NodeInfo::NodeInfo() {
+::llcpp::fuchsia::io::NodeInfo::NodeInfo() {
   tag_ = Tag::Invalid;
 }
 
-::fuchsia::io::NodeInfo::~NodeInfo() {
+::llcpp::fuchsia::io::NodeInfo::~NodeInfo() {
   Destroy();
 }
 
-void ::fuchsia::io::NodeInfo::Destroy() {
+void ::llcpp::fuchsia::io::NodeInfo::Destroy() {
   switch (which()) {
   case Tag::kService:
     service_.~Service();
@@ -148,7 +150,7 @@ void ::fuchsia::io::NodeInfo::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
+void ::llcpp::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
   switch (other.which()) {
   case Tag::kService:
     mutable_service() = std::move(other.mutable_service());
@@ -177,19 +179,19 @@ void ::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
   other.Destroy();
 }
 
-void ::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::fuchsia::io::NodeInfo, service_) == 8);
-  static_assert(offsetof(::fuchsia::io::NodeInfo, file_) == 8);
-  static_assert(offsetof(::fuchsia::io::NodeInfo, directory_) == 8);
-  static_assert(offsetof(::fuchsia::io::NodeInfo, pipe_) == 8);
-  static_assert(offsetof(::fuchsia::io::NodeInfo, vmofile_) == 8);
-  static_assert(offsetof(::fuchsia::io::NodeInfo, device_) == 8);
-  static_assert(offsetof(::fuchsia::io::NodeInfo, tty_) == 8);
-  static_assert(sizeof(::fuchsia::io::NodeInfo) == ::fuchsia::io::NodeInfo::PrimarySize);
+void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, service_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, file_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, directory_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, pipe_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, vmofile_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, device_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, tty_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::io::NodeInfo) == ::llcpp::fuchsia::io::NodeInfo::PrimarySize);
 }
 
 
-Service& ::fuchsia::io::NodeInfo::mutable_service() {
+Service& ::llcpp::fuchsia::io::NodeInfo::mutable_service() {
   if (which() != Tag::kService) {
     Destroy();
     new (&service_) Service;
@@ -198,7 +200,7 @@ Service& ::fuchsia::io::NodeInfo::mutable_service() {
   return service_;
 }
 
-FileObject& ::fuchsia::io::NodeInfo::mutable_file() {
+FileObject& ::llcpp::fuchsia::io::NodeInfo::mutable_file() {
   if (which() != Tag::kFile) {
     Destroy();
     new (&file_) FileObject;
@@ -207,7 +209,7 @@ FileObject& ::fuchsia::io::NodeInfo::mutable_file() {
   return file_;
 }
 
-DirectoryObject& ::fuchsia::io::NodeInfo::mutable_directory() {
+DirectoryObject& ::llcpp::fuchsia::io::NodeInfo::mutable_directory() {
   if (which() != Tag::kDirectory) {
     Destroy();
     new (&directory_) DirectoryObject;
@@ -216,7 +218,7 @@ DirectoryObject& ::fuchsia::io::NodeInfo::mutable_directory() {
   return directory_;
 }
 
-Pipe& ::fuchsia::io::NodeInfo::mutable_pipe() {
+Pipe& ::llcpp::fuchsia::io::NodeInfo::mutable_pipe() {
   if (which() != Tag::kPipe) {
     Destroy();
     new (&pipe_) Pipe;
@@ -225,7 +227,7 @@ Pipe& ::fuchsia::io::NodeInfo::mutable_pipe() {
   return pipe_;
 }
 
-Vmofile& ::fuchsia::io::NodeInfo::mutable_vmofile() {
+Vmofile& ::llcpp::fuchsia::io::NodeInfo::mutable_vmofile() {
   if (which() != Tag::kVmofile) {
     Destroy();
     new (&vmofile_) Vmofile;
@@ -234,7 +236,7 @@ Vmofile& ::fuchsia::io::NodeInfo::mutable_vmofile() {
   return vmofile_;
 }
 
-Device& ::fuchsia::io::NodeInfo::mutable_device() {
+Device& ::llcpp::fuchsia::io::NodeInfo::mutable_device() {
   if (which() != Tag::kDevice) {
     Destroy();
     new (&device_) Device;
@@ -243,7 +245,7 @@ Device& ::fuchsia::io::NodeInfo::mutable_device() {
   return device_;
 }
 
-Tty& ::fuchsia::io::NodeInfo::mutable_tty() {
+Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
   if (which() != Tag::kTty) {
     Destroy();
     new (&tty_) Tty;
@@ -2587,11 +2589,11 @@ zx_status_t File::Call::SetFlags(zx::unowned_channel _client_end, uint32_t flags
 }
 
 
-::fidl::DecodeResult<File::GetBufferResponse> File::SyncClient::GetBuffer(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fuchsia::mem::Buffer** out_buffer) {
+::fidl::DecodeResult<File::GetBufferResponse> File::SyncClient::GetBuffer(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer) {
   return File::Call::GetBuffer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer), out_s, out_buffer);
 }
 
-::fidl::DecodeResult<File::GetBufferResponse> File::Call::GetBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::fuchsia::mem::Buffer** out_buffer) {
+::fidl::DecodeResult<File::GetBufferResponse> File::Call::GetBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer) {
   if (_request_buffer.capacity() < GetBufferRequest::PrimarySize) {
     return ::fidl::DecodeResult<GetBufferResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall);
   }
@@ -3404,7 +3406,7 @@ void File::Interface::SetFlagsCompleterBase::Reply(::fidl::DecodedMessage<SetFla
 }
 
 
-void File::Interface::GetBufferCompleterBase::Reply(int32_t s, ::fuchsia::mem::Buffer* buffer) {
+void File::Interface::GetBufferCompleterBase::Reply(int32_t s, ::llcpp::fuchsia::mem::Buffer* buffer) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBufferResponse>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   GetBufferResponse _response = {};
@@ -3420,7 +3422,7 @@ void File::Interface::GetBufferCompleterBase::Reply(int32_t s, ::fuchsia::mem::B
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
-void File::Interface::GetBufferCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::fuchsia::mem::Buffer* buffer) {
+void File::Interface::GetBufferCompleterBase::Reply(::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::mem::Buffer* buffer) {
   if (_buffer.capacity() < GetBufferResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -8310,3 +8312,4 @@ void DirectoryAdmin::Interface::GetDevicePathCompleterBase::Reply(::fidl::Decode
 
 }  // namespace io
 }  // namespace fuchsia
+}  // namespace llcpp

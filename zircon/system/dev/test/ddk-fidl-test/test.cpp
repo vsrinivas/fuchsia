@@ -23,6 +23,8 @@ using driver_integration_test::IsolatedDevmgr;
 
 namespace {
 
+namespace fuchsia = ::llcpp::fuchsia;
+
 const board_test::DeviceEntry kDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
     strcpy(entry.name, "ddk-fidl");

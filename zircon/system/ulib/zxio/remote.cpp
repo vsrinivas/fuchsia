@@ -10,7 +10,7 @@
 #include <string.h>
 #include <zircon/syscalls.h>
 
-namespace fio = fuchsia::io;
+namespace fio = llcpp::fuchsia::io;
 
 namespace {
 
@@ -349,7 +349,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io,
     if (response->s != ZX_OK) {
         return response->s;
     }
-    fuchsia::mem::Buffer* buffer = response->buffer;
+    llcpp::fuchsia::mem::Buffer* buffer = response->buffer;
     if (!buffer) {
         return ZX_ERR_IO;
     }

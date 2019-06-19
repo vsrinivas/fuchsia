@@ -12,6 +12,8 @@
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -122,11 +124,12 @@ struct Union {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test::name::Union> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test::name::Union>);
+struct IsFidlType<::llcpp::test::name::Union> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::Union>);
 
 }  // namespace fidl

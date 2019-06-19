@@ -13,6 +13,8 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
@@ -247,39 +249,40 @@ class Child final {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::test::name::Parent::GetChildResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::Parent::GetChildResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::Parent::GetChildResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::Parent::GetChildResponse)
-    == ::test::name::Parent::GetChildResponse::PrimarySize);
-static_assert(offsetof(::test::name::Parent::GetChildResponse, c) == 16);
+struct IsFidlMessage<::llcpp::test::name::Parent::GetChildResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Parent::GetChildResponse)
+    == ::llcpp::test::name::Parent::GetChildResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::Parent::GetChildResponse, c) == 16);
 
 template <>
-struct IsFidlType<::test::name::Parent::GetChildRequestResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::Parent::GetChildRequestResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::Parent::GetChildRequestResponse> : public std::true_type {};
-static_assert(sizeof(::test::name::Parent::GetChildRequestResponse)
-    == ::test::name::Parent::GetChildRequestResponse::PrimarySize);
-static_assert(offsetof(::test::name::Parent::GetChildRequestResponse, r) == 16);
+struct IsFidlMessage<::llcpp::test::name::Parent::GetChildRequestResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Parent::GetChildRequestResponse)
+    == ::llcpp::test::name::Parent::GetChildRequestResponse::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::Parent::GetChildRequestResponse, r) == 16);
 
 template <>
-struct IsFidlType<::test::name::Parent::TakeChildRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::Parent::TakeChildRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::Parent::TakeChildRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::Parent::TakeChildRequest)
-    == ::test::name::Parent::TakeChildRequest::PrimarySize);
-static_assert(offsetof(::test::name::Parent::TakeChildRequest, c) == 16);
+struct IsFidlMessage<::llcpp::test::name::Parent::TakeChildRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Parent::TakeChildRequest)
+    == ::llcpp::test::name::Parent::TakeChildRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::Parent::TakeChildRequest, c) == 16);
 
 template <>
-struct IsFidlType<::test::name::Parent::TakeChildRequestRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::test::name::Parent::TakeChildRequestRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::test::name::Parent::TakeChildRequestRequest> : public std::true_type {};
-static_assert(sizeof(::test::name::Parent::TakeChildRequestRequest)
-    == ::test::name::Parent::TakeChildRequestRequest::PrimarySize);
-static_assert(offsetof(::test::name::Parent::TakeChildRequestRequest, r) == 16);
+struct IsFidlMessage<::llcpp::test::name::Parent::TakeChildRequestRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::test::name::Parent::TakeChildRequestRequest)
+    == ::llcpp::test::name::Parent::TakeChildRequestRequest::PrimarySize);
+static_assert(offsetof(::llcpp::test::name::Parent::TakeChildRequestRequest, r) == 16);
 
 }  // namespace fidl

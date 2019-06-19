@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
 
   // Using high-level C++ bindings to launch the server component
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
+  ::fidl::InterfaceHandle<fuchsia::io::Directory> directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = server_url;
   launch_info.directory_request = directory.NewRequest().TakeChannel();
@@ -47,7 +47,7 @@ int main(int argc, const char** argv) {
   echo_provider.Connect("fidl.examples.echo.Echo", std::move(server_end));
 
   // Using low-level C++ bindings to perform a call
-  fidl::examples::echo::Echo::SyncClient client(std::move(client_end));
+  ::llcpp::fidl::examples::echo::Echo::SyncClient client(std::move(client_end));
   std::vector<uint8_t> request_buffer(512);
   std::vector<uint8_t> response_buffer(512);
   fidl::StringView out_str = {};

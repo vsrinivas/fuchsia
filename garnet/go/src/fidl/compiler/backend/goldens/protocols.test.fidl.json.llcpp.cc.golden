@@ -3,18 +3,20 @@
 #include <protocols.test.fidl.json.llcpp.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
-::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result() {
+::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result() {
   tag_ = Tag::Invalid;
 }
 
-::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Result() {
+::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Result() {
   Destroy();
 }
 
-void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
+void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
   switch (which()) {
   case Tag::kResponse:
     response_.~WithErrorSyntax_ErrorAsPrimitive_Response();
@@ -25,7 +27,7 @@ void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
+void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
   switch (other.which()) {
   case Tag::kResponse:
     mutable_response() = std::move(other.mutable_response());
@@ -39,14 +41,14 @@ void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::MoveImpl_(WithErrorS
   other.Destroy();
 }
 
-void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, response_) == 4);
-  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, err_) == 4);
-  static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result) == ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::PrimarySize);
+void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result) == ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::PrimarySize);
 }
 
 
-WithErrorSyntax_ErrorAsPrimitive_Response& ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_response() {
+WithErrorSyntax_ErrorAsPrimitive_Response& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
     new (&response_) WithErrorSyntax_ErrorAsPrimitive_Response;
@@ -55,7 +57,7 @@ WithErrorSyntax_ErrorAsPrimitive_Response& ::test::name::WithErrorSyntax_ErrorAs
   return response_;
 }
 
-uint32_t& ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_err() {
+uint32_t& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_err() {
   if (which() != Tag::kErr) {
     Destroy();
     new (&err_) uint32_t;
@@ -2621,15 +2623,15 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
 }
 
 
-::test::name::WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {
+::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {
   tag_ = Tag::Invalid;
 }
 
-::test::name::WithErrorSyntax_ErrorAsEnum_Result::~WithErrorSyntax_ErrorAsEnum_Result() {
+::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::~WithErrorSyntax_ErrorAsEnum_Result() {
   Destroy();
 }
 
-void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
+void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
   switch (which()) {
   case Tag::kResponse:
     response_.~WithErrorSyntax_ErrorAsEnum_Response();
@@ -2643,7 +2645,7 @@ void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
   tag_ = Tag::Invalid;
 }
 
-void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other) {
+void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other) {
   switch (other.which()) {
   case Tag::kResponse:
     mutable_response() = std::move(other.mutable_response());
@@ -2657,14 +2659,14 @@ void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::MoveImpl_(WithErrorSyntax
   other.Destroy();
 }
 
-void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsEnum_Result, response_) == 4);
-  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsEnum_Result, err_) == 4);
-  static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsEnum_Result) == ::test::name::WithErrorSyntax_ErrorAsEnum_Result::PrimarySize);
+void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result) == ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::PrimarySize);
 }
 
 
-WithErrorSyntax_ErrorAsEnum_Response& ::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_response() {
+WithErrorSyntax_ErrorAsEnum_Response& ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_response() {
   if (which() != Tag::kResponse) {
     Destroy();
     new (&response_) WithErrorSyntax_ErrorAsEnum_Response;
@@ -2673,7 +2675,7 @@ WithErrorSyntax_ErrorAsEnum_Response& ::test::name::WithErrorSyntax_ErrorAsEnum_
   return response_;
 }
 
-ErrorEnun& ::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_err() {
+ErrorEnun& ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_err() {
   if (which() != Tag::kErr) {
     Destroy();
     new (&err_) ErrorEnun;
@@ -2980,3 +2982,4 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::Decoded
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp

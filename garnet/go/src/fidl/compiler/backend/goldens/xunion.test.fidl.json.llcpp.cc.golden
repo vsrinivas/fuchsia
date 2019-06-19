@@ -3,10 +3,12 @@
 #include <xunion.test.fidl.json.llcpp.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace test {
 namespace name {
 
-auto ::test::name::OlderSimpleUnion::which() const -> Tag {
+auto ::llcpp::test::name::OlderSimpleUnion::which() const -> Tag {
   switch (ordinal_) {
   case Tag::kI:
   case Tag::kF:
@@ -16,13 +18,13 @@ auto ::test::name::OlderSimpleUnion::which() const -> Tag {
   }
 }
 
-void ::test::name::OlderSimpleUnion::SizeAndOffsetAssertionHelper() {
+void ::llcpp::test::name::OlderSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(OlderSimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(OlderSimpleUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(OlderSimpleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
-auto ::test::name::NewerSimpleUnion::which() const -> Tag {
+auto ::llcpp::test::name::NewerSimpleUnion::which() const -> Tag {
   switch (ordinal_) {
   case Tag::kI:
   case Tag::kS:
@@ -33,7 +35,7 @@ auto ::test::name::NewerSimpleUnion::which() const -> Tag {
   }
 }
 
-void ::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
+void ::llcpp::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(NewerSimpleUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(NewerSimpleUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(NewerSimpleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
@@ -41,3 +43,4 @@ void ::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
 
 }  // namespace name
 }  // namespace test
+}  // namespace llcpp

@@ -15,6 +15,8 @@
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace camera {
 namespace common {
@@ -383,7 +385,7 @@ struct VideoFormat {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  ::fuchsia::sysmem::ImageFormat format{};
+  ::llcpp::fuchsia::sysmem::ImageFormat format{};
 
   FrameRate rate{};
 };
@@ -507,93 +509,94 @@ class VirtualCameraFactory final {
 }  // namespace common
 }  // namespace camera
 }  // namespace fuchsia
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::RealWorldStreamConfig> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::RealWorldStreamConfig>);
-static_assert(offsetof(::fuchsia::camera::common::RealWorldStreamConfig, stream_id) == 0);
-static_assert(sizeof(::fuchsia::camera::common::RealWorldStreamConfig) == ::fuchsia::camera::common::RealWorldStreamConfig::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::RealWorldStreamConfig> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::RealWorldStreamConfig>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::RealWorldStreamConfig, stream_id) == 0);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::RealWorldStreamConfig) == ::llcpp::fuchsia::camera::common::RealWorldStreamConfig::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::Metadata> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::Metadata>);
-static_assert(offsetof(::fuchsia::camera::common::Metadata, timestamp) == 0);
-static_assert(sizeof(::fuchsia::camera::common::Metadata) == ::fuchsia::camera::common::Metadata::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::Metadata> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::Metadata>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::Metadata, timestamp) == 0);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::Metadata) == ::llcpp::fuchsia::camera::common::Metadata::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::FrameAvailableEvent> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::FrameAvailableEvent>);
-static_assert(offsetof(::fuchsia::camera::common::FrameAvailableEvent, frame_status) == 0);
-static_assert(offsetof(::fuchsia::camera::common::FrameAvailableEvent, buffer_id) == 4);
-static_assert(offsetof(::fuchsia::camera::common::FrameAvailableEvent, metadata) == 8);
-static_assert(sizeof(::fuchsia::camera::common::FrameAvailableEvent) == ::fuchsia::camera::common::FrameAvailableEvent::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::FrameAvailableEvent> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::FrameAvailableEvent>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::FrameAvailableEvent, frame_status) == 0);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::FrameAvailableEvent, buffer_id) == 4);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::FrameAvailableEvent, metadata) == 8);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::FrameAvailableEvent) == ::llcpp::fuchsia::camera::common::FrameAvailableEvent::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::Stream::ReleaseFrameRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::camera::common::Stream::ReleaseFrameRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::camera::common::Stream::ReleaseFrameRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::camera::common::Stream::ReleaseFrameRequest)
-    == ::fuchsia::camera::common::Stream::ReleaseFrameRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::camera::common::Stream::ReleaseFrameRequest, buffer_id) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::camera::common::Stream::ReleaseFrameRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::camera::common::Stream::ReleaseFrameRequest)
+    == ::llcpp::fuchsia::camera::common::Stream::ReleaseFrameRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::Stream::ReleaseFrameRequest, buffer_id) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::Stream::OnFrameAvailableResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::camera::common::Stream::OnFrameAvailableResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::camera::common::Stream::OnFrameAvailableResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::camera::common::Stream::OnFrameAvailableResponse)
-    == ::fuchsia::camera::common::Stream::OnFrameAvailableResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::camera::common::Stream::OnFrameAvailableResponse, frame) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::camera::common::Stream::OnFrameAvailableResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::camera::common::Stream::OnFrameAvailableResponse)
+    == ::llcpp::fuchsia::camera::common::Stream::OnFrameAvailableResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::Stream::OnFrameAvailableResponse, frame) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::FrameRate> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::FrameRate>);
-static_assert(offsetof(::fuchsia::camera::common::FrameRate, frames_per_sec_numerator) == 0);
-static_assert(offsetof(::fuchsia::camera::common::FrameRate, frames_per_sec_denominator) == 4);
-static_assert(sizeof(::fuchsia::camera::common::FrameRate) == ::fuchsia::camera::common::FrameRate::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::FrameRate> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::FrameRate>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::FrameRate, frames_per_sec_numerator) == 0);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::FrameRate, frames_per_sec_denominator) == 4);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::FrameRate) == ::llcpp::fuchsia::camera::common::FrameRate::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::DeviceInfo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::DeviceInfo>);
-static_assert(offsetof(::fuchsia::camera::common::DeviceInfo, camera_id) == 0);
-static_assert(offsetof(::fuchsia::camera::common::DeviceInfo, vendor_id) == 8);
-static_assert(offsetof(::fuchsia::camera::common::DeviceInfo, product_id) == 10);
-static_assert(offsetof(::fuchsia::camera::common::DeviceInfo, max_stream_count) == 12);
-static_assert(offsetof(::fuchsia::camera::common::DeviceInfo, output_capabilities) == 16);
-static_assert(sizeof(::fuchsia::camera::common::DeviceInfo) == ::fuchsia::camera::common::DeviceInfo::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::DeviceInfo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::DeviceInfo>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::DeviceInfo, camera_id) == 0);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::DeviceInfo, vendor_id) == 8);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::DeviceInfo, product_id) == 10);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::DeviceInfo, max_stream_count) == 12);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::DeviceInfo, output_capabilities) == 16);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::DeviceInfo) == ::llcpp::fuchsia::camera::common::DeviceInfo::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::ArtificialStreamConfig> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::ArtificialStreamConfig>);
-static_assert(offsetof(::fuchsia::camera::common::ArtificialStreamConfig, stream_id) == 0);
-static_assert(sizeof(::fuchsia::camera::common::ArtificialStreamConfig) == ::fuchsia::camera::common::ArtificialStreamConfig::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::ArtificialStreamConfig> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::ArtificialStreamConfig>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::ArtificialStreamConfig, stream_id) == 0);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::ArtificialStreamConfig) == ::llcpp::fuchsia::camera::common::ArtificialStreamConfig::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::VirtualStreamConfig> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::VirtualStreamConfig>);
+struct IsFidlType<::llcpp::fuchsia::camera::common::VirtualStreamConfig> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::VirtualStreamConfig>);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::VideoFormat> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::VideoFormat>);
-static_assert(offsetof(::fuchsia::camera::common::VideoFormat, format) == 0);
-static_assert(offsetof(::fuchsia::camera::common::VideoFormat, rate) == 72);
-static_assert(sizeof(::fuchsia::camera::common::VideoFormat) == ::fuchsia::camera::common::VideoFormat::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::VideoFormat> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::VideoFormat>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VideoFormat, format) == 0);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VideoFormat, rate) == 72);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::VideoFormat) == ::llcpp::fuchsia::camera::common::VideoFormat::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::VirtualCameraConfig> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::camera::common::VirtualCameraConfig>);
-static_assert(offsetof(::fuchsia::camera::common::VirtualCameraConfig, formats) == 0);
-static_assert(offsetof(::fuchsia::camera::common::VirtualCameraConfig, info) == 16);
-static_assert(offsetof(::fuchsia::camera::common::VirtualCameraConfig, stream_config) == 40);
-static_assert(sizeof(::fuchsia::camera::common::VirtualCameraConfig) == ::fuchsia::camera::common::VirtualCameraConfig::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::camera::common::VirtualCameraConfig> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::VirtualCameraConfig>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VirtualCameraConfig, formats) == 0);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VirtualCameraConfig, info) == 16);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VirtualCameraConfig, stream_config) == 40);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::VirtualCameraConfig) == ::llcpp::fuchsia::camera::common::VirtualCameraConfig::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest)
-    == ::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest, config) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest)
+    == ::llcpp::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VirtualCameraFactory::CreateDeviceRequest, config) == 16);
 
 }  // namespace fidl

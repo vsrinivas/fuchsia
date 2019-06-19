@@ -14,6 +14,8 @@
 #include <lib/zx/eventpair.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace fidl {
 namespace test {
 namespace llcpp {
@@ -343,64 +345,65 @@ class DirEntTestInterface final {
 }  // namespace llcpp
 }  // namespace test
 }  // namespace fidl
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEnt> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl::test::llcpp::dirent::DirEnt>);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEnt, is_dir) == 0);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEnt, name) == 8);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEnt, some_flags) == 24);
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEnt) == ::fidl::test::llcpp::dirent::DirEnt::PrimarySize);
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEnt> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fidl::test::llcpp::dirent::DirEnt>);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEnt, is_dir) == 0);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEnt, name) == 8);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEnt, some_flags) == 24);
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEnt) == ::llcpp::fidl::test::llcpp::dirent::DirEnt::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest)
-    == ::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest, dirents) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest)
+    == ::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesRequest, dirents) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse)
-    == ::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse, num_dir) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse)
+    == ::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::CountNumDirectoriesResponse, num_dir) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse)
-    == ::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse, dirents) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse)
+    == ::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ReadDirResponse, dirents) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest)
-    == ::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest, dirents) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest)
+    == ::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::ConsumeDirectoriesRequest, dirents) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse)
-    == ::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse, dirents) == 16);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse)
+    == ::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OnDirentsResponse, dirents) == 16);
 
 template <>
-struct IsFidlType<::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest> : public std::true_type {};
-static_assert(sizeof(::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest)
-    == ::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest::PrimarySize);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest, dirents) == 16);
-static_assert(offsetof(::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest, ep) == 32);
+struct IsFidlMessage<::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest)
+    == ::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest, dirents) == 16);
+static_assert(offsetof(::llcpp::fidl::test::llcpp::dirent::DirEntTestInterface::OneWayDirentsRequest, ep) == 32);
 
 }  // namespace fidl

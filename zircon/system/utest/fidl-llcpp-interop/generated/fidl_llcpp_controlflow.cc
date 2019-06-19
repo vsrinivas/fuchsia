@@ -3,6 +3,8 @@
 #include <fidl_llcpp_controlflow.h>
 #include <memory>
 
+namespace llcpp {
+
 namespace fidl {
 namespace test {
 namespace llcpp {
@@ -236,3 +238,4 @@ void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(::f
 }  // namespace llcpp
 }  // namespace test
 }  // namespace fidl
+}  // namespace llcpp

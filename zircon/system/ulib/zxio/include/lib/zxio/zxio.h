@@ -13,8 +13,8 @@
 
 __BEGIN_CDECLS
 
-typedef fuchsia::io::NodeAttributes zxio_node_attr_t;
-typedef fuchsia::io::SeekOrigin zxio_seek_origin_t;
+typedef ::llcpp::fuchsia::io::NodeAttributes zxio_node_attr_t;
+typedef ::llcpp::fuchsia::io::SeekOrigin zxio_seek_origin_t;
 
 // An IO object.
 //

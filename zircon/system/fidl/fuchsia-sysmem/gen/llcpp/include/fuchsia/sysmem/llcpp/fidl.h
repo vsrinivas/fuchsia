@@ -14,6 +14,8 @@
 #include <lib/zx/vmo.h>
 #include <zircon/fidl.h>
 
+namespace llcpp {
+
 namespace fuchsia {
 namespace sysmem {
 
@@ -3959,381 +3961,382 @@ class BufferCollection final {
 
 }  // namespace sysmem
 }  // namespace fuchsia
+}  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::VmoBuffer> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::VmoBuffer>);
-static_assert(offsetof(::fuchsia::sysmem::VmoBuffer, vmo) == 0);
-static_assert(offsetof(::fuchsia::sysmem::VmoBuffer, vmo_usable_start) == 8);
-static_assert(sizeof(::fuchsia::sysmem::VmoBuffer) == ::fuchsia::sysmem::VmoBuffer::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::VmoBuffer> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::VmoBuffer>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::VmoBuffer, vmo) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::VmoBuffer, vmo_usable_start) == 8);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::VmoBuffer) == ::llcpp::fuchsia::sysmem::VmoBuffer::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest)
-    == ::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest, rights_attenuation_mask) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest, token_request) == 20);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest, rights_attenuation_mask) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionToken::DuplicateRequest, token_request) == 20);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Heap::AllocateVmoRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Heap::AllocateVmoRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Heap::AllocateVmoRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Heap::AllocateVmoRequest)
-    == ::fuchsia::sysmem::Heap::AllocateVmoRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Heap::AllocateVmoRequest, size) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Heap::AllocateVmoRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Heap::AllocateVmoRequest)
+    == ::llcpp::fuchsia::sysmem::Heap::AllocateVmoRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::AllocateVmoRequest, size) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Heap::AllocateVmoResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Heap::AllocateVmoResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Heap::AllocateVmoResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Heap::AllocateVmoResponse)
-    == ::fuchsia::sysmem::Heap::AllocateVmoResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Heap::AllocateVmoResponse, s) == 16);
-static_assert(offsetof(::fuchsia::sysmem::Heap::AllocateVmoResponse, vmo) == 20);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Heap::AllocateVmoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Heap::AllocateVmoResponse)
+    == ::llcpp::fuchsia::sysmem::Heap::AllocateVmoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::AllocateVmoResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::AllocateVmoResponse, vmo) == 20);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Heap::CreateResourceRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Heap::CreateResourceRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Heap::CreateResourceRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Heap::CreateResourceRequest)
-    == ::fuchsia::sysmem::Heap::CreateResourceRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Heap::CreateResourceRequest, vmo) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Heap::CreateResourceRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Heap::CreateResourceRequest)
+    == ::llcpp::fuchsia::sysmem::Heap::CreateResourceRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::CreateResourceRequest, vmo) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Heap::CreateResourceResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Heap::CreateResourceResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Heap::CreateResourceResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Heap::CreateResourceResponse)
-    == ::fuchsia::sysmem::Heap::CreateResourceResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Heap::CreateResourceResponse, s) == 16);
-static_assert(offsetof(::fuchsia::sysmem::Heap::CreateResourceResponse, id) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Heap::CreateResourceResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Heap::CreateResourceResponse)
+    == ::llcpp::fuchsia::sysmem::Heap::CreateResourceResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::CreateResourceResponse, s) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::CreateResourceResponse, id) == 24);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Heap::DestroyResourceRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Heap::DestroyResourceRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Heap::DestroyResourceRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Heap::DestroyResourceRequest)
-    == ::fuchsia::sysmem::Heap::DestroyResourceRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Heap::DestroyResourceRequest, id) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Heap::DestroyResourceRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Heap::DestroyResourceRequest)
+    == ::llcpp::fuchsia::sysmem::Heap::DestroyResourceRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Heap::DestroyResourceRequest, id) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::DriverConnector::ConnectRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::DriverConnector::ConnectRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::DriverConnector::ConnectRequest)
-    == ::fuchsia::sysmem::DriverConnector::ConnectRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::DriverConnector::ConnectRequest, allocator_request) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest)
+    == ::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::ConnectRequest, allocator_request) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse)
-    == ::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, status) == 16);
-static_assert(offsetof(::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, base_address) == 24);
-static_assert(offsetof(::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, size) == 32);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse)
+    == ::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, base_address) == 24);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::DriverConnector::GetProtectedMemoryInfoResponse, size) == 32);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest)
-    == ::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest, collection) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest)
+    == ::llcpp::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Allocator::AllocateNonSharedCollectionRequest, collection) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest)
-    == ::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest, token_request) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest)
+    == ::llcpp::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Allocator::AllocateSharedCollectionRequest, token_request) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::Allocator::BindSharedCollectionRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::Allocator::BindSharedCollectionRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::Allocator::BindSharedCollectionRequest)
-    == ::fuchsia::sysmem::Allocator::BindSharedCollectionRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::Allocator::BindSharedCollectionRequest, token) == 16);
-static_assert(offsetof(::fuchsia::sysmem::Allocator::BindSharedCollectionRequest, buffer_collection_request) == 20);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest)
+    == ::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest, token) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::Allocator::BindSharedCollectionRequest, buffer_collection_request) == 20);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::ImagePlane> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::ImagePlane>);
-static_assert(offsetof(::fuchsia::sysmem::ImagePlane, byte_offset) == 0);
-static_assert(offsetof(::fuchsia::sysmem::ImagePlane, bytes_per_row) == 4);
-static_assert(sizeof(::fuchsia::sysmem::ImagePlane) == ::fuchsia::sysmem::ImagePlane::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::ImagePlane> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImagePlane>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImagePlane, byte_offset) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImagePlane, bytes_per_row) == 4);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::ImagePlane) == ::llcpp::fuchsia::sysmem::ImagePlane::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferMemoryConstraints> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferMemoryConstraints>);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, min_size_bytes) == 0);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, max_size_bytes) == 4);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, physically_contiguous_required) == 8);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, secure_required) == 9);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, ram_domain_supported) == 10);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, cpu_domain_supported) == 11);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, inaccessible_domain_supported) == 12);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, heap_permitted_count) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemoryConstraints, heap_permitted) == 24);
-static_assert(sizeof(::fuchsia::sysmem::BufferMemoryConstraints) == ::fuchsia::sysmem::BufferMemoryConstraints::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferMemoryConstraints> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferMemoryConstraints>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, min_size_bytes) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, max_size_bytes) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, physically_contiguous_required) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, secure_required) == 9);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, ram_domain_supported) == 10);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, cpu_domain_supported) == 11);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, inaccessible_domain_supported) == 12);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, heap_permitted_count) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints, heap_permitted) == 24);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferMemoryConstraints) == ::llcpp::fuchsia::sysmem::BufferMemoryConstraints::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::FormatModifier> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::FormatModifier>);
-static_assert(offsetof(::fuchsia::sysmem::FormatModifier, value) == 0);
-static_assert(sizeof(::fuchsia::sysmem::FormatModifier) == ::fuchsia::sysmem::FormatModifier::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::FormatModifier> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::FormatModifier>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::FormatModifier, value) == 0);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::FormatModifier) == ::llcpp::fuchsia::sysmem::FormatModifier::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::PixelFormat> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::PixelFormat>);
-static_assert(offsetof(::fuchsia::sysmem::PixelFormat, type) == 0);
-static_assert(offsetof(::fuchsia::sysmem::PixelFormat, has_format_modifier) == 4);
-static_assert(offsetof(::fuchsia::sysmem::PixelFormat, format_modifier) == 8);
-static_assert(sizeof(::fuchsia::sysmem::PixelFormat) == ::fuchsia::sysmem::PixelFormat::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::PixelFormat> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::PixelFormat>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PixelFormat, type) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PixelFormat, has_format_modifier) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::PixelFormat, format_modifier) == 8);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::PixelFormat) == ::llcpp::fuchsia::sysmem::PixelFormat::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::ColorSpace> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::ColorSpace>);
-static_assert(offsetof(::fuchsia::sysmem::ColorSpace, type) == 0);
-static_assert(sizeof(::fuchsia::sysmem::ColorSpace) == ::fuchsia::sysmem::ColorSpace::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::ColorSpace> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ColorSpace>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ColorSpace, type) == 0);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::ColorSpace) == ::llcpp::fuchsia::sysmem::ColorSpace::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::ImageSpec> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::ImageSpec>);
-static_assert(offsetof(::fuchsia::sysmem::ImageSpec, min_width) == 0);
-static_assert(offsetof(::fuchsia::sysmem::ImageSpec, min_height) == 4);
-static_assert(offsetof(::fuchsia::sysmem::ImageSpec, layers) == 8);
-static_assert(offsetof(::fuchsia::sysmem::ImageSpec, pixel_format) == 16);
-static_assert(offsetof(::fuchsia::sysmem::ImageSpec, color_space) == 32);
-static_assert(sizeof(::fuchsia::sysmem::ImageSpec) == ::fuchsia::sysmem::ImageSpec::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::ImageSpec> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImageSpec>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageSpec, min_width) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageSpec, min_height) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageSpec, layers) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageSpec, pixel_format) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageSpec, color_space) == 32);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::ImageSpec) == ::llcpp::fuchsia::sysmem::ImageSpec::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferSpec> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferSpec>);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferSpec> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferSpec>);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::ImageFormat_2> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::ImageFormat_2>);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, pixel_format) == 0);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, coded_width) == 16);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, coded_height) == 20);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, bytes_per_row) == 24);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, display_width) == 28);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, display_height) == 32);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, layers) == 36);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, color_space) == 40);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, has_pixel_aspect_ratio) == 44);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, pixel_aspect_ratio_width) == 48);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat_2, pixel_aspect_ratio_height) == 52);
-static_assert(sizeof(::fuchsia::sysmem::ImageFormat_2) == ::fuchsia::sysmem::ImageFormat_2::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::ImageFormat_2> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImageFormat_2>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, pixel_format) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, coded_width) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, coded_height) == 20);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, bytes_per_row) == 24);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, display_width) == 28);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, display_height) == 32);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, layers) == 36);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, color_space) == 40);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, has_pixel_aspect_ratio) == 44);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, pixel_aspect_ratio_width) == 48);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat_2, pixel_aspect_ratio_height) == 52);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::ImageFormat_2) == ::llcpp::fuchsia::sysmem::ImageFormat_2::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::ImageFormatConstraints> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::ImageFormatConstraints>);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, pixel_format) == 0);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, color_spaces_count) == 16);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, color_space) == 20);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, min_coded_width) == 148);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, max_coded_width) == 152);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, min_coded_height) == 156);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, max_coded_height) == 160);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, min_bytes_per_row) == 164);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, max_bytes_per_row) == 168);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, max_coded_width_times_coded_height) == 172);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, layers) == 176);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, coded_width_divisor) == 180);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, coded_height_divisor) == 184);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, bytes_per_row_divisor) == 188);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, start_offset_divisor) == 192);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, display_width_divisor) == 196);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, display_height_divisor) == 200);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, required_min_coded_width) == 204);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, required_max_coded_width) == 208);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, required_min_coded_height) == 212);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, required_max_coded_height) == 216);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, required_min_bytes_per_row) == 220);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormatConstraints, required_max_bytes_per_row) == 224);
-static_assert(sizeof(::fuchsia::sysmem::ImageFormatConstraints) == ::fuchsia::sysmem::ImageFormatConstraints::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::ImageFormatConstraints> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImageFormatConstraints>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, pixel_format) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, color_spaces_count) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, color_space) == 20);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, min_coded_width) == 148);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, max_coded_width) == 152);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, min_coded_height) == 156);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, max_coded_height) == 160);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, min_bytes_per_row) == 164);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, max_bytes_per_row) == 168);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, max_coded_width_times_coded_height) == 172);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, layers) == 176);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, coded_width_divisor) == 180);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, coded_height_divisor) == 184);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, bytes_per_row_divisor) == 188);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, start_offset_divisor) == 192);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, display_width_divisor) == 196);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, display_height_divisor) == 200);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, required_min_coded_width) == 204);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, required_max_coded_width) == 208);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, required_min_coded_height) == 212);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, required_max_coded_height) == 216);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, required_min_bytes_per_row) == 220);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormatConstraints, required_max_bytes_per_row) == 224);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::ImageFormatConstraints) == ::llcpp::fuchsia::sysmem::ImageFormatConstraints::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::ImageFormat> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::ImageFormat>);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat, width) == 0);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat, height) == 4);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat, layers) == 8);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat, pixel_format) == 16);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat, color_space) == 32);
-static_assert(offsetof(::fuchsia::sysmem::ImageFormat, planes) == 36);
-static_assert(sizeof(::fuchsia::sysmem::ImageFormat) == ::fuchsia::sysmem::ImageFormat::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::ImageFormat> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::ImageFormat>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat, width) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat, height) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat, layers) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat, pixel_format) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat, color_space) == 32);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::ImageFormat, planes) == 36);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::ImageFormat) == ::llcpp::fuchsia::sysmem::ImageFormat::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferFormat> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferFormat>);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferFormat> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferFormat>);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollectionInfo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferCollectionInfo>);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo, buffer_count) == 0);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo, format) == 8);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo, vmos) == 88);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo, vmo_size) == 344);
-static_assert(sizeof(::fuchsia::sysmem::BufferCollectionInfo) == ::fuchsia::sysmem::BufferCollectionInfo::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionInfo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferCollectionInfo>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo, buffer_count) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo, format) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo, vmos) == 88);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo, vmo_size) == 344);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionInfo) == ::llcpp::fuchsia::sysmem::BufferCollectionInfo::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferMemorySettings> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferMemorySettings>);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemorySettings, size_bytes) == 0);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemorySettings, is_physically_contiguous) == 4);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemorySettings, is_secure) == 5);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemorySettings, coherency_domain) == 8);
-static_assert(offsetof(::fuchsia::sysmem::BufferMemorySettings, heap) == 16);
-static_assert(sizeof(::fuchsia::sysmem::BufferMemorySettings) == ::fuchsia::sysmem::BufferMemorySettings::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferMemorySettings> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferMemorySettings>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemorySettings, size_bytes) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemorySettings, is_physically_contiguous) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemorySettings, is_secure) == 5);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemorySettings, coherency_domain) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferMemorySettings, heap) == 16);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferMemorySettings) == ::llcpp::fuchsia::sysmem::BufferMemorySettings::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::SingleBufferSettings> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::SingleBufferSettings>);
-static_assert(offsetof(::fuchsia::sysmem::SingleBufferSettings, buffer_settings) == 0);
-static_assert(offsetof(::fuchsia::sysmem::SingleBufferSettings, has_image_format_constraints) == 24);
-static_assert(offsetof(::fuchsia::sysmem::SingleBufferSettings, image_format_constraints) == 32);
-static_assert(sizeof(::fuchsia::sysmem::SingleBufferSettings) == ::fuchsia::sysmem::SingleBufferSettings::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::SingleBufferSettings> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::SingleBufferSettings>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SingleBufferSettings, buffer_settings) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SingleBufferSettings, has_image_format_constraints) == 24);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SingleBufferSettings, image_format_constraints) == 32);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SingleBufferSettings) == ::llcpp::fuchsia::sysmem::SingleBufferSettings::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::SingleBufferInfo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::SingleBufferInfo>);
-static_assert(offsetof(::fuchsia::sysmem::SingleBufferInfo, settings) == 0);
-static_assert(offsetof(::fuchsia::sysmem::SingleBufferInfo, buffer) == 264);
-static_assert(sizeof(::fuchsia::sysmem::SingleBufferInfo) == ::fuchsia::sysmem::SingleBufferInfo::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::SingleBufferInfo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::SingleBufferInfo>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SingleBufferInfo, settings) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::SingleBufferInfo, buffer) == 264);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::SingleBufferInfo) == ::llcpp::fuchsia::sysmem::SingleBufferInfo::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollectionInfo_2> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferCollectionInfo_2>);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo_2, buffer_count) == 0);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo_2, settings) == 8);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionInfo_2, buffers) == 272);
-static_assert(sizeof(::fuchsia::sysmem::BufferCollectionInfo_2) == ::fuchsia::sysmem::BufferCollectionInfo_2::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionInfo_2> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferCollectionInfo_2>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo_2, buffer_count) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo_2, settings) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionInfo_2, buffers) == 272);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionInfo_2) == ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest)
-    == ::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest, status) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest, buffer_collection_info) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnBuffersAllocatedRequest, buffer_collection_info) == 24);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest)
-    == ::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest, status) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest, buffer_info) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionEvents::OnAllocateSingleBufferDoneRequest, buffer_info) == 24);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferUsage> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferUsage>);
-static_assert(offsetof(::fuchsia::sysmem::BufferUsage, cpu) == 0);
-static_assert(offsetof(::fuchsia::sysmem::BufferUsage, vulkan) == 4);
-static_assert(offsetof(::fuchsia::sysmem::BufferUsage, display) == 8);
-static_assert(offsetof(::fuchsia::sysmem::BufferUsage, video) == 12);
-static_assert(sizeof(::fuchsia::sysmem::BufferUsage) == ::fuchsia::sysmem::BufferUsage::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferUsage> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferUsage>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, cpu) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, vulkan) == 4);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, display) == 8);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferUsage, video) == 12);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferUsage) == ::llcpp::fuchsia::sysmem::BufferUsage::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollectionConstraints> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fuchsia::sysmem::BufferCollectionConstraints>);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, usage) == 0);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_camping) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_dedicated_slack) == 20);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_shared_slack) == 24);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count) == 28);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, max_buffer_count) == 32);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, has_buffer_memory_constraints) == 36);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, buffer_memory_constraints) == 40);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints_count) == 320);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints) == 328);
-static_assert(sizeof(::fuchsia::sysmem::BufferCollectionConstraints) == ::fuchsia::sysmem::BufferCollectionConstraints::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollectionConstraints> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::sysmem::BufferCollectionConstraints>);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, usage) == 0);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_camping) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_dedicated_slack) == 20);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count_for_shared_slack) == 24);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, min_buffer_count) == 28);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, max_buffer_count) == 32);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, has_buffer_memory_constraints) == 36);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, buffer_memory_constraints) == 40);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints_count) == 320);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints, image_format_constraints) == 328);
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollectionConstraints) == ::llcpp::fuchsia::sysmem::BufferCollectionConstraints::PrimarySize);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::SetEventSinkRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::SetEventSinkRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::SetEventSinkRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::SetEventSinkRequest)
-    == ::fuchsia::sysmem::BufferCollection::SetEventSinkRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::SetEventSinkRequest, events) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::SetEventSinkRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::SetEventSinkRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::SetEventSinkRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::SetEventSinkRequest, events) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::SetConstraintsRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::SetConstraintsRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::SetConstraintsRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::SetConstraintsRequest)
-    == ::fuchsia::sysmem::BufferCollection::SetConstraintsRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::SetConstraintsRequest, has_constraints) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::SetConstraintsRequest, constraints) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::SetConstraintsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::SetConstraintsRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::SetConstraintsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::SetConstraintsRequest, has_constraints) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::SetConstraintsRequest, constraints) == 24);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse)
-    == ::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse, status) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse, buffer_collection_info) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForBuffersAllocatedResponse, buffer_collection_info) == 24);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse)
-    == ::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::CheckBuffersAllocatedResponse, status) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest)
-    == ::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest, buffer_index) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::CloseSingleBufferRequest, buffer_index) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest)
-    == ::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest, buffer_index) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::AllocateSingleBufferRequest, buffer_index) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest)
-    == ::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest, buffer_index) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedRequest, buffer_index) == 16);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse)
-    == ::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse, status) == 16);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse, buffer_info) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::WaitForSingleBufferAllocatedResponse, buffer_info) == 24);
 
 template <>
-struct IsFidlType<::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest> : public std::true_type {};
-static_assert(sizeof(::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest)
-    == ::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest::PrimarySize);
-static_assert(offsetof(::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest, buffer_index) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest)
+    == ::llcpp::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysmem::BufferCollection::CheckSingleBufferAllocatedRequest, buffer_index) == 16);
 
 }  // namespace fidl

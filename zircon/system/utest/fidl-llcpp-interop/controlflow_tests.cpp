@@ -28,7 +28,7 @@
 // Control flow tests: manually interact with a server and test for epitaph and shutdown.
 namespace {
 
-namespace gen = fidl::test::llcpp::controlflow;
+namespace gen = ::llcpp::fidl::test::llcpp::controlflow;
 
 class Server : public gen::ControlFlow::Interface {
 public:

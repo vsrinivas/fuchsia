@@ -15,7 +15,7 @@
 
 #include "private.h"
 
-namespace fio = fuchsia::io;
+namespace fio = ::llcpp::fuchsia::io;
 
 #define ZXDEBUG 0
 
