@@ -358,6 +358,19 @@ mod internal {
             Self::Version::MULTICAST_SUBNET.contains(*self)
         }
 
+        /// Is this a unicast address in the context of the given subnet?
+        ///
+        /// `is_unicast_in_subnet` returns `true` if this address is none of:
+        /// - a multicast address
+        /// - the IPv4 global broadcast address
+        /// - the IPv4 subnet-specific broadcast address for the given `subnet`
+        ///
+        /// Note one exception to these rules: If `subnet` is an IPv4 /32, then
+        /// the single unicast address in the subnet is also technically the
+        /// subnet broadcast address. In this case, `is_unicast_in_subnet` will
+        /// return `true`.
+        fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool;
+
         // TODO(joshlf): Is this the right naming convention?
 
         /// Invoke a function on this address if it is an `Ipv4Address` or
@@ -427,6 +440,12 @@ mod internal {
 
         fn into_ip_addr(self) -> IpAddr {
             IpAddr::V4(self)
+        }
+
+        fn is_unicast_in_subnet(&self, subnet: &Subnet<Self>) -> bool {
+            !self.is_multicast()
+                && !self.is_global_broadcast()
+                && (subnet.prefix() == 32 || *self != subnet.broadcast())
         }
 
         fn with_v4<O, F: Fn(Ipv4Addr) -> O>(&self, f: F, default: O) -> O {
@@ -539,6 +558,10 @@ mod internal {
             IpAddr::V6(self)
         }
 
+        fn is_unicast_in_subnet(&self, _subnet: &Subnet<Self>) -> bool {
+            !self.is_multicast()
+        }
+
         fn with_v4<O, F: Fn(Ipv4Addr) -> O>(&self, f: F, default: O) -> O {
             default
         }
@@ -576,6 +599,25 @@ mod internal {
     impl Debug for Ipv6Addr {
         fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
             Display::fmt(self, f)
+        }
+    }
+
+    /// A multicast IP address.
+    ///
+    /// A `MulticastAddr` is wrapper around the IP address type `A` which
+    /// guarantees that it is a multicast address.
+    pub struct MulticastAddr<A: IpAddress>(A);
+
+    impl<A: IpAddress> MulticastAddr<A> {
+        /// Constructs a new `MulticastAddr`.
+        ///
+        /// `new` returns `None` if `addr` is not a multicast address (according
+        /// to [`IpAddress::is_multicast`]).
+        pub fn new(addr: A) -> Option<MulticastAddr<A>> {
+            if !addr.is_multicast() {
+                return None;
+            }
+            Some(MulticastAddr(addr))
         }
     }
 
@@ -761,7 +803,8 @@ mod internal {
     /// An address and that address' subnet.
     ///
     /// An `AddrSubnet` is a pair of an address and a subnet which maintains the
-    /// invariant that the address is guaranteed to be in the subnet.
+    /// invariant that the address is guaranteed to be a unicast address in the
+    /// subnet.
     #[derive(Copy, Clone, Eq, PartialEq)]
     pub struct AddrSubnet<A> {
         addr: A,
@@ -775,12 +818,17 @@ mod internal {
         /// length. The network address of the subnet is taken to be the first
         /// `prefix` bits of the address. It returns `None` if `prefix` is
         /// longer than the number of bits in this type of IP address (32 for
-        /// IPv4 and 128 for IPv6).
+        /// IPv4 and 128 for IPv6) or if `addr` is not a unicast address in the
+        /// resulting subnet (see [`IpAddress::is_unicast_in_subnet`]).
         pub(crate) fn new(addr: A, prefix: u8) -> Option<AddrSubnet<A>> {
             if prefix > A::BYTES * 8 {
                 return None;
             }
-            Some(AddrSubnet { addr, subnet: Subnet { network: addr.mask(prefix), prefix } })
+            let subnet = Subnet { network: addr.mask(prefix), prefix };
+            if !addr.is_unicast_in_subnet(&subnet) {
+                return None;
+            }
+            Some(AddrSubnet { addr, subnet })
         }
 
         /// Get the address.
@@ -1056,10 +1104,32 @@ mod internal {
             // Network address has more than top 8 bits set
             assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), None);
 
-            AddrSubnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap();
+            AddrSubnet::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
             // Prefix exceeds 32 bits (use assert, not assert_eq, because
             // AddrSubnet doesn't impl Debug)
-            assert!(AddrSubnet::new(Ipv4Addr::new([255, 255, 255, 255]), 33) == None);
+            assert!(AddrSubnet::new(Ipv4Addr::new([1, 2, 3, 4]), 33) == None);
+            // Global broadcast
+            assert!(AddrSubnet::new(Ipv4::GLOBAL_BROADCAST_ADDRESS, 16) == None);
+            // Subnet broadcast
+            assert!(AddrSubnet::new(Ipv4Addr::new([192, 168, 255, 255]), 16) == None);
+            // Multicast
+            assert!(AddrSubnet::new(Ipv4Addr::new([224, 0, 0, 1]), 16) == None);
+        }
+
+        #[test]
+        fn test_is_unicast_in_subnet() {
+            // Valid unicast in subnet
+            assert!(Ipv4Addr::new([1, 2, 3, 4])
+                .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
+            // Global broadcast
+            assert!(!Ipv4::GLOBAL_BROADCAST_ADDRESS
+                .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 16).unwrap()));
+            // Subnet broadcast
+            assert!(!Ipv4Addr::new([1, 2, 255, 255])
+                .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([1, 2, 0, 0]), 16).unwrap()));
+            // Multicast
+            assert!(!Ipv4Addr::new([224, 0, 0, 1])
+                .is_unicast_in_subnet(&Subnet::new(Ipv4Addr::new([224, 0, 0, 0]), 8).unwrap()));
         }
 
         macro_rules! add_mask_test {
