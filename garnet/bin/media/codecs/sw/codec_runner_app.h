@@ -26,6 +26,9 @@ class CodecRunnerApp {
         startup_context_(component::StartupContext::CreateFromStartupInfo()) {}
 
   void Run() {
+    zx_status_t status = syslog::InitLogger();
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to init syslog: %d", status);
+
     // Lives until after Loop.Run() which is fine since it is not referenced
     // after Loop.Run().
     auto codec_admission_control =
