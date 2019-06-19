@@ -2,10 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-## Temporary to support soft transition
+group("bundles") {
+  testonly = true
+  deps = [
+    ":ermine",
+  ]
+}
+
+## packages required to run ermine
 group("ermine") {
   testonly = true
   public_deps = [
-    "//src/experiences/session_shells:ermine",
+    ":ermine_config",
+    "//topaz/packages/prod:ermine",
+  ]
+}
+
+group("ermine_config") {
+  testonly = true
+  public_deps = [
+    "//topaz/packages/config:ermine",
   ]
 }
