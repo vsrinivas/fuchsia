@@ -29,10 +29,10 @@ Mixin class            | Function             | Purpose
 `ddk::Writable`        | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`      | **DdkGetSize()**     | returns size of device
 `ddk::Ioctlable`       | **DdkIoctl()**       | client's **ioctl()**
-`ddk::Messageable`     | **DdkMessage()**     | for FIDL RPC messages
+`ddk::Messageable`     | **DdkMessage()**     | for FIDL IPC messages
 `ddk::Suspendable`     | **DdkSuspend()**     | to suspend device
 `ddk::Resumable`       | **DdkResume()**      | to resume device
-`ddk::Rxrpcable`       | **DdkRxrpc()**       | RPC message for bus devices
+`ddk::Rxrpcable`       | **DdkRxrpc()**       | remote messages for bus devices
 
 When defining the class for your device, you specify which functions it will
 support by including the appropriate mixins.
