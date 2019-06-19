@@ -69,8 +69,8 @@ source_set("bug_report_schema") {
 if (current_toolchain == host_toolchain) {
   source_set("client_lib") {
     sources = [
-      "bug_report_client.cc",
-      "bug_report_client.h",
+      "client/bug_report_handler.cc",
+      "client/bug_report_handler.h",
     ]
 
     deps = [
@@ -85,7 +85,7 @@ if (current_toolchain == host_toolchain) {
     output_name = "bugreport"
 
     sources = [
-      "bug_report_client_main.cc",
+      "client/main.cc",
     ]
 
     deps = [

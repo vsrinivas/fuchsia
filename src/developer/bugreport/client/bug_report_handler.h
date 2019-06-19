@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_BUGREPORT_BUG_REPORT_CLIENT_H_
-#define SRC_DEVELOPER_BUGREPORT_BUG_REPORT_CLIENT_H_
+#ifndef SRC_DEVELOPER_BUGREPORT_CLIENT_BUG_REPORT_HANDLER_H_
+#define SRC_DEVELOPER_BUGREPORT_CLIENT_BUG_REPORT_HANDLER_H_
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -38,4 +38,4 @@ std::optional<std::vector<Target>> HandleBugReport(
 
 }  // namespace bugreport
 
-#endif  // SRC_DEVELOPER_BUGREPORT_BUG_REPORT_CLIENT_H_
+#endif  // SRC_DEVELOPER_BUGREPORT_CLIENT_BUG_REPORT_HANDLER_H_

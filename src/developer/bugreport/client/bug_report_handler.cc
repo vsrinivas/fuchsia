@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/bugreport/bug_report_client.h"
+#include "src/developer/bugreport/client/bug_report_handler.h"
 
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>

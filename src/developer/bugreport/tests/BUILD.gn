@@ -70,13 +70,13 @@ if (current_toolchain == host_toolchain) {
     testonly = true
 
     deps = [
-      ":bugreport_client_unittest",
+      ":bugreport_handler_unittest",
     ]
   }
 
-  test("bugreport_client_unittest") {
+  test("bugreport_handler_unittest") {
     sources = [
-      "bug_report_client_unittest.cc",
+      "bug_report_handler_unittest.cc",
     ]
 
     deps = [
