@@ -159,12 +159,6 @@ TEST(FtlTest, Stats) {
 class FtlTest : public zxtest::Test {
   public:
     using PageCount = uint32_t;
-    FtlTest() : rand_seed_(static_cast<uint32_t>(time(nullptr))) { srand(rand_seed_); }
-    ~FtlTest() {
-        if (zxtest::Runner::GetInstance()->CurrentTestHasFailures()) {
-            printf("rand seed: %u", rand_seed_);
-        }
-    }
 
     void SetUp() override;
 
@@ -187,10 +181,10 @@ class FtlTest : public zxtest::Test {
     ftl::Volume* volume_ = nullptr;
     fbl::Array<uint8_t> write_counters_;
     fbl::Array<uint32_t> page_buffer_;
-    uint32_t rand_seed_;  // TODO(rvargas): replace with framework provided seed when available.
 };
 
 void FtlTest::SetUp() {
+    srand(zxtest::Runner::GetInstance()->random_seed());
     ASSERT_TRUE(ftl_.Init(kDefaultOptions));
     volume_ = ftl_.volume();
     ASSERT_OK(volume_->Unmount());
@@ -299,6 +293,7 @@ class FtlExtendTest : public FtlTest {
 };
 
 void FtlExtendTest::SetUpBaseTest() {
+    srand(zxtest::Runner::GetInstance()->random_seed());
     volume_ = ftl_.volume();
     ASSERT_OK(volume_->Unmount());
 
