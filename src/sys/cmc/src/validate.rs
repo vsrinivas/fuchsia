@@ -2231,7 +2231,7 @@ mod tests {
             result = Ok(()),
         },
         test_validate_extra_schemas_feature_present => {
-            input = json!({"sandbox": {"features" : ["shell"]}, "program": {"binary": "a"}}),
+            input = json!({"sandbox": {"features" : ["deprecated-shell"]}, "program": {"binary": "a"}}),
             extra_schemas = &[(&BLOCK_SHELL_FEATURE_SCHEMA, None)],
             result = Err(Error::validate_schema(&BLOCK_SHELL_FEATURE_SCHEMA, "Not condition is not met at /sandbox/features/0")),
         },

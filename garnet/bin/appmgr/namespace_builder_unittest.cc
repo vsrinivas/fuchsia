@@ -79,7 +79,7 @@ TEST(NamespaceBuilder, Shell) {
   document.SetObject();
   rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
   rapidjson::Value feat_array(rapidjson::kArrayType);
-  feat_array.PushBack("shell", allocator);
+  feat_array.PushBack("deprecated-shell", allocator);
   document.AddMember("features", feat_array, allocator);
   rapidjson::Value services_array(rapidjson::kArrayType);
   document.AddMember("services", services_array, allocator);

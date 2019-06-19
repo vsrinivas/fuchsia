@@ -112,13 +112,13 @@ void NamespaceBuilder::AddSandbox(
     if (feature == "build-info") {
       PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data",
                               "/config/build-info");
-    } else if (feature == "root-ssl-certificates" || feature == "shell" ||
+    } else if (feature == "root-ssl-certificates" ||
                feature == "deprecated-shell") {
-      // "shell" implies "root-ssl-certificates"
+      // "deprecated-shell" implies "root-ssl-certificates"
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data",
                               "/config/ssl");
 
-      if (feature == "shell" || feature == "deprecated-shell") {
+      if (feature == "deprecated-shell") {
         // TODO(abarth): These permissions should depend on the envionment
         // in some way so that a shell running at a user-level scope doesn't
         // have access to all the device drivers and such.

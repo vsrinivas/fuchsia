@@ -10,7 +10,7 @@
           "type": "array",
           "items": {
             "not": {
-              "enum": ["shell"]
+              "enum": ["deprecated-shell"]
             }
           }
         }

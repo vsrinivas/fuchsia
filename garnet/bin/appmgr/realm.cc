@@ -601,7 +601,7 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
     return;
 
   SandboxMetadata sandbox;
-  sandbox.AddFeature("shell");
+  sandbox.AddFeature("deprecated-shell");
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));

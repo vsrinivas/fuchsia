@@ -90,7 +90,6 @@
               "deprecated-shell",
               "isolated-cache-storage",
               "isolated-persistent-storage",
-              "shell",
               "shell-commands",
               "root-ssl-certificates",
               "system-temp",

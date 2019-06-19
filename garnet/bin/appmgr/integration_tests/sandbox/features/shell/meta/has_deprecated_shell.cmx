@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/has_shell"
+        "binary": "test/has_deprecated_shell"
     },
     "sandbox": {
         "features": [
