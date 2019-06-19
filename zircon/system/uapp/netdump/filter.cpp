@@ -26,13 +26,14 @@ static inline bool match_address(AddressFieldType type, uint32_t src, uint32_t d
     return (type & DST_ADDR) && (dst == spec);
 }
 
-// The const uint8_t[] are in network byte order.
-static bool match_address(AddressFieldType type, size_t n, const uint8_t src[], const uint8_t dst[],
-                          const uint8_t spec[]) {
-    if ((type & SRC_ADDR) && std::equal(src, src + n, spec)) {
+// The address data are in network byte order.
+template <size_t N>
+static bool match_address(AddressFieldType type, const uint8_t src[], const uint8_t dst[],
+                          const std::array<uint8_t, N> spec) {
+    if ((type & SRC_ADDR) && std::equal(spec.begin(), spec.end(), src)) {
         return true;
     }
-    return (type & DST_ADDR) && (std::equal(dst, dst + n, spec));
+    return (type & DST_ADDR) && (std::equal(spec.begin(), spec.end(), dst));
 }
 
 FrameLengthFilter::FrameLengthFilter(uint16_t frame_len, LengthComparator comp) {
@@ -58,11 +59,11 @@ bool FrameLengthFilter::match(const Packet& packet) {
     return match_fn_(packet);
 }
 
-EthFilter::EthFilter(const uint8_t mac[ETH_ALEN], AddressFieldType type) {
+EthFilter::EthFilter(const MacAddress& mac, AddressFieldType type) {
     spec_ = Spec(std::in_place_type_t<Address>());
     Address* addr = std::get_if<Address>(&spec_);
     addr->type = type;
-    std::copy(mac, mac + ETH_ALEN, addr->mac);
+    addr->mac = mac; // Copy assignment.
 }
 
 bool EthFilter::match(const Packet& packet) {
@@ -70,8 +71,8 @@ bool EthFilter::match(const Packet& packet) {
         return false;
     }
     if (auto addr = std::get_if<Address>(&spec_)) {
-        return match_address(addr->type, ETH_ALEN,
-                             packet.frame->h_source, packet.frame->h_dest, addr->mac);
+        return match_address<ETH_ALEN>(addr->type, packet.frame->h_source, packet.frame->h_dest,
+                                       addr->mac);
     }
     return std::get<EthType>(spec_) == packet.frame->h_proto;
 }
@@ -154,28 +155,13 @@ IpFilter::IpFilter(uint32_t ipv4_addr, AddressFieldType type)
     };
 }
 
-class Ipv6AddrMatcher : public std::function<bool(const Packet& packet)> {
-public:
-    Ipv6AddrMatcher(const uint8_t addr[IP6_ADDR_LEN], AddressFieldType type)
-        : type_(type) {
-        std::copy(addr, addr + IP6_ADDR_LEN, addr_);
-    }
-
-    bool operator()(const Packet& packet) {
-        return match_address(type_, IP6_ADDR_LEN,
-                             packet.ipv6->src.u8, packet.ipv6->dst.u8, addr_);
-    }
-
-private:
-    const AddressFieldType type_;
-    uint8_t addr_[IP6_ADDR_LEN];
-};
-
-IpFilter::IpFilter(const uint8_t ipv6_addr[IP6_ADDR_LEN], AddressFieldType type)
+IpFilter::IpFilter(const IPv6Address& ipv6_addr, AddressFieldType type)
     : version_(6) {
-    // We construct the closure explicitly using a class to ensure
-    // the entire `ipv6_addr` is captured by copy.
-    match_fn_ = Ipv6AddrMatcher(ipv6_addr, type);
+    // Capture of `ipv6_addr` of type `std::array` is by-copy.
+    match_fn_ = [ipv6_addr, type](const Packet& packet) {
+        return match_address<IP6_ADDR_LEN>(type, packet.ipv6->src.u8, packet.ipv6->dst.u8,
+                                           ipv6_addr);
+    };
 }
 
 static constexpr uint16_t ETH_P_IP_NETWORK_BYTE_ORDER = 0x0008;
@@ -213,10 +199,13 @@ static inline bool port_in_range(uint16_t begin, uint16_t end, uint16_t port) {
 }
 
 PortFilter::PortFilter(std::vector<PortRange> ports, PortFieldType type)
-    : ports_(std::vector<PortRange>{}), type_(type) {
-    for (const PortFilter::PortRange& range : ports) {
-        ports_.emplace_back(ntohs(range.first), ntohs(range.second));
+    : type_(type) {
+    // Modify `ports` in place.
+    for (auto range_it = ports.begin(); range_it < ports.end(); ++range_it) {
+        range_it->first = ntohs(range_it->first);
+        range_it->second = ntohs(range_it->second);
     }
+    ports_ = std::move(ports);
 }
 
 bool PortFilter::match_ports(uint16_t src_port, uint16_t dst_port) {

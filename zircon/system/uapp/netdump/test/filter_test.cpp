@@ -5,7 +5,6 @@
 #include "filter.h"
 
 #include <algorithm>
-#include <cstring>
 
 #include <zxtest/zxtest.h>
 
@@ -13,16 +12,16 @@ namespace netdump::test {
 
 // Canonical packet data.
 static uint16_t frame_length = 2000; // bytes
-static uint8_t src_mac[] = {0xde, 0xad, 0xbe, 0xef, 0xd0, 0x0d};
-static uint8_t dst_mac[] = {0xab, 0xcd, 0xef, 0xab, 0xcd, 0xef};
-static uint16_t ip_pkt_length = htons(1842); //bytes
+static EthFilter::MacAddress src_mac = {0xde, 0xad, 0xbe, 0xef, 0xd0, 0x0d};
+static EthFilter::MacAddress dst_mac = {0xab, 0xcd, 0xef, 0xab, 0xcd, 0xef};
+static uint16_t ip_pkt_length = htons(1842); // bytes
 static uint8_t protocol = 0xab;
 static uint32_t ip4addr_src = 0xc0a80a04;
 static uint32_t ip4addr_dst = 0xfffefdfc;
-static uint8_t ip6addr_src[IP6_ADDR_LEN] = {0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0, 0,
-                                            0, 0, 0, 0, 0, 0, 0x88, 0x88};
-static uint8_t ip6addr_dst[IP6_ADDR_LEN] = {0x32, 0x11, 0xAB, 0xCD, 0x12, 0xFF, 0, 0,
-                                            0, 0, 0, 0, 0, 0, 0x12, 0x68};
+static IpFilter::IPv6Address ip6addr_src{0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0x88, 0x88};
+static IpFilter::IPv6Address ip6addr_dst{0x32, 0x11, 0xAB, 0xCD, 0x12, 0xFF, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0x12, 0x68};
 static uint16_t src_port = htons(6587);
 static uint16_t dst_port = htons(1234);
 
@@ -37,8 +36,8 @@ static Packet SetupEth(uint16_t ethtype) {
     Packet packet;
     packet.frame_length = frame_length;
     test_frame.h_proto = ethtype;
-    std::copy(src_mac, src_mac + ETH_ALEN, test_frame.h_source);
-    std::copy(dst_mac, dst_mac + ETH_ALEN, test_frame.h_dest);
+    std::copy(src_mac.begin(), src_mac.end(), test_frame.h_source);
+    std::copy(dst_mac.begin(), dst_mac.end(), test_frame.h_dest);
     packet.frame = &test_frame;
     return packet;
 }
@@ -56,8 +55,8 @@ static void SetupIPv6(Packet* packet) {
     reinterpret_cast<struct iphdr*>(&test_ipv6)->version = 6; // Version is set through ip4 pointer.
     test_ipv6.length = ip_pkt_length;
     test_ipv6.next_header = protocol;
-    std::copy(ip6addr_src, ip6addr_src + IP6_ADDR_LEN, test_ipv6.src.u8);
-    std::copy(ip6addr_dst, ip6addr_dst + IP6_ADDR_LEN, test_ipv6.dst.u8);
+    std::copy(ip6addr_src.begin(), ip6addr_src.end(), test_ipv6.src.u8);
+    std::copy(ip6addr_dst.begin(), ip6addr_dst.end(), test_ipv6.dst.u8);
     packet->ipv6 = &test_ipv6;
 }
 
@@ -102,8 +101,8 @@ TEST(NetdumpFilterTests, MacTest) {
     EthFilter matched_src = EthFilter(src_mac, SRC_ADDR);
     EthFilter matched_dst = EthFilter(dst_mac, DST_ADDR);
 
-    uint8_t unmatched_mac1[] = {0x0d, 0xd0, 0xef, 0xbe, 0xad, 0xde};
-    uint8_t unmatched_mac2[] = {0xef, 0xdc, 0xab, 0xef, 0xdc, 0xab};
+    EthFilter::MacAddress unmatched_mac1{0x0d, 0xd0, 0xef, 0xbe, 0xad, 0xde};
+    EthFilter::MacAddress unmatched_mac2{0xef, 0xdc, 0xab, 0xef, 0xdc, 0xab};
     EthFilter unmatched_src1 = EthFilter(unmatched_mac1, SRC_ADDR);
     EthFilter unmatched_src2 = EthFilter(unmatched_mac2, SRC_ADDR);
     EthFilter unmatched_dst1 = EthFilter(unmatched_mac1, DST_ADDR);
@@ -137,7 +136,7 @@ TEST(NetdumpFilterTests, VersionTest) {
     EXPECT_TRUE(ip6filter.match(packet));
 }
 
-TEST(NetdumpFilterTests, LengthTest) {
+TEST(NetdumpFilterTests, IPLengthTest) {
     Packet packet = SetupEth(htons(ETH_P_IP));
     SetupIPv4(&packet);
     EXPECT_FALSE(IpFilter(4, htons(40), LengthComparator::LEQ).match(packet));
@@ -194,8 +193,8 @@ TEST(NetdumpFilterTests, Ipv4AddrTest) {
 }
 
 TEST(NetdumpFilterTests, Ipv6AddrTest) {
-    uint8_t ip6addr_other[IP6_ADDR_LEN];
-    memset(&ip6addr_other, 123, IP6_ADDR_LEN);
+    IpFilter::IPv6Address ip6addr_other;
+    ip6addr_other.fill(123);
     Packet packet = SetupEth(htons(ETH_P_IPV6));
     SetupIPv6(&packet);
 
@@ -217,8 +216,8 @@ TEST(NetdumpFilterTests, Ipv6AddrTest) {
     EXPECT_FALSE(unmatched_src.match(packet));
     EXPECT_FALSE(unmatched_dst.match(packet));
 
-    memset(&ip6addr_src, 0, IP6_ADDR_LEN);
-    memset(&ip6addr_dst, 0, IP6_ADDR_LEN);
+    ip6addr_src.fill(0);
+    ip6addr_dst.fill(0);
     // If IpFilter did not make a copy of the given IP6 address on construction then
     // the following will fail.
     EXPECT_TRUE(matched_src.match(packet));

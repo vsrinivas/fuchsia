@@ -112,8 +112,9 @@ public:
     explicit EthFilter(uint16_t ethtype)
         : spec_(Spec(ethtype)) {}
 
+    using MacAddress = std::array<uint8_t, ETH_ALEN>;
     // A filter matching on MAC address.
-    EthFilter(const uint8_t mac[ETH_ALEN], AddressFieldType type);
+    EthFilter(const MacAddress& mac, AddressFieldType type);
 
     bool match(const Packet& packet) override;
 
@@ -124,7 +125,7 @@ private:
     using EthType = uint16_t;
     using Address =
         struct {
-        uint8_t mac[ETH_ALEN];
+        MacAddress mac;
         AddressFieldType type;
     };
     using Spec = std::variant<EthType, Address>;
@@ -150,8 +151,9 @@ public:
     // A filter matching on IPv4 address. `ipv4_addr` should be in network byte order.
     explicit IpFilter(uint32_t ipv4_addr, AddressFieldType type);
 
+    using IPv6Address = std::array<uint8_t, IP6_ADDR_LEN>;
     // A filter matching on IPv6 address. `ipv6_addr` should be in network byte order.
-    IpFilter(const uint8_t ipv6_addr[IP6_ADDR_LEN], AddressFieldType type);
+    IpFilter(const IPv6Address& ipv6_addr, AddressFieldType type);
 
     bool match(const Packet& packet) override;
 
