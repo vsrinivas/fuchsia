@@ -157,7 +157,7 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
 TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
   std::string remote_pid = "3141";
   std::string filter = "echo_client";
-  const char* argv[] = {"fakebinary",   "--filter",         filter.c_str(),
+  const char* argv[] = {"fakebinary",   "--remote_name",    filter.c_str(),
                         "--remote-pid", remote_pid.c_str(), "leftover",
                         "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);

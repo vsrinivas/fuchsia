@@ -84,7 +84,7 @@ the system, wait for a program with the substring "echo_client" to start, and
 automatically attach to it.
 
 ```sh
-fx fidlcat --filter echo_client
+fx fidlcat --remote-name echo_client
 ```
 
 ## Running without the fx tool

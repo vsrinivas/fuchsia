@@ -123,22 +123,22 @@ void EnqueueStartup(
     workflow.SetBreakpoints(process_koid);
   };
 
-  auto attach = [&workflow, process_koid, filter = options.filter, params,
-                 set_breakpoints =
-                     std::move(set_breakpoints)](const zxdb::Err& err) {
-    if (!err.ok()) {
-      FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
-      return;
-    }
-    FXL_LOG(INFO) << "Connected!";
-    if (process_koid != ULLONG_MAX) {
-      workflow.Attach(process_koid, set_breakpoints);
-    } else if (!filter.empty()) {
-      workflow.Filter(filter, set_breakpoints);
-    } else {
-      workflow.Launch(params, set_breakpoints);
-    }
-  };
+  auto attach =
+      [&workflow, process_koid, remote_name = options.remote_name, params,
+       set_breakpoints = std::move(set_breakpoints)](const zxdb::Err& err) {
+        if (!err.ok()) {
+          FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
+          return;
+        }
+        FXL_LOG(INFO) << "Connected!";
+        if (process_koid != ULLONG_MAX) {
+          workflow.Attach(process_koid, set_breakpoints);
+        } else if (!remote_name.empty()) {
+          workflow.Filter(remote_name, set_breakpoints);
+        } else {
+          workflow.Launch(params, set_breakpoints);
+        }
+      };
 
   auto connect = [&workflow, attach = std::move(attach), host, port]() {
     FXL_LOG(INFO) << "Connecting to port " << port << " on " << host << "...";
