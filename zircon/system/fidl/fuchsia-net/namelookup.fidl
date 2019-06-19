@@ -26,16 +26,13 @@ enum LookupError {
     INTERNAL_ERROR = 4;
 };
 
-table LookupIpOptions {
+bits LookupIpOptions : uint8 {
     /// If the lookup should return IPv4 addresses.
-    /// Defaults to true.
-    1: bool v4_addrs;
+    V4_ADDRS = 0b001;
     /// If the lookup should return IPv6 addresses.
-    /// Defaults to true.
-    2: bool v6_addrs;
+    V6_ADDRS = 0b010;
     /// If the lookup should return a canonical_name, if one exists.
-    /// Defaults to false.
-    3: bool cname_lookup;
+    CNAME_LOOKUP = 0b100;
 };
 
 const uint64 MAX_HOSTNAME_SIZE = 255;
