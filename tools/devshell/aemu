@@ -5,13 +5,14 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port>] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
+## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
 ##   -g <port> enable gRPC service on port to control the emulator
+##   -r <fps> webrtc frame rate when using gRPC service, default is 30
 ##   -w <size> window size, default is 1280x800
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
@@ -34,6 +35,7 @@ AEMU_DIR=""
 UPSCRIPT=no
 WINDOW_SIZE="1280x800"
 GRPC=0
+RTCFPS="30"
 GPU="host"
 VULKAN=1
 
@@ -65,6 +67,10 @@ while [[ $# -ge 1 ]]; do
   -g)
     shift
     GRPC="$1"
+    ;;
+  -r)
+    shift
+    RTCFPS="$1"
     ;;
   -w)
     shift
@@ -163,6 +169,7 @@ fi
 
 if (( $GRPC )); then
   OPTIONS+=("-grpc" "$GRPC")
+  OPTIONS+=("-rtcfps" "$RTCFPS")
 fi
 
 if (( $NET )); then
