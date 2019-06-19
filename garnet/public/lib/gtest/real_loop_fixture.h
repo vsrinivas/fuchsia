@@ -62,12 +62,28 @@ class RealLoopFixture : public ::testing::Test {
   bool RunLoopWithTimeout(zx::duration timeout = zx::sec(1));
 
   // Runs the loop until the condition returns true.
+  //
+  // |step| specifies the interval at which this method should wake up to poll
+  // |condition|. If |step| is |zx::duration::infinite()|, no polling timer is
+  // set. Instead, the condition is checked initially and after anything happens
+  // on the loop (e.g. a task executes). This is useful when the caller knows
+  // that |condition| will be made true by a task running on the loop. This will
+  // generally be the case unless |condition| is made true on a different
+  // thread.
   void RunLoopUntil(fit::function<bool()> condition,
                     zx::duration step = zx::msec(10));
 
   // Runs the loop until the condition returns true or the timeout is reached.
   // Returns |true| if the condition was met, and |false| if the timeout was
   // reached.
+  //
+  // |step| specifies the interval at which this method should wake up to poll
+  // |condition|. If |step| is |zx::duration::infinite()|, no polling timer is
+  // set. Instead, the condition is checked initially and after anything happens
+  // on the loop (e.g. a task executes). This is useful when the caller knows
+  // that |condition| will be made true by a task running on the loop. This will
+  // generally be the case unless |condition| is made true on a different
+  // thread.
   bool RunLoopWithTimeoutOrUntil(fit::function<bool()> condition,
                                  zx::duration timeout = zx::sec(1),
                                  zx::duration step = zx::msec(10));

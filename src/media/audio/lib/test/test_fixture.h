@@ -30,7 +30,7 @@ namespace media::audio::test {
 //   1) False-positive test failures are expensive and must be eliminated.
 //   2) Having done that, streamline test run-time (time=resources=cost);
 constexpr zx::duration kDurationResponseExpected = zx::sec(60);
-constexpr zx::duration kDurationGranularity = zx::msec(1);
+constexpr zx::duration kDurationGranularity = zx::duration::infinite();
 
 constexpr char kDisconnectErr[] =
     "Connection to fuchsia.media FIDL interface was lost!\n";

@@ -22,8 +22,8 @@ TEST_F(RealLoopFixtureTest, Timeout) {
 }
 
 TEST_F(RealLoopFixtureTest, NoTimeout) {
-  QuitLoop();
   // Check that the first run loop doesn't hit the timeout.
+  QuitLoop();
   EXPECT_FALSE(RunLoopWithTimeout(zx::msec(10)));
   // But the second does.
   EXPECT_TRUE(RunLoopWithTimeout(zx::msec(10)));
