@@ -149,7 +149,7 @@ impl Session {
             SessionEvent::OnPlaybackStatusChanged { playback_status } => control_handle
                 .send_on_playback_status_changed(clone_playback_status(playback_status)),
             SessionEvent::OnMetadataChanged { media_metadata } => {
-                control_handle.send_on_metadata_changed(&mut clone_metadata(media_metadata))
+                control_handle.send_on_metadata_changed(&mut media_metadata.clone())
             }
             SessionEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => control_handle
                 .send_on_playback_capabilities_changed(clone_playback_capabilities(
@@ -225,7 +225,7 @@ impl Clone for SessionState {
                 .playback_capabilities
                 .as_ref()
                 .map(clone_playback_capabilities),
-            media_metadata: self.media_metadata.as_ref().map(clone_metadata),
+            media_metadata: self.media_metadata.clone(),
             media_images: self
                 .media_images
                 .iter()
@@ -261,8 +261,7 @@ impl SessionState {
 
         if let Some(event) = self
             .media_metadata
-            .as_ref()
-            .map(clone_metadata)
+            .clone()
             .map(|media_metadata| SessionEvent::OnMetadataChanged { media_metadata })
         {
             events.push(event);
@@ -284,7 +283,7 @@ impl SessionState {
                 self.playback_status.get_or_insert_with(|| clone_playback_status(playback_status));
             }
             SessionEvent::OnMetadataChanged { ref media_metadata } => {
-                self.media_metadata.get_or_insert_with(|| clone_metadata(media_metadata));
+                self.media_metadata.get_or_insert_with(|| media_metadata.clone());
             }
             SessionEvent::OnPlaybackCapabilitiesChanged { ref playback_capabilities } => {
                 self.playback_capabilities

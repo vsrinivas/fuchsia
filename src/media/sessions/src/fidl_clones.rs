@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 //! Remove this file entirely when FIDL-526 is fixed.
 
-use fidl_fuchsia_math::*;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions::*;
 
@@ -38,22 +37,6 @@ pub fn clone_playback_status(playback_status: &PlaybackStatus) -> PlaybackStatus
     }
 }
 
-impl Clone for Clonable<Metadata> {
-    fn clone(&self) -> Self {
-        Clonable(clone_metadata(&self.0))
-    }
-}
-
-pub fn clone_metadata(metadata: &Metadata) -> Metadata {
-    Metadata {
-        properties: metadata
-            .properties
-            .iter()
-            .map(|p| Property { label: p.label.clone(), value: p.value.clone() })
-            .collect(),
-    }
-}
-
 impl Clone for Clonable<PlaybackCapabilities> {
     fn clone(&self) -> Self {
         Clonable(clone_playback_capabilities(&self.0))
@@ -72,16 +55,12 @@ pub fn clone_playback_capabilities(
     }
 }
 
-pub fn clone_size(size: &Size) -> Size {
-    Size { width: size.width, height: size.height }
-}
-
 pub fn clone_media_image(media_image: &MediaImage) -> MediaImage {
     MediaImage {
         image_type: media_image.image_type.clone(),
         url: media_image.url.clone(),
         mime_type: media_image.mime_type.clone(),
-        sizes: media_image.sizes.iter().map(clone_size).collect(),
+        sizes: media_image.sizes.iter().cloned().collect(),
     }
 }
 
@@ -99,7 +78,7 @@ pub fn clone_session_event(event: &SessionEvent) -> SessionEvent {
             }
         }
         SessionEvent::OnMetadataChanged { media_metadata } => {
-            SessionEvent::OnMetadataChanged { media_metadata: clone_metadata(&media_metadata) }
+            SessionEvent::OnMetadataChanged { media_metadata: media_metadata.clone() }
         }
         SessionEvent::OnPlaybackCapabilitiesChanged { playback_capabilities } => {
             SessionEvent::OnPlaybackCapabilitiesChanged {

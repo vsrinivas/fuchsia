@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{clone_session_id_handle, fidl_clones::clone_size, MAX_EVENTS_SENT_WITHOUT_ACK};
+use crate::{clone_session_id_handle, MAX_EVENTS_SENT_WITHOUT_ACK};
 use failure::{Error, ResultExt};
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{create_endpoints, ClientEnd};
@@ -40,10 +40,7 @@ fn clone_buffer(src: &Buffer) -> Buffer {
 }
 
 fn clone_media_image_bitmap(src: &MediaImageBitmap) -> MediaImageBitmap {
-    MediaImageBitmap {
-        size: clone_size(&src.size),
-        argb8888_pixel_data: clone_buffer(&src.argb8888_pixel_data),
-    }
+    MediaImageBitmap { size: src.size, argb8888_pixel_data: clone_buffer(&src.argb8888_pixel_data) }
 }
 
 fn bitmaps_refer_to_same_memory(a: &MediaImageBitmap, b: &MediaImageBitmap) -> bool {
@@ -378,8 +375,8 @@ async fn service_routes_bitmaps() {
 
     fasync::spawn(serve_fut(
         expected_url.clone(),
-        clone_size(&expected_minimum_size),
-        clone_size(&expected_desired_size),
+        expected_minimum_size,
+        expected_desired_size,
         clone_media_image_bitmap(&expected_bitmap),
     ));
 
