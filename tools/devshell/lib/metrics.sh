@@ -8,7 +8,7 @@
 ### depends on FUCHSIA_DIR being defined correctly.
 
 declare -r GA_PROPERTY_ID="UA-127897021-6"
-declare -r TRACK_ALL_ARGS="set"
+declare -r TRACK_ALL_ARGS="set,fidlcat"
 declare -r TRACK_RESULTS="set,build"
 declare -r DEBUG_LOG_CONFIG="/tmp/.fx_metrics_debugfile"
 
