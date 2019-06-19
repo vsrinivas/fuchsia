@@ -53,12 +53,16 @@ class AppModel {
   final _startupContext = StartupContext.fromStartupInfo();
 
   final ClustersModel clustersModel = ClustersModel();
+  final ValueNotifier<DateTime> currentTime =
+      ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
   ValueNotifier<ChildViewConnection> askChildViewConnection =
       ValueNotifier<ChildViewConnection>(null);
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
+  ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   KeyChordListener _keyboardListener;
   StatusModel status;
+  String keyboardShortcuts = 'Help Me!';
 
   AppModel() {
     StartupContext.fromStartupInfo()
@@ -94,6 +98,7 @@ class AppModel {
       _keyboardListener = KeyChordListener(
         presentation: sessionShell.presentation,
         actions: {
+          'shortcuts': onKeyboard,
           'ask': onMeta,
           'fullscreen': onFullscreen,
           'cancel': onCancel,
@@ -105,10 +110,15 @@ class AppModel {
         },
         bindings: bindings,
       )..listen();
+      keyboardShortcuts = _keyboardListener.helpText();
     } else {
       throw ArgumentError.value(
           'keyboard_shortcuts.json', 'fileName', 'File does not exist');
     }
+
+    // Update the current time every second.
+    Timer.periodic(
+        Duration(seconds: 1), (timer) => currentTime.value = DateTime.now());
 
     // Display the Ask bar after a brief duration.
     Timer(Duration(milliseconds: 500), onMeta);
@@ -177,27 +187,37 @@ class AppModel {
       clustersModel.fullscreenStory.restore();
     } else if (sessionShell.focusedStory != null) {
       clustersModel.maximize(sessionShell.focusedStory.id);
-      // Hide the ask bar if visible.
-      if (askVisibility.value) {
-        onCancel();
-      }
+      // Hide system overlays.
+      onCancel();
     }
   }
 
   /// Shows the Ask bar and sets the focus on it.
   void onMeta() {
-    _ask.show();
-    _keyboardListener.add(_cancelActionBinding);
+    if (askVisibility.value == false) {
+      // Close other system overlays.
+      onCancel();
+      _ask.show();
+      _keyboardListener.add(_cancelActionBinding);
+    }
   }
 
   /// Toggles the Status menu on/off.
-  void onStatus() => statusVisibility.value = !statusVisibility.value;
+  void onStatus() {
+    if (statusVisibility.value == false) {
+      // Close other system overlays.
+      onCancel();
+      statusVisibility.value = true;
+      _keyboardListener.add(_cancelActionBinding);
+    }
+  }
 
   /// Called when tapped behind Ask bar, quick settings, notifications or the
   /// Escape key was pressed.
   void onCancel() {
     _ask.hide();
     statusVisibility.value = false;
+    helpVisibility.value = false;
     _keyboardListener.release(_cancelActionBinding);
   }
 
@@ -206,8 +226,19 @@ class AppModel {
     sessionShell.focusedStory?.delete();
   }
 
+  /// Called when the keyboard help button is tapped.
+  void onKeyboard() {
+    if (helpVisibility.value == false) {
+      // Close other system overlays.
+      onCancel();
+      helpVisibility.value = true;
+      _keyboardListener.add(_cancelActionBinding);
+    }
+  }
+
   /// Called when the user initiates logout (using keyboard or UI).
   void onLogout() {
+    onCancel();
     askChildViewConnection.value = null;
     _pointerEventsListener.stop();
 

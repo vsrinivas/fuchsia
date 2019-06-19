@@ -38,59 +38,57 @@ class Clusters extends StatelessWidget {
       child: AnimatedBuilder(
         animation: model,
         builder: (context, child) => Stack(
-              children: <Widget>[
-                Positioned.fill(
-                  child: PageView.builder(
-                    controller: pageController,
-                    scrollDirection: Axis.horizontal,
-                    itemCount: model.clusters.length,
-                    onPageChanged: (page) {
-                      final cluster = model.clusters[page];
-                      model.currentCluster.value = cluster;
-                    },
-                    itemBuilder: (context, index) {
-                      final cluster = model.clusters[index];
-                      return Padding(
-                        padding: EdgeInsets.all(40),
-                        child: Cluster(model: cluster),
-                      );
-                    },
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: model.currentCluster,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      child: Icon(
-                        Icons.chevron_left,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                      onTap: model.previousCluster,
-                    ),
-                  ),
-                  builder: (context, child) =>
-                      !model.isFirst ? child : Offstage(),
-                ),
-                AnimatedBuilder(
-                  animation: model.currentCluster,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      child: Icon(
-                        Icons.chevron_right,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                      onTap: model.nextCluster,
-                    ),
-                  ),
-                  builder: (context, child) =>
-                      !model.isLast ? child : Offstage(),
-                ),
-              ],
+          children: <Widget>[
+            Positioned.fill(
+              child: PageView.builder(
+                controller: pageController,
+                scrollDirection: Axis.horizontal,
+                itemCount: model.clusters.length,
+                onPageChanged: (page) {
+                  final cluster = model.clusters[page];
+                  model.currentCluster.value = cluster;
+                },
+                itemBuilder: (context, index) {
+                  final cluster = model.clusters[index];
+                  return Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Cluster(model: cluster),
+                  );
+                },
+              ),
             ),
+            AnimatedBuilder(
+              animation: model.currentCluster,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  child: Icon(
+                    Icons.chevron_left,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                  onTap: model.previousCluster,
+                ),
+              ),
+              builder: (context, child) => !model.isFirst ? child : Offstage(),
+            ),
+            AnimatedBuilder(
+              animation: model.currentCluster,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                  onTap: model.nextCluster,
+                ),
+              ),
+              builder: (context, child) => !model.isLast ? child : Offstage(),
+            ),
+          ],
+        ),
       ),
       builder: (context, child) =>
           model.fullscreenStory == null ? child : Offstage(),

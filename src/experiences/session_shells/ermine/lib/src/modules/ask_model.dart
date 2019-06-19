@@ -85,6 +85,7 @@ class AskModel extends ChangeNotifier {
 
   /// Called from ui when hiding animation has completed.
   void hideAnimationCompleted() {
+    visibility.value = false;
     _suggestions = <Suggestion>[];
     suggestions.value = _suggestions;
     selection.value = -1;
@@ -163,6 +164,9 @@ class AskModel extends ChangeNotifier {
     final result = List<Suggestion>.from(newSuggestions.take(_kMaxSuggestions));
     _suggestions = result;
     suggestions.value = result;
+    if (result.isNotEmpty) {
+      selection.value = 0;
+    }
   }
 
   void onSelect(Suggestion suggestion) {

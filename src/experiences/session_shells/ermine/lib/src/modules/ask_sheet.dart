@@ -162,6 +162,12 @@ class _AskSheetState extends State<AskSheet> with TickerProviderStateMixin {
                     children: <Widget>[
                       AskTextField(model: widget.model),
                       _buildBody(),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: widget.model.hideAnimationCompleted,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -185,13 +191,13 @@ class _AskSheetState extends State<AskSheet> with TickerProviderStateMixin {
             child: AnimatedBuilder(
               animation: widget.model.suggestions,
               builder: (_, child) => SizedBox(
-                    height: min(
-                      _kDefaultListHeight,
-                      AskSuggestionList.kListItemHeight *
-                          widget.model.suggestions.value.length,
-                    ),
-                    child: child,
-                  ),
+                height: min(
+                  _kDefaultListHeight,
+                  AskSuggestionList.kListItemHeight *
+                      widget.model.suggestions.value.length,
+                ),
+                child: child,
+              ),
               child: CustomScrollView(
                 controller: _scrollController,
                 physics: _DismissablePhysics(onDismiss: _close),

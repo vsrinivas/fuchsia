@@ -38,13 +38,7 @@ class AskModule extends StatelessWidget {
               fontSize: 18.0,
               color: Colors.white,
             ),
-        child: Align(
-          alignment: Alignment.bottomRight,
-          child: SizedBox(
-            width: 500.0,
-            child: AskSheet(model: model),
-          ),
-        ),
+        child: AskSheet(model: model),
       ),
     );
   }
