@@ -686,7 +686,10 @@ RUN_TEST(TestAdd)
 RUN_TEST(TestAddAfterFlush)
 RUN_TEST(TestAddMultiple)
 RUN_TEST(TestAddMultiThread)
-RUN_TEST(TestAddAndFlushMultiThread)
+
+// Test disabled due to flakiness. See FLK-329.
+// RUN_TEST(TestAddAndFlushMultiThread)
+
 END_TEST_CASE(HistogramTest)
 
 } // namespace
