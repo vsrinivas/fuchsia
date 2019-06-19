@@ -31,8 +31,6 @@ brcmf_core_srcs = [
   "chip.h",
   "common.cc",
   "common.h",
-  "commonring.cc",
-  "commonring.h",
   "core.cc",
   "core.h",
   "d11.cc",
