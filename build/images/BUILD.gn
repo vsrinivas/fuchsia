@@ -1043,6 +1043,7 @@ if (!bootfs_only) {
   }
   images += [
     {
+      default = false
       deps = [
         ":fvm.blob.sparse.blk",
       ]
