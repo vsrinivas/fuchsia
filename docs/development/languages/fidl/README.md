@@ -37,6 +37,7 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
 * [Attributes](reference/attributes.md) &mdash; describes the available FIDL attributes
 * [Bindings](reference/bindings.md) &mdash; requirements for FIDL language bindings
 * [Compiler](reference/compiler.md) &mdash; describes the organization of the compiler
+* [Linter](reference/linter.md) &mdash; describes how to check API readability with the FIDL linter
 * [Editors](reference/editors.md) &mdash; discusses support for FIDL in IDEs and stand-alone editors
 * [FIDL Tuning Proposals](reference/ftp/README.md) &mdash; accepted and rejected changes for FIDL
 * [Grammar](reference/grammar.md) &mdash; the FIDL grammar
