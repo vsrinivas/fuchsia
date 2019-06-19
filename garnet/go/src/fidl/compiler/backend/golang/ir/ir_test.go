@@ -576,8 +576,8 @@ func TestCompileInterface(t *testing.T) {
 		Name: types.EncodedCompoundIdentifier("Test"),
 		Methods: []types.Method{
 			{
-				Ordinal:    types.Ordinal(1),
-				GenOrdinal: types.Ordinal(1789789),
+				Ordinal:    1,
+				GenOrdinal: 1789789,
 				Name:       types.Identifier("First"),
 				HasRequest: true,
 				Request: []types.Parameter{
@@ -589,8 +589,8 @@ func TestCompileInterface(t *testing.T) {
 				RequestSize: 18,
 			},
 			{
-				Ordinal:    types.Ordinal(2),
-				GenOrdinal: types.Ordinal(2789789),
+				Ordinal:    2,
+				GenOrdinal: 2789789,
 				Name:       types.Identifier("Second"),
 				HasRequest: true,
 				Request: []types.Parameter{
@@ -628,9 +628,9 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinal:        types.Ordinal(1),
+				Ordinal:        1,
 				OrdinalName:    "TestFirstOrdinal",
-				GenOrdinal:     types.Ordinal(1789789),
+				GenOrdinal:     1789789,
 				GenOrdinalName: "TestFirstGenOrdinal",
 				Name:           "First",
 				Request: &Struct{
@@ -648,9 +648,9 @@ func TestCompileInterface(t *testing.T) {
 				IsEvent:         false,
 			},
 			{
-				Ordinal:        types.Ordinal(2),
+				Ordinal:        2,
 				OrdinalName:    "TestSecondOrdinal",
-				GenOrdinal:     types.Ordinal(2789789),
+				GenOrdinal:     2789789,
 				GenOrdinalName: "TestSecondGenOrdinal",
 				Name:           "Second",
 				Request: &Struct{
@@ -690,8 +690,8 @@ func TestCompileInterface(t *testing.T) {
 		Name: types.EncodedCompoundIdentifier("test"),
 		Methods: []types.Method{
 			{
-				Ordinal:     types.Ordinal(1),
-				GenOrdinal:  types.Ordinal(9),
+				Ordinal:     1,
+				GenOrdinal:  9,
 				Name:        types.Identifier("first"),
 				HasResponse: true,
 				Response: []types.Parameter{
@@ -721,9 +721,9 @@ func TestCompileInterface(t *testing.T) {
 		ServiceNameConstant:  "TestName",
 		Methods: []Method{
 			{
-				Ordinal:        types.Ordinal(1),
+				Ordinal:        1,
 				OrdinalName:    "TestFirstOrdinal",
-				GenOrdinal:     types.Ordinal(9),
+				GenOrdinal:     9,
 				GenOrdinalName: "TestFirstGenOrdinal",
 				Name:           "First",
 				Response: &Struct{

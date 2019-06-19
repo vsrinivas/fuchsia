@@ -152,8 +152,8 @@ type Interface struct {
 
 type Method struct {
 	types.Attributes
-	Ordinal     types.Ordinal
-	GenOrdinal  types.Ordinal
+	Ordinal     uint64
+	GenOrdinal  uint64
 	OrdinalName string
 	Name        string
 	CamelName   string

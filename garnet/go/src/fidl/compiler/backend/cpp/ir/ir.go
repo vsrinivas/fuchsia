@@ -202,9 +202,9 @@ type Interface struct {
 
 type Method struct {
 	types.Attributes
-	Ordinal              types.Ordinal
+	Ordinal              uint64
 	OrdinalName          string
-	GenOrdinal           types.Ordinal
+	GenOrdinal           uint64
 	GenOrdinalName       string
 	Name                 string
 	NameInLowerSnakeCase string

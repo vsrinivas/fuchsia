@@ -29,8 +29,8 @@ func TestCompileInterface(t *testing.T) {
 				Name: types.EncodedCompoundIdentifier("Test"),
 				Methods: []types.Method{
 					{
-						Ordinal:    types.Ordinal(1),
-						GenOrdinal: types.Ordinal(314159),
+						Ordinal:    1,
+						GenOrdinal: 314159,
 						Name:       types.Identifier("First"),
 						HasRequest: true,
 						Request: []types.Parameter{
@@ -42,8 +42,8 @@ func TestCompileInterface(t *testing.T) {
 						RequestSize: 18,
 					},
 					{
-						Ordinal:    types.Ordinal(2),
-						GenOrdinal: types.Ordinal(271828),
+						Ordinal:    2,
+						GenOrdinal: 271828,
 						Name:       types.Identifier("Second"),
 						HasRequest: true,
 						Request: []types.Parameter{
@@ -193,8 +193,8 @@ func TestCompileInterface(t *testing.T) {
 				Name: types.EncodedCompoundIdentifier("EventTest"),
 				Methods: []types.Method{
 					{
-						Ordinal:     types.Ordinal(1),
-						GenOrdinal:  types.Ordinal(314159),
+						Ordinal:     1,
+						GenOrdinal:  314159,
 						Name:        types.Identifier("First"),
 						HasResponse: true,
 						Response: []types.Parameter{
@@ -279,8 +279,8 @@ func TestCompileInterface(t *testing.T) {
 				Name: types.EncodedCompoundIdentifier("EventTest"),
 				Methods: []types.Method{
 					{
-						Ordinal:     types.Ordinal(2),
-						GenOrdinal:  types.Ordinal(271828),
+						Ordinal:     2,
+						GenOrdinal:  271828,
 						Name:        types.Identifier("Second"),
 						HasResponse: true,
 						Response: []types.Parameter{

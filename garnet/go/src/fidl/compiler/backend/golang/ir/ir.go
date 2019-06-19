@@ -404,14 +404,14 @@ type Method struct {
 	types.Attributes
 
 	// Ordinal is the ordinal for this method.
-	Ordinal types.Ordinal
+	Ordinal uint64
 
 	// OrdinalName is the name of the ordinal for this method, including the interface
 	// name as a prefix.
 	OrdinalName string
 
 	// TODO(FIDL-524): Remove.
-	GenOrdinal types.Ordinal
+	GenOrdinal uint64
 
 	// TODO(FIDL-524): Remove.
 	GenOrdinalName string

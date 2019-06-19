@@ -63,6 +63,14 @@ go_test("fidlgen_cpp_test") {
   ]
 }
 
+go_test("fidlgen_cpp_ir_test") {
+  gopackage = "fidl/compiler/backend/cpp/ir"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
+
 go_test("fidlgen_llcpp_test") {
   gopackage = "fidl/compiler/llcpp_backend"
 
@@ -73,14 +81,6 @@ go_test("fidlgen_llcpp_test") {
 
 go_test("fidlgen_cpp_overnet_internal_test") {
   gopackage = "fidl/compiler/backend/cpp_overnet_internal"
-
-  deps = [
-    ":fidlgen_test_lib",
-  ]
-}
-
-go_test("fidlgen_cpp_ir_test") {
-  gopackage = "fidl/compiler/backend/cpp/ir"
 
   deps = [
     ":fidlgen_test_lib",
@@ -129,6 +129,14 @@ go_test("fidlgen_syzkaller_test") {
 
 go_test("fidlgen_syzkaller_ir_test") {
   gopackage = "fidl/compiler/backend/syzkaller/ir"
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
+
+go_test("fidlgen_types_test") {
+  gopackage = "fidl/compiler/backend/types"
 
   deps = [
     ":fidlgen_test_lib",

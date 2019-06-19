@@ -71,7 +71,7 @@ type Interface struct {
 // Method represents a method of a FIDL interface in terms of syzkaller syscalls.
 type Method struct {
 	// Ordinal is the ordinal for this method.
-	Ordinal types.Ordinal
+	Ordinal uint64
 
 	// Name is the name of the Method, including the interface name as a prefix.
 	Name string
@@ -465,7 +465,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 	return i, o, h
 }
 
-func header(ordinal types.Ordinal) []StructMember {
+func header(ordinal uint64) []StructMember {
 	return []StructMember{
 		{
 			Type: Type(fmt.Sprintf("fidl_message_header[%d]", ordinal)),
@@ -540,7 +540,7 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 	return i, o, h
 }
 
-func (c *compiler) compileParameters(name string, ordinal types.Ordinal, params []types.Parameter) (Struct, Struct) {
+func (c *compiler) compileParameters(name string, ordinal uint64, params []types.Parameter) (Struct, Struct) {
 	var args types.Struct
 	for _, p := range params {
 		args.Members = append(args.Members, types.StructMember{
