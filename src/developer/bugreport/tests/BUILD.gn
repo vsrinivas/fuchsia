@@ -13,11 +13,15 @@ test_package("bugreport_tests") {
     {
       name = "bugreport_integration_test"
     },
+    {
+      name = "command_line_options_unittest"
+    },
   ]
 
   deps = [
     ":bugreport_integration_test",
     ":bugreport_unittest",
+    ":command_line_options_unittest",
   ]
 }
 
@@ -62,6 +66,20 @@ executable("bugreport_integration_test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
+  ]
+}
+
+executable("command_line_options_unittest") {
+  testonly = true
+
+  sources = [
+    "command_line_options_unittest.cc",
+  ]
+
+  deps = [
+    "//src/developer/bugreport:command_line_options",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 

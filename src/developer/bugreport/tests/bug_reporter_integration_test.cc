@@ -32,7 +32,8 @@ class BugReporterIntegrationTest : public testing::Test {
 };
 
 TEST_F(BugReporterIntegrationTest, SmokeTest) {
-  ASSERT_TRUE(MakeBugReport(environment_services_, json_path_.data()));
+  ASSERT_TRUE(MakeBugReport(environment_services_,
+                            /*attachment_allowlist=*/{}, json_path_.data()));
 
   std::string output;
   ASSERT_TRUE(files::ReadFileToString(json_path_, &output));

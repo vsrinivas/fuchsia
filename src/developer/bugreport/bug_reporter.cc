@@ -10,6 +10,8 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <vector>
+
 #include "src/developer/bugreport/bug_report_schema.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/filewritestream.h"
@@ -33,11 +35,16 @@ void AddAnnotations(
 
 void AddAttachments(
     const std::vector<fuchsia::feedback::Attachment>& attachments,
+    const std::set<std::string>& attachment_allowlist,
     rapidjson::Document* document) {
   rapidjson::Value json_attachments(rapidjson::kObjectType);
   for (const auto& attachment : attachments) {
-    // TODO(DX-1551): interpret the attachment value as a JSON object for
-    // the "inspect" key.
+    if (!attachment_allowlist.empty() &&
+        attachment_allowlist.find(attachment.key) ==
+            attachment_allowlist.end()) {
+      continue;
+    }
+
     std::string value;
     if (!fsl::StringFromVmo(attachment.value, &value)) {
       fprintf(stderr, "Failed to parse attachment VMO as string for key %s\n",
@@ -52,11 +59,12 @@ void AddAttachments(
 }
 
 bool MakeAndWriteJson(const fuchsia::feedback::Data& feedback_data,
+                      const std::set<std::string>& attachment_allowlist,
                       FILE* out_file) {
   rapidjson::Document document;
   document.SetObject();
   AddAnnotations(feedback_data.annotations(), &document);
-  AddAttachments(feedback_data.attachments(), &document);
+  AddAttachments(feedback_data.attachments(), attachment_allowlist, &document);
 
   char buffer[65536];
   rapidjson::FileWriteStream output_stream(out_file, buffer, sizeof(buffer));
@@ -73,6 +81,7 @@ bool MakeAndWriteJson(const fuchsia::feedback::Data& feedback_data,
 }  // namespace
 
 bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services,
+                   const std::set<std::string>& attachment_allowlist,
                    const char* out_filename) {
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
   services->Connect(feedback_data_provider.NewRequest());
@@ -99,11 +108,13 @@ bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services,
       fprintf(stderr, "Failed to open output file %s\n", out_filename);
       return false;
     }
-    const bool success = MakeAndWriteJson(result.response().data, out_file);
+    const bool success = MakeAndWriteJson(result.response().data,
+                                          attachment_allowlist, out_file);
     fclose(out_file);
     return success;
   } else {
-    return MakeAndWriteJson(result.response().data, stdout);
+    return MakeAndWriteJson(result.response().data, attachment_allowlist,
+                            stdout);
   }
 }
 

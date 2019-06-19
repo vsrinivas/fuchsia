@@ -8,16 +8,23 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
+#include <set>
+#include <string>
 
 namespace fuchsia {
 namespace bugreport {
 
-// Makes a JSON file representing a bug report containing all the feedback data
-// by connecting to fuchsia.feedback.DataProvider from |services|.
+// Makes a JSON file representing a bug report containing the feedback data
+// (annotations and attachments) collected from fuchsia.feedback.DataProvider
+// from |services|.
 //
-// By default, the JSON file is streamed to stdout. Use |out_filename| to output
-// it to a file.
+// By default:
+//   - all the attachments are reported. Use |attachment_allowlist| to restrict
+//     the attachments to specific keys, e.g., to minimize the output.
+//   - the JSON file is streamed to stdout. Use |out_filename| to output it to
+//     a file.
 bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services,
+                   const std::set<std::string>& attachment_allowlist = {},
                    const char* out_filename = nullptr);
 
 }  // namespace bugreport

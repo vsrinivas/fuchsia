@@ -63,7 +63,7 @@ class BugReporterTest : public gtest::RealLoopFixture {
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(BugReporterTest, SmokeTest) {
+TEST_F(BugReporterTest, Basic) {
   ResetFeedbackDataProvider(/*annotations=*/
                             {
                                 {"annotation.1.key", "annotation.1.value"},
@@ -76,7 +76,7 @@ TEST_F(BugReporterTest, SmokeTest) {
                             });
 
   ASSERT_TRUE(MakeBugReport(service_directory_provider_.service_directory(),
-                            json_path_.data()));
+                            /*attachment_allowlist=*/{}, json_path_.data()));
 
   std::string output;
   ASSERT_TRUE(files::ReadFileToString(json_path_, &output));
@@ -115,6 +115,34 @@ TEST_F(BugReporterTest, SmokeTest) {
                "attachment.1.value");
   EXPECT_STREQ(document["attachments"]["attachment.2.key"].GetString(),
                "attachment.2.value");
+}
+
+TEST_F(BugReporterTest, RestrictedAttachments) {
+  ResetFeedbackDataProvider(/*annotations=*/
+                            {
+                                {"annotation.key", "unused"},
+                            },
+                            /*attachments=*/{
+                                {"attachment.key.filtered", "unused"},
+                                {"attachment.key.kept", "unused"},
+                            });
+
+  ASSERT_TRUE(MakeBugReport(service_directory_provider_.service_directory(),
+                            /*attachment_allowlist=*/
+                            {
+                                "attachment.key.kept",
+                                "attachment.key.ignored",
+                            },
+                            json_path_.data()));
+
+  std::string output;
+  ASSERT_TRUE(files::ReadFileToString(json_path_, &output));
+  rapidjson::Document document;
+  ASSERT_FALSE(document.Parse(output.c_str()).HasParseError());
+  ASSERT_TRUE(document.HasMember("attachments"));
+  ASSERT_FALSE(document["attachments"].HasMember("attachment.key.filtered"));
+  ASSERT_TRUE(document["attachments"].HasMember("attachment.key.kept"));
+  ASSERT_FALSE(document["attachments"].HasMember("attachment.key.ignored"));
 }
 
 }  // namespace

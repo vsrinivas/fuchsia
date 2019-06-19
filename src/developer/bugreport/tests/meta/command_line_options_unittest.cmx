@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/command_line_options_unittest"
+    }
+}

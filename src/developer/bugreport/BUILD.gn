@@ -34,8 +34,26 @@ executable("main") {
   ]
 
   deps = [
+    ":command_line_options",
     ":src",
     "//sdk/lib/sys/cpp",
+  ]
+}
+
+source_set("bug_report_schema") {
+  sources = [
+    "bug_report_schema.h",
+  ]
+}
+
+source_set("command_line_options") {
+  sources = [
+    "command_line_options.cc",
+    "command_line_options.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
   ]
 }
 
@@ -55,12 +73,6 @@ source_set("src") {
     "//sdk/fidl/fuchsia.feedback",
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("bug_report_schema") {
-  sources = [
-    "bug_report_schema.h",
   ]
 }
 
