@@ -411,7 +411,6 @@ bool vmo_no_resize_test_helper(uint32_t flag) {
 }
 
 bool vmo_no_resize_test() {
-    static_assert(ZX_VMO_NON_RESIZABLE == 0);
     return vmo_no_resize_test_helper(0);
 }
 

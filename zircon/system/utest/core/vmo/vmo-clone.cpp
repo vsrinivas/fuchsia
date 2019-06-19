@@ -685,7 +685,7 @@ bool vmo_clone_shrink_grow_parent() {
 }
 
 // Check that non-resizable VMOs cannot get resized.
-bool vmo_clone_no_resize_test_helper(bool flag) {
+bool vmo_clone_no_resize_test_helper(uint32_t flag) {
     BEGIN_TEST;
 
     const size_t len = PAGE_SIZE * 4;
@@ -729,7 +729,6 @@ bool vmo_clone_no_resize_test_helper(bool flag) {
 }
 
 bool vmo_clone_no_resize_test() {
-    static_assert(ZX_VMO_CHILD_NON_RESIZEABLE == 0);
     return vmo_clone_no_resize_test_helper(0);
 }
 
