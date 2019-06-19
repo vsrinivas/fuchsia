@@ -213,7 +213,7 @@ tools such as [cmc], and SDK libraries such as [libsys] and [libsvc].
 -   [Components v2](#components-v2)
 
 [fuchsia.sys]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys/
-[cmc]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/cmc
+[cmc]: https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/cmc
 [libsys]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/sys
 [libsvc]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/svc
 
@@ -540,12 +540,12 @@ Tree by adding the appropriate [Fuchsia Package](#fuchsia-package).
 
 #### **Realm**
 
-In [components v1](#components-v1) terminology, realm is synonymous to
+In [components v1](#components-v1), realm is synonymous to
 [environment](#environment).
 
-In [components v2](#components-v2) terminology, a realm is a subtree of
-component instances in the [component instance tree](#component-instance-tree).
-It acts as a container for component instances and capabilities in the subtree.
+In [components v2](#components-v2), a realm is a subtree of component instances
+in the [component instance tree](#component-instance-tree). It acts as a
+container for component instances and capabilities in the subtree.
 
 #### **Scenic**
 
