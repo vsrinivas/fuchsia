@@ -76,11 +76,12 @@ struct output output = {
 };
 struct output errout = {
 	stream: 0, nextc: 0, end: 0, buf: 0, bufsize: 0, fd: 2, flags: 0
-};
-struct output preverrout;
+}
+#ifdef notyet
 struct output memout = {
 	stream: 0, nextc: 0, end: 0, buf: 0, bufsize: 0, fd: MEM_OUT, flags: 0
 };
+#endif
 #else
 struct output output = {
 	nextc: 0, end: 0, buf: 0, bufsize: OUTBUFSIZ, fd: 1, flags: 0
@@ -89,9 +90,11 @@ struct output errout = {
 	nextc: 0, end: 0, buf: 0, bufsize: 0, fd: 2, flags: 0
 };
 struct output preverrout;
+#ifdef notyet
 struct output memout = {
 	nextc: 0, end: 0, buf: 0, bufsize: 0, fd: MEM_OUT, flags: 0
 };
+#endif
 #endif
 struct output *out1 = &output;
 struct output *out2 = &errout;
@@ -112,6 +115,7 @@ INIT {
 }
 
 RESET {
+#ifdef notyet
 	out1 = &output;
 	out2 = &errout;
 #ifdef USE_GLIBC_STDIO
@@ -122,6 +126,7 @@ RESET {
 		ckfree(memout.buf);
 		memout.buf = NULL;
 	}
+#endif
 }
 
 #endif
@@ -150,10 +155,13 @@ buffered:
 	if (!bufsize) {
 		;
 	} else if (dest->buf == NULL) {
+#ifdef notyet
 		if (dest->fd == MEM_OUT && len > bufsize) {
 			bufsize = len;
 		}
+#endif
 		offset = 0;
+#ifdef notyet
 		goto alloc;
 	} else if (dest->fd == MEM_OUT) {
 		offset = bufsize;
@@ -165,6 +173,7 @@ buffered:
 		if (bufsize < offset)
 			goto err;
 alloc:
+#endif
 		INTOFF;
 		dest->buf = ckrealloc(dest->buf, bufsize);
 		dest->bufsize = bufsize;
@@ -180,7 +189,9 @@ alloc:
 		goto buffered;
 
 	if ((xwrite(dest->fd, p, len))) {
+#ifdef notyet
 err:
+#endif
 		dest->flags |= OUTPUT_ERR;
 	}
 #endif
@@ -385,6 +396,7 @@ xwrite(int fd, const void *p, size_t n)
 }
 
 
+#ifdef notyet
 #ifdef USE_GLIBC_STDIO
 void initstreams() {
 	output.stream = stdout;
@@ -407,6 +419,7 @@ __closememout(void) {
 	memout.stream = NULL;
 	return error;
 }
+#endif
 #endif
 
 
