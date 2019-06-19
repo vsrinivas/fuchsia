@@ -24,8 +24,8 @@ public:
     virtual zx_status_t BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_t offset, uint64_t size,
                                zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt_out) override;
 
-    virtual zx_status_t RegRead(const volatile uint32_t* reg, uint32_t* val_out) override;
-    virtual zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val) override;
+    virtual zx_status_t RegRead(size_t offset, uint32_t* val_out) override;
+    virtual zx_status_t RegWrite(size_t offset, uint32_t val) override;
 
     virtual zx_status_t InterruptWait() override;
     virtual void InterruptCancel() override;

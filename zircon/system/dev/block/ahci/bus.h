@@ -36,8 +36,8 @@ public:
     // If the bus encounters an error, non-error status will be returned.
     // A bus error typically means the device is no longer accessible. This may be due to hot-
     // unplug and should be handled gracefully.
-    virtual zx_status_t RegRead(const volatile uint32_t* reg, uint32_t* val_out) = 0;
-    virtual zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val) = 0;
+    virtual zx_status_t RegRead(size_t offset, uint32_t* val_out) = 0;
+    virtual zx_status_t RegWrite(size_t offset, uint32_t val) = 0;
 
     // Wait on an interrupt from the bus's interrupt source.
     virtual zx_status_t InterruptWait() = 0;

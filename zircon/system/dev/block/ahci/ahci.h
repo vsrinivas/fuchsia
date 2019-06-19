@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <stdint.h>
+
+#include <limits.h>
+
 #define AHCI_MAX_PORTS    32
 #define AHCI_MAX_COMMANDS 32
 #define AHCI_MAX_PRDS     ((PAGE_SIZE / sizeof(zx_paddr_t)) + 1)
@@ -86,6 +90,24 @@ struct ahci_port_reg_t {
     uint32_t vendor[4];     // vendor specific
 } __attribute__((packed));
 
+constexpr size_t kPortCommandListBase       = offsetof(ahci_port_reg_t, clb);
+constexpr size_t kPortCommandListBaseUpper  = offsetof(ahci_port_reg_t, clbu);
+constexpr size_t kPortFISBase               = offsetof(ahci_port_reg_t, fb);
+constexpr size_t kPortFISBaseUpper          = offsetof(ahci_port_reg_t, fbu);
+constexpr size_t kPortInterruptStatus       = offsetof(ahci_port_reg_t, is);
+constexpr size_t kPortInterruptEnable       = offsetof(ahci_port_reg_t, ie);
+constexpr size_t kPortCommand               = offsetof(ahci_port_reg_t, cmd);
+constexpr size_t kPortTaskFileData          = offsetof(ahci_port_reg_t, tfd);
+constexpr size_t kPortSignature             = offsetof(ahci_port_reg_t, sig);
+constexpr size_t kPortSataStatus            = offsetof(ahci_port_reg_t, ssts);
+constexpr size_t kPortSataControl           = offsetof(ahci_port_reg_t, sctl);
+constexpr size_t kPortSataError             = offsetof(ahci_port_reg_t, serr);
+constexpr size_t kPortSataActive            = offsetof(ahci_port_reg_t, sact);
+constexpr size_t kPortCommandIssue          = offsetof(ahci_port_reg_t, ci);
+constexpr size_t kPortSataNotification      = offsetof(ahci_port_reg_t, sntf);
+constexpr size_t kPortFisBasedSwitching     = offsetof(ahci_port_reg_t, fbs);
+constexpr size_t kPortDeviceSleep           = offsetof(ahci_port_reg_t, devslp);
+
 #define AHCI_CAP_NCQ (1u << 30)
 #define AHCI_GHC_HR  (1u << 0)
 #define AHCI_GHC_IE  (1u << 1)
@@ -107,6 +129,20 @@ struct ahci_hba_t {
     uint32_t vendor[24];       // vendor specific registers
     ahci_port_reg_t ports[32]; // port control registers
 } __attribute__((packed));
+
+constexpr size_t kHbaCapabilities           = offsetof(ahci_hba_t, cap);
+constexpr size_t kHbaGlobalHostControl      = offsetof(ahci_hba_t, ghc);
+constexpr size_t kHbaInterruptStatus        = offsetof(ahci_hba_t, is);
+constexpr size_t kHbaPortsImplemented       = offsetof(ahci_hba_t, pi);
+constexpr size_t kHbaVersion                = offsetof(ahci_hba_t, vs);
+constexpr size_t kHbaCoalescingControl      = offsetof(ahci_hba_t, ccc_ctl);
+constexpr size_t kHbaCoalescingPorts        = offsetof(ahci_hba_t, ccc_ports);
+constexpr size_t kHbaEnclosureLocation      = offsetof(ahci_hba_t, em_loc);
+constexpr size_t kHbaEnclosureControl       = offsetof(ahci_hba_t, em_ctl);
+constexpr size_t kHbaCapabilitiesExtended   = offsetof(ahci_hba_t, cap2);
+constexpr size_t kHbaBiosHandoffControl     = offsetof(ahci_hba_t, bohc);
+constexpr size_t kHbaVendor                 = offsetof(ahci_hba_t, vendor);
+constexpr size_t kHbaPorts                  = offsetof(ahci_hba_t, ports);
 
 // Command List.
 struct ahci_cl_t {

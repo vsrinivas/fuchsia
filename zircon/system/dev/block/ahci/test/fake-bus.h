@@ -6,6 +6,7 @@
 
 #include <lib/sync/completion.h>
 
+#include "../ahci.h"
 #include "../bus.h"
 
 namespace ahci {
@@ -21,14 +22,13 @@ public:
     virtual zx_status_t BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_t offset, uint64_t size,
                                zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt_out) override;
 
-    virtual zx_status_t RegRead(const volatile uint32_t* reg, uint32_t* val_out) override;
-    virtual zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val) override;
+    virtual zx_status_t RegRead(size_t offset, uint32_t* val_out) override;
+    virtual zx_status_t RegWrite(size_t offset, uint32_t val) override;
 
     virtual zx_status_t InterruptWait() override;
     virtual void InterruptCancel() override;
 
     virtual void* mmio() override { return nullptr; }
-
 
 
     // Test control functions.
@@ -37,10 +37,17 @@ public:
     void DoFailConfigure() { fail_configure_ = true; }
 
 private:
+    zx_status_t HbaRead(size_t offset, uint32_t* val_out);
+    zx_status_t HbaWrite(size_t offset, uint32_t val);
+
     sync_completion_t irq_completion_;
     bool interrupt_cancelled_ = false;
 
     bool fail_configure_ = false;
+
+    // Fake host bus adapter registers.
+    uint32_t ghc_ = 0;
+
 };
 
 } // namespace ahci

@@ -49,7 +49,10 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Port);
 
     // Configure a port for use.
-    zx_status_t Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs);
+    zx_status_t Configure(uint32_t num, Controller* con, size_t reg_base);
+
+    uint32_t RegRead(size_t offset);
+    void RegWrite(size_t offset, uint32_t val);
 
     void Enable();
     void Disable();
@@ -94,12 +97,7 @@ public:
         return (flags_ & kPortFlagSyncPaused);
     }
 
-    // Temporary until InitScan is fixed.
-    ahci_port_reg_t* regs() { return regs_; }
-
 private:
-    inline uint32_t RegRead(const volatile uint32_t* reg);
-    inline void RegWrite(volatile uint32_t* reg, uint32_t val);
     bool SlotBusyLocked(uint32_t slot);
     zx_status_t TxnBeginLocked(uint32_t slot, sata_txn_t* txn);
     void TxnComplete(zx_status_t status);
@@ -116,7 +114,7 @@ private:
     sata_txn_t* sync_ = nullptr;   // FLUSH command in flight
 
     io_buffer_t buffer_{};
-    ahci_port_reg_t* regs_ = nullptr;
+    size_t reg_base_ = 0;
     ahci_port_mem_t* mem_ = nullptr;
 
     sata_devinfo_t devinfo_{};

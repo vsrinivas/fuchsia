@@ -18,17 +18,53 @@ zx_status_t FakeBus::IoBufferInit(io_buffer_t* buffer_, size_t size, uint32_t fl
     return ZX_ERR_IO_NOT_PRESENT;
 }
 
-zx_status_t FakeBus::BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_t offset, uint64_t size,
-                            zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt_out) {
+zx_status_t FakeBus::BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_t offset,
+                            uint64_t size, zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt_out)
+                            {
     return ZX_ERR_IO_NOT_PRESENT;
 }
 
-
-zx_status_t FakeBus::RegRead(const volatile uint32_t* reg, uint32_t* val_out) {
+// Read registers in the Host Bus Adapter.
+zx_status_t FakeBus::HbaRead(size_t offset, uint32_t* val_out) {
+    switch (offset) {
+    case kHbaGlobalHostControl:
+        *val_out = ghc_;
+        return ZX_OK;
+    default:
+        ZX_DEBUG_ASSERT(false);
+        break;
+    }
     return ZX_ERR_IO_NOT_PRESENT;
 }
 
-zx_status_t FakeBus::RegWrite(volatile uint32_t* reg, uint32_t val) {
+zx_status_t FakeBus::HbaWrite(size_t offset, uint32_t val) {
+    switch (offset) {
+    case kHbaGlobalHostControl:
+        if (val & AHCI_GHC_HR) {
+            // Reset was asserted. This bit clears asynchronously when reset has succeded.
+            // Clear immediately until async response is supported.
+            val &= ~AHCI_GHC_HR;
+        }
+        ghc_ = val;
+        return ZX_OK;
+    default:
+        ZX_DEBUG_ASSERT(false);
+        break;
+    }
+    return ZX_ERR_IO_NOT_PRESENT;
+}
+
+zx_status_t FakeBus::RegRead(size_t offset, uint32_t* val_out) {
+    if (offset < kHbaPorts) {
+        return HbaRead(offset, val_out);
+    }
+    return ZX_ERR_IO_NOT_PRESENT;
+}
+
+zx_status_t FakeBus::RegWrite(size_t offset, uint32_t val) {
+    if (offset < kHbaPorts) {
+        return HbaWrite(offset, val);
+    }
     return ZX_ERR_IO_NOT_PRESENT;
 }
 

@@ -59,28 +59,28 @@ Port::~Port() {
     ZX_DEBUG_ASSERT(list_is_empty(&txn_list_));
 }
 
-uint32_t Port::RegRead(const volatile uint32_t* reg) {
-    return con_->RegRead(reg);
+uint32_t Port::RegRead(size_t offset) {
+    return con_->RegRead(reg_base_ + offset);
 }
 
-void Port::RegWrite(volatile uint32_t* reg, uint32_t val) {
-    con_->RegWrite(reg, val);
+void Port::RegWrite(size_t offset, uint32_t val) {
+    con_->RegWrite(reg_base_ + offset, val);
 }
 
 bool Port::SlotBusyLocked(uint32_t slot) {
     // a command slot is busy if a transaction is in flight or pending to be completed
-    return ((RegRead(&regs_->sact) | RegRead(&regs_->ci)) & (1u << slot)) ||
+    return ((RegRead(kPortSataActive) | RegRead(kPortCommandIssue)) & (1u << slot)) ||
            (commands_[slot] != nullptr) ||
            (running_ & (1u << slot)) || (completed_ & (1u << slot));
 }
 
-zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs) {
+zx_status_t Port::Configure(uint32_t num, Controller* con, size_t reg_base) {
     fbl::AutoLock lock(&lock_);
     num_ = num;
     con_ = con;
-    regs_ = regs;
+    reg_base_ = reg_base + (num * sizeof(ahci_port_reg_t));
     flags_ = kPortFlagImplemented;
-    uint32_t cmd = RegRead(&regs_->cmd);
+    uint32_t cmd = RegRead(kPortCommand);
     if (cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
         zxlogf(ERROR, "ahci.%u: port busy\n", num_);
         return ZX_ERR_UNAVAILABLE;
@@ -106,13 +106,13 @@ zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs
 
     // command list.
     zx_paddr_t paddr = vtop(phys_base, mem_, &mem_->cl);
-    RegWrite(&regs_->clb, lo32(paddr));
-    RegWrite(&regs_->clbu, hi32(paddr));
+    RegWrite(kPortCommandListBase, lo32(paddr));
+    RegWrite(kPortCommandListBaseUpper, hi32(paddr));
 
     // FIS receive area.
     paddr = vtop(phys_base, mem_, &mem_->fis);
-    RegWrite(&regs_->fb, lo32(paddr));
-    RegWrite(&regs_->fbu, hi32(paddr));
+    RegWrite(kPortFISBase, lo32(paddr));
+    RegWrite(kPortFISBaseUpper, hi32(paddr));
 
     // command table, followed by PRDT.
     for (int i = 0; i < AHCI_MAX_COMMANDS; i++) {
@@ -122,48 +122,48 @@ zx_status_t Port::Configure(uint32_t num, Controller* con, ahci_port_reg_t* regs
     }
 
     // clear port interrupts
-    RegWrite(&regs_->is, RegRead(&regs_->is));
+    RegWrite(kPortInterruptStatus, RegRead(kPortInterruptStatus));
 
     // clear error
-    RegWrite(&regs_->serr, RegRead(&regs_->serr));
+    RegWrite(kPortSataError, RegRead(kPortSataError));
 
     // spin up
     cmd |= AHCI_PORT_CMD_SUD;
-    RegWrite(&regs_->cmd, cmd);
+    RegWrite(kPortCommand, cmd);
 
     // activate link
     cmd &= ~AHCI_PORT_CMD_ICC_MASK;
     cmd |= AHCI_PORT_CMD_ICC_ACTIVE;
-    RegWrite(&regs_->cmd, cmd);
+    RegWrite(kPortCommand, cmd);
 
     // enable FIS receive
     cmd |= AHCI_PORT_CMD_FRE;
-    RegWrite(&regs_->cmd, cmd);
+    RegWrite(kPortCommand, cmd);
 
     return ZX_OK;
 }
 
 void Port::Enable() {
-    uint32_t cmd = RegRead(&regs_->cmd);
+    uint32_t cmd = RegRead(kPortCommand);
     if (cmd & AHCI_PORT_CMD_ST) return;
     if (!(cmd & AHCI_PORT_CMD_FRE)) {
         zxlogf(ERROR, "ahci.%u: cannot enable port without FRE enabled\n", num_);
         return;
     }
-    zx_status_t status = con_->WaitForClear(&regs_->cmd, AHCI_PORT_CMD_CR, zx::msec(500));
+    zx_status_t status = con_->WaitForClear(reg_base_ + kPortCommand, AHCI_PORT_CMD_CR, zx::msec(500));
     if (status) {
         zxlogf(ERROR, "ahci.%u: dma engine still running when enabling port\n", num_);
     }
     cmd |= AHCI_PORT_CMD_ST;
-    RegWrite(&regs_->cmd, cmd);
+    RegWrite(kPortCommand, cmd);
 }
 
 void Port::Disable() {
-    uint32_t cmd = RegRead(&regs_->cmd);
+    uint32_t cmd = RegRead(kPortCommand);
     if (!(cmd & AHCI_PORT_CMD_ST)) return;
     cmd &= ~AHCI_PORT_CMD_ST;
-    RegWrite(&regs_->cmd, cmd);
-    zx_status_t status = con_->WaitForClear(&regs_->cmd, AHCI_PORT_CMD_CR, zx::msec(500));
+    RegWrite(kPortCommand, cmd);
+    zx_status_t status = con_->WaitForClear(reg_base_ + kPortCommand, AHCI_PORT_CMD_CR, zx::msec(500));
     if (status) {
         zxlogf(ERROR, "ahci.%u: port disable timed out\n", num_);
     }
@@ -174,10 +174,10 @@ void Port::Reset() {
     Disable();
 
     // clear error
-    RegWrite(&regs_->serr, RegRead(&regs_->serr));
+    RegWrite(kPortSataError, RegRead(kPortSataError));
 
     // wait for device idle
-    zx_status_t status = con_->WaitForClear(&regs_->tfd,
+    zx_status_t status = con_->WaitForClear(reg_base_ + kPortTaskFileData,
                                             AHCI_PORT_TFD_BUSY | AHCI_PORT_TFD_DATA_REQUEST,
                                             zx::sec(1));
     if (status != ZX_OK) {
@@ -185,24 +185,24 @@ void Port::Reset() {
         zxlogf(SPEW, "ahci.%u: timed out waiting for port idle, resetting\n", num_);
         // v1.3.1, 10.4.2 port reset
         uint32_t sctl = AHCI_PORT_SCTL_IPM_ACTIVE | AHCI_PORT_SCTL_IPM_PARTIAL | AHCI_PORT_SCTL_DET_INIT;
-        RegWrite(&regs_->sctl, sctl);
+        RegWrite(kPortSataControl, sctl);
         usleep(1000);
-        sctl = RegRead(&regs_->sctl);
+        sctl = RegRead(kPortSataControl);
         sctl &= ~AHCI_PORT_SCTL_DET_MASK;
-        RegWrite(&regs_->sctl, sctl);
+        RegWrite(kPortSataControl, sctl);
     }
 
     // enable port
     Enable();
 
     // wait for device detect
-    status = con_->WaitForSet(&regs_->ssts, AHCI_PORT_SSTS_DET_PRESENT, zx::sec(1));
+    status = con_->WaitForSet(reg_base_ + kPortSataStatus, AHCI_PORT_SSTS_DET_PRESENT, zx::sec(1));
     if ((driver_get_log_flags() & DDK_LOG_SPEW) && (status < 0)) {
         zxlogf(SPEW, "ahci.%u: no device detected\n", num_);
     }
 
     // clear error
-    RegWrite(&regs_->serr, RegRead(&regs_->serr));
+    RegWrite(kPortSataError, RegRead(kPortSataError));
 }
 
 void Port::SetDevInfo(const sata_devinfo_t* devinfo) {
@@ -332,7 +332,7 @@ bool Port::ProcessQueued() {
 
 void Port::TxnComplete(zx_status_t status) {
     fbl::AutoLock lock(&lock_);
-    uint32_t active = RegRead(&regs_->sact); // Transactions active in hardware.
+    uint32_t active = RegRead(kPortSataActive); // Transactions active in hardware.
     uint32_t running = running_;               // Transactions tagged as running.
     // Transactions active in hardware but not tagged as running.
     uint32_t unaccounted = active & ~running;
@@ -473,9 +473,9 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
 
     // start command
     if (cmd_is_queued(cmd)) {
-        RegWrite(&regs_->sact, (1u << slot));
+        RegWrite(kPortSataActive, (1u << slot));
     }
-    RegWrite(&regs_->ci, (1u << slot));
+    RegWrite(kPortCommandIssue, (1u << slot));
 
     // set the watchdog
     // TODO: general timeout mechanism
@@ -489,12 +489,12 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
 // The port may have been disabled or unplugged, but is still valid.
 bool Port::HandleIrq() {
     // Clear interrupt status.
-    uint32_t int_status = RegRead(&regs_->is);
-    RegWrite(&regs_->is, int_status);
+    uint32_t int_status = RegRead(kPortInterruptStatus);
+    RegWrite(kPortInterruptStatus, int_status);
 
     if (int_status & AHCI_PORT_INT_PRC) { // PhyRdy change
-        uint32_t serr = RegRead(&regs_->serr);
-        RegWrite(&regs_->serr, serr & ~0x1);
+        uint32_t serr = RegRead(kPortSataError);
+        RegWrite(kPortSataError, serr & ~0x1);
     }
     if (int_status & AHCI_PORT_INT_ERROR) { // error
         zxlogf(ERROR, "ahci.%u: error is=0x%08x\n", num_, int_status);
@@ -532,7 +532,7 @@ bool Port::HandleWatchdog() {
             continue;
         }
         // Check whether this is a real timeout.
-        uint32_t active = RegRead(&regs_->sact);
+        uint32_t active = RegRead(kPortSataActive);
         if ((active & (1u << slot)) == 0) {
             // Command is no longer active, it has completed but not yet serviced by
             // IRQ thread. Get the time this event happened, compare to time

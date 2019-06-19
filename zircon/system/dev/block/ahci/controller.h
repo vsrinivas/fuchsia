@@ -59,13 +59,14 @@ public:
     static void Release(void* ctx);
 
     // Read or write a 32-bit AHCI controller reg. Endinaness is corrected.
-    uint32_t RegRead(const volatile uint32_t* reg);
-    zx_status_t RegWrite(volatile uint32_t* reg, uint32_t val);
+    uint32_t RegRead(size_t offset);
+    zx_status_t RegWrite(size_t offset, uint32_t val);
 
     // Wait until all bits in |mask| are cleared in |reg| or timeout expires.
-    zx_status_t WaitForClear(const volatile uint32_t* reg, uint32_t mask, zx::duration timeout);
+    zx_status_t WaitForClear(size_t offset, uint32_t mask, zx::duration timeout);
     // Wait until one bit in |mask| is set in |reg| or timeout expires.
-    zx_status_t WaitForSet(const volatile uint32_t* reg, uint32_t mask, zx::duration timeout);
+    zx_status_t WaitForSet(size_t offset, uint32_t mask, zx::duration timeout);
+
 
     static int WorkerThread(void* arg) {
         return static_cast<Controller*>(arg)->WorkerLoop();
@@ -90,7 +91,7 @@ public:
     // Not used in DDK lifecycle where Release() is called.
     void Shutdown() __TA_EXCLUDES(lock_);
 
-    void HbaReset();
+    zx_status_t HbaReset();
     void AhciEnable();
 
     zx_status_t SetDevInfo(uint32_t portnr, sata_devinfo_t* devinfo);
@@ -117,7 +118,6 @@ private:
     bool ShouldExit() __TA_EXCLUDES(lock_);
 
     zx_device_t* zxdev_ = nullptr;
-    ahci_hba_t* regs_ = nullptr;
     uint32_t cap_ = 0;
 
     fbl::Mutex lock_;

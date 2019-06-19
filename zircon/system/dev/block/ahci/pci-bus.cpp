@@ -12,13 +12,17 @@ namespace ahci {
 
 PciBus::~PciBus() {}
 
-zx_status_t PciBus::RegRead(const volatile uint32_t* reg, uint32_t* val_out) {
-    *val_out = pcie_read32(reg);
+zx_status_t PciBus::RegRead(size_t offset, uint32_t* val_out) {
+    uintptr_t reg = reinterpret_cast<uintptr_t>(mmio_->get());
+    reg += offset;
+    *val_out = pcie_read32(reinterpret_cast<const volatile uint32_t*>(reg));
     return ZX_OK;
 }
 
-zx_status_t PciBus::RegWrite(volatile uint32_t* reg, uint32_t val) {
-    pcie_write32(reg, val);
+zx_status_t PciBus::RegWrite(size_t offset, uint32_t val) {
+    uintptr_t reg = reinterpret_cast<uintptr_t>(mmio_->get());
+    reg += offset;
+    pcie_write32(reinterpret_cast<volatile uint32_t*>(reg), val);
     return ZX_OK;
 }
 

@@ -101,4 +101,16 @@ TEST(AhciTest, LaunchThreads) {
     con->Shutdown();
 }
 
+TEST(AhciTest, HbaReset) {
+    zx_device_t* fake_parent = nullptr;
+    std::unique_ptr<FakeBus> bus(new FakeBus());
+    std::unique_ptr<Controller> con;
+    EXPECT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
+
+    // Test reset function.
+    EXPECT_OK(con->HbaReset());
+
+    con->Shutdown();
+}
+
 } // namespace ahci

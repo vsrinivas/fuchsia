@@ -36,34 +36,32 @@ namespace ahci {
 
 // TODO(sron): Check return values from bus_->RegRead() and RegWrite().
 // Handle properly for buses that may by unplugged at runtime.
-uint32_t Controller::RegRead(const volatile uint32_t* reg) {
+uint32_t Controller::RegRead(size_t offset) {
     uint32_t val = 0;
-    bus_->RegRead(reg, &val);
+    bus_->RegRead(offset, &val);
     return val;
 }
 
-zx_status_t Controller::RegWrite(volatile uint32_t* reg, uint32_t val) {
-    return bus_->RegWrite(reg, val);
+zx_status_t Controller::RegWrite(size_t offset, uint32_t val) {
+    return bus_->RegWrite(offset, val);
 }
 
-zx_status_t Controller::WaitForClear(const volatile uint32_t* reg, uint32_t mask,
-                                     zx::duration timeout) {
+zx_status_t Controller::WaitForClear(size_t offset, uint32_t mask, zx::duration timeout) {
     int i = 0;
     zx::time deadline = zx::clock::get_monotonic() + timeout;
     do {
-        if (!(RegRead(reg) & mask)) return ZX_OK;
+        if (!(RegRead(offset) & mask)) return ZX_OK;
         usleep(10 * 1000);
         i++;
     } while (zx::clock::get_monotonic() < deadline);
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t Controller::WaitForSet(const volatile uint32_t* reg, uint32_t mask,
-                                   zx::duration timeout) {
+zx_status_t Controller::WaitForSet(size_t offset, uint32_t mask, zx::duration timeout) {
     int i = 0;
     zx::time deadline = zx::clock::get_monotonic() + timeout;
     do {
-        if (RegRead(reg) & mask) return ZX_OK;
+        if (RegRead(offset) & mask) return ZX_OK;
         usleep(10 * 1000);
         i++;
     } while (zx::clock::get_monotonic() < deadline);
@@ -71,29 +69,30 @@ zx_status_t Controller::WaitForSet(const volatile uint32_t* reg, uint32_t mask,
 }
 
 void Controller::AhciEnable() {
-    uint32_t ghc = RegRead(&regs_->ghc);
+    uint32_t ghc = RegRead(kHbaGlobalHostControl);
     if (ghc & AHCI_GHC_AE) return;
     for (int i = 0; i < 5; i++) {
         ghc |= AHCI_GHC_AE;
-        RegWrite(&regs_->ghc, ghc);
-        ghc = RegRead(&regs_->ghc);
+        RegWrite(kHbaGlobalHostControl, ghc);
+        ghc = RegRead(kHbaGlobalHostControl);
         if (ghc & AHCI_GHC_AE) return;
         usleep(10 * 1000);
     }
 }
 
-void Controller::HbaReset() {
+zx_status_t Controller::HbaReset() {
     // AHCI 1.3: Software may perform an HBA reset prior to initializing the controller
-    uint32_t ghc = RegRead(&regs_->ghc);
+    uint32_t ghc = RegRead(kHbaGlobalHostControl);
     ghc |= AHCI_GHC_AE;
-    RegWrite(&regs_->ghc, ghc);
+    RegWrite(kHbaGlobalHostControl, ghc);
     ghc |= AHCI_GHC_HR;
-    RegWrite(&regs_->ghc, ghc);
+    RegWrite(kHbaGlobalHostControl, ghc);
     // reset should complete within 1 second
-    zx_status_t status = WaitForClear(&regs_->ghc, AHCI_GHC_HR, zx::sec(1));
+    zx_status_t status = WaitForClear(kHbaGlobalHostControl, AHCI_GHC_HR, zx::sec(1));
     if (status) {
         zxlogf(ERROR, "ahci: hba reset timed out\n");
     }
+    return status;
 }
 
 zx_status_t Controller::SetDevInfo(uint32_t portnr, sata_devinfo_t* devinfo) {
@@ -191,12 +190,12 @@ int Controller::IrqLoop() {
             return 0;
         }
         // mask hba interrupts while interrupts are being handled
-        uint32_t ghc = RegRead(&regs_->ghc);
-        RegWrite(&regs_->ghc, ghc & ~AHCI_GHC_IE);
+        uint32_t ghc = RegRead(kHbaGlobalHostControl);
+        RegWrite(kHbaGlobalHostControl, ghc & ~AHCI_GHC_IE);
 
         // handle interrupt for each port
-        uint32_t is = RegRead(&regs_->is);
-        RegWrite(&regs_->is, is);
+        uint32_t is = RegRead(kHbaInterruptStatus);
+        RegWrite(kHbaInterruptStatus, is);
         for (uint32_t i = 0; is && i < AHCI_MAX_PORTS; i++) {
             if (is & 0x1) {
                 bool txn_handled = ports_[i].HandleIrq();
@@ -209,8 +208,8 @@ int Controller::IrqLoop() {
         }
 
         // unmask hba interrupts
-        ghc = RegRead(&regs_->ghc);
-        RegWrite(&regs_->ghc, ghc | AHCI_GHC_IE);
+        ghc = RegRead(kHbaGlobalHostControl);
+        RegWrite(kHbaGlobalHostControl, ghc | AHCI_GHC_IE);
     }
 }
 
@@ -230,28 +229,28 @@ int Controller::InitScan() {
     // enable ahci mode
     AhciEnable();
 
-    cap_ = RegRead(&regs_->cap);
+    cap_ = RegRead(kHbaCapabilities);
 
     // count number of ports
-    uint32_t port_map = RegRead(&regs_->pi);
+    uint32_t port_map = RegRead(kHbaPortsImplemented);
 
     // initialize ports
     zx_status_t status;
     for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
         if (!(port_map & (1u << i))) continue; // port not implemented
-        status = ports_[i].Configure(i, this, &regs_->ports[i]);
-        if (status) {
+        status = ports_[i].Configure(i, this, kHbaPorts);
+        if (status != ZX_OK) {
             return status;
         }
     }
 
     // clear hba interrupts
-    RegWrite(&regs_->is, RegRead(&regs_->is));
+    RegWrite(kHbaInterruptStatus, RegRead(kHbaInterruptStatus));
 
     // enable hba interrupts
-    uint32_t ghc = RegRead(&regs_->ghc);
+    uint32_t ghc = RegRead(kHbaGlobalHostControl);
     ghc |= AHCI_GHC_IE;
-    RegWrite(&regs_->ghc, ghc);
+    RegWrite(kHbaGlobalHostControl, ghc);
 
     // this part of port init happens after enabling interrupts in ghc
     for (uint32_t i = 0; i < AHCI_MAX_PORTS; i++) {
@@ -262,16 +261,15 @@ int Controller::InitScan() {
         port->Enable();
 
         // enable interrupts
-        ahci_port_reg_t* port_regs = port->regs();
-        RegWrite(&port_regs->ie, AHCI_PORT_INT_MASK);
+        port->RegWrite(kPortInterruptEnable, AHCI_PORT_INT_MASK);
 
         // reset port
         port->Reset();
 
         // FIXME proper layering?
-        if (RegRead(&port_regs->ssts) & AHCI_PORT_SSTS_DET_PRESENT) {
+        if (port->RegRead(kPortSataStatus) & AHCI_PORT_SSTS_DET_PRESENT) {
             port->set_present(true);
-            if (RegRead(&port_regs->sig) == AHCI_PORT_SIG_SATA) {
+            if (port->RegRead(kPortSignature) == AHCI_PORT_SIG_SATA) {
                 sata_bind(this, zxdev_, port->num());
             }
         }
@@ -303,7 +301,6 @@ zx_status_t Controller::CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> 
         zxlogf(ERROR, "ahci: failed to configure host bus\n");
         return status;
     }
-    controller->regs_ = static_cast<ahci_hba_t*>(bus->mmio());
     controller->bus_ = std::move(bus);
     *con_out = std::move(controller);
     return ZX_OK;
