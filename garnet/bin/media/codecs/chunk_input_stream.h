@@ -27,12 +27,24 @@ class ChunkInputStream {
   struct InputBlock {
     // Pointer to data which is set iff `len > 0`.
     const uint8_t* data = nullptr;
-    const size_t len = 0;
-    const size_t non_padding_len = 0;
+    size_t len = 0;
+    // Encoders with delay should take care not to encode padding bytes, which
+    // would inject silence midstream.
+    size_t non_padding_len = 0;
     // Set on the last invocation of the input block processor for the input
     // stream.
-    const bool is_end_of_stream = false;
-    const std::optional<uint64_t> timestamp_ish;
+    bool is_end_of_stream = false;
+    std::optional<uint64_t> timestamp_ish;
+    // A timestamp to apply to delayed output. This is only provided at the
+    // end of the stream, when there is no way to associate this with input.
+    //
+    // Audio encoders often add priming samples to the start of their output.
+    // Because of this, the last timestamp may belong to samples stuck inside
+    // the encoder at the end of the stream.
+    //
+    // Correct decoders strip priming samples and translate timestamps forward
+    // onto the correct samples.
+    std::optional<uint64_t> flush_timestamp_ish;
   };
 
   enum Status {
@@ -47,7 +59,7 @@ class ChunkInputStream {
   };
 
   using InputBlockProcessor =
-      fit::function<ControlFlow(InputBlock input_block)>;
+      fit::function<ControlFlow(const InputBlock input_block)>;
 
   ChunkInputStream(size_t chunk_size,
                    TimestampExtrapolator&& timestamp_extrapolator,
@@ -111,9 +123,7 @@ class ChunkInputStream {
   Status EmitBlock(const uint8_t* data, const size_t non_padding_len,
                    const bool is_end_of_stream = false);
 
-  // Ensures we have a timestamp in `next_output_timestamp_` for the next
-  // emitted block.
-  Status EnsureTimestamp();
+  std::pair<std::optional<uint64_t>, Status> ExtrapolateTimestamp();
 
   // Returns total number of bytes seen, which may be more than `stream_index_`,
   // because we might have some bytes in the scratch block.

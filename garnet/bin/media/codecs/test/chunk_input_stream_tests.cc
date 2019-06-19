@@ -456,3 +456,45 @@ TEST(ChunkInputStream, ReportsErrorWhenMissingTimebase) {
   // timestamp.
   EXPECT_EQ(calls_for_packet_2, 1u);
 }
+
+TEST(ChunkInputStream, ProvidesFlushTimestamp) {
+  constexpr size_t kChunkSize = 4;
+  constexpr size_t kPacketLen = 2;
+  auto packets = Packets(2);
+  auto buffers = Buffers({kPacketLen});
+
+  auto buffer = buffers.ptr(0);
+
+  packets.ptr(0)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(0)->SetBuffer(buffer);
+  packets.ptr(0)->SetStartOffset(0);
+  packets.ptr(0)->SetTimstampIsh(10);
+
+  packets.ptr(1)->SetValidLengthBytes(kPacketLen);
+  packets.ptr(1)->SetBuffer(buffer);
+  packets.ptr(1)->SetStartOffset(0);
+  packets.ptr(1)->SetTimstampIsh(20);
+
+  bool flush_called = false;
+  auto input_block_processor =
+      [&flush_called](ChunkInputStream::InputBlock input_block) {
+        if (input_block.is_end_of_stream) {
+          flush_called = true;
+          EXPECT_TRUE(input_block.flush_timestamp_ish.has_value());
+          return ChunkInputStream::kContinue;
+        }
+
+        return ChunkInputStream::kContinue;
+      };
+
+  auto under_test =
+      ChunkInputStream(kChunkSize, TimestampExtrapolator(ZX_SEC(1), ZX_SEC(1)),
+                       input_block_processor);
+
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(0)),
+            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.ProcessInputPacket(packets.ptr(1)),
+            ChunkInputStream::kOk);
+  EXPECT_EQ(under_test.Flush(), ChunkInputStream::kOk);
+  EXPECT_TRUE(flush_called);
+}

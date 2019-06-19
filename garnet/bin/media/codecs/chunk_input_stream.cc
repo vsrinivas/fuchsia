@@ -48,10 +48,11 @@ ChunkInputStream::Status ChunkInputStream::ProcessInputPacket(
                         "Any stashed timestamp should have been used when "
                         "emitting the scratch block.");
 
-    Status status;
-    if ((status = EnsureTimestamp()) != kOk) {
+    auto [timestamp, status] = ExtrapolateTimestamp();
+    if (status != kOk) {
       return status;
     }
+    next_output_timestamp_ = timestamp;
   }
 
   while (input_packet.bytes_unread() >= chunk_size_) {
@@ -101,31 +102,43 @@ void ChunkInputStream::AppendToScratchBlock(InputPacket* input_packet) {
 ChunkInputStream::Status ChunkInputStream::EmitBlock(
     const uint8_t* data, const size_t non_padding_len,
     const bool is_end_of_stream) {
-  auto timestamp_ish = next_output_timestamp_;
-  next_output_timestamp_ = std::nullopt;
+  stream_index_ += chunk_size_;
+  std::optional<uint64_t> timestamp_ish;
+  std::swap(timestamp_ish, next_output_timestamp_);
 
-  if (input_block_processor_({.data = data,
-                              .len = chunk_size_,
-                              .timestamp_ish = timestamp_ish,
-                              .non_padding_len = non_padding_len,
-                              .is_end_of_stream = is_end_of_stream}) ==
-      kTerminate) {
+  std::optional<uint64_t> flush_timestamp;
+  if (is_end_of_stream) {
+    auto [timestamp, status] = ExtrapolateTimestamp();
+    if (status != kOk) {
+      return status;
+    }
+    flush_timestamp = timestamp;
+  }
+
+  InputBlock input_block;
+  input_block.data = data;
+  input_block.len = chunk_size_;
+  input_block.non_padding_len = non_padding_len;
+  input_block.is_end_of_stream = is_end_of_stream;
+  input_block.timestamp_ish = timestamp_ish;
+  input_block.flush_timestamp_ish = flush_timestamp;
+  if (input_block_processor_(input_block) == kTerminate) {
     early_terminated_ = true;
     return kUserTerminated;
   }
 
-  stream_index_ += chunk_size_;
   return kOk;
 }
 
-ChunkInputStream::Status ChunkInputStream::EnsureTimestamp() {
+std::pair<std::optional<uint64_t>, ChunkInputStream::Status>
+ChunkInputStream::ExtrapolateTimestamp() {
+  std::optional<uint64_t> timestamp;
   if (timestamp_extrapolator_.has_information() &&
-      !(next_output_timestamp_ =
-            timestamp_extrapolator_.Extrapolate(stream_index_))) {
-    return kExtrapolationFailedWithoutTimebase;
+      !(timestamp = timestamp_extrapolator_.Extrapolate(stream_index_))) {
+    return {std::nullopt, kExtrapolationFailedWithoutTimebase};
   }
 
-  return kOk;
+  return {timestamp, kOk};
 }
 
 size_t ChunkInputStream::BytesSeen() const {

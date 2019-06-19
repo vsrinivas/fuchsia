@@ -250,7 +250,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
       format_details.has_timebase()
           ? TimestampExtrapolator(format_details.timebase(), bytes_per_second)
           : TimestampExtrapolator(),
-      [this](ChunkInputStream::InputBlock input_block) {
+      [this](const ChunkInputStream::InputBlock input_block) {
         if (input_block.non_padding_len == 0) {
           return ChunkInputStream::kContinue;
         }
