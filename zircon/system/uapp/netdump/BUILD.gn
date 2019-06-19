@@ -6,6 +6,7 @@ executable("netdump") {
   sources = [
     "filter.cpp",
     "netdump.cpp",
+    "parser.cpp",
     "tokens.cpp",
   ]
   deps = [
@@ -31,12 +32,14 @@ test("netdump-test") {
   sources = [
     "filter.cpp",
     "test/filter_test.cpp",
+    "test/parser_test.cpp",
     "test/tokens_test.cpp",
     "tokens.cpp",
   ]
   include_dirs = [ "." ]
   deps = [
     ":common",
+    "$zx/system/ulib/mock-function",
     "$zx/system/ulib/zxtest",
   ]
 }
