@@ -188,7 +188,6 @@ struct brcmf_sdreg {
 };
 
 struct brcmf_sdio;
-struct brcmf_sdiod_freezer;
 
 struct brcmf_sdio_dev {
     struct sdio_func *func1;
@@ -214,7 +213,6 @@ struct brcmf_sdio_dev {
     char nvram_name[BRCMF_FW_NAME_LEN];
     bool wowl_enabled;
     enum brcmf_sdiod_state state;
-    struct brcmf_sdiod_freezer* freezer;
 };
 
 /* sdio core registers */
@@ -389,19 +387,6 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 int brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func);
 
 void brcmf_sdiod_change_state(struct brcmf_sdio_dev* sdiodev, enum brcmf_sdiod_state state);
-#ifdef CONFIG_PM_SLEEP
-bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev);
-void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev);
-void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev);
-void brcmf_sdiod_freezer_uncount(struct brcmf_sdio_dev* sdiodev);
-#else
-static inline bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev) {
-    return false;
-}
-static inline void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {}
-static inline void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev) {}
-static inline void brcmf_sdiod_freezer_uncount(struct brcmf_sdio_dev* sdiodev) {}
-#endif /* CONFIG_PM_SLEEP */
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev);
 void brcmf_sdio_remove(struct brcmf_sdio* bus);

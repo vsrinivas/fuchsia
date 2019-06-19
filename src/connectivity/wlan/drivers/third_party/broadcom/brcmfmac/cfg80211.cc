@@ -2639,30 +2639,6 @@ static zx_status_t brcmf_notify_tdls_peer_event(struct brcmf_if* ifp,
     return ZX_OK;
 }
 
-#ifdef CONFIG_PM
-static zx_status_t brcmf_cfg80211_set_rekey_data(struct wiphy* wiphy, struct net_device* ndev,
-                                                 struct cfg80211_gtk_rekey_data* gtk) {
-    struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_gtk_keyinfo_le gtk_le;
-    zx_status_t ret;
-    int32_t fw_err = 0;
-
-    brcmf_dbg(TRACE, "Enter, bssidx=%d\n", ifp->bsscfgidx);
-
-    memcpy(gtk_le.kck, gtk->kck, sizeof(gtk_le.kck));
-    memcpy(gtk_le.kek, gtk->kek, sizeof(gtk_le.kek));
-    memcpy(gtk_le.replay_counter, gtk->replay_ctr, sizeof(gtk_le.replay_counter));
-
-    ret = brcmf_fil_iovar_data_set(ifp, "gtk_key_info", &gtk_le, sizeof(gtk_le), &fw_err);
-    if (ret != ZX_OK) {
-        brcmf_err("gtk_key_info iovar failed: %s, fw err %s\n", zx_status_get_string(ret),
-                  brcmf_fil_get_errstr(fw_err));
-    }
-
-    return ret;
-}
-#endif
-
 static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_if* ifp = cfg_to_if(cfg);
@@ -4556,11 +4532,6 @@ static void brcmf_free_wiphy(struct wiphy* wiphy) {
         return;
     }
 
-#if IS_ENABLED(CONFIG_PM)
-    if (wiphy->wowlan != &brcmf_wowlan_support) {
-        free(wiphy->wowlan);
-    }
-#endif
     free(wiphy_to_cfg(wiphy));
     free(wiphy);
 }

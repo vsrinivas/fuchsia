@@ -1402,9 +1402,6 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
     dev->bus = bus;
     bus->ops = &brcmf_usb_bus_ops;
     bus->always_use_fws_queue = true;
-#ifdef CONFIG_PM
-    bus->wowl_supported = true;
-#endif
 
     devinfo->settings =
         brcmf_get_module_param(bus->dev, BRCMF_BUSTYPE_USB, bus_pub->devid, bus_pub->chiprev);

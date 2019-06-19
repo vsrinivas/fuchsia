@@ -3395,11 +3395,6 @@ void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
         bus->idlecount = 0;
     }
     bus->dpc_running = false;
-    if (brcmf_sdiod_freezing(bus->sdiodev)) {
-        brcmf_sdiod_change_state(bus->sdiodev, BRCMF_SDIOD_DOWN);
-        brcmf_sdiod_try_freeze(bus->sdiodev);
-        brcmf_sdiod_change_state(bus->sdiodev, BRCMF_SDIOD_DATA);
-    }
     mtx_unlock(&lock);
 }
 
@@ -3686,17 +3681,6 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
         bus->sgentry_align = sdiodev->settings->bus.sdio.sd_sgentry_align;
     }
 
-#ifdef CONFIG_PM_SLEEP
-    /* wowl can be supported when KEEP_POWER is true and (WAKE_SDIO_IRQ
-     * is true or when platform data OOB irq is true).
-     */
-    if ((sdio_get_host_pm_caps(sdiodev->func1) & MMC_PM_KEEP_POWER) &&
-            ((sdio_get_host_pm_caps(sdiodev->func1) & MMC_PM_WAKE_SDIO_IRQ) ||
-             (sdiodev->settings->bus.sdio.oob_irq_supported))) {
-        sdiodev->bus_if->wowl_supported = true;
-    }
-#endif
-
     err = brcmf_sdio_kso_init(bus);
     if (err != ZX_OK) {
         brcmf_err("error enabling KSO: %s\n", zx_status_get_string(err));
@@ -3776,25 +3760,16 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
     struct brcmf_sdio* bus = (struct brcmf_sdio*)data;
 
     /* Run until signal received */
-    brcmf_sdiod_freezer_count(bus->sdiodev);
     while (1) {
         if (bus->watchdog_should_stop.load()) {
             break;
         }
-        // TODO(NET-744): Put back the freezer-related calls once 744 is resolved.
-        // The polling workaround tangles up the freezer logic, and freezing is just related
-        // to power-saving. I don't know what would happen if we tried to freeze when
-        // watchdog wasn't active, so I'm commenting them out for now.
-        //brcmf_sdiod_freezer_uncount(bus->sdiodev);
-
         // Currently we're depending on watchdog for all interrupt handling, so poll quickly
         // instead of waiting for watchdog signal.
         //sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
         zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
 
-        //brcmf_sdiod_freezer_count(bus->sdiodev);
         if (bus->wd_active.load()) {
-            brcmf_sdiod_try_freeze(bus->sdiodev);
             brcmf_sdio_bus_watchdog(bus);
         }
         /* Count the tick for reference */
@@ -4030,7 +4005,6 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
         brcmf_err("insufficient memory to create txworkqueue\n");
         goto fail;
     }
-    brcmf_sdiod_freezer_count(sdiodev);
     workqueue_init_work(&bus->datawork, brcmf_sdio_dataworker);
     bus->brcmf_wq = wq;
 

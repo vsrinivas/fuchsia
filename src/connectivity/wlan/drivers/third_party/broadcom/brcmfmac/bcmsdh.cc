@@ -66,14 +66,6 @@
 
 #define BRCMF_DEFAULT_RXGLOM_SIZE 32 /* max rx frames in glom chain */
 
-struct brcmf_sdiod_freezer {
-    std::atomic<int> freezing;
-    std::atomic<int> thread_count;
-    uint32_t frozen_count;
-    sync_completion_t thread_freeze;
-    sync_completion_t resumed;
-};
-
 static void brcmf_sdiod_ib_irqhandler(struct brcmf_sdio_dev* sdiodev) {
     brcmf_dbg(INTR, "IB intr triggered\n");
 
@@ -686,86 +678,12 @@ zx_status_t brcmf_sdiod_abort(struct brcmf_sdio_dev* sdiodev, uint32_t func) {
     return ZX_OK;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
-    sdiodev->freezer =
-        static_cast<decltype(sdiodev->freezer)>(calloc(1, sizeof(*sdiodev->freezer)));
-    if (!sdiodev->freezer) { return ZX_ERR_NO_MEMORY; }
-    sdiodev->freezer->thread_count.store(0);
-    sdiodev->freezer->freezing.store(0);
-    sdiodev->freezer->thread_freeze = {};
-    sdiodev->freezer->resumed = {};
-    return ZX_OK;
-}
-
-static void brcmf_sdiod_freezer_detach(struct brcmf_sdio_dev* sdiodev) {
-    if (sdiodev->freezer) {
-        WARN_ON(sdiodev->freezer->freezing.load());
-        free(sdiodev->freezer);
-    }
-}
-
-static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
-    zx_status_t res = ZX_OK;
-
-    sdiodev->freezer->frozen_count = 0;
-    sync_completion_reset(&sdiodev->freezer->resumed);
-    sync_completion_reset(&sdiodev->freezer->thread_freeze);
-    sdiodev->freezer->freezing.store(1);
-    brcmf_sdio_trigger_dpc(sdiodev->bus);
-    sync_completion_wait(&sdiodev->freezer->thread_freeze, ZX_TIME_INFINITE);
-    sdio_claim_host(sdiodev->func1);
-    res = brcmf_sdio_sleep(sdiodev->bus, true);
-    sdio_release_host(sdiodev->func1);
-    return res;
-}
-
-static void brcmf_sdiod_freezer_off(struct brcmf_sdio_dev* sdiodev) {
-    sdio_claim_host(sdiodev->func1);
-    brcmf_sdio_sleep(sdiodev->bus, false);
-    sdio_release_host(sdiodev->func1);
-    sdiodev->freezer->freezing.store(0);
-    sync_completion_signal(&sdiodev->freezer->resumed);
-}
-
-bool brcmf_sdiod_freezing(struct brcmf_sdio_dev* sdiodev) {
-    return sdiodev->freezer->freezing.load();
-}
-
-void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
-    if (!brcmf_sdiod_freezing(sdiodev)) {
-        return;
-    }
-    sdiodev->freezer->frozen_count++;
-    if (sdiodev->freezer->thread_count.load() == sdiodev->freezer->frozen_count) {
-        sync_completion_signal(&sdiodev->freezer->thread_freeze);
-    }
-    sync_completion_wait(&sdiodev->freezer->resumed, ZX_TIME_INFINITE);
-}
-
-void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev) {
-    sdiodev->freezer->thread_count.fetch_add(1);
-}
-
-void brcmf_sdiod_freezer_uncount(struct brcmf_sdio_dev* sdiodev) {
-    sdiodev->freezer->thread_count.fetch_sub(1);
-}
-#else
-static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
-    return ZX_OK;
-}
-
-static void brcmf_sdiod_freezer_detach(struct brcmf_sdio_dev* sdiodev) {}
-#endif /* CONFIG_PM_SLEEP */
-
 static zx_status_t brcmf_sdiod_remove(struct brcmf_sdio_dev* sdiodev) {
     sdiodev->state = BRCMF_SDIOD_DOWN;
     if (sdiodev->bus) {
         brcmf_sdio_remove(sdiodev->bus);
         sdiodev->bus = NULL;
     }
-
-    brcmf_sdiod_freezer_detach(sdiodev);
 
     /* Disable Function 2 */
     sdio_claim_host(sdiodev->func2);
@@ -819,11 +737,6 @@ static zx_status_t brcmf_sdiod_probe(struct brcmf_sdio_dev* sdiodev) {
         goto out;
     }
 
-    ret = brcmf_sdiod_freezer_attach(sdiodev);
-    if (ret != ZX_OK) {
-        goto out;
-    }
-
     /* try to attach to the target device */
     sdiodev->bus = brcmf_sdio_probe(sdiodev);
     if (!sdiodev->bus) {
@@ -865,17 +778,6 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
     {/* end: all zeroes */}
 };
 #endif // TODO_ADD_SDIO_IDS
-
-static void brcmf_sdiod_acpi_set_power_manageable(struct brcmf_device* dev, int val) {
-#if IS_ENABLED(CONFIG_ACPI)
-    struct acpi_device* adev;
-
-    adev = ACPI_COMPANION(dev);
-    if (adev) {
-        adev->flags.power_manageable = 0;
-    }
-#endif
-}
 
 zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* composite_proto) {
     zx_status_t err;
@@ -958,10 +860,6 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* compos
     // Fuchsia? (MMC_QUIRK_LENIENT_FN0 is defined outside this driver.)
     /* Set MMC_QUIRK_LENIENT_FN0 for this card */
     //func->card->quirks |= MMC_QUIRK_LENIENT_FN0;
-
-    /* prohibit ACPI power management for this device */
-    // TODO(cphoenix): Linux power management stuff
-    brcmf_sdiod_acpi_set_power_manageable(NULL, 0);
 
     bus_if = static_cast<decltype(bus_if)>(calloc(1, sizeof(struct brcmf_bus)));
     if (!bus_if) {
@@ -1084,53 +982,6 @@ void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled) {
     brcmf_dbg(SDIO, "Configuring WOWL, enabled=%d\n", enabled);
     sdiodev->wowl_enabled = enabled;
 }
-
-#ifdef CONFIG_PM_SLEEP
-static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_sdio_dev* sdiodev, uint32_t func) {
-    struct brcmf_bus* bus_if;
-    mmc_pm_flag_t sdio_flags;
-    struct brcmf_device* dev = sdiodev->dev;
-
-    brcmf_dbg(SDIO, "Enter: F%d\n", func);
-    if (func != SDIO_FN_1) {
-        return ZX_OK;
-    }
-
-    bus_if = dev_to_bus(dev);
-    sdiodev = bus_if->bus_priv.sdio;
-
-    brcmf_sdiod_freezer_on(sdiodev);
-    brcmf_sdio_wd_timer(sdiodev->bus, false);
-
-    sdio_flags = MMC_PM_KEEP_POWER;
-    if (sdiodev->wowl_enabled) {
-        if (sdiodev->settings->bus.sdio.oob_irq_supported) {
-            enable_irq_wake(sdiodev->irq_handle);
-        } else {
-            sdio_flags |= MMC_PM_WAKE_SDIO_IRQ;
-        }
-    }
-    if (sdio_set_host_pm_flags(sdiodev, SDIO_FN_1, sdio_flags)) {
-        brcmf_err("Failed to set pm_flags %x\n", sdio_flags);
-    }
-    return ZX_OK;
-}
-
-static zx_status_t brcmf_ops_sdio_resume(struct brcmf_device* dev) {
-    struct brcmf_bus* bus_if = dev_to_bus(dev);
-    struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
-
-    brcmf_dbg(SDIO, "Enter");
-
-    brcmf_sdiod_freezer_off(sdiodev);
-    return ZX_OK;
-}
-
-static const struct dev_pm_ops brcmf_sdio_pm_ops = {
-    .suspend = brcmf_ops_sdio_suspend,
-    .resume = brcmf_ops_sdio_resume,
-};
-#endif /* CONFIG_PM_SLEEP */
 
 void brcmf_sdio_exit(void) {
     brcmf_dbg(SDIO, "Enter\n");
