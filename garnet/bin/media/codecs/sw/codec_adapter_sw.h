@@ -336,8 +336,8 @@ class CodecAdapterSW : public CodecAdapter {
   BlockingMpscQueue<CodecInputItem> input_queue_;
   BlockingMpscQueue<CodecPacket*> free_output_packets_;
 
-  std::map<CodecPacket*, LocalOutput> in_use_by_client_ FXL_GUARDED_BY(lock_);
   BufferPool output_buffer_pool_;
+  std::map<CodecPacket*, LocalOutput> in_use_by_client_ FXL_GUARDED_BY(lock_);
 
   // Buffers the client has added but that we cannot use until configuration is
   // complete.

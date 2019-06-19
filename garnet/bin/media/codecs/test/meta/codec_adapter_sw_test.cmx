@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "test/codec_adapter_sw_test"
+    },
+    "sandbox": {
+        "features": [],
+        "services": []
+    }
+}

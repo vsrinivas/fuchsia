@@ -10,6 +10,7 @@ group("test") {
   testonly = true
   deps = [
     ":chunk_input_stream_tests",
+    ":codec_adapter_sw_test",
     ":mpsc_queue_tests",
     ":output_sink_tests",
     ":raw_frames",
@@ -17,6 +18,33 @@ group("test") {
     ":raw_frames_test_bin",
     ":sbc_encoder_test",
     ":timestamp_extrapolator_tests",
+  ]
+}
+
+executable("codec_adapter_sw_test_bin") {
+  output_name = "codec_adapter_sw_test"
+  testonly = true
+
+  sources = [
+    "codec_adapter_sw_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/media/codecs/sw:codec_adapter_sw",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+test_package("codec_adapter_sw_test") {
+  tests = [
+    {
+      name = "codec_adapter_sw_test"
+      environments = basic_envs
+    },
+  ]
+
+  deps = [
+    ":codec_adapter_sw_test_bin",
   ]
 }
 
