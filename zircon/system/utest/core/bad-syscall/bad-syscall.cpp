@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
-extern zx_status_t bad_syscall(uint64_t num);
+extern "C" zx_status_t bad_syscall(uint64_t num);
 
 bool bad_access_test(void) {
     BEGIN_TEST;
@@ -20,7 +20,7 @@ bool bad_access_test(void) {
               0, "Error: channel create failed");
     EXPECT_LT(zx_channel_write(0, h[0], unmapped_addr, 1, NULL, 0),
               0, "Error: reading unmapped addr");
-    EXPECT_LT(zx_channel_write(h[0], 0, (void*)KERNEL_ASPACE_BASE - 1, 5, NULL, 0),
+    EXPECT_LT(zx_channel_write(h[0], 0, (void*)(KERNEL_ASPACE_BASE - 1), 5, NULL, 0),
               0, "Error: read crossing kernel boundary");
     EXPECT_LT(zx_channel_write(h[0], 0, (void*)KERNEL_ASPACE_BASE, 1, NULL, 0),
               0, "Error: read into kernel space");
