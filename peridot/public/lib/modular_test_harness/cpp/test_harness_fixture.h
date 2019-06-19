@@ -6,6 +6,7 @@
 #define LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_FIXTURE_H_
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/modular_test_harness/cpp/test_harness_launcher.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -194,17 +195,12 @@ void AddModToStory(
 
 class TestHarnessFixture : public sys::testing::TestWithEnvironment {
  protected:
-  TestHarnessFixture();
-  virtual ~TestHarnessFixture();
-
   fuchsia::modular::testing::TestHarnessPtr& test_harness() {
-    return test_harness_;
+    return test_harness_launcher_.test_harness();
   }
 
  private:
-  std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;
-  fuchsia::sys::ComponentControllerPtr test_harness_ctrl_;
-  fuchsia::modular::testing::TestHarnessPtr test_harness_;
+  modular::testing::TestHarnessLauncher test_harness_launcher_;
 };
 
 }  // namespace testing
