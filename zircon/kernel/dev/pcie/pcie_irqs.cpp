@@ -44,9 +44,10 @@ void PcieDevice::ResetCommonIrqBookkeeping() {
     irq_.singleton_handler.handler = nullptr;
     irq_.singleton_handler.ctx = nullptr;
     irq_.singleton_handler.dev = nullptr;
-    irq_.mode          = PCIE_IRQ_MODE_DISABLED;
-    irq_.handlers      = nullptr;
+    irq_.mode = PCIE_IRQ_MODE_DISABLED;
+    irq_.handlers = nullptr;
     irq_.handler_count = 0;
+    irq_.registered_handler_count = 0;
 }
 
 zx_status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
