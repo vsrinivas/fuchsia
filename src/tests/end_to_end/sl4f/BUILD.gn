@@ -9,6 +9,7 @@ dart_test("sl4f_test") {
   sources = [
     "dump_test.dart",
     "file_facade_test.dart",
+    "performance_test.dart",
   ]
 
   deps = [
