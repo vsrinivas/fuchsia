@@ -11,9 +11,12 @@
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -118,6 +121,8 @@ void FormatChar(FormatNode* node) {
 }
 
 void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
+  node->set_description_kind(FormatNode::kBaseType);
+
   if (options.num_format != NumFormat::kDefault) {
     // Overridden format option.
     switch (options.num_format) {
@@ -159,8 +164,7 @@ void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
   }
 }
 
-void FormatCollection(FormatNode* node,
-                      const Collection* coll,
+void FormatCollection(FormatNode* node, const Collection* coll,
                       const FormatExprValueOptions& options,
                       fxl::RefPtr<EvalContext> eval_context) {
   if (coll->is_declaration()) {
@@ -199,7 +203,8 @@ void FormatCollection(FormatNode* node,
     if (err.has_error()) {
       node->children().push_back(std::make_unique<FormatNode>(from_name, err));
     } else {
-      node->children().push_back(std::make_unique<FormatNode>(from_name, from_value));
+      node->children().push_back(
+          std::make_unique<FormatNode>(from_name, from_value));
     }
   }
 
@@ -214,45 +219,89 @@ void FormatCollection(FormatNode* node,
     ExprValue member_value;
     Err err = ResolveMember(eval_context, node->value(), member, &member_value);
     if (err.has_error()) {
-      node->children().push_back(std::make_unique<FormatNode>(member_name, err));
+      node->children().push_back(
+          std::make_unique<FormatNode>(member_name, err));
     } else {
-      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value));
+      node->children().push_back(
+          std::make_unique<FormatNode>(member_name, member_value));
     }
   }
+
+  node->set_description_kind(FormatNode::kCollection);
+}
+
+void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
+                   fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(FormatNode::kPointer);
+
+  // Note: don't make assumptions about the type of value.type() since it isn't
+  // necessarily a ModifiedType representing a pointer, but could be other
+  // things like a pointer to a member.
+
+  Err err = node->value().EnsureSizeIs(kTargetPointerSize);
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  // The address goes in the description.
+  node->set_description(
+      fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+
+  // Make a child node that's the dereferenced pointer value. If/when we
+  // support GUIs, we should probably remove the intermediate node and put the
+  // dereferenced struct members directly as children on this node. Otherwise
+  // it's an annoying extra step to expand to things.
+
+  // Use our name but with a "*" to show it dereferenced.
+  auto deref_node = std::make_unique<FormatNode>(
+      "*" + node->name(),
+      [ptr_value = node->value()](
+          fxl::RefPtr<EvalContext> context,
+          std::function<void(const Err& err, ExprValue value)> cb) {
+        ResolvePointer(context, ptr_value, std::move(cb));
+      });
+  node->children().push_back(std::move(deref_node));
 }
 
 }  // namespace
 
-void FillFormatNode(FormatNode* node, fxl::RefPtr<EvalContext> context) {
-  FXL_DCHECK(node->state() == FormatNode::kUnevaluated ||
-             node->state() == FormatNode::kHasValue);
-
-  if (node->state() == FormatNode::kUnevaluated) {
-    FillFormatNodeValue(node, std::move(context));
-    return;
+void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
+                         std::function<void()> cb) {
+  switch (node->source()) {
+    case FormatNode::kValue:
+      // Already has the value.
+      cb();
+      return;
+    case FormatNode::kExpression:
+      // Evaluate the expression.
+      EvalExpression(node->expression(), context, true,
+                     [weak_node = node->GetWeakPtr(), cb = std::move(cb)](
+                         const Err& err, ExprValue value) {
+                       if (!weak_node)
+                         return;
+                       if (err.has_error()) {
+                         weak_node->set_err(err);
+                         weak_node->SetValue(ExprValue());
+                       } else {
+                         weak_node->SetValue(std::move(value));
+                       }
+                       cb();
+                     });
+      return;
+    case FormatNode::kProgramatic:
+      // Lambda provides the value.
+      node->FillProgramaticValue(std::move(context), std::move(cb));
+      return;
   }
-}
-
-void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context) {
-  EvalExpression(
-      node->expression(), context, true,
-      [weak_node = node->GetWeakPtr()](const Err& err, ExprValue value) {
-        if (!weak_node)
-          return;
-        if (err.has_error()) {
-          weak_node->set_err(err);
-          weak_node->SetValue(ExprValue());
-        } else {
-          weak_node->SetValue(std::move(value));
-        }
-      });
+  FXL_NOTREACHED();
 }
 
 void FillFormatNodeDescription(FormatNode* node,
                                const FormatExprValueOptions& options,
                                fxl::RefPtr<EvalContext> context) {
   if (node->state() == FormatNode::kEmpty ||
-      node->state() == FormatNode::kUnevaluated) {
+      node->state() == FormatNode::kUnevaluated || node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);
     return;
   }
@@ -260,6 +309,7 @@ void FillFormatNodeDescription(FormatNode* node,
   // All code paths below convert to "described" state.
   node->set_state(FormatNode::kDescribed);
   node->set_description(std::string());
+  node->set_description_kind(FormatNode::kNone);
   node->children().clear();
   node->set_err(Err());
 
@@ -276,7 +326,25 @@ void FillFormatNodeDescription(FormatNode* node,
   // Always use this variable below instead of value.type().
   fxl::RefPtr<Type> type = node->value().GetConcreteType(context.get());
 
-  if (IsNumericBaseType(node->value().GetBaseType())) {
+  // TODO(brettw) handle references here.
+
+  if (const ModifiedType* modified_type = type->AsModifiedType()) {
+    // Modified types (references were handled above).
+    switch (modified_type->tag()) {
+      case DwarfTag::kPointerType:
+        // Function pointers need special handling.
+        /* TODO(brettw) implement this.
+        if (IsPointerToFunction(modified_type))
+          FormatFunctionPointer(value, options, &out);
+        else*/
+        FormatPointer(node, options, context);
+        break;
+      default:
+        node->set_err(Err("Unhandled type modifier 0x%x, please file a bug.",
+                          static_cast<unsigned>(modified_type->tag())));
+        break;
+    }
+  } else if (IsNumericBaseType(node->value().GetBaseType())) {
     // Numeric types.
     FormatNumeric(node, options);
   } else if (const Collection* coll = type->AsCollection()) {

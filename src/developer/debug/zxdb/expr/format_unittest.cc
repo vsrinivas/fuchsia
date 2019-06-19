@@ -21,25 +21,42 @@ namespace {
 
 class FormatTest : public TestWithLoop {
  public:
-  FormatTest()
-      : eval_context_(fxl::MakeRefCounted<MockEvalContext>()),
-        provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
+  FormatTest() : eval_context_(fxl::MakeRefCounted<MockEvalContext>()) {}
 
-  MockSymbolDataProvider* provider() { return provider_.get(); }
+  MockSymbolDataProvider* provider() { return eval_context_->data_provider(); }
 
-  std::unique_ptr<FormatNode> SyncFormat(const ExprValue& value,
-                                         const FormatExprValueOptions& opts) {
+  // Formats a given node synchronously.
+  void SyncFormat(FormatNode* node, const FormatExprValueOptions& opts) {
+    // Populate the value.
+    bool called = false;
+    FillFormatNodeValue(node, eval_context_, [&called]() {
+      debug_ipc::MessageLoop::Current()->QuitNow();
+      called = true;
+    });
+    if (!called)
+      loop().Run();
+
+    FillFormatNodeDescription(node, opts, eval_context_);
+  }
+
+  std::unique_ptr<FormatNode> GetDescribedNode(
+      const ExprValue& value, const FormatExprValueOptions& opts) {
     auto node = std::make_unique<FormatNode>(std::string(), value);
-    FillFormatNodeDescription(node.get(), opts, eval_context_);
+    SyncFormat(node.get(), opts);
     return node;
   }
 
-  // Recursively describes all nodes in the given tree.
-  void RecursiveSyncDescribe(FormatNode* node,
+  // Recursively describes all nodes in the given tree. If update_value is set,
+  // the value of the node will also be refreshed.
+  void RecursiveSyncDescribe(FormatNode* node, bool update_value,
                              const FormatExprValueOptions& opts) {
-    FillFormatNodeDescription(node, opts, eval_context_);
+    if (update_value)
+      SyncFormat(node, opts);
+    else
+      FillFormatNodeDescription(node, opts, eval_context_);
+
     for (auto& c : node->children())
-      RecursiveSyncDescribe(c.get(), opts);
+      RecursiveSyncDescribe(c.get(), update_value, opts);
   }
 
   // Returns "<type>, <description>" for the given formatted node. Errors
@@ -54,7 +71,7 @@ class FormatTest : public TestWithLoop {
   // On error, returns "Err: <msg>".
   std::string SyncTypeDesc(const ExprValue& value,
                            const FormatExprValueOptions& opts) {
-    auto node = SyncFormat(value, opts);
+    auto node = GetDescribedNode(value, opts);
     return GetTypeDesc(node.get());
   }
 
@@ -71,7 +88,7 @@ class FormatTest : public TestWithLoop {
   std::string SyncTreeTypeDesc(const ExprValue& value,
                                const FormatExprValueOptions& opts) {
     auto node = std::make_unique<FormatNode>(std::string(), value);
-    RecursiveSyncDescribe(node.get(), opts);
+    RecursiveSyncDescribe(node.get(), true, opts);
 
     std::string result;
     RecursiveTreeTypeDesc(node.get(), &result, 0);
@@ -80,8 +97,7 @@ class FormatTest : public TestWithLoop {
 
  private:
   // Recursive backend for SyncTreeTypeDesc.
-  void RecursiveTreeTypeDesc(const FormatNode* node,
-                             std::string* output,
+  void RecursiveTreeTypeDesc(const FormatNode* node, std::string* output,
                              int indent) {
     output->append(std::string(indent * 2, ' '));
     output->append(node->name());
@@ -93,7 +109,6 @@ class FormatTest : public TestWithLoop {
   }
 
   fxl::RefPtr<MockEvalContext> eval_context_;
-  fxl::RefPtr<MockSymbolDataProvider> provider_;
 };
 
 }  // namespace
@@ -285,23 +300,25 @@ TEST_F(FormatTest, Structs) {
       "    a = int32_t, 0x110011\n"
       // TODO(brettw) should be "    b = int32_t&, 0x1100 = 0x10" or similar
       // when refs are supported.
-      "    b = Err: Unsupported type for new formatting system.\n"
+      "    b = Err: Unhandled type modifier 0x10, please file a bug.\n"
       "  second = Foo, \n"
       "    a = int32_t, 0x330033\n"
       // TODO(brettw) should be "    b = int32_t&, 0x1100 = 0x10" or similar
       // when refs are supported.
-      "    b = Err: Unsupported type for new formatting system.\n",
+      "    b = Err: Unhandled type modifier 0x10, please file a bug.\n",
       SyncTreeTypeDesc(pair_value, opts));
 
   // Test an anonymous struct. Clang will generate structs with no names for
-  // things like closures.
+  // things like closures. This struct has no members.
   auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
   auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(
       DwarfTag::kPointerType, LazySymbol(anon_struct));
   ExprValue anon_value(anon_struct_ptr,
                        {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
-  // TODO(brettw) should be "((anon struct)*) 0x1100",
-  EXPECT_EQ(" = Err: Unsupported type for new formatting system.\n", SyncTreeTypeDesc(anon_value, opts));
+  EXPECT_EQ(
+      " = (anon struct)*, 0x1100\n"
+      "  * = (anon struct), \n",
+      SyncTreeTypeDesc(anon_value, opts));
 }
 
 // GDB and LLDB both print all members of a union and accept the possibility
@@ -333,9 +350,11 @@ TEST_F(FormatTest, Union) {
   union_type->set_data_members(std::move(data_members));
 
   ExprValue value(union_type, {42, 0, 0, 0});
-  EXPECT_EQ(" = MyUnion, \n"
-            "  a = int32_t, 42\n"
-            "  b = int32_t, 42\n", SyncTreeTypeDesc(value, opts));
+  EXPECT_EQ(
+      " = MyUnion, \n"
+      "  a = int32_t, 42\n"
+      "  b = int32_t, 42\n",
+      SyncTreeTypeDesc(value, opts));
 }
 
 // Tests formatting when a class has derived base classes.
@@ -371,13 +390,48 @@ TEST_F(FormatTest, DerivedClasses) {
   // Only the Base should be printed, EmptyBase should be omitted because it
   // has no data.
   FormatExprValueOptions opts;
-  EXPECT_EQ(" = Derived, \n"
-            "  Base = Base, \n"
-            "    a = int32_t, 1\n"
-            "    b = int32_t, 2\n"
-            "  c = int32_t, 3\n"
-            "  d = int32_t, 4\n",
-            SyncTreeTypeDesc(value, opts));
+  EXPECT_EQ(
+      " = Derived, \n"
+      "  Base = Base, \n"
+      "    a = int32_t, 1\n"
+      "    b = int32_t, 2\n"
+      "  c = int32_t, 3\n"
+      "  d = int32_t, 4\n",
+      SyncTreeTypeDesc(value, opts));
+}
+
+TEST_F(FormatTest, Pointer) {
+  FormatExprValueOptions opts;
+
+  auto base_type = MakeInt32Type();
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
+                                                    LazySymbol(base_type));
+
+  std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  ExprValue value(ptr_type, data);
+
+  // The pointer points to invalid memory.
+  EXPECT_EQ(
+      " = int32_t*, 0x807060504030201\n"
+      "  * = Err: Invalid pointer 0x807060504030201\n",
+      SyncTreeTypeDesc(value, opts));
+
+  // Provide some memory backing for the request.
+  constexpr uint64_t kAddress = 0x807060504030201;
+  provider()->AddMemory(kAddress, {123, 0, 0, 0});
+  EXPECT_EQ(
+      " = int32_t*, 0x807060504030201\n"
+      "  * = int32_t, 123\n",
+      SyncTreeTypeDesc(value, opts));
+
+  // Test an invalid one with an incorrect size.
+  data.resize(7);
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
+  ExprValue bad_value(ptr_type, data);
+  EXPECT_EQ(
+      " = Err: The value of type 'int32_t*' is the incorrect size (expecting "
+      "8, got 7). Please file a bug.\n",
+      SyncTreeTypeDesc(bad_value, opts));
 }
 
 }  // namespace zxdb

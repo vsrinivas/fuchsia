@@ -71,14 +71,31 @@ class FormatNode {
  public:
   using ChildVector = std::vector<std::unique_ptr<FormatNode>>;
 
+  // Type of function to use when the value is programatically generated. The
+  // callback will issue the callback with the result or error.
+  //
+  // The callback can be issued immediately (within the callstack of the caller
+  // of the getter) or asynchronously in the future. The implementation of
+  // GetProgramaticValue does not have to worry about the lifetime of the
+  // FormatNode, that will be handled by the implementation of the callback
+  // passed to it.
+  using GetProgramaticValue = std::function<void(
+      fxl::RefPtr<EvalContext> context,
+      std::function<void(const Err& err, ExprValue value)> cb)>;
+
   // The original source or the value for this node.
   enum Source {
-    kValue,       // Value is given, nothing to do.
-    kExpression,  // Evaluate an expression in some context to get the value.
+    kValue,        // Value is given, nothing to do.
+    kExpression,   // Evaluate an expression in some context to get the value.
+    kProgramatic,  // Evaluate a GetProgramaticValue() callback.
+  };
 
-    // In the future we may want to support a "kProgramatic" source which
-    // evaluates a lambda to compute a value. This could be the integration
-    // point for pretty-printers.
+  // The format of the description.
+  enum DescriptionKind {
+    kNone,
+    kBaseType,    // Integers, characters, bools, etc.
+    kCollection,  // Structs, classes.
+    kPointer,
   };
 
   /* TODO(brettw) in the future I'm think we'll need something like this as
@@ -102,9 +119,18 @@ class FormatNode {
   };
 
   FormatNode();
+
+  // Constructor for a known value.
   FormatNode(const std::string& name, ExprValue value);
+
+  // Constructor for the error case.
   FormatNode(const std::string& name, Err err);
+
+  // Constructor with an expression.
   explicit FormatNode(const std::string& expression);
+
+  // Constructor for a programatically-filled value.
+  FormatNode(const std::string& name, GetProgramaticValue get_value);
 
   // Not copyable nor moveable since this doesn't work with the weak ptr
   // factory.
@@ -128,6 +154,12 @@ class FormatNode {
   const std::string& expression() const { return expression_; }
   void set_expression(std::string e) { expression_ = std::move(e); }
 
+  // Call when source == kProgramatic to fill the value from the getter. The
+  // callback will be issued (possibly from within this call stack) when the
+  // value is filled.
+  void FillProgramaticValue(fxl::RefPtr<EvalContext> context,
+                            std::function<void()> cb);
+
   // The value. This will be valid when the State == kHasValue. The description
   // and type might not be up-to-date, see FillFormatNodeDescription().
   //
@@ -146,6 +178,9 @@ class FormatNode {
   // an abbreviated version of the struct's members.
   const std::string& description() const { return description_; }
   void set_description(std::string d) { description_ = std::move(d); }
+
+  DescriptionKind description_kind() const { return description_kind_; }
+  void set_description_kind(DescriptionKind dk) { description_kind_ = dk; }
 
   const ChildVector& children() const { return children_; }
   ChildVector& children() { return children_; }
@@ -169,11 +204,19 @@ class FormatNode {
   State state_ = kEmpty;
 
   std::string name_;
-  std::string expression_;
-  ExprValue value_;
 
+  // Valid when source == kExpression.
+  std::string expression_;
+
+  // Valid when source == kProgramatic.
+  GetProgramaticValue get_programatic_value_;
+
+  ExprValue value_;  // Value when source == kValue or when state == kHasValue.
+
+  // Valid when state == kDescribed.
   std::string type_;
   std::string description_;
+  DescriptionKind description_kind_ = kNone;
   Err err_;
 
   ChildVector children_;
