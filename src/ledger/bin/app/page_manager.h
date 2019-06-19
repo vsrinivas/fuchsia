@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 
 #include <optional>
 #include <string>
@@ -41,7 +42,8 @@ class PageManager {
               storage::PageId page_id, PageUsageListener* page_usage_listener,
               storage::LedgerStorage* ledger_storage,
               sync_coordinator::LedgerSync* ledger_sync,
-              LedgerMergeManager* ledger_merge_manager);
+              LedgerMergeManager* ledger_merge_manager,
+              inspect::Node inspect_node);
   ~PageManager();
 
   // Checks whether the given page is closed and synced. The result returned in
@@ -67,6 +69,12 @@ class PageManager {
   void GetPage(LedgerImpl::Delegate::PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
                fit::function<void(storage::Status)> callback);
+
+  // Registers "interest" in this |PageManager| for which this |PageManager|
+  // will remain non-empty and returns a closure that when called will
+  // deregister the "interest" in this |PageManager| (and potentially cause this
+  // |PageManager|'s on_empty_callback_ to be called).
+  fit::closure CreateDetacher();
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
@@ -146,6 +154,20 @@ class PageManager {
   // |outstanding_operations_| counts the number of active tracking operations.
   // The super manager is not empty until all operations have completed.
   uint64_t outstanding_operations_ = 0;
+
+  // The static Inspect object maintaining in Inspect a representation of this
+  // |PageManager|.
+  inspect::Node inspect_node_;
+  // The static Inspect object to which this |PageManager|'s commits are
+  // attached.
+  inspect::Node commits_node_;
+  fit::deferred_callback children_manager_retainer_;
+
+  // A nonnegative count of the number of "registered interests" for this
+  // |PageManager|. This field is incremented by calls to |CreateDetacher| and
+  // decremented by calls to the closures returned by calls to |CreateDetacher|.
+  // This |PageManager| is not considered empty while this number is positive.
+  int64_t outstanding_detachers_ = 0;
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageManager> weak_factory_;

@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/inspect.h>
 #include <trace/event.h>
 
 #include <string>
@@ -24,6 +25,7 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/logging.h"
@@ -36,7 +38,8 @@ PageManager::PageManager(Environment* environment, std::string ledger_name,
                          PageUsageListener* page_usage_listener,
                          storage::LedgerStorage* ledger_storage,
                          sync_coordinator::LedgerSync* ledger_sync,
-                         LedgerMergeManager* ledger_merge_manager)
+                         LedgerMergeManager* ledger_merge_manager,
+                         inspect::Node inspect_node)
     : environment_(environment),
       ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
@@ -44,11 +47,23 @@ PageManager::PageManager(Environment* environment, std::string ledger_name,
       ledger_storage_(ledger_storage),
       ledger_sync_(ledger_sync),
       ledger_merge_manager_(ledger_merge_manager),
+      inspect_node_(std::move(inspect_node)),
+      commits_node_(
+          inspect_node_.CreateChild(kCommitsInspectPathComponent.ToString())),
       weak_factory_(this) {
   page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
 }
 
 PageManager::~PageManager() {}
+
+fit::closure PageManager::CreateDetacher() {
+  outstanding_detachers_++;
+  return [this]() {
+    outstanding_detachers_--;
+    FXL_DCHECK(outstanding_detachers_ >= 0);
+    CheckEmpty();
+  };
+}
 
 void PageManager::PageIsClosedAndSynced(
     fit::function<void(storage::Status, PagePredicateResult)> callback) {
@@ -308,7 +323,8 @@ void PageManager::MaybeMarkPageOpened() { was_opened_.clear(); }
 
 void PageManager::CheckEmpty() {
   if (on_empty_callback_ && !active_page_manager_container_ &&
-      outstanding_operations_ == 0 && page_availability_manager_.IsEmpty()) {
+      outstanding_operations_ == 0 && page_availability_manager_.IsEmpty() &&
+      outstanding_detachers_ == 0) {
     on_empty_callback_();
   }
 }

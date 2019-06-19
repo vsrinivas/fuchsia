@@ -25,6 +25,8 @@ source_set("lib") {
     "fake_disk_cleanup_manager.h",
     "get_page_ensure_initialized.cc",
     "get_page_ensure_initialized.h",
+    "inspect.cc",
+    "inspect.h",
     "ledger_matcher.cc",
     "ledger_matcher.h",
     "ledger_memory_usage.cc",
@@ -44,6 +46,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/inspect:inspect",
     "//garnet/public/lib/rapidjson_utils",
     "//garnet/public/lib/timekeeper:testing",
     "//peridot/lib/convert",
@@ -63,6 +66,7 @@ source_set("lib") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace-provider-with-fdio",
@@ -70,8 +74,10 @@ source_set("lib") {
   ]
 
   deps = [
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/inspect:reader",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/ledger/bin/fidl",
     "//src/ledger/lib/coroutine",

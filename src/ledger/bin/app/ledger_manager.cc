@@ -24,6 +24,7 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/logging.h"
@@ -47,6 +48,9 @@ LedgerManager::LedgerManager(
       merge_manager_(environment_),
       page_usage_listener_(page_usage_listener),
       inspect_node_(std::move(inspect_node)),
+      pages_node_(
+          inspect_node_.CreateChild(kPagesInspectPathComponent.ToString())),
+      children_manager_retainer_(pages_node_.SetChildrenManager(this)),
       weak_factory_(this) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
@@ -93,6 +97,35 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                                            std::move(callback));
 }
 
+void LedgerManager::GetNames(
+    fit::function<void(std::vector<std::string>)> callback) {
+  storage_->ListPages([callback = std::move(callback)](
+                          storage::Status status,
+                          std::set<storage::PageId> page_ids) {
+    if (status != storage::Status::OK) {
+      FXL_LOG(WARNING) << "Status wasn't OK; rather it was " << status << "!";
+    }
+    std::vector<std::string> display_names;
+    display_names.reserve(page_ids.size());
+    for (const auto& page_id : page_ids) {
+      display_names.push_back(PageIdToDisplayName(page_id));
+    }
+    callback(display_names);
+  });
+}
+
+void LedgerManager::Attach(std::string name,
+                           fit::function<void(fit::closure)> callback) {
+  storage::PageId page_id;
+  if (!PageDisplayNameToPageId(name, &page_id)) {
+    FXL_DCHECK(false) << "Page display name \"" << name
+                      << "\" not convertable into a PageId!";
+    callback([]() {});
+    return;
+  }
+  callback(GetOrCreatePageManager(page_id)->CreateDetacher());
+};
+
 PageManager* LedgerManager::GetOrCreatePageManager(
     convert::ExtendedStringView page_id) {
   auto it = page_managers_.find(page_id);
@@ -102,9 +135,10 @@ PageManager* LedgerManager::GetOrCreatePageManager(
 
   auto ret = page_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(page_id.ToString()),
-      std::forward_as_tuple(environment_, ledger_name_, page_id.ToString(),
-                            page_usage_listener_, storage_.get(),
-                            ledger_sync_.get(), &merge_manager_));
+      std::forward_as_tuple(
+          environment_, ledger_name_, page_id.ToString(), page_usage_listener_,
+          storage_.get(), ledger_sync_.get(), &merge_manager_,
+          pages_node_.CreateChild(PageIdToDisplayName(page_id.ToString()))));
   FXL_DCHECK(ret.second);
   return &ret.first->second;
 }

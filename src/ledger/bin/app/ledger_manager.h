@@ -41,7 +41,7 @@ namespace ledger {
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
-class LedgerManager : public LedgerImpl::Delegate {
+class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
  public:
   LedgerManager(
       Environment* environment, std::string ledger_name,
@@ -82,6 +82,12 @@ class LedgerManager : public LedgerImpl::Delegate {
                fit::function<void(Status)> callback) override;
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
+
+  // inspect::ChildrenManager:
+  void GetNames(
+      fit::function<void(std::vector<std::string>)> callback) override;
+  void Attach(std::string name,
+              fit::function<void(fit::closure)> callback) override;
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
@@ -139,6 +145,9 @@ class LedgerManager : public LedgerImpl::Delegate {
   // The static Inspect object maintaining in Inspect a representation of this
   // LedgerManager.
   inspect::Node inspect_node_;
+  // The static Inspect object to which this LedgerManager's pages are attached.
+  inspect::Node pages_node_;
+  fit::deferred_callback children_manager_retainer_;
 
   // Must be the last member.
   fxl::WeakPtrFactory<LedgerManager> weak_factory_;

@@ -241,7 +241,7 @@ class PageManagerTest : public TestWithEnvironment {
     page_manager_ = std::make_unique<PageManager>(
         &environment_, kLedgerName, convert::ToString(page_id_.id),
         disk_cleanup_manager_.get(), storage_.get(), sync_.get(),
-        ledger_merge_manager_.get());
+        ledger_merge_manager_.get(), inspect::Node());
   }
 
   PageId RandomId() {
@@ -283,6 +283,37 @@ class StubConflictResolverFactory : public ConflictResolverFactory {
 
   fidl::Binding<ConflictResolverFactory> binding_;
 };
+
+TEST_F(PageManagerTest, OnEmptyCalled) {
+  bool get_page_callback_called;
+  Status get_page_status;
+  bool on_empty_callback_called;
+
+  page_manager_->set_on_empty(
+      callback::Capture(callback::SetWhenCalled(&on_empty_callback_called)));
+
+  PagePtr page;
+  page_manager_->GetPage(
+      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&get_page_callback_called),
+                        &get_page_status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(get_page_callback_called);
+  EXPECT_EQ(Status::OK, get_page_status);
+  EXPECT_FALSE(on_empty_callback_called);
+
+  fit::closure detacher = page_manager_->CreateDetacher();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(on_empty_callback_called);
+
+  detacher();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(on_empty_callback_called);
+}
 
 TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   bool called;

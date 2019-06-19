@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/inspect/inspect.h>
+#include <lib/inspect/testing/inspect.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -20,25 +21,53 @@
 #include <utility>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
+#include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
+#include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
-constexpr char kLedgerName[] = "ledger_under_test";
+using ::inspect::testing::ChildrenMatch;
+using ::inspect::testing::NameMatches;
+using ::inspect::testing::NodeMatches;
+using ::testing::AllOf;
+using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
+
+constexpr fxl::StringView kLedgerName = "ledger_under_test";
+constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
+constexpr fxl::StringView kInspectPathComponent = "test_ledger";
+
+PageId RandomId(const Environment& environment) {
+  PageId result;
+  environment.random()->Draw(&result.id);
+  return result;
+}
+
+PageId SpecificId(const storage::PageId& page_id) {
+  PageId fidl_page_id;
+  convert::ToArray(page_id, &fidl_page_id.id);
+  return fidl_page_id;
+}
 
 class DelayingCallbacksManager {
  public:
@@ -238,9 +267,11 @@ class LedgerManagerTest : public TestWithEnvironment {
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
+    top_level_node_ = inspect::Node(kTestTopLevelNodeName.ToString());
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_, kLedgerName, inspect::Node(),
+        &environment_, kLedgerName.ToString(),
+        top_level_node_.CreateChild(kInspectPathComponent.ToString()),
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
         std::move(storage), std::move(sync), disk_cleanup_manager_.get());
     ResetLedgerPtr();
@@ -248,15 +279,10 @@ class LedgerManagerTest : public TestWithEnvironment {
 
   void ResetLedgerPtr() { ledger_manager_->BindLedger(ledger_.NewRequest()); }
 
-  PageId RandomId() {
-    PageId result;
-    environment_.random()->Draw(&result.id);
-    return result;
-  }
-
  protected:
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
+  inspect::Node top_level_node_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
@@ -314,7 +340,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   ResetLedgerPtr();
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
@@ -381,7 +407,7 @@ TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
   bool on_empty_called;
   ledger_manager_->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   bool delete_page_called;
   Status delete_page_status;
   ledger_manager_->DeletePageStorage(
@@ -408,7 +434,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   Status status;
   PagePredicateResult is_closed_and_synced;
 
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
@@ -428,7 +454,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -464,7 +490,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCallOnEmpty) {
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -513,7 +539,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -542,7 +568,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -585,7 +611,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
 TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -641,7 +667,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
   Status status;
   PagePredicateResult is_closed_offline_empty;
 
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
@@ -659,7 +685,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
 
   storage_ptr->should_get_page_fail = false;
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -696,7 +722,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
   PagePredicateResult is_closed_offline_empty;
   bool delete_page_called = false;
   Status delete_page_status;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   // The page is closed, offline and empty. Try to delete the page storage in
   // the callback.
@@ -728,7 +754,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
 
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   PagePtr page1;
   ledger_->GetPage(fidl::MakeOptional(id), page1.NewRequest());
@@ -746,7 +772,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   zx_status_t status;
 
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   bool called;
   storage_ptr->ClearCalls();
   // Get the root page.
@@ -794,7 +820,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
   PagePtr page1;
   PagePtr page2;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
@@ -832,7 +858,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCalls) {
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(0, disk_cleanup_manager_->page_closed_count);
@@ -866,7 +892,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
 
 TEST_F(LedgerManagerTest, OnPageOpenedClosedUnused) {
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
 
   EXPECT_EQ(0, disk_cleanup_manager_->page_opened_count);
@@ -928,7 +954,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedUnused) {
 
 TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
   bool called;
 
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
@@ -946,7 +972,7 @@ TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
 
 TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
   PagePtr page;
-  PageId id = RandomId();
+  PageId id = RandomId(environment_);
 
   // Start deleting the page.
   bool delete_called;
@@ -1006,6 +1032,176 @@ TEST_F(LedgerManagerTest, MultipleConflictResolvers) {
   RunLoopUntilIdle();
   EXPECT_FALSE(factory1.disconnected);
   EXPECT_FALSE(factory2.disconnected);
+}
+
+// Constructs a Matcher to be matched against a test-owned Inspect object (the
+// Inspect object to which the LedgerManager under test attaches a child) that
+// validates that the matched object has a hierarchy with a node for the
+// LedgerManager under test, a node named |kPagesInspectPathComponent|
+// under that, and a node for each of the given |page_ids| under that.
+testing::Matcher<const inspect::ObjectHierarchy&> HierarchyMatcher(
+    const std::vector<storage::PageId>& page_ids) {
+  auto page_expectations =
+      std::vector<testing::Matcher<const inspect::ObjectHierarchy&>>();
+  std::set<storage::PageId> sorted_and_unique_page_ids;
+  for (const storage::PageId& page_id : page_ids) {
+    sorted_and_unique_page_ids.insert(page_id);
+  }
+  for (const storage::PageId& page_id : sorted_and_unique_page_ids) {
+    page_expectations.push_back(
+        NodeMatches(NameMatches(PageIdToDisplayName(page_id))));
+  }
+  return ChildrenMatch(ElementsAre(ChildrenMatch(ElementsAre(
+      AllOf(NodeMatches(NameMatches(kPagesInspectPathComponent.ToString())),
+            ChildrenMatch(ElementsAreArray(page_expectations)))))));
+}
+
+// TODO(https://fuchsia.atlassian.net/browse/LE-800): Make FakeLedgerStorage
+// usable as a real LedgerStorage and unify this class with LedgerManagerTest.
+class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
+ public:
+  LedgerManagerWithRealStorageTest() = default;
+  ~LedgerManagerWithRealStorageTest() override = default;
+
+  // gtest::TestWithEnvironment:
+  void SetUp() override {
+    TestWithEnvironment::SetUp();
+    auto encryption_service =
+        std::make_unique<encryption::FakeEncryptionService>(dispatcher());
+    db_factory_ = std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+    auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
+        &environment_, encryption_service.get(),
+
+        db_factory_.get(), DetachedPath(tmpfs_.root_fd()));
+    std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
+    top_level_node_ = inspect::Node(kTestTopLevelNodeName.ToString());
+    attachment_node_ = top_level_node_.CreateChild(
+        kSystemUnderTestAttachmentPointPathComponent.ToString());
+    disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
+    ledger_manager_ = std::make_unique<LedgerManager>(
+        &environment_, kLedgerName.ToString(),
+        attachment_node_.CreateChild(kInspectPathComponent.ToString()),
+        std::move(encryption_service), std::move(std::move(ledger_storage)),
+        std::move(sync), disk_cleanup_manager_.get());
+  }
+
+ protected:
+  testing::AssertionResult MutatePage(const PagePtr& page_ptr) {
+    page_ptr->Put(convert::ToArray("Hello."),
+                  convert::ToArray("Is it me for whom you are looking?"));
+    bool sync_callback_called;
+    page_ptr->Sync(
+        callback::Capture(callback::SetWhenCalled(&sync_callback_called)));
+    RunLoopUntilIdle();
+    if (!sync_callback_called) {
+      return testing::AssertionFailure() << "Sync callback wasn't called!";
+    }
+    if (!page_ptr.is_bound()) {
+      return testing::AssertionFailure() << "Page pointer came unbound!";
+    }
+    return testing::AssertionSuccess();
+  }
+
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<storage::fake::FakeDbFactory> db_factory_;
+  // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our
+  // reads using FIDL, and because we want to use inspect::ReadFromFidl for our
+  // reads, we need to have these two objects (one parent, one child, both part
+  // of the test, and with the system under test attaching to the child) rather
+  // than just one. Even though this is test code this is still a layer of
+  // indirection that should be eliminable in Inspect's upcoming "VMO-World".
+  inspect::Node top_level_node_;
+  inspect::Node attachment_node_;
+  std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
+  std::unique_ptr<LedgerManager> ledger_manager_;
+
+ private:
+  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManagerWithRealStorageTest);
+};
+
+TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
+  // These PageIds are similar to those seen in use by real components.
+  PageId first_page_id = SpecificId("first_page_id___");
+  PageId second_page_id = SpecificId("second_page_id__");
+  // Real components also use random PageIds.
+  PageId third_page_id = RandomId(environment_);
+  std::vector<storage::PageId> storage_page_ids(
+      {convert::ToString(first_page_id.id),
+       convert::ToString(second_page_id.id),
+       convert::ToString(third_page_id.id)});
+  LedgerPtr ledger_ptr;
+  ledger_manager_->BindLedger(ledger_ptr.NewRequest());
+
+  // When nothing has yet requested a page, check that the Inspect hierarchy
+  // is as expected with no nodes representing pages.
+  inspect::ObjectHierarchy zeroth_hierarchy;
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &zeroth_hierarchy));
+  EXPECT_THAT(zeroth_hierarchy, HierarchyMatcher({}));
+
+  // When one page has been created in the ledger, check that the Inspect
+  // hierarchy is as expected with a node for that one page.
+  PagePtr first_page_ptr;
+  ledger_ptr->GetPage(fidl::MakeOptional(first_page_id),
+                      first_page_ptr.NewRequest());
+  RunLoopUntilIdle();
+  inspect::ObjectHierarchy hierarchy_after_one_connection;
+  ASSERT_TRUE(
+      Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_connection));
+  EXPECT_THAT(hierarchy_after_one_connection,
+              HierarchyMatcher({storage_page_ids[0]}));
+
+  // When two ledgers have been created in the repository, check that the
+  // Inspect hierarchy is as expected with nodes for both ledgers.
+  PagePtr second_page_ptr;
+  ledger_ptr->GetPage(fidl::MakeOptional(second_page_id),
+                      second_page_ptr.NewRequest());
+  RunLoopUntilIdle();
+  inspect::ObjectHierarchy hierarchy_after_two_connections;
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
+                      &hierarchy_after_two_connections));
+  EXPECT_THAT(hierarchy_after_two_connections,
+              HierarchyMatcher({storage_page_ids[0], storage_page_ids[1]}));
+
+  // Unbind the first page, but only after having written to it, because it is
+  // not guaranteed that the LedgerManager under test will maintain an empty
+  // page resident on disk to be described in a later inspection.
+  EXPECT_TRUE(MutatePage(first_page_ptr));
+  first_page_ptr.Unbind();
+  RunLoopUntilIdle();
+
+  // When one of the two pages has been disconnected, check that an inspection
+  // still finds both.
+  inspect::ObjectHierarchy hierarchy_after_one_disconnection;
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
+                      &hierarchy_after_one_disconnection));
+  EXPECT_THAT(hierarchy_after_one_disconnection,
+              HierarchyMatcher({storage_page_ids[0], storage_page_ids[1]}));
+
+  // Check that after a third page connection is made, all three pages appear in
+  // an inspection.
+  PagePtr third_page_ptr;
+  ledger_ptr->GetPage(fidl::MakeOptional(third_page_id),
+                      third_page_ptr.NewRequest());
+  RunLoopUntilIdle();
+  inspect::ObjectHierarchy hierarchy_with_second_and_third_connection;
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
+                      &hierarchy_with_second_and_third_connection));
+  EXPECT_THAT(hierarchy_with_second_and_third_connection,
+              HierarchyMatcher(storage_page_ids));
+
+  // Check that after all pages are mutated and unbound all three pages still
+  // appear in an inspection.
+  EXPECT_TRUE(MutatePage(second_page_ptr));
+  second_page_ptr.Unbind();
+  EXPECT_TRUE(MutatePage(third_page_ptr));
+  third_page_ptr.Unbind();
+  RunLoopUntilIdle();
+
+  inspect::ObjectHierarchy hierarchy_after_three_disconnections;
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
+                      &hierarchy_after_three_disconnections));
+  EXPECT_THAT(hierarchy_after_three_disconnections,
+              HierarchyMatcher(storage_page_ids));
 }
 
 }  // namespace
