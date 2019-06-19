@@ -55,7 +55,7 @@ class BlobfsTest : public zxtest::Test {
 
     FsTestType type_;
     Environment* environment_;
-    const char* device_path_;
+    std::string device_path_;
     bool read_only_ = false;
     bool mounted_ = false;
 };
@@ -75,6 +75,7 @@ class BlobfsTestWithFvm : public BlobfsTest {
     void CreatePartition();
 
     std::string fvm_path_;
+    std::string partition_path_;
 };
 
 // Creates an open blob with the provided Merkle tree + Data, and reads back to

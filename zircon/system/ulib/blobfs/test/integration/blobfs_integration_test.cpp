@@ -5,6 +5,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fzl/fdio.h>
+#include <zircon/device/vfs.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs_test.h"
@@ -65,37 +68,6 @@ static bool uint8_to_hex_str(const uint8_t* data, char* hex_str) {
     return true;
 }
 
-bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
-    fbl::unique_fd fd(open(MOUNT_PATH, O_RDONLY | O_DIRECTORY));
-    ASSERT_TRUE(fd);
-
-    zx_status_t status;
-    fuchsia_io_FilesystemInfo info;
-    fzl::FdioCaller caller(std::move(fd));
-    ASSERT_EQ(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    const char* kFsName = "blobfs";
-    const char* name = reinterpret_cast<const char*>(info.name);
-    ASSERT_EQ(close(caller.release().release()), 0);
-    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
-    ASSERT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
-    ASSERT_EQ(info.max_filename_size, Digest::kLength * 2);
-    ASSERT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
-    ASSERT_NE(info.fs_id, 0);
-
-    // Check that used_bytes are within a reasonable range
-    ASSERT_GE(info.used_bytes, expected_bytes);
-    ASSERT_LE(info.used_bytes, info.total_bytes);
-
-    // Check that total_bytes are a multiple of slice_size
-    ASSERT_GE(info.total_bytes, kTestFvmSliceSize);
-    ASSERT_EQ(info.total_bytes % kTestFvmSliceSize, 0);
-    ASSERT_EQ(info.total_nodes, kTestFvmSliceSize / blobfs::kBlobfsInodeSize);
-    ASSERT_EQ(info.used_nodes, expected_nodes);
-    return true;
-}
-
 */
 
 // Go over the parent device logic and test fixture.
@@ -107,7 +79,7 @@ TEST_F(BlobfsTestWithFvm, Trivial) {
 
 void RunBasicsTest() {
     for (unsigned int i = 10; i < 16; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
         ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
         fbl::unique_fd fd;
@@ -141,7 +113,7 @@ TEST_F(BlobfsTestWithFvm, Basics) {
 }
 
 void RunUnallocatedBlobTest() {
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
     ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &info));
 
     // We can create a blob with a name.
@@ -166,7 +138,7 @@ TEST_F(BlobfsTestWithFvm, UnallocatedBlob) {
 }
 
 void RunNullBlobTest() {
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
     ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 0, &info));
 
     fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
@@ -443,26 +415,54 @@ static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
     END_TEST;
 }
 
-static bool TestQueryInfo(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    ASSERT_EQ(blobfsTest->GetType(), FsTestType::kFvm);
+*/
 
+void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
+    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(fd);
+
+    zx_status_t status;
+    fuchsia_io_FilesystemInfo info;
+    fzl::FdioCaller caller(std::move(fd));
+    ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info));
+    ASSERT_OK(status);
+
+    const char kFsName[] = "blobfs";
+    const char* name = reinterpret_cast<const char*>(info.name);
+    ASSERT_STR_EQ(kFsName, name, "Unexpected filesystem mounted");
+    EXPECT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
+    EXPECT_EQ(info.max_filename_size, digest::Digest::kLength * 2);
+    EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
+    EXPECT_NE(info.fs_id, 0);
+
+    // Check that used_bytes are within a reasonable range
+    EXPECT_GE(info.used_bytes, expected_bytes);
+    EXPECT_LE(info.used_bytes, info.total_bytes);
+
+    // Check that total_bytes are a multiple of slice_size
+    EXPECT_GE(info.total_bytes, kTestFvmSliceSize);
+    EXPECT_EQ(info.total_bytes % kTestFvmSliceSize, 0);
+    EXPECT_EQ(info.total_nodes, kTestFvmSliceSize / blobfs::kBlobfsInodeSize);
+    EXPECT_EQ(info.used_nodes, expected_nodes);
+}
+
+TEST_F(BlobfsTestWithFvm, QueryInfo) {
     size_t total_bytes = 0;
-    ASSERT_TRUE(QueryInfo(0, 0));
+    ASSERT_NO_FAILURES(QueryInfo(0, 0));
     for (size_t i = 10; i < 16; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
+        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
         fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
         total_bytes += fbl::round_up(info->size_merkle + info->size_data,
-                       blobfs::kBlobfsBlockSize);
+                                     blobfs::kBlobfsBlockSize);
     }
 
-    ASSERT_TRUE(QueryInfo(6, total_bytes));
-    END_HELPER;
+    ASSERT_NO_FAILURES(QueryInfo(6, total_bytes));
 }
+
+/*
 
 bool GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
     BEGIN_HELPER;
@@ -2046,7 +2046,6 @@ RUN_TESTS(MEDIUM, TestMmap)
 RUN_TESTS(MEDIUM, TestMmapUseAfterClose)
 RUN_TESTS(MEDIUM, TestReaddir)
 RUN_TESTS(MEDIUM, TestDiskTooSmall)
-RUN_TEST_FVM(MEDIUM, TestQueryInfo)
 RUN_TESTS(MEDIUM, TestGetAllocatedRegions)
 RUN_TESTS(MEDIUM, UseAfterUnlink)
 RUN_TESTS(MEDIUM, WriteAfterRead)

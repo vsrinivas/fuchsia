@@ -51,7 +51,7 @@ BlobfsTest::BlobfsTest(FsTestType type)
 
 void BlobfsTest::SetUp() {
     ASSERT_TRUE(mkdir(kMountPath, 0755) == 0 || errno == EEXIST, "Could not create mount point");
-    ASSERT_OK(mkfs(device_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options));
+    ASSERT_OK(mkfs(device_path_.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options));
     Mount();
 }
 
@@ -71,7 +71,7 @@ void BlobfsTest::Mount() {
     ASSERT_FALSE(mounted_);
     int flags = read_only_ ? O_RDONLY : O_RDWR;
 
-    fbl::unique_fd fd(open(device_path_, flags));
+    fbl::unique_fd fd(open(device_path_.c_str(), flags));
     ASSERT_TRUE(fd, "Could not open ramdisk");
 
     mount_options_t options = default_mount_options;
@@ -103,16 +103,16 @@ zx_status_t BlobfsTest::CheckFs() {
         .force = true,
         .apply_journal = true,
     };
-    return fsck(device_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync);
+    return fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync);
 }
 
 void BlobfsTest::CheckInfo() {
     fuchsia_io_FilesystemInfo info;
     ASSERT_TRUE(GetFsInfo(&info));
 
-    const char* kFsName = "blobfs";
+    const char kFsName[] = "blobfs";
     const char* name = reinterpret_cast<const char*>(info.name);
-    ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
+    ASSERT_STR_EQ(kFsName, name);
     ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
     ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
 }
@@ -133,11 +133,11 @@ void BlobfsTestWithFvm::SetUp() {
 
 void BlobfsTestWithFvm::TearDown() {
     BlobfsTest::TearDown();
-    ASSERT_OK(fvm_destroy(device_path_));
+    ASSERT_OK(fvm_destroy(partition_path_.c_str()));
 }
 
 void BlobfsTestWithFvm::BindFvm() {
-    fbl::unique_fd fd(open(device_path_, O_RDWR));
+    fbl::unique_fd fd(open(device_path_.c_str(), O_RDWR));
     ASSERT_TRUE(fd, "Could not open test disk");
     ASSERT_OK(fvm_init(fd.get(), kTestFvmSliceSize));
 
@@ -170,6 +170,10 @@ void BlobfsTestWithFvm::CreatePartition() {
     char path[PATH_MAX];
     fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, path));
     ASSERT_TRUE(fd, "Could not locate FVM partition");
+
+    // The base test must see the FVM volume as the device to work with.
+    partition_path_.swap(device_path_);
+    device_path_.assign(path);
 }
 
 void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {
