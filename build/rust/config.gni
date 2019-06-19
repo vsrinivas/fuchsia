@@ -71,12 +71,6 @@ if (current_os == "mac") {
   }
 }
 
-if (is_debug) {
-  _rust_opt_level = "0"
-} else {
-  _rust_opt_level = "z"
-}
-
 clang_prefix_rebased = rebase_path(clang_prefix, "", root_build_dir)
 
 clang_resource_dir = exec_script(rebase_path("$clang_prefix_rebased/clang"),
@@ -104,8 +98,6 @@ rust_build_args =
       rebase_path(clang_prefix_rebased, "", root_build_dir),
       "--clang-resource-dir",
       clang_resource_dir,
-      "--opt-level",
-      _rust_opt_level,
       "--symbol-level",
       "$symbol_level",
     ] + _platform_args

@@ -58,6 +58,11 @@ import("//build/rust/rustc_artifact.gni")
 #     "fat". This value takes precedence over GN args or the default value for the
 #     type of build (debug or release).
 #
+#   force_opt (optional)
+#     Force a particular optimization level for this target (even when building in debug mode).
+#     Values include 0-3, s, or z. This does not change the optimization level of dependencies,
+#     so consider combining with LTO for best results.
+#
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
@@ -89,6 +94,7 @@ template("rustc_binary") {
                              "source_root",
                              "testonly",
                              "with_lto",
+                             "force_opt",
                              "sdk_category",
                              "features",
                              "visibility",

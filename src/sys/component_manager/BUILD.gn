@@ -57,6 +57,11 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2018"
 
+  # Component manager must always be small (even in debug builds) since it
+  # is part of the Zircon boot image.
+  force_opt = "z"
+  with_lto = "fat"
+
   deps = [
     ":lib",
     "//garnet/public/lib/fidl/rust/fidl",

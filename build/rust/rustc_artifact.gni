@@ -194,6 +194,16 @@ template("rustc_artifact") {
 
   group_deps = []
 
+  if (defined(invoker.force_opt)) {
+    rust_opt_level = invoker.force_opt
+  } else {
+    if (is_debug) {
+      rust_opt_level = "0"
+    } else {
+      rust_opt_level = "z"
+    }
+  }
+
   if (type == "bin") {
     if (defined(invoker.with_lto)) {
       with_lto = invoker.with_lto
@@ -416,6 +426,8 @@ template("rustc_artifact") {
     rust_warnings,
     "--remap-path-prefix",
     "$absolute_path=$relative_path",
+    "--opt-level",
+    rust_opt_level,
   ]
 
   if (defined(invoker.features)) {

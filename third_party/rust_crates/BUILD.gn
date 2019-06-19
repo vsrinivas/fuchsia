@@ -63,6 +63,13 @@ action("build-third-party") {
   deps = rust_build_deps
   inputs += rust_build_inputs
 
+  if (is_debug) {
+    rust_opt_level = "0"
+  } else {
+    rust_opt_level = "z"
+  }
+  args += ["--opt-level", rust_opt_level]
+
   outputs = [
     out_deps_data,
   ]
