@@ -719,7 +719,7 @@ void x86_mmu_percpu_init(void) {
     ulong cr4 = x86_get_cr4();
     if (x86_feature_test(X86_FEATURE_SMEP))
         cr4 |= X86_CR4_SMEP;
-    if (x86_feature_test(X86_FEATURE_SMAP))
+    if (g_x86_feature_has_smap)
         cr4 |= X86_CR4_SMAP;
     x86_set_cr4(cr4);
 

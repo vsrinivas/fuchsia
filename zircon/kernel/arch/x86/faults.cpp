@@ -275,7 +275,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
     if (unlikely(
             !(error_code & PFEX_U) &&
             (error_code & PFEX_P) &&
-            x86_feature_test(X86_FEATURE_SMAP) &&
+            g_x86_feature_has_smap &&
             !(frame->flags & X86_FLAGS_AC) &&
             is_user_address(va))) {
         /* supervisor mode page-present access failure with the AC bit clear (SMAP enabled) */

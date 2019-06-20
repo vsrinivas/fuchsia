@@ -35,6 +35,7 @@ static struct x86_model_info model_info;
 
 bool g_x86_feature_fsgsbase;
 bool g_x86_feature_pcid_good;
+bool g_x86_feature_has_smap;
 bool g_has_meltdown;
 bool g_has_l1tf;
 bool g_has_mds;
@@ -156,6 +157,8 @@ void x86_feature_init(void) {
         g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
         g_has_mds = x86_intel_cpu_has_mds(&cpuid, &msr);
     }
+
+    g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
 }
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {

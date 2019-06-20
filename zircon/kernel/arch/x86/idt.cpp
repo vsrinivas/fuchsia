@@ -88,7 +88,7 @@ void idt_setup(struct idt* idt) {
     // If SMAP is not available, we need to skip past the CLAC instruction
     // at the beginning of the ISR stubs.
     int clac_shift = 0;
-    if (!x86_feature_test(X86_FEATURE_SMAP)) {
+    if (!g_x86_feature_has_smap) {
         clac_shift += CLAC_SIZE;
     }
 

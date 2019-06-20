@@ -29,7 +29,7 @@ void fill_out_stac_instruction(const CodePatchInfo* patch) {
     const size_t kSize = 3;
     DEBUG_ASSERT(patch->dest_size == kSize);
     DEBUG_ASSERT(kStacInstructionEnd - kStacInstruction == kSize);
-    if (x86_feature_test(X86_FEATURE_SMAP)) {
+    if (g_x86_feature_has_smap) {
         memcpy(patch->dest_addr, kStacInstruction, kSize);
     } else {
         memset(patch->dest_addr, kNopInstruction, kSize);
@@ -40,7 +40,7 @@ void fill_out_clac_instruction(const CodePatchInfo* patch) {
     const size_t kSize = 3;
     DEBUG_ASSERT(patch->dest_size == kSize);
     DEBUG_ASSERT(kClacInstructionEnd - kClacInstruction == kSize);
-    if (x86_feature_test(X86_FEATURE_SMAP)) {
+    if (g_x86_feature_has_smap) {
         memcpy(patch->dest_addr, kClacInstruction, kSize);
     } else {
         memset(patch->dest_addr, kNopInstruction, kSize);

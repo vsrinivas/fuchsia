@@ -297,6 +297,7 @@ extern enum x86_microarch_list x86_microarch;
 
 extern bool g_x86_feature_fsgsbase;
 extern bool g_x86_feature_pcid_good;
+extern bool g_x86_feature_has_smap;
 
 enum x86_hypervisor_list {
     X86_HYPERVISOR_UNKNOWN,
