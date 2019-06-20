@@ -4,7 +4,93 @@
 
 #include "src/developer/memory/metrics/tests/test_utils.h"
 
+#include <gtest/gtest.h>
+
 namespace memory {
+
+const zx_handle_t TestUtils::kRootHandle = 1;
+const zx_handle_t TestUtils::kSelfHandle = 2;
+const zx_koid_t TestUtils::kSelfKoid = 3;
+
+class MockOS : public OS {
+ public:
+  MockOS(OsResponses responses)
+      : responses_(responses),
+        i_get_processes_(0),
+        i_get_property_(0),
+        i_get_info_(0),
+        clock_(0) {}
+
+ private:
+  zx_status_t GetRootResource(zx_handle_t* root_resource) override {
+    *root_resource = TestUtils::kRootHandle;
+    return ZX_OK;
+  }
+
+  zx_handle_t ProcessSelf() override {
+    return TestUtils::kSelfHandle;
+  }
+
+  zx_time_t GetMonotonic() override {
+    return clock_++;
+  }
+
+  zx_status_t GetProcesses(
+      fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb)
+      override {
+    auto const& r = responses_.get_processes.at(i_get_processes_++);
+    for (auto const& c : r.callbacks) {
+      auto ret = cb(c.depth, c.handle, c.koid, c.parent_koid);
+      if (ret != ZX_OK) {
+        return ret;
+      }
+    }
+    return r.ret;
+  }
+
+  zx_status_t GetProperty(
+      zx_handle_t handle, uint32_t property, void* value, size_t name_len)
+     override {
+    auto const& r = responses_.get_property.at(i_get_property_++);
+    EXPECT_EQ(r.handle, handle);
+    EXPECT_EQ(r.property, property);
+    auto len = std::min(name_len, r.value_len);
+    memcpy(value, r.value, len);
+    return r.ret;
+  }
+
+  zx_status_t GetInfo(
+      zx_handle_t handle,
+      uint32_t topic,
+      void* buffer,
+      size_t buffer_size,
+      size_t* actual,
+      size_t* avail) override {
+    auto const& r = responses_.get_info.at(i_get_info_++);
+    EXPECT_EQ(r.handle, handle);
+    EXPECT_EQ(r.topic, topic);
+    size_t num_copied = 0;
+    if (buffer != nullptr) {
+      num_copied = std::min(r.value_count, buffer_size / r.value_size);
+      memcpy(buffer, r.values, num_copied * r.value_size);
+    }
+    if (actual != nullptr) {
+      *actual = num_copied;
+    }
+    if (avail != nullptr) {
+      if (num_copied < r.value_count) {
+        *avail = r.value_count - num_copied;
+      } else {
+        *avail = 0;
+      }
+    }
+    return r.ret;
+  }
+
+  OsResponses responses_;
+  uint32_t i_get_processes_, i_get_property_, i_get_info_;
+  zx_time_t clock_;
+};
 
 // static.
 void TestUtils::CreateCapture(memory::Capture& capture,
@@ -27,4 +113,14 @@ std::vector<ProcessSummary> TestUtils::GetProcessSummaries(
        [](ProcessSummary a, ProcessSummary b) { return a.koid() < b.koid(); } );
   return summaries;
 }
+
+zx_status_t TestUtils::GetCapture(
+      Capture& capture, CaptureLevel level, const OsResponses& r) {
+  MockOS os(r);
+  CaptureState state;
+  zx_status_t ret = Capture::GetCaptureState(state, os);
+  EXPECT_EQ(ZX_OK, ret);
+  return Capture::GetCapture(capture, state, level, os);
+}
+
 }  // namespace memory

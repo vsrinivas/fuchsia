@@ -19,9 +19,50 @@ struct CaptureTemplate {
   std::vector<Process> processes;
 };
 
+struct GetProcessesCallback {
+  int depth;
+  zx_handle_t handle;
+  zx_koid_t koid;
+  zx_koid_t parent_koid;
+};
+
+struct GetProcessesResponse {
+  zx_status_t ret;
+  std::vector<GetProcessesCallback> callbacks;
+};
+
+struct GetPropertyResponse {
+  zx_handle_t handle;
+  uint32_t property;
+  const void* value;
+  size_t value_len;
+  zx_status_t ret;
+};
+
+struct GetInfoResponse {
+  zx_handle_t handle;
+  uint32_t topic;
+  const void* values;
+  size_t value_size;
+  size_t value_count;
+  zx_status_t ret;
+};
+
+struct OsResponses {
+  const std::vector<GetProcessesResponse> get_processes;
+  const std::vector<GetPropertyResponse> get_property;
+  const std::vector<GetInfoResponse> get_info;
+};
+
 class TestUtils {
  public:
+  const static zx_handle_t kRootHandle;
+  const static zx_handle_t kSelfHandle;
+  const static zx_koid_t kSelfKoid;
+
   static void CreateCapture(memory::Capture& capture, const CaptureTemplate& t);
+  static zx_status_t GetCapture(
+      Capture& capture, CaptureLevel level, const OsResponses& r);
 
   // Sorted by koid.
   static std::vector<ProcessSummary> GetProcessSummaries(
