@@ -2,7 +2,7 @@
 
 The following FIDL attributes are supported:
 
-* [`[Deprecateed]`](#deprecated)
+* [`[Deprecated]`](#deprecated)
 * [`[Discoverable]`](#discoverable)
 * [`[Doc]`](#doc)
 * [`[FragileBase]`](#fragilebase)
