@@ -14,7 +14,7 @@ source_set("bad-syscall") {
   deps = [
     "$zx/kernel/syscalls:syscall-abi",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }

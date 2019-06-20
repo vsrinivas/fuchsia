@@ -8,12 +8,13 @@
 
 #include <zircon/zx-syscall-numbers.h>
 #include <zircon/syscalls.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 extern "C" zx_status_t bad_syscall(uint64_t num);
 
-bool bad_access_test(void) {
-    BEGIN_TEST;
+namespace {
+
+TEST(BadAccessTest, InvalidMapAddress) {
     void* unmapped_addr = (void*)4096;
     zx_handle_t h[2];
     EXPECT_EQ(zx_channel_create(0, h, h + 1),
@@ -26,29 +27,13 @@ bool bad_access_test(void) {
               0, "Error: read into kernel space");
     EXPECT_EQ(zx_channel_write(h[0], 0, (void*)&unmapped_addr, sizeof(void*), NULL, 0),
               0, "Good syscall failed");
-    END_TEST;
 }
 
-static void try_bad_syscall(void* arg) {
-    uint64_t num = (uintptr_t)arg;
-    zx_status_t status = bad_syscall(num);
-    UNITTEST_FAIL_TRACEF("bad syscall %#" PRIx64 " returned %d", num, status);
+TEST(BadAccessTest, SyscallNumTest) {
+    ASSERT_DEATH(([](){ bad_syscall(ZX_SYS_COUNT);}));
+    ASSERT_DEATH(([](){ bad_syscall(0x80000000ull);}));
+    ASSERT_DEATH(([](){ bad_syscall(0xff00ff0000000000ull);}));
+    ASSERT_DEATH(([](){ bad_syscall(0xff00ff0000000010ull);}));
 }
 
-#define TRY_BAD_SYSCALL(num) \
-    ASSERT_DEATH(try_bad_syscall, (void*)(uintptr_t)(num), \
-                 "bad syscall did not crash")
-
-bool bad_syscall_num_test(void) {
-    BEGIN_TEST;
-    TRY_BAD_SYSCALL(ZX_SYS_COUNT);
-    TRY_BAD_SYSCALL(0x80000000ull);
-    TRY_BAD_SYSCALL(0xff00ff0000000000ull);
-    TRY_BAD_SYSCALL(0xff00ff0000000010ull);
-    END_TEST;
-}
-
-BEGIN_TEST_CASE(bad_syscall_tests)
-RUN_TEST(bad_access_test)
-RUN_TEST(bad_syscall_num_test)
-END_TEST_CASE(bad_syscall_tests)
+} // namespace
