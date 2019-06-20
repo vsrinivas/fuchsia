@@ -86,6 +86,8 @@ class CobaltApp {
   //
   //           Example: 20190220_01_RC00
   //
+  // |debug_channels| The list of channels that should be considered DEBUG.
+  //
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
@@ -95,7 +97,8 @@ class CobaltApp {
       size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
       const std::string& product_name, const std::string& board_name,
-      const std::string& version);
+      const std::string& version,
+      const std::vector<std::string>& debug_channels);
 
  private:
   static encoder::ClientSecret getClientSecret();

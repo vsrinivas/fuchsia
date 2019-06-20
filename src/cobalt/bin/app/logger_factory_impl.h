@@ -30,7 +30,8 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     logger::Encoder* logger_encoder,
                     logger::ObservationWriter* observation_writer,
                     logger::EventAggregator* event_aggregator,
-                    logger::Logger* internal_logger);
+                    logger::Logger* internal_logger,
+                    encoder::SystemDataInterface* system_data);
 
  private:
   // Constructs a new LoggerImpl based on |project_context|, binds it to
@@ -102,6 +103,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   logger::ObservationWriter* observation_writer_;  // not owned
   logger::EventAggregator* event_aggregator_;      // not owned
   logger::Logger* internal_logger_;                // not owned
+  encoder::SystemDataInterface* system_data_;      // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

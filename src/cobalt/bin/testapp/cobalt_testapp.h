@@ -52,11 +52,14 @@ class CobaltTestApp {
       bool start_event_aggregator_worker = false,
       uint32_t initial_interval_seconds = 0);
 
+  void SetChannel(const std::string &current_channel);
+  bool DoChannelFilteringTests();
   bool DoLocalAggregationTests(const size_t backfill_days);
 
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
+  fuchsia::cobalt::SystemDataUpdaterSyncPtr system_data_updater_;
   CobaltTestAppLogger logger_;
   bool test_for_prober_;
   std::unique_ptr<util::ClockInterface> clock_;

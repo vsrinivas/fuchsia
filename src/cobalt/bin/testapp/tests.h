@@ -41,6 +41,11 @@ bool TestLogCustomEvent(CobaltTestAppLogger* logger);
 
 bool TestLogCobaltEvent(CobaltTestAppLogger* logger);
 
+bool TestChannelFiltering(CobaltTestAppLogger* logger,
+                          uint32_t expect_more_than,
+                          fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                          uint32_t* num_added = nullptr);
+
 // Tests of local aggregation.
 //
 // Each of these tests assumes that the EventAggregator has been updated with

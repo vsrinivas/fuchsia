@@ -70,8 +70,9 @@ CobaltApp::CobaltApp(
     size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
     bool use_memory_observation_store, size_t max_bytes_per_observation_store,
     const std::string& product_name, const std::string& board_name,
-    const std::string& version)
-    : system_data_(product_name, board_name, version),
+    const std::string& version, const std::vector<std::string>& debug_channels)
+    : system_data_(product_name, board_name, version,
+                   std::make_unique<logger::ChannelMapper>(debug_channels)),
       context_(sys::ComponentContext::Create()),
       network_wrapper_(
           dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
@@ -155,7 +156,7 @@ CobaltApp::CobaltApp(
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       std::move(global_project_context_factory), getClientSecret(),
       &timer_manager_, &logger_encoder_, &observation_writer_,
-      &event_aggregator_, internal_logger_.get()));
+      &event_aggregator_, internal_logger_.get(), &system_data_));
 
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

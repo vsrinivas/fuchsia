@@ -73,6 +73,7 @@ bool CobaltTestApp::RunTests() {
   TRY_TEST(TestLogIntHistogram(&logger_));
   TRY_TEST(TestLogCustomEvent(&logger_));
   TRY_TEST(TestLogCobaltEvent(&logger_));
+  TRY_TEST(DoChannelFilteringTests());
 
   // TODO(pesk): Count generated observations only for reports in the test
   // registry and turn local aggregation tests back on. (Currently these tests
@@ -82,6 +83,22 @@ bool CobaltTestApp::RunTests() {
     return false;
   }
   */
+
+  return true;
+}
+
+void CobaltTestApp::SetChannel(const std::string &current_channel) {
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  system_data_updater_->SetChannel(current_channel, &status);
+  FXL_CHECK(status == fuchsia::cobalt::Status::OK) << "Unable to set channel";
+}
+
+bool CobaltTestApp::DoChannelFilteringTests() {
+  uint32_t num_added = 0;
+  SetChannel("prod");
+  TRY_TEST(TestChannelFiltering(&logger_, 0, &cobalt_controller_, &num_added));
+  SetChannel("devhost");
+  TRY_TEST(TestChannelFiltering(&logger_, num_added, &cobalt_controller_));
 
   return true;
 }
@@ -149,6 +166,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     stream << "--verbose=" << fxl::GetVlogVerbosity();
     launch_info.arguments.push_back(stream.str());
   }
+
   fuchsia::sys::LauncherPtr launcher;
   context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
@@ -163,6 +181,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   services.Connect(logger_factory.NewRequest());
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+
   std::string project_name =
       (test_for_prober_ ? cobalt_prober_registry::kProjectName
                         : cobalt_registry::kProjectName);
@@ -178,6 +197,9 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
       logger_.logger_simple_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
+
+  services.Connect(system_data_updater_.NewRequest());
+  SetChannel("devhost");
 
   services.Connect(cobalt_controller_.NewRequest());
 }

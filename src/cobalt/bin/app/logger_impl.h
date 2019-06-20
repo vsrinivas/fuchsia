@@ -25,6 +25,7 @@ class LoggerImpl : public fuchsia::cobalt::Logger,
              logger::EventAggregator* event_aggregator,
              logger::ObservationWriter* observation_writer,
              TimerManager* timer_manager,
+             encoder::SystemDataInterface* system_data,
              logger::LoggerInterface* internal_logger);
 
  private:

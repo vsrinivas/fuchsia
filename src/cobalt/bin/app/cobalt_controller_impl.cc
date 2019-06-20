@@ -105,6 +105,11 @@ void CobaltControllerImpl::GetFailedSendAttempts(
   callback(num_failed_attempts);
 }
 
+void CobaltControllerImpl::GetNumObservationsAdded(
+    GetNumObservationsAddedCallback callback) {
+  callback(observation_store_->num_observations_added());
+}
+
 void CobaltControllerImpl::GenerateAggregatedObservations(
     uint32_t day_index, GenerateAggregatedObservationsCallback callback) {
   size_t num_obs_before = observation_store_->num_observations_added();

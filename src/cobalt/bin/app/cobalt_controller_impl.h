@@ -39,6 +39,9 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
 
   void GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) override;
 
+  void GetNumObservationsAdded(
+      GetNumObservationsAddedCallback callback) override;
+
   void GenerateAggregatedObservations(
       uint32_t day_index,
       GenerateAggregatedObservationsCallback callback) override;

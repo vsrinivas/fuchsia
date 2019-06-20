@@ -27,6 +27,8 @@
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
 #include "third_party/cobalt/encoder/memory_observation_store.h"
 #include "third_party/cobalt/util/posix_file_system.h"
@@ -79,6 +81,14 @@ const size_t kEventAggregatorBackfillDaysDefault(2);
 // We normally start the EventAggregator's worker thread after constructing the
 // EventAggregator.
 constexpr bool kStartEventAggregatorWorkerDefault(true);
+
+// This is a set of channel names that are known to have DEBUG semantics.
+//
+// - devhost is the channel for development devices.
+// - fishfood-release is the main fishfood channel.
+// - qa-daily is a daily QA release.
+const std::vector<std::string> kDebugChannels({"devhost", "fishfood-release",
+                                               "qa-daily"});
 
 // ReadBoardName returns the board name of the currently running device.
 //
@@ -227,7 +237,8 @@ int main(int argc, const char** argv) {
       loop.dispatcher(), schedule_interval, min_interval, initial_interval,
       event_aggregator_backfill_days, start_event_aggregator_worker,
       use_memory_observation_store, max_bytes_per_observation_store,
-      ReadBuildInfo("product"), ReadBoardName(), ReadBuildInfo("version"));
+      ReadBuildInfo("product"), ReadBoardName(), ReadBuildInfo("version"),
+      kDebugChannels);
   loop.Run();
   return 0;
 }

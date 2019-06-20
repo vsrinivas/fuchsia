@@ -11,9 +11,10 @@ LoggerImpl::LoggerImpl(std::unique_ptr<logger::ProjectContext> project_context,
                        logger::EventAggregator* event_aggregator,
                        logger::ObservationWriter* observation_writer,
                        TimerManager* timer_manager,
+                       encoder::SystemDataInterface* system_data,
                        logger::LoggerInterface* internal_logger)
     : logger_(std::move(project_context), encoder, event_aggregator,
-              observation_writer, internal_logger),
+              observation_writer, system_data, internal_logger),
       timer_manager_(timer_manager) {}
 
 void LoggerImpl::LogEvent(

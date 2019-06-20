@@ -329,6 +329,48 @@ bool TestLogCobaltEvent(CobaltTestAppLogger* logger) {
   return SendAndCheckSuccess("TestLogCobaltEvent", logger);
 }
 
+bool TestChannelFiltering(CobaltTestAppLogger* logger,
+                          uint32_t expect_more_than,
+                          fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                          uint32_t* num_added) {
+  uint32_t num_obs_at_start = 0;
+  (*cobalt_controller)->GetNumObservationsAdded(&num_obs_at_start);
+  FX_LOGS(INFO) << "========================";
+  FX_LOGS(INFO) << "TestChannelFiltering (expecting more than "
+                << expect_more_than << " observations)";
+  for (uint32_t index : kErrorOccurredIndicesToUse) {
+    if (!logger->LogEvent(cobalt_registry::kErrorOccurredMetricId, index)) {
+      FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
+      return false;
+    }
+  }
+  if (logger->LogEvent(cobalt_registry::kErrorOccurredMetricId,
+                       kErrorOccurredInvalidIndex)) {
+    FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
+    return false;
+  }
+
+  if (!SendAndCheckSuccess("TestChannelFiltering", logger)) {
+    return false;
+  }
+
+  uint32_t num_obs_at_end = 0;
+  (*cobalt_controller)->GetNumObservationsAdded(&num_obs_at_end);
+  uint32_t num_obs = num_obs_at_end - num_obs_at_start;
+
+  if (num_added) {
+    *num_added = num_obs;
+  }
+
+  if (num_obs <= expect_more_than) {
+    FX_LOGS(INFO) << "Expected more than " << expect_more_than << " saw "
+                  << num_obs;
+    FX_LOGS(INFO) << "TestChannelFiltering: FAIL";
+  }
+
+  return true;
+}
+
 ////////////////////// Tests using local aggregation ///////////////////////
 
 // A helper function which generates locally aggregated observations for

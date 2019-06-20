@@ -33,7 +33,7 @@ class LoggerImplTest : public ::testing::Test {
         logger_impl_(std::make_unique<logger::ProjectContext>(
                          1, "test", std::make_unique<cobalt::ProjectConfig>()),
                      &encoder_, &event_aggregator_, &observation_writer_,
-                     nullptr, &fake_logger_),
+                     nullptr, nullptr, &fake_logger_),
         logger_(&logger_impl_) {}
 
  private:
