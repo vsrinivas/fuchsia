@@ -22,6 +22,9 @@ const std::string kIsolateUrlFfmpeg =
 const std::string kIsolateUrlSbc =
     "fuchsia-pkg://fuchsia.com/codec_runner_sw_sbc#meta/"
     "codec_runner_sw_sbc.cmx";
+const std::string kIsolateUrlAac =
+    "fuchsia-pkg://fuchsia.com/codec_runner_sw_aac#meta/"
+    "codec_runner_sw_aac.cmx";
 
 struct EncoderSupportSpec {
   std::string isolate_url;
@@ -46,8 +49,17 @@ const EncoderSupportSpec kSbcEncoderSupportSpec = {
         },
 };
 
+const EncoderSupportSpec kAacEncoderSupportSpec = {
+    .isolate_url = kIsolateUrlAac,
+    .mime_types = {"audio/pcm"},
+    .supports_settings =
+        [](const fuchsia::media::EncoderSettings& settings) {
+          return settings.is_aac();
+        },
+};
+
 const std::vector<EncoderSupportSpec> supported_encoders = {
-    kSbcEncoderSupportSpec};
+    kSbcEncoderSupportSpec, kAacEncoderSupportSpec};
 
 const std::vector<std::string> kFfmpegDecoderMimeTypes = {"video/h264"};
 

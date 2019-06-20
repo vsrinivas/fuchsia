@@ -21,8 +21,10 @@ config("public_include_dirs") {
 }
 
 static_library("libFraunhoferAAC") {
-  # TODO(turnage): more visibility as needed
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//garnet/bin/media/codecs/sw/aac:*",
+  ]
   public = [
     "//third_party/android/platform/external/aac/libAACdec/include/aacdecoder_lib.h",
   ]

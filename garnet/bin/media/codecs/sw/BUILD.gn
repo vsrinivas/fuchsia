@@ -10,6 +10,7 @@ group("sw") {
   deps = [
     ":codec_adapter_sw",
     ":codec_runner_sw",
+    "aac",
     "ffmpeg",
     "low_layer",
     "sbc",

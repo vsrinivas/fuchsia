@@ -8,6 +8,7 @@ group("media") {
   testonly = true
   deps = [
     ":codec_factory",
+    ":codec_runner_sw_aac",
     ":codec_runner_sw_ffmpeg",
     ":codec_runner_sw_sbc",
     ":services",
@@ -37,6 +38,26 @@ package("codec_factory") {
     {
       path = rebase_path("codec_factory/meta/codec_factory.cmx")
       dest = "codec_factory.cmx"
+    },
+  ]
+}
+
+# This package is only really expected to be used by the codec_factory package.
+package("codec_runner_sw_aac") {
+  meta = [
+    {
+      path = rebase_path("codecs/meta/codec_runner_sw_aac.cmx")
+      dest = "codec_runner_sw_aac.cmx"
+    },
+  ]
+
+  deps = [
+    "//garnet/bin/media/codecs/sw/aac:codec_runner_sw_aac",
+  ]
+
+  binaries = [
+    {
+      name = "codec_runner_sw_aac"
     },
   ]
 }
