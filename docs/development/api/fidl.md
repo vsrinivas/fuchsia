@@ -355,24 +355,108 @@ Comments use `///` (three forward slashes). Comments in a library will also
 appear in the generated code to ease development when coding against the
 library. We say that comments "flow-through" to the target language.
 
-Place comments above the thing being described.  Use reasonably complete
-sentences with proper capitalization and periods. Limit comment widths to 80
-characters.
+Place comments above the thing being described. Except in the cases listed
+below, use reasonably complete sentences with proper capitalization and
+periods. Limit comment widths to 80 characters unless a longer comment is
+unavoidable (e.g., for a long URL).
 
-For instance:
+Comments should be written in Markdown. We rely on the
+[CommonMark](http://www.commonmark.org) specification for our markdown. Some
+tools may render output using other Markdown standards; in cases where your tool
+does not use CommonMark, we encourage developers to write Markdown that is
+compatible with both CommonMark and their tool. References to FIDL elements
+should always be in code font.
+
+A documented entity is any FIDL element that has a comment attached. The first
+reference to any documented entity in a comment should be given with its fully
+qualified name, in the form ``[`<library>/<top level declaration>.<member>`]``
+(e.g., ``[`fuchsia.io/Node.clone`]``). Subsequent references to that documented
+entity can use an abbreviated version, as long as that abbreviated version is
+unambiguous (e.g., `clone`).
+
+Request parameters, response parameters, and error types should be documented as
+lists of the form:
+
 ```fidl
-/// A widget displaying violins on the screen.
++ request `param1` <description>
++ request `param2` <description>
+- response `param1` <description>
+- response `param2` <description>
+* error <description>
+```
+
+Requests, responses, and errors must appear in that order. A given set of
+parameters must also follow the order in which they were declared in the
+parameter list.  The terms "request" and "response" may be elided if the
+parameter names are only found in one of the request or response parameter list.
+
+The first part of a doc comment describing a variable, field, or type should be
+a noun phrase that briefly states the intended purpose of the documented entity,
+including information that cannot be deduced from the name and type. The
+description should be terminated with a period. The description should not
+reiterate the name of the documented entity, or its particular type of FIDL
+language element (e.g., `struct` or `protocol`).
+
+```fidl
+/// A representation of violins displayed on the screen.
 struct Widget {
     /// A monotonically increasing id, uniquely identifying the widget.
     uint64 id;
     /// Location of the top left corner of the widget.
     Point location;
-    ...
+};
+```
+
+The following are examples of what you should not do:
+
+```fidl
+/// BAD: Widget is a representation of violins displayed on the screen.
+/// BAD: struct Widget is a representation of violins displayed on the screen.
+```
+
+The first part of a doc comment attached to a protocol method should be a brief
+description of the behavior of that method, starting with a verb, including
+information that cannot be deduced from the name and type. The verb should be
+written in the present tense, agree with a third person singular pronoun, and
+use the indicative mood (this effectively means that you should pretend the word
+"it" comes before the verb, and that you are making a statement of fact).  The
+phrase should end with a period.
+
+A full example:
+
+```fidl
+
+/// An abstract representation of a [`fuchsia.io/Node`] whose layout is flat.
+protocol File {
+    compose Node;
+
+    /// Acquires a [`fuchsia.mem/Buffer`] representing this file, if
+    /// there is one, with the requested access rights.
+    ///
+    /// ## Rights
+    ///
+    /// This method requires the following rights:
+    ///
+    /// * [`fuchsia.io/OPEN_RIGHT_WRITABLE`] if `flags` includes
+    ///   [`fuchsia.io/VMO_FLAG_WRITE`].
+    /// * [`fuchsia.io/OPEN_RIGHT_READABLE`] if `flags` includes
+    ///   [`fuchsia.io/VMO_FLAG_READ`] or [`fuchsia.io/VMO_FLAG_EXEC`].
+    ///
+    /// + request `flags` a bit field composing any of
+    ///     `VMO_FLAG_READ`, `VMO_FLAG_WRITE`, or `VMO_FLAG_EXEC`.
+    /// - response `buffer` the requested `fuchsia.mem/Buffer`, or
+    ///     null if there was an error, or the buffer does not exist.
+    /// * error a zx_status value indicating success or failure.
+    /// * see [`fuchsia.mem/Buffer`]
+    /// [`fuchsia.mem/Buffer`]:
+    ///    https://fuchsia.googlesource.com/fuchsia/+/9853fad50ca70256f0e86201c0e20424f1c25ab5/zircon/system/fidl/fuchsia-io/io.fidl
+    GetBuffer(uint32 flags) ->
+        (fuchsia.mem.Buffer? buffer) error zx.status;
 };
 ```
 
 Types or values defined by some external source of truth should be commented
-with references to the external thing.  For example, reference the WiFi
+with references to the external thing. For example, reference the WiFi
 specification that describes a configuration structure.  Similarly, if a
 structure must match an ABI defined in a C header, reference the C header.
 
