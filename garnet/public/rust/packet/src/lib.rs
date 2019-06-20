@@ -678,6 +678,19 @@ pub trait Buffer: ParseBuffer {
     /// so on. Otherwise, it may panic, and in any case, almost certainly won't
     /// produce the desired buffer contents.
     ///
+    /// # Padding
+    ///
+    /// If, during parsing, a packet encountered post-packet padding that was
+    /// discarded (see the documentation on [`ParsablePacket::parse`]), calling
+    /// `undo_parse` on the `ParseMetadata` from that packet will not undo the
+    /// effects of consuming and discarding that padding. The reason for this is
+    /// that the padding is not considered part of the packet itself (the body
+    /// it was parsed from can be thought of comprising the packet and
+    /// post-packet padding back-to-back).
+    ///
+    /// Calling `undo_parse` on the next encapsulating packet (the one whose
+    /// body contained the padding) will undo those effects.
+    ///
     /// # Panics
     ///
     /// `undo_parse` may panic if called in the wrong order. See the previous
@@ -1148,12 +1161,19 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     ///
     /// # Padding
     ///
-    /// There may be post-packet padding which was added in order to satisfy the
-    /// minimum body length requirement of a lower layer packet. If this packet
+    /// There may be post-packet padding (coming after the entire packet,
+    /// including any footer) which was added in order to satisfy the minimum
+    /// body length requirement of an encapsulating packet. If this packet
     /// describes its own length (and thus, it's possible to determine whether
-    /// there's any padding), `parse` is required to consume any padding. If
-    /// this invariant is not upheld, future calls to `Buffer::parse` or
-    /// `Buffer::undo_parse` may behave incorrectly.
+    /// there's any padding), `parse` is required to consume any post-packet
+    /// padding from the buffer's suffix. If this invariant is not upheld,
+    /// future calls to `Buffer::parse` or `Buffer::undo_parse` may behave
+    /// incorrectly.
+    ///
+    /// Pre-packet padding is not supported; if a protocol supports such
+    /// padding, it must be handled in a way that is transparent to this API. In
+    /// particular, that means that the `parse_metadata` method must treat that
+    /// padding as part of the packet.
     fn parse<BV: BufferView<B>>(buffer: BV, args: ParseArgs) -> Result<Self, Self::Error>;
 
     /// Parse a packet from a `BufferMut`.
@@ -1168,6 +1188,19 @@ pub trait ParsablePacket<B: ByteSlice, ParseArgs>: Sized {
     }
 
     /// Metadata about this packet required by [`Buffer::undo_parse`].
+    ///
+    /// The returned `ParseMetadata` records the number of header and footer
+    /// bytes consumed by this packet during parsing, and the number of bytes
+    /// left in the body (not consumed from the buffer). The header length must
+    /// be equal to the number of bytes consumed from the prefix, and the footer
+    /// length must be equal to the number of bytes consumed from the suffix.
+    ///
+    /// There is one exception: if any post-packet padding was consumed from the
+    /// suffix, this should not be included, as it is not considered part of the
+    /// packet. For example, consider a packet with 8 bytes of footer followed
+    /// by 8 bytes of post-packet padding. Parsing this packet would consume 16
+    /// bytes from the suffix, but calling `parse_metadata` on the resulting
+    /// object would return a `ParseMetadata` with only 8 bytes of footer.
     fn parse_metadata(&self) -> ParseMetadata;
 }
 
