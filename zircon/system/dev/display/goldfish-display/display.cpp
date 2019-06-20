@@ -36,7 +36,7 @@ constexpr zx_pixel_format_t kPixelFormats[] = {
 constexpr uint32_t FB_WIDTH = 1;
 constexpr uint32_t FB_HEIGHT = 2;
 
-constexpr uint32_t GL_RGBA = 0x1908;
+constexpr uint32_t GL_BGRA_EXT = 0x80E1;
 constexpr uint32_t GL_UNSIGNED_BYTE = 0x1401;
 
 constexpr uint32_t IMAGE_TYPE_OPTIMAL = 1;
@@ -607,7 +607,7 @@ zx_status_t Display::CreateColorBufferLocked(uint32_t width, uint32_t height,
     cmd->size = kSize_rcCreateColorBuffer;
     cmd->width = width;
     cmd->height = height;
-    cmd->internalformat = GL_RGBA;
+    cmd->internalformat = GL_BGRA_EXT;
 
     return ExecuteCommandLocked(kSize_rcCreateColorBuffer, id);
 }
@@ -661,7 +661,7 @@ zx_status_t Display::UpdateColorBufferLocked(uint32_t id, zx_paddr_t paddr,
     cmd->y = 0;
     cmd->width = width;
     cmd->height = height;
-    cmd->format = GL_RGBA;
+    cmd->format = GL_BGRA_EXT;
     cmd->type = GL_UNSIGNED_BYTE;
 
     auto buffer = static_cast<pipe_cmd_buffer_t*>(cmd_buffer_.virt());
