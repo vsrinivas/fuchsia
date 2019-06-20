@@ -131,7 +131,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
 
     // Listen for the module that is created in CreateStory().
     test_module_ = std::make_unique<modular::testing::FakeComponent>();
-    test_module_url_ = builder.GenerateFakeUrl();
+    test_module_url_ = modular::testing::GenerateFakeUrl();
     builder.InterceptComponent(test_module_->GetOnCreateHandler(),
                                {.url = test_module_url_});
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
+#include <lib/modular_test_harness/cpp/test_harness_launcher.h>
 #include <src/lib/files/glob.h>
 #include <test/modular/test/harness/cpp/fidl.h>
 

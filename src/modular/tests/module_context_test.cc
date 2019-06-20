@@ -97,9 +97,12 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
     fuchsia::modular::ModuleControllerPtr controller;
   };
 
-  FakeModuleInfo parent_module{.url = builder.GenerateFakeUrl("parent_module")};
-  FakeModuleInfo child_module1{.url = builder.GenerateFakeUrl("child_module1")};
-  FakeModuleInfo child_module2{.url = builder.GenerateFakeUrl("child_module2")};
+  FakeModuleInfo parent_module{
+      .url = modular::testing::GenerateFakeUrl("parent_module")};
+  FakeModuleInfo child_module1{
+      .url = modular::testing::GenerateFakeUrl("child_module1")};
+  FakeModuleInfo child_module2{
+      .url = modular::testing::GenerateFakeUrl("child_module2")};
 
   builder.InterceptComponent(
       parent_module.component.GetOnCreateHandler(),
@@ -179,8 +182,8 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
     FakeModule component;
   };
 
-  FakeModuleInfo module1{.url = builder.GenerateFakeUrl("module1")};
-  FakeModuleInfo module2{.url = builder.GenerateFakeUrl("module2")};
+  FakeModuleInfo module1{.url = modular::testing::GenerateFakeUrl("module1")};
+  FakeModuleInfo module2{.url = modular::testing::GenerateFakeUrl("module2")};
 
   builder.InterceptComponent(
       module1.component.GetOnCreateHandler(),
@@ -223,7 +226,7 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
 TEST_F(ModuleContextTest, CreateEntity) {
   modular::testing::TestHarnessBuilder builder;
 
-  auto module_url = builder.GenerateFakeUrl("module");
+  auto module_url = modular::testing::GenerateFakeUrl("module");
   FakeModule module;
   builder.InterceptComponent(
       module.GetOnCreateHandler(),
@@ -363,8 +366,8 @@ TEST_F(ModuleContextTest, OngoingActivity_NotifyOnWatch) {
     FakeModule component;
   };
 
-  FakeModuleInfo module1{.url = builder.GenerateFakeUrl("module1")};
-  FakeModuleInfo module2{.url = builder.GenerateFakeUrl("module2")};
+  FakeModuleInfo module1{.url = modular::testing::GenerateFakeUrl("module1")};
+  FakeModuleInfo module2{.url = modular::testing::GenerateFakeUrl("module2")};
 
   builder.InterceptComponent(
       module1.component.GetOnCreateHandler(),

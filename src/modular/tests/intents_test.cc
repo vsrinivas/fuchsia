@@ -35,7 +35,7 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
           latest_handled_intent_ = std::move(intent);
           number_of_intents_handled_++;
         });
-    test_module_url_ = builder_.GenerateFakeUrl();
+    test_module_url_ = modular::testing::GenerateFakeUrl();
     builder_.InterceptComponent(
         test_module_->GetOnCreateHandler(),
         {.url = test_module_url_,
@@ -201,7 +201,7 @@ TEST_F(IntentsTest, DifferentHandler) {
   bool module_started{false};
 
   // Use different handler
-  auto different_module_url = builder_.GenerateFakeUrl();
+  auto different_module_url = modular::testing::GenerateFakeUrl();
   auto different_intent_param_name = "different_param_name";
   auto different_intent_param_data = "\"different_param_data\"";
   auto different_intent =

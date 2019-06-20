@@ -130,14 +130,14 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   modular::testing::TestHarnessBuilder builder;
 
   TestModule test_module;
-  const auto test_module_url = builder.GenerateFakeUrl();
+  const auto test_module_url = modular::testing::GenerateFakeUrl();
   builder.InterceptComponent(
       test_module.GetOnCreateHandler(),
       {.url = test_module_url,
        .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
 
   TestAgent test_agent;
-  const auto test_agent_url = builder.GenerateFakeUrl();
+  const auto test_agent_url = modular::testing::GenerateFakeUrl();
   builder.InterceptComponent(
       test_agent.GetOnCreateHandler(),
       {.url = test_agent_url,

@@ -56,7 +56,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
         {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
     builder.InterceptStoryShell(story_shell_.GetOnCreateHandler());
 
-    fake_module_url_ = builder.GenerateFakeUrl("module");
+    fake_module_url_ = modular::testing::GenerateFakeUrl("module");
     builder.InterceptComponent(
         [this](fuchsia::sys::StartupInfo startup_info,
                fidl::InterfaceHandle<

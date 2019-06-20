@@ -136,7 +136,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
 
   // Listen for the module we're going to create.
   modular::testing::FakeComponent test_module;
-  const auto test_module_url = builder.GenerateFakeUrl();
+  const auto test_module_url = modular::testing::GenerateFakeUrl();
   builder.InterceptComponent(test_module.GetOnCreateHandler(),
                              {.url = test_module_url});
 

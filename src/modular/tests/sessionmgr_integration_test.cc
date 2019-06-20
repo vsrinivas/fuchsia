@@ -56,7 +56,7 @@ TEST_F(SessionmgrIntegrationTest,
 
   TestSessionShell session_shell([] {}, [] {});
   builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
-                                {.url = builder.GenerateFakeUrl()});
+                                {.url = modular::testing::GenerateFakeUrl()});
 
   test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
   fuchsia::modular::testing::TestHarnessSpec spec = builder.BuildSpec();

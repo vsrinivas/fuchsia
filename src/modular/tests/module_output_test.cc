@@ -24,7 +24,7 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
   void SetUp() override {
     test_module_ = std::make_unique<modular::testing::FakeModule>(
         [](fuchsia::modular::Intent intent) {});
-    test_module_url_ = builder_.GenerateFakeUrl();
+    test_module_url_ = modular::testing::GenerateFakeUrl();
     builder_.InterceptComponent(
         test_module_->GetOnCreateHandler(),
         {.url = test_module_url_,

@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/test_harness_builder_test_bin"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

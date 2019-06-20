@@ -220,7 +220,7 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
 
     // Listen for the module that is created in CreateStory().
     module_ = std::make_unique<TestModule>();
-    module_url_ = builder.GenerateFakeUrl();
+    module_url_ = modular::testing::GenerateFakeUrl();
     builder.InterceptComponent(
         module_->GetOnCreateHandler(),
         {.url = module_url_,
