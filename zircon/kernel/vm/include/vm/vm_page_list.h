@@ -252,16 +252,28 @@ public:
     // page list, starting at offset 0 in this list.
     //
     // For every page in |other| in the given range, if there is no corresponding page
-    // in |this|, then they will be passed to |migrate_fn| and migrated into |this|. For
+    // in |this|, then they will be passed to |migrate_fn|. If |migrate_fn| returns true,
+    // they will be migrated into |this|; otherwise they will be added to |free_list|. For
     // any pages in |other| outside the given range or which conflict with a page in |this|,
     // they will be passed to |release_fn| and then added to |free_list|.
     //
     // The |offset| values passed to |release_fn| and |migrate_fn| are the original offsets
     // in |other|, not the adapted offsets in |this|.
+    //
+    // **NOTE** unlike MergeOnto, |other| will be empty at the end of this method.
     void MergeFrom(VmPageList& other, uint64_t offset, uint64_t end_offset,
                    fbl::Function<void(vm_page*, uint64_t offset)> release_fn,
-                   fbl::Function<void(vm_page*, uint64_t offset)> migrate_fn,
+                   fbl::Function<bool(vm_page*, uint64_t offset)> migrate_fn,
                    list_node_t* free_list);
+
+    // Merges this pages in |this| onto |other|.
+    //
+    // For every page in |this|, checks the same offset in |other|. If there is no
+    // page, then it inserts the page into |other|. If there is a page, it adds the
+    // page onto |free_list|.
+    //
+    // **NOTE** unlike MergeFrom, |this| will be empty at the end of this method.
+    void MergeOnto(VmPageList& other, list_node_t* free_list);
 
     // Takes the pages in the range [offset, length) out of this page list.
     VmPageSpliceList TakePages(uint64_t offset, uint64_t length);

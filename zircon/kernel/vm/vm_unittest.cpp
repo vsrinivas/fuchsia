@@ -1473,6 +1473,7 @@ static bool vmpl_merge_offset_test_helper(uint64_t list1_offset, uint64_t list2_
                         || page == test_pages + 3 || page == test_pages + 4);
                 DEBUG_ASSERT(offset == offsets[1] || offset == offsets[2]
                         || offset == offsets[3] || offsets[4]);
+                return true;
             },
             &free_list);
 
@@ -1536,6 +1537,7 @@ static bool vmpl_merge_overlap_test_helper(uint64_t list1_offset, uint64_t list2
             [&](vm_page* page, uint64_t offset) {
                 DEBUG_ASSERT(page == test_pages + 1);
                 DEBUG_ASSERT(offset == list2_offset + 2 * PAGE_SIZE);
+                return true;
             },
             &free_list);
 
@@ -1610,6 +1612,40 @@ static bool vmpl_for_every_page_test() {
     END_TEST;
 }
 
+static bool vmpl_merge_onto_test() {
+    BEGIN_TEST;
+
+    VmPageList list1, list2;
+    list1.InitializeSkew(0, 0);
+    list2.InitializeSkew(0, 0);
+    vm_page_t test_pages[4] = {};
+
+    list1.AddPage(test_pages + 0, 0);
+    list1.AddPage(test_pages + 1, VmPageListNode::kPageFanOut * PAGE_SIZE + 2 * PAGE_SIZE);
+    list2.AddPage(test_pages + 2, 0);
+    list2.AddPage(test_pages + 3, 2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE);
+
+    list_node_t free_list;
+    list_initialize(&free_list);
+
+    list1.MergeOnto(list2, &free_list);
+
+    // (test_pages + 0) should have covered this page
+    EXPECT_EQ(1ul, list_length(&free_list), "");
+    EXPECT_EQ(test_pages + 2, list_remove_head_type(&free_list, vm_page, queue_node), "");
+
+    EXPECT_EQ(test_pages + 0, list2.GetPage(0), "");
+    EXPECT_EQ(test_pages + 1,
+              list2.GetPage(VmPageListNode::kPageFanOut * PAGE_SIZE + 2 * PAGE_SIZE), "");
+    EXPECT_EQ(test_pages + 3,
+              list2.GetPage(2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE), "");
+
+    list2.RemoveAllPages(&free_list);
+    EXPECT_EQ(3ul, list_length(&free_list), "");
+
+    END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -1669,4 +1705,5 @@ VM_UNITTEST(vmpl_page_gap_iter_test)
 VM_UNITTEST(vmpl_merge_offset_test)
 VM_UNITTEST(vmpl_merge_overlap_test)
 VM_UNITTEST(vmpl_for_every_page_test)
+VM_UNITTEST(vmpl_merge_onto_test)
 UNITTEST_END_TESTCASE(vm_page_list_tests, "vmpl", "VmPageList tests");

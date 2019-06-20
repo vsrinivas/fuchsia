@@ -146,9 +146,6 @@ VmObjectPaged::~VmObjectPaged() {
 
     RemoveFromGlobalList();
 
-    list_node_t list;
-    list_initialize(&list);
-
     if (!is_hidden()) {
         // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
         // to be done before emptying the page list so that a hidden parent can't merge into this
@@ -156,25 +153,10 @@ VmObjectPaged::~VmObjectPaged() {
         //
         // To prevent races with a hidden parent merging itself into this vmo, it is necessary
         // to hold the lock over the parent_ check and into the subsequent removal call.
-        {
-            Guard<fbl::Mutex> guard{&lock_};
-            if (parent_) {
-                // Release any COW pages in ancestors retained by this vmo.
-                ReleaseCowParentPagesLocked(0, parent_limit_, &list);
-
-                LTRACEF("removing ourself from our parent %p\n", parent_.get());
-                parent_->RemoveChild(this, guard.take());
-            }
-        }
-
-        if (is_contiguous()) {
-            // If we're contiguous, then all the ancestor pages we're freeing
-            // should be pages which looked contiguous to userspace.
-            vm_page_t* p;
-            list_for_every_entry(&list, p, vm_page_t, queue_node) {
-                p->object.pin_count--;
-                ASSERT(p->object.pin_count == 0);
-            }
+        Guard<fbl::Mutex> guard{&lock_};
+        if (parent_) {
+            LTRACEF("removing ourself from our parent %p\n", parent_.get());
+            parent_->RemoveChild(this, guard.take());
         }
     } else {
         // Most of the hidden vmo's state should have already been cleaned up when it merged
@@ -191,6 +173,9 @@ VmObjectPaged::~VmObjectPaged() {
             ASSERT(p->object.pin_count == 0);
             return ZX_ERR_NEXT;
         });
+
+    list_node_t list;
+    list_initialize(&list);
 
     // free all of the pages attached to us
     page_list_.RemoveAllPages(&list);
@@ -410,6 +395,9 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
     parent_offset_ = 0;
     parent_limit_ = size_;
 
+    // This method should only ever be called on leaf vmos (i.e. non-hidden),
+    // so this flag should never be set.
+    DEBUG_ASSERT(!partial_cow_release_);
     DEBUG_ASSERT(parent_start_limit_ == 0); // Should only ever be set for hidden vmos
 
     // Move everything into the hidden parent, for immutability
@@ -565,90 +553,13 @@ void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adop
     DEBUG_ASSERT(children_list_len_ == 2);
     // A hidden vmo must be fully initialized to have 2 children.
     DEBUG_ASSERT(user_id_ != ZX_KOID_INVALID);
+    bool removed_left = &left_child_locked() == removed;
 
     DropChildLocked(removed);
     auto& child = children_list_.front();
 
-    const uint64_t merge_start_offset = child.parent_offset_;
-    const uint64_t merge_end_offset = child.parent_offset_ + child.parent_limit_;
-
-    // Calculate the child's parent limit as a limit against its new parent to compare
-    // with this hidden vmo's limit. Update the child's limit so it won't be able to see
-    // more of its new parent than this hidden vmo was able to see.
-    if (child.parent_offset_ + child.parent_limit_ > parent_limit_) {
-        if (parent_limit_ < child.parent_offset_) {
-            child.parent_limit_ = 0;
-            child.parent_start_limit_ = 0;
-        } else {
-            child.parent_limit_ = parent_limit_ - child.parent_offset_;
-            child.parent_start_limit_ = fbl::min(child.parent_start_limit_, child.parent_limit_);
-        }
-    }
-
-
-    // Adjust the child's offset so it will still see the correct range.
-    bool overflow = add_overflow(parent_offset_, child.parent_offset_, &child.parent_offset_);
-    // Overflow here means that something went wrong when setting up parent limits.
-    DEBUG_ASSERT(!overflow);
-
-    if (child.is_hidden()) {
-        // After the merge, either |child| can't see anything in parent (in which case
-        // the parent limits could be anything), or |child|'s first visible offset will be
-        // at least as large as |this|'s first visible offset.
-        DEBUG_ASSERT(child.parent_start_limit_ == child.parent_limit_
-                || parent_offset_ + parent_start_limit_
-                        <= child.parent_offset_ + child.parent_start_limit_);
-    } else {
-        // non-hidden vmos should always have zero parent_start_limit_
-        DEBUG_ASSERT(child.parent_start_limit_ == 0);
-    }
-
-    list_node covered_pages;
-    list_initialize(&covered_pages);
-
-    // Merge our page list into the child page list and update all the necessary metadata.
-    // TODO: This does work proportional to the number of pages in page_list_. Investigate what
-    // would need to be done to make the work proportional to the number of pages actually split.
-    child.page_list_.MergeFrom(page_list_,
-            merge_start_offset, merge_end_offset,
-            [this_is_contig = this->is_contiguous()](vm_page* page, uint64_t offset) {
-                if (this_is_contig) {
-                    // If this vmo is contiguous, unpin the pages that aren't needed. The pages
-                    // are either original contig pages (which should have a pin_count of 1), or
-                    // they're forked pages where the original is already in the contig child (in
-                    // which case pin_count should be 0).
-                    DEBUG_ASSERT(page->object.pin_count <= 1);
-                    page->object.pin_count = 0;
-                }
-            },
-            [this_is_contig = this->is_contiguous(), child_is_contig = child.is_contiguous(),
-             merge_start_offset, merge_end_offset](vm_page* page, uint64_t offset) {
-                // Only migrate pages in the child's range.
-                DEBUG_ASSERT(merge_start_offset <= offset && offset < merge_end_offset);
-
-                if (child_is_contig) {
-                    // We moved the page into the contiguous vmo, so we expect the page
-                    // to be a pinned contiguous page.
-                    DEBUG_ASSERT(page->object.pin_count == 1);
-                } else if (this_is_contig) {
-                    // This vmo was contiguous but the child isn't, so unpin the pages. Similar
-                    // to above, this should be at most 1.
-                    DEBUG_ASSERT(page->object.pin_count <= 1);
-                    page->object.pin_count = 0;
-                } else {
-                    // Neither is contiguous, so the page shouldn't have been pinned.
-                    DEBUG_ASSERT(page->object.pin_count == 0);
-                }
-
-                // Since we recursively fork on write, if the child doesn't have the
-                // page, then neither of its children do.
-                page->object.cow_left_split = 0;
-                page->object.cow_right_split = 0;
-            }, &covered_pages);
-
-    if (!list_is_empty(&covered_pages)) {
-        pmm_free(&covered_pages);
-    }
+    // Merge this vmo's content into the remaining child.
+    MergeContentWithChildLocked(removed, removed_left);
 
     // The child which removed itself and led to the invocation should have a reference
     // to us, in addition to child.parent_ which we are about to clear.
@@ -710,6 +621,186 @@ void VmObjectPaged::RemoveChild(VmObjectPaged* removed, Guard<fbl::Mutex>&& adop
         } else {
             descendant = nullptr;
         }
+    }
+}
+
+void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool removed_left) {
+    DEBUG_ASSERT(children_list_len_ == 1);
+    auto& child = children_list_.front();
+
+    list_node freed_pages;
+    list_initialize(&freed_pages);
+
+    const uint64_t visibility_start_offset = child.parent_offset_ + child.parent_start_limit_;
+    const uint64_t merge_start_offset = child.parent_offset_;
+    const uint64_t merge_end_offset = child.parent_offset_ + child.parent_limit_;
+
+    page_list_.RemovePages(0, visibility_start_offset, &freed_pages);
+    page_list_.RemovePages(merge_end_offset, MAX_SIZE, &freed_pages);
+
+    if (child.parent_offset_ + child.parent_limit_ > parent_limit_) {
+        // Update the child's parent limit to ensure that it won't be able to see more
+        // of its new parent than this hidden vmo was able to see.
+        if (parent_limit_ < child.parent_offset_) {
+            child.parent_limit_ = 0;
+            child.parent_start_limit_ = 0;
+        } else {
+            child.parent_limit_ = parent_limit_ - child.parent_offset_;
+            child.parent_start_limit_ = fbl::min(child.parent_start_limit_, child.parent_limit_);
+        }
+    } else {
+        // The child will be able to see less of its new parent than this hidden vmo was
+        // able to see, so release any parent pages in that range.
+        ReleaseCowParentPagesLocked(merge_end_offset, parent_limit_, &freed_pages);
+    }
+
+    if (removed->parent_offset_ + removed->parent_start_limit_ < visibility_start_offset) {
+        // If the removed former child has a smaller offset, then there are retained
+        // ancestor pages that will no longer be visible and thus should be freed.
+        ReleaseCowParentPagesLocked(removed->parent_offset_ + removed->parent_start_limit_,
+                                    visibility_start_offset, &freed_pages);
+    }
+
+    // Adjust the child's offset so it will still see the correct range.
+    bool overflow = add_overflow(parent_offset_, child.parent_offset_, &child.parent_offset_);
+    // Overflow here means that something went wrong when setting up parent limits.
+    DEBUG_ASSERT(!overflow);
+
+    if (child.is_hidden()) {
+        // After the merge, either |child| can't see anything in parent (in which case
+        // the parent limits could be anything), or |child|'s first visible offset will be
+        // at least as large as |this|'s first visible offset.
+        DEBUG_ASSERT(child.parent_start_limit_ == child.parent_limit_
+                || parent_offset_ + parent_start_limit_
+                        <= child.parent_offset_ + child.parent_start_limit_);
+    } else {
+        // non-hidden vmos should always have zero parent_start_limit_
+        DEBUG_ASSERT(child.parent_start_limit_ == 0);
+    }
+
+    if (is_contiguous()) {
+        vm_page_t* p;
+        list_for_every_entry(&freed_pages, p, vm_page_t, queue_node) {
+            // The pages that have been freed all come from contigous hidden vmos, so they can
+            // either be contiguously pinned or have been migrated into their other child.
+            DEBUG_ASSERT(p->object.pin_count <= 1);
+            p->object.pin_count = 0;
+        }
+    }
+
+    // At this point, we need to merge |this|'s page list and |child|'s page list.
+    //
+    // In general, COW clones are expected to share most of their pages (i.e. to fork a relatively
+    // small number of pages). Because of this, it is preferable to do work proportional to the
+    // number of pages which were forked into |removed|. However, there are a few things that can
+    // prevent this:
+    //   - If |child|'s offset is non-zero then the offsets of all of |this|'s pages will
+    //     need to be updated when they are merged into |child|.
+    //   - If |this| is contiguous and |child| is not, then all of |this|'s page's pin
+    //     counts will need to be updated when they are migrated into |child|.
+    //   - If there has been a call to ReleaseCowParentPagesLocked which was not able to
+    //     update the parent limits, then there can exist pages in this vmo's page list
+    //     which are not visible to |child| but can't be easily freed based on its parent
+    //     limits. Finding these pages requires examining the split bits of all pages.
+    //   - If |child| is hidden, then there can exist pages in this vmo which were split into
+    //     |child|'s subtree and then migrated out of |child|. Those pages need to be freed, and
+    //     the simplest way to find those pages is to examine the split bits.
+    bool fast_merge = merge_start_offset == 0
+            && !(is_contiguous() && !child.is_contiguous())
+            && !partial_cow_release_
+            && !child.is_hidden();
+
+    if (fast_merge) {
+        // Only leaf vmos can be directly removed, so this must always be true. This guarantees
+        // that there are no pages that were split into |removed| that have since been migrated
+        // to its children.
+        DEBUG_ASSERT(!removed->is_hidden());
+
+        // Before merging, find any pages that are present in both |removed| and |this|. Those
+        // pages are visibile to |child| but haven't been written to through |child|, so
+        // their split bits need to be cleared. Note that ::ReleaseCowParentPagesLocked ensures
+        // that pages outside of the parent limit range won't have their split bits set.
+        removed->page_list_.ForEveryPageInRange(
+                [removed_offset = removed->parent_offset_, this](vm_page_t* page, uint64_t offset)
+                // Analysis needs to be disabled since the main function has no information.
+                TA_NO_THREAD_SAFETY_ANALYSIS {
+            vm_page_t* p_page = page_list_.GetPage(offset + removed_offset);
+            if (p_page) {
+                // The page is definitely forked into |removed|, but shouldn't be forked twice.
+                DEBUG_ASSERT(p_page->object.cow_left_split ^ p_page->object.cow_right_split);
+                p_page->object.cow_left_split = 0;
+                p_page->object.cow_right_split = 0;
+            }
+            return ZX_ERR_NEXT;
+        }, removed->parent_start_limit_, removed->parent_limit_);
+
+        list_node covered_pages;
+        list_initialize(&covered_pages);
+
+        // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
+        // then move that list to |child|.
+        child.page_list_.MergeOnto(page_list_, &covered_pages);
+        child.page_list_ = ktl::move(page_list_);
+
+#ifdef DEBUG_ASSERT_IMPLEMENTED
+        vm_page_t* p;
+        list_for_every_entry(&covered_pages, p, vm_page_t, queue_node) {
+            // The page was already present in |child|, so it should be split at least
+            // once. And being split twice is obviously bad.
+            ASSERT(p->object.cow_left_split ^ p->object.cow_right_split);
+            // If |this| is contig, then we're only here if |child| is also contig. In that
+            // case, any covered pages must be covered by the original contig page in |child|
+            // and must be unpinned themselves.
+            ASSERT(p->object.pin_count == 0);
+        }
+#endif
+        list_splice_after(&covered_pages, &freed_pages);
+    } else {
+        // Merge our page list into the child page list and update all the necessary metadata.
+        child.page_list_.MergeFrom(page_list_,
+                merge_start_offset, merge_end_offset,
+                [this_is_contig = this->is_contiguous()](vm_page* page, uint64_t offset) {
+                    if (this_is_contig) {
+                        // If this vmo is contiguous, unpin the pages that aren't needed. The pages
+                        // are either original contig pages (which should have a pin_count of 1),
+                        // or they're forked pages where the original is already in the contig
+                        // child (in which case pin_count should be 0).
+                        DEBUG_ASSERT(page->object.pin_count <= 1);
+                        page->object.pin_count = 0;
+                    }
+                },
+                [this_is_contig = this->is_contiguous(), child_is_contig = child.is_contiguous(),
+                 removed_left](vm_page* page, uint64_t offset) -> bool {
+                    if (child_is_contig) {
+                        // We moved the page into the contiguous vmo, so we expect the page
+                        // to be a pinned contiguous page.
+                        DEBUG_ASSERT(page->object.pin_count == 1);
+                    } else if (this_is_contig) {
+                        // This vmo was contiguous but the child isn't, so unpin the pages. Similar
+                        // to above, this should be at most 1.
+                        DEBUG_ASSERT(page->object.pin_count <= 1);
+                        page->object.pin_count = 0;
+                    } else {
+                        // Neither is contiguous, so the page shouldn't have been pinned.
+                        DEBUG_ASSERT(page->object.pin_count == 0);
+                    }
+
+                    if (removed_left ? page->object.cow_right_split : page->object.cow_left_split) {
+                        // This happens when the pages was already migrated into child but then
+                        // was migrated further into child's descendants. The page can be freed.
+                        return false;
+                    } else {
+                        // Since we recursively fork on write, if the child doesn't have the
+                        // page, then neither of its children do.
+                        page->object.cow_left_split = 0;
+                        page->object.cow_right_split = 0;
+                        return true;
+                    }
+                }, &freed_pages);
+    }
+
+    if (!list_is_empty(&freed_pages)) {
+        pmm_free(&freed_pages);
     }
 }
 
@@ -1633,6 +1724,21 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
         parent_start_limit_ = end;
         skip_split_bits = true;
     } else {
+        // If the vmo limits can't be updated, this function will need to use the split bits
+        // to release pages in the parent. It also means that ancestor pages in the specified
+        // range might end up being released based on their current split bits, instead of through
+        // subsequent calls to this function. Therefore parent and all ancestors need to have
+        // the partial_cow_release_ flag set to prevent fast merge issues in ::RemoveChild.
+        auto cur = this;
+        uint64_t cur_start = start;
+        uint64_t cur_end = end;
+        while (cur->parent_ && cur_start < cur_end) {
+            auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+            parent->partial_cow_release_ = true;
+            cur_start = fbl::max(cur_start + cur->parent_offset_, parent->parent_start_limit_);
+            cur_end = fbl::min(cur_end + cur->parent_offset_, parent->parent_limit_);
+            cur = parent;
+        }
         skip_split_bits = false;
     }
 
@@ -1667,8 +1773,9 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
     }
 
     // Any pages left were accesible by both children. Free any pages that were already split
-    // into the other child, and mark any unsplit pages. We don't need to recurse on this
-    // range because the visibility of ancestor pages in this range isn't changing.
+    // into the other child. For pages that haven't been split into the other child, we need to
+    // ensure they're univisible. We don't need to recurse on this range because the visibility of
+    // parent's ancestor pages in this range isn't changing.
     parent->page_list_.RemovePages([skip_split_bits, left](vm_page_t*& page, auto offset) -> bool {
         // Simply checking if the page is resident in |this|->page_list_ is insufficient, as the
         // page split into this vmo could have been migrated anywhere into is children. To avoid
@@ -1677,9 +1784,14 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
         if (left ? page->object.cow_right_split : page->object.cow_left_split) {
             return true;
         }
-        if (!skip_split_bits) {
-            // Only bother setting the split bits if we didn't make the page
-            // inaccessible through parent_limit_;
+        if (skip_split_bits) {
+            // If we were able to update this vmo's parent limit, that made the pages
+            // uniaccessible. We clear the split bits to allow ::OnChildRemoved to efficiently
+            // merge vmos without having to worry about pages above parent_limit_.
+            page->object.cow_left_split = 0;
+            page->object.cow_right_split = 0;
+        } else {
+            // Otherwise set the appropriate split bit to make the page uniaccessible.
             if (left) {
                 page->object.cow_left_split = 1;
             } else {

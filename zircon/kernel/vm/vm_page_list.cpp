@@ -225,7 +225,7 @@ bool VmPageList::IsEmpty() {
 
 void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint64_t end_offset,
                            fbl::Function<void(vm_page*, uint64_t offset)> release_fn,
-                           fbl::Function<void(vm_page*, uint64_t offset)> migrate_fn,
+                           fbl::Function<bool(vm_page*, uint64_t offset)> migrate_fn,
                            list_node_t* free_list) {
     constexpr uint64_t kNodeSize = PAGE_SIZE * VmPageListNode::kPageFanOut;
     // The skewed |offset| in |other| must be equal to 0 skewed in |this|. This allows
@@ -270,7 +270,10 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
                 zx_status_t status = target->AddPage(page, i);
                 uint64_t src_offset = other_offset - other.list_skew_ + i * PAGE_SIZE;
                 if (status == ZX_OK) {
-                    migrate_fn(page, src_offset);
+                    if (!migrate_fn(page, src_offset)) {
+                        target->RemovePage(i);
+                        list_add_tail(free_list, &page->queue_node);
+                    }
                 } else {
                     release_fn(page, src_offset);
                     list_add_tail(free_list, &page->queue_node);
@@ -279,12 +282,49 @@ void VmPageList::MergeFrom(VmPageList& other, const uint64_t offset, const uint6
         } else {
             // If there's no node at the desired location, then directly insert the node.
             list_.insert_or_find(ktl::move(other_node), &target);
+            bool has_page = false;
             for (unsigned i = 0; i < VmPageListNode::kPageFanOut; i++) {
                 auto page = target->GetPage(i);
                 if (page) {
-                    migrate_fn(page, other_offset - other.list_skew_ + i * PAGE_SIZE);
+                    if (migrate_fn(page, other_offset - other.list_skew_ + i * PAGE_SIZE)) {
+                        has_page = true;
+                    } else {
+                        target->RemovePage(i);
+                        list_add_tail(free_list, &page->queue_node);
+                    }
                 }
             }
+            if (!has_page) {
+                list_.erase(target);
+            }
+        }
+    }
+}
+
+void VmPageList::MergeOnto(VmPageList& other, list_node_t* free_list) {
+    DEBUG_ASSERT(other.list_skew_ == list_skew_);
+
+    auto iter = list_.begin();
+    while (iter.IsValid()) {
+        auto node = list_.erase(iter++);
+        auto target = other.list_.find(node->GetKey());
+        if (target.IsValid()) {
+            // If there'a already a node at the desired location, then merge the two nodes.
+            for (unsigned i = 0; i < VmPageListNode::kPageFanOut; i++) {
+                auto page = node->RemovePage(i);
+                if (!page) {
+                    continue;
+                }
+
+                auto old_page = target->RemovePage(i);
+                if (old_page) {
+                    list_add_tail(free_list, &old_page->queue_node);
+                }
+
+                target->AddPage(page, i);
+            }
+        } else {
+            other.list_.insert(ktl::move(node));
         }
     }
 }

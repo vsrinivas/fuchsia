@@ -302,6 +302,12 @@ private:
             // Calling into the children confuses analysis
             TA_NO_THREAD_SAFETY_ANALYSIS;
 
+    // When cleaning up a hidden vmo, merges the hidden vmo's content (e.g. page list, view
+    // of the parent) into the remaining child.
+    void MergeContentWithChildLocked(VmObjectPaged* removed, bool removed_left)
+            // Accesses into the child confuse analysis
+            TA_NO_THREAD_SAFETY_ANALYSIS;
+
     // Outside of initialization/destruction, hidden vmos always have two children. For
     // clarity, whichever child is first in the list is the 'left' child, and whichever
     // child is second is the 'right' child.
@@ -341,6 +347,11 @@ private:
     uint64_t parent_start_limit_ TA_GUARDED(lock_) = 0;
     const uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
+
+    // Flag which is true if there was a call to ::ReleaseCowParentPagesLocked which was
+    // not able to update the parent limits. When this is not set, it is sometimes
+    // possible for ::MergeContentWithChildLocked to do significantly less work.
+    bool partial_cow_release_ TA_GUARDED(lock_) = false;
 
     // parent pointer (may be null)
     fbl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
