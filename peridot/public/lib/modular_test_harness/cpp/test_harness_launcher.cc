@@ -14,13 +14,14 @@ constexpr char kTestHarnessUrl[] =
     "modular_test_harness.cmx";
 };
 
-TestHarnessLauncher::TestHarnessLauncher()
-    : harness_launcher_thread_(
-          [this](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
-                     test_harness_req) {
-            LaunchTestHarness(std::move(test_harness_req));
-          },
-          test_harness_.NewRequest()) {}
+TestHarnessLauncher::TestHarnessLauncher() {
+  harness_launcher_thread_.reset(new std::thread(
+      [this](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
+                 test_harness_req) {
+        LaunchTestHarness(std::move(test_harness_req));
+      },
+      test_harness_.NewRequest()));
+}
 
 TestHarnessLauncher::~TestHarnessLauncher() {
   // Wait until the test harness thread's async::Loop is ready
@@ -36,7 +37,7 @@ TestHarnessLauncher::~TestHarnessLauncher() {
                   [this] { test_harness_ctrl_->Kill(); });
 
   // Wait for the thread to exit.
-  harness_launcher_thread_.join();
+  harness_launcher_thread_->join();
 }
 
 void TestHarnessLauncher::LaunchTestHarness(
