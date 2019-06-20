@@ -6,10 +6,14 @@ To build Zircon and run unit tests, run one of the following commands:
 
 ```sh
 # Build and run x64.
-./scripts/build-zircon-x64 && ./scripts/run-zircon-x64
+fx set bringup.x64 -with-base //garnet/packages/tests:zircon
+fx build
+fx run
 
 # Build and run arm64.
-./scripts/build-zircon-arm64 && ./scripts/run-zircon-arm64
+fx set bringup.arm64 -with-base //garnet/packages/tests:zircon
+fx build
+fx run
 ```
 
 Once the scripts finish running, you should see the Zircon shell. To run

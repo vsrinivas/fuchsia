@@ -10,8 +10,9 @@ etc.
 ## Example usage
 
 ```
-./scripts/run-zircon-x64 -c userboot=bin/core-tests
-./scripts/run-zircon-arm64 -c userboot=bin/core-tests
+fx set bringup.x64 -with-base //garnet/packages/tests:zircon  # or bringup.arm64
+fx build
+fx run -c userboot=bin/core-tests
 ```
 
 ## Notes

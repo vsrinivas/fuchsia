@@ -493,11 +493,11 @@ This option sets the default boot device to netboot, use a local zircon.bin or t
 
 # How to pass the commandline to the kernel
 
-## in Qemu, using scripts/run-zircon*
+## in Qemu, using fx run
 
 Pass each option using -c, for example:
 ```
-./scripts/run-zircon-x64 -c gfxconsole.font=18x32 -c gfxconsole.early=false
+fx run -c gfxconsole.font=18x32 -c gfxconsole.early=false
 ```
 
 ## in GigaBoot20x6, when netbooting

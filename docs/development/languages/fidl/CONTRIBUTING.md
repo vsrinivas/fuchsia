@@ -83,8 +83,9 @@ Tests are now built as:
 ### fidl-coding-table
 
 ```sh
-./scripts/build-zircon-x64 && \
-./scripts/run-zircon-x64 -c zircon.autorun.boot=/boot/test/sys/fidl-coding-tables-test
+fx set bringup.x64 --variant clang
+fx build && \
+fx run zircon.autorun.boot=/boot/test/sys/fidl-coding-tables-test
 ```
 
 ### fidlgen (LLCPP, HLCPP, Rust, Go)
@@ -121,8 +122,9 @@ fx exec topaz/bin/fidlgen_dart/regen.sh
 In `zircon/`:
 
 ```sh
-./scripts/build-zircon-x64 && \
-./scripts/run-zircon-x64 -c zircon.autorun.boot=/boot/test/sys/fidl-test
+fx set bringup.x64
+fx build && \
+fx run -c zircon.autorun.boot=/boot/test/sys/fidl-test
 ```
 
 When the test completes, you're running in the QEMU emulator.

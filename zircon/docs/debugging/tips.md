@@ -59,7 +59,9 @@ To automatically symbolize the backtraces when running zircon, pass the logs
 through the symbolizer as follows:
 
 ```
-$ ./scripts/run-zircon -a (x64|arm64) | ./scripts/symbolize
+fx set bringup.x64 --variant asan  # or bringup.arm64
+fx build
+fx run | ./scripts/symbolize
 ...
 > crasher
 ...

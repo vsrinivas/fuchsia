@@ -35,10 +35,11 @@ loglistener | ./scripts/symbolize build-arm64-asan/ids.txt
 For a slightly more involved case we'll consider a complete workflow to compile
 and symbolize an ASan crash.
 
-First build (you can use `./scripts/build-zircon-x86 -A` as well):
+First build:
 
 ```
-gn gen build-zircon --args='variants=["asan"]'
+fx set bringup.x64 --variant asan
+fx build
 ```
 
 Now you'll want to run this on QEMU, but if you just run it directly
@@ -46,7 +47,7 @@ you'll be stuck copy pasting the output into a file. You can use `tee`
 to solve this:
 
 ```
-./scripts/run-zircon-x86 -A | tee ~/log.txt
+fx run | tee ~/log.txt
 ```
 
 This will create a log.txt file in your home directory (feel free to place it

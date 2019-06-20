@@ -16,8 +16,7 @@ prebuilts, including toolchains:
 
 This will download QEMU to the `prebuilt/downloads/qemu` directory. You
 can either add `prebuilt/downloads/qemu/bin` to your PATH, or specify
-`prebuilt/downloads/qemu/bin` using the -q flag to the run-zircon scripts
-(see below).
+`prebuilt/downloads/qemu/bin` using the -q flag to `fx run` (see below).
 
 ## Build QEMU
 
@@ -52,10 +51,14 @@ when invoking run-zircon-{arch}.
 
 ```
 # for aarch64
-./scripts/run-zircon-arm64
+fx set bringup.arm64
+fx build
+fx run
 
 # for x86
-./scripts/run-zircon-x64
+fx set bringup.x64
+fx build
+fx run
 ```
 
 If QEMU is not on your path, use -q <directory> to specify its location.
@@ -93,7 +96,7 @@ run-zircon-x64 script uses /dev/tap0.
 sudo chown $USER /dev/tap0
 
 # Run zircon in QEMU, which will open /dev/tap0
-./scripts/run-zircon-x86 -N
+fx run -N
 
 # (In a different window) bring up tap0 with a link local IPv6 address
 sudo ifconfig tap0 inet6 fc00::/7 up
@@ -107,7 +110,7 @@ example startup script containing the above command is located in
 scripts/qemu-ifup-macos, so QEMU can be started with:
 
 ```
-./scripts/run-zircon-x64 -Nu ./scripts/qemu-ifup-macos
+fx run -Nu ./scripts/qemu-ifup-macos
 ```
 
 ## Using Emulated Disk under QEMU
@@ -117,7 +120,7 @@ Please follow the minfs instructions on how to create a disk image
 
 After creating the image, you can run zircon in QEMU with the disk image:
 ```
-./scripts/run-zircon-x64 -d [-D <disk_image_path (default: "blk.bin")>]
+fx run -d [-D <disk_image_path (default: "blk.bin")>]
 ```
 
 
@@ -130,7 +133,7 @@ Here is a sample session to get you started.
 In the shell you're running QEMU in:
 
 ```
-shell1$ ./scripts/run-zircon-x64 -- -s -S
+shell1$ fx run -- -s -S
 [... some QEMU start up text ...]
 ```
 
@@ -140,7 +143,7 @@ If you want to run QEMU without GDB, but be able to attach with GDB later
 then start QEMU without "-S" in the above example:
 
 ```
-shell1$ ./scripts/run-zircon-x64 -- -s
+shell1$ fx run -- -s
 [... some QEMU start up text ...]
 ```
 

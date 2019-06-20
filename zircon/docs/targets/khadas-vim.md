@@ -55,29 +55,18 @@ If you are not at Google, hang on until we make this publicly available.
 To find out what version of the bootloader you have, grep for "fuchsia-bootloader"
 in the kernel boot log. You should see something like: "cmdline: fuchsia-bootloader=0.04"
 
-## Building Zircon
-
-You'll need to build with ```-t``` to disable tests so that the image will fit in the boot partition.
+## Building
 
 ```
-scripts/build-zircon-arm64 -t
+fx set bringup.arm64
+fx build
 ```
 
 Be sure you've already set up your network before proceeding to the next step.
 
-## Flashing Zircon
+## Flashing & Paving
 
 First enter fastboot mode by holding down SW3 (leftmost button), pressing SW1 (rightmost button) quickly and keeping pressing SW3 for a few seconds.
-
-If you are working from the zircon layer, cd to the zircon directory and run:
-
-```
-scripts/flash-vim2 -m
-```
-
-The device should boot into zedboot by default.
-
-If you are working from the garnet layer of above, run the following:
 
 ```
 fx flash --pave
@@ -93,26 +82,18 @@ Alternatively, you can get to zedboot by resetting your vim2 by pressing SW1(rig
 
 ### netbooting
 
-To netboot zircon, enter zedboot and run the following under the zircon directory:
-
 ```
-scripts/netboot-zircon-arm64 ./build-gcc
-```
-
-To netboot garnet, run the following under the fuchsia directory:
-
-```
-fx set core.vim2 --netboot && fx build && fx netboot -1
+fx set bringup.vim2 --netboot && fx build && fx netboot -1
 ```
 
 You should be able to see "Issued boot command to ..." message printed out if this step is successful.
 
 ### Paving
 
-Paving is available from garnet layers and above. Run the following under the fuchsia directory:
+Paving is available from the "core" product and above. Run the following under the fuchsia directory:
 
 ```
-fx set core.vim2 --release && fx build && fx pave -1
+fx set core.vim2 && fx build && fx pave -1
 ```
 
 ### Fuchsia logo

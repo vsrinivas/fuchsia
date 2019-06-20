@@ -20,7 +20,9 @@ $ mkfile -n 16g blk.bin
    wish to attach additional devices, you can supply them with '-hdb', '-hdc,
    and so on.
 ```shell
-$ ./scripts/run-zircon-x64 -- -hda blk.bin
+fx set bringup.x64
+fx build
+fx run -- -hda blk.bin
 ```
 
 ### Target Device (QEMU and Real Hardware)
