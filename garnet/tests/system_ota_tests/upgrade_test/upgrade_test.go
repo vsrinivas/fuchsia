@@ -85,7 +85,7 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	}
 
 	// Tell the device to connect to our repository.
-	localHostname, err := c.LocalHostname()
+	localHostname, err := device.GetSshConnection()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,9 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	}
 	defer server.Shutdown(context.Background())
 
-	device.RegisterPackageRepository(server)
+	if err := device.RegisterPackageRepository(server); err != nil {
+		t.Fatal(err)
+	}
 
 	// Start the system OTA process.
 	log.Printf("starting system OTA")

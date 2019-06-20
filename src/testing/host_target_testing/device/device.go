@@ -115,6 +115,16 @@ func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
 	c.sshClient.RegisterDisconnectListener(wg)
 }
 
+func (c *Client) GetSshConnection() (string, error) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := c.Run("PATH= echo $SSH_CONNECTION", &stdout, &stderr)
+	if err != nil {
+		return "", fmt.Errorf("failed to read SSH_CONNECTION: %s: %s", err, string(stderr.Bytes()))
+	}
+	return strings.Split(string(stdout.Bytes()), " ")[0], nil
+}
+
 func (c *Client) GetSystemImageMerkle() (string, error) {
 	const systemImageMeta = "/system/meta"
 	merkle, err := c.ReadRemotePath(systemImageMeta)

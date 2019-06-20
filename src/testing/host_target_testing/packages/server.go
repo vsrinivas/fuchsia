@@ -129,7 +129,7 @@ func genConfig(dir string, localHostname string, port int) (configURL string, co
 		})
 	}
 
-	hostname := strings.SplitN(localHostname, "%", 2)[0]
+	hostname := strings.ReplaceAll(localHostname, "%", "%25")
 	repoURL := fmt.Sprintf("http://[%s]:%d", hostname, port)
 	configURL = fmt.Sprintf("%s/host_target_testing/config.json", repoURL)
 

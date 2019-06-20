@@ -23,7 +23,6 @@ type Config struct {
 	FuchsiaDir             string
 	SshKeyFile             string
 	netaddrPath            string
-	localHostname          string
 	DeviceName             string
 	deviceHostname         string
 	LkgbPath               string
@@ -52,7 +51,6 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.FuchsiaDir, "fuchsia-dir", os.Getenv("FUCHSIA_DIR"), "fuchsia dir")
 	fs.StringVar(&c.SshKeyFile, "ssh-private-key", os.Getenv("FUCHSIA_SSH_KEY"), "SSH private key file that can access the device")
 	fs.StringVar(&c.netaddrPath, "netaddr-path", filepath.Join(testDataPath, "netaddr"), "zircon netaddr tool path")
-	fs.StringVar(&c.localHostname, "local-hostname", "", "local hostname")
 	fs.StringVar(&c.DeviceName, "device", os.Getenv("FUCHSIA_NODENAME"), "device name")
 	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
 	fs.StringVar(&c.LkgbPath, "lkgb", filepath.Join(testDataPath, "lkgb"), "path to lkgb, default is $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb")
@@ -158,21 +156,6 @@ func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
 	}
 
 	return packages.NewRepository(c.upgradeAmberFilesDir)
-}
-
-func (c *Config) LocalHostname() (string, error) {
-	if c.localHostname == "" {
-		var err error
-		c.localHostname, err = c.netaddr("--local", c.DeviceName)
-		if err != nil {
-			return "", fmt.Errorf("ERROR: netaddr failed: %s", err)
-		}
-		if c.localHostname == "" {
-			return "", fmt.Errorf("unable to determine the local hostname")
-		}
-	}
-
-	return c.localHostname, nil
 }
 
 func (c *Config) DeviceHostname() (string, error) {
