@@ -8,6 +8,7 @@ import("//build/test.gni")
 executable("gdc-task") {
   testonly = true
   sources = [
+    "../gdc.cpp",
     "task-test.cpp",
   ]
   deps = [
@@ -19,6 +20,10 @@ executable("gdc-task") {
     "//zircon/public/banjo/ddk.protocol.sysmem",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/public/lib/driver",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",
@@ -26,6 +31,7 @@ executable("gdc-task") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gdc-test.h"
+#include "gdc-on-device-test.h"
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>

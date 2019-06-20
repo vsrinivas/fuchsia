@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_TEST_H_
-#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_TEST_H_
+#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_ON_DEVICE_TEST_H_
+#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_ON_DEVICE_TEST_H_
 
 #include <zxtest/zxtest.h>
 
@@ -25,4 +25,4 @@ class GdcDeviceTester : public zxtest::Test {
 
 }  // namespace gdc
 
-#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_TEST_H_
+#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TEST_GDC_ON_DEVICE_TEST_H_

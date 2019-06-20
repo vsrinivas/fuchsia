@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TASK_H_
+#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TASK_H_
+
 #include <ddktl/protocol/gdc.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
+#include <lib/syslog/global.h>
 #include <zircon/fidl.h>
 
 namespace gdc {
@@ -61,3 +65,5 @@ class Task {
   fbl::Array<fzl::PinnedVmo> input_buffers_;
 };
 }  // namespace gdc
+
+#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TASK_H_

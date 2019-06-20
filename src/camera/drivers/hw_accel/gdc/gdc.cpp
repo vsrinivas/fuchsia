@@ -6,6 +6,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -61,8 +62,24 @@ zx_status_t GdcDevice::GdcInitTask(
     const buffer_collection_info_t* output_buffer_collection,
     zx::vmo config_vmo, const gdc_callback_t* callback,
     uint32_t* out_task_index) {
-  // TODO(braval): Implement this.
-  return ZX_ERR_NOT_SUPPORTED;
+  if (out_task_index == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  std::unique_ptr<Task> task;
+  zx_status_t status =
+      gdc::Task::Create(input_buffer_collection, output_buffer_collection,
+                        config_vmo, callback, bti_, &task);
+  if (status != ZX_OK) {
+    FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
+    return status;
+  }
+
+  // Put an entry in the hashmap.
+  task_map_[next_task_index_] = std::move(task);
+  *out_task_index = next_task_index_;
+  next_task_index_++;
+  return ZX_OK;
 }
 
 zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index,
@@ -72,7 +89,12 @@ zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index,
 }
 
 void GdcDevice::GdcRemoveTask(uint32_t task_index) {
-  // TODO(braval): Implement this.
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  ZX_ASSERT(task_entry != task_map_.end());
+
+  // Remove map entry.
+  task_map_.erase(task_entry);
 }
 
 void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
@@ -84,35 +106,35 @@ zx_status_t GdcDevice::Setup(void* ctx, zx_device_t* parent,
                              std::unique_ptr<GdcDevice>* out) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
+    FX_LOGF(ERROR, "", "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> clk_mmio;
   zx_status_t status = pdev.MapMmio(kHiu, &clk_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> gdc_mmio;
   status = pdev.MapMmio(kGdc, &gdc_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
     return status;
   }
 
   zx::interrupt gdc_irq;
   status = pdev.GetInterrupt(0, &gdc_irq);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.GetInterrupt failed %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: pdev_.GetInterrupt failed %d\n", __func__, status);
     return status;
   }
 
   zx::bti bti;
   status = pdev.GetBti(0, &bti);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not obtain bti: %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: could not obtain bti: %d\n", __func__, status);
     return status;
   }
 
@@ -130,12 +152,6 @@ zx_status_t GdcDevice::Setup(void* ctx, zx_device_t* parent,
   return status;
 }
 
-GdcDevice::~GdcDevice() {
-  running_.store(false);
-  thrd_join(irq_thread_, NULL);
-  gdc_irq_.destroy();
-}
-
 void GdcDevice::DdkUnbind() {
   ShutDown();
   DdkRemove();
@@ -149,7 +165,7 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
   std::unique_ptr<GdcDevice> gdc_device;
   zx_status_t status = gdc::GdcDevice::Setup(ctx, device, &gdc_device);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not setup gdc device: %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: Could not setup gdc device: %d\n", __func__, status);
     return status;
   }
   zx_device_prop_t props[] = {
@@ -163,17 +179,17 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
 #if 0
     status = gdc::GdcDeviceTester::RunTests(gdc_device.get());
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Device Unit Tests Failed \n", __func__);
+        FX_LOGF(ERROR, "%s: Device Unit Tests Failed \n", __func__);
         return status;
     }
 #endif
 
   status = gdc_device->DdkAdd("gdc", 0, props, countof(props));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not add gdc device: %d\n", __func__, status);
+    FX_LOGF(ERROR, "%s: Could not add gdc device: %d\n", __func__, status);
     return status;
   } else {
-    zxlogf(INFO, "%s: gdc driver added\n", __func__);
+    FX_LOGF(INFO, "", "%s: gdc driver added\n", __func__);
   }
 
   // gdc device intentionally leaked as it is now held by DevMgr.

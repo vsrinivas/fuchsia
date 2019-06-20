@@ -17,7 +17,15 @@
 #include <threads.h>
 #include <zircon/fidl.h>
 
+#include <deque>
+#include <list>
+#include <unordered_map>
+#include <vector>
+
+#include "task.h"
+
 namespace gdc {
+
 // |GdcDevice| is spawned by the driver in |gdc.cpp|
 // This provides ZX_PROTOCOL_GDC.
 class GdcDevice;
@@ -37,7 +45,7 @@ class GdcDevice : public GdcDeviceType,
         gdc_irq_(std::move(gdc_irq)),
         bti_(std::move(bti)) {}
 
-  ~GdcDevice();
+  ~GdcDevice() = default;
 
   // Setup() is used to create an instance of GdcDevice.
   // It sets up the pdev & brings the GDC out of reset.
@@ -73,8 +81,8 @@ class GdcDevice : public GdcDeviceType,
   ddk::MmioBuffer gdc_mmio_;
   zx::interrupt gdc_irq_;
   zx::bti bti_;
-  thrd_t irq_thread_;
-  std::atomic<bool> running_;
+  uint32_t next_task_index_ = 0;
+  std::unordered_map<uint32_t, std::unique_ptr<Task>> task_map_;
 };
 
 }  // namespace gdc
