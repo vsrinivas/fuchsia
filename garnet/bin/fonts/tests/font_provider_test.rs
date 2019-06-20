@@ -519,8 +519,8 @@ mod reviewed_api {
 mod experimental_api {
     use {
         failure::{Error, ResultExt},
-        fidl_fuchsia_fonts::FamilyName,
-        fidl_fuchsia_fonts_experimental as fonts_exp, fuchsia_async as fasync,
+        fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
+        fuchsia_async as fasync,
         fuchsia_component::client::{launch, launcher, App},
     };
 
@@ -547,12 +547,64 @@ mod experimental_api {
         Ok(())
     }
 
+    fn roboto_info (id: u32, weight: u16) -> fonts_exp::TypefaceInfo {
+        fonts_exp::TypefaceInfo {
+            asset_id: Some(id),
+            font_index: Some(0),
+            family: Some(fonts::FamilyName { name: String::from("Roboto") }),
+            style: Some(fonts::Style2 {
+                slant: Some(fonts::Slant::Upright),
+                weight: Some(weight),
+                width: Some(fonts::Width::Normal),
+            }),
+            languages: Some(Vec::new()),
+            generic_family: Some(fonts::GenericFontFamily::SansSerif),
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_get_typefaces_by_family() -> Result<(), Error> {
+        let roboto = roboto_info(1, fonts::WEIGHT_NORMAL);
+        let roboto_light = roboto_info(2, 300);
+        let roboto_medium = roboto_info(3, 500);
+
         let (_app, font_provider) = start_provider_with_default_fonts()?;
-        let mut family = FamilyName { name: String::new() };
-        let response = await!(font_provider.get_typefaces_by_family(&mut family));
-        assert!(response.is_err());
+        let mut family = fonts::FamilyName { name: String::from("Roboto") };
+
+        let response = await!(font_provider.get_typefaces_by_family(&mut family))?;
+        let faces = response.unwrap().results.unwrap();
+
+        assert_eq!(faces.len(), 3);
+        assert_eq!(faces[0], roboto);
+        assert_eq!(faces[1], roboto_light);
+        assert_eq!(faces[2], roboto_medium);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_default_fonts()?;
+        let mut family = fonts::FamilyName { name: String::from("Material Icons") };
+        let mut alias = fonts::FamilyName { name: String::from("MaterialIcons") };
+
+        let by_family = await!(font_provider.get_typefaces_by_family(&mut family))?;
+        let by_alias = await!(font_provider.get_typefaces_by_family(&mut alias))?;
+
+        let by_family_faces = by_family.unwrap().results.unwrap();
+        let by_alias_faces = by_alias.unwrap().results.unwrap();
+
+        assert_eq!(by_family_faces.len(), 1);
+        assert_eq!(by_alias_faces.len(), 1);
+        assert_eq!(by_family_faces[0], by_alias_faces[0]);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_typefaces_by_family_not_found() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_default_fonts()?;
+        let mut family = fonts::FamilyName { name: String::from("NoSuchFont") };
+        let response = await!(font_provider.get_typefaces_by_family(&mut family))?;
+        assert_eq!(response.unwrap_err(), fonts_exp::Error::NotFound);
         Ok(())
     }
 

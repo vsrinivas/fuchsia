@@ -13,7 +13,7 @@ use {
     fidl::encoding::{Decodable, OutOfLine},
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
-    fidl_fuchsia_mem as mem,
+    fidl_fuchsia_intl as intl, fidl_fuchsia_mem as mem,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     log,
@@ -351,6 +351,25 @@ impl FontService {
         Ok(response)
     }
 
+    fn get_typefaces_by_family(
+        &self,
+        family_name: fonts::FamilyName,
+    ) -> Result<fonts_exp::TypefaceInfoResponse, fonts_exp::Error> {
+        let family = self
+            .match_family(&UniCase::new(family_name.name.clone()))
+            .ok_or(fonts_exp::Error::NotFound)?;
+        // Convert Vec<Arc<Typeface>> to Vec<TypefaceInfo>
+        let faces: Vec<fonts_exp::TypefaceInfo> = family
+            .faces
+            .faces
+            .iter()
+            // Copy most fields from `Typeface` and use the canonical family name
+            .map(|face| typefaceinfo_from_typeface(face, family.name.clone()))
+            .collect();
+        let response = fonts_exp::TypefaceInfoResponse { results: Some(faces) };
+        Ok(response)
+    }
+
     async fn handle_font_provider_request(
         &self,
         request: fonts::ProviderRequest,
@@ -392,7 +411,8 @@ impl FontService {
                 Ok(responder.send(response)?)
             }
             fonts_exp::ProviderRequest::GetTypefacesByFamily { family, responder } => {
-                Err(format_err!("Unimplemented: GetTypefacesByFamily"))
+                let mut response = self.get_typefaces_by_family(family);
+                Ok(responder.send(&mut response)?)
             }
             fonts_exp::ProviderRequest::ListTypefaces { request, responder } => {
                 Err(format_err!("Unimplemented: ListTypefaces"))
@@ -443,4 +463,22 @@ impl FontService {
 pub enum ProviderRequestStream {
     Stable(fonts::ProviderRequestStream),
     Experimental(fonts_exp::ProviderRequestStream),
+}
+
+fn typefaceinfo_from_typeface(face: &Typeface, family: String) -> fonts_exp::TypefaceInfo {
+    fonts_exp::TypefaceInfo {
+        asset_id: Some(face.asset_id),
+        font_index: Some(face.font_index),
+        family: Some(fonts::FamilyName { name: family }),
+        style: Some(fonts::Style2 {
+            slant: Some(face.slant),
+            weight: Some(face.weight),
+            width: Some(face.width),
+        }),
+        languages: Some(
+            // Convert BTreeSet<String> to Vec<LocaleId>
+            face.languages.iter().map(|lang| intl::LocaleId { id: lang.clone() }).collect(),
+        ),
+        generic_family: face.generic_family,
+    }
 }

@@ -244,7 +244,7 @@ fn select_best_match<'a, 'b>(
 pub struct TypefaceCollection {
     /// Some typefaces may be in more than one collection. In particular, fallback typefaces are
     /// added to the family collection and also to the fallback collection.
-    faces: Vec<Arc<Typeface>>,
+    pub faces: Vec<Arc<Typeface>>,
 }
 
 impl TypefaceCollection {
