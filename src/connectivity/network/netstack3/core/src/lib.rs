@@ -275,20 +275,27 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
 
     /// Schedule a callback to be invoked after a timeout.
     ///
-    /// `schedule_timeout` schedules `f` to be invoked after `duration` has elapsed, overwriting any
-    /// previous timeout with the same ID.
+    /// `schedule_timeout` schedules `f` to be invoked after `duration` has
+    /// elapsed, overwriting any previous timeout with the same ID.
     ///
-    /// If there was previously a timer with that ID, return the time at which is was scheduled to
-    /// fire.
-    fn schedule_timeout(&mut self, duration: time::Duration, id: TimerId) -> Option<Self::Instant>;
+    /// If there was previously a timer with that ID, return the time at which
+    /// is was scheduled to fire.
+    ///
+    /// # Panics
+    ///
+    /// `schedule_timeout` may panic if `duration` is large enough that
+    /// `self.now() + duration` overflows.
+    fn schedule_timeout(&mut self, duration: time::Duration, id: TimerId) -> Option<Self::Instant> {
+        self.schedule_timeout_instant(self.now().checked_add(duration).unwrap(), id)
+    }
 
     /// Schedule a callback to be invoked at a specific time.
     ///
-    /// `schedule_timeout_instant` schedules `f` to be invoked at `time`, overwriting any previous
-    /// timeout with the same ID.
+    /// `schedule_timeout_instant` schedules `f` to be invoked at `time`,
+    /// overwriting any previous timeout with the same ID.
     ///
-    /// If there was previously a timer with that ID, return the time at which is was scheduled to
-    /// fire.
+    /// If there was previously a timer with that ID, return the time at which
+    /// is was scheduled to fire.
     fn schedule_timeout_instant(
         &mut self,
         time: Self::Instant,

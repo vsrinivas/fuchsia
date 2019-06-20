@@ -77,9 +77,10 @@ use ethernet as eth;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
+use std::convert::TryFrom;
 use std::fs::File;
 use std::marker::PhantomData;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use failure::{bail, Error};
 use fidl::endpoints::{RequestStream, ServiceMarker};
@@ -619,7 +620,7 @@ impl EventLoop {
 }
 
 struct TimerInfo {
-    time: Instant,
+    time: zx::Time,
     id: TimerId,
     abort_handle: AbortHandle,
 }
@@ -642,26 +643,45 @@ impl EventLoopInner {
     }
 }
 
-impl EventDispatcher for EventLoopInner {
-    type Instant = Instant;
+/// A thin wrapper around `zx::Time` that implements `core::Instant`.
+#[derive(Copy, Clone)]
+struct ZxTime(zx::Time);
 
-    fn now(&self) -> Instant {
-        Instant::now()
+impl netstack3_core::Instant for ZxTime {
+    fn duration_since(&self, earlier: ZxTime) -> Duration {
+        assert!(self.0 >= earlier.0);
+        // guaranteed not to panic because the assertion ensures that the
+        // difference is non-negative, and all non-negative i64 values are also
+        // valid u64 values
+        Duration::from_nanos(u64::try_from(self.0.into_nanos() - earlier.0.into_nanos()).unwrap())
     }
 
-    fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<Instant> {
-        // We need to separately keep track of the time at which the future completes (a Zircon
-        // Time object) and the time at which the user expects it to complete. You cannot convert
-        // between Zircon Time objects and std::time::Instant objects (since std::time::Instance is
-        // opaque), so we generate two different time objects to keep track of.
-        let zircon_time = zx::Time::after(zx::Duration::from(duration));
-        let rust_time = self.now() + duration;
+    fn checked_add(&self, duration: Duration) -> Option<ZxTime> {
+        Some(ZxTime(zx::Time::from_nanos(
+            self.0.into_nanos().checked_add(i64::try_from(duration.as_nanos()).ok()?)?,
+        )))
+    }
 
+    fn checked_sub(&self, duration: Duration) -> Option<ZxTime> {
+        Some(ZxTime(zx::Time::from_nanos(
+            self.0.into_nanos().checked_sub(i64::try_from(duration.as_nanos()).ok()?)?,
+        )))
+    }
+}
+
+impl EventDispatcher for EventLoopInner {
+    type Instant = ZxTime;
+
+    fn now(&self) -> ZxTime {
+        ZxTime(zx::Time::get(zx::ClockId::Monotonic))
+    }
+
+    fn schedule_timeout_instant(&mut self, time: ZxTime, id: TimerId) -> Option<ZxTime> {
         let old_timer = self.cancel_timeout(id);
 
         let mut timer_send = self.event_send.clone();
         let timeout = async move {
-            await!(fasync::Timer::new(zircon_time));
+            await!(fasync::Timer::new(time.0));
             timer_send.send(Event::TimerEvent(id));
             // The timer's cancel function is called by the receiver, so that
             // this async block does not need to have a reference to the
@@ -669,19 +689,13 @@ impl EventDispatcher for EventLoopInner {
         };
 
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        self.timers.push(TimerInfo { time: rust_time, id, abort_handle });
+        self.timers.push(TimerInfo { time: time.0, id, abort_handle });
 
         let timeout = Abortable::new(timeout, abort_registration);
         let timeout = timeout.unwrap_or_else(|_| ());
 
         fasync::spawn_local(timeout);
         old_timer
-    }
-
-    fn schedule_timeout_instant(&mut self, _time: Instant, _id: TimerId) -> Option<Instant> {
-        // It's not possible to convert a std::time::Instant to a Zircon Time, so this API will
-        // need some more thought. Punting on this until we need it.
-        unimplemented!()
     }
 
     // TODO(wesleyac): Fix race
@@ -699,7 +713,7 @@ impl EventDispatcher for EventLoopInner {
     // ensuring that the timer future cannot fire until the main queue is empty.
     // See `GroupAvailable` in `src/connectivity/wlan/wlanstack/src/future_util.rs`
     // for an example of how to do this.
-    fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
+    fn cancel_timeout(&mut self, id: TimerId) -> Option<ZxTime> {
         let index =
             self.timers.iter().enumerate().find_map(
                 |x| {
@@ -711,7 +725,7 @@ impl EventDispatcher for EventLoopInner {
                 },
             )?;
         self.timers[index].abort_handle.abort();
-        Some(self.timers.remove(index).time)
+        Some(ZxTime(self.timers.remove(index).time))
     }
 }
 
