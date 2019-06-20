@@ -1028,6 +1028,86 @@ extern "C" bool test_sysmem_cpu_usage_and_inaccessible_domain_fails(void) {
     END_TEST;
 }
 
+extern "C" bool test_sysmem_required_size(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator_client;
+    status = connect_to_sysmem_driver(&allocator_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(
+        allocator_client.get(), token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(),
+        collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(
+        BufferCollectionConstraints::Default);
+    constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints->min_buffer_count_for_camping = 1;
+    constraints->has_buffer_memory_constraints = false;
+    constraints->image_format_constraints_count = 1;
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints->image_format_constraints[0];
+    image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
+        .type = fuchsia_sysmem_ColorSpaceType_REC709,
+    };
+    image_constraints.min_coded_width = 256;
+    image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
+    image_constraints.min_coded_height = 256;
+    image_constraints.max_coded_height = std::numeric_limits<uint32_t>::max();
+    image_constraints.min_bytes_per_row = 256;
+    image_constraints.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
+    image_constraints.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.bytes_per_row_divisor = 1;
+    image_constraints.start_offset_divisor = 1;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+    image_constraints.required_max_coded_width = 512;
+    image_constraints.required_max_coded_height = 1024;
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(
+        collection_client.get(), true, constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status,
+        buffer_collection_info.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    size_t vmo_size;
+    status = zx_vmo_get_size(buffer_collection_info->buffers[0].vmo, &vmo_size);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Image must be at least 512x1024 NV12, due to the required max sizes
+    // above.
+    EXPECT_LE(1024 * 512 * 3 / 2, vmo_size);
+
+    END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -1042,5 +1122,6 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_constraints_retained_beyond_clean_close)
     RUN_TEST(test_sysmem_heap_constraints)
     RUN_TEST(test_sysmem_cpu_usage_and_inaccessible_domain_fails)
+    RUN_TEST(test_sysmem_required_size)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

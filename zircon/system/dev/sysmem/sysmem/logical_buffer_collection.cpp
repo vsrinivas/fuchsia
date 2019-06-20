@@ -1315,8 +1315,10 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
         // struct copy
         min_image.pixel_format = constraints->pixel_format;
 
+        // We use required_max_coded_width because that's the max width that the producer (or
+        // initiator) wants these buffers to be able to hold.
         min_image.coded_width =
-            AlignUp(constraints->min_coded_width,
+            AlignUp(std::max(constraints->min_coded_width, constraints->required_max_coded_width),
                     constraints->coded_width_divisor);
         if (min_image.coded_width > constraints->max_coded_width) {
             LogError(
@@ -1325,8 +1327,10 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
             return BufferCollection::BufferCollectionInfo(
                 BufferCollection::BufferCollectionInfo::Null);
         }
+        // We use required_max_coded_height because that's the max height that the producer (or
+        // initiator) wants these buffers to be able to hold.
         min_image.coded_height =
-            AlignUp(constraints->min_coded_height,
+            AlignUp(std::max(constraints->min_coded_height, constraints->required_max_coded_height),
                     constraints->coded_height_divisor);
         if (min_image.coded_height > constraints->max_coded_height) {
             LogError(
@@ -1336,7 +1340,9 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
                 BufferCollection::BufferCollectionInfo::Null);
         }
         min_image.bytes_per_row =
-            AlignUp(constraints->min_bytes_per_row,
+            AlignUp(std::max(constraints->min_bytes_per_row,
+                             ImageFormatStrideBytesPerWidthPixel(&constraints->pixel_format) *
+                                 min_image.coded_width),
                     constraints->bytes_per_row_divisor);
         if (min_image.bytes_per_row > constraints->max_bytes_per_row) {
             LogError("bytes_per_row_divisor caused bytes_per_row > "
