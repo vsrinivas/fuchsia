@@ -63,6 +63,7 @@ use crate::webdriver::facade::WebdriverFacade;
 use crate::wlan::facade::WlanFacade;
 
 pub mod macros {
+    pub use crate::fx_err_and_bail;
     pub use crate::with_line;
 }
 
@@ -71,6 +72,14 @@ macro_rules! with_line {
     ($tag:expr) => {
         format!("{}:{}", $tag, line!())
     };
+}
+
+#[macro_export]
+macro_rules! fx_err_and_bail {
+    ($tag:expr, $msg:expr) => {{
+        fx_log_err!(tag: $tag, "{}", $msg);
+        bail!($msg)
+    }};
 }
 
 /// Sl4f object. This stores all information about state for each connectivity stack.

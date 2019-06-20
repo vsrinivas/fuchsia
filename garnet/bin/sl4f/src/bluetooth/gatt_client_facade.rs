@@ -23,6 +23,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::bluetooth::types::BleScanResponse;
+use crate::server::sl4f::macros::{fx_err_and_bail, with_line};
 
 #[derive(Debug)]
 pub struct InnerGattClientFacade {
@@ -87,6 +88,7 @@ impl GattClientFacade {
         periph_id: String,
         service_id: u64,
     ) -> Result<(), Error> {
+        let tag = "GattClientFacade::gattc_connect_to_service";
         let client_proxy = self.get_client_from_peripherals(periph_id);
         let (proxy, server) = endpoints::create_proxy()?;
 
@@ -101,20 +103,22 @@ impl GattClientFacade {
                 Ok(())
             }
             None => {
-                fx_log_err!(tag: "gattc_connect_to_service", "Unable to connect to service.");
+                fx_log_err!(tag: &with_line!(tag), "Unable to connect to service.");
                 bail!("No peripheral proxy created.")
             }
         }
     }
 
     pub async fn gattc_discover_characteristics(&self) -> Result<Vec<Characteristic>, Error> {
+        let tag = "GattClientFacade::gattc_discover_characteristics";
         let discover_characteristics =
             self.inner.read().active_proxy.as_ref().unwrap().discover_characteristics();
 
         let (status, chrcs) =
             await!(discover_characteristics).map_err(|_| BTError::new("Failed to send message"))?;
         if let Some(e) = status.error {
-            bail!("Failed to read characteristics: {}", BTError::from(*e));
+            let err_msg = format!("Failed to read characteristics: {}", BTError::from(*e));
+            fx_err_and_bail!(&with_line!(tag), err_msg)
         }
         Ok(chrcs)
     }
@@ -125,6 +129,7 @@ impl GattClientFacade {
         offset: u16,
         write_value: Vec<u8>,
     ) -> Result<(), Error> {
+        let tag = "GattClientFacade::gattc_write_char_by_id";
         let write_characteristic =
             self.inner.read().active_proxy.as_ref().unwrap().write_characteristic(
                 id,
@@ -136,7 +141,10 @@ impl GattClientFacade {
             await!(write_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to write to characteristic: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to write to characteristic: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => Ok(()),
         }
     }
@@ -156,6 +164,7 @@ impl GattClientFacade {
     }
 
     pub async fn gattc_read_char_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
+        let tag = "GattClientFacade::gattc_read_char_by_id";
         let read_characteristic =
             self.inner.read().active_proxy.as_ref().unwrap().read_characteristic(id);
 
@@ -163,7 +172,10 @@ impl GattClientFacade {
             await!(read_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to read characteristic: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to read characteristic: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => Ok(value),
         }
     }
@@ -174,6 +186,7 @@ impl GattClientFacade {
         offset: u16,
         max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
+        let tag = "GattClientFacade::gattc_read_long_char_by_id";
         let read_long_characteristic = self
             .inner
             .read()
@@ -186,19 +199,26 @@ impl GattClientFacade {
             await!(read_long_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to read characteristic: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to read characteristic: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => Ok(value),
         }
     }
 
     pub async fn gattc_read_desc_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
+        let tag = "GattClientFacade::gattc_read_desc_by_id";
         let read_descriptor = self.inner.read().active_proxy.as_ref().unwrap().read_descriptor(id);
 
         let (status, value) =
             await!(read_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to read descriptor: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to read descriptor: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => Ok(value),
         }
     }
@@ -209,6 +229,7 @@ impl GattClientFacade {
         offset: u16,
         max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
+        let tag = "GattClientFacade::gattc_read_long_desc_by_id";
         let read_long_descriptor = self
             .inner
             .read()
@@ -221,12 +242,16 @@ impl GattClientFacade {
             await!(read_long_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to read descriptor: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to read long descriptor: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => Ok(value),
         }
     }
 
     pub async fn gattc_write_desc_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
+        let tag = "GattClientFacade::gattc_write_desc_by_id";
         let write_descriptor = self
             .inner
             .read()
@@ -239,7 +264,10 @@ impl GattClientFacade {
             await!(write_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to write to descriptor: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to write to descriptor: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => Ok(()),
         }
     }
@@ -249,6 +277,7 @@ impl GattClientFacade {
         id: u64,
         value: bool,
     ) -> Result<(), Error> {
+        let tag = "GattClientFacade::gattc_toggle_notify_characteristic";
         let notify_characteristic =
             self.inner.read().active_proxy.as_ref().unwrap().notify_characteristic(id, value);
 
@@ -256,13 +285,17 @@ impl GattClientFacade {
             await!(notify_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
 
         match status.error {
-            Some(e) => bail!("Failed to enable notifications: {}", BTError::from(*e)),
+            Some(e) => {
+                let err_msg = format!("Failed to enable notifications: {}", BTError::from(*e));
+                fx_err_and_bail!(&with_line!(tag), err_msg)
+            }
             None => {}
         };
         Ok(())
     }
 
     pub async fn list_services(&self, id: String) -> Result<Vec<ServiceInfo>, Error> {
+        let tag = "GattClientFacade::list_services";
         let client_proxy = self.get_client_from_peripherals(id);
 
         match client_proxy {
@@ -270,10 +303,14 @@ impl GattClientFacade {
                 let (status, services) = await!(c.list_services(None))?;
                 match status.error {
                     None => {
-                        fx_log_info!(tag: "list_services", "Found services: {:?}", services);
+                        fx_log_info!(tag: &with_line!(tag), "Found services: {:?}", services);
                         Ok(services)
                     }
-                    Some(e) => bail!("Error found while listing services: {:?}", BTError::from(*e)),
+                    Some(e) => {
+                        let err_msg =
+                            format!("Error found while listing services: {:?}", BTError::from(*e));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
+                    }
                 }
             }
             None => bail!("No client exists with provided device id"),
@@ -289,31 +326,40 @@ impl GattClientFacade {
     // TODO(aniramakri): Is this right behavior? If the device id already exists, don't
     // overwrite ClientProxy?
     pub fn update_peripheral_id(&self, id: &String, client: ClientProxy) {
+        let tag = "GattClientFacade::update_peripheral_id";
         if self.inner.read().peripheral_ids.contains_key(id) {
-            fx_log_warn!(tag: "update_peripheral_id", "Attempted to overwrite existing id: {}", id);
+            fx_log_warn!(tag: &with_line!(tag), "Attempted to overwrite existing id: {}", id);
         } else {
-            fx_log_info!(tag: "update_peripheral_id", "Added {:?} to peripheral ids", id);
+            fx_log_info!(tag: &with_line!(tag), "Added {:?} to peripheral ids", id);
             self.inner.write().peripheral_ids.insert(id.clone(), client);
         }
 
-        fx_log_info!(tag: "update_peripheral_id", "Peripheral ids: {:?}",
-            self.inner.read().peripheral_ids);
+        fx_log_info!(
+            tag: &with_line!(tag),
+            "Peripheral ids: {:?}",
+            self.inner.read().peripheral_ids
+        );
     }
 
     pub fn remove_peripheral_id(&self, id: &String) {
+        let tag = "GattClientFacade::remove_peripheral_id";
         self.inner.write().peripheral_ids.remove(id);
-        fx_log_info!(tag: "remove_peripheral_id", "After removing peripheral id: {:?}",
-            self.inner.read().peripheral_ids);
+        fx_log_info!(
+            tag: &with_line!(tag),
+            "After removing peripheral id: {:?}",
+            self.inner.read().peripheral_ids
+        );
     }
 
     // Update the central proxy if none exists, otherwise raise error
     // If no proxy exists, set up central server to listen for events. This central listener will
     // wake up any wakers who may be interested in RemoteDevices discovered
     pub fn set_central_proxy(inner: Arc<RwLock<InnerGattClientFacade>>) {
+        let tag = "GattClientFacade::set_central_proxy";
         let mut central_modified = false;
         let new_central = match inner.read().central.clone() {
             Some(c) => {
-                fx_log_warn!(tag: "set_central_proxy", "Current central: {:?}.", c);
+                fx_log_warn!(tag: &with_line!(tag), "Current central: {:?}.", c);
                 central_modified = true;
                 Some(c)
             }
@@ -339,8 +385,9 @@ impl GattClientFacade {
         id: String,
         device: RemoteDevice,
     ) {
+        let tag = "GattClientFacade::update_devices";
         if inner.read().devices.contains_key(&id) {
-            fx_log_warn!(tag: "update_devices", "Already discovered: {:?}", id);
+            fx_log_warn!(tag: &with_line!(tag), "Already discovered: {:?}", id);
         } else {
             inner.write().devices.insert(id, device);
         }
@@ -349,6 +396,7 @@ impl GattClientFacade {
     pub fn listen_central_events(
         inner: Arc<RwLock<InnerGattClientFacade>>,
     ) -> impl Future<Output = ()> {
+        let tag = "GattClientFacade::listen_central_events";
         let evt_stream = match inner.read().central.clone() {
             Some(c) => c.take_event_stream(),
             None => panic!("No central created!"),
@@ -358,14 +406,18 @@ impl GattClientFacade {
             .map_ok(move |evt| {
                 match evt {
                     CentralEvent::OnScanStateChanged { scanning } => {
-                        fx_log_info!(tag: "listen_central_events", "Scan state changed: {:?}",
-                            scanning);
+                        fx_log_info!(tag: &with_line!(tag), "Scan state changed: {:?}", scanning);
                     }
                     CentralEvent::OnDeviceDiscovered { device } => {
                         let id = device.identifier.clone();
                         let name = device.advertising_data.as_ref().map(|adv| &adv.name);
                         // Update the device discovered list
-                        fx_log_info!(tag: "listen_central_events", "Device discovered: id: {:?}, name: {:?}", id, name);
+                        fx_log_info!(
+                            tag: &with_line!(tag),
+                            "Device discovered: id: {:?}, name: {:?}",
+                            id,
+                            name
+                        );
                         GattClientFacade::update_devices(&inner, id, device);
 
                         // In the event that we need to short-circuit the stream, wake up all
@@ -375,17 +427,22 @@ impl GattClientFacade {
                         }
                     }
                     CentralEvent::OnPeripheralDisconnected { identifier } => {
-                        fx_log_info!(tag: "listen_central_events", "Peer disconnected: {:?}", identifier);
+                        fx_log_info!(tag: &with_line!(tag), "Peer disconnected: {:?}", identifier);
                     }
                 }
             })
             .try_collect::<()>()
-            .unwrap_or_else(
-                |e| fx_log_err!(tag: "listen_central_events", "failed to subscribe to BLE Central events: {:?}", e),
-            )
+            .unwrap_or_else(|e| {
+                fx_log_err!(
+                    tag: &with_line!("GattClientFacade::listen_central_events"),
+                    "Failed to subscribe to BLE Central events: {:?}",
+                    e
+                )
+            })
     }
 
     pub async fn connect_peripheral(&self, id: String) -> Result<(), Error> {
+        let tag = "GattClientFacade::connect_peripheral";
         // Set the central proxy if necessary
         GattClientFacade::set_central_proxy(self.inner.clone());
 
@@ -393,7 +450,8 @@ impl GattClientFacade {
         // Create server endpoints
         let (proxy, server_end) = match fidl::endpoints::create_proxy() {
             Err(e) => {
-                bail!("Failed to create proxy endpoint: {:?}", e);
+                let err_msg = format!("Failed to create proxy endpoint: {:?}", e);
+                fx_err_and_bail!(&with_line!(tag), err_msg)
             }
             Ok(x) => x,
         };
@@ -403,26 +461,34 @@ impl GattClientFacade {
             Some(c) => {
                 let status = await!(c.connect_peripheral(&mut identifier, server_end))?;
                 match status.error {
-                    Some(e) => bail!("Failed to connect to peripheral: {}", BTError::from(*e)),
+                    Some(e) => {
+                        let err_msg =
+                            format!("Failed to connect to peripheral: {:?}", BTError::from(*e));
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
+                    }
                     None => {}
                 }
             }
-            None => bail!("No central proxy created."),
+            None => fx_err_and_bail!(&with_line!(tag), "No central proxy created."),
         };
         self.update_peripheral_id(&identifier, proxy);
         Ok(())
     }
 
     pub async fn disconnect_peripheral(&self, id: String) -> Result<(), Error> {
+        let tag = "GattClientFacade::disconnect_peripheral";
         match &self.inner.read().central {
             Some(c) => {
                 let status = await!(c.disconnect_peripheral(&id))?;
                 match status.error {
                     None => {}
-                    Some(e) => bail!("Failed to disconnect: {:?}", e),
+                    Some(e) => {
+                        fx_log_err!(tag: &with_line!(tag), "Failed to disconnect: {:?}", e);
+                        bail!("Failed to disconnect: {:?}", e)
+                    }
                 }
             }
-            None => bail!("Failed to disconnect from perpheral."),
+            None => fx_err_and_bail!(&with_line!(tag), "Failed to disconnect from perpheral."),
         };
         // Remove current id from map of peripheral_ids
         self.remove_peripheral_id(&id);
@@ -474,7 +540,9 @@ impl GattClientFacade {
     }
 
     pub fn print(&self) {
-        fx_log_info!(tag: "print",
+        let tag = "GattClientFacade::print";
+        fx_log_info!(
+            tag: &with_line!(tag),
             "BluetoothFacade: Central: {:?}, Devices: {:?}, Periph_ids: {:?}",
             self.get_central_proxy(),
             self.get_devices(),
