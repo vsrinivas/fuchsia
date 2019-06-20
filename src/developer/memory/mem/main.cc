@@ -16,25 +16,31 @@ using namespace memory;
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
+  if (command_line.HasOption("help")) {
+    std::cout
+        << "Usage: mem [options]\n"
+           "  Prints system-wide task and memory\n\n"
+           "  Memory numbers are triplets P,S,T\n"
+           "  P: Private bytes\n"
+           "  S: Total bytes scaled by 1/# processes sharing each byte\n"
+           "  T: Total bytes\n"
+           "     S and T are inclusive of P\n\n"
+           " Options:\n"
+           " [default] Human readable representation of process and vmo groups\n"
+           " --print   Machine readable representation of proccess and vmos\n"
+           " --output  CSV of process memory\n"
+           "           --repeat=N Runs forever, outputing every N seconds\n"
+           "           --pid=N    Output vmo groups of process pid instead\n";
+    return EXIT_SUCCESS;
+  }
+
   CaptureState capture_state;
   auto s = Capture::GetCaptureState(capture_state);
   Printer printer(std::cout);
 
   if (s != ZX_OK) {
-    std::cerr << "Error getting capture state: "
-              << zx_status_get_string(s);
+    std::cerr << "Error getting capture state: " << zx_status_get_string(s);
     return EXIT_FAILURE;
-  }
-  if (command_line.HasOption("summarize")) {
-    Capture capture;
-    s = Capture::GetCapture(capture, capture_state, VMO);
-    if (s != ZX_OK) {
-      std::cerr << "Error getting capture: " << zx_status_get_string(s);
-      return EXIT_FAILURE;
-    }
-    Summary summary(capture);
-    printer.PrintSummary(summary, VMO, SORTED);
-    return EXIT_SUCCESS;
   }
 
   if (command_line.HasOption("print")) {
@@ -98,5 +104,14 @@ int main(int argc, const char** argv) {
     return EXIT_SUCCESS;
   }
 
+  // Default is summarize
+  Capture capture;
+  s = Capture::GetCapture(capture, capture_state, VMO);
+  if (s != ZX_OK) {
+    std::cerr << "Error getting capture: " << zx_status_get_string(s);
+    return EXIT_FAILURE;
+  }
+  Summary summary(capture);
+  printer.PrintSummary(summary, VMO, SORTED);
   return EXIT_SUCCESS;
 }
