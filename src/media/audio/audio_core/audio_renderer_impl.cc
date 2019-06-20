@@ -399,6 +399,13 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
     return;
   }
 
+  // Validate we have a valid buffer id. Note we currently only support a
+  // single buffer.
+  if (packet.payload_buffer_id != 0) {
+    FXL_LOG(ERROR) << "Invalid Packet payload_buffer_id.";
+    return;
+  }
+
   // Start by making sure that the region we are receiving is made from an
   // integral number of audio frames. Count the total number of frames in the
   // process.

@@ -183,9 +183,7 @@ TEST_F(AudioRendererTest, SendPacketNoReply) {
   AssertConnectedAndDiscardAllPackets();
 }
 
-// TODO(tjdetwiler): Start enforcing payload_buffer_id once we ensure all
-// clients are providing a valid value.
-TEST_F(AudioRendererTest, SendPacketNoReplyAcceptAnyPayloadBufferId) {
+TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -197,7 +195,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyAcceptAnyPayloadBufferId) {
   packet.payload_size = kValidPayloadSize;
   audio_renderer_->SendPacketNoReply(std::move(packet));
 
-  AssertConnectedAndDiscardAllPackets();
+  ExpectDisconnect();
 }
 
 // It is invalid to SendPacket before the stream type has been configured
